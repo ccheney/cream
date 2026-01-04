@@ -14,7 +14,7 @@
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
     "clean": "rm -rf dist coverage"
   },
