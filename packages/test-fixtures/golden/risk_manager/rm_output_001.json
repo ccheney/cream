@@ -1,0 +1,40 @@
+{
+  "verdict": "APPROVE",
+  "violations": [],
+  "riskMetrics": {
+    "portfolioRisk": 0.021,
+    "positionRisk": 0.009,
+    "correlationRisk": 0.35,
+    "proposedPositionValue": 9250,
+    "proposedPositionPct": 0.0925,
+    "totalExposureAfterTrade": 0.207,
+    "leverageRatio": 1.0
+  },
+  "analysis": {
+    "perInstrumentCheck": {
+      "passed": true,
+      "positionPct": 0.0925,
+      "limit": 0.05,
+      "note": "Position size within per-instrument limit"
+    },
+    "portfolioCheck": {
+      "passed": true,
+      "totalAllocation": 0.207,
+      "limit": 1.0,
+      "note": "Total portfolio allocation acceptable"
+    },
+    "leverageCheck": {
+      "passed": true,
+      "currentLeverage": 1.0,
+      "maxLeverage": 2.0,
+      "note": "Within leverage constraints"
+    },
+    "correlationCheck": {
+      "passed": true,
+      "maxCorrelation": 0.35,
+      "limit": 0.7,
+      "note": "AAPL and MSFT correlation within limits"
+    }
+  },
+  "notes": "Position approved. All risk constraints satisfied. Consider monitoring correlation with existing MSFT position."
+}

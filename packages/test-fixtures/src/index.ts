@@ -95,3 +95,31 @@ export {
   type Position,
   type PortfolioState,
 } from "./factories";
+
+// ============================================
+// Golden Dataset Infrastructure
+// ============================================
+
+export {
+  // Schema
+  GoldenAgentType,
+  MarketRegime,
+  ScenarioCategory,
+  GoldenCaseMetadataSchema,
+  GoldenDatasetMetadataSchema,
+  STALENESS_THRESHOLDS,
+  checkStaleness,
+  type GoldenCaseMetadata,
+  type GoldenDatasetMetadata,
+  type StalenessCheckResult,
+  // Loaders
+  loadGoldenMetadata,
+  loadGoldenInput,
+  loadGoldenOutput,
+  loadGoldenCase,
+  getAllGoldenCaseIds,
+  getAllGoldenCases,
+  checkGoldenStaleness,
+  hasGoldenDataset,
+  getGoldenDatasetStats,
+} from "./golden/index.js";

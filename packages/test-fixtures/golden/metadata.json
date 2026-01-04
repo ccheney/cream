@@ -1,0 +1,116 @@
+{
+  "dataset_version": "1.0.0",
+  "created": "2026-01-04",
+  "last_refreshed": "2026-01-04",
+  "notes": "Initial golden dataset with seed cases for all agents",
+  "cases": [
+    {
+      "id": "trader_001",
+      "agent": "trader",
+      "scenario": "momentum",
+      "regime": "bull_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["high_confidence", "equity"],
+      "adversarial": false,
+      "description": "Standard bullish momentum setup with clear trend",
+      "expectedOutcome": "BUY decision with appropriate position sizing"
+    },
+    {
+      "id": "trader_002",
+      "agent": "trader",
+      "scenario": "mean_reversion",
+      "regime": "range",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["moderate_confidence", "equity"],
+      "adversarial": false,
+      "description": "Range-bound market with oversold conditions",
+      "expectedOutcome": "BUY decision at support level"
+    },
+    {
+      "id": "trader_003",
+      "agent": "trader",
+      "scenario": "adversarial",
+      "regime": "high_vol",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["conflicting_signals", "edge_case"],
+      "adversarial": true,
+      "description": "Conflicting technical signals during high volatility",
+      "expectedOutcome": "HOLD or reduced position size"
+    },
+    {
+      "id": "ta_001",
+      "agent": "technical_analyst",
+      "scenario": "breakout",
+      "regime": "bull_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["volume_confirmation", "resistance_break"],
+      "adversarial": false,
+      "description": "Clear breakout above resistance with volume",
+      "expectedOutcome": "Bullish analysis with breakout confirmation"
+    },
+    {
+      "id": "ta_002",
+      "agent": "technical_analyst",
+      "scenario": "momentum",
+      "regime": "bear_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["oversold", "divergence"],
+      "adversarial": false,
+      "description": "Bearish trend with bullish divergence",
+      "expectedOutcome": "Cautious bullish analysis noting divergence"
+    },
+    {
+      "id": "rm_001",
+      "agent": "risk_manager",
+      "scenario": "momentum",
+      "regime": "bull_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["within_limits", "standard"],
+      "adversarial": false,
+      "description": "Standard position within all risk limits",
+      "expectedOutcome": "APPROVE with risk metrics"
+    },
+    {
+      "id": "rm_002",
+      "agent": "risk_manager",
+      "scenario": "adversarial",
+      "regime": "high_vol",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["exceeds_limits", "edge_case"],
+      "adversarial": true,
+      "description": "Position exceeds per-instrument limit",
+      "expectedOutcome": "REJECT with violation details"
+    },
+    {
+      "id": "critic_001",
+      "agent": "critic",
+      "scenario": "momentum",
+      "regime": "bull_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["consistent_rationale", "aligned"],
+      "adversarial": false,
+      "description": "Decision plan aligned with market data",
+      "expectedOutcome": "APPROVE with positive score"
+    },
+    {
+      "id": "critic_002",
+      "agent": "critic",
+      "scenario": "adversarial",
+      "regime": "bear_trend",
+      "created": "2026-01",
+      "refreshed": "2026-01",
+      "tags": ["regime_mismatch", "edge_case"],
+      "adversarial": true,
+      "description": "Bullish rationale in bearish regime",
+      "expectedOutcome": "REJECT with mismatch noted"
+    }
+  ]
+}

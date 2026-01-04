@@ -1,0 +1,45 @@
+{
+  "decision": {
+    "instrument": {
+      "instrumentId": "AAPL",
+      "instrumentType": "EQUITY"
+    },
+    "action": "BUY",
+    "size": {
+      "quantity": 50,
+      "unit": "SHARES",
+      "targetPositionQuantity": 50
+    },
+    "orderPlan": {
+      "entryOrderType": "LIMIT",
+      "entryLimitPrice": 185.00,
+      "exitOrderType": "MARKET",
+      "timeInForce": "DAY"
+    },
+    "riskLevels": {
+      "stopLossLevel": 179.50,
+      "takeProfitLevel": 195.00,
+      "denomination": "UNDERLYING_PRICE"
+    },
+    "strategyFamily": "TREND",
+    "rationale": "Strong bullish momentum with price trading above all major moving averages. RSI at 58 shows room to run without being overbought. Volume confirms trend with above-average activity. Entering on pullback to SMA20 level with defined risk parameters.",
+    "confidence": 0.78
+  },
+  "analysis": {
+    "bullishFactors": [
+      "Price above all major moving averages (SMA20, SMA50, SMA200)",
+      "Positive MACD signal with expanding histogram",
+      "Above-average volume confirms buying interest",
+      "Positive analyst consensus and news sentiment"
+    ],
+    "bearishFactors": [
+      "Approaching 52-week high, potential resistance",
+      "P/E ratio above historical average",
+      "Earnings event in 24 days adds uncertainty"
+    ],
+    "keyLevels": {
+      "support": [182.30, 178.45, 175.20],
+      "resistance": [190.00, 195.00, 199.62]
+    }
+  }
+}
