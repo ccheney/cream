@@ -1,0 +1,170 @@
+// Cream Trading System - Common Types
+// Shared enums and messages used across the system
+
+syntax = "proto3";
+
+package cream.v1;
+
+// ============================================
+// Environment
+// ============================================
+
+// Trading environment
+enum Environment {
+  ENVIRONMENT_UNSPECIFIED = 0;
+  ENVIRONMENT_BACKTEST = 1;
+  ENVIRONMENT_PAPER = 2;
+  ENVIRONMENT_LIVE = 3;
+}
+
+// ============================================
+// Trading Enums
+// ============================================
+
+// Trading action that expresses intent in terms of exposure
+enum Action {
+  ACTION_UNSPECIFIED = 0;
+  ACTION_BUY = 1;      // Establish new long from flat
+  ACTION_SELL = 2;     // Establish new short from flat
+  ACTION_HOLD = 3;     // Maintain current position
+  ACTION_INCREASE = 4; // Increase exposure in direction
+  ACTION_REDUCE = 5;   // Reduce exposure magnitude
+  ACTION_NO_TRADE = 6; // Remain flat
+}
+
+// Direction derived from action and position
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  DIRECTION_LONG = 1;
+  DIRECTION_SHORT = 2;
+  DIRECTION_FLAT = 3;
+}
+
+// Instrument type
+enum InstrumentType {
+  INSTRUMENT_TYPE_UNSPECIFIED = 0;
+  INSTRUMENT_TYPE_EQUITY = 1;
+  INSTRUMENT_TYPE_OPTION = 2;
+}
+
+// Option type (call or put)
+enum OptionType {
+  OPTION_TYPE_UNSPECIFIED = 0;
+  OPTION_TYPE_CALL = 1;
+  OPTION_TYPE_PUT = 2;
+}
+
+// Size unit for position sizing
+enum SizeUnit {
+  SIZE_UNIT_UNSPECIFIED = 0;
+  SIZE_UNIT_SHARES = 1;
+  SIZE_UNIT_CONTRACTS = 2;
+}
+
+// Order type
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_LIMIT = 1;
+  ORDER_TYPE_MARKET = 2;
+}
+
+// Time in force for orders
+enum TimeInForce {
+  TIME_IN_FORCE_UNSPECIFIED = 0;
+  TIME_IN_FORCE_DAY = 1;
+  TIME_IN_FORCE_GTC = 2;  // Good 'til canceled
+  TIME_IN_FORCE_IOC = 3;  // Immediate or cancel
+  TIME_IN_FORCE_FOK = 4;  // Fill or kill
+}
+
+// Risk level denomination
+enum RiskDenomination {
+  RISK_DENOMINATION_UNSPECIFIED = 0;
+  RISK_DENOMINATION_UNDERLYING_PRICE = 1;
+  RISK_DENOMINATION_OPTION_PRICE = 2;
+}
+
+// Strategy family
+enum StrategyFamily {
+  STRATEGY_FAMILY_UNSPECIFIED = 0;
+  STRATEGY_FAMILY_TREND = 1;
+  STRATEGY_FAMILY_MEAN_REVERSION = 2;
+  STRATEGY_FAMILY_EVENT_DRIVEN = 3;
+  STRATEGY_FAMILY_VOLATILITY = 4;
+  STRATEGY_FAMILY_RELATIVE_VALUE = 5;
+}
+
+// ============================================
+// Common Messages
+// ============================================
+
+// Option contract details
+message OptionContract {
+  // Underlying symbol (e.g., "AAPL")
+  string underlying = 1;
+
+  // Expiration date in YYYY-MM-DD format
+  string expiration = 2;
+
+  // Strike price
+  double strike = 3;
+
+  // Call or put
+  OptionType option_type = 4;
+}
+
+// Instrument identifier
+message Instrument {
+  // Unique identifier (ticker or OCC symbol for options)
+  string instrument_id = 1;
+
+  // Type of instrument
+  InstrumentType instrument_type = 2;
+
+  // Option contract details (required when instrument_type is OPTION)
+  OptionContract option_contract = 3;
+}
+
+// Position sizing
+message Size {
+  // Number of shares or contracts
+  int32 quantity = 1;
+
+  // Unit of size
+  SizeUnit unit = 2;
+
+  // Target position after execution (signed: positive=long, negative=short)
+  int32 target_position_quantity = 3;
+}
+
+// Risk levels - mandatory for all decisions
+message RiskLevels {
+  // Stop-loss price level
+  double stop_loss_level = 1;
+
+  // Take-profit price level
+  double take_profit_level = 2;
+
+  // What price the levels refer to
+  RiskDenomination denomination = 3;
+}
+
+// Regime classification
+enum Regime {
+  REGIME_UNSPECIFIED = 0;
+  REGIME_BULL_TREND = 1;
+  REGIME_BEAR_TREND = 2;
+  REGIME_RANGE_BOUND = 3;
+  REGIME_HIGH_VOLATILITY = 4;
+  REGIME_LOW_VOLATILITY = 5;
+  REGIME_CRISIS = 6;
+}
+
+// Market hours status
+enum MarketStatus {
+  MARKET_STATUS_UNSPECIFIED = 0;
+  MARKET_STATUS_PRE_MARKET = 1;
+  MARKET_STATUS_OPEN = 2;
+  MARKET_STATUS_AFTER_HOURS = 3;
+  MARKET_STATUS_CLOSED = 4;
+}

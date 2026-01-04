@@ -1,0 +1,285 @@
+// Cream Trading System - Execution Schema
+// Messages for Rust execution engine communication
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "cream/v1/common.proto";
+import "cream/v1/decision.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================
+// Constraint Check
+// ============================================
+
+// Result of a constraint check
+enum ConstraintResult {
+  CONSTRAINT_RESULT_UNSPECIFIED = 0;
+  CONSTRAINT_RESULT_PASS = 1;
+  CONSTRAINT_RESULT_FAIL = 2;
+  CONSTRAINT_RESULT_WARN = 3;
+}
+
+// Individual constraint check result
+message ConstraintCheck {
+  // Name of the constraint
+  string name = 1;
+
+  // Result of the check
+  ConstraintResult result = 2;
+
+  // Description of the constraint
+  string description = 3;
+
+  // Actual value that was checked
+  optional double actual_value = 4;
+
+  // Threshold that was applied
+  optional double threshold = 5;
+}
+
+// Request to validate a decision plan against constraints
+message CheckConstraintsRequest {
+  // Decision plan to validate
+  DecisionPlan decision_plan = 1;
+
+  // Current account state
+  AccountState account_state = 2;
+
+  // Current positions
+  repeated Position positions = 3;
+}
+
+// Response from constraint validation
+message CheckConstraintsResponse {
+  // Overall result
+  bool approved = 1;
+
+  // Individual constraint results
+  repeated ConstraintCheck checks = 2;
+
+  // Timestamp of validation
+  google.protobuf.Timestamp validated_at = 3;
+
+  // Rejection reason (if not approved)
+  optional string rejection_reason = 4;
+}
+
+// ============================================
+// Account State
+// ============================================
+
+// Current account state
+message AccountState {
+  // Account identifier
+  string account_id = 1;
+
+  // Total account equity
+  double equity = 2;
+
+  // Available cash for trading
+  double buying_power = 3;
+
+  // Current margin used
+  double margin_used = 4;
+
+  // Day trade count (for PDT rule)
+  int32 day_trade_count = 5;
+
+  // Whether pattern day trader rules apply
+  bool is_pdt_restricted = 6;
+
+  // Timestamp of state snapshot
+  google.protobuf.Timestamp as_of = 7;
+}
+
+// ============================================
+// Positions
+// ============================================
+
+// Current position
+message Position {
+  // Instrument
+  Instrument instrument = 1;
+
+  // Quantity held (signed: positive=long, negative=short)
+  int32 quantity = 2;
+
+  // Average entry price
+  double avg_entry_price = 3;
+
+  // Current market value
+  double market_value = 4;
+
+  // Unrealized P&L
+  double unrealized_pnl = 5;
+
+  // Unrealized P&L percentage
+  double unrealized_pnl_pct = 6;
+
+  // Cost basis
+  double cost_basis = 7;
+}
+
+// ============================================
+// Order Execution
+// ============================================
+
+// Order status
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_ACCEPTED = 2;
+  ORDER_STATUS_PARTIAL_FILL = 3;
+  ORDER_STATUS_FILLED = 4;
+  ORDER_STATUS_CANCELLED = 5;
+  ORDER_STATUS_REJECTED = 6;
+  ORDER_STATUS_EXPIRED = 7;
+}
+
+// Order side
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+// Request to submit an order
+message SubmitOrderRequest {
+  // Instrument to trade
+  Instrument instrument = 1;
+
+  // Buy or sell
+  OrderSide side = 2;
+
+  // Quantity
+  int32 quantity = 3;
+
+  // Order type
+  OrderType order_type = 4;
+
+  // Limit price (required for limit orders)
+  optional double limit_price = 5;
+
+  // Time in force
+  TimeInForce time_in_force = 6;
+
+  // Client order ID for tracking
+  string client_order_id = 7;
+
+  // Reference to decision cycle
+  string cycle_id = 8;
+}
+
+// Response from order submission
+message SubmitOrderResponse {
+  // Broker-assigned order ID
+  string order_id = 1;
+
+  // Client order ID (echoed back)
+  string client_order_id = 2;
+
+  // Current order status
+  OrderStatus status = 3;
+
+  // Submission timestamp
+  google.protobuf.Timestamp submitted_at = 4;
+
+  // Error message if rejected
+  optional string error_message = 5;
+}
+
+// Order execution acknowledgment
+message ExecutionAck {
+  // Order ID
+  string order_id = 1;
+
+  // Client order ID
+  string client_order_id = 2;
+
+  // Current status
+  OrderStatus status = 3;
+
+  // Filled quantity
+  int32 filled_quantity = 4;
+
+  // Average fill price
+  double avg_fill_price = 5;
+
+  // Remaining quantity
+  int32 remaining_quantity = 6;
+
+  // Last update timestamp
+  google.protobuf.Timestamp updated_at = 7;
+
+  // Commission charged
+  double commission = 8;
+}
+
+// ============================================
+// gRPC Service
+// ============================================
+
+// Execution engine service
+service ExecutionService {
+  // Validate a decision plan against constraints
+  rpc CheckConstraints(CheckConstraintsRequest) returns (CheckConstraintsResponse);
+
+  // Submit an order for execution
+  rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse);
+
+  // Stream order execution updates
+  rpc StreamExecutions(StreamExecutionsRequest) returns (stream StreamExecutionsResponse);
+
+  // Get current account state
+  rpc GetAccountState(GetAccountStateRequest) returns (GetAccountStateResponse);
+
+  // Get current positions
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+}
+
+// Request to stream executions
+message StreamExecutionsRequest {
+  // Filter by cycle ID (optional)
+  optional string cycle_id = 1;
+
+  // Filter by order IDs (optional)
+  repeated string order_ids = 2;
+}
+
+// Response with execution update (streamed)
+message StreamExecutionsResponse {
+  // Execution acknowledgment
+  ExecutionAck execution = 1;
+}
+
+// Request for account state
+message GetAccountStateRequest {
+  // Account ID (uses default if not specified)
+  optional string account_id = 1;
+}
+
+// Response with account state
+message GetAccountStateResponse {
+  // Current account state
+  AccountState account_state = 1;
+}
+
+// Request for positions
+message GetPositionsRequest {
+  // Account ID (uses default if not specified)
+  optional string account_id = 1;
+
+  // Filter by symbols (optional)
+  repeated string symbols = 2;
+}
+
+// Response with positions
+message GetPositionsResponse {
+  // Current positions
+  repeated Position positions = 1;
+
+  // Timestamp of snapshot
+  google.protobuf.Timestamp as_of = 2;
+}

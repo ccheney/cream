@@ -46,6 +46,21 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/schema": {
+      "name": "@cream/schema",
+      "version": "0.0.1",
+    },
+    "packages/schema-gen": {
+      "name": "@cream/schema-gen",
+      "version": "0.0.1",
+      "dependencies": {
+        "@bufbuild/protobuf": "^2.0.0",
+        "@connectrpc/connect": "^2.0.0",
+      },
+      "devDependencies": {
+        "typescript": "^5.7.0",
+      },
+    },
     "packages/test-fixtures": {
       "name": "@cream/test-fixtures",
       "version": "0.0.1",
@@ -60,11 +75,19 @@
     },
   },
   "packages": {
+    "@bufbuild/protobuf": ["@bufbuild/protobuf@2.10.2", "", {}, "sha512-uFsRXwIGyu+r6AMdz+XijIIZJYpoWeYzILt5yZ2d3mCjQrWUTVpVD9WL/jZAbvp+Ed04rOhrsk7FiTcEDseB5A=="],
+
+    "@connectrpc/connect": ["@connectrpc/connect@2.1.1", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.7.0" } }, "sha512-JzhkaTvM73m2K1URT6tv53k2RwngSmCXLZJgK580qNQOXRzZRR/BCMfZw3h+90JpnG6XksP5bYT+cz0rpUzUWQ=="],
+
     "@cream/config": ["@cream/config@workspace:packages/config"],
 
     "@cream/domain": ["@cream/domain@workspace:packages/domain"],
 
     "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
+
+    "@cream/schema": ["@cream/schema@workspace:packages/schema"],
+
+    "@cream/schema-gen": ["@cream/schema-gen@workspace:packages/schema-gen"],
 
     "@cream/test-fixtures": ["@cream/test-fixtures@workspace:packages/test-fixtures"],
 

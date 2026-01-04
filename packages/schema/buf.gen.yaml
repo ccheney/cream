@@ -1,0 +1,37 @@
+# Buf code generation configuration
+# https://buf.build/docs/configuration/v2/buf-gen-yaml
+version: v2
+
+# Clean output directories before generation
+clean: true
+
+# Managed mode for consistent options across languages
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/cream-trading/cream/gen/go
+
+inputs:
+  - directory: .
+
+plugins:
+  # TypeScript (ES modules) - Protobuf-ES for message types
+  - remote: buf.build/bufbuild/es
+    out: ../schema-gen/ts
+    opt:
+      - target=ts
+
+  # Connect-ES (gRPC-web client) - For Connect/gRPC-Web service clients
+  - remote: buf.build/bufbuild/connect-es
+    out: ../schema-gen/ts
+    opt:
+      - target=ts
+
+  # Python - Uses protoc built-in Python plugin via BSR
+  - remote: buf.build/protocolbuffers/python
+    out: ../schema-gen/python
+
+  # Python type stubs
+  - remote: buf.build/protocolbuffers/pyi
+    out: ../schema-gen/python

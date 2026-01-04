@@ -1,0 +1,25 @@
+# Buf configuration for Cream trading system schema
+# https://buf.build/docs/configuration/v2/buf-yaml
+version: v2
+
+# Module configuration
+modules:
+  - path: .
+    name: buf.build/cream/schema
+
+# Dependencies (common Google types)
+deps:
+  - buf.build/googleapis/googleapis
+
+# Linting configuration
+lint:
+  use:
+    - STANDARD
+  except:
+    # Allow shorter package names during development
+    - PACKAGE_VERSION_SUFFIX
+
+# Breaking change detection
+breaking:
+  use:
+    - FILE

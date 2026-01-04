@@ -1,0 +1,141 @@
+// Cream Trading System - Decision Schema
+// DecisionPlan and related messages for trading decisions
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "cream/v1/common.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================
+// Order Planning
+// ============================================
+
+// Order execution plan
+message OrderPlan {
+  // Order type for entry
+  OrderType entry_order_type = 1;
+
+  // Limit price for entry (required when entry_order_type is LIMIT)
+  optional double entry_limit_price = 2;
+
+  // Order type for exit
+  OrderType exit_order_type = 3;
+
+  // Time in force for orders
+  TimeInForce time_in_force = 4;
+
+  // Execution tactic identifier (e.g., "TWAP", "VWAP", "ICEBERG")
+  optional string execution_tactic = 5;
+
+  // Additional execution parameters
+  google.protobuf.Struct execution_params = 6;
+}
+
+// ============================================
+// References
+// ============================================
+
+// References to supporting data
+message References {
+  // Indicator names used in decision
+  repeated string used_indicators = 1;
+
+  // Memory case IDs from HelixDB
+  repeated string memory_case_ids = 2;
+
+  // Event IDs that influenced decision
+  repeated string event_ids = 3;
+}
+
+// ============================================
+// Decision
+// ============================================
+
+// Individual decision for an instrument
+message Decision {
+  // Target instrument
+  Instrument instrument = 1;
+
+  // Trading action
+  Action action = 2;
+
+  // Position sizing
+  Size size = 3;
+
+  // Order execution plan
+  OrderPlan order_plan = 4;
+
+  // Risk levels (mandatory - always required)
+  RiskLevels risk_levels = 5;
+
+  // Strategy family
+  StrategyFamily strategy_family = 6;
+
+  // Human-readable rationale for the decision
+  string rationale = 7;
+
+  // Confidence score [0.0, 1.0]
+  double confidence = 8;
+
+  // Supporting references
+  References references = 9;
+}
+
+// ============================================
+// DecisionPlan
+// ============================================
+
+// Complete decision plan for a trading cycle
+message DecisionPlan {
+  // Unique identifier for this trading cycle
+  string cycle_id = 1;
+
+  // Timestamp when the decision was made
+  google.protobuf.Timestamp as_of_timestamp = 2;
+
+  // Trading environment
+  Environment environment = 3;
+
+  // List of decisions for this cycle
+  repeated Decision decisions = 4;
+
+  // Optional portfolio-level notes
+  optional string portfolio_notes = 5;
+}
+
+// ============================================
+// Validation
+// ============================================
+
+// Risk validation result
+message RiskValidationResult {
+  // Whether the validation passed
+  bool valid = 1;
+
+  // Validation errors (blocking issues)
+  repeated string errors = 2;
+
+  // Validation warnings (non-blocking issues)
+  repeated string warnings = 3;
+
+  // Calculated risk-reward ratio
+  optional double risk_reward_ratio = 4;
+}
+
+// Decision plan validation result
+message DecisionPlanValidationResult {
+  // Whether the validation passed
+  bool success = 1;
+
+  // Validated decision plan (if successful)
+  DecisionPlan decision_plan = 2;
+
+  // Validation errors
+  repeated string errors = 3;
+
+  // Validation warnings
+  repeated string warnings = 4;
+}
