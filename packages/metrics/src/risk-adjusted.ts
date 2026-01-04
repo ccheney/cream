@@ -77,7 +77,9 @@ export const DEFAULT_WINDOWS: MetricsWindow[] = [
  * Calculate mean of an array
  */
 export function mean(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
@@ -85,7 +87,9 @@ export function mean(values: number[]): number {
  * Calculate sample standard deviation
  */
 export function stdDev(values: number[], meanValue?: number): number {
-  if (values.length < 2) return 0;
+  if (values.length < 2) {
+    return 0;
+  }
 
   const avg = meanValue ?? mean(values);
   const squaredDiffs = values.map((v) => (v - avg) ** 2);
@@ -101,11 +105,10 @@ export function stdDev(values: number[], meanValue?: number): number {
  *
  * Formula: sqrt(sum((min(return - target, 0))^2) / n)
  */
-export function downsideDeviation(
-  returns: number[],
-  targetReturn: number = 0
-): number {
-  if (returns.length === 0) return 0;
+export function downsideDeviation(returns: number[], targetReturn = 0): number {
+  if (returns.length === 0) {
+    return 0;
+  }
 
   const downsideReturns = returns.map((r) => Math.min(r - targetReturn, 0));
   const squaredDownside = downsideReturns.map((r) => r ** 2);
@@ -125,7 +128,9 @@ export function downsideDeviation(
  * @returns Array of period returns (decimal, e.g., 0.01 = 1%)
  */
 export function calculateReturns(values: number[]): number[] {
-  if (values.length < 2) return [];
+  if (values.length < 2) {
+    return [];
+  }
 
   const returns: number[] = [];
   for (let i = 1; i < values.length; i++) {
@@ -147,7 +152,9 @@ export function calculateReturns(values: number[]): number[] {
  * @returns Cumulative return (decimal, e.g., 0.10 = 10%)
  */
 export function cumulativeReturn(returns: number[]): number {
-  if (returns.length === 0) return 0;
+  if (returns.length === 0) {
+    return 0;
+  }
 
   let cumulative = 1;
   for (const r of returns) {
@@ -164,10 +171,14 @@ export function cumulativeReturn(returns: number[]): number {
  * @returns Total return percentage (e.g., 0.10 = 10%)
  */
 export function calculateRawReturn(equity: number[]): number {
-  if (equity.length < 2) return 0;
+  if (equity.length < 2) {
+    return 0;
+  }
   const first = equity[0];
   const last = equity[equity.length - 1];
-  if (first === 0) return 0;
+  if (first === 0) {
+    return 0;
+  }
   return (last - first) / first;
 }
 
@@ -182,7 +193,9 @@ export function calculateRawReturn(equity: number[]): number {
  * @returns Maximum drawdown as positive decimal (e.g., 0.20 = 20% drawdown)
  */
 export function calculateMaxDrawdown(equity: number[]): number {
-  if (equity.length < 2) return 0;
+  if (equity.length < 2) {
+    return 0;
+  }
 
   let maxDrawdown = 0;
   let peak = equity[0];
@@ -208,12 +221,16 @@ export function calculateMaxDrawdown(equity: number[]): number {
  * @returns Current drawdown as positive decimal
  */
 export function calculateCurrentDrawdown(equity: number[]): number {
-  if (equity.length < 2) return 0;
+  if (equity.length < 2) {
+    return 0;
+  }
 
   const peak = Math.max(...equity);
   const current = equity[equity.length - 1];
 
-  if (peak === 0) return 0;
+  if (peak === 0) {
+    return 0;
+  }
   return (peak - current) / peak;
 }
 
@@ -240,12 +257,16 @@ export function calculateSharpe(
   returns: number[],
   config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): number | null {
-  if (returns.length < 2) return null;
+  if (returns.length < 2) {
+    return null;
+  }
 
   const meanReturn = mean(returns);
   const std = stdDev(returns, meanReturn);
 
-  if (std === 0) return null; // Zero volatility case
+  if (std === 0) {
+    return null; // Zero volatility case
+  }
 
   // Convert annual risk-free rate to per-period
   const periodRiskFreeRate = config.riskFreeRate / config.periodsPerYear;
@@ -280,12 +301,16 @@ export function calculateSortino(
   returns: number[],
   config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): number | null {
-  if (returns.length < 2) return null;
+  if (returns.length < 2) {
+    return null;
+  }
 
   const meanReturn = mean(returns);
   const downDev = downsideDeviation(returns, config.targetReturn / config.periodsPerYear);
 
-  if (downDev === 0) return null; // No downside volatility case
+  if (downDev === 0) {
+    return null; // No downside volatility case
+  }
 
   // Convert annual target to per-period
   const periodTarget = config.targetReturn / config.periodsPerYear;
@@ -321,10 +346,14 @@ export function calculateCalmar(
   equity: number[],
   config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): number | null {
-  if (returns.length < 2 || equity.length < 2) return null;
+  if (returns.length < 2 || equity.length < 2) {
+    return null;
+  }
 
   const maxDD = calculateMaxDrawdown(equity);
-  if (maxDD === 0) return null; // No drawdown case (all gains)
+  if (maxDD === 0) {
+    return null; // No drawdown case (all gains)
+  }
 
   // Calculate annualized return
   const totalReturn = cumulativeReturn(returns);
@@ -332,7 +361,7 @@ export function calculateCalmar(
   const years = periods / config.periodsPerYear;
 
   // Annualized return (CAGR formula)
-  const annualizedReturn = years > 0 ? Math.pow(1 + totalReturn, 1 / years) - 1 : totalReturn;
+  const annualizedReturn = years > 0 ? (1 + totalReturn) ** (1 / years) - 1 : totalReturn;
 
   // Calmar ratio
   return annualizedReturn / maxDD;
@@ -357,9 +386,7 @@ export function calculateMetricsForWindow(
 ): PerformanceMetrics {
   // Get the last N periods for this window
   const windowEquity =
-    equity.length <= window.period
-      ? equity
-      : equity.slice(equity.length - window.period);
+    equity.length <= window.period ? equity : equity.slice(equity.length - window.period);
 
   // Calculate returns from equity
   const returns = calculateReturns(windowEquity);
@@ -506,12 +533,20 @@ export function gradePerformance(
 
   // Get minimum non-null metric
   const values = [sharpe, sortino, calmar].filter((v) => v !== null) as number[];
-  if (values.length === 0) return "poor";
+  if (values.length === 0) {
+    return "poor";
+  }
 
   const minMetric = Math.min(...values);
 
-  if (minMetric >= 3.0) return "exceptional";
-  if (minMetric >= 2.0) return "elite";
-  if (minMetric >= 1.0) return "acceptable";
+  if (minMetric >= 3.0) {
+    return "exceptional";
+  }
+  if (minMetric >= 2.0) {
+    return "elite";
+  }
+  if (minMetric >= 1.0) {
+    return "acceptable";
+  }
   return "poor";
 }

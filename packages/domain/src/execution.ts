@@ -8,12 +8,7 @@
  */
 
 import { z } from "zod";
-import {
-  InstrumentSchema,
-  OrderType,
-  TimeInForce,
-  DecisionPlanSchema,
-} from "./decision";
+import { DecisionPlanSchema, InstrumentSchema, OrderType, TimeInForce } from "./decision";
 import { Iso8601Schema } from "./time";
 
 // ============================================

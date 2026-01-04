@@ -6,21 +6,21 @@
  * @see docs/plans/ui/26-data-viz.md lines 139-149
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  hexToRgb,
-  rgbToHex,
-  rgbToCss,
-  lerpColor,
+  CORRELATION_COLORS,
+  clearColorCache,
+  correlationScale,
   createDivergingScale,
   createSequentialScale,
-  correlationScale,
-  getCorrelationColor,
-  clearColorCache,
-  isHighCorrelation,
   formatCorrelation,
-  CORRELATION_COLORS,
+  getCorrelationColor,
+  hexToRgb,
+  isHighCorrelation,
+  lerpColor,
   type RGB,
+  rgbToCss,
+  rgbToHex,
 } from "./color-scales.js";
 
 // ============================================

@@ -6,7 +6,7 @@
  * @see docs/plans/14-testing.md lines 174-202
  */
 
-import { describe, expect, it, beforeAll, afterAll, afterEach, beforeEach } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 
 // ============================================
@@ -87,7 +87,7 @@ function createTradeDecisionNode(
 /**
  * Generates a mock embedding vector.
  */
-function generateMockEmbedding(dimensions: number = 768): number[] {
+function generateMockEmbedding(dimensions = 768): number[] {
   return Array.from({ length: dimensions }, () => Math.random() * 2 - 1);
 }
 
@@ -95,7 +95,9 @@ function generateMockEmbedding(dimensions: number = 768): number[] {
  * Calculates cosine similarity between two vectors.
  */
 function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
+  if (a.length !== b.length) {
+    return 0;
+  }
 
   let dotProduct = 0;
   let normA = 0;
@@ -143,7 +145,9 @@ function createMockClient(): HelixClient {
       if (filter.properties) {
         results = results.filter((n) => {
           for (const [key, value] of Object.entries(filter.properties!)) {
-            if (n.properties[key] !== value) return false;
+            if (n.properties[key] !== value) {
+              return false;
+            }
           }
           return true;
         });
@@ -191,7 +195,7 @@ function createMockClient(): HelixClient {
 // ============================================
 
 describe("HelixDB Integration", () => {
-  let container: StartedTestContainer | null = null;
+  const container: StartedTestContainer | null = null;
   let client: HelixClient;
 
   // NOTE: Container-based tests are skipped until HelixDB Docker image is available.
@@ -253,8 +257,8 @@ describe("HelixDB Integration", () => {
       const retrieved = await client.getNode("decision-3");
 
       expect(retrieved).not.toBeNull();
-      expect(retrieved!.id).toBe("decision-3");
-      expect(retrieved!.properties.instrument).toBe("GOOGL");
+      expect(retrieved?.id).toBe("decision-3");
+      expect(retrieved?.properties.instrument).toBe("GOOGL");
     });
 
     it("returns null for non-existent node", async () => {

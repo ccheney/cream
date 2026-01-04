@@ -6,17 +6,15 @@
  * @see docs/plans/ui/08-realtime.md
  */
 
-// Types
-export * from "./types.js";
-
 // Mappers
 export * from "./mappers.js";
-
 // Publisher
 export {
   createEventPublisher,
+  default,
+  type EventPublisher,
   getEventPublisher,
   resetEventPublisher,
-  type EventPublisher,
 } from "./publisher.js";
-export { default } from "./publisher.js";
+// Types
+export * from "./types.js";

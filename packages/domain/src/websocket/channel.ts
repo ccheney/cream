@@ -87,14 +87,7 @@ export type AgentType = z.infer<typeof AgentType>;
 /**
  * Trading cycle phases (OODA loop).
  */
-export const CyclePhase = z.enum([
-  "observe",
-  "orient",
-  "decide",
-  "act",
-  "complete",
-  "error",
-]);
+export const CyclePhase = z.enum(["observe", "orient", "decide", "act", "complete", "error"]);
 
 export type CyclePhase = z.infer<typeof CyclePhase>;
 
@@ -124,12 +117,7 @@ export type OrderStatus = z.infer<typeof OrderStatus>;
 /**
  * Alert severity levels.
  */
-export const AlertSeverity = z.enum([
-  "info",
-  "warning",
-  "error",
-  "critical",
-]);
+export const AlertSeverity = z.enum(["info", "warning", "error", "critical"]);
 
 export type AlertSeverity = z.infer<typeof AlertSeverity>;
 
@@ -140,11 +128,7 @@ export type AlertSeverity = z.infer<typeof AlertSeverity>;
 /**
  * System health status.
  */
-export const SystemHealthStatus = z.enum([
-  "healthy",
-  "degraded",
-  "unhealthy",
-]);
+export const SystemHealthStatus = z.enum(["healthy", "degraded", "unhealthy"]);
 
 export type SystemHealthStatus = z.infer<typeof SystemHealthStatus>;
 
@@ -155,10 +139,6 @@ export type SystemHealthStatus = z.infer<typeof SystemHealthStatus>;
 /**
  * Agent voting decision.
  */
-export const AgentVote = z.enum([
-  "APPROVE",
-  "REJECT",
-  "ABSTAIN",
-]);
+export const AgentVote = z.enum(["APPROVE", "REJECT", "ABSTAIN"]);
 
 export type AgentVote = z.infer<typeof AgentVote>;

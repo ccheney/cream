@@ -9,11 +9,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   EmptyState,
+  NoActivityEmpty,
   NoDataEmpty,
+  NoItemsEmpty,
   NoResultsEmpty,
   NotFoundEmpty,
-  NoItemsEmpty,
-  NoActivityEmpty,
   OfflineEmpty,
   PermissionEmpty,
 } from "./empty-state";
@@ -29,8 +29,7 @@ const meta: Meta<typeof EmptyState> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Empty state component with icon, title, description, and optional action.",
+        component: "Empty state component with icon, title, description, and optional action.",
       },
     },
   },

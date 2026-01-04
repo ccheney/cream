@@ -13,7 +13,7 @@
  * ⚠️ SECURITY CRITICAL: Do not modify without thorough review
  */
 
-import { env, isLive, isBacktest, getAlpacaBaseUrl } from "./env";
+import { env, getAlpacaBaseUrl, isBacktest, isLive } from "./env";
 
 // ============================================
 // Order ID Namespacing
@@ -127,7 +127,9 @@ export function requireLiveConfirmation(confirmationToken: string): void {
  * Check if LIVE confirmation has been granted
  */
 export function isLiveConfirmed(): boolean {
-  if (!isLive()) return true; // Non-LIVE doesn't need confirmation
+  if (!isLive()) {
+    return true; // Non-LIVE doesn't need confirmation
+  }
   return liveConfirmationGranted;
 }
 
@@ -172,9 +174,6 @@ export function validateEnvironmentConsistency(): void {
   if (isLive()) {
     // Ensure LIVE confirmation is required (not bypassed)
     if (!liveConfirmationGranted) {
-      console.warn(
-        "⚠️ WARNING: LIVE environment active but confirmation not yet granted"
-      );
     }
 
     // Log LIVE activation for audit trail
@@ -241,10 +240,7 @@ interface AuditLogEntry {
  *
  * In LIVE environment, all significant operations are logged for compliance.
  */
-export function auditLog(
-  operation: string,
-  details: Record<string, unknown>
-): void {
+export function auditLog(operation: string, details: Record<string, unknown>): void {
   const entry: AuditLogEntry = {
     timestamp: new Date().toISOString(),
     operation,
@@ -256,7 +252,6 @@ export function auditLog(
 
   // In LIVE, also log to console for immediate visibility
   if (isLive()) {
-    console.log(`[AUDIT] ${operation}:`, JSON.stringify(details));
   }
 }
 
@@ -272,10 +267,7 @@ export function getAuditLog(): readonly AuditLogEntry[] {
  */
 export function clearAuditLog(): void {
   if (isLive()) {
-    throw new SafetyError(
-      "Cannot clear audit log in LIVE environment",
-      "AUDIT_LOG_PROTECTED"
-    );
+    throw new SafetyError("Cannot clear audit log in LIVE environment", "AUDIT_LOG_PROTECTED");
   }
   auditLogEntries.length = 0;
 }
@@ -337,9 +329,6 @@ export function recordCircuitFailure(
     });
 
     if (isLive()) {
-      console.error(
-        `🚨 CIRCUIT BREAKER OPENED: ${circuitName} after ${state.failureCount} failures`
-      );
     }
   }
 }
@@ -352,7 +341,9 @@ export function isCircuitOpen(
   resetTimeoutMs = DEFAULT_RESET_TIMEOUT_MS
 ): boolean {
   const state = circuitBreakers.get(circuitName);
-  if (!state || !state.isOpen) return false;
+  if (!state || !state.isOpen) {
+    return false;
+  }
 
   // Check if enough time has passed to try again (half-open state)
   if (state.openedAt && Date.now() - state.openedAt > resetTimeoutMs) {

@@ -9,16 +9,16 @@
 import { describe, expect, it } from "bun:test";
 import {
   createWebSocketLogger,
-  generateCorrelationId,
-  shouldLog,
-  getTimestamp,
-  truncateMessage,
-  LOG_LEVEL_PRIORITY,
   DEFAULT_LOGGER_CONFIG,
-  type LogLevel,
-  type WebSocketEventType,
+  generateCorrelationId,
+  getTimestamp,
+  LOG_LEVEL_PRIORITY,
   type LogEntry,
   type LoggerConfig,
+  type LogLevel,
+  shouldLog,
+  truncateMessage,
+  type WebSocketEventType,
 } from "./logger";
 
 // ============================================
@@ -332,11 +332,7 @@ describe("WebSocketEventType Type", () => {
   });
 
   it("includes message events", () => {
-    const events: WebSocketEventType[] = [
-      "message.received",
-      "message.sent",
-      "message.invalid",
-    ];
+    const events: WebSocketEventType[] = ["message.received", "message.sent", "message.invalid"];
     expect(events.length).toBe(3);
   });
 
@@ -351,11 +347,7 @@ describe("WebSocketEventType Type", () => {
   });
 
   it("includes heartbeat events", () => {
-    const events: WebSocketEventType[] = [
-      "heartbeat.ping",
-      "heartbeat.pong",
-      "heartbeat.timeout",
-    ];
+    const events: WebSocketEventType[] = ["heartbeat.ping", "heartbeat.pong", "heartbeat.timeout"];
     expect(events.length).toBe(3);
   });
 });

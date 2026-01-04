@@ -215,8 +215,7 @@ export const useLoadingStore = create<LoadingState>((set, get) => ({
 /**
  * Selector for checking if a specific key is loading.
  */
-export const selectIsLoading = (key: LoadingKey) => (state: LoadingState) =>
-  state.isLoading(key);
+export const selectIsLoading = (key: LoadingKey) => (state: LoadingState) => state.isLoading(key);
 
 /**
  * Selector for checking if any operation is loading.
@@ -226,9 +225,8 @@ export const selectIsAnyLoading = (state: LoadingState) => state.isAnyLoading();
 /**
  * Selector for checking if any key with a prefix is loading.
  */
-export const selectIsLoadingByPrefix =
-  (prefix: string) => (state: LoadingState) =>
-    state.isLoadingByPrefix(prefix);
+export const selectIsLoadingByPrefix = (prefix: string) => (state: LoadingState) =>
+  state.isLoadingByPrefix(prefix);
 
 /**
  * Selector for getting all loading keys.

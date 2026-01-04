@@ -6,7 +6,8 @@
  * @see docs/plans/ui/28-states.md lines 83-87
  */
 
-import React, { useCallback, useEffect, useRef } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 // ============================================
 // Types
@@ -266,9 +267,7 @@ export function ErrorPanel({
         <h4 style={titleStyles}>{title}</h4>
         <p style={messageStyles}>{message}</p>
         {hint && <p style={hintStyles}>{hint}</p>}
-        {errorCode && (
-          <span style={errorCodeStyles}>Error code: {errorCode}</span>
-        )}
+        {errorCode && <span style={errorCodeStyles}>Error code: {errorCode}</span>}
 
         {/* Actions */}
         {actions && actions.length > 0 && (
@@ -278,11 +277,7 @@ export function ErrorPanel({
                 key={index}
                 type="button"
                 onClick={action.onClick}
-                style={
-                  action.variant === "secondary"
-                    ? secondaryButtonStyles
-                    : primaryButtonStyles
-                }
+                style={action.variant === "secondary" ? secondaryButtonStyles : primaryButtonStyles}
                 data-testid={`${testId}-action-${index}`}
               >
                 {action.label}

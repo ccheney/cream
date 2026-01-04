@@ -6,10 +6,10 @@
  * @see docs/plans/11-configuration.md for full specification
  */
 
-import { parse } from "yaml";
-import { readFile } from "fs/promises";
+import { readFile } from "node:fs/promises";
 import { deepmerge } from "deepmerge-ts";
-import { CreamConfigSchema, type CreamConfig } from "./validate";
+import { parse } from "yaml";
+import { type CreamConfig, CreamConfigSchema } from "./validate";
 
 /**
  * Environment type for config loading
@@ -55,10 +55,7 @@ export async function loadConfig(
   let override: unknown = {};
   try {
     override = await loadYaml(`${configDir}/${environment}.yaml`);
-  } catch {
-    // Environment override is optional
-    console.warn(`No ${environment}.yaml found, using defaults only`);
-  }
+  } catch {}
 
   // Deep merge with type safety - override takes precedence
   const merged = deepmerge(base as object, override as object);
@@ -92,9 +89,7 @@ export async function loadConfigFromFile(path: string): Promise<CreamConfig> {
  * @param configDir - Base directory for config files
  * @returns Validated configuration object
  */
-export async function loadConfigWithEnv(
-  configDir = "configs"
-): Promise<CreamConfig> {
+export async function loadConfigWithEnv(configDir = "configs"): Promise<CreamConfig> {
   // Determine environment from CREAM_ENV or NODE_ENV
   const creamEnv = process.env.CREAM_ENV;
   const nodeEnv = process.env.NODE_ENV;

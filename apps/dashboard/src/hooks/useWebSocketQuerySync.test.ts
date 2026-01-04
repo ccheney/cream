@@ -8,22 +8,21 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  queryKeys,
-  parseServerMessage,
-  type ServerMessage,
-  type ServerMessageType,
-  type QuotePayload,
-  type OrderPayload,
-  type DecisionPayload,
-  type SystemStatusPayload,
-  type AlertPayload,
   type AgentOutputPayload,
+  type AlertPayload,
   type CycleProgressPayload,
+  type DecisionPayload,
+  type OrderPayload,
   type PortfolioPayload,
   type PositionPayload,
+  parseServerMessage,
+  type QuotePayload,
+  queryKeys,
+  type ServerMessage,
+  type ServerMessageType,
+  type SystemStatusPayload,
   type UseWebSocketQuerySyncOptions,
   type UseWebSocketQuerySyncReturn,
-  type EmptyStateAction,
 } from "./useWebSocketQuerySync.js";
 
 // ============================================
@@ -284,7 +283,7 @@ describe("parseServerMessage", () => {
       const result = parseServerMessage(raw);
       expect(result?.timestamp).toBeDefined();
       // Should be a valid ISO string
-      expect(new Date(result!.timestamp).toISOString()).toBe(result?.timestamp);
+      expect(new Date(result?.timestamp).toISOString()).toBe(result?.timestamp);
     });
   });
 
@@ -399,12 +398,7 @@ describe("OrderPayload Type", () => {
   });
 
   it("supports all order statuses", () => {
-    const statuses: OrderPayload["status"][] = [
-      "pending",
-      "filled",
-      "cancelled",
-      "rejected",
-    ];
+    const statuses: OrderPayload["status"][] = ["pending", "filled", "cancelled", "rejected"];
     statuses.forEach((status) => {
       const payload: OrderPayload = {
         orderId: "ord-123",
@@ -465,11 +459,7 @@ describe("SystemStatusPayload Type", () => {
   });
 
   it("supports all status values", () => {
-    const statuses: SystemStatusPayload["status"][] = [
-      "online",
-      "offline",
-      "degraded",
-    ];
+    const statuses: SystemStatusPayload["status"][] = ["online", "offline", "degraded"];
     statuses.forEach((status) => {
       const payload: SystemStatusPayload = {
         status,
@@ -651,8 +641,8 @@ describe("UseWebSocketQuerySyncOptions Type", () => {
       debounceMs: 200,
       debug: true,
       queryKeyPrefix: "custom",
-      onCycleProgress: (payload) => console.log(payload),
-      onError: (error) => console.error(error),
+      onCycleProgress: (_payload) => {},
+      onError: (_error) => {},
     };
     expect(options.debounceMs).toBe(200);
     expect(options.debug).toBe(true);
@@ -664,8 +654,8 @@ describe("UseWebSocketQuerySyncReturn Type", () => {
   it("has correct shape", () => {
     // Create a mock return value to verify the type
     const mockReturn: UseWebSocketQuerySyncReturn = {
-      handleMessage: (message: unknown) => {},
-      invalidateByType: (type: ServerMessageType) => {},
+      handleMessage: (_message: unknown) => {},
+      invalidateByType: (_type: ServerMessageType) => {},
       pendingCount: 0,
       flush: () => {},
     };

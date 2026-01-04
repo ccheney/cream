@@ -7,14 +7,14 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import { EquityCurve } from "./EquityCurve";
 import type { EquityDataPoint } from "./EquityCurve";
+import { EquityCurve } from "./EquityCurve";
 
 // ============================================
 // Sample Data
 // ============================================
 
-function generateEquityData(days: number = 90): EquityDataPoint[] {
+function generateEquityData(days = 90): EquityDataPoint[] {
   const data: EquityDataPoint[] = [];
   let equity = 100000;
   let peak = equity;
@@ -44,7 +44,7 @@ function generateEquityData(days: number = 90): EquityDataPoint[] {
 
 const sampleEquityData = generateEquityData(180);
 
-function generateFlatData(days: number = 30): EquityDataPoint[] {
+function generateFlatData(days = 30): EquityDataPoint[] {
   const data: EquityDataPoint[] = [];
   const equity = 100000;
   const now = new Date();
@@ -62,7 +62,7 @@ function generateFlatData(days: number = 30): EquityDataPoint[] {
   return data;
 }
 
-function generateDownwardData(days: number = 60): EquityDataPoint[] {
+function generateDownwardData(days = 60): EquityDataPoint[] {
   const data: EquityDataPoint[] = [];
   let equity = 100000;
   let peak = equity;
@@ -100,8 +100,7 @@ const meta: Meta<typeof EquityCurve> = {
     layout: "padded",
     docs: {
       description: {
-        component:
-          "Equity curve chart showing portfolio value over time. Built with Recharts.",
+        component: "Equity curve chart showing portfolio value over time. Built with Recharts.",
       },
     },
   },
@@ -246,17 +245,10 @@ export const DashboardCard: Story = {
           <span style={{ fontSize: "24px", fontWeight: 600 }}>
             ${(sampleEquityData[sampleEquityData.length - 1].value / 1000).toFixed(1)}k
           </span>
-          <span style={{ color: "#22c55e", fontSize: "14px" }}>
-            +12.4%
-          </span>
+          <span style={{ color: "#22c55e", fontSize: "14px" }}>+12.4%</span>
         </div>
       </div>
-      <EquityCurve
-        data={sampleEquityData}
-        height={200}
-        showXAxis={false}
-        showGrid={false}
-      />
+      <EquityCurve data={sampleEquityData} height={200} showXAxis={false} showGrid={false} />
     </div>
   ),
   parameters: {

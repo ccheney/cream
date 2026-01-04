@@ -9,22 +9,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
+import type { OHLCVData } from "@/lib/chart-config.js";
 import {
-  type ChartUpdateType,
-  type ChartUpdateMessage,
-  type CandleUpdate,
-  type EquityUpdate,
-  type SparklineUpdate,
-  type GaugeUpdate,
-  parseChartUpdateMessage,
-  createThrottledUpdater,
-  applyCandleUpdate,
   appendEquityPoint,
   appendSparklineValue,
+  applyCandleUpdate,
+  type CandleUpdate,
+  type ChartUpdateMessage,
+  type ChartUpdateType,
+  createThrottledUpdater,
+  type EquityUpdate,
+  type GaugeUpdate,
+  type SparklineUpdate,
   trimData,
 } from "@/lib/chart-updaters.js";
-import type { OHLCVData } from "@/lib/chart-config.js";
-import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
 
 // ============================================
 // Types
@@ -98,9 +97,7 @@ const STALE_THRESHOLD_MS = 30000; // 30 seconds
 /**
  * Hook for managing real-time chart updates.
  */
-export function useChartUpdates(
-  options: UseChartUpdatesOptions
-): UseChartUpdatesReturn {
+export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdatesReturn {
   const {
     chartType,
     symbol,
@@ -204,7 +201,7 @@ export function useChartUpdates(
               newData = trimData(newData as EquityDataPoint[], maxDataPoints);
               break;
 
-            case "sparkline":
+            case "sparkline": {
               const sparklineUpdate = message.payload as SparklineUpdate;
               newData = appendSparklineValue(
                 prev.data as number[],
@@ -212,11 +209,13 @@ export function useChartUpdates(
                 sparklineUpdate.maxLength ?? maxDataPoints
               );
               break;
+            }
 
-            case "gauge":
+            case "gauge": {
               const gaugeUpdate = message.payload as GaugeUpdate;
               newData = gaugeUpdate.value;
               break;
+            }
 
             default:
               return prev;
@@ -308,9 +307,7 @@ export function useCandleUpdates(
 /**
  * Hook for equity curve updates.
  */
-export function useEquityUpdates(
-  options?: Omit<UseChartUpdatesOptions, "chartType">
-) {
+export function useEquityUpdates(options?: Omit<UseChartUpdatesOptions, "chartType">) {
   return useChartUpdates({
     chartType: "equity",
     ...options,
@@ -320,9 +317,7 @@ export function useEquityUpdates(
 /**
  * Hook for sparkline updates.
  */
-export function useSparklineUpdates(
-  options?: Omit<UseChartUpdatesOptions, "chartType">
-) {
+export function useSparklineUpdates(options?: Omit<UseChartUpdatesOptions, "chartType">) {
   return useChartUpdates({
     chartType: "sparkline",
     ...options,
@@ -332,9 +327,7 @@ export function useSparklineUpdates(
 /**
  * Hook for gauge updates.
  */
-export function useGaugeUpdates(
-  options?: Omit<UseChartUpdatesOptions, "chartType">
-) {
+export function useGaugeUpdates(options?: Omit<UseChartUpdatesOptions, "chartType">) {
   return useChartUpdates({
     chartType: "gauge",
     ...options,

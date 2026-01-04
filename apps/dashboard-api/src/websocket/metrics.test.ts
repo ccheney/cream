@@ -7,26 +7,26 @@
  * @see docs/plans/ui/08-realtime.md lines 130-139
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  createHistogramBuckets,
   createMetricsRegistry,
   createWebSocketMetrics,
-  labelsToKey,
-  formatLabels,
-  createHistogramBuckets,
-  observeHistogram,
-  LATENCY_BUCKETS,
-  SIZE_BUCKETS,
   DURATION_BUCKETS,
-  WS_METRICS,
-  METRIC_HELP,
-  type MetricType,
-  type Labels,
+  formatLabels,
   type HistogramBuckets,
+  LATENCY_BUCKETS,
+  type Labels,
+  labelsToKey,
+  METRIC_HELP,
   type Metric,
   type MetricOutput,
   type MetricsRegistry,
+  type MetricType,
+  observeHistogram,
+  SIZE_BUCKETS,
   type WebSocketMetrics,
+  WS_METRICS,
 } from "./metrics";
 
 // ============================================
@@ -782,8 +782,8 @@ describe("Integration", () => {
     const metrics = createWebSocketMetrics();
 
     // Observe values in different buckets
-    metrics.observeBroadcastLatency(5);   // <= 5
-    metrics.observeBroadcastLatency(15);  // <= 25
+    metrics.observeBroadcastLatency(5); // <= 5
+    metrics.observeBroadcastLatency(15); // <= 25
     metrics.observeBroadcastLatency(100); // <= 100
     metrics.observeBroadcastLatency(500); // <= 500
 

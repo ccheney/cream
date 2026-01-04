@@ -104,9 +104,7 @@ export function createValidDecision(overrides: Partial<Decision> = {}): Decision
 /**
  * Create a valid decision plan for testing
  */
-export function createValidPlan(
-  decisions: Decision[] = [createValidDecision()]
-): DecisionPlan {
+export function createValidPlan(decisions: Decision[] = [createValidDecision()]): DecisionPlan {
   return {
     cycleId: `test-cycle-${Date.now()}`,
     asOfTimestamp: new Date().toISOString(),
@@ -118,9 +116,7 @@ export function createValidPlan(
 /**
  * Create a plan with a specific risk violation
  */
-export function createPlanWithViolation(
-  violationType: RiskViolationType
-): DecisionPlan {
+export function createPlanWithViolation(violationType: RiskViolationType): DecisionPlan {
   switch (violationType) {
     case "per_instrument_limit":
       // Position size exceeds 5% of portfolio
@@ -208,9 +204,7 @@ export function createPlanWithViolation(
 /**
  * Create a plan with a specific rationale/data mismatch for Critic testing
  */
-export function createPlanWithMismatch(
-  mismatchType: CriticMismatchType
-): {
+export function createPlanWithMismatch(mismatchType: CriticMismatchType): {
   plan: DecisionPlan;
   regime: string;
   signals: Record<string, number>;
@@ -278,7 +272,7 @@ export function createPlanWithMismatch(
 /**
  * Create a high confidence setup for position limit testing
  */
-export function createHighConfidenceSetup(confidence: number = 0.99): DecisionPlan {
+export function createHighConfidenceSetup(confidence = 0.99): DecisionPlan {
   return createValidPlan([
     createValidDecision({
       confidence,
@@ -431,10 +425,7 @@ export const CONSTRAINT_LIMITS = {
 /**
  * Check if a position size violates per-instrument limit
  */
-export function violatesPerInstrumentLimit(
-  positionValue: number,
-  portfolioValue: number
-): boolean {
+export function violatesPerInstrumentLimit(positionValue: number, portfolioValue: number): boolean {
   return positionValue / portfolioValue > CONSTRAINT_LIMITS.MAX_POSITION_SIZE;
 }
 
@@ -448,9 +439,6 @@ export function violatesPortfolioLimit(totalAllocation: number): boolean {
 /**
  * Check if leverage violates limit
  */
-export function violatesLeverageLimit(
-  notionalValue: number,
-  equity: number
-): boolean {
+export function violatesLeverageLimit(notionalValue: number, equity: number): boolean {
   return notionalValue > equity * CONSTRAINT_LIMITS.MAX_LEVERAGE;
 }

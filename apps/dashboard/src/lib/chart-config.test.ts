@@ -9,13 +9,13 @@
 import { describe, expect, it } from "bun:test";
 import {
   CHART_COLORS,
-  DEFAULT_CHART_OPTIONS,
-  DEFAULT_CANDLESTICK_OPTIONS,
-  DEFAULT_LINE_OPTIONS,
   createEntryMarker,
   createExitMarker,
   createStopLossLine,
   createTakeProfitLine,
+  DEFAULT_CANDLESTICK_OPTIONS,
+  DEFAULT_CHART_OPTIONS,
+  DEFAULT_LINE_OPTIONS,
   SAMPLE_OHLCV_DATA,
 } from "./chart-config.js";
 

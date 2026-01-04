@@ -9,10 +9,10 @@
 import React, { forwardRef } from "react";
 import { Spinner } from "./spinner";
 import {
-  Checkmark,
   type ButtonState,
-  SUCCESS_STATE_DURATION,
+  Checkmark,
   ERROR_STATE_DURATION,
+  SUCCESS_STATE_DURATION,
 } from "./success-feedback";
 
 // ============================================
@@ -64,12 +64,15 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 /**
  * Variant styles.
  */
-const VARIANT_STYLES: Record<ButtonVariant, {
-  bg: string;
-  hoverBg: string;
-  color: string;
-  border: string;
-}> = {
+const VARIANT_STYLES: Record<
+  ButtonVariant,
+  {
+    bg: string;
+    hoverBg: string;
+    color: string;
+    border: string;
+  }
+> = {
   primary: {
     bg: "#1c1917", // stone-900
     hoverBg: "#292524", // stone-800
@@ -105,13 +108,16 @@ const VARIANT_STYLES: Record<ButtonVariant, {
 /**
  * Size styles.
  */
-const SIZE_STYLES: Record<ButtonSize, {
-  padding: string;
-  fontSize: string;
-  height: string;
-  minWidth: string;
-  iconSize: number;
-}> = {
+const SIZE_STYLES: Record<
+  ButtonSize,
+  {
+    padding: string;
+    fontSize: string;
+    height: string;
+    minWidth: string;
+    iconSize: number;
+  }
+> = {
   sm: {
     padding: "6px 12px",
     fontSize: "13px",
@@ -273,13 +279,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         case "loading":
           return (
             <>
-              <Spinner
-                size={sizeStyle.iconSize <= 14 ? "xs" : "sm"}
-                label="Loading"
-              />
-              {!isIconButton && (
-                <span>{loadingText ?? children}</span>
-              )}
+              <Spinner size={sizeStyle.iconSize <= 14 ? "xs" : "sm"} label="Loading" />
+              {!isIconButton && <span>{loadingText ?? children}</span>}
             </>
           );
         case "success":
@@ -367,5 +368,5 @@ IconButton.displayName = "IconButton";
 // Exports
 // ============================================
 
-export { type ButtonState } from "./success-feedback";
+export type { ButtonState } from "./success-feedback";
 export default Button;

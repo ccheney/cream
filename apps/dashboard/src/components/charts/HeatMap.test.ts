@@ -7,10 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  SAMPLE_CORRELATION_DATA,
-  type CorrelationMatrix,
-} from "./HeatMap.js";
+import { type CorrelationMatrix, SAMPLE_CORRELATION_DATA } from "./HeatMap.js";
 
 // ============================================
 // Sample Data Tests
@@ -35,9 +32,7 @@ describe("SAMPLE_CORRELATION_DATA", () => {
     const keys = Object.keys(SAMPLE_CORRELATION_DATA);
     for (const a of keys) {
       for (const b of keys) {
-        expect(SAMPLE_CORRELATION_DATA[a][b]).toBe(
-          SAMPLE_CORRELATION_DATA[b][a]
-        );
+        expect(SAMPLE_CORRELATION_DATA[a][b]).toBe(SAMPLE_CORRELATION_DATA[b][a]);
       }
     }
   });

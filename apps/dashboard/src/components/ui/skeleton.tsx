@@ -6,7 +6,7 @@
  * @see docs/plans/ui/28-states.md lines 7-44
  */
 
-import React from "react";
+import type React from "react";
 
 // ============================================
 // Types
@@ -71,8 +71,7 @@ export interface SkeletonCardProps extends React.HTMLAttributes<HTMLDivElement> 
 const baseStyles: React.CSSProperties = {
   display: "block",
   backgroundColor: "#e7e5e4", // stone-200
-  backgroundImage:
-    "linear-gradient(90deg, #e7e5e4 25%, #f5f5f4 50%, #e7e5e4 75%)",
+  backgroundImage: "linear-gradient(90deg, #e7e5e4 25%, #f5f5f4 50%, #e7e5e4 75%)",
   backgroundSize: "200% 100%",
   animation: "shimmer 1.5s infinite",
   borderRadius: "4px",
@@ -119,8 +118,12 @@ const cardActionsStyles: React.CSSProperties = {
  * Convert size value to CSS string.
  */
 function toCssValue(value: string | number | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value === "number") return `${value}px`;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "number") {
+    return `${value}px`;
+  }
   return value;
 }
 
@@ -129,7 +132,9 @@ function toCssValue(value: string | number | undefined): string | undefined {
  * Note: This runs client-side only.
  */
 export function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") {
+    return false;
+  }
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
@@ -172,7 +177,7 @@ export function Skeleton({
     width: toCssValue(width),
     height: toCssValue(height),
     borderRadius: toCssValue(radius),
-    ...((!animated) && reducedMotionStyles),
+    ...(!animated && reducedMotionStyles),
     ...style,
   };
 
@@ -248,14 +253,7 @@ export function SkeletonCircle({
   ...props
 }: SkeletonCircleProps) {
   return (
-    <Skeleton
-      width={size}
-      height={size}
-      radius="50%"
-      testId={testId}
-      style={style}
-      {...props}
-    />
+    <Skeleton width={size} height={size} radius="50%" testId={testId} style={style} {...props} />
   );
 }
 
@@ -292,11 +290,7 @@ export function SkeletonCard({
         <div style={cardHeaderStyles}>
           <SkeletonCircle size={40} testId={`${testId}-avatar`} />
           <div style={{ flex: 1 }}>
-            <Skeleton
-              width="60%"
-              height={14}
-              testId={`${testId}-title`}
-            />
+            <Skeleton width="60%" height={14} testId={`${testId}-title`} />
             <Skeleton
               width="40%"
               height={12}
@@ -309,27 +303,14 @@ export function SkeletonCard({
 
       {/* Content lines */}
       <div style={cardContentStyles}>
-        <SkeletonText
-          lines={lines}
-          testId={`${testId}-content`}
-        />
+        <SkeletonText lines={lines} testId={`${testId}-content`} />
       </div>
 
       {/* Action buttons */}
       {actions && (
         <div style={cardActionsStyles}>
-          <Skeleton
-            width={80}
-            height={32}
-            radius={6}
-            testId={`${testId}-action-1`}
-          />
-          <Skeleton
-            width={80}
-            height={32}
-            radius={6}
-            testId={`${testId}-action-2`}
-          />
+          <Skeleton width={80} height={32} radius={6} testId={`${testId}-action-1`} />
+          <Skeleton width={80} height={32} radius={6} testId={`${testId}-action-2`} />
         </div>
       )}
     </div>
@@ -362,13 +343,7 @@ export function SkeletonContainer({
   }
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label={label}
-      data-testid={testId}
-    >
+    <div role="status" aria-live="polite" aria-busy="true" aria-label={label} data-testid={testId}>
       <span className="sr-only">{label}</span>
       {children}
     </div>
@@ -403,12 +378,7 @@ export function SkeletonTableRow({
     >
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       {Array.from({ length: columns }, (_, i) => (
-        <Skeleton
-          key={i}
-          width={`${100 / columns}%`}
-          height={16}
-          testId={`${testId}-cell-${i}`}
-        />
+        <Skeleton key={i} width={`${100 / columns}%`} height={16} testId={`${testId}-cell-${i}`} />
       ))}
     </div>
   );
@@ -446,12 +416,7 @@ export function SkeletonChart({
         <Skeleton width={80} height={16} testId={`${testId}-legend`} />
       </div>
       {/* Chart area */}
-      <Skeleton
-        width="100%"
-        height={height}
-        radius={4}
-        testId={`${testId}-area`}
-      />
+      <Skeleton width="100%" height={height} radius={4} testId={`${testId}-area`} />
     </div>
   );
 }
@@ -459,11 +424,7 @@ export function SkeletonChart({
 /**
  * Stat card skeleton.
  */
-export function SkeletonStat({
-  testId = "skeleton-stat",
-}: {
-  testId?: string;
-}) {
+export function SkeletonStat({ testId = "skeleton-stat" }: { testId?: string }) {
   return (
     <div
       data-testid={testId}

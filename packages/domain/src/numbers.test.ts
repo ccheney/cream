@@ -2,39 +2,38 @@
  * Number Precision Safety Utilities Tests
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  // Constants
-  SINT32_MIN,
-  SINT32_MAX,
-  UINT32_MAX,
   BASIS_POINTS_PER_PERCENT,
-  // Schemas
-  Sint32Schema,
-  Uint32Schema,
-  PositivePriceSchema,
-  NonNegativePriceSchema,
   BasisPointsSchema,
-  QuantitySchema,
-  // Validation
-  validateSint32,
-  validateUint32,
-  isSafeInteger,
-  isInSint32Range,
-  isInUint32Range,
-  // Basis points
-  toBasisPoints,
-  fromBasisPoints,
-  // Money
-  formatMoney,
-  parseMoney,
-  formatPrice,
+  // Position
+  calculateQtyChange,
   // Clamping
   clampToSint32,
   clampToUint32,
-  // Position
-  calculateQtyChange,
+  // Money
+  formatMoney,
+  formatPrice,
+  fromBasisPoints,
   getPositionDirection,
+  isInSint32Range,
+  isInUint32Range,
+  isSafeInteger,
+  NonNegativePriceSchema,
+  PositivePriceSchema,
+  parseMoney,
+  SINT32_MAX,
+  // Constants
+  SINT32_MIN,
+  // Schemas
+  Sint32Schema,
+  // Basis points
+  toBasisPoints,
+  UINT32_MAX,
+  Uint32Schema,
+  // Validation
+  validateSint32,
+  validateUint32,
 } from "./numbers";
 
 // ============================================
@@ -101,7 +100,7 @@ describe("Uint32Schema", () => {
 describe("PositivePriceSchema", () => {
   test("accepts positive prices", () => {
     expect(PositivePriceSchema.safeParse(0.01).success).toBe(true);
-    expect(PositivePriceSchema.safeParse(100.50).success).toBe(true);
+    expect(PositivePriceSchema.safeParse(100.5).success).toBe(true);
   });
 
   test("rejects zero and negative", () => {
@@ -113,7 +112,7 @@ describe("PositivePriceSchema", () => {
 describe("NonNegativePriceSchema", () => {
   test("accepts zero and positive", () => {
     expect(NonNegativePriceSchema.safeParse(0).success).toBe(true);
-    expect(NonNegativePriceSchema.safeParse(100.50).success).toBe(true);
+    expect(NonNegativePriceSchema.safeParse(100.5).success).toBe(true);
   });
 
   test("rejects negative", () => {

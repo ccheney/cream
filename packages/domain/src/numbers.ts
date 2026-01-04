@@ -74,17 +74,13 @@ export type Uint32 = z.infer<typeof Uint32Schema>;
  * Zod schema for positive prices
  * Note: Money calculations should be done in Rust with rust_decimal
  */
-export const PositivePriceSchema = z
-  .number()
-  .positive("Price must be positive");
+export const PositivePriceSchema = z.number().positive("Price must be positive");
 export type PositivePrice = z.infer<typeof PositivePriceSchema>;
 
 /**
  * Zod schema for non-negative prices (allows zero)
  */
-export const NonNegativePriceSchema = z
-  .number()
-  .nonnegative("Price must be non-negative");
+export const NonNegativePriceSchema = z.number().nonnegative("Price must be non-negative");
 export type NonNegativePrice = z.infer<typeof NonNegativePriceSchema>;
 
 /**
@@ -107,11 +103,7 @@ export type BasisPoints = z.infer<typeof BasisPointsSchema>;
  * Zod schema for quantity (position size)
  * Signed integer within sint32 range
  */
-export const QuantitySchema = z
-  .number()
-  .int()
-  .min(SINT32_MIN)
-  .max(SINT32_MAX);
+export const QuantitySchema = z.number().int().min(SINT32_MIN).max(SINT32_MAX);
 export type Quantity = z.infer<typeof QuantitySchema>;
 
 // ============================================
@@ -135,9 +127,7 @@ export function validateSint32(n: number): void {
     throw new Error(`Value ${n} is not an integer`);
   }
   if (n < SINT32_MIN || n > SINT32_MAX) {
-    throw new Error(
-      `Value ${n} is outside sint32 range [${SINT32_MIN}, ${SINT32_MAX}]`
-    );
+    throw new Error(`Value ${n} is outside sint32 range [${SINT32_MIN}, ${SINT32_MAX}]`);
   }
 }
 
@@ -290,7 +280,7 @@ export function parseMoney(str: string): number {
 
   // Parse as float then convert to cents
   const amount = parseFloat(cleaned);
-  if (isNaN(amount)) {
+  if (Number.isNaN(amount)) {
     throw new Error(`Invalid money string: ${str}`);
   }
 
@@ -323,20 +313,16 @@ export function formatPrice(price: number, decimals = 2): string {
  * @returns Clamped value within sint32 range
  */
 export function clampToSint32(n: number): number {
-  if (!Number.isInteger(n)) {
-    n = Math.round(n);
-  }
-  return Math.max(SINT32_MIN, Math.min(SINT32_MAX, n));
+  const value = Number.isInteger(n) ? n : Math.round(n);
+  return Math.max(SINT32_MIN, Math.min(SINT32_MAX, value));
 }
 
 /**
  * Clamp a number to uint32 range
  */
 export function clampToUint32(n: number): number {
-  if (!Number.isInteger(n)) {
-    n = Math.round(n);
-  }
-  return Math.max(0, Math.min(UINT32_MAX, n));
+  const value = Number.isInteger(n) ? n : Math.round(n);
+  return Math.max(0, Math.min(UINT32_MAX, value));
 }
 
 // ============================================
@@ -357,10 +343,7 @@ export function clampToUint32(n: number): number {
  * calculateQtyChange(-100, 100)  // 200 (cover short and go long)
  * ```
  */
-export function calculateQtyChange(
-  currentQty: number,
-  targetQty: number
-): number {
+export function calculateQtyChange(currentQty: number, targetQty: number): number {
   validateSint32(currentQty);
   validateSint32(targetQty);
 
@@ -381,7 +364,11 @@ export function calculateQtyChange(
  * @returns "LONG", "SHORT", or "FLAT"
  */
 export function getPositionDirection(qty: number): "LONG" | "SHORT" | "FLAT" {
-  if (qty > 0) return "LONG";
-  if (qty < 0) return "SHORT";
+  if (qty > 0) {
+    return "LONG";
+  }
+  if (qty < 0) {
+    return "SHORT";
+  }
   return "FLAT";
 }

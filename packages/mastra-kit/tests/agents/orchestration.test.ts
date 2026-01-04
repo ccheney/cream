@@ -8,16 +8,15 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  withTimeout,
-  createMockTraderAgent,
-  createMockRiskManagerAgent,
   createMockCriticAgent,
-  executePipeline,
+  createMockRiskManagerAgent,
+  createMockTraderAgent,
   createTestSnapshot,
+  type DecisionPlan,
+  executePipeline,
   validateDecisionPlan,
   verifyHandoffIntegrity,
-  type DecisionPlan,
-  type Snapshot,
+  withTimeout,
 } from "./orchestration.js";
 
 // ============================================
@@ -464,7 +463,7 @@ describe("Handoff Verification", () => {
 
     // Check all fields preserved
     const original = result.traderResult!;
-    const passed = result.riskResult!.planPassedThrough;
+    const passed = result.riskResult?.planPassedThrough;
     const final = result.plan!;
 
     // Trader → Risk handoff

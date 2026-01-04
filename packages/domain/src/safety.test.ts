@@ -1,24 +1,24 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { env } from "./env";
 import {
+  auditLog,
+  clearAuditLog,
   generateOrderId,
-  validateOrderIdEnvironment,
-  validateBrokerEndpoint,
-  requireLiveConfirmation,
+  getAuditLog,
+  getIsolatedDatabaseName,
+  isCircuitOpen,
   isLiveConfirmed,
   preventAccidentalLiveExecution,
-  getIsolatedDatabaseName,
-  validateDatabaseIsolation,
-  auditLog,
-  getAuditLog,
-  clearAuditLog,
   recordCircuitFailure,
-  isCircuitOpen,
-  resetCircuit,
   requireCircuitClosed,
-  SafetyError,
+  requireLiveConfirmation,
+  resetCircuit,
   resetSafetyState,
+  SafetyError,
+  validateBrokerEndpoint,
+  validateDatabaseIsolation,
+  validateOrderIdEnvironment,
 } from "./safety";
-import { env } from "./env";
 
 // Note: These tests run in BACKTEST environment (set via CREAM_ENV=BACKTEST)
 
@@ -50,15 +50,11 @@ describe("Order ID Namespacing", () => {
 describe("Broker Endpoint Validation", () => {
   // In BACKTEST environment, should reject production endpoints
   it("rejects production endpoint in non-LIVE environment", () => {
-    expect(() =>
-      validateBrokerEndpoint("https://api.alpaca.markets")
-    ).toThrow(SafetyError);
+    expect(() => validateBrokerEndpoint("https://api.alpaca.markets")).toThrow(SafetyError);
   });
 
   it("accepts paper endpoint in non-LIVE environment", () => {
-    expect(() =>
-      validateBrokerEndpoint("https://paper-api.alpaca.markets")
-    ).not.toThrow();
+    expect(() => validateBrokerEndpoint("https://paper-api.alpaca.markets")).not.toThrow();
   });
 });
 
@@ -88,19 +84,13 @@ describe("State Isolation", () => {
 
   it("validates database isolation - rejects other environment databases", () => {
     // In BACKTEST, accessing PAPER or LIVE databases should fail
-    expect(() =>
-      validateDatabaseIsolation("file:cream_paper.db")
-    ).toThrow(SafetyError);
+    expect(() => validateDatabaseIsolation("file:cream_paper.db")).toThrow(SafetyError);
 
-    expect(() =>
-      validateDatabaseIsolation("file:cream_live.db")
-    ).toThrow(SafetyError);
+    expect(() => validateDatabaseIsolation("file:cream_live.db")).toThrow(SafetyError);
   });
 
   it("allows database for current environment", () => {
-    expect(() =>
-      validateDatabaseIsolation("file:cream_backtest.db")
-    ).not.toThrow();
+    expect(() => validateDatabaseIsolation("file:cream_backtest.db")).not.toThrow();
   });
 });
 
@@ -113,10 +103,10 @@ describe("Audit Logging", () => {
     auditLog("TEST_OPERATION", { key: "value" });
     const log = getAuditLog();
     expect(log.length).toBe(1);
-    expect(log[0]!.operation).toBe("TEST_OPERATION");
-    expect(log[0]!.details.key).toBe("value");
-    expect(log[0]!.timestamp).toBeDefined();
-    expect(log[0]!.environment).toBe(env.CREAM_ENV);
+    expect(log[0]?.operation).toBe("TEST_OPERATION");
+    expect(log[0]?.details.key).toBe("value");
+    expect(log[0]?.timestamp).toBeDefined();
+    expect(log[0]?.environment).toBe(env.CREAM_ENV);
   });
 
   it("clears audit log in BACKTEST environment", () => {

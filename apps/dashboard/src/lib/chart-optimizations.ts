@@ -67,11 +67,8 @@ export interface DownsampleOptions {
  * // downsampled.length <= 500
  * ```
  */
-export function downsampleLTTB(
-  data: Point[],
-  options: DownsampleOptions
-): Point[] {
-  const { threshold, preserveExtremes = true } = options;
+export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point[] {
+  const { threshold, preserveExtremes: _preserveExtremes = true } = options;
 
   // Return data as-is if within threshold
   if (data.length <= threshold) {
@@ -96,19 +93,13 @@ export function downsampleLTTB(
   for (let i = 0; i < threshold - 2; i++) {
     // Calculate bucket boundaries
     const bucketStart = Math.floor((i + 1) * bucketSize) + 1;
-    const bucketEnd = Math.min(
-      Math.floor((i + 2) * bucketSize) + 1,
-      data.length - 1
-    );
+    const bucketEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, data.length - 1);
 
     // Calculate average point in next bucket (for triangle area calculation)
     let avgX = 0;
     let avgY = 0;
     const nextBucketStart = bucketEnd;
-    const nextBucketEnd = Math.min(
-      Math.floor((i + 3) * bucketSize) + 1,
-      data.length
-    );
+    const nextBucketEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, data.length);
 
     for (let j = nextBucketStart; j < nextBucketEnd; j++) {
       avgX += data[j].x;
@@ -127,8 +118,7 @@ export function downsampleLTTB(
     for (let j = bucketStart; j < bucketEnd; j++) {
       // Calculate triangle area using cross product
       const area = Math.abs(
-        (pointA.x - avgX) * (data[j].y - pointA.y) -
-        (pointA.x - data[j].x) * (avgY - pointA.y)
+        (pointA.x - avgX) * (data[j].y - pointA.y) - (pointA.x - data[j].x) * (avgY - pointA.y)
       );
 
       if (area > maxArea) {
@@ -150,10 +140,7 @@ export function downsampleLTTB(
 /**
  * Downsample time series data using LTTB.
  */
-export function downsampleTimeSeries(
-  data: TimePoint[],
-  threshold: number
-): TimePoint[] {
+export function downsampleTimeSeries(data: TimePoint[], threshold: number): TimePoint[] {
   if (data.length <= threshold) {
     return data;
   }
@@ -176,10 +163,7 @@ export function downsampleTimeSeries(
  *
  * Uses close price for LTTB selection but preserves full OHLC data.
  */
-export function downsampleOHLC(
-  data: OHLCPoint[],
-  threshold: number
-): OHLCPoint[] {
+export function downsampleOHLC(data: OHLCPoint[], threshold: number): OHLCPoint[] {
   if (data.length <= threshold) {
     return data;
   }
@@ -213,31 +197,24 @@ function perpendicularDistance(point: Point, lineStart: Point, lineEnd: Point): 
 
   if (lineLengthSq === 0) {
     // Line is a point
-    return Math.sqrt(
-      Math.pow(point.x - lineStart.x, 2) + Math.pow(point.y - lineStart.y, 2)
-    );
+    return Math.sqrt((point.x - lineStart.x) ** 2 + (point.y - lineStart.y) ** 2);
   }
 
   // Calculate perpendicular distance
-  const t =
-    ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lineLengthSq;
+  const t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lineLengthSq;
 
   if (t < 0) {
-    return Math.sqrt(
-      Math.pow(point.x - lineStart.x, 2) + Math.pow(point.y - lineStart.y, 2)
-    );
+    return Math.sqrt((point.x - lineStart.x) ** 2 + (point.y - lineStart.y) ** 2);
   }
 
   if (t > 1) {
-    return Math.sqrt(
-      Math.pow(point.x - lineEnd.x, 2) + Math.pow(point.y - lineEnd.y, 2)
-    );
+    return Math.sqrt((point.x - lineEnd.x) ** 2 + (point.y - lineEnd.y) ** 2);
   }
 
   const projX = lineStart.x + t * dx;
   const projY = lineStart.y + t * dy;
 
-  return Math.sqrt(Math.pow(point.x - projX, 2) + Math.pow(point.y - projY, 2));
+  return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
 }
 
 /**
@@ -285,16 +262,13 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
 /**
  * Simplify time series using Douglas-Peucker.
  */
-export function simplifyTimeSeries(
-  data: TimePoint[],
-  epsilon: number
-): TimePoint[] {
+export function simplifyTimeSeries(data: TimePoint[], epsilon: number): TimePoint[] {
   if (data.length <= 2) {
     return data;
   }
 
   // Convert to normalized points
-  const minTime = 0;
+  const _minTime = 0;
   const maxTime = data.length - 1;
   const minVal = Math.min(...data.map((d) => d.value));
   const maxVal = Math.max(...data.map((d) => d.value));
@@ -363,7 +337,7 @@ export function getVisibleWindow<T>(
   data: T[],
   startIndex: number,
   endIndex: number,
-  overscan: number = 5
+  overscan = 5
 ): T[] {
   const start = Math.max(0, startIndex - overscan);
   const end = Math.min(data.length, endIndex + overscan);
@@ -397,7 +371,7 @@ export class LRUCache<K, V> {
   private cache = new Map<K, V>();
   private maxSize: number;
 
-  constructor(maxSize: number = 100) {
+  constructor(maxSize = 100) {
     this.maxSize = maxSize;
   }
 
@@ -445,7 +419,7 @@ export class LRUCache<K, V> {
 export function memoize<Args extends unknown[], Result>(
   fn: (...args: Args) => Result,
   keyFn?: (...args: Args) => string,
-  maxSize: number = 100
+  maxSize = 100
 ): (...args: Args) => Result {
   const cache = new LRUCache<string, Result>(maxSize);
 
@@ -472,7 +446,7 @@ export function memoize<Args extends unknown[], Result>(
 export async function processBatched<T, R>(
   data: T[],
   processor: (item: T) => R,
-  batchSize: number = 1000
+  batchSize = 1000
 ): Promise<R[]> {
   const results: R[] = [];
 
@@ -524,10 +498,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 /**
  * Automatically select best downsampling method based on data size.
  */
-export function autoDownsample(
-  data: Point[],
-  targetPoints: number = 1000
-): Point[] {
+export function autoDownsample(data: Point[], targetPoints = 1000): Point[] {
   const dataLength = data.length;
 
   if (dataLength <= targetPoints) {

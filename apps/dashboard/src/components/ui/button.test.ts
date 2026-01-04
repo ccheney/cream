@@ -7,12 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type {
-  ButtonProps,
-  ButtonVariant,
-  ButtonSize,
-  ButtonState,
-} from "./button.js";
+import type { ButtonProps, ButtonSize, ButtonState, ButtonVariant } from "./button.js";
 
 // ============================================
 // ButtonVariant Type Tests
@@ -724,7 +719,15 @@ describe("Edge Cases", () => {
   });
 
   it("handles multiple state transitions", () => {
-    const states: ButtonState[] = ["idle", "loading", "error", "idle", "loading", "success", "idle"];
+    const states: ButtonState[] = [
+      "idle",
+      "loading",
+      "error",
+      "idle",
+      "loading",
+      "success",
+      "idle",
+    ];
     expect(states.length).toBe(7);
   });
 

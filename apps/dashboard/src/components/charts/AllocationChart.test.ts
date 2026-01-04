@@ -8,10 +8,10 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  SAMPLE_ALLOCATION_DATA,
   ALLOCATION_COLORS,
-  getAllocationColor,
   type AllocationDataPoint,
+  getAllocationColor,
+  SAMPLE_ALLOCATION_DATA,
 } from "./AllocationChart.js";
 
 // ============================================
@@ -97,7 +97,7 @@ describe("SAMPLE_ALLOCATION_DATA", () => {
   it("includes cash allocation", () => {
     const cash = SAMPLE_ALLOCATION_DATA.find((d) => d.name === "Cash");
     expect(cash).toBeDefined();
-    expect(cash!.value).toBe(15);
+    expect(cash?.value).toBe(15);
   });
 });
 
@@ -147,9 +147,7 @@ describe("Percentage Calculations", () => {
   });
 
   it("calculates largest allocation", () => {
-    const largest = SAMPLE_ALLOCATION_DATA.reduce((max, d) =>
-      d.value > max.value ? d : max
-    );
+    const largest = SAMPLE_ALLOCATION_DATA.reduce((max, d) => (d.value > max.value ? d : max));
     expect(largest.name).toBe("AAPL");
     expect(largest.value).toBe(25);
   });

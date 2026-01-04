@@ -7,13 +7,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  getColor,
-  getTrendColor,
-  generatePath,
-  getLastPoint,
-} from "./Sparkline.js";
 import { CHART_COLORS } from "@/lib/chart-config";
+import { generatePath, getColor, getLastPoint, getTrendColor } from "./Sparkline.js";
 
 // ============================================
 // Color Tests
@@ -122,29 +117,29 @@ describe("getLastPoint", () => {
   it("returns coordinates for single value", () => {
     const point = getLastPoint([10], 80, 24);
     expect(point).not.toBeNull();
-    expect(point!.x).toBeDefined();
-    expect(point!.y).toBeDefined();
+    expect(point?.x).toBeDefined();
+    expect(point?.y).toBeDefined();
   });
 
   it("returns coordinates near right edge", () => {
     const point = getLastPoint([10, 20], 80, 24);
     expect(point).not.toBeNull();
-    expect(point!.x).toBeGreaterThan(70); // Near right edge
+    expect(point?.x).toBeGreaterThan(70); // Near right edge
   });
 
   it("y is lower for higher values", () => {
     const point1 = getLastPoint([10, 10], 80, 24);
     const point2 = getLastPoint([10, 20], 80, 24);
     // Higher value = lower y (SVG coordinate system)
-    expect(point2!.y).toBeLessThan(point1!.y);
+    expect(point2?.y).toBeLessThan(point1?.y);
   });
 
   it("returns valid coordinates for all same values", () => {
     const point = getLastPoint([10, 10, 10], 80, 24);
     expect(point).not.toBeNull();
     // Should return valid y within height bounds
-    expect(point!.y).toBeGreaterThanOrEqual(0);
-    expect(point!.y).toBeLessThanOrEqual(24);
+    expect(point?.y).toBeGreaterThanOrEqual(0);
+    expect(point?.y).toBeLessThanOrEqual(24);
   });
 });
 

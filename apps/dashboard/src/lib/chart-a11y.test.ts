@@ -8,23 +8,22 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  type ChartDescriptionOptions,
+  calculateEquityStats,
+  calculateOHLCStats,
+  calculateStats,
+  checkContrastRatio,
+  checkGraphicsContrast,
+  FOCUS_STYLES,
   generateChartAriaLabel,
   generateChartDescription,
   generateUpdateAnnouncement,
-  calculateStats,
-  calculateOHLCStats,
-  calculateEquityStats,
+  getFocusStyleString,
   handleDataPointNavigation,
   handleZoomNavigation,
   KEYBOARD_KEYS,
-  FOCUS_STYLES,
-  getFocusStyleString,
   toAccessibleTableData,
   toCSV,
-  checkContrastRatio,
-  checkGraphicsContrast,
-  type ChartStats,
-  type ChartDescriptionOptions,
 } from "./chart-a11y.js";
 
 // ============================================
@@ -609,9 +608,7 @@ describe("checkContrastRatio", () => {
   });
 
   it("throws for invalid hex color", () => {
-    expect(() => checkContrastRatio("invalid", "#FFFFFF")).toThrow(
-      "Invalid hex color"
-    );
+    expect(() => checkContrastRatio("invalid", "#FFFFFF")).toThrow("Invalid hex color");
   });
 });
 

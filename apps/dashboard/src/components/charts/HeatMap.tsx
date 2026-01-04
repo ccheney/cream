@@ -8,14 +8,14 @@
 
 "use client";
 
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
+import { CHART_COLORS } from "@/lib/chart-config";
 import {
+  CORRELATION_COLORS,
+  formatCorrelation,
   getCorrelationColor,
   isHighCorrelation,
-  formatCorrelation,
-  CORRELATION_COLORS,
 } from "@/lib/color-scales";
-import { CHART_COLORS } from "@/lib/chart-config";
 
 // ============================================
 // Types
@@ -65,7 +65,7 @@ export interface CellData {
 function useMatrixData(
   data: CorrelationMatrix,
   highlightThreshold: number,
-  showDiagonal: boolean
+  _showDiagonal: boolean
 ): {
   keys: string[];
   cells: CellData[][];
@@ -90,7 +90,7 @@ function useMatrixData(
     });
 
     return { keys, cells };
-  }, [data, highlightThreshold, showDiagonal]);
+  }, [data, highlightThreshold]);
 }
 
 // ============================================
@@ -152,10 +152,7 @@ function Cell({ cell, size, showDiagonal, isHovered, onHover }: CellProps) {
         fontFamily: "Geist Mono, monospace",
         fontSize: size > 40 ? 10 : 8,
         color: Math.abs(cell.value) > 0.5 ? "#FFFFFF" : CHART_COLORS.text,
-        textShadow:
-          Math.abs(cell.value) > 0.5
-            ? "0 1px 2px rgba(0,0,0,0.5)"
-            : "none",
+        textShadow: Math.abs(cell.value) > 0.5 ? "0 1px 2px rgba(0,0,0,0.5)" : "none",
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -194,7 +191,12 @@ function Tooltip({ cell, position }: TooltipProps) {
       </p>
       <p
         style={{
-          color: cell.value > 0 ? CORRELATION_COLORS.positive : cell.value < 0 ? CORRELATION_COLORS.negative : CHART_COLORS.text,
+          color:
+            cell.value > 0
+              ? CORRELATION_COLORS.positive
+              : cell.value < 0
+                ? CORRELATION_COLORS.negative
+                : CHART_COLORS.text,
           margin: 0,
           fontWeight: 600,
         }}
@@ -340,15 +342,14 @@ function HeatMapComponent({
             </div>
 
             {/* Row cells */}
-            {row.map((cell, colIndex) => (
+            {row.map((cell, _colIndex) => (
               <Cell
                 key={`${cell.rowKey}-${cell.colKey}`}
                 cell={cell}
                 size={cellSize}
                 showDiagonal={showDiagonal}
                 isHovered={
-                  hoveredCell?.rowKey === cell.rowKey &&
-                  hoveredCell?.colKey === cell.colKey
+                  hoveredCell?.rowKey === cell.rowKey && hoveredCell?.colKey === cell.colKey
                 }
                 onHover={handleCellHover}
               />
@@ -358,9 +359,7 @@ function HeatMapComponent({
       </div>
 
       {/* Tooltip */}
-      {showTooltip && hoveredCell && (
-        <Tooltip cell={hoveredCell} position={mousePosition} />
-      )}
+      {showTooltip && hoveredCell && <Tooltip cell={hoveredCell} position={mousePosition} />}
     </div>
   );
 }

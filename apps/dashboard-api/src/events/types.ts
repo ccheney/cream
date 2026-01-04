@@ -7,8 +7,8 @@
  */
 
 import { z } from "zod/v4";
-import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
 import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
+import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
 
 // ============================================
 // Event Sources

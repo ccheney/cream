@@ -27,8 +27,7 @@ export default app;
 
 // Start server if run directly
 if (import.meta.main) {
-  const port = parseInt(process.env.PORT ?? "3001");
-  console.log(`Dashboard API running on http://localhost:${port}`);
+  const port = parseInt(process.env.PORT ?? "3001", 10);
   Bun.serve({
     port,
     fetch: app.fetch,

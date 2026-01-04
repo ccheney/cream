@@ -9,24 +9,24 @@
 import { describe, expect, it } from "bun:test";
 import {
   BaseEventSchema,
-  MastraCycleEventSchema,
-  MastraAgentEventSchema,
-  QuoteStreamEventSchema,
-  OrderUpdateEventSchema,
-  DecisionInsertEventSchema,
-  SystemAlertEventSchema,
-  HealthCheckEventSchema,
-  REDIS_CHANNELS,
-  type EventSource,
-  type SourceStatus,
-  type SourceState,
-  type PublisherStats,
-  type EventPublisherConfig,
-  type RedisConfig,
-  type GrpcConfig,
-  type TursoCdcConfig,
-  type BroadcastTarget,
   type BroadcastEvent,
+  type BroadcastTarget,
+  DecisionInsertEventSchema,
+  type EventPublisherConfig,
+  type EventSource,
+  type GrpcConfig,
+  HealthCheckEventSchema,
+  MastraAgentEventSchema,
+  MastraCycleEventSchema,
+  OrderUpdateEventSchema,
+  type PublisherStats,
+  QuoteStreamEventSchema,
+  REDIS_CHANNELS,
+  type RedisConfig,
+  type SourceState,
+  type SourceStatus,
+  SystemAlertEventSchema,
+  type TursoCdcConfig,
 } from "./types";
 
 // ============================================
@@ -301,7 +301,7 @@ describe("QuoteStreamEventSchema", () => {
   it("validates valid quote event", () => {
     const event = {
       symbol: "AAPL",
-      bid: 185.00,
+      bid: 185.0,
       ask: 185.05,
       timestamp: "2026-01-04T12:00:00.000Z",
     };
@@ -312,7 +312,7 @@ describe("QuoteStreamEventSchema", () => {
   it("allows optional fields", () => {
     const event = {
       symbol: "AAPL",
-      bid: 185.00,
+      bid: 185.0,
       ask: 185.05,
       bidSize: 100,
       askSize: 200,
@@ -327,7 +327,7 @@ describe("QuoteStreamEventSchema", () => {
 
   it("requires symbol", () => {
     const event = {
-      bid: 185.00,
+      bid: 185.0,
       ask: 185.05,
       timestamp: "2026-01-04T12:00:00.000Z",
     };
@@ -349,7 +349,7 @@ describe("OrderUpdateEventSchema", () => {
       type: "limit",
       quantity: 100,
       filledQuantity: 50,
-      price: 185.00,
+      price: 185.0,
       status: "partially_filled",
       timestamp: "2026-01-04T12:00:00.000Z",
     };

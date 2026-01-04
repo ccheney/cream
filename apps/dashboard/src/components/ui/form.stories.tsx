@@ -7,19 +7,17 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import React from "react";
 import {
   Form,
-  FormField,
-  FormLabel,
-  FormInput,
-  FormTextarea,
-  FormSelect,
   FormError,
-  FormHint,
+  FormField,
   FormGroup,
+  FormHint,
+  FormInput,
+  FormLabel,
+  FormSelect,
+  FormTextarea,
 } from "./form";
-import { Input } from "./input";
 
 // ============================================
 // FormField Stories
@@ -32,8 +30,7 @@ const meta: Meta<typeof FormField> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Form field wrapper with label, input, hint, and error display.",
+        component: "Form field wrapper with label, input, hint, and error display.",
       },
     },
   },
@@ -80,7 +77,9 @@ export const WithError: Story = {
 export const Required: Story = {
   render: () => (
     <FormField>
-      <FormLabel htmlFor="name" required>Full Name</FormLabel>
+      <FormLabel htmlFor="name" required>
+        Full Name
+      </FormLabel>
       <FormInput id="name" type="text" placeholder="John Doe" />
     </FormField>
   ),
@@ -223,23 +222,31 @@ export const CompleteForm: StoryObj = {
     <Form style={{ width: "400px" }}>
       <FormGroup direction="horizontal">
         <FormField>
-          <FormLabel htmlFor="firstName" required>First Name</FormLabel>
+          <FormLabel htmlFor="firstName" required>
+            First Name
+          </FormLabel>
           <FormInput id="firstName" placeholder="John" />
         </FormField>
         <FormField>
-          <FormLabel htmlFor="lastName" required>Last Name</FormLabel>
+          <FormLabel htmlFor="lastName" required>
+            Last Name
+          </FormLabel>
           <FormInput id="lastName" placeholder="Doe" />
         </FormField>
       </FormGroup>
 
       <FormField>
-        <FormLabel htmlFor="email" required>Email</FormLabel>
+        <FormLabel htmlFor="email" required>
+          Email
+        </FormLabel>
         <FormInput id="email" type="email" placeholder="john@example.com" />
         <FormHint>We'll never share your email</FormHint>
       </FormField>
 
       <FormField>
-        <FormLabel htmlFor="password" required>Password</FormLabel>
+        <FormLabel htmlFor="password" required>
+          Password
+        </FormLabel>
         <FormInput id="password" type="password" placeholder="••••••••" hasError />
         <FormError>Password must be at least 8 characters</FormError>
       </FormField>

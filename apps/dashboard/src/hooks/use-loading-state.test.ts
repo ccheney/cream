@@ -8,11 +8,11 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  withLoading,
-  type UseLoadingStateReturn,
-  type UseLoadingStateOptions,
-  type UseMultiLoadingStateReturn,
   type UseGlobalLoadingReturn,
+  type UseLoadingStateOptions,
+  type UseLoadingStateReturn,
+  type UseMultiLoadingStateReturn,
+  withLoading,
 } from "./use-loading-state.js";
 
 // ============================================
@@ -171,7 +171,11 @@ describe("withLoading", () => {
 
   it("returns the result of async function", async () => {
     const fn = async () => "expected result";
-    const wrapped = withLoading(fn, () => {}, () => {});
+    const wrapped = withLoading(
+      fn,
+      () => {},
+      () => {}
+    );
     const result = await wrapped();
     expect(result).toBe("expected result");
   });
@@ -183,13 +187,17 @@ describe("withLoading", () => {
       throw new Error("Test error");
     };
 
-    const wrapped = withLoading(fn, () => {}, () => {
-      stopCalled = true;
-    });
+    const wrapped = withLoading(
+      fn,
+      () => {},
+      () => {
+        stopCalled = true;
+      }
+    );
 
     try {
       await wrapped();
-    } catch (e) {
+    } catch (_e) {
       // Expected
     }
 
@@ -201,7 +209,11 @@ describe("withLoading", () => {
       throw new Error("Test error");
     };
 
-    const wrapped = withLoading(fn, () => {}, () => {});
+    const wrapped = withLoading(
+      fn,
+      () => {},
+      () => {}
+    );
 
     let caughtError: Error | null = null;
     try {
@@ -224,7 +236,11 @@ describe("withLoading", () => {
       email: "test@example.com",
     });
 
-    const wrapped = withLoading(fn, () => {}, () => {});
+    const wrapped = withLoading(
+      fn,
+      () => {},
+      () => {}
+    );
     const result = await wrapped();
 
     expect(result.name).toBe("Test");
@@ -296,7 +312,7 @@ describe("Hook Behaviors", () => {
   describe("useGlobalLoadingState", () => {
     it("clearAll removes all loading states", () => {
       // Conceptually, clearAll should empty the store
-      const keys = ["a", "b", "c"];
+      const _keys = ["a", "b", "c"];
       const afterClear: string[] = [];
       expect(afterClear.length).toBe(0);
     });
@@ -324,8 +340,12 @@ describe("Integration Patterns", () => {
   it("loading state coordinates with form submission", () => {
     // Form submission sets loading, completion clears it
     let isSubmitting = false;
-    const startSubmit = () => { isSubmitting = true; };
-    const endSubmit = () => { isSubmitting = false; };
+    const startSubmit = () => {
+      isSubmitting = true;
+    };
+    const endSubmit = () => {
+      isSubmitting = false;
+    };
 
     startSubmit();
     expect(isSubmitting).toBe(true);
@@ -360,7 +380,9 @@ describe("Edge Cases", () => {
 
   it("handles multiple start calls", () => {
     let loadingCount = 0;
-    const start = () => { loadingCount = 1; }; // Idempotent
+    const start = () => {
+      loadingCount = 1;
+    }; // Idempotent
 
     start();
     start();
@@ -370,7 +392,9 @@ describe("Edge Cases", () => {
 
   it("handles stop before start", () => {
     let isLoading = false;
-    const stop = () => { isLoading = false; };
+    const stop = () => {
+      isLoading = false;
+    };
 
     stop(); // No-op before start
     expect(isLoading).toBe(false);
@@ -378,7 +402,11 @@ describe("Edge Cases", () => {
 
   it("withLoading handles sync-like async", async () => {
     const fn = async () => "immediate";
-    const wrapped = withLoading(fn, () => {}, () => {});
+    const wrapped = withLoading(
+      fn,
+      () => {},
+      () => {}
+    );
     const result = await wrapped();
     expect(result).toBe("immediate");
   });
@@ -392,7 +420,7 @@ describe("Callbacks", () => {
   it("startLoading accepts options", () => {
     const mockReturn: UseLoadingStateReturn = {
       isLoading: false,
-      startLoading: (opts) => {
+      startLoading: (_opts) => {
         // Options should be passed through
       },
       stopLoading: () => {},
@@ -411,7 +439,7 @@ describe("Callbacks", () => {
       isLoading: false,
       startLoading: () => {},
       stopLoading: () => {},
-      setLoading: (loading, opts) => {
+      setLoading: (loading, _opts) => {
         lastLoading = loading;
       },
     };

@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 
 // ============================================
 // Types
@@ -124,12 +124,9 @@ const styles = {
  */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // Log the critical error
-    console.error("[Global Error] Critical application error:", error);
-
     // In production, send to error tracking service with high priority
     // Example: logCriticalErrorToService(error);
-  }, [error]);
+  }, []);
 
   const handleReset = () => {
     reset();
@@ -150,20 +147,16 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       <body>
         <div style={styles.container} role="alert" aria-label="Critical error">
           <div style={styles.card}>
-            <div style={styles.icon} aria-hidden="true">
-
-            </div>
+            <div style={styles.icon} aria-hidden="true"></div>
 
             <h1 style={styles.title}>Application Error</h1>
 
             <p style={styles.message}>
-              A critical error occurred while loading the application. This
-              usually requires a page refresh to recover.
+              A critical error occurred while loading the application. This usually requires a page
+              refresh to recover.
             </p>
 
-            {error.digest && (
-              <p style={styles.digest}>Error ID: {error.digest}</p>
-            )}
+            {error.digest && <p style={styles.digest}>Error ID: {error.digest}</p>}
 
             <div style={styles.actions}>
               <button

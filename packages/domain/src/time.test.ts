@@ -4,41 +4,41 @@
  * Tests for ISO-8601/RFC 3339 timestamp handling
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
+  addDays,
+  addHours,
+  // Arithmetic
+  addMilliseconds,
+  addMinutes,
+  addSeconds,
+  // Comparison
+  compareIso8601,
+  DateOnlySchema,
+  daysToExpiration,
+  diffMilliseconds,
+  fromDateOnly,
+  fromIso8601,
+  getOptionExpirationTime,
+  getTradingDay,
   // Schemas
   Iso8601Schema,
   Iso8601UtcSchema,
-  DateOnlySchema,
-  // Conversion
-  toIso8601,
-  fromIso8601,
-  nowIso8601,
-  toDateOnly,
-  fromDateOnly,
+  isAfter,
+  isBefore,
+  isBetween,
+  isOptionExpired,
+  isSameTradingDay,
+  isValidDateOnly,
   // Validation
   isValidIso8601,
-  isValidDateOnly,
-  // Comparison
-  compareIso8601,
-  isBefore,
-  isAfter,
-  isBetween,
-  // Arithmetic
-  addMilliseconds,
-  addSeconds,
-  addMinutes,
-  addHours,
-  addDays,
-  diffMilliseconds,
+  nowIso8601,
+  startOfDay,
   // Trading
   startOfHour,
-  startOfDay,
-  isSameTradingDay,
-  getTradingDay,
-  getOptionExpirationTime,
-  isOptionExpired,
-  daysToExpiration,
+  toDateOnly,
+  // Conversion
+  toIso8601,
 } from "./time";
 
 // ============================================
@@ -284,31 +284,19 @@ describe("isValidDateOnly", () => {
 
 describe("compareIso8601", () => {
   test("returns -1 when a is before b", () => {
-    expect(compareIso8601(
-      "2026-01-04T10:00:00.000Z",
-      "2026-01-04T12:00:00.000Z"
-    )).toBe(-1);
+    expect(compareIso8601("2026-01-04T10:00:00.000Z", "2026-01-04T12:00:00.000Z")).toBe(-1);
   });
 
   test("returns 1 when a is after b", () => {
-    expect(compareIso8601(
-      "2026-01-04T12:00:00.000Z",
-      "2026-01-04T10:00:00.000Z"
-    )).toBe(1);
+    expect(compareIso8601("2026-01-04T12:00:00.000Z", "2026-01-04T10:00:00.000Z")).toBe(1);
   });
 
   test("returns 0 when equal", () => {
-    expect(compareIso8601(
-      "2026-01-04T12:00:00.000Z",
-      "2026-01-04T12:00:00.000Z"
-    )).toBe(0);
+    expect(compareIso8601("2026-01-04T12:00:00.000Z", "2026-01-04T12:00:00.000Z")).toBe(0);
   });
 
   test("compares milliseconds", () => {
-    expect(compareIso8601(
-      "2026-01-04T12:00:00.001Z",
-      "2026-01-04T12:00:00.000Z"
-    )).toBe(1);
+    expect(compareIso8601("2026-01-04T12:00:00.001Z", "2026-01-04T12:00:00.000Z")).toBe(1);
   });
 });
 
@@ -353,79 +341,61 @@ describe("isBefore / isAfter / isBetween", () => {
 
 describe("addMilliseconds", () => {
   test("adds positive milliseconds", () => {
-    expect(addMilliseconds("2026-01-04T12:00:00.000Z", 500))
-      .toBe("2026-01-04T12:00:00.500Z");
+    expect(addMilliseconds("2026-01-04T12:00:00.000Z", 500)).toBe("2026-01-04T12:00:00.500Z");
   });
 
   test("subtracts negative milliseconds", () => {
-    expect(addMilliseconds("2026-01-04T12:00:00.500Z", -500))
-      .toBe("2026-01-04T12:00:00.000Z");
+    expect(addMilliseconds("2026-01-04T12:00:00.500Z", -500)).toBe("2026-01-04T12:00:00.000Z");
   });
 });
 
 describe("addSeconds", () => {
   test("adds seconds", () => {
-    expect(addSeconds("2026-01-04T12:00:00.000Z", 30))
-      .toBe("2026-01-04T12:00:30.000Z");
+    expect(addSeconds("2026-01-04T12:00:00.000Z", 30)).toBe("2026-01-04T12:00:30.000Z");
   });
 });
 
 describe("addMinutes", () => {
   test("adds minutes", () => {
-    expect(addMinutes("2026-01-04T12:00:00.000Z", 15))
-      .toBe("2026-01-04T12:15:00.000Z");
+    expect(addMinutes("2026-01-04T12:00:00.000Z", 15)).toBe("2026-01-04T12:15:00.000Z");
   });
 
   test("handles hour rollover", () => {
-    expect(addMinutes("2026-01-04T12:45:00.000Z", 30))
-      .toBe("2026-01-04T13:15:00.000Z");
+    expect(addMinutes("2026-01-04T12:45:00.000Z", 30)).toBe("2026-01-04T13:15:00.000Z");
   });
 });
 
 describe("addHours", () => {
   test("adds hours", () => {
-    expect(addHours("2026-01-04T12:00:00.000Z", 3))
-      .toBe("2026-01-04T15:00:00.000Z");
+    expect(addHours("2026-01-04T12:00:00.000Z", 3)).toBe("2026-01-04T15:00:00.000Z");
   });
 
   test("handles day rollover", () => {
-    expect(addHours("2026-01-04T22:00:00.000Z", 5))
-      .toBe("2026-01-05T03:00:00.000Z");
+    expect(addHours("2026-01-04T22:00:00.000Z", 5)).toBe("2026-01-05T03:00:00.000Z");
   });
 });
 
 describe("addDays", () => {
   test("adds days", () => {
-    expect(addDays("2026-01-04T12:00:00.000Z", 7))
-      .toBe("2026-01-11T12:00:00.000Z");
+    expect(addDays("2026-01-04T12:00:00.000Z", 7)).toBe("2026-01-11T12:00:00.000Z");
   });
 
   test("handles month rollover", () => {
-    expect(addDays("2026-01-30T12:00:00.000Z", 5))
-      .toBe("2026-02-04T12:00:00.000Z");
+    expect(addDays("2026-01-30T12:00:00.000Z", 5)).toBe("2026-02-04T12:00:00.000Z");
   });
 });
 
 describe("diffMilliseconds", () => {
   test("calculates positive difference", () => {
-    expect(diffMilliseconds(
-      "2026-01-04T12:00:01.000Z",
-      "2026-01-04T12:00:00.000Z"
-    )).toBe(1000);
+    expect(diffMilliseconds("2026-01-04T12:00:01.000Z", "2026-01-04T12:00:00.000Z")).toBe(1000);
   });
 
   test("calculates negative difference", () => {
-    expect(diffMilliseconds(
-      "2026-01-04T12:00:00.000Z",
-      "2026-01-04T12:00:01.000Z"
-    )).toBe(-1000);
+    expect(diffMilliseconds("2026-01-04T12:00:00.000Z", "2026-01-04T12:00:01.000Z")).toBe(-1000);
   });
 
   test("handles milliseconds", () => {
-    expect(diffMilliseconds(
-      "2026-01-04T12:00:00.123Z",
-      "2026-01-04T12:00:00.000Z"
-    )).toBe(123);
+    expect(diffMilliseconds("2026-01-04T12:00:00.123Z", "2026-01-04T12:00:00.000Z")).toBe(123);
   });
 });
 
@@ -435,36 +405,27 @@ describe("diffMilliseconds", () => {
 
 describe("startOfHour", () => {
   test("rounds down to start of hour", () => {
-    expect(startOfHour("2026-01-04T15:30:45.123Z"))
-      .toBe("2026-01-04T15:00:00.000Z");
+    expect(startOfHour("2026-01-04T15:30:45.123Z")).toBe("2026-01-04T15:00:00.000Z");
   });
 
   test("preserves exact hour", () => {
-    expect(startOfHour("2026-01-04T15:00:00.000Z"))
-      .toBe("2026-01-04T15:00:00.000Z");
+    expect(startOfHour("2026-01-04T15:00:00.000Z")).toBe("2026-01-04T15:00:00.000Z");
   });
 });
 
 describe("startOfDay", () => {
   test("rounds down to midnight UTC", () => {
-    expect(startOfDay("2026-01-04T15:30:45.123Z"))
-      .toBe("2026-01-04T00:00:00.000Z");
+    expect(startOfDay("2026-01-04T15:30:45.123Z")).toBe("2026-01-04T00:00:00.000Z");
   });
 });
 
 describe("isSameTradingDay", () => {
   test("returns true for same day", () => {
-    expect(isSameTradingDay(
-      "2026-01-04T10:00:00.000Z",
-      "2026-01-04T22:00:00.000Z"
-    )).toBe(true);
+    expect(isSameTradingDay("2026-01-04T10:00:00.000Z", "2026-01-04T22:00:00.000Z")).toBe(true);
   });
 
   test("returns false for different days", () => {
-    expect(isSameTradingDay(
-      "2026-01-04T23:00:00.000Z",
-      "2026-01-05T01:00:00.000Z"
-    )).toBe(false);
+    expect(isSameTradingDay("2026-01-04T23:00:00.000Z", "2026-01-05T01:00:00.000Z")).toBe(false);
   });
 });
 
@@ -476,13 +437,11 @@ describe("getTradingDay", () => {
 
 describe("getOptionExpirationTime", () => {
   test("returns 4 PM ET in UTC (9 PM)", () => {
-    expect(getOptionExpirationTime("2026-01-17"))
-      .toBe("2026-01-17T21:00:00.000Z");
+    expect(getOptionExpirationTime("2026-01-17")).toBe("2026-01-17T21:00:00.000Z");
   });
 
   test("throws for invalid date", () => {
-    expect(() => getOptionExpirationTime("2026-02-30"))
-      .toThrow("Invalid expiration date format");
+    expect(() => getOptionExpirationTime("2026-02-30")).toThrow("Invalid expiration date format");
   });
 });
 
@@ -538,6 +497,6 @@ describe("round-trip conversions", () => {
     const now = nowIso8601();
     const parsed = fromIso8601(now);
     expect(parsed).toBeInstanceOf(Date);
-    expect(isNaN(parsed.getTime())).toBe(false);
+    expect(Number.isNaN(parsed.getTime())).toBe(false);
   });
 });

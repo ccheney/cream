@@ -13,44 +13,36 @@ export const VERSION = "0.0.1";
 // ============================================
 
 export {
-  // Types
-  type MetricsConfig,
-  type PerformanceMetrics,
-  type MetricsWindow,
-
-  // Constants
-  DEFAULT_METRICS_CONFIG,
-  DEFAULT_WINDOWS,
-
-  // Statistical helpers
-  mean,
-  stdDev,
-  downsideDeviation,
-
-  // Return calculations
-  calculateReturns,
-  cumulativeReturn,
-  calculateRawReturn,
-
+  calculateAllMetrics,
+  calculateCalmar,
+  calculateCurrentDrawdown,
   // Drawdown calculations
   calculateMaxDrawdown,
-  calculateCurrentDrawdown,
-
+  // Window-based metrics
+  calculateMetricsForWindow,
+  calculateRawReturn,
+  // Return calculations
+  calculateReturns,
   // Risk-adjusted ratios
   calculateSharpe,
   calculateSortino,
-  calculateCalmar,
-
-  // Window-based metrics
-  calculateMetricsForWindow,
-  calculateAllMetrics,
-
+  cumulativeReturn,
+  // Constants
+  DEFAULT_METRICS_CONFIG,
+  DEFAULT_WINDOWS,
+  downsideDeviation,
+  gradePerformance,
+  // Utility functions
+  isAcceptablePerformance,
+  // Types
+  type MetricsConfig,
+  type MetricsWindow,
+  // Statistical helpers
+  mean,
+  type PerformanceMetrics,
+  rollingMaxDrawdown,
   // Rolling metrics
   rollingSharpE,
   rollingSortino,
-  rollingMaxDrawdown,
-
-  // Utility functions
-  isAcceptablePerformance,
-  gradePerformance,
+  stdDev,
 } from "./risk-adjusted";

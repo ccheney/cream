@@ -13,19 +13,15 @@ import { join } from "node:path";
 
 // Import Zod schemas from domain
 import {
-  DecisionSchema,
-  DecisionPlanSchema,
-  InstrumentSchema,
-  SizeSchema,
-  OrderPlanSchema,
-  RiskLevelsSchema,
   Action,
+  DecisionPlanSchema,
+  DecisionSchema,
+  InstrumentSchema,
   InstrumentType,
-  SizeUnit,
   OrderType,
-  TimeInForce,
-  RiskDenomination,
+  SizeUnit,
   StrategyFamily,
+  TimeInForce,
 } from "./decision.js";
 
 // ============================================

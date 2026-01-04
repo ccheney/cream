@@ -90,7 +90,7 @@ export class SymbolThrottle {
   private lastSent: Map<string, number> = new Map();
   private throttleMs: number;
 
-  constructor(throttleMs: number = 200) {
+  constructor(throttleMs = 200) {
     this.throttleMs = throttleMs;
   }
 
@@ -156,7 +156,7 @@ export class QuoteBatcher {
   private metrics: BatchingMetrics;
   private callback: BatchCallback;
   private flushTimer: ReturnType<typeof setInterval> | null = null;
-  private isRunning: boolean = false;
+  private isRunning = false;
 
   constructor(callback: BatchCallback, config?: Partial<BatchingConfig>) {
     this.config = { ...DEFAULT_BATCHING_CONFIG, ...config };
@@ -169,7 +169,9 @@ export class QuoteBatcher {
    * Start the batcher (enables flush timer).
    */
   start(): void {
-    if (this.isRunning) return;
+    if (this.isRunning) {
+      return;
+    }
 
     this.isRunning = true;
     this.flushTimer = setInterval(() => {
@@ -233,7 +235,9 @@ export class QuoteBatcher {
    * Flush the current batch.
    */
   flush(reason: "size" | "timer" | "manual" = "manual"): void {
-    if (this.buffer.size === 0) return;
+    if (this.buffer.size === 0) {
+      return;
+    }
 
     const quotes = Array.from(this.buffer.values());
     this.buffer.clear();
@@ -241,12 +245,8 @@ export class QuoteBatcher {
     // Update metrics
     this.metrics.quotesSent += quotes.length;
     this.metrics.batchesSent++;
-    this.metrics.maxBatchSizeSeen = Math.max(
-      this.metrics.maxBatchSizeSeen,
-      quotes.length
-    );
-    this.metrics.avgBatchSize =
-      this.metrics.quotesSent / this.metrics.batchesSent;
+    this.metrics.maxBatchSizeSeen = Math.max(this.metrics.maxBatchSizeSeen, quotes.length);
+    this.metrics.avgBatchSize = this.metrics.quotesSent / this.metrics.batchesSent;
 
     if (reason === "size") {
       this.metrics.flushBySize++;
@@ -339,18 +339,19 @@ export class QuoteBatcher {
  * Calculate throttle discard rate.
  */
 export function calculateThrottleRate(metrics: BatchingMetrics): number {
-  if (metrics.quotesReceived === 0) return 0;
+  if (metrics.quotesReceived === 0) {
+    return 0;
+  }
   return metrics.quotesThrottled / metrics.quotesReceived;
 }
 
 /**
  * Calculate batch fill rate.
  */
-export function calculateBatchFillRate(
-  metrics: BatchingMetrics,
-  maxBatchSize: number
-): number {
-  if (metrics.batchesSent === 0) return 0;
+export function calculateBatchFillRate(metrics: BatchingMetrics, maxBatchSize: number): number {
+  if (metrics.batchesSent === 0) {
+    return 0;
+  }
   return metrics.avgBatchSize / maxBatchSize;
 }
 
@@ -362,7 +363,7 @@ export function createQuote(
   bid: number,
   ask: number,
   last: number,
-  volume: number = 0
+  volume = 0
 ): Quote {
   return {
     symbol,

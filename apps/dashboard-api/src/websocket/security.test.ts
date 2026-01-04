@@ -6,49 +6,40 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
+import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
 import {
-  validateToken,
-  decodeTokenPayload,
-  isTokenExpiringSoon,
-  isTokenExpired,
+  addAllowedOrigin,
+  CHANNEL_PERMISSIONS,
+  CONNECTION_LIMITS,
   canAccessChannel,
   canAccessChannels,
-  filterAccessibleChannels,
-  createRateLimiter,
-  subscribeRateLimiter,
-  messageRateLimiterMinute,
-  checkMessageRateLimit,
-  recordMessage,
-  checkSubscribeRateLimit,
-  recordSubscribe,
-  createConnectionTracker,
-  connectionTracker,
-  createSymbolTracker,
-  symbolTracker,
-  validateOrigin,
-  addAllowedOrigin,
-  logSecurityEvent,
-  getAuditLog,
-  clearAuditLog,
   checkConnectionSecurity,
+  checkMessageRateLimit,
+  checkSubscribeRateLimit,
   checkSubscriptionSecurity,
   checkSymbolSubscriptionSecurity,
+  clearAuditLog,
+  createConnectionTracker,
+  createRateLimiter,
+  createSymbolTracker,
+  decodeTokenPayload,
+  filterAccessibleChannels,
+  getAuditLog,
+  isTokenExpired,
+  isTokenExpiringSoon,
+  logSecurityEvent,
+  messageRateLimiterMinute,
   RATE_LIMITS,
-  CONNECTION_LIMITS,
-  TOKEN_EXPIRY_WARNING_SECONDS,
-  ALLOWED_ORIGINS,
-  CHANNEL_PERMISSIONS,
-  type UserRole,
-  type TokenValidationResult,
-  type TokenErrorCode,
-  type AuthorizationResult,
-  type RateLimitResult,
-  type SecurityAuditEvent,
+  recordSubscribe,
   type SecurityEventType,
-  type JwtPayload,
+  subscribeRateLimiter,
+  symbolTracker,
+  type TokenErrorCode,
+  type UserRole,
+  validateOrigin,
+  validateToken,
 } from "./security";
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
 
 // ============================================
 // Token Validation Tests
@@ -215,7 +206,16 @@ describe("canAccessChannel", () => {
   });
 
   it("allows admin to access all channels", () => {
-    const channels: Channel[] = ["quotes", "orders", "decisions", "agents", "cycles", "alerts", "system", "portfolio"];
+    const channels: Channel[] = [
+      "quotes",
+      "orders",
+      "decisions",
+      "agents",
+      "cycles",
+      "alerts",
+      "system",
+      "portfolio",
+    ];
     for (const channel of channels) {
       const result = canAccessChannel(channel, "admin");
       expect(result.authorized).toBe(true);
@@ -542,12 +542,12 @@ describe("getAuditLog", () => {
 // ============================================
 
 describe("checkConnectionSecurity", () => {
-  let tracker: ReturnType<typeof createConnectionTracker>;
+  let _tracker: ReturnType<typeof createConnectionTracker>;
 
   beforeEach(() => {
     clearAuditLog();
     // Reset connection tracker state
-    tracker = createConnectionTracker();
+    _tracker = createConnectionTracker();
   });
 
   it("rejects invalid origin", () => {
@@ -586,34 +586,27 @@ describe("checkSubscriptionSecurity", () => {
   });
 
   it("filters to authorized channels", () => {
-    const result = checkSubscriptionSecurity(
-      "conn-test",
-      "user-1",
-      "user",
-      ["quotes", "agents", "orders"]
-    );
+    const result = checkSubscriptionSecurity("conn-test", "user-1", "user", [
+      "quotes",
+      "agents",
+      "orders",
+    ]);
     expect(result.authorizedChannels).toContain("quotes");
     expect(result.authorizedChannels).toContain("orders");
     expect(result.authorizedChannels).not.toContain("agents");
   });
 
   it("returns errors for unauthorized channels", () => {
-    const result = checkSubscriptionSecurity(
-      "conn-test",
-      "user-1",
-      "user",
-      ["agents", "system"]
-    );
+    const result = checkSubscriptionSecurity("conn-test", "user-1", "user", ["agents", "system"]);
     expect(result.errors.length).toBeGreaterThan(0);
   });
 
   it("allows admin all channels", () => {
-    const result = checkSubscriptionSecurity(
-      "conn-test",
-      "admin-1",
-      "admin",
-      ["quotes", "agents", "system"]
-    );
+    const result = checkSubscriptionSecurity("conn-test", "admin-1", "admin", [
+      "quotes",
+      "agents",
+      "system",
+    ]);
     expect(result.authorizedChannels.length).toBe(3);
     expect(result.errors.length).toBe(0);
   });
@@ -668,7 +661,16 @@ describe("CONNECTION_LIMITS", () => {
 
 describe("CHANNEL_PERMISSIONS", () => {
   it("has permissions for all channels", () => {
-    const channels: Channel[] = ["quotes", "orders", "decisions", "agents", "cycles", "alerts", "system", "portfolio"];
+    const channels: Channel[] = [
+      "quotes",
+      "orders",
+      "decisions",
+      "agents",
+      "cycles",
+      "alerts",
+      "system",
+      "portfolio",
+    ];
     for (const channel of channels) {
       expect(CHANNEL_PERMISSIONS[channel]).toBeDefined();
       expect(Array.isArray(CHANNEL_PERMISSIONS[channel])).toBe(true);

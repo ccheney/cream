@@ -7,16 +7,16 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { OHLCVData, TradeMarker, PriceLineConfig } from "@/lib/chart-config";
+import type { OHLCVData, PriceLineConfig, TradeMarker } from "@/lib/chart-config";
 import {
-  sampleOHLCVData,
+  emptyMarkers,
   emptyOHLCVData,
-  singleCandleData,
+  emptyPriceLines,
   largeOHLCVData,
   sampleMarkers,
-  emptyMarkers,
+  sampleOHLCVData,
   samplePriceLines,
-  emptyPriceLines,
+  singleCandleData,
 } from "./__fixtures__/chart-data";
 
 // ============================================
@@ -384,7 +384,7 @@ describe("Edge Cases", () => {
   it("handles doji candle (open ~ close)", () => {
     const dojiCandle: OHLCVData = {
       time: "2026-01-04",
-      open: 100.00,
+      open: 100.0,
       high: 105,
       low: 95,
       close: 100.01,

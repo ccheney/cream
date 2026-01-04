@@ -7,14 +7,14 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
+import type { OHLCVData, PriceLineConfig, TradeMarker } from "@/lib/chart-config";
 import TradingViewChart from "./TradingViewChart";
-import type { OHLCVData, TradeMarker, PriceLineConfig } from "@/lib/chart-config";
 
 // ============================================
 // Sample Data
 // ============================================
 
-function generateSampleCandles(days: number = 30): OHLCVData[] {
+function generateSampleCandles(days = 30): OHLCVData[] {
   const data: OHLCVData[] = [];
   let price = 150;
   const now = new Date();
@@ -215,9 +215,7 @@ export const ExampleUsage: Story = {
     <div>
       <div style={{ marginBottom: "16px" }}>
         <h3 style={{ margin: 0 }}>AAPL Stock Price</h3>
-        <p style={{ color: "#78716c", fontSize: "14px", margin: "4px 0 0" }}>
-          Last 60 days • NYSE
-        </p>
+        <p style={{ color: "#78716c", fontSize: "14px", margin: "4px 0 0" }}>Last 60 days • NYSE</p>
       </div>
       <TradingViewChart
         data={sampleCandles}

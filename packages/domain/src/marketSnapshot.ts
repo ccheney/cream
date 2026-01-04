@@ -8,13 +8,7 @@
  */
 
 import { z } from "zod";
-import {
-  InstrumentType,
-  OptionType,
-  OptionContractSchema,
-  MarketStatus,
-  Regime,
-} from "./decision";
+import { MarketStatus, OptionContractSchema, Regime } from "./decision";
 import { CreamEnvironment } from "./env";
 import { Iso8601Schema } from "./time";
 
@@ -68,78 +62,82 @@ export type BarTimeframe = z.infer<typeof BarTimeframe>;
 /**
  * OHLCV candlestick bar
  */
-export const BarSchema = z.object({
-  /** Symbol */
-  symbol: z.string().min(1),
+export const BarSchema = z
+  .object({
+    /** Symbol */
+    symbol: z.string().min(1),
 
-  /** Bar open time */
-  timestamp: Iso8601Schema,
+    /** Bar open time */
+    timestamp: Iso8601Schema,
 
-  /** Bar timeframe in minutes (1, 5, 15, 60, 240, 1440) */
-  timeframeMinutes: z.number().int().refine(
-    (val) => [1, 5, 15, 60, 240, 1440].includes(val),
-    { message: "Invalid bar timeframe. Must be 1, 5, 15, 60, 240, or 1440 minutes" }
-  ),
+    /** Bar timeframe in minutes (1, 5, 15, 60, 240, 1440) */
+    timeframeMinutes: z
+      .number()
+      .int()
+      .refine((val) => [1, 5, 15, 60, 240, 1440].includes(val), {
+        message: "Invalid bar timeframe. Must be 1, 5, 15, 60, 240, or 1440 minutes",
+      }),
 
-  /** Open price */
-  open: z.number().positive(),
+    /** Open price */
+    open: z.number().positive(),
 
-  /** High price */
-  high: z.number().positive(),
+    /** High price */
+    high: z.number().positive(),
 
-  /** Low price */
-  low: z.number().positive(),
+    /** Low price */
+    low: z.number().positive(),
 
-  /** Close price */
-  close: z.number().positive(),
+    /** Close price */
+    close: z.number().positive(),
 
-  /** Volume */
-  volume: z.number().int().nonnegative(),
+    /** Volume */
+    volume: z.number().int().nonnegative(),
 
-  /** VWAP (volume-weighted average price) */
-  vwap: z.number().positive().optional(),
+    /** VWAP (volume-weighted average price) */
+    vwap: z.number().positive().optional(),
 
-  /** Number of trades */
-  tradeCount: z.number().int().nonnegative().optional(),
-}).superRefine((data, ctx) => {
-  // Validate high >= open, close, low
-  if (data.high < data.open) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "high must be >= open",
-      path: ["high"],
-    });
-  }
-  if (data.high < data.close) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "high must be >= close",
-      path: ["high"],
-    });
-  }
-  if (data.high < data.low) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "high must be >= low",
-      path: ["high"],
-    });
-  }
-  // Validate low <= open, close
-  if (data.low > data.open) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "low must be <= open",
-      path: ["low"],
-    });
-  }
-  if (data.low > data.close) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "low must be <= close",
-      path: ["low"],
-    });
-  }
-});
+    /** Number of trades */
+    tradeCount: z.number().int().nonnegative().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Validate high >= open, close, low
+    if (data.high < data.open) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "high must be >= open",
+        path: ["high"],
+      });
+    }
+    if (data.high < data.close) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "high must be >= close",
+        path: ["high"],
+      });
+    }
+    if (data.high < data.low) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "high must be >= low",
+        path: ["high"],
+      });
+    }
+    // Validate low <= open, close
+    if (data.low > data.open) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "low must be <= open",
+        path: ["low"],
+      });
+    }
+    if (data.low > data.close) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "low must be <= close",
+        path: ["low"],
+      });
+    }
+  });
 export type Bar = z.infer<typeof BarSchema>;
 
 // ============================================
@@ -149,42 +147,44 @@ export type Bar = z.infer<typeof BarSchema>;
 /**
  * Complete market snapshot for a symbol
  */
-export const SymbolSnapshotSchema = z.object({
-  /** Symbol */
-  symbol: z.string().min(1),
+export const SymbolSnapshotSchema = z
+  .object({
+    /** Symbol */
+    symbol: z.string().min(1),
 
-  /** Current quote */
-  quote: QuoteSchema,
+    /** Current quote */
+    quote: QuoteSchema,
 
-  /** Latest completed bars (multiple timeframes) */
-  bars: z.array(BarSchema),
+    /** Latest completed bars (multiple timeframes) */
+    bars: z.array(BarSchema),
 
-  /** Market status */
-  marketStatus: MarketStatus,
+    /** Market status */
+    marketStatus: MarketStatus,
 
-  /** Daily high */
-  dayHigh: z.number().positive(),
+    /** Daily high */
+    dayHigh: z.number().positive(),
 
-  /** Daily low */
-  dayLow: z.number().positive(),
+    /** Daily low */
+    dayLow: z.number().positive(),
 
-  /** Previous close */
-  prevClose: z.number().positive(),
+    /** Previous close */
+    prevClose: z.number().positive(),
 
-  /** Today's open */
-  open: z.number().positive(),
+    /** Today's open */
+    open: z.number().positive(),
 
-  /** Snapshot timestamp */
-  asOf: Iso8601Schema,
-}).superRefine((data, ctx) => {
-  if (data.dayHigh < data.dayLow) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "dayHigh must be >= dayLow",
-      path: ["dayHigh"],
-    });
-  }
-});
+    /** Snapshot timestamp */
+    asOf: Iso8601Schema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.dayHigh < data.dayLow) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "dayHigh must be >= dayLow",
+        path: ["dayHigh"],
+      });
+    }
+  });
 export type SymbolSnapshot = z.infer<typeof SymbolSnapshotSchema>;
 
 // ============================================
@@ -324,29 +324,31 @@ export type GetSnapshotResponse = z.infer<typeof GetSnapshotResponseSchema>;
 /**
  * Request for option chain
  */
-export const GetOptionChainRequestSchema = z.object({
-  /** Underlying symbol */
-  underlying: z.string().min(1),
+export const GetOptionChainRequestSchema = z
+  .object({
+    /** Underlying symbol */
+    underlying: z.string().min(1),
 
-  /** Expiration dates to include (YYYY-MM-DD format, empty for all) */
-  expirations: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).default([]),
+    /** Expiration dates to include (YYYY-MM-DD format, empty for all) */
+    expirations: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).default([]),
 
-  /** Strike range (min) */
-  minStrike: z.number().positive().optional(),
+    /** Strike range (min) */
+    minStrike: z.number().positive().optional(),
 
-  /** Strike range (max) */
-  maxStrike: z.number().positive().optional(),
-}).superRefine((data, ctx) => {
-  if (data.minStrike !== undefined && data.maxStrike !== undefined) {
-    if (data.minStrike > data.maxStrike) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "minStrike must be <= maxStrike",
-        path: ["minStrike"],
-      });
+    /** Strike range (max) */
+    maxStrike: z.number().positive().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.minStrike !== undefined && data.maxStrike !== undefined) {
+      if (data.minStrike > data.maxStrike) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "minStrike must be <= maxStrike",
+          path: ["minStrike"],
+        });
+      }
     }
-  }
-});
+  });
 export type GetOptionChainRequest = z.infer<typeof GetOptionChainRequestSchema>;
 
 /**

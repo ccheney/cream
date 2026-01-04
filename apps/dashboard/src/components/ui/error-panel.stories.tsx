@@ -7,12 +7,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import {
-  ErrorPanel,
-  ErrorInline,
-  ApiErrorPanel,
-  ConnectionErrorPanel,
-} from "./error-panel";
+import { ApiErrorPanel, ConnectionErrorPanel, ErrorInline, ErrorPanel } from "./error-panel";
 
 // ============================================
 // ErrorPanel Stories
@@ -25,8 +20,7 @@ const meta: Meta<typeof ErrorPanel> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Error panel component with title, message, hint, and optional actions.",
+        component: "Error panel component with title, message, hint, and optional actions.",
       },
     },
   },
@@ -183,21 +177,9 @@ export const ConnectionError: StoryObj<typeof ConnectionErrorPanel> = {
 export const AllVariants: StoryObj = {
   render: () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "400px" }}>
-      <ErrorPanel
-        variant="error"
-        title="Error"
-        message="This is an error message."
-      />
-      <ErrorPanel
-        variant="warning"
-        title="Warning"
-        message="This is a warning message."
-      />
-      <ErrorPanel
-        variant="info"
-        title="Info"
-        message="This is an info message."
-      />
+      <ErrorPanel variant="error" title="Error" message="This is an error message." />
+      <ErrorPanel variant="warning" title="Warning" message="This is a warning message." />
+      <ErrorPanel variant="info" title="Info" message="This is an info message." />
     </div>
   ),
   parameters: {

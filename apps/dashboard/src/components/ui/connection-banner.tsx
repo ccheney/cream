@@ -8,7 +8,7 @@
 
 "use client";
 
-import React from "react";
+import type React from "react";
 import type { ConnectionStatus } from "../../lib/ws/connection-monitor.js";
 
 // ============================================
@@ -193,9 +193,15 @@ function RefreshIcon({ style }: { style?: React.CSSProperties }) {
  */
 export function formatRetryTime(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
-  if (seconds <= 0) return "now";
-  if (seconds === 1) return "1 second";
-  if (seconds < 60) return `${seconds} seconds`;
+  if (seconds <= 0) {
+    return "now";
+  }
+  if (seconds === 1) {
+    return "1 second";
+  }
+  if (seconds < 60) {
+    return `${seconds} seconds`;
+  }
   const minutes = Math.floor(seconds / 60);
   return `${minutes} minute${minutes > 1 ? "s" : ""}`;
 }
@@ -275,12 +281,7 @@ export function ConnectionBanner({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
-      <div
-        role="alert"
-        aria-live="assertive"
-        data-testid={testId}
-        style={bannerStyles.container}
-      >
+      <div role="alert" aria-live="assertive" data-testid={testId} style={bannerStyles.container}>
         {/* Warning Icon */}
         <WarningIcon style={bannerStyles.icon} />
 

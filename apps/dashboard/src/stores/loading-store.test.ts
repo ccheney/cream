@@ -6,21 +6,20 @@
  * @see docs/plans/ui/28-states.md lines 7-44
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  useLoadingStore,
-  LOADING_KEYS,
   createLoadingKey,
-  parseLoadingKey,
-  selectIsLoading,
-  selectIsAnyLoading,
-  selectIsLoadingByPrefix,
-  selectLoadingKeys,
+  LOADING_KEYS,
   type LoadingKey,
   type LoadingOperation,
-  type LoadingState,
   type LoadingOptions,
+  parseLoadingKey,
   type StandardLoadingKey,
+  selectIsAnyLoading,
+  selectIsLoading,
+  selectIsLoadingByPrefix,
+  selectLoadingKeys,
+  useLoadingStore,
 } from "./loading-store.js";
 
 // Reset store before each test

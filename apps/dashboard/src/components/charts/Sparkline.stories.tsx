@@ -17,7 +17,7 @@ const upwardTrend = [10, 12, 11, 15, 18, 16, 20, 22, 25, 23, 28, 30];
 const downwardTrend = [30, 28, 25, 22, 24, 20, 18, 15, 16, 12, 10, 8];
 const flatTrend = [20, 19, 21, 20, 22, 21, 20, 19, 21, 20, 21, 20];
 const volatileTrend = [15, 25, 12, 28, 10, 30, 8, 26, 14, 24, 16, 22];
-const shortData = [10, 15, 12, 18, 20];
+const _shortData = [10, 15, 12, 18, 20];
 const longData = Array.from({ length: 50 }, () => Math.random() * 100);
 
 // ============================================
@@ -31,8 +31,7 @@ const meta: Meta<typeof Sparkline> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Compact inline chart for showing trends in small spaces like table cells.",
+        component: "Compact inline chart for showing trends in small spaces like table cells.",
       },
     },
   },
@@ -284,10 +283,24 @@ export const InTableCell: Story = {
     <table style={{ borderCollapse: "collapse", fontSize: "14px" }}>
       <thead>
         <tr>
-          <th style={{ padding: "8px 16px", textAlign: "left", borderBottom: "1px solid #e5e5e5" }}>Symbol</th>
-          <th style={{ padding: "8px 16px", textAlign: "right", borderBottom: "1px solid #e5e5e5" }}>Price</th>
-          <th style={{ padding: "8px 16px", textAlign: "right", borderBottom: "1px solid #e5e5e5" }}>Change</th>
-          <th style={{ padding: "8px 16px", textAlign: "center", borderBottom: "1px solid #e5e5e5" }}>7D</th>
+          <th style={{ padding: "8px 16px", textAlign: "left", borderBottom: "1px solid #e5e5e5" }}>
+            Symbol
+          </th>
+          <th
+            style={{ padding: "8px 16px", textAlign: "right", borderBottom: "1px solid #e5e5e5" }}
+          >
+            Price
+          </th>
+          <th
+            style={{ padding: "8px 16px", textAlign: "right", borderBottom: "1px solid #e5e5e5" }}
+          >
+            Change
+          </th>
+          <th
+            style={{ padding: "8px 16px", textAlign: "center", borderBottom: "1px solid #e5e5e5" }}
+          >
+            7D
+          </th>
         </tr>
       </thead>
       <tbody>

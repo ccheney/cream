@@ -10,12 +10,12 @@
 
 import { memo, useMemo } from "react";
 import {
-  PieChart,
-  Pie,
   Cell,
-  Tooltip,
-  ResponsiveContainer,
   Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   type TooltipProps,
 } from "recharts";
 import { CHART_COLORS } from "@/lib/chart-config";
@@ -81,7 +81,9 @@ export const ALLOCATION_COLORS = [
  * Get color for allocation slice.
  */
 export function getAllocationColor(index: number, customColor?: string): string {
-  if (customColor) return customColor;
+  if (customColor) {
+    return customColor;
+  }
   return ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
 }
 
@@ -100,7 +102,9 @@ function defaultValueFormatter(value: number): string {
  * Calculate percentage of total.
  */
 function calculatePercentage(value: number, total: number): number {
-  if (total === 0) return 0;
+  if (total === 0) {
+    return 0;
+  }
   return (value / total) * 100;
 }
 
@@ -140,9 +144,7 @@ function CustomTooltip({
         fontSize: 11,
       }}
     >
-      <p style={{ color: CHART_COLORS.text, margin: 0, marginBottom: 4 }}>
-        {data.name}
-      </p>
+      <p style={{ color: CHART_COLORS.text, margin: 0, marginBottom: 4 }}>{data.name}</p>
       <p style={{ color: CHART_COLORS.primary, margin: 0, fontWeight: 600 }}>
         {valueFormatter(percentage)}
       </p>
@@ -164,15 +166,10 @@ interface LabelProps {
   name: string;
 }
 
-function renderCustomLabel({
-  cx,
-  cy,
-  midAngle,
-  outerRadius,
-  percent,
-  name,
-}: LabelProps) {
-  if (percent < 0.05) return null; // Skip small slices
+function renderCustomLabel({ cx, cy, midAngle, outerRadius, percent, name }: LabelProps) {
+  if (percent < 0.05) {
+    return null; // Skip small slices
+  }
 
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 20;
@@ -211,7 +208,9 @@ function renderCustomLegend(props: {
 }) {
   const { payload, total, valueFormatter } = props;
 
-  if (!payload) return null;
+  if (!payload) {
+    return null;
+  }
 
   return (
     <ul
@@ -244,9 +243,7 @@ function renderCustomLegend(props: {
                 marginRight: 8,
               }}
             />
-            <span style={{ color: CHART_COLORS.text, flex: 1 }}>
-              {entry.value}
-            </span>
+            <span style={{ color: CHART_COLORS.text, flex: 1 }}>{entry.value}</span>
             <span style={{ color: CHART_COLORS.primary, fontWeight: 500 }}>
               {valueFormatter(percentage)}
             </span>
@@ -275,10 +272,7 @@ function AllocationChartComponent({
   className,
 }: AllocationChartProps) {
   // Calculate total
-  const total = useMemo(
-    () => data.reduce((sum, d) => sum + d.value, 0),
-    [data]
-  );
+  const total = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
 
   // Calculate radii
   const outerRadius = size / 2 - 40;
@@ -317,11 +311,7 @@ function AllocationChartComponent({
       <ResponsiveContainer width={size} height={size}>
         <PieChart>
           {showTooltip && (
-            <Tooltip
-              content={
-                <CustomTooltip total={total} valueFormatter={valueFormatter} />
-              }
-            />
+            <Tooltip content={<CustomTooltip total={total} valueFormatter={valueFormatter} />} />
           )}
 
           <Pie

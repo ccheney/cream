@@ -139,11 +139,8 @@ const DEFAULT_HEARTBEAT: HeartbeatConfig = {
 /**
  * Calculate reconnection delay with exponential backoff.
  */
-export function calculateBackoffDelay(
-  attempt: number,
-  config: ReconnectionConfig
-): number {
-  const delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
+export function calculateBackoffDelay(attempt: number, config: ReconnectionConfig): number {
+  const delay = config.initialDelay * config.backoffMultiplier ** attempt;
   return Math.min(delay, config.maxDelay);
 }
 
@@ -151,7 +148,9 @@ export function calculateBackoffDelay(
  * Create WebSocket URL with token.
  */
 export function createWebSocketUrl(baseUrl: string, token?: string): string {
-  if (!token) return baseUrl;
+  if (!token) {
+    return baseUrl;
+  }
   const separator = baseUrl.includes("?") ? "&" : "?";
   return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 }
@@ -231,7 +230,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
   // Start heartbeat
   const startHeartbeat = useCallback(() => {
-    if (pingIntervalRef.current) return;
+    if (pingIntervalRef.current) {
+      return;
+    }
 
     pingIntervalRef.current = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -256,9 +257,15 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
   // Connect
   const connect = useCallback(() => {
-    if (isUnmountedRef.current) return;
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    if (wsRef.current?.readyState === WebSocket.CONNECTING) return;
+    if (isUnmountedRef.current) {
+      return;
+    }
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      return;
+    }
 
     clearTimers();
     shouldReconnectRef.current = true;
@@ -280,7 +287,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     };
 
     ws.onclose = () => {
-      if (isUnmountedRef.current) return;
+      if (isUnmountedRef.current) {
+        return;
+      }
       clearTimers();
       setConnectionState("disconnected");
       onDisconnectRef.current?.();
@@ -297,15 +306,19 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       }
     };
 
-    ws.onerror = (event) => {
-      if (isUnmountedRef.current) return;
+    ws.onerror = (_event) => {
+      if (isUnmountedRef.current) {
+        return;
+      }
       const error = new Error("WebSocket error");
       setLastError(error);
       onErrorRef.current?.(error);
     };
 
     ws.onmessage = (event) => {
-      if (isUnmountedRef.current) return;
+      if (isUnmountedRef.current) {
+        return;
+      }
 
       try {
         const data = JSON.parse(event.data);
@@ -399,10 +412,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         }
       } else {
         // Resume if disconnected
-        if (
-          connectionState === "reconnecting" &&
-          shouldReconnectRef.current
-        ) {
+        if (connectionState === "reconnecting" && shouldReconnectRef.current) {
           connect();
         }
       }
@@ -426,7 +436,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       isUnmountedRef.current = true;
       disconnect();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoConnect, connect, disconnect]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     connectionState,

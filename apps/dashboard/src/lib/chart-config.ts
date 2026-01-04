@@ -7,10 +7,10 @@
  */
 
 import type {
-  ChartOptions,
   CandlestickSeriesOptions,
-  LineSeriesOptions,
+  ChartOptions,
   DeepPartial,
+  LineSeriesOptions,
 } from "lightweight-charts";
 
 // ============================================
@@ -134,10 +134,7 @@ export interface TradeMarker {
 /**
  * Create entry marker (BUY).
  */
-export function createEntryMarker(
-  time: number | string,
-  text: string = "BUY"
-): TradeMarker {
+export function createEntryMarker(time: number | string, text = "BUY"): TradeMarker {
   return {
     time,
     position: "belowBar",
@@ -151,10 +148,7 @@ export function createEntryMarker(
 /**
  * Create exit marker (SELL).
  */
-export function createExitMarker(
-  time: number | string,
-  text: string = "SELL"
-): TradeMarker {
+export function createExitMarker(time: number | string, text = "SELL"): TradeMarker {
   return {
     time,
     position: "aboveBar",

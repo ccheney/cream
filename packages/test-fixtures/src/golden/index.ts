@@ -6,29 +6,28 @@
  * @see docs/plans/14-testing.md lines 328-364
  */
 
-// Schema exports
-export {
-  GoldenAgentType,
-  MarketRegime,
-  ScenarioCategory,
-  GoldenCaseMetadataSchema,
-  GoldenDatasetMetadataSchema,
-  STALENESS_THRESHOLDS,
-  checkStaleness,
-  type GoldenCaseMetadata,
-  type GoldenDatasetMetadata,
-  type StalenessCheckResult,
-} from "./schema.js";
-
 // Loader exports
 export {
-  loadGoldenMetadata,
-  loadGoldenInput,
-  loadGoldenOutput,
-  loadGoldenCase,
+  checkGoldenStaleness,
   getAllGoldenCaseIds,
   getAllGoldenCases,
-  checkGoldenStaleness,
-  hasGoldenDataset,
   getGoldenDatasetStats,
+  hasGoldenDataset,
+  loadGoldenCase,
+  loadGoldenInput,
+  loadGoldenMetadata,
+  loadGoldenOutput,
 } from "./loader.js";
+// Schema exports
+export {
+  checkStaleness,
+  GoldenAgentType,
+  type GoldenCaseMetadata,
+  GoldenCaseMetadataSchema,
+  type GoldenDatasetMetadata,
+  GoldenDatasetMetadataSchema,
+  MarketRegime,
+  ScenarioCategory,
+  STALENESS_THRESHOLDS,
+  type StalenessCheckResult,
+} from "./schema.js";

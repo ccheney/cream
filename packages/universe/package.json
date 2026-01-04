@@ -16,6 +16,7 @@
     "typecheck": "echo 'Typecheck skipped - workspace resolution in progress'",
     "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
+    "format": "biome format --write src/",
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {

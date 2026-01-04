@@ -7,8 +7,8 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import { ToastItem, ToastContainer } from "./toast";
 import { useToastStore } from "../../stores/toast-store";
+import { ToastContainer, ToastItem } from "./toast";
 
 // ============================================
 // ToastItem Stories
@@ -21,8 +21,7 @@ const meta: Meta<typeof ToastItem> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Toast notification component with auto-dismiss and queue management.",
+        component: "Toast notification component with auto-dismiss and queue management.",
       },
     },
   },

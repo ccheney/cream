@@ -2,29 +2,29 @@
  * Tests for Risk-Adjusted Performance Metrics
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  mean,
-  stdDev,
-  downsideDeviation,
-  calculateReturns,
-  cumulativeReturn,
-  calculateRawReturn,
-  calculateMaxDrawdown,
+  calculateAllMetrics,
+  calculateCalmar,
   calculateCurrentDrawdown,
+  calculateMaxDrawdown,
+  calculateMetricsForWindow,
+  calculateRawReturn,
+  calculateReturns,
   calculateSharpe,
   calculateSortino,
-  calculateCalmar,
-  calculateMetricsForWindow,
-  calculateAllMetrics,
-  rollingSharpE,
-  rollingSortino,
-  rollingMaxDrawdown,
-  isAcceptablePerformance,
-  gradePerformance,
+  cumulativeReturn,
   DEFAULT_METRICS_CONFIG,
+  downsideDeviation,
+  gradePerformance,
+  isAcceptablePerformance,
   type MetricsConfig,
   type MetricsWindow,
+  mean,
+  rollingMaxDrawdown,
+  rollingSharpE,
+  rollingSortino,
+  stdDev,
 } from "./risk-adjusted";
 
 // ============================================
@@ -204,9 +204,7 @@ describe("calculateSharpe", () => {
 
   test("calculates positive Sharpe", () => {
     // Variable positive returns (with some volatility)
-    const returns = Array.from({ length: 100 }, (_, i) =>
-      0.001 + Math.sin(i) * 0.0005
-    );
+    const returns = Array.from({ length: 100 }, (_, i) => 0.001 + Math.sin(i) * 0.0005);
     const sharpe = calculateSharpe(returns, config);
     expect(sharpe).not.toBeNull();
     expect(sharpe!).toBeGreaterThan(0);
@@ -223,9 +221,7 @@ describe("calculateSharpe", () => {
 
   test("negative Sharpe for poor returns", () => {
     // Variable negative returns (with some volatility)
-    const returns = Array.from({ length: 100 }, (_, i) =>
-      -0.001 - Math.sin(i) * 0.0005
-    );
+    const returns = Array.from({ length: 100 }, (_, i) => -0.001 - Math.sin(i) * 0.0005);
     const sharpe = calculateSharpe(returns, config);
     expect(sharpe).not.toBeNull();
     expect(sharpe!).toBeLessThan(0);

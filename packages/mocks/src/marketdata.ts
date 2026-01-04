@@ -8,14 +8,13 @@
  */
 
 import {
-  createBullTrendSnapshot,
+  type Candle,
   createBearTrendSnapshot,
+  createBullTrendSnapshot,
   createHighVolSnapshot,
   createRangeBoundSnapshot,
-  type MarketSnapshot,
-  type SymbolSnapshot,
-  type Candle,
   type Indicators,
+  type SymbolSnapshot,
 } from "@cream/test-fixtures";
 
 // ============================================
@@ -171,11 +170,7 @@ export class MockPolygonAdapter {
   /**
    * Get candle data for a symbol
    */
-  async getCandles(
-    symbol: string,
-    timeframe: Timeframe,
-    limit = 100
-  ): Promise<Candle[]> {
+  async getCandles(symbol: string, timeframe: Timeframe, limit = 100): Promise<Candle[]> {
     await this.simulateDelay();
     this.checkFailure();
 
@@ -201,7 +196,7 @@ export class MockPolygonAdapter {
   /**
    * Generate synthetic candles for testing
    */
-  private generateCandles(symbol: string, count: number): Candle[] {
+  private generateCandles(_symbol: string, count: number): Candle[] {
     const candles: Candle[] = [];
     let price = 100;
     const now = Date.now();
@@ -303,7 +298,9 @@ export class MockPolygonAdapter {
     symbol: string
   ): Promise<{ snapshot: SymbolSnapshot; indicators: Indicators } | undefined> {
     const snapshot = await this.getSnapshot(symbol);
-    if (!snapshot) return undefined;
+    if (!snapshot) {
+      return undefined;
+    }
 
     return {
       snapshot,
@@ -318,10 +315,7 @@ export class MockPolygonAdapter {
   /**
    * Get option chain for a symbol
    */
-  async getOptionChain(
-    symbol: string,
-    expirationDate?: string
-  ): Promise<OptionChainEntry[]> {
+  async getOptionChain(symbol: string, expirationDate?: string): Promise<OptionChainEntry[]> {
     await this.simulateDelay();
     this.checkFailure();
 
@@ -422,7 +416,7 @@ export class MockPolygonAdapter {
     if (!this.candles.has(symbol)) {
       this.candles.set(symbol, new Map());
     }
-    this.candles.get(symbol)!.set(timeframe, candles);
+    this.candles.get(symbol)?.set(timeframe, candles);
   }
 
   /**
@@ -451,9 +445,7 @@ export class MockPolygonAdapter {
    */
   private async simulateDelay(): Promise<void> {
     if (this.config.responseDelay > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.config.responseDelay)
-      );
+      await new Promise((resolve) => setTimeout(resolve, this.config.responseDelay));
     }
   }
 
@@ -589,9 +581,7 @@ export class MockDatabentoAdapter {
    */
   private async simulateDelay(): Promise<void> {
     if (this.config.responseDelay > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.config.responseDelay)
-      );
+      await new Promise((resolve) => setTimeout(resolve, this.config.responseDelay));
     }
   }
 
@@ -612,17 +602,13 @@ export class MockDatabentoAdapter {
 /**
  * Create a mock Polygon adapter
  */
-export function createMockPolygon(
-  config?: MockMarketDataConfig
-): MockPolygonAdapter {
+export function createMockPolygon(config?: MockMarketDataConfig): MockPolygonAdapter {
   return new MockPolygonAdapter(config);
 }
 
 /**
  * Create a mock Databento adapter
  */
-export function createMockDatabento(
-  config?: MockMarketDataConfig
-): MockDatabentoAdapter {
+export function createMockDatabento(config?: MockMarketDataConfig): MockDatabentoAdapter {
   return new MockDatabentoAdapter(config);
 }

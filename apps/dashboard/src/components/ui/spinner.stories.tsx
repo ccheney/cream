@@ -7,13 +7,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import {
-  Spinner,
-  SpinnerDots,
-  SpinnerBar,
-  ButtonLoading,
-  SpinnerOverlay,
-} from "./spinner";
+import { ButtonLoading, Spinner, SpinnerBar, SpinnerDots, SpinnerOverlay } from "./spinner";
 
 // ============================================
 // Spinner Stories
@@ -195,7 +189,9 @@ export const ButtonLoadingVariants: StoryObj = {
 
 export const OverlayDefault: StoryObj<typeof SpinnerOverlay> = {
   render: (args) => (
-    <div style={{ position: "relative", width: "300px", height: "200px", border: "1px solid #ccc" }}>
+    <div
+      style={{ position: "relative", width: "300px", height: "200px", border: "1px solid #ccc" }}
+    >
       <div style={{ padding: "16px" }}>
         <h3>Card Content</h3>
         <p>This content is behind the overlay.</p>
@@ -217,7 +213,9 @@ export const OverlayDefault: StoryObj<typeof SpinnerOverlay> = {
 
 export const OverlayWithText: StoryObj<typeof SpinnerOverlay> = {
   render: (args) => (
-    <div style={{ position: "relative", width: "300px", height: "200px", border: "1px solid #ccc" }}>
+    <div
+      style={{ position: "relative", width: "300px", height: "200px", border: "1px solid #ccc" }}
+    >
       <div style={{ padding: "16px" }}>
         <h3>Card Content</h3>
         <p>This content is loading.</p>

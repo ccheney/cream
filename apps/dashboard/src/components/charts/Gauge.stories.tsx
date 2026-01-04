@@ -7,7 +7,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Gauge } from "./Gauge";
 
 // ============================================
@@ -21,8 +21,7 @@ const meta: Meta<typeof Gauge> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Arc gauge for displaying percentage values with color-coded thresholds.",
+        component: "Arc gauge for displaying percentage values with color-coded thresholds.",
       },
     },
   },

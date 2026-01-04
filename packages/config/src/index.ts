@@ -10,38 +10,35 @@
 export const PACKAGE_NAME = "@cream/config";
 export const VERSION = "0.0.1";
 
-// All schemas and types
-export * from "./schemas";
-
-// Validation utilities
-export {
-  CreamConfigSchema,
-  validateConfig,
-  validateConfigOrThrow,
-  validatePartialConfig,
-  validateAtStartup,
-  type CreamConfig,
-  type ValidationResult,
-} from "./validate";
-
 // Loading utilities
 export {
+  type ConfigEnvironment,
   loadConfig,
   loadConfigFromFile,
   loadConfigWithEnv,
-  type ConfigEnvironment,
 } from "./loader";
-
+// All schemas and types
+export * from "./schemas";
 // Startup validation utilities
 export {
-  sanitizeConfig,
-  sanitizeEnv,
-  validateStartup,
-  validateLiveTradingSafety,
-  runStartupValidation,
-  validateStartupNoExit,
   createAuditLog,
   logStartupAudit,
-  type StartupResult,
+  runStartupValidation,
   type StartupAuditLog,
+  type StartupResult,
+  sanitizeConfig,
+  sanitizeEnv,
+  validateLiveTradingSafety,
+  validateStartup,
+  validateStartupNoExit,
 } from "./startup";
+// Validation utilities
+export {
+  type CreamConfig,
+  CreamConfigSchema,
+  type ValidationResult,
+  validateAtStartup,
+  validateConfig,
+  validateConfigOrThrow,
+  validatePartialConfig,
+} from "./validate";

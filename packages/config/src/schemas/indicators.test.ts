@@ -2,25 +2,25 @@
  * Tests for Indicator Configuration Schemas
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  IndicatorName,
-  RSIParamsSchema,
-  StochasticParamsSchema,
-  SMAParamsSchema,
-  EMAParamsSchema,
-  ATRParamsSchema,
-  BollingerBandsParamsSchema,
-  VolumeSMAParamsSchema,
-  IndicatorConfigSchema,
-  RSIIndicatorConfigSchema,
-  StochasticIndicatorConfigSchema,
-  SMAIndicatorConfigSchema,
-  EMAIndicatorConfigSchema,
   ATRIndicatorConfigSchema,
+  ATRParamsSchema,
   BollingerBandsIndicatorConfigSchema,
-  VolumeSMAIndicatorConfigSchema,
+  BollingerBandsParamsSchema,
+  EMAIndicatorConfigSchema,
+  EMAParamsSchema,
+  IndicatorConfigSchema,
+  IndicatorName,
+  RSIIndicatorConfigSchema,
+  RSIParamsSchema,
+  SMAIndicatorConfigSchema,
+  SMAParamsSchema,
+  StochasticIndicatorConfigSchema,
+  StochasticParamsSchema,
   TypedIndicatorConfigSchema,
+  VolumeSMAIndicatorConfigSchema,
+  VolumeSMAParamsSchema,
 } from "./indicators";
 
 // ============================================

@@ -7,7 +7,7 @@
  * @see docs/plans/14-testing.md lines 365-398
  */
 
-import type { AgentType, EvalResult, BatchEvalResults } from "../../src/index.js";
+import type { AgentType, BatchEvalResults, EvalResult } from "../../src/index.js";
 
 // ============================================
 // Types
@@ -133,7 +133,7 @@ export const DEFAULT_JUDGE_CONFIG: JudgeConfig = {
  */
 export function createMockJudge() {
   return async (
-    input: unknown,
+    _input: unknown,
     output: unknown,
     expectedBehavior: string,
     _config: JudgeConfig
@@ -147,14 +147,26 @@ export function createMockJudge() {
     let score = 0.75; // Base score
 
     // Boost score for good patterns
-    if (outputStr.includes("rationale")) score += 0.05;
-    if (outputStr.includes("stop") || outputStr.includes("risk")) score += 0.05;
-    if (outputStr.includes("confidence")) score += 0.05;
+    if (outputStr.includes("rationale")) {
+      score += 0.05;
+    }
+    if (outputStr.includes("stop") || outputStr.includes("risk")) {
+      score += 0.05;
+    }
+    if (outputStr.includes("confidence")) {
+      score += 0.05;
+    }
 
     // Reduce score for bad patterns
-    if (outputStr.includes("error")) score -= 0.2;
-    if (outputStr.includes("undefined")) score -= 0.1;
-    if (outputStr.length < 50) score -= 0.1;
+    if (outputStr.includes("error")) {
+      score -= 0.2;
+    }
+    if (outputStr.includes("undefined")) {
+      score -= 0.1;
+    }
+    if (outputStr.length < 50) {
+      score -= 0.1;
+    }
 
     // Clamp to 0-1
     score = Math.max(0, Math.min(1, score));
@@ -217,12 +229,7 @@ export async function runBatchEvaluation(
   const results: EvalResult[] = [];
 
   for (let i = 0; i < testCases.length; i++) {
-    const judgeResult = await evaluateAgentWithJudge(
-      agentType,
-      testCases[i],
-      outputs[i],
-      config
-    );
+    const judgeResult = await evaluateAgentWithJudge(agentType, testCases[i], outputs[i], config);
 
     results.push({
       testId: judgeResult.testId,
@@ -309,7 +316,7 @@ export function generateEvalReport(batchResults: BatchEvalResults): string {
 export function checkForRegression(
   current: BatchEvalResults,
   baseline: BatchEvalResults,
-  regressionThreshold: number = 0.95
+  regressionThreshold = 0.95
 ): { hasRegression: boolean; details: string } {
   const currentMean = current.stats.mean;
   const baselineMean = baseline.stats.mean;
@@ -436,7 +443,8 @@ export const SAMPLE_TEST_CASES: Record<AgentType, JudgeTestCase[]> = {
         rationale: "Bullish outlook",
         action: "SELL",
       },
-      expectedBehavior: "Correctly identifies inconsistency between bullish rationale and sell action",
+      expectedBehavior:
+        "Correctly identifies inconsistency between bullish rationale and sell action",
     },
   ],
 };

@@ -69,11 +69,17 @@ function getColor(color: SparklineColor | string): string {
  * Determine color based on trend (first vs last value).
  */
 function getTrendColor(data: number[]): SparklineColor {
-  if (data.length < 2) return "neutral";
+  if (data.length < 2) {
+    return "neutral";
+  }
   const first = data[0];
   const last = data[data.length - 1];
-  if (last > first) return "profit";
-  if (last < first) return "loss";
+  if (last > first) {
+    return "profit";
+  }
+  if (last < first) {
+    return "loss";
+  }
   return "neutral";
 }
 
@@ -85,13 +91,10 @@ function getTrendColor(data: number[]): SparklineColor {
  * Generate SVG path for sparkline.
  * Uses monotone interpolation for smooth curves.
  */
-function generatePath(
-  data: number[],
-  width: number,
-  height: number,
-  padding: number = 2
-): string {
-  if (data.length === 0) return "";
+function generatePath(data: number[], width: number, height: number, padding = 2): string {
+  if (data.length === 0) {
+    return "";
+  }
   if (data.length === 1) {
     // Single point: draw horizontal line
     const y = height / 2;
@@ -138,9 +141,11 @@ function getLastPoint(
   data: number[],
   width: number,
   height: number,
-  padding: number = 2
+  padding = 2
 ): { x: number; y: number } | null {
-  if (data.length === 0) return null;
+  if (data.length === 0) {
+    return null;
+  }
 
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -181,21 +186,19 @@ function SparklineComponent({
 
   // Determine color
   const resolvedColor = useMemo(() => {
-    if (color) return getColor(color);
-    if (autoColor) return getColor(getTrendColor(data));
+    if (color) {
+      return getColor(color);
+    }
+    if (autoColor) {
+      return getColor(getTrendColor(data));
+    }
     return CHART_COLORS.text;
   }, [color, autoColor, data]);
 
   // Handle empty data
   if (data.length === 0) {
     return (
-      <svg
-        width={width}
-        height={height}
-        className={className}
-        role="img"
-        aria-label="No data"
-      >
+      <svg width={width} height={height} className={className} role="img" aria-label="No data">
         <line
           x1={0}
           y1={height / 2}
@@ -228,14 +231,7 @@ function SparklineComponent({
       />
 
       {/* Last point dot */}
-      {lastPoint && (
-        <circle
-          cx={lastPoint.x}
-          cy={lastPoint.y}
-          r={4}
-          fill={resolvedColor}
-        />
-      )}
+      {lastPoint && <circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill={resolvedColor} />}
     </svg>
   );
 }

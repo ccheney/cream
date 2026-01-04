@@ -9,28 +9,15 @@
 
 // FMP Client
 export {
-  FMPClient,
   createFMPClient,
+  FMPClient,
   type FMPClientConfig,
   type FMPConstituent,
-  type FMPHistoricalConstituent,
   type FMPETFHolding,
+  type FMPHistoricalConstituent,
   type FMPScreenerFilters,
   type FMPScreenerResult,
 } from "./fmp-client.js";
-
-// Source Resolvers
-export {
-  resolveSource,
-  resolveStaticSource,
-  resolveIndexSource,
-  resolveETFHoldingsSource,
-  resolveScreenerSource,
-  type ResolvedInstrument,
-  type SourceResolutionResult,
-  type SourceResolverOptions,
-} from "./sources.js";
-
 // Universe Resolver
 export {
   resolveUniverse,
@@ -38,3 +25,14 @@ export {
   type UniverseResolutionResult,
   type UniverseResolverOptions,
 } from "./resolver.js";
+// Source Resolvers
+export {
+  type ResolvedInstrument,
+  resolveETFHoldingsSource,
+  resolveIndexSource,
+  resolveScreenerSource,
+  resolveSource,
+  resolveStaticSource,
+  type SourceResolutionResult,
+  type SourceResolverOptions,
+} from "./sources.js";

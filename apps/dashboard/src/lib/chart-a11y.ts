@@ -325,7 +325,9 @@ export function createFocusTrap(container: HTMLElement): () => void {
   const lastElement = focusableElements[focusableElements.length - 1];
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== "Tab") return;
+    if (event.key !== "Tab") {
+      return;
+    }
 
     if (event.shiftKey && document.activeElement === firstElement) {
       event.preventDefault();
@@ -419,10 +421,7 @@ export function checkContrastRatio(
 /**
  * Check graphics contrast (3:1 for WCAG AA).
  */
-export function checkGraphicsContrast(
-  foreground: string,
-  background: string
-): boolean {
+export function checkGraphicsContrast(foreground: string, background: string): boolean {
   const { ratio } = checkContrastRatio(foreground, background);
   return ratio >= 3;
 }
@@ -470,7 +469,7 @@ function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number 
   const { r, g, b } = rgb;
   const [R, G, B] = [r, g, b].map((c) => {
     const sRGB = c / 255;
-    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+    return sRGB <= 0.03928 ? sRGB / 12.92 : ((sRGB + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }

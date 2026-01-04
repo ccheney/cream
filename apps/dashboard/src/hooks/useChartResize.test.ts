@@ -6,15 +6,14 @@
  * @see docs/plans/ui/26-data-viz.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
+  ASPECT_RATIOS,
+  BREAKPOINTS,
+  calculateDimensions,
+  clamp,
   debounce,
   getBreakpoint,
-  clamp,
-  calculateDimensions,
-  BREAKPOINTS,
-  ASPECT_RATIOS,
-  type UseChartResizeOptions,
 } from "./useChartResize.js";
 
 // ============================================

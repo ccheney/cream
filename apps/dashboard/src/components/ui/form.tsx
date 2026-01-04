@@ -8,15 +8,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useId, forwardRef } from "react";
-import type {
-  FieldValues,
-  FieldPath,
-  ControllerProps,
-  ControllerRenderProps,
-  FieldError,
-  UseFormReturn,
-} from "react-hook-form";
+import React, { createContext, forwardRef, useContext, useId } from "react";
+import type { ControllerProps, FieldPath, FieldValues } from "react-hook-form";
 import { Controller, FormProvider, useFormContext } from "react-hook-form";
 
 // ============================================
@@ -195,12 +188,7 @@ export const FormItem = forwardRef<HTMLDivElement, FormItemProps>(
 
     return (
       <FormItemContext.Provider value={{ id }}>
-        <div
-          ref={ref}
-          data-testid={testId}
-          style={{ ...itemStyles, ...style }}
-          {...props}
-        />
+        <div ref={ref} data-testid={testId} style={{ ...itemStyles, ...style }} {...props} />
       </FormItemContext.Provider>
     );
   }
@@ -234,16 +222,10 @@ FormLabel.displayName = "FormLabel";
 /**
  * Form control - wrapper that applies ARIA attributes.
  */
-export function FormControl({
-  children,
-}: {
-  children: React.ReactElement;
-}) {
+export function FormControl({ children }: { children: React.ReactElement }) {
   const { formItemId, formDescriptionId, formMessageId, error } = useFormField();
 
-  const describedBy = error
-    ? `${formDescriptionId} ${formMessageId}`
-    : formDescriptionId;
+  const describedBy = error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId;
 
   return React.cloneElement(children, {
     id: formItemId,
@@ -342,22 +324,13 @@ FormMessage.displayName = "FormMessage";
  * <FormError message="Please enter a valid email address" />
  * ```
  */
-export function FormError({
-  message,
-  testId = "form-error",
-  className,
-}: FormErrorProps) {
+export function FormError({ message, testId = "form-error", className }: FormErrorProps) {
   if (!message) {
     return null;
   }
 
   return (
-    <p
-      role="alert"
-      data-testid={testId}
-      className={className}
-      style={errorStyles}
-    >
+    <p role="alert" data-testid={testId} className={className} style={errorStyles}>
       <AlertCircleIcon style={errorIconStyles} />
       <span>{message}</span>
     </p>

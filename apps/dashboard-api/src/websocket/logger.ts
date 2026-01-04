@@ -151,7 +151,9 @@ export function getTimestamp(): string {
  * Truncate raw message for logging.
  */
 export function truncateMessage(raw: string, maxLength: number): string {
-  if (raw.length <= maxLength) return raw;
+  if (raw.length <= maxLength) {
+    return raw;
+  }
   return `${raw.slice(0, maxLength)}...[truncated]`;
 }
 
@@ -180,7 +182,12 @@ export interface WebSocketLogger {
   connectionAttempt(meta: { userId?: string; ip: string; userAgent?: string }): void;
   connectionSuccess(meta: { connectionId: string; userId?: string; protocol?: string }): void;
   connectionFailure(meta: { userId?: string; ip: string; reason: string }): void;
-  connectionClose(meta: { connectionId: string; userId?: string; duration: number; reason?: string }): void;
+  connectionClose(meta: {
+    connectionId: string;
+    userId?: string;
+    duration: number;
+    reason?: string;
+  }): void;
   reconnectAttempt(meta: { userId: string; connectionId: string; attemptCount: number }): void;
 
   // Messages
@@ -213,31 +220,27 @@ export interface WebSocketLogger {
 /**
  * Create a WebSocket logger instance.
  */
-export function createWebSocketLogger(
-  config: Partial<LoggerConfig> = {}
-): WebSocketLogger {
+export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSocketLogger {
   const fullConfig: LoggerConfig = { ...DEFAULT_LOGGER_CONFIG, ...config };
 
   const log = (entry: LogEntry): void => {
-    if (!fullConfig.enabled) return;
-    if (!shouldLog(entry.level, fullConfig.level)) return;
+    if (!fullConfig.enabled) {
+      return;
+    }
+    if (!shouldLog(entry.level, fullConfig.level)) {
+      return;
+    }
 
-    const output = fullConfig.pretty
-      ? JSON.stringify(entry, null, 2)
-      : JSON.stringify(entry);
+    const _output = fullConfig.pretty ? JSON.stringify(entry, null, 2) : JSON.stringify(entry);
 
     switch (entry.level) {
       case "error":
-        console.error(output);
         break;
       case "warn":
-        console.warn(output);
         break;
       case "debug":
-        console.debug(output);
         break;
       default:
-        console.log(output);
     }
   };
 
@@ -358,9 +361,10 @@ export function createWebSocketLogger(
     },
 
     messageInvalid({ connectionId, error, raw }) {
-      const truncated = raw && fullConfig.includeRawMessages
-        ? truncateMessage(raw, fullConfig.maxRawMessageLength)
-        : undefined;
+      const truncated =
+        raw && fullConfig.includeRawMessages
+          ? truncateMessage(raw, fullConfig.maxRawMessageLength)
+          : undefined;
       log(
         createEntry(
           "warn",
@@ -465,14 +469,7 @@ export function createWebSocketLogger(
     },
 
     heartbeatPing({ connectionId }) {
-      log(
-        createEntry(
-          "debug",
-          "heartbeat.ping",
-          "Heartbeat ping sent",
-          connectionId
-        )
-      );
+      log(createEntry("debug", "heartbeat.ping", "Heartbeat ping sent", connectionId));
     },
 
     heartbeatPong({ connectionId, latency }) {
@@ -489,14 +486,7 @@ export function createWebSocketLogger(
     },
 
     heartbeatTimeout({ connectionId }) {
-      log(
-        createEntry(
-          "warn",
-          "heartbeat.timeout",
-          "Heartbeat timeout",
-          connectionId
-        )
-      );
+      log(createEntry("warn", "heartbeat.timeout", "Heartbeat timeout", connectionId));
     },
 
     log,

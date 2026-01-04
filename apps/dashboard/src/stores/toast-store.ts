@@ -175,9 +175,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 
   startDismiss: (id) => {
     set((state) => ({
-      toasts: state.toasts.map((t) =>
-        t.id === id ? { ...t, dismissing: true } : t
-      ),
+      toasts: state.toasts.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
     }));
   },
 

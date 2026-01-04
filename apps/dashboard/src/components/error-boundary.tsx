@@ -8,7 +8,7 @@
 
 "use client";
 
-import React, { Component, type ReactNode, type ErrorInfo } from "react";
+import React, { Component, type ErrorInfo, type ReactNode } from "react";
 
 // ============================================
 // Types
@@ -151,11 +151,7 @@ const fallbackStyles = {
 /**
  * Default error fallback component.
  */
-export function DefaultErrorFallback({
-  error,
-  errorInfo,
-  reset,
-}: ErrorFallbackProps) {
+export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackProps) {
   const isDev = process.env.NODE_ENV === "development";
   const [showDetails, setShowDetails] = React.useState(isDev);
 
@@ -166,15 +162,13 @@ export function DefaultErrorFallback({
       data-testid="error-fallback"
       style={fallbackStyles.container}
     >
-      <div style={fallbackStyles.icon} aria-hidden="true">
-
-      </div>
+      <div style={fallbackStyles.icon} aria-hidden="true"></div>
 
       <h2 style={fallbackStyles.title}>Something went wrong</h2>
 
       <p style={fallbackStyles.message}>
-        We encountered an unexpected error. Please try again or contact support
-        if the problem persists.
+        We encountered an unexpected error. Please try again or contact support if the problem
+        persists.
       </p>
 
       <div style={fallbackStyles.actions}>
@@ -243,10 +237,7 @@ export function DefaultErrorFallback({
  * </ErrorBoundary>
  * ```
  */
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -266,10 +257,6 @@ export class ErrorBoundary extends Component<
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Update state with error info
     this.setState({ errorInfo });
-
-    // Log error to console
-    console.error("[ErrorBoundary] Caught error:", error);
-    console.error("[ErrorBoundary] Component stack:", errorInfo.componentStack);
 
     // Call onError callback if provided
     this.props.onError?.(error, errorInfo);
@@ -312,13 +299,7 @@ export class ErrorBoundary extends Component<
       }
 
       // Default fallback
-      return (
-        <DefaultErrorFallback
-          error={error}
-          errorInfo={errorInfo}
-          reset={this.reset}
-        />
-      );
+      return <DefaultErrorFallback error={error} errorInfo={errorInfo} reset={this.reset} />;
     }
 
     return children;

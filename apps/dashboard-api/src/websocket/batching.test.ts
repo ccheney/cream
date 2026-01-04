@@ -6,16 +6,16 @@
  * @see docs/plans/ui/06-websocket.md lines 158-174
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+  type BatchingMetrics,
+  calculateBatchFillRate,
+  calculateThrottleRate,
+  createQuote,
+  DEFAULT_BATCHING_CONFIG,
+  type Quote,
   QuoteBatcher,
   SymbolThrottle,
-  DEFAULT_BATCHING_CONFIG,
-  createQuote,
-  calculateThrottleRate,
-  calculateBatchFillRate,
-  type Quote,
-  type BatchingMetrics,
 } from "./batching.js";
 
 // ============================================
@@ -100,10 +100,11 @@ describe("QuoteBatcher", () => {
 
   beforeEach(() => {
     receivedBatches = [];
-    batcher = new QuoteBatcher(
-      (quotes) => receivedBatches.push(quotes),
-      { maxBatchSize: 5, flushInterval: 50, throttlePerSymbol: 10 }
-    );
+    batcher = new QuoteBatcher((quotes) => receivedBatches.push(quotes), {
+      maxBatchSize: 5,
+      flushInterval: 50,
+      throttlePerSymbol: 10,
+    });
   });
 
   afterEach(() => {
@@ -152,10 +153,11 @@ describe("QuoteBatcher - Size Limit", () => {
 
   beforeEach(() => {
     receivedBatches = [];
-    batcher = new QuoteBatcher(
-      (quotes) => receivedBatches.push(quotes),
-      { maxBatchSize: 3, flushInterval: 1000, throttlePerSymbol: 0 }
-    );
+    batcher = new QuoteBatcher((quotes) => receivedBatches.push(quotes), {
+      maxBatchSize: 3,
+      flushInterval: 1000,
+      throttlePerSymbol: 0,
+    });
   });
 
   afterEach(() => {
@@ -189,10 +191,11 @@ describe("QuoteBatcher - Timer Flush", () => {
 
   beforeEach(() => {
     receivedBatches = [];
-    batcher = new QuoteBatcher(
-      (quotes) => receivedBatches.push(quotes),
-      { maxBatchSize: 50, flushInterval: 30, throttlePerSymbol: 0 }
-    );
+    batcher = new QuoteBatcher((quotes) => receivedBatches.push(quotes), {
+      maxBatchSize: 50,
+      flushInterval: 30,
+      throttlePerSymbol: 0,
+    });
   });
 
   afterEach(() => {
@@ -232,10 +235,11 @@ describe("QuoteBatcher - Throttling", () => {
 
   beforeEach(() => {
     receivedBatches = [];
-    batcher = new QuoteBatcher(
-      (quotes) => receivedBatches.push(quotes),
-      { maxBatchSize: 50, flushInterval: 1000, throttlePerSymbol: 50 }
-    );
+    batcher = new QuoteBatcher((quotes) => receivedBatches.push(quotes), {
+      maxBatchSize: 50,
+      flushInterval: 1000,
+      throttlePerSymbol: 50,
+    });
   });
 
   afterEach(() => {
@@ -272,10 +276,11 @@ describe("QuoteBatcher - Metrics", () => {
   let batcher: QuoteBatcher;
 
   beforeEach(() => {
-    batcher = new QuoteBatcher(
-      () => {},
-      { maxBatchSize: 5, flushInterval: 1000, throttlePerSymbol: 0 }
-    );
+    batcher = new QuoteBatcher(() => {}, {
+      maxBatchSize: 5,
+      flushInterval: 1000,
+      throttlePerSymbol: 0,
+    });
   });
 
   afterEach(() => {
@@ -397,11 +402,7 @@ describe("QuoteBatcher - Configuration", () => {
 describe("QuoteBatcher - addMany", () => {
   it("adds multiple quotes", () => {
     const batcher = new QuoteBatcher(() => {}, { throttlePerSymbol: 0 });
-    const quotes = [
-      createTestQuote("AAPL"),
-      createTestQuote("MSFT"),
-      createTestQuote("GOOGL"),
-    ];
+    const quotes = [createTestQuote("AAPL"), createTestQuote("MSFT"), createTestQuote("GOOGL")];
     const accepted = batcher.addMany(quotes);
     expect(accepted).toBe(3);
     expect(batcher.getBufferSize()).toBe(3);

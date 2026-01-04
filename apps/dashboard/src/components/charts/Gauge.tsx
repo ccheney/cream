@@ -8,7 +8,7 @@
 
 "use client";
 
-import { memo, useMemo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { CHART_COLORS } from "@/lib/chart-config";
 
 // ============================================
@@ -125,19 +125,7 @@ function describeArc(
   const end = polarToCartesian(cx, cy, radius, startAngle);
   const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
 
-  return [
-    "M",
-    start.x,
-    start.y,
-    "A",
-    radius,
-    radius,
-    0,
-    largeArcFlag,
-    0,
-    end.x,
-    end.y,
-  ].join(" ");
+  return ["M", start.x, start.y, "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y].join(" ");
 }
 
 /**
@@ -212,7 +200,7 @@ function GaugeComponent({
       const progress = Math.min(elapsed / animationDuration, 1);
 
       // Ease-out
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - (1 - progress) ** 3;
       const currentValue = startValue + (endValue - startValue) * eased;
 
       setDisplayValue(currentValue);
@@ -229,7 +217,7 @@ function GaugeComponent({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [value, max, animate, animationDuration]);
+  }, [value, max, animate, animationDuration, displayValue]);
 
   // Memoize paths
   const trackPath = useMemo(
@@ -237,10 +225,7 @@ function GaugeComponent({
     [cx, cy, radius]
   );
 
-  const valueAngle = useMemo(
-    () => valueToAngle(displayValue, max),
-    [displayValue, max]
-  );
+  const valueAngle = useMemo(() => valueToAngle(displayValue, max), [displayValue, max]);
 
   const valuePath = useMemo(
     () => describeArc(cx, cy, radius, startAngle, valueAngle),
@@ -260,10 +245,7 @@ function GaugeComponent({
   }, [displayValue, max]);
 
   return (
-    <div
-      className={className}
-      style={{ width: size, height: size * 0.65 }}
-    >
+    <div className={className} style={{ width: size, height: size * 0.65 }}>
       <svg
         width={size}
         height={size * 0.65}
@@ -337,9 +319,4 @@ export default Gauge;
 // Utility Exports
 // ============================================
 
-export {
-  describeArc,
-  valueToAngle,
-  polarToCartesian,
-  degreesToRadians,
-};
+export { describeArc, valueToAngle, polarToCartesian, degreesToRadians };

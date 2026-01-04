@@ -104,7 +104,12 @@ export const ASPECT_RATIOS = {
 /**
  * Default options.
  */
-const DEFAULT_OPTIONS: Required<Omit<UseChartResizeOptions, "onResize" | "fixedHeight" | "minWidth" | "maxWidth" | "minHeight" | "maxHeight">> = {
+const DEFAULT_OPTIONS: Required<
+  Omit<
+    UseChartResizeOptions,
+    "onResize" | "fixedHeight" | "minWidth" | "maxWidth" | "minHeight" | "maxHeight"
+  >
+> = {
   aspectRatio: ASPECT_RATIOS.widescreen,
   debounceMs: 100,
 };
@@ -226,9 +231,7 @@ export function calculateDimensions(
  * }
  * ```
  */
-export function useChartResize(
-  options: UseChartResizeOptions = {}
-): UseChartResizeReturn {
+export function useChartResize(options: UseChartResizeOptions = {}): UseChartResizeReturn {
   const { debounceMs = DEFAULT_OPTIONS.debounceMs, onResize } = options;
 
   // Container ref
@@ -255,12 +258,16 @@ export function useChartResize(
   // Calculate and update dimensions
   const updateDimensions = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     const rect = container.getBoundingClientRect();
     const containerWidth = rect.width;
 
-    if (containerWidth === 0) return;
+    if (containerWidth === 0) {
+      return;
+    }
 
     const newDimensions = calculateDimensions(containerWidth, optionsRef.current);
     const newBreakpoint = getBreakpoint(containerWidth);
@@ -274,7 +281,9 @@ export function useChartResize(
     });
 
     setBreakpoint((prev) => {
-      if (prev === newBreakpoint) return prev;
+      if (prev === newBreakpoint) {
+        return prev;
+      }
       return newBreakpoint;
     });
 
@@ -292,7 +301,9 @@ export function useChartResize(
   // Setup ResizeObserver
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     // Initial measurement
     updateDimensions();
@@ -301,7 +312,7 @@ export function useChartResize(
     const debouncedUpdate = debounce(updateDimensions, debounceMs);
 
     // Create observer
-    const observer = new ResizeObserver((entries) => {
+    const observer = new ResizeObserver((_entries) => {
       // Use requestAnimationFrame for smooth updates
       requestAnimationFrame(() => {
         debouncedUpdate();
@@ -356,7 +367,7 @@ export function useSquareChart(
  * Hook for sparklines (fixed height).
  */
 export function useSparklineSize(
-  height: number = 32,
+  height = 32,
   options?: Omit<UseChartResizeOptions, "fixedHeight">
 ): UseChartResizeReturn {
   return useChartResize({

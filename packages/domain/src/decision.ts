@@ -90,12 +90,7 @@ export type Regime = z.infer<typeof Regime>;
 /**
  * Market hours status
  */
-export const MarketStatus = z.enum([
-  "PRE_MARKET",
-  "OPEN",
-  "AFTER_HOURS",
-  "CLOSED",
-]);
+export const MarketStatus = z.enum(["PRE_MARKET", "OPEN", "AFTER_HOURS", "CLOSED"]);
 export type MarketStatus = z.infer<typeof MarketStatus>;
 
 /**
@@ -235,8 +230,12 @@ export function getDecisionDirection(decision: Decision): Direction {
   const { action, size } = decision;
 
   if (action === "NO_TRADE" || action === "HOLD") {
-    if (size.targetPositionQuantity > 0) return "LONG";
-    if (size.targetPositionQuantity < 0) return "SHORT";
+    if (size.targetPositionQuantity > 0) {
+      return "LONG";
+    }
+    if (size.targetPositionQuantity < 0) {
+      return "SHORT";
+    }
     return "FLAT";
   }
 
@@ -249,8 +248,12 @@ export function getDecisionDirection(decision: Decision): Direction {
   }
 
   if (action === "REDUCE") {
-    if (size.targetPositionQuantity > 0) return "LONG";
-    if (size.targetPositionQuantity < 0) return "SHORT";
+    if (size.targetPositionQuantity > 0) {
+      return "LONG";
+    }
+    if (size.targetPositionQuantity < 0) {
+      return "SHORT";
+    }
     return "FLAT";
   }
 
@@ -277,10 +280,7 @@ export interface RiskValidationResult {
  * 4. Minimum risk-reward ratio (>= 1.5)
  * 5. Maximum stop distance (stop not > 5x profit target)
  */
-export function validateRiskLevels(
-  decision: Decision,
-  entryPrice: number
-): RiskValidationResult {
+export function validateRiskLevels(decision: Decision, entryPrice: number): RiskValidationResult {
   const result: RiskValidationResult = {
     valid: true,
     errors: [],
@@ -391,9 +391,7 @@ export function validateDecisionPlan(
   if (!parseResult.success) {
     return {
       success: false,
-      errors: parseResult.error.issues.map(
-        (i) => `${i.path.join(".")}: ${i.message}`
-      ),
+      errors: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
       warnings: [],
     };
   }
@@ -409,17 +407,9 @@ export function validateDecisionPlan(
     if (entryPrice !== undefined) {
       const riskResult = validateRiskLevels(decision, entryPrice);
       if (!riskResult.valid) {
-        errors.push(
-          ...riskResult.errors.map(
-            (e) => `${decision.instrument.instrumentId}: ${e}`
-          )
-        );
+        errors.push(...riskResult.errors.map((e) => `${decision.instrument.instrumentId}: ${e}`));
       }
-      warnings.push(
-        ...riskResult.warnings.map(
-          (w) => `${decision.instrument.instrumentId}: ${w}`
-        )
-      );
+      warnings.push(...riskResult.warnings.map((w) => `${decision.instrument.instrumentId}: ${w}`));
     }
   }
 

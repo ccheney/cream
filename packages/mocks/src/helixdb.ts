@@ -7,7 +7,7 @@
  * @see docs/plans/14-testing.md for mocking strategy
  */
 
-import { createMemoryContext, type PastTradeCase } from "@cream/test-fixtures";
+import { createMemoryContext } from "@cream/test-fixtures";
 
 // ============================================
 // Types
@@ -304,12 +304,10 @@ export class MockHelixDB {
     }
 
     // Calculate mock similarity scores
-    const results: VectorSearchResult<TradeMemory>[] = matches
-      .slice(0, k)
-      .map((item, index) => ({
-        item: { ...item },
-        score: this.config.deterministic ? 0.9 - index * 0.05 : Math.random(),
-      }));
+    const results: VectorSearchResult<TradeMemory>[] = matches.slice(0, k).map((item, index) => ({
+      item: { ...item },
+      score: this.config.deterministic ? 0.9 - index * 0.05 : Math.random(),
+    }));
 
     // Sort by score descending
     results.sort((a, b) => b.score - a.score);
@@ -349,14 +347,12 @@ export class MockHelixDB {
     );
 
     // Calculate mock cosine similarity
-    const results: VectorSearchResult<GraphNode>[] = nodesOfType
-      .slice(0, k)
-      .map((node, index) => ({
-        item: { ...node },
-        score: this.config.deterministic
-          ? 0.95 - index * 0.02
-          : this.cosineSimilarity(embedding, node.embedding!),
-      }));
+    const results: VectorSearchResult<GraphNode>[] = nodesOfType.slice(0, k).map((node, index) => ({
+      item: { ...node },
+      score: this.config.deterministic
+        ? 0.95 - index * 0.02
+        : this.cosineSimilarity(embedding, node.embedding!),
+    }));
 
     results.sort((a, b) => b.score - a.score);
     return results;
@@ -366,7 +362,9 @@ export class MockHelixDB {
    * Calculate cosine similarity between two vectors
    */
   private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) return 0;
+    if (a.length !== b.length) {
+      return 0;
+    }
 
     let dotProduct = 0;
     let normA = 0;
@@ -378,7 +376,9 @@ export class MockHelixDB {
       normB += b[i] * b[i];
     }
 
-    if (normA === 0 || normB === 0) return 0;
+    if (normA === 0 || normB === 0) {
+      return 0;
+    }
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
@@ -395,7 +395,7 @@ export class MockHelixDB {
    */
   async query(
     helixql: string,
-    params: Record<string, unknown> = {}
+    _params: Record<string, unknown> = {}
   ): Promise<Record<string, unknown>[]> {
     await this.simulateDelay();
     this.checkFailure();
@@ -441,9 +441,7 @@ export class MockHelixDB {
    */
   private async simulateDelay(): Promise<void> {
     if (this.config.queryDelay > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.config.queryDelay)
-      );
+      await new Promise((resolve) => setTimeout(resolve, this.config.queryDelay));
     }
   }
 

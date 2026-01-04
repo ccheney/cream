@@ -8,32 +8,30 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  AgentOutputMessageSchema,
+  AgentType,
+  AlertMessageSchema,
+  CHANNELS,
   // Channels
   Channel,
-  CHANNELS,
-  AgentType,
-  CyclePhase,
-  OrderStatus,
-  AlertSeverity,
   // Client messages
   ClientMessageSchema,
-  SubscribeMessageSchema,
-  UnsubscribeMessageSchema,
-  SubscribeSymbolsMessageSchema,
-  PingMessageSchema,
-  // Server messages
-  ServerMessageSchema,
-  QuoteMessageSchema,
-  OrderMessageSchema,
-  AgentOutputMessageSchema,
+  CyclePhase,
   CycleProgressMessageSchema,
-  AlertMessageSchema,
-  SystemStatusMessageSchema,
-  PongMessageSchema,
   ErrorMessageSchema,
+  OrderDataSchema,
+  OrderMessageSchema,
+  PingMessageSchema,
+  PongMessageSchema,
   // Data payloads
   QuoteDataSchema,
-  OrderDataSchema,
+  QuoteMessageSchema,
+  // Server messages
+  ServerMessageSchema,
+  SubscribeMessageSchema,
+  SubscribeSymbolsMessageSchema,
+  SystemStatusMessageSchema,
+  UnsubscribeMessageSchema,
 } from "./index.js";
 
 // ============================================

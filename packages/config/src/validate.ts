@@ -8,18 +8,17 @@
  */
 
 import { z } from "zod";
-
+import { AgentsConfigSchema } from "./schemas/agents";
+import { ConstraintsConfigSchema } from "./schemas/constraints";
 // Import all sub-schemas
 import { CoreConfigSchema } from "./schemas/core";
-import { IndicatorsConfigSchema } from "./schemas/indicators";
-import { NormalizationConfigSchema } from "./schemas/features";
-import { RegimeConfigSchema } from "./schemas/regime";
-import { ConstraintsConfigSchema } from "./schemas/constraints";
-import { MemoryConfigSchema } from "./schemas/memory";
-import { AgentsConfigSchema } from "./schemas/agents";
-import { UniverseConfigSchema } from "./schemas/universe";
 import { ExecutionConfigSchema } from "./schemas/execution";
+import { NormalizationConfigSchema } from "./schemas/features";
+import { IndicatorsConfigSchema } from "./schemas/indicators";
+import { MemoryConfigSchema } from "./schemas/memory";
 import { MetricsConfigSchema } from "./schemas/metrics";
+import { RegimeConfigSchema } from "./schemas/regime";
+import { UniverseConfigSchema } from "./schemas/universe";
 
 // ============================================
 // Complete Configuration Schema
@@ -115,9 +114,7 @@ export function validateConfig(config: unknown): ValidationResult {
 
   return {
     success: false,
-    errors: result.error.issues.map(
-      (issue) => `${issue.path.join(".")}: ${issue.message}`
-    ),
+    errors: result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
   };
 }
 
@@ -152,9 +149,7 @@ export function validatePartialConfig(config: unknown): ValidationResult {
 
   return {
     success: false,
-    errors: result.error.issues.map(
-      (issue) => `${issue.path.join(".")}: ${issue.message}`
-    ),
+    errors: result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
   };
 }
 
@@ -190,12 +185,16 @@ export function validateAtStartup(config: unknown): ValidationResult & { warning
     if (!cfg.universe) {
       warnings.push("LIVE environment without universe configuration - no instruments to trade");
     }
-    if (cfg.constraints?.per_instrument?.max_pct_equity !== undefined &&
-        cfg.constraints.per_instrument.max_pct_equity > 0.2) {
+    if (
+      cfg.constraints?.per_instrument?.max_pct_equity !== undefined &&
+      cfg.constraints.per_instrument.max_pct_equity > 0.2
+    ) {
       warnings.push("LIVE: per_instrument.max_pct_equity > 20% is risky");
     }
-    if (cfg.constraints?.portfolio?.max_gross_pct_equity !== undefined &&
-        cfg.constraints.portfolio.max_gross_pct_equity > 3.0) {
+    if (
+      cfg.constraints?.portfolio?.max_gross_pct_equity !== undefined &&
+      cfg.constraints.portfolio.max_gross_pct_equity > 3.0
+    ) {
       warnings.push("LIVE: portfolio leverage > 3x is very risky");
     }
   }

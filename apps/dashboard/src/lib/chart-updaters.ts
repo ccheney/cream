@@ -6,8 +6,8 @@
  * @see docs/plans/ui/26-data-viz.md
  */
 
-import type { OHLCVData } from "./chart-config.js";
 import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
+import type { OHLCVData } from "./chart-config.js";
 
 // ============================================
 // Types
@@ -67,20 +67,14 @@ export interface ChartUpdateMessage {
 /**
  * Append a new candle to the data array.
  */
-export function appendCandle(
-  data: OHLCVData[],
-  candle: OHLCVData
-): OHLCVData[] {
+export function appendCandle(data: OHLCVData[], candle: OHLCVData): OHLCVData[] {
   return [...data, candle];
 }
 
 /**
  * Update the last candle (for real-time updates within a period).
  */
-export function updateLastCandle(
-  data: OHLCVData[],
-  candle: OHLCVData
-): OHLCVData[] {
+export function updateLastCandle(data: OHLCVData[], candle: OHLCVData): OHLCVData[] {
   if (data.length === 0) {
     return [candle];
   }
@@ -103,10 +97,7 @@ export function updateLastCandle(
 /**
  * Apply a candle update (handles both append and update).
  */
-export function applyCandleUpdate(
-  data: OHLCVData[],
-  update: CandleUpdate
-): OHLCVData[] {
+export function applyCandleUpdate(data: OHLCVData[], update: CandleUpdate): OHLCVData[] {
   if (update.type === "append") {
     return appendCandle(data, update.candle);
   } else {
@@ -186,11 +177,7 @@ export function updateLastEquityPoint(
 /**
  * Append a value to sparkline data, shifting if max length exceeded.
  */
-export function appendSparklineValue(
-  data: number[],
-  value: number,
-  maxLength: number = 20
-): number[] {
+export function appendSparklineValue(data: number[], value: number, maxLength = 20): number[] {
   const newData = [...data, value];
   if (newData.length > maxLength) {
     return newData.slice(newData.length - maxLength);
@@ -201,11 +188,7 @@ export function appendSparklineValue(
 /**
  * Batch update sparkline with multiple values.
  */
-export function batchUpdateSparkline(
-  data: number[],
-  values: number[],
-  maxLength: number = 20
-): number[] {
+export function batchUpdateSparkline(data: number[], values: number[], maxLength = 20): number[] {
   const newData = [...data, ...values];
   if (newData.length > maxLength) {
     return newData.slice(newData.length - maxLength);
@@ -222,7 +205,7 @@ export function batchUpdateSparkline(
  */
 export function createThrottledUpdater<T>(
   updateFn: (value: T) => void,
-  intervalMs: number = 100
+  intervalMs = 100
 ): {
   update: (value: T) => void;
   flush: () => void;
@@ -233,7 +216,9 @@ export function createThrottledUpdater<T>(
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const scheduleUpdate = () => {
-    if (pending === null) return;
+    if (pending === null) {
+      return;
+    }
 
     const now = Date.now();
     const timeSinceLastUpdate = now - lastUpdate;
@@ -292,9 +277,7 @@ export function createThrottledUpdater<T>(
 /**
  * Parse a chart update message.
  */
-export function parseChartUpdateMessage(
-  raw: unknown
-): ChartUpdateMessage | null {
+export function parseChartUpdateMessage(raw: unknown): ChartUpdateMessage | null {
   if (typeof raw !== "object" || raw === null) {
     return null;
   }
@@ -327,9 +310,7 @@ export function parseChartUpdateMessage(
 /**
  * Sort updates by timestamp.
  */
-export function sortByTimestamp<T extends { timestamp: string }>(
-  updates: T[]
-): T[] {
+export function sortByTimestamp<T extends { timestamp: string }>(updates: T[]): T[] {
   return [...updates].sort((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
@@ -342,7 +323,7 @@ export function sortByTimestamp<T extends { timestamp: string }>(
  */
 export function filterStaleUpdates<T extends { timestamp: string }>(
   updates: T[],
-  maxAgeMs: number = 5000
+  maxAgeMs = 5000
 ): T[] {
   const now = Date.now();
   return updates.filter((update) => {

@@ -8,26 +8,26 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  mapCycleEvent,
-  mapAgentEvent,
-  mapQuoteEvent,
-  mapOrderEvent,
-  mapDecisionEvent,
-  mapAlertEvent,
-  mapHealthCheckEvent,
-  mapEvent,
-  batchQuoteEvents,
   aggregateQuotes,
+  batchQuoteEvents,
   type MappableEvent,
+  mapAgentEvent,
+  mapAlertEvent,
+  mapCycleEvent,
+  mapDecisionEvent,
+  mapEvent,
+  mapHealthCheckEvent,
+  mapOrderEvent,
+  mapQuoteEvent,
 } from "./mappers";
 import type {
-  MastraCycleEvent,
-  MastraAgentEvent,
-  QuoteStreamEvent,
-  OrderUpdateEvent,
   DecisionInsertEvent,
-  SystemAlertEvent,
   HealthCheckEvent,
+  MastraAgentEvent,
+  MastraCycleEvent,
+  OrderUpdateEvent,
+  QuoteStreamEvent,
+  SystemAlertEvent,
 } from "./types";
 
 // ============================================
@@ -54,7 +54,7 @@ const sampleAgentEvent: MastraAgentEvent = {
 
 const sampleQuoteEvent: QuoteStreamEvent = {
   symbol: "AAPL",
-  bid: 185.00,
+  bid: 185.0,
   ask: 185.05,
   bidSize: 100,
   askSize: 200,
@@ -71,7 +71,7 @@ const sampleOrderEvent: OrderUpdateEvent = {
   type: "limit",
   quantity: 100,
   filledQuantity: 50,
-  price: 185.00,
+  price: 185.0,
   avgFillPrice: 184.95,
   status: "partially_filled",
   timestamp: "2026-01-04T12:00:00.000Z",
@@ -220,7 +220,7 @@ describe("mapQuoteEvent", () => {
 
   it("maps bid/ask correctly", () => {
     const result = mapQuoteEvent(sampleQuoteEvent);
-    expect((result.message as any).data.bid).toBe(185.00);
+    expect((result.message as any).data.bid).toBe(185.0);
     expect((result.message as any).data.ask).toBe(185.05);
   });
 
@@ -290,7 +290,7 @@ describe("mapOrderEvent", () => {
 
   it("maps prices correctly", () => {
     const result = mapOrderEvent(sampleOrderEvent);
-    expect((result.message as any).data.price).toBe(185.00);
+    expect((result.message as any).data.price).toBe(185.0);
     expect((result.message as any).data.avgFillPrice).toBe(184.95);
   });
 
@@ -494,21 +494,21 @@ describe("batchQuoteEvents", () => {
 
   it("deduplicates by symbol (keeps latest)", () => {
     const events: QuoteStreamEvent[] = [
-      { ...sampleQuoteEvent, bid: 185.00 },
-      { ...sampleQuoteEvent, bid: 185.10 },
-      { ...sampleQuoteEvent, bid: 185.20 },
+      { ...sampleQuoteEvent, bid: 185.0 },
+      { ...sampleQuoteEvent, bid: 185.1 },
+      { ...sampleQuoteEvent, bid: 185.2 },
     ];
     const result = batchQuoteEvents(events);
     expect(result.length).toBe(1);
-    expect((result[0].message as any).data.bid).toBe(185.20);
+    expect((result[0].message as any).data.bid).toBe(185.2);
   });
 
   it("keeps one event per symbol", () => {
     const events: QuoteStreamEvent[] = [
-      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.00 },
-      { ...sampleQuoteEvent, symbol: "GOOGL", bid: 180.00 },
-      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.50 },
-      { ...sampleQuoteEvent, symbol: "MSFT", bid: 420.00 },
+      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.0 },
+      { ...sampleQuoteEvent, symbol: "GOOGL", bid: 180.0 },
+      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.5 },
+      { ...sampleQuoteEvent, symbol: "MSFT", bid: 420.0 },
     ];
     const result = batchQuoteEvents(events);
     expect(result.length).toBe(3);
@@ -552,11 +552,11 @@ describe("aggregateQuotes", () => {
 
   it("keeps latest quote per symbol", () => {
     const events: QuoteStreamEvent[] = [
-      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.00 },
-      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.50 },
+      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.0 },
+      { ...sampleQuoteEvent, symbol: "AAPL", bid: 185.5 },
     ];
     const result = aggregateQuotes(events);
-    expect(result.get("AAPL")?.bid).toBe(185.50);
+    expect(result.get("AAPL")?.bid).toBe(185.5);
   });
 });
 

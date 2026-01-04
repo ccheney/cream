@@ -8,8 +8,8 @@
 
 "use client";
 
-import { useCallback, useRef, useEffect } from "react";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef } from "react";
 
 // ============================================
 // Types
@@ -269,15 +269,14 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
 /**
  * Create a debounced invalidation batcher.
  */
-function createInvalidationBatcher(
-  queryClient: QueryClient,
-  debounceMs: number
-) {
+function createInvalidationBatcher(queryClient: QueryClient, debounceMs: number) {
   const pending = new Set<string>();
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const flush = () => {
-    if (pending.size === 0) return;
+    if (pending.size === 0) {
+      return;
+    }
 
     const keys = Array.from(pending);
     pending.clear();
@@ -290,15 +289,13 @@ function createInvalidationBatcher(
       if (!keyGroups.has(topLevel)) {
         keyGroups.set(topLevel, []);
       }
-      keyGroups.get(topLevel)!.push(key);
+      keyGroups.get(topLevel)?.push(key);
     }
 
     // Invalidate by group
     for (const [_topLevel, queryKeys] of keyGroups) {
       // Use the shortest key for partial matching
-      const shortestKey = queryKeys.reduce((a, b) =>
-        a.length <= b.length ? a : b
-      );
+      const shortestKey = queryKeys.reduce((a, b) => (a.length <= b.length ? a : b));
       queryClient.invalidateQueries({ queryKey: shortestKey });
     }
   };
@@ -353,12 +350,7 @@ function createInvalidationBatcher(
 export function useWebSocketQuerySync(
   options: UseWebSocketQuerySyncOptions = {}
 ): UseWebSocketQuerySyncReturn {
-  const {
-    debounceMs = 100,
-    debug = false,
-    onCycleProgress,
-    onError,
-  } = options;
+  const { debounceMs = 100, debug = false, onCycleProgress, onError } = options;
 
   const queryClient = useQueryClient();
 
@@ -372,9 +364,7 @@ export function useWebSocketQuerySync(
   }, [onCycleProgress, onError]);
 
   // Create invalidation batcher
-  const batcherRef = useRef<ReturnType<typeof createInvalidationBatcher> | null>(
-    null
-  );
+  const batcherRef = useRef<ReturnType<typeof createInvalidationBatcher> | null>(null);
 
   if (!batcherRef.current) {
     batcherRef.current = createInvalidationBatcher(queryClient, debounceMs);
@@ -395,13 +385,11 @@ export function useWebSocketQuerySync(
 
         if (!message) {
           if (debug) {
-            console.warn("[WS Query Sync] Invalid message:", raw);
           }
           return;
         }
 
         if (debug) {
-          console.log("[WS Query Sync] Received:", message.type, message.data);
         }
 
         // Skip heartbeat
@@ -475,9 +463,7 @@ export function useWebSocketQuerySync(
 
           case "error": {
             const error = new Error(
-              typeof message.data === "string"
-                ? message.data
-                : "WebSocket error"
+              typeof message.data === "string" ? message.data : "WebSocket error"
             );
             onErrorRef.current?.(error);
             break;
@@ -485,13 +471,11 @@ export function useWebSocketQuerySync(
 
           default:
             if (debug) {
-              console.warn("[WS Query Sync] Unknown message type:", message.type);
             }
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         if (debug) {
-          console.error("[WS Query Sync] Error handling message:", error);
         }
         onErrorRef.current?.(error);
       }

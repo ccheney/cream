@@ -8,19 +8,13 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 // Read files for testing
-const animationsCss = fs.readFileSync(
-  path.join(__dirname, "animations.css"),
-  "utf-8"
-);
+const animationsCss = fs.readFileSync(path.join(__dirname, "animations.css"), "utf-8");
 
-const tailwindConfig = fs.readFileSync(
-  path.join(__dirname, "../../tailwind.config.ts"),
-  "utf-8"
-);
+const tailwindConfig = fs.readFileSync(path.join(__dirname, "../../tailwind.config.ts"), "utf-8");
 
 // ============================================
 // CSS Custom Properties Tests

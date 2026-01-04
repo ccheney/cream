@@ -8,10 +8,10 @@
 
 import { describe, expect, it } from "bun:test";
 import type {
+  FormDescriptionProps,
   FormErrorProps,
   FormItemProps,
   FormLabelProps,
-  FormDescriptionProps,
 } from "./form.js";
 
 // ============================================

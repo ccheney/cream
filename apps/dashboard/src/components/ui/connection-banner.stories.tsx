@@ -8,13 +8,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
+import type { ConnectionState } from "./connection-banner";
 import {
   ConnectionBanner,
   DisconnectionBanner,
-  ReconnectingBanner,
   OfflineBanner,
+  ReconnectingBanner,
 } from "./connection-banner";
-import type { ConnectionState } from "./connection-banner";
 
 // ============================================
 // ConnectionBanner Stories
@@ -27,8 +27,7 @@ const meta: Meta<typeof ConnectionBanner> = {
     layout: "fullscreen",
     docs: {
       description: {
-        component:
-          "Banner for displaying WebSocket connection status with reconnection.",
+        component: "Banner for displaying WebSocket connection status with reconnection.",
       },
     },
   },

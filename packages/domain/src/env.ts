@@ -31,7 +31,9 @@ const urlSchema = z.string().refine(
   (val) => {
     try {
       // Allow file: URLs for local SQLite, http/https/ws for remote
-      if (val.startsWith("file:")) return true;
+      if (val.startsWith("file:")) {
+        return true;
+      }
       new URL(val);
       return true;
     } catch {
@@ -51,44 +53,22 @@ const urlSchema = z.string().refine(
 const envSchema = z
   .object({
     // Core Configuration
-    CREAM_ENV: CreamEnvironment.describe(
-      "Trading environment: BACKTEST | PAPER | LIVE"
-    ),
-    CREAM_BROKER: CreamBroker.default("ALPACA").describe(
-      "Broker to use for trading"
-    ),
+    CREAM_ENV: CreamEnvironment.describe("Trading environment: BACKTEST | PAPER | LIVE"),
+    CREAM_BROKER: CreamBroker.default("ALPACA").describe("Broker to use for trading"),
 
     // Database URLs
     TURSO_DATABASE_URL: urlSchema
       .optional()
       .default("http://localhost:8080")
       .describe("Turso/libsql database URL"),
-    TURSO_AUTH_TOKEN: z
-      .string()
-      .optional()
-      .describe("Turso Cloud authentication token"),
-    HELIX_URL: urlSchema
-      .optional()
-      .default("http://localhost:6969")
-      .describe("HelixDB server URL"),
+    TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
+    HELIX_URL: urlSchema.optional().default("http://localhost:6969").describe("HelixDB server URL"),
 
     // Market Data Providers
-    DATABENTO_KEY: z
-      .string()
-      .optional()
-      .describe("Databento API key for execution-grade data"),
-    POLYGON_KEY: z
-      .string()
-      .optional()
-      .describe("Polygon/Massive API key for candles and options"),
-    FMP_KEY: z
-      .string()
-      .optional()
-      .describe("FMP API key for fundamentals and transcripts"),
-    ALPHAVANTAGE_KEY: z
-      .string()
-      .optional()
-      .describe("Alpha Vantage API key for macro indicators"),
+    DATABENTO_KEY: z.string().optional().describe("Databento API key for execution-grade data"),
+    POLYGON_KEY: z.string().optional().describe("Polygon/Massive API key for candles and options"),
+    FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
+    ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
 
     // Broker Credentials
     ALPACA_KEY: z.string().optional().describe("Alpaca API key"),
@@ -178,16 +158,13 @@ function parseEnv(): EnvConfig {
   const rawEnv = {
     CREAM_ENV: Bun.env.CREAM_ENV ?? process.env.CREAM_ENV,
     CREAM_BROKER: Bun.env.CREAM_BROKER ?? process.env.CREAM_BROKER,
-    TURSO_DATABASE_URL:
-      Bun.env.TURSO_DATABASE_URL ?? process.env.TURSO_DATABASE_URL,
-    TURSO_AUTH_TOKEN:
-      Bun.env.TURSO_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
+    TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL ?? process.env.TURSO_DATABASE_URL,
+    TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
     HELIX_URL: Bun.env.HELIX_URL ?? process.env.HELIX_URL,
     DATABENTO_KEY: Bun.env.DATABENTO_KEY ?? process.env.DATABENTO_KEY,
     POLYGON_KEY: Bun.env.POLYGON_KEY ?? process.env.POLYGON_KEY,
     FMP_KEY: Bun.env.FMP_KEY ?? process.env.FMP_KEY,
-    ALPHAVANTAGE_KEY:
-      Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
+    ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
     ALPACA_KEY: Bun.env.ALPACA_KEY ?? process.env.ALPACA_KEY,
     ALPACA_SECRET: Bun.env.ALPACA_SECRET ?? process.env.ALPACA_SECRET,
     ALPACA_BASE_URL: Bun.env.ALPACA_BASE_URL ?? process.env.ALPACA_BASE_URL,
@@ -197,9 +174,7 @@ function parseEnv(): EnvConfig {
   const result = envSchema.safeParse(rawEnv);
 
   if (!result.success) {
-    const formatted = result.error.format();
-    console.error("❌ Environment validation failed:");
-    console.error(JSON.stringify(formatted, null, 2));
+    const _formatted = result.error.format();
     throw result.error;
   }
 
@@ -260,9 +235,7 @@ export function getAlpacaBaseUrl(): string {
   if (env.ALPACA_BASE_URL) {
     return env.ALPACA_BASE_URL;
   }
-  return isLive()
-    ? "https://api.alpaca.markets"
-    : "https://paper-api.alpaca.markets";
+  return isLive() ? "https://api.alpaca.markets" : "https://paper-api.alpaca.markets";
 }
 
 /**

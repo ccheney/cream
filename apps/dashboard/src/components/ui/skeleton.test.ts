@@ -8,10 +8,10 @@
 
 import { describe, expect, it } from "bun:test";
 import type {
+  SkeletonCardProps,
+  SkeletonCircleProps,
   SkeletonProps,
   SkeletonTextProps,
-  SkeletonCircleProps,
-  SkeletonCardProps,
 } from "./skeleton.js";
 
 // ============================================
@@ -436,7 +436,7 @@ describe("Edge Cases", () => {
   });
 
   it("SkeletonCard with no options uses defaults", () => {
-    const props: SkeletonCardProps = {};
+    const _props: SkeletonCardProps = {};
     const defaults = {
       avatar: false,
       lines: 2,

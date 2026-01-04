@@ -8,20 +8,20 @@
 
 "use client";
 
-import { useEffect, useRef, useCallback, memo } from "react";
 import {
+  type CandlestickData,
   createChart,
   type IChartApi,
   type ISeriesApi,
-  type CandlestickData,
   type Time,
 } from "lightweight-charts";
+import { memo, useCallback, useEffect, useRef } from "react";
 import {
-  DEFAULT_CHART_OPTIONS,
   DEFAULT_CANDLESTICK_OPTIONS,
+  DEFAULT_CHART_OPTIONS,
   type OHLCVData,
-  type TradeMarker,
   type PriceLineConfig,
+  type TradeMarker,
 } from "@/lib/chart-config";
 
 // ============================================
@@ -78,11 +78,15 @@ function TradingViewChartComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const priceLineRefs = useRef<Map<string, ReturnType<typeof seriesRef.current.createPriceLine>>>(new Map());
+  const priceLineRefs = useRef<Map<string, ReturnType<typeof seriesRef.current.createPriceLine>>>(
+    new Map()
+  );
 
   // Initialize chart
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
 
     // Create chart
     const chart = createChart(containerRef.current, {
@@ -135,11 +139,13 @@ function TradingViewChartComponent({
       seriesRef.current = null;
       priceLineRefs.current.clear();
     };
-  }, [height, onCrosshairMove, onReady, width]);
+  }, [height, onCrosshairMove, onReady, width, data.length, data.map]);
 
   // Update data
   useEffect(() => {
-    if (!seriesRef.current || data.length === 0) return;
+    if (!seriesRef.current || data.length === 0) {
+      return;
+    }
 
     const formattedData = data.map((d) => ({
       time: d.time as Time,
@@ -155,7 +161,9 @@ function TradingViewChartComponent({
 
   // Update markers
   useEffect(() => {
-    if (!seriesRef.current) return;
+    if (!seriesRef.current) {
+      return;
+    }
 
     const formattedMarkers = markers.map((m) => ({
       time: m.time as Time,
@@ -171,10 +179,12 @@ function TradingViewChartComponent({
 
   // Update price lines
   useEffect(() => {
-    if (!seriesRef.current) return;
+    if (!seriesRef.current) {
+      return;
+    }
 
     // Remove old price lines
-    for (const [key, priceLine] of priceLineRefs.current) {
+    for (const [_key, priceLine] of priceLineRefs.current) {
       seriesRef.current.removePriceLine(priceLine);
     }
     priceLineRefs.current.clear();
@@ -195,7 +205,9 @@ function TradingViewChartComponent({
 
   // Handle resize
   const handleResize = useCallback(() => {
-    if (!chartRef.current || !containerRef.current || !autoResize) return;
+    if (!chartRef.current || !containerRef.current || !autoResize) {
+      return;
+    }
 
     chartRef.current.applyOptions({
       width: containerRef.current.clientWidth,
@@ -203,7 +215,9 @@ function TradingViewChartComponent({
   }, [autoResize]);
 
   useEffect(() => {
-    if (!autoResize) return;
+    if (!autoResize) {
+      return;
+    }
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);

@@ -6,15 +6,15 @@
  * @see docs/plans/14-testing.md lines 328-364
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  GoldenDatasetMetadataSchema,
+  checkStaleness,
   type GoldenAgentType,
   type GoldenCaseMetadata,
   type GoldenDatasetMetadata,
-  checkStaleness,
+  GoldenDatasetMetadataSchema,
   type StalenessCheckResult,
 } from "./schema.js";
 
@@ -72,10 +72,7 @@ export function loadGoldenMetadata(): GoldenDatasetMetadata {
  * @param caseId Case identifier without prefix (e.g., "001")
  * @returns Parsed JSON input
  */
-export function loadGoldenInput<T = unknown>(
-  agent: GoldenAgentType,
-  caseId: string
-): T {
+export function loadGoldenInput<T = unknown>(agent: GoldenAgentType, caseId: string): T {
   const agentDir = getAgentDir(agent);
   const prefix = getAgentPrefix(agent);
   const filename = `${prefix}_input_${caseId}.json`;
@@ -96,10 +93,7 @@ export function loadGoldenInput<T = unknown>(
  * @param caseId Case identifier without prefix (e.g., "001")
  * @returns Parsed JSON output
  */
-export function loadGoldenOutput<T = unknown>(
-  agent: GoldenAgentType,
-  caseId: string
-): T {
+export function loadGoldenOutput<T = unknown>(agent: GoldenAgentType, caseId: string): T {
   const agentDir = getAgentDir(agent);
   const prefix = getAgentPrefix(agent);
   const filename = `${prefix}_output_${caseId}.json`;
@@ -175,7 +169,12 @@ export function getAllGoldenCaseIds(agent: GoldenAgentType): string[] {
  */
 export function getAllGoldenCases<TInput = unknown, TOutput = unknown>(
   agent: GoldenAgentType
-): Array<{ caseId: string; input: TInput; output: TOutput; metadata: GoldenCaseMetadata | undefined }> {
+): Array<{
+  caseId: string;
+  input: TInput;
+  output: TOutput;
+  metadata: GoldenCaseMetadata | undefined;
+}> {
   const caseIds = getAllGoldenCaseIds(agent);
 
   return caseIds.map((caseId) => ({
@@ -253,7 +252,9 @@ export function getGoldenDatasetStats(): {
       byAgent[case_.agent] = (byAgent[case_.agent] ?? 0) + 1;
       byRegime[case_.regime] = (byRegime[case_.regime] ?? 0) + 1;
       byScenario[case_.scenario] = (byScenario[case_.scenario] ?? 0) + 1;
-      if (case_.adversarial) adversarialCount++;
+      if (case_.adversarial) {
+        adversarialCount++;
+      }
     }
 
     return {

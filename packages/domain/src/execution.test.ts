@@ -2,23 +2,23 @@
  * Execution Schema Tests
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  ConstraintResult,
-  OrderStatus,
-  OrderSide,
   AccountStateSchema,
-  PositionSchema,
-  ConstraintCheckSchema,
   CheckConstraintsRequestSchema,
   CheckConstraintsResponseSchema,
-  SubmitOrderRequestSchema,
-  SubmitOrderResponseSchema,
+  ConstraintCheckSchema,
+  ConstraintResult,
   ExecutionAckSchema,
-  StreamExecutionsRequestSchema,
   GetAccountStateRequestSchema,
   GetPositionsRequestSchema,
   GetPositionsResponseSchema,
+  OrderSide,
+  OrderStatus,
+  PositionSchema,
+  StreamExecutionsRequestSchema,
+  SubmitOrderRequestSchema,
+  SubmitOrderResponseSchema,
 } from "./execution";
 
 // ============================================
@@ -38,16 +38,16 @@ const validOptionInstrument = {
   optionContract: {
     underlying: "AAPL",
     expiration: "2026-01-17",
-    strike: 190.00,
+    strike: 190.0,
     optionType: "CALL" as const,
   },
 };
 
 const validAccountState = {
   accountId: "ACC123",
-  equity: 100000.00,
-  buyingPower: 50000.00,
-  marginUsed: 10000.00,
+  equity: 100000.0,
+  buyingPower: 50000.0,
+  marginUsed: 10000.0,
   dayTradeCount: 2,
   isPdtRestricted: false,
   asOf: validTimestamp,
@@ -56,11 +56,11 @@ const validAccountState = {
 const validPosition = {
   instrument: validInstrument,
   quantity: 100,
-  avgEntryPrice: 180.00,
-  marketValue: 18500.00,
-  unrealizedPnl: 500.00,
+  avgEntryPrice: 180.0,
+  marketValue: 18500.0,
+  unrealizedPnl: 500.0,
   unrealizedPnlPct: 2.78,
-  costBasis: 18000.00,
+  costBasis: 18000.0,
 };
 
 // ============================================
@@ -112,7 +112,7 @@ describe("AccountStateSchema", () => {
     const result = AccountStateSchema.safeParse(validAccountState);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.equity).toBe(100000.00);
+      expect(result.data.equity).toBe(100000.0);
       expect(result.data.isPdtRestricted).toBe(false);
     }
   });
@@ -184,7 +184,7 @@ describe("PositionSchema", () => {
   test("accepts negative unrealized P&L", () => {
     const result = PositionSchema.safeParse({
       ...validPosition,
-      unrealizedPnl: -500.00,
+      unrealizedPnl: -500.0,
       unrealizedPnlPct: -2.78,
     });
     expect(result.success).toBe(true);
@@ -200,8 +200,8 @@ describe("ConstraintCheckSchema", () => {
     name: "MaxPositionSize",
     result: "PASS" as const,
     description: "Position size within limit",
-    actualValue: 5000.00,
-    threshold: 10000.00,
+    actualValue: 5000.0,
+    threshold: 10000.0,
   };
 
   test("accepts valid constraint check", () => {
@@ -297,7 +297,7 @@ describe("SubmitOrderRequestSchema", () => {
     side: "BUY" as const,
     quantity: 100,
     orderType: "LIMIT" as const,
-    limitPrice: 185.00,
+    limitPrice: 185.0,
     timeInForce: "DAY" as const,
     clientOrderId: "client-order-123",
     cycleId: "cycle-456",
@@ -385,7 +385,7 @@ describe("ExecutionAckSchema", () => {
       avgFillPrice: 185.25,
       remainingQuantity: 0,
       updatedAt: validTimestamp,
-      commission: 0.00,
+      commission: 0.0,
     });
     expect(result.success).toBe(true);
   });
@@ -399,7 +399,7 @@ describe("ExecutionAckSchema", () => {
       avgFillPrice: 185.25,
       remainingQuantity: 50,
       updatedAt: validTimestamp,
-      commission: 0.00,
+      commission: 0.0,
     });
     expect(result.success).toBe(true);
   });

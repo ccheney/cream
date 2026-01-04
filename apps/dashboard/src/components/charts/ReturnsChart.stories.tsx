@@ -7,8 +7,8 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import { ReturnsChart } from "./ReturnsChart";
 import type { ReturnDataPoint } from "./ReturnsChart";
+import { ReturnsChart } from "./ReturnsChart";
 
 // ============================================
 // Sample Data
@@ -77,8 +77,7 @@ const meta: Meta<typeof ReturnsChart> = {
     layout: "padded",
     docs: {
       description: {
-        component:
-          "Bar chart for displaying periodic returns with positive/negative coloring.",
+        component: "Bar chart for displaying periodic returns with positive/negative coloring.",
       },
     },
   },
@@ -278,11 +277,7 @@ export const DashboardCard: Story = {
           YTD: <span style={{ color: "#22c55e", fontWeight: 500 }}>+19.8%</span>
         </p>
       </div>
-      <ReturnsChart
-        data={monthlyReturns}
-        height={200}
-        showGrid={false}
-      />
+      <ReturnsChart data={monthlyReturns} height={200} showGrid={false} />
     </div>
   ),
   parameters: {
@@ -303,11 +298,7 @@ export const YearOverYear: Story = {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div>
         <h4 style={{ margin: "0 0 8px", fontSize: "14px", color: "#78716c" }}>2024</h4>
-        <ReturnsChart
-          data={monthlyReturns}
-          height={150}
-          showGrid={false}
-        />
+        <ReturnsChart data={monthlyReturns} height={150} showGrid={false} />
       </div>
       <div>
         <h4 style={{ margin: "0 0 8px", fontSize: "14px", color: "#78716c" }}>2023</h4>

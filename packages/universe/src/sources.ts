@@ -73,9 +73,7 @@ export interface SourceResolverOptions {
 /**
  * Resolve a static source
  */
-export async function resolveStaticSource(
-  source: StaticSource
-): Promise<SourceResolutionResult> {
+export async function resolveStaticSource(source: StaticSource): Promise<SourceResolutionResult> {
   return {
     sourceName: source.name,
     instruments: source.tickers.map((ticker: string) => ({
@@ -109,7 +107,9 @@ export async function resolveIndexSource(
   if (source.point_in_time && options.asOfDate) {
     // Get point-in-time constituents for backtesting
     symbols = await client.getConstituentsAsOf(source.index_id, options.asOfDate);
-    warnings.push(`Using point-in-time constituents as of ${options.asOfDate.toISOString().split("T")[0]}`);
+    warnings.push(
+      `Using point-in-time constituents as of ${options.asOfDate.toISOString().split("T")[0]}`
+    );
   } else {
     // Get current constituents
     const constituents = await client.getIndexConstituents(source.index_id);
@@ -124,8 +124,12 @@ export async function resolveIndexSource(
       symbol,
       source: source.name,
     };
-    if (constituent?.name) inst.name = constituent.name;
-    if (constituent?.sector) inst.sector = constituent.sector;
+    if (constituent?.name) {
+      inst.name = constituent.name;
+    }
+    if (constituent?.sector) {
+      inst.sector = constituent.sector;
+    }
     return inst;
   });
 
@@ -154,9 +158,7 @@ export async function resolveETFHoldingsSource(
   const client = createFMPClient(options.fmpConfig);
 
   // Get ETF symbols to process
-  const etfSymbols: string[] = source.etf_symbol
-    ? [source.etf_symbol]
-    : source.etf_symbols ?? [];
+  const etfSymbols: string[] = source.etf_symbol ? [source.etf_symbol] : (source.etf_symbols ?? []);
 
   if (etfSymbols.length === 0) {
     throw new Error("ETF holdings source requires etf_symbol or etf_symbols");
@@ -169,9 +171,7 @@ export async function resolveETFHoldingsSource(
     const holdings = await client.getETFHoldings(etfSymbol);
 
     // Filter by weight
-    let filteredHoldings = holdings.filter(
-      (h) => h.weightPercentage >= source.min_weight_pct
-    );
+    let filteredHoldings = holdings.filter((h) => h.weightPercentage >= source.min_weight_pct);
 
     // Sort by weight descending
     filteredHoldings.sort((a, b) => b.weightPercentage - a.weightPercentage);
@@ -232,13 +232,27 @@ export async function resolveScreenerSource(
   };
 
   // Map common filter names
-  if (filters.market_cap_min) fmpFilters.marketCapMoreThan = Number(filters.market_cap_min);
-  if (filters.market_cap_max) fmpFilters.marketCapLowerThan = Number(filters.market_cap_max);
-  if (filters.volume_avg_min) fmpFilters.volumeMoreThan = Number(filters.volume_avg_min);
-  if (filters.price_min) fmpFilters.priceMoreThan = Number(filters.price_min);
-  if (filters.price_max) fmpFilters.priceLowerThan = Number(filters.price_max);
-  if (filters.sector) fmpFilters.sector = String(filters.sector);
-  if (filters.is_etf !== undefined) fmpFilters.isEtf = Boolean(filters.is_etf);
+  if (filters.market_cap_min) {
+    fmpFilters.marketCapMoreThan = Number(filters.market_cap_min);
+  }
+  if (filters.market_cap_max) {
+    fmpFilters.marketCapLowerThan = Number(filters.market_cap_max);
+  }
+  if (filters.volume_avg_min) {
+    fmpFilters.volumeMoreThan = Number(filters.volume_avg_min);
+  }
+  if (filters.price_min) {
+    fmpFilters.priceMoreThan = Number(filters.price_min);
+  }
+  if (filters.price_max) {
+    fmpFilters.priceLowerThan = Number(filters.price_max);
+  }
+  if (filters.sector) {
+    fmpFilters.sector = String(filters.sector);
+  }
+  if (filters.is_etf !== undefined) {
+    fmpFilters.isEtf = Boolean(filters.is_etf);
+  }
   if (filters.is_actively_trading !== undefined) {
     fmpFilters.isActivelyTrading = Boolean(filters.is_actively_trading);
   }

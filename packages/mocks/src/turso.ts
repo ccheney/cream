@@ -76,8 +76,6 @@ export class MockTursoClient {
   private tables: Map<string, Row[]> = new Map();
   private schemas: Map<string, TableSchema> = new Map();
   private config: Required<MockTursoConfig>;
-  private inTransaction = false;
-  private transactionBuffer: Row[][] = [];
 
   constructor(config: MockTursoConfig = {}) {
     this.config = {
@@ -128,9 +126,7 @@ export class MockTursoClient {
   /**
    * Execute a batch of statements
    */
-  async batch(
-    statements: Array<{ sql: string; args?: unknown[] }>
-  ): Promise<ResultSet[]> {
+  async batch(statements: Array<{ sql: string; args?: unknown[] }>): Promise<ResultSet[]> {
     const results: ResultSet[] = [];
     for (const stmt of statements) {
       results.push(await this.execute(stmt.sql, stmt.args ?? []));
@@ -148,7 +144,10 @@ export class MockTursoClient {
     // Save current state for rollback
     const savedState = new Map<string, Row[]>();
     for (const [name, rows] of this.tables.entries()) {
-      savedState.set(name, rows.map((r) => ({ ...r })));
+      savedState.set(
+        name,
+        rows.map((r) => ({ ...r }))
+      );
     }
 
     const self = this;
@@ -182,9 +181,7 @@ export class MockTursoClient {
    */
   private executeCreateTable(sql: string): ResultSet {
     // Parse table name: CREATE TABLE [IF NOT EXISTS] name (...)
-    const match = sql.match(
-      /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["']?(\w+)["']?\s*\(/i
-    );
+    const match = sql.match(/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["']?(\w+)["']?\s*\(/i);
     if (!match) {
       throw new Error(`Invalid CREATE TABLE: ${sql}`);
     }
@@ -219,9 +216,7 @@ export class MockTursoClient {
    */
   private executeInsert(sql: string, args: unknown[]): ResultSet {
     // Parse: INSERT INTO table (col1, col2) VALUES (?, ?)
-    const match = sql.match(
-      /INSERT INTO\s+["']?(\w+)["']?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i
-    );
+    const match = sql.match(/INSERT INTO\s+["']?(\w+)["']?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
     if (!match) {
       throw new Error(`Invalid INSERT: ${sql}`);
     }
@@ -256,9 +251,7 @@ export class MockTursoClient {
    */
   private executeSelect(sql: string, args: unknown[]): ResultSet {
     // Parse: SELECT col1, col2 FROM table [WHERE ...]
-    const match = sql.match(
-      /SELECT\s+(.+?)\s+FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i
-    );
+    const match = sql.match(/SELECT\s+(.+?)\s+FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i);
     if (!match) {
       return { columns: [], rows: [], rowsAffected: 0 };
     }
@@ -288,9 +281,7 @@ export class MockTursoClient {
     }
 
     // Project columns
-    const resultRows = rows.map((row) =>
-      columns.map((col) => row[col] ?? null)
-    );
+    const resultRows = rows.map((row) => columns.map((col) => row[col] ?? null));
 
     return {
       columns,
@@ -304,9 +295,7 @@ export class MockTursoClient {
    */
   private executeUpdate(sql: string, args: unknown[]): ResultSet {
     // Parse: UPDATE table SET col1 = ? [WHERE ...]
-    const match = sql.match(
-      /UPDATE\s+["']?(\w+)["']?\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i
-    );
+    const match = sql.match(/UPDATE\s+["']?(\w+)["']?\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i);
     if (!match) {
       throw new Error(`Invalid UPDATE: ${sql}`);
     }
@@ -350,9 +339,7 @@ export class MockTursoClient {
    */
   private executeDelete(sql: string, args: unknown[]): ResultSet {
     // Parse: DELETE FROM table [WHERE ...]
-    const match = sql.match(
-      /DELETE FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i
-    );
+    const match = sql.match(/DELETE FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i);
     if (!match) {
       throw new Error(`Invalid DELETE: ${sql}`);
     }
@@ -403,22 +390,14 @@ export class MockTursoClient {
   /**
    * Apply WHERE clause to filter rows
    */
-  private applyWhere(
-    rows: Row[],
-    whereClause: string,
-    args: unknown[]
-  ): Row[] {
+  private applyWhere(rows: Row[], whereClause: string, args: unknown[]): Row[] {
     return rows.filter((row) => this.matchesWhere(row, whereClause, args));
   }
 
   /**
    * Check if a row matches the WHERE clause
    */
-  private matchesWhere(
-    row: Row,
-    whereClause: string,
-    args: unknown[]
-  ): boolean {
+  private matchesWhere(row: Row, whereClause: string, args: unknown[]): boolean {
     // Simplified WHERE parsing: col = ?
     const match = whereClause.match(/(\w+)\s*=\s*\?/);
     if (match) {
@@ -477,9 +456,7 @@ export class MockTursoClient {
    */
   private async simulateDelay(): Promise<void> {
     if (this.config.queryDelay > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.config.queryDelay)
-      );
+      await new Promise((resolve) => setTimeout(resolve, this.config.queryDelay));
     }
   }
 

@@ -8,16 +8,10 @@
  * - Ranking and limits
  */
 
-import { describe, expect, it, beforeEach, mock } from "bun:test";
-import type { UniverseConfig, StaticSource, IndexSource, ETFHoldingsSource, ScreenerSource } from "@cream/config";
-import {
-  resolveStaticSource,
-  resolveIndexSource,
-  resolveETFHoldingsSource,
-  resolveScreenerSource,
-  type ResolvedInstrument,
-} from "./sources.js";
+import { describe, expect, it } from "bun:test";
+import type { StaticSource, UniverseConfig } from "@cream/config";
 import { resolveUniverse, resolveUniverseSymbols } from "./resolver.js";
+import { resolveStaticSource } from "./sources.js";
 
 // ============================================
 // Static Source Tests

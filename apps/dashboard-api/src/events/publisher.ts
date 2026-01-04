@@ -6,42 +6,34 @@
  * @see docs/plans/ui/08-realtime.md lines 143-167, 190-200
  */
 
-import { EventEmitter } from "events";
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
-import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
-import {
-  broadcast,
-  broadcastQuote,
-  broadcastAll,
-} from "../websocket/handler.js";
+import { EventEmitter } from "node:events";
+import { broadcast, broadcastAll, broadcastQuote } from "../websocket/handler.js";
 import { createWebSocketLogger } from "../websocket/logger.js";
 import { createWebSocketMetrics } from "../websocket/metrics.js";
-import type {
-  EventSource,
-  SourceStatus,
-  SourceState,
-  PublisherStats,
-  EventPublisherConfig,
-  MastraCycleEvent,
-  MastraAgentEvent,
-  QuoteStreamEvent,
-  OrderUpdateEvent,
-  DecisionInsertEvent,
-  SystemAlertEvent,
-  HealthCheckEvent,
-  BroadcastEvent,
-} from "./types.js";
 import {
-  mapCycleEvent,
-  mapAgentEvent,
-  mapQuoteEvent,
-  mapOrderEvent,
-  mapDecisionEvent,
-  mapAlertEvent,
-  mapHealthCheckEvent,
   batchQuoteEvents,
   type MappableEvent,
+  mapAgentEvent,
+  mapAlertEvent,
+  mapCycleEvent,
+  mapDecisionEvent,
+  mapHealthCheckEvent,
+  mapOrderEvent,
 } from "./mappers.js";
+import type {
+  BroadcastEvent,
+  DecisionInsertEvent,
+  EventPublisherConfig,
+  EventSource,
+  HealthCheckEvent,
+  MastraAgentEvent,
+  MastraCycleEvent,
+  OrderUpdateEvent,
+  PublisherStats,
+  QuoteStreamEvent,
+  SourceState,
+  SystemAlertEvent,
+} from "./types.js";
 
 // ============================================
 // Constants
@@ -50,12 +42,12 @@ import {
 /**
  * Default reconnection delay (ms).
  */
-const DEFAULT_RECONNECT_DELAY_MS = 1000;
+const _DEFAULT_RECONNECT_DELAY_MS = 1000;
 
 /**
  * Maximum reconnection delay (ms).
  */
-const MAX_RECONNECT_DELAY_MS = 30000;
+const _MAX_RECONNECT_DELAY_MS = 30000;
 
 /**
  * Quote batch interval (ms).
@@ -97,10 +89,8 @@ export interface EventPublisher {
 /**
  * Create event publisher.
  */
-export function createEventPublisher(
-  config: EventPublisherConfig = {}
-): EventPublisher {
-  const logger = createWebSocketLogger({ level: "info" });
+export function createEventPublisher(config: EventPublisherConfig = {}): EventPublisher {
+  const _logger = createWebSocketLogger({ level: "info" });
   const metrics = createWebSocketMetrics();
   const emitter = new EventEmitter();
 
@@ -136,10 +126,7 @@ export function createEventPublisher(
     };
   }
 
-  function updateSourceState(
-    source: EventSource,
-    update: Partial<SourceState>
-  ): void {
+  function updateSourceState(source: EventSource, update: Partial<SourceState>): void {
     Object.assign(sourceStates[source], update);
   }
 
@@ -157,7 +144,7 @@ export function createEventPublisher(
     });
   }
 
-  function setSourceError(source: EventSource, error: Error): void {
+  function _setSourceError(source: EventSource, error: Error): void {
     updateSourceState(source, {
       status: "error",
       lastError: error,
@@ -172,24 +159,23 @@ export function createEventPublisher(
   function broadcastEvent(event: BroadcastEvent): void {
     try {
       const { target, message } = event;
-      let sent = 0;
+      let _sent = 0;
 
       if (target.channel === null) {
         // Broadcast to all
-        sent = broadcastAll(message);
+        _sent = broadcastAll(message);
       } else if (target.symbol) {
         // Broadcast to symbol subscribers
-        sent = broadcastQuote(target.symbol, message);
+        _sent = broadcastQuote(target.symbol, message);
       } else {
         // Broadcast to channel subscribers
-        sent = broadcast(target.channel, message);
+        _sent = broadcast(target.channel, message);
       }
 
       eventsBroadcast++;
       metrics.observeBroadcastLatency(1); // Simplified latency tracking
-    } catch (error) {
+    } catch (_error) {
       eventsDropped++;
-      console.error("[EventPublisher] Broadcast error:", error);
     }
   }
 
@@ -199,7 +185,9 @@ export function createEventPublisher(
 
   function startQuoteBatching(): void {
     quoteBatchInterval = setInterval(() => {
-      if (pendingQuotes.length === 0) return;
+      if (pendingQuotes.length === 0) {
+        return;
+      }
 
       // Get and clear pending quotes
       const quotes = pendingQuotes.splice(0, pendingQuotes.length);
@@ -258,8 +246,12 @@ export function createEventPublisher(
     const connected = states.filter((s) => s.status === "connected").length;
     const errors = states.filter((s) => s.status === "error").length;
 
-    if (errors >= 2) return "unhealthy";
-    if (connected < 2) return "degraded";
+    if (errors >= 2) {
+      return "unhealthy";
+    }
+    if (connected < 2) {
+      return "degraded";
+    }
     return "healthy";
   }
 
@@ -335,10 +327,10 @@ export function createEventPublisher(
 
   return {
     async start(): Promise<void> {
-      if (running) return;
+      if (running) {
+        return;
+      }
       running = true;
-
-      console.log("[EventPublisher] Starting...");
 
       // Setup internal event handling
       if (config.enableInternalEvents !== false) {
@@ -350,19 +342,13 @@ export function createEventPublisher(
 
       // Start health checks
       startHealthChecks();
-
-      // Note: Redis, gRPC, and Turso connections would be started here
-      // For now, we're setting up the infrastructure
-      // Actual connections require external dependencies
-
-      console.log("[EventPublisher] Started");
     },
 
     async stop(): Promise<void> {
-      if (!running) return;
+      if (!running) {
+        return;
+      }
       running = false;
-
-      console.log("[EventPublisher] Stopping...");
 
       // Stop intervals
       stopQuoteBatching();
@@ -379,8 +365,6 @@ export function createEventPublisher(
         }
         pendingQuotes.length = 0;
       }
-
-      console.log("[EventPublisher] Stopped");
     },
 
     getStats(): PublisherStats {
@@ -397,7 +381,9 @@ export function createEventPublisher(
     },
 
     emit(event: MappableEvent): void {
-      if (!running) return;
+      if (!running) {
+        return;
+      }
       emitter.emit(event.type, event.data);
     },
 
@@ -416,9 +402,7 @@ let globalPublisher: EventPublisher | null = null;
 /**
  * Get or create the global event publisher.
  */
-export function getEventPublisher(
-  config?: EventPublisherConfig
-): EventPublisher {
+export function getEventPublisher(config?: EventPublisherConfig): EventPublisher {
   if (!globalPublisher) {
     globalPublisher = createEventPublisher(config);
   }

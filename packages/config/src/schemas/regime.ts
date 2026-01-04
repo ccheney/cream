@@ -22,13 +22,7 @@ export type ClassifierType = z.infer<typeof ClassifierType>;
 /**
  * Regime labels (fixed taxonomy)
  */
-export const RegimeLabel = z.enum([
-  "BULL_TREND",
-  "BEAR_TREND",
-  "RANGE",
-  "HIGH_VOL",
-  "LOW_VOL",
-]);
+export const RegimeLabel = z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]);
 export type RegimeLabel = z.infer<typeof RegimeLabel>;
 
 // ============================================
@@ -154,13 +148,9 @@ export const RegimeConfigSchema = z
     /**
      * Regime labels (fixed taxonomy)
      */
-    labels: z.array(RegimeLabel).default([
-      "BULL_TREND",
-      "BEAR_TREND",
-      "RANGE",
-      "HIGH_VOL",
-      "LOW_VOL",
-    ]),
+    labels: z
+      .array(RegimeLabel)
+      .default(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
 
     /**
      * Rule-based classifier settings

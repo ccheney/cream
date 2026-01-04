@@ -6,17 +6,14 @@
  * @see docs/plans/ui/07-state-management.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { act } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  useWSStore,
-  selectIsReconnecting,
   selectHasSubscriptions,
-  selectSubscriptionCount,
+  selectIsReconnecting,
   selectIsSubscribedToChannel,
   selectIsSubscribedToSymbol,
-  type WSStore,
-  type ConnectionStatus,
+  selectSubscriptionCount,
+  useWSStore,
 } from "./websocket.js";
 
 // ============================================
@@ -199,19 +196,13 @@ describe("Error Handling", () => {
 describe("subscribe", () => {
   it("adds new channels", () => {
     useWSStore.getState().subscribe(["orders", "decisions"]);
-    expect(useWSStore.getState().subscribedChannels).toEqual([
-      "orders",
-      "decisions",
-    ]);
+    expect(useWSStore.getState().subscribedChannels).toEqual(["orders", "decisions"]);
   });
 
   it("does not duplicate channels", () => {
     useWSStore.getState().subscribe(["orders"]);
     useWSStore.getState().subscribe(["orders", "decisions"]);
-    expect(useWSStore.getState().subscribedChannels).toEqual([
-      "orders",
-      "decisions",
-    ]);
+    expect(useWSStore.getState().subscribedChannels).toEqual(["orders", "decisions"]);
   });
 
   it("handles empty array", () => {
@@ -231,10 +222,7 @@ describe("unsubscribe", () => {
   it("removes channels", () => {
     useWSStore.getState().subscribe(["orders", "decisions", "alerts"]);
     useWSStore.getState().unsubscribe(["decisions"]);
-    expect(useWSStore.getState().subscribedChannels).toEqual([
-      "orders",
-      "alerts",
-    ]);
+    expect(useWSStore.getState().subscribedChannels).toEqual(["orders", "alerts"]);
   });
 
   it("removes multiple channels", () => {
@@ -411,45 +399,33 @@ describe("selectSubscriptionCount", () => {
 
 describe("selectIsSubscribedToChannel", () => {
   it("returns false when not subscribed", () => {
-    expect(selectIsSubscribedToChannel("orders")(useWSStore.getState())).toBe(
-      false
-    );
+    expect(selectIsSubscribedToChannel("orders")(useWSStore.getState())).toBe(false);
   });
 
   it("returns true when subscribed", () => {
     useWSStore.getState().subscribe(["orders"]);
-    expect(selectIsSubscribedToChannel("orders")(useWSStore.getState())).toBe(
-      true
-    );
+    expect(selectIsSubscribedToChannel("orders")(useWSStore.getState())).toBe(true);
   });
 
   it("returns false for different channel", () => {
     useWSStore.getState().subscribe(["orders"]);
-    expect(
-      selectIsSubscribedToChannel("decisions")(useWSStore.getState())
-    ).toBe(false);
+    expect(selectIsSubscribedToChannel("decisions")(useWSStore.getState())).toBe(false);
   });
 });
 
 describe("selectIsSubscribedToSymbol", () => {
   it("returns false when not subscribed", () => {
-    expect(selectIsSubscribedToSymbol("AAPL")(useWSStore.getState())).toBe(
-      false
-    );
+    expect(selectIsSubscribedToSymbol("AAPL")(useWSStore.getState())).toBe(false);
   });
 
   it("returns true when subscribed", () => {
     useWSStore.getState().subscribeSymbols(["AAPL"]);
-    expect(selectIsSubscribedToSymbol("AAPL")(useWSStore.getState())).toBe(
-      true
-    );
+    expect(selectIsSubscribedToSymbol("AAPL")(useWSStore.getState())).toBe(true);
   });
 
   it("returns false for different symbol", () => {
     useWSStore.getState().subscribeSymbols(["AAPL"]);
-    expect(selectIsSubscribedToSymbol("GOOGL")(useWSStore.getState())).toBe(
-      false
-    );
+    expect(selectIsSubscribedToSymbol("GOOGL")(useWSStore.getState())).toBe(false);
   });
 });
 
@@ -472,10 +448,7 @@ describe("Edge Cases", () => {
 
   it("handles special characters in channel names", () => {
     useWSStore.getState().subscribe(["orders:live", "decisions/pending"]);
-    expect(useWSStore.getState().subscribedChannels).toEqual([
-      "orders:live",
-      "decisions/pending",
-    ]);
+    expect(useWSStore.getState().subscribedChannels).toEqual(["orders:live", "decisions/pending"]);
   });
 
   it("handles case sensitivity in symbols", () => {

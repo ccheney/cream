@@ -6,13 +6,13 @@
  * @see docs/plans/ui/28-states.md lines 102-108
  */
 
-import React from "react";
+import type React from "react";
 import {
-  useToastStore,
-  type Toast,
-  type ToastVariant,
-  type ToastPosition,
   EXIT_ANIMATION_DURATION,
+  type Toast,
+  type ToastPosition,
+  type ToastVariant,
+  useToastStore,
 } from "../../stores/toast-store";
 
 // ============================================
@@ -41,13 +41,16 @@ export interface ToastContainerProps {
 /**
  * Variant styles.
  */
-const VARIANT_STYLES: Record<ToastVariant, {
-  borderColor: string;
-  iconColor: string;
-  icon: string;
-  role: "status" | "alert";
-  ariaLive: "polite" | "assertive";
-}> = {
+const VARIANT_STYLES: Record<
+  ToastVariant,
+  {
+    borderColor: string;
+    iconColor: string;
+    icon: string;
+    role: "status" | "alert";
+    ariaLive: "polite" | "assertive";
+  }
+> = {
   success: {
     borderColor: "#22c55e", // green-500
     iconColor: "#22c55e",
@@ -287,17 +290,9 @@ export function ToastContainer({ position: propPosition }: ToastContainerProps) 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: toastKeyframes }} />
-      <div
-        data-testid="toast-container"
-        style={containerStyles}
-        aria-label="Notifications"
-      >
+      <div data-testid="toast-container" style={containerStyles} aria-label="Notifications">
         {toasts.map((toast) => (
-          <ToastItem
-            key={toast.id}
-            toast={toast}
-            onDismiss={handleDismiss}
-          />
+          <ToastItem key={toast.id} toast={toast} onDismiss={handleDismiss} />
         ))}
       </div>
     </>
@@ -308,5 +303,5 @@ export function ToastContainer({ position: propPosition }: ToastContainerProps) 
 // Exports
 // ============================================
 
+export type { Toast, ToastPosition, ToastVariant } from "../../stores/toast-store";
 export { useToast } from "../../stores/toast-store";
-export type { Toast, ToastVariant, ToastPosition } from "../../stores/toast-store";

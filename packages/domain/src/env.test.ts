@@ -1,10 +1,5 @@
-import { describe, it, expect } from "bun:test";
-import { z } from "zod";
-import {
-  envSchema,
-  CreamEnvironment,
-  CreamBroker,
-} from "./env";
+import { describe, expect, it } from "bun:test";
+import { CreamBroker, CreamEnvironment, envSchema } from "./env";
 
 describe("CreamEnvironment", () => {
   it("accepts valid environment values", () => {

@@ -1,62 +1,59 @@
-import { describe, it, expect } from "bun:test";
-import { readFile } from "fs/promises";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { describe, expect, it } from "bun:test";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  DecisionSchema,
   DecisionPlanSchema,
+  DecisionSchema,
   InstrumentSchema,
-  SizeSchema,
   OrderPlanSchema,
   RiskLevelsSchema,
+  SizeSchema,
 } from "@cream/domain";
 import {
-  // Metadata
-  createMetadata,
-  // Instruments
-  createEquityInstrument,
-  createOptionContract,
-  createOptionInstrument,
-  // Size
-  createSize,
-  createOptionsSize,
-  // Order Plan
-  createOrderPlan,
-  createMarketOrderPlan,
-  // Risk Levels
-  createRiskLevels,
-  createShortRiskLevels,
-  // References
-  createReferences,
+  createBearTrendSnapshot,
+  createBullTrendSnapshot,
+  // Market Snapshots
+  createCandle,
   // Decisions
   createDecision,
-  createShortDecision,
-  createHoldDecision,
-  createOptionsSpreadDecision,
   // Decision Plans
   createDecisionPlan,
   createEmptyDecisionPlan,
-  createMultiDecisionPlan,
+  createEmptyPortfolioState,
+  // Instruments
+  createEquityInstrument,
+  createHighVolSnapshot,
+  createHoldDecision,
+  createIndicators,
+  createInvalidDecisionBadRiskLevels,
   // Invalid decisions
   createInvalidDecisionMissingSize,
   createInvalidDecisionMissingStop,
-  createInvalidDecisionBadRiskLevels,
-  // Market Snapshots
-  createCandle,
-  createIndicators,
-  createSymbolSnapshot,
+  createMarketOrderPlan,
   createMarketSnapshot,
-  createBullTrendSnapshot,
-  createBearTrendSnapshot,
-  createHighVolSnapshot,
-  createRangeBoundSnapshot,
+  createMemoryContext,
+  // Metadata
+  createMetadata,
+  createMultiDecisionPlan,
+  createOptionInstrument,
+  createOptionsSize,
+  createOptionsSpreadDecision,
+  // Order Plan
+  createOrderPlan,
   // Memory
   createPastTradeCase,
-  createMemoryContext,
+  createPortfolioState,
   // Portfolio
   createPosition,
-  createPortfolioState,
-  createEmptyPortfolioState,
+  createRangeBoundSnapshot,
+  // Risk Levels
+  createRiskLevels,
+  createShortDecision,
+  createShortRiskLevels,
+  // Size
+  createSize,
+  createSymbolSnapshot,
 } from "./factories";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -474,10 +471,7 @@ describe("createEmptyPortfolioState", () => {
 describe("JSON fixtures", () => {
   describe("snapshot fixtures", () => {
     it("bull_trend_aapl.json is valid", async () => {
-      const content = await readFile(
-        join(fixturesDir, "snapshots/bull_trend_aapl.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "snapshots/bull_trend_aapl.json"), "utf-8");
       const data = JSON.parse(content);
       expect(data._version).toBe("1.0.0");
       expect(data.regime).toBe("BULL_TREND");
@@ -485,30 +479,21 @@ describe("JSON fixtures", () => {
     });
 
     it("bear_trend_spy.json is valid", async () => {
-      const content = await readFile(
-        join(fixturesDir, "snapshots/bear_trend_spy.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "snapshots/bear_trend_spy.json"), "utf-8");
       const data = JSON.parse(content);
       expect(data.regime).toBe("BEAR_TREND");
       expect(data.symbols[0].symbol).toBe("SPY");
     });
 
     it("high_vol_nvda.json is valid", async () => {
-      const content = await readFile(
-        join(fixturesDir, "snapshots/high_vol_nvda.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "snapshots/high_vol_nvda.json"), "utf-8");
       const data = JSON.parse(content);
       expect(data.regime).toBe("HIGH_VOL");
       expect(data.symbols[0].symbol).toBe("NVDA");
     });
 
     it("range_bound_tsla.json is valid", async () => {
-      const content = await readFile(
-        join(fixturesDir, "snapshots/range_bound_tsla.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "snapshots/range_bound_tsla.json"), "utf-8");
       const data = JSON.parse(content);
       expect(data.regime).toBe("RANGE");
       expect(data.symbols[0].symbol).toBe("TSLA");
@@ -517,20 +502,14 @@ describe("JSON fixtures", () => {
 
   describe("decision fixtures", () => {
     it("valid_increase.json passes schema validation", async () => {
-      const content = await readFile(
-        join(fixturesDir, "decisions/valid_increase.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "decisions/valid_increase.json"), "utf-8");
       const data = JSON.parse(content);
       const result = DecisionSchema.safeParse(data.decision);
       expect(result.success).toBe(true);
     });
 
     it("valid_multi_leg.json passes schema validation", async () => {
-      const content = await readFile(
-        join(fixturesDir, "decisions/valid_multi_leg.json"),
-        "utf-8"
-      );
+      const content = await readFile(join(fixturesDir, "decisions/valid_multi_leg.json"), "utf-8");
       const data = JSON.parse(content);
       const result = DecisionSchema.safeParse(data.decision);
       expect(result.success).toBe(true);

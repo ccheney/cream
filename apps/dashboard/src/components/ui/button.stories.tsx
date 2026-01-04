@@ -7,9 +7,9 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import React, { useState } from "react";
-import { Button, IconButton } from "./button";
+import { useState } from "react";
 import type { ButtonState } from "./button";
+import { Button, IconButton } from "./button";
 
 // ============================================
 // Button Stories
@@ -22,8 +22,7 @@ const meta: Meta<typeof Button> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Button component with variants, sizes, and loading states.",
+        component: "Button component with variants, sizes, and loading states.",
       },
     },
   },
@@ -182,9 +181,15 @@ export const AllStates: StoryObj = {
   render: () => (
     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
       <Button state="idle">Idle</Button>
-      <Button state="loading" loadingText="Loading...">Loading</Button>
-      <Button state="success" successText="Done!">Success</Button>
-      <Button state="error" errorText="Error">Error</Button>
+      <Button state="loading" loadingText="Loading...">
+        Loading
+      </Button>
+      <Button state="success" successText="Done!">
+        Success
+      </Button>
+      <Button state="error" errorText="Error">
+        Error
+      </Button>
     </div>
   ),
 };
@@ -276,10 +281,18 @@ export const Disabled: Story = {
 export const DisabledVariants: StoryObj = {
   render: () => (
     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-      <Button variant="primary" disabled>Primary</Button>
-      <Button variant="secondary" disabled>Secondary</Button>
-      <Button variant="destructive" disabled>Destructive</Button>
-      <Button variant="ghost" disabled>Ghost</Button>
+      <Button variant="primary" disabled>
+        Primary
+      </Button>
+      <Button variant="secondary" disabled>
+        Secondary
+      </Button>
+      <Button variant="destructive" disabled>
+        Destructive
+      </Button>
+      <Button variant="ghost" disabled>
+        Ghost
+      </Button>
     </div>
   ),
 };
@@ -337,12 +350,16 @@ export const VariantSizeMatrix: StoryObj = {
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {(["primary", "secondary", "destructive", "ghost"] as const).map((variant) => (
         <div key={variant} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <span style={{ width: "80px", fontSize: "12px", color: "#78716c" }}>
-            {variant}
-          </span>
-          <Button variant={variant} size="sm">Small</Button>
-          <Button variant={variant} size="md">Medium</Button>
-          <Button variant={variant} size="lg">Large</Button>
+          <span style={{ width: "80px", fontSize: "12px", color: "#78716c" }}>{variant}</span>
+          <Button variant={variant} size="sm">
+            Small
+          </Button>
+          <Button variant={variant} size="md">
+            Medium
+          </Button>
+          <Button variant={variant} size="lg">
+            Large
+          </Button>
         </div>
       ))}
     </div>

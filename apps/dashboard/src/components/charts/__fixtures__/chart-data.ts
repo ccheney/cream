@@ -4,9 +4,9 @@
  * Sample data for testing chart components.
  */
 
-import type { OHLCVData, TradeMarker, PriceLineConfig } from "@/lib/chart-config";
-import type { EquityDataPoint } from "../EquityCurve";
+import type { OHLCVData, PriceLineConfig, TradeMarker } from "@/lib/chart-config";
 import type { AllocationDataPoint } from "../AllocationChart";
+import type { EquityDataPoint } from "../EquityCurve";
 import type { ReturnDataPoint } from "../ReturnsChart";
 
 // ============================================
@@ -16,7 +16,7 @@ import type { ReturnDataPoint } from "../ReturnsChart";
 /**
  * Generate OHLCV data for testing.
  */
-export function generateOHLCVData(days: number, startPrice: number = 100): OHLCVData[] {
+export function generateOHLCVData(days: number, startPrice = 100): OHLCVData[] {
   const data: OHLCVData[] = [];
   let price = startPrice;
   const now = new Date();
@@ -106,7 +106,7 @@ export const emptyPriceLines: PriceLineConfig[] = [];
 /**
  * Generate equity data for testing.
  */
-export function generateEquityData(days: number, startEquity: number = 100000): EquityDataPoint[] {
+export function generateEquityData(days: number, startEquity = 100000): EquityDataPoint[] {
   const data: EquityDataPoint[] = [];
   let equity = startEquity;
   let peak = equity;
@@ -139,9 +139,7 @@ export const sampleEquityData: EquityDataPoint[] = generateEquityData(90);
 export const emptyEquityData: EquityDataPoint[] = [];
 
 /** Single point equity data */
-export const singlePointEquityData: EquityDataPoint[] = [
-  { time: "2026-01-04", value: 100000 },
-];
+export const singlePointEquityData: EquityDataPoint[] = [{ time: "2026-01-04", value: 100000 }];
 
 /** All positive equity (upward trend) */
 export const upwardEquityData: EquityDataPoint[] = [
@@ -176,9 +174,7 @@ export const sampleAllocationData: AllocationDataPoint[] = [
 export const emptyAllocationData: AllocationDataPoint[] = [];
 
 /** Single slice allocation */
-export const singleSliceData: AllocationDataPoint[] = [
-  { name: "Cash", value: 100 },
-];
+export const singleSliceData: AllocationDataPoint[] = [{ name: "Cash", value: 100 }];
 
 /** Two slice allocation */
 export const twoSliceData: AllocationDataPoint[] = [

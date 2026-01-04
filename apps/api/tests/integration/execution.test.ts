@@ -6,7 +6,7 @@
  * @see docs/plans/14-testing.md lines 132-168
  */
 
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 
 // ============================================
@@ -196,7 +196,7 @@ function createMockClient(): ExecutionEngineClient {
 // ============================================
 
 describe("Execution Engine Integration", () => {
-  let container: StartedTestContainer | null = null;
+  const container: StartedTestContainer | null = null;
   let client: ExecutionEngineClient;
 
   // NOTE: Container-based tests are skipped until the Execution Engine Docker image exists.

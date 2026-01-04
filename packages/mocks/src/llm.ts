@@ -7,7 +7,7 @@
  * @see docs/plans/14-testing.md for mocking strategy
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 // ============================================
 // Types
@@ -253,10 +253,7 @@ export class MockLLM implements LLMInterface {
   /**
    * Complete a prompt and return parsed JSON
    */
-  async completeJSON<T = unknown>(
-    prompt: string,
-    options?: CompletionOptions
-  ): Promise<T> {
+  async completeJSON<T = unknown>(prompt: string, options?: CompletionOptions): Promise<T> {
     const response = await this.complete(prompt, options);
     try {
       return JSON.parse(response) as T;
@@ -342,10 +339,7 @@ export class MockLLMRecorder implements LLMInterface {
   private recordings: Map<string, MockResponse> = new Map();
   private keyStrategy: "hash" | "pattern" | "exact";
 
-  constructor(
-    realLLM: LLMInterface,
-    keyStrategy: "hash" | "pattern" | "exact" = "pattern"
-  ) {
+  constructor(realLLM: LLMInterface, keyStrategy: "hash" | "pattern" | "exact" = "pattern") {
     this.realLLM = realLLM;
     this.keyStrategy = keyStrategy;
   }
@@ -370,10 +364,7 @@ export class MockLLMRecorder implements LLMInterface {
   /**
    * Complete JSON and record the response
    */
-  async completeJSON<T = unknown>(
-    prompt: string,
-    options?: CompletionOptions
-  ): Promise<T> {
+  async completeJSON<T = unknown>(prompt: string, options?: CompletionOptions): Promise<T> {
     const key = extractPromptKey(prompt, this.keyStrategy);
     const startTime = Date.now();
 
@@ -506,7 +497,10 @@ export function createMockLLMWithDefaults(): MockLLM {
     "risk_manager:REJECT": {
       content: {
         verdict: "REJECT",
-        violations: ["Position size exceeds 5% limit", "Correlation with existing positions too high"],
+        violations: [
+          "Position size exceeds 5% limit",
+          "Correlation with existing positions too high",
+        ],
         riskMetrics: {
           portfolioRisk: 0.08,
           positionRisk: 0.06,
@@ -544,7 +538,10 @@ export function createMockLLMWithDefaults(): MockLLM {
       content: {
         instrumentId: "AAPL",
         sentiment: "neutral",
-        headlines: ["Apple announces new product line", "Tech sector steady amid market volatility"],
+        headlines: [
+          "Apple announces new product line",
+          "Tech sector steady amid market volatility",
+        ],
         impactScore: 0.3,
         eventRisk: "low",
       },

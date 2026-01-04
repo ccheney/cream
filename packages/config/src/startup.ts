@@ -10,9 +10,9 @@
  * @see docs/plans/11-configuration.md
  */
 
+import { type EnvConfig, env, isLive } from "@cream/domain/env";
 import { z } from "zod";
-import { env, envSchema, isLive, isPaper, type EnvConfig } from "@cream/domain/env";
-import { loadConfigWithEnv, type CreamConfig } from "./index";
+import { type CreamConfig, loadConfigWithEnv } from "./index";
 import { validateAtStartup } from "./validate";
 
 // ============================================
@@ -22,14 +22,7 @@ import { validateAtStartup } from "./validate";
 /**
  * Patterns that identify sensitive fields to redact
  */
-const SENSITIVE_PATTERNS = [
-  /key$/i,
-  /secret$/i,
-  /token$/i,
-  /password$/i,
-  /credential/i,
-  /auth/i,
-];
+const SENSITIVE_PATTERNS = [/key$/i, /secret$/i, /token$/i, /password$/i, /credential/i, /auth/i];
 
 /**
  * Check if a field name contains sensitive data
@@ -56,7 +49,9 @@ const REDACTED = "[REDACTED]";
  */
 export function sanitizeConfig(obj: unknown, depth = 0): unknown {
   // Prevent infinite recursion
-  if (depth > 10) return REDACTED;
+  if (depth > 10) {
+    return REDACTED;
+  }
 
   if (obj === null || obj === undefined) {
     return obj;
@@ -152,24 +147,17 @@ export function validateLiveTradingSafety(): {
   // Check for explicit LIVE trading approval
   const approved = process.env.LIVE_TRADING_APPROVED === "true";
   if (!approved) {
-    errors.push(
-      "LIVE trading requires LIVE_TRADING_APPROVED=true environment variable"
-    );
+    errors.push("LIVE trading requires LIVE_TRADING_APPROVED=true environment variable");
   }
 
   // Double-check that we're not accidentally in LIVE
   if (env.ALPACA_BASE_URL?.includes("paper-api")) {
-    errors.push(
-      "LIVE trading detected but ALPACA_BASE_URL points to paper trading endpoint"
-    );
+    errors.push("LIVE trading detected but ALPACA_BASE_URL points to paper trading endpoint");
   }
 
   // Verify database isolation
-  if (env.TURSO_DATABASE_URL?.includes("backtest") ||
-      env.TURSO_DATABASE_URL?.includes("paper")) {
-    errors.push(
-      "LIVE trading detected but database URL appears to be for non-LIVE environment"
-    );
+  if (env.TURSO_DATABASE_URL?.includes("backtest") || env.TURSO_DATABASE_URL?.includes("paper")) {
+    errors.push("LIVE trading detected but database URL appears to be for non-LIVE environment");
   }
 
   return { approved: errors.length === 0, errors };
@@ -186,9 +174,7 @@ export function validateLiveTradingSafety(): {
  * @param configDir - Directory containing config files
  * @returns Validation result with config and diagnostics
  */
-export async function validateStartup(
-  configDir = "configs"
-): Promise<StartupResult> {
+export async function validateStartup(configDir = "configs"): Promise<StartupResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -208,9 +194,7 @@ export async function validateStartup(
     warnings.push(...startupValidation.warnings);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      errors.push(
-        ...error.issues.map((i) => `config.${i.path.join(".")}: ${i.message}`)
-      );
+      errors.push(...error.issues.map((i) => `config.${i.path.join(".")}: ${i.message}`));
     } else {
       errors.push(
         `Configuration loading failed: ${error instanceof Error ? error.message : String(error)}`
@@ -267,10 +251,7 @@ export interface StartupAuditLog {
  * @param result - Startup validation result
  * @returns Audit log entry (sanitized)
  */
-export function createAuditLog(
-  service: string,
-  result: StartupResult
-): StartupAuditLog {
+export function createAuditLog(service: string, result: StartupResult): StartupAuditLog {
   return {
     timestamp: new Date().toISOString(),
     service,
@@ -285,9 +266,7 @@ export function createAuditLog(
 /**
  * Log startup audit entry to console (structured JSON)
  */
-export function logStartupAudit(audit: StartupAuditLog): void {
-  console.log(JSON.stringify(audit, null, 2));
-}
+export function logStartupAudit(_audit: StartupAuditLog): void {}
 
 // ============================================
 // Fail-Fast Entry Point
@@ -330,46 +309,28 @@ export async function runStartupValidation(
   service: string,
   configDir = "configs"
 ): Promise<{ env: EnvConfig; config: CreamConfig }> {
-  console.log(`\n🚀 Starting ${service}...`);
-  console.log(`   Environment: ${env.CREAM_ENV}`);
-  console.log(`   Broker: ${env.CREAM_BROKER}\n`);
-
   const result = await validateStartup(configDir);
 
   // Create and log audit entry
   const audit = createAuditLog(service, result);
 
   if (!result.success) {
-    console.error("❌ Startup validation FAILED\n");
-    console.error("Errors:");
-    for (const error of result.errors) {
-      console.error(`  • ${error}`);
+    for (const _error of result.errors) {
     }
     if (result.warnings.length > 0) {
-      console.warn("\nWarnings:");
-      for (const warning of result.warnings) {
-        console.warn(`  ⚠ ${warning}`);
+      for (const _warning of result.warnings) {
       }
     }
-    console.error("\n📋 Audit Log:");
     logStartupAudit(audit);
-    console.error("\n💀 Exiting with code 1 (fail-fast)\n");
     process.exit(1);
   }
 
   // Log warnings even on success
   if (result.warnings.length > 0) {
-    console.warn("⚠️  Startup warnings:");
-    for (const warning of result.warnings) {
-      console.warn(`  • ${warning}`);
+    for (const _warning of result.warnings) {
     }
-    console.log();
   }
-
-  console.log("✅ Startup validation passed\n");
-  console.log("📋 Configuration (sanitized):");
   logStartupAudit(audit);
-  console.log();
 
   // TypeScript knows config is defined because result.success is true
   return { env: result.env, config: result.config! };

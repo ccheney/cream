@@ -7,8 +7,8 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import { AllocationChart } from "./AllocationChart";
 import type { AllocationDataPoint } from "./AllocationChart";
+import { AllocationChart } from "./AllocationChart";
 
 // ============================================
 // Sample Data
@@ -208,12 +208,7 @@ export const DashboardCard: Story = {
       }}
     >
       <h3 style={{ margin: "0 0 16px", fontSize: "16px" }}>Sector Allocation</h3>
-      <AllocationChart
-        data={sectorAllocation}
-        size={240}
-        innerRadius: 55,
-        showLegend
-      />
+      <AllocationChart data={sectorAllocation} size={240} innerRadius={55} showLegend />
     </div>
   ),
   parameters: {

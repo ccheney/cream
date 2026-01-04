@@ -95,11 +95,7 @@ export const AGENT_EVAL_CONFIGS = {
 export function createDecisionQualityScorer() {
   return {
     name: "decision_quality",
-    scorer: async (args: {
-      input: unknown;
-      output: unknown;
-      expected?: unknown;
-    }) => {
+    scorer: async (args: { input: unknown; output: unknown; expected?: unknown }) => {
       const output = args.output as Record<string, unknown>;
 
       // Check required fields
@@ -134,11 +130,7 @@ export function createDecisionQualityScorer() {
 export function createRiskIdentificationScorer() {
   return {
     name: "risk_identification",
-    scorer: async (args: {
-      input: unknown;
-      output: unknown;
-      expected?: unknown;
-    }) => {
+    scorer: async (args: { input: unknown; output: unknown; expected?: unknown }) => {
       const output = String(args.output || "").toLowerCase();
 
       // Check for risk-related keywords
@@ -179,7 +171,7 @@ export async function initAgentEval(
   agentName: keyof typeof AGENT_EVAL_CONFIGS,
   experimentSuffix?: string
 ) {
-  const config = AGENT_EVAL_CONFIGS[agentName];
+  const _config = AGENT_EVAL_CONFIGS[agentName];
   const experimentName = getExperimentName("paper", experimentSuffix);
 
   return Eval(BRAINTRUST_PROJECT, {

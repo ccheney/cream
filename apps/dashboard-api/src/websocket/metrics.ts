@@ -176,7 +176,9 @@ export function labelsToKey(labels: Labels = {}): string {
  */
 export function formatLabels(labels: Labels): string {
   const entries = Object.entries(labels);
-  if (entries.length === 0) return "";
+  if (entries.length === 0) {
+    return "";
+  }
   const formatted = entries.map(([k, v]) => `${k}="${v}"`).join(",");
   return `{${formatted}}`;
 }
@@ -230,11 +232,7 @@ export function observeHistogram(histogram: HistogramBuckets, value: number): vo
 export function createMetricsRegistry(): MetricsRegistry {
   const metrics = new Map<string, Metric>();
 
-  const ensureMetric = (
-    name: string,
-    type: MetricType,
-    buckets?: number[]
-  ): Metric => {
+  const ensureMetric = (name: string, type: MetricType, _buckets?: number[]): Metric => {
     let metric = metrics.get(name);
     if (!metric) {
       metric = {
@@ -251,7 +249,7 @@ export function createMetricsRegistry(): MetricsRegistry {
   return {
     metrics,
 
-    inc(name: string, labels: Labels = {}, value: number = 1): void {
+    inc(name: string, labels: Labels = {}, value = 1): void {
       const metric = ensureMetric(name, "counter");
       const key = labelsToKey(labels);
       const current = (metric.values.get(key) as number) || 0;
@@ -264,14 +262,14 @@ export function createMetricsRegistry(): MetricsRegistry {
       metric.values.set(key, value);
     },
 
-    incGauge(name: string, labels: Labels = {}, value: number = 1): void {
+    incGauge(name: string, labels: Labels = {}, value = 1): void {
       const metric = ensureMetric(name, "gauge");
       const key = labelsToKey(labels);
       const current = (metric.values.get(key) as number) || 0;
       metric.values.set(key, current + value);
     },
 
-    decGauge(name: string, labels: Labels = {}, value: number = 1): void {
+    decGauge(name: string, labels: Labels = {}, value = 1): void {
       const metric = ensureMetric(name, "gauge");
       const key = labelsToKey(labels);
       const current = (metric.values.get(key) as number) || 0;
@@ -284,13 +282,14 @@ export function createMetricsRegistry(): MetricsRegistry {
       let histogram = metric.values.get(key) as HistogramBuckets | undefined;
       if (!histogram) {
         // Use default buckets based on metric name
-        const buckets = name.includes("latency") || name.includes("ms")
-          ? LATENCY_BUCKETS
-          : name.includes("size") || name.includes("bytes")
-            ? SIZE_BUCKETS
-            : name.includes("duration") || name.includes("seconds")
-              ? DURATION_BUCKETS
-              : LATENCY_BUCKETS;
+        const buckets =
+          name.includes("latency") || name.includes("ms")
+            ? LATENCY_BUCKETS
+            : name.includes("size") || name.includes("bytes")
+              ? SIZE_BUCKETS
+              : name.includes("duration") || name.includes("seconds")
+                ? DURATION_BUCKETS
+                : LATENCY_BUCKETS;
         histogram = createHistogramBuckets(buckets);
         metric.values.set(key, histogram);
       }
@@ -361,23 +360,19 @@ export function createMetricsRegistry(): MetricsRegistry {
 
         if (metric.type === "histogram") {
           for (const [labelKey, histogram] of metric.values) {
-            const baseLabels = labelKey ? `{${labelKey}}` : "";
+            const _baseLabels = labelKey ? `{${labelKey}}` : "";
             const buckets = histogram as HistogramBuckets;
             let cumulative = 0;
 
             for (let i = 0; i < buckets.boundaries.length; i++) {
               cumulative += buckets.counts[i];
               const le = buckets.boundaries[i];
-              const labels = labelKey
-                ? `{${labelKey},le="${le}"}`
-                : `{le="${le}"}`;
+              const labels = labelKey ? `{${labelKey},le="${le}"}` : `{le="${le}"}`;
               lines.push(`${name}_bucket${labels} ${cumulative}`);
             }
 
             cumulative += buckets.counts[buckets.counts.length - 1];
-            const infLabels = labelKey
-              ? `{${labelKey},le="+Inf"}`
-              : `{le="+Inf"}`;
+            const infLabels = labelKey ? `{${labelKey},le="+Inf"}` : `{le="+Inf"}`;
             lines.push(`${name}_bucket${infLabels} ${cumulative}`);
 
             const sumLabels = labelKey ? `{${labelKey}}` : "";
@@ -463,7 +458,7 @@ export function createWebSocketMetrics(): WebSocketMetrics {
       registry.inc(WS_METRICS.TOTAL_CONNECTIONS, userId ? { user_id: userId } : {});
     },
 
-    connectionClosed(userId?: string, durationSeconds: number) {
+    connectionClosed(_userId?: string, durationSeconds: number) {
       activeConnections = Math.max(0, activeConnections - 1);
       registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections);
       registry.observe(WS_METRICS.CONNECTION_DURATION, durationSeconds);

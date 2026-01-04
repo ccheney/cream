@@ -9,12 +9,12 @@
 
 import type { UniverseConfig, UniverseFilters, UniverseSource } from "@cream/config";
 
-import { type FMPClientConfig, createFMPClient } from "./fmp-client.js";
+import { createFMPClient, type FMPClientConfig } from "./fmp-client.js";
 import {
   type ResolvedInstrument,
+  resolveSource,
   type SourceResolutionResult,
   type SourceResolverOptions,
-  resolveSource,
 } from "./sources.js";
 
 // ============================================
@@ -85,12 +85,24 @@ function composeUnion(sourceResults: SourceResolutionResult[]): ResolvedInstrume
         const marketCap = existing.marketCap ?? instrument.marketCap;
         const avgVolume = existing.avgVolume ?? instrument.avgVolume;
         const price = existing.price ?? instrument.price;
-        if (name !== undefined) merged.name = name;
-        if (sector !== undefined) merged.sector = sector;
-        if (industry !== undefined) merged.industry = industry;
-        if (marketCap !== undefined) merged.marketCap = marketCap;
-        if (avgVolume !== undefined) merged.avgVolume = avgVolume;
-        if (price !== undefined) merged.price = price;
+        if (name !== undefined) {
+          merged.name = name;
+        }
+        if (sector !== undefined) {
+          merged.sector = sector;
+        }
+        if (industry !== undefined) {
+          merged.industry = industry;
+        }
+        if (marketCap !== undefined) {
+          merged.marketCap = marketCap;
+        }
+        if (avgVolume !== undefined) {
+          merged.avgVolume = avgVolume;
+        }
+        if (price !== undefined) {
+          merged.price = price;
+        }
         symbolMap.set(instrument.symbol, merged);
       } else {
         symbolMap.set(instrument.symbol, instrument);
@@ -105,8 +117,12 @@ function composeUnion(sourceResults: SourceResolutionResult[]): ResolvedInstrume
  * Compose instruments using intersection (only those in ALL sources)
  */
 function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedInstrument[] {
-  if (sourceResults.length === 0) return [];
-  if (sourceResults.length === 1) return sourceResults[0].instruments;
+  if (sourceResults.length === 0) {
+    return [];
+  }
+  if (sourceResults.length === 1) {
+    return sourceResults[0].instruments;
+  }
 
   // Get symbol sets for each source
   const symbolSets = sourceResults.map(
@@ -124,7 +140,9 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
 
   for (const result of sourceResults) {
     for (const instrument of result.instruments) {
-      if (!intersection.has(instrument.symbol)) continue;
+      if (!intersection.has(instrument.symbol)) {
+        continue;
+      }
 
       const existing = symbolMap.get(instrument.symbol);
       if (existing) {
@@ -138,12 +156,24 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
         const marketCap = existing.marketCap ?? instrument.marketCap;
         const avgVolume = existing.avgVolume ?? instrument.avgVolume;
         const price = existing.price ?? instrument.price;
-        if (name !== undefined) merged.name = name;
-        if (sector !== undefined) merged.sector = sector;
-        if (industry !== undefined) merged.industry = industry;
-        if (marketCap !== undefined) merged.marketCap = marketCap;
-        if (avgVolume !== undefined) merged.avgVolume = avgVolume;
-        if (price !== undefined) merged.price = price;
+        if (name !== undefined) {
+          merged.name = name;
+        }
+        if (sector !== undefined) {
+          merged.sector = sector;
+        }
+        if (industry !== undefined) {
+          merged.industry = industry;
+        }
+        if (marketCap !== undefined) {
+          merged.marketCap = marketCap;
+        }
+        if (avgVolume !== undefined) {
+          merged.avgVolume = avgVolume;
+        }
+        if (price !== undefined) {
+          merged.price = price;
+        }
         symbolMap.set(instrument.symbol, merged);
       } else {
         symbolMap.set(instrument.symbol, instrument);
@@ -259,7 +289,9 @@ async function applyFilters(
     const includeSet = new Set(filters.include_sectors.map((s: string) => s.toLowerCase()));
     const before = filtered.length;
     filtered = filtered.filter((i) => {
-      if (!i.sector) return false;
+      if (!i.sector) {
+        return false;
+      }
       return includeSet.has(i.sector.toLowerCase());
     });
     if (filtered.length < before) {
@@ -272,7 +304,9 @@ async function applyFilters(
     const excludeSet = new Set(filters.exclude_sectors.map((s: string) => s.toLowerCase()));
     const before = filtered.length;
     filtered = filtered.filter((i) => {
-      if (!i.sector) return true; // Keep if no sector data
+      if (!i.sector) {
+        return true; // Keep if no sector data
+      }
       return !excludeSet.has(i.sector.toLowerCase());
     });
     if (filtered.length < before) {

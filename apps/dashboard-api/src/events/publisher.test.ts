@@ -6,19 +6,19 @@
  * @see docs/plans/ui/08-realtime.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
   createEventPublisher,
+  type EventPublisher,
   getEventPublisher,
   resetEventPublisher,
-  type EventPublisher,
 } from "./publisher";
 import type {
-  MastraCycleEvent,
-  MastraAgentEvent,
-  QuoteStreamEvent,
-  OrderUpdateEvent,
   DecisionInsertEvent,
+  MastraAgentEvent,
+  MastraCycleEvent,
+  OrderUpdateEvent,
+  QuoteStreamEvent,
   SystemAlertEvent,
 } from "./types";
 
@@ -46,7 +46,7 @@ const sampleAgentEvent: MastraAgentEvent = {
 
 const sampleQuoteEvent: QuoteStreamEvent = {
   symbol: "AAPL",
-  bid: 185.00,
+  bid: 185.0,
   ask: 185.05,
   timestamp: "2026-01-04T12:00:00.000Z",
 };

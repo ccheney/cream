@@ -7,7 +7,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import { Logo, LoadingLogo } from "./logo";
+import { LoadingLogo, Logo } from "./logo";
 
 // ============================================
 // Logo Stories
@@ -20,8 +20,7 @@ const meta: Meta<typeof Logo> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Cream logo component with full and icon-only variants.",
+        component: "Cream logo component with full and icon-only variants.",
       },
     },
   },

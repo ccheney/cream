@@ -37,11 +37,11 @@ export const LLMConfigSchema = z.object({
    * - gemini-3-pro-preview: Best quality, higher latency
    * - gemini-3-flash-preview: Faster, good for iteration
    */
-  model_id: z.string().refine(
-    (id) =>
-      id.startsWith("gemini-3-pro") || id.startsWith("gemini-3-flash"),
-    { message: "Must use Gemini 3.x model (gemini-3-pro-preview or gemini-3-flash-preview)" }
-  ),
+  model_id: z
+    .string()
+    .refine((id) => id.startsWith("gemini-3-pro") || id.startsWith("gemini-3-flash"), {
+      message: "Must use Gemini 3.x model (gemini-3-pro-preview or gemini-3-flash-preview)",
+    }),
 
   /**
    * Temperature for response generation

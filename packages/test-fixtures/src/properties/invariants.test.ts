@@ -8,32 +8,28 @@
  * @see docs/plans/14-testing.md lines 425-476
  */
 
-import { describe, test, expect, beforeEach } from "bun:test";
-import { DecisionPlanSchema, validateRiskLevels, getDecisionDirection } from "@cream/domain";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { DecisionPlanSchema, validateRiskLevels } from "@cream/domain";
+import { createMockLLMWithDefaults, type MockLLM } from "../../../mocks/src";
 import {
-  createMockLLM,
-  createMockLLMWithDefaults,
-  type MockLLM,
-} from "../../../mocks/src";
-import {
-  createValidDecision,
-  createValidPlan,
-  createPlanWithViolation,
-  createPlanWithMismatch,
+  CONSTRAINT_LIMITS,
+  type ConsensusResult,
+  type CriticVerdict,
+  createCriticApproveVerdict,
+  createCriticRejectVerdict,
   createHighConfidenceSetup,
   createPlanMissingStopLoss,
   createPlanWithInvalidStopLoss,
+  createPlanWithMismatch,
+  createPlanWithViolation,
   createRiskApproveVerdict,
   createRiskRejectVerdict,
-  createCriticApproveVerdict,
-  createCriticRejectVerdict,
-  CONSTRAINT_LIMITS,
+  createValidDecision,
+  createValidPlan,
+  type RiskManagerVerdict,
+  violatesLeverageLimit,
   violatesPerInstrumentLimit,
   violatesPortfolioLimit,
-  violatesLeverageLimit,
-  type RiskManagerVerdict,
-  type CriticVerdict,
-  type ConsensusResult,
 } from "./helpers";
 
 // ============================================
@@ -48,7 +44,7 @@ import {
  */
 function evaluateRiskManager(
   plan: ReturnType<typeof createValidPlan>,
-  portfolioValue: number = 100000
+  portfolioValue = 100000
 ): RiskManagerVerdict {
   const violations: string[] = [];
 
@@ -64,10 +60,7 @@ function evaluateRiskManager(
   }
 
   // Check portfolio limit
-  const totalValue = plan.decisions.reduce(
-    (sum, d) => sum + d.size.quantity * 175,
-    0
-  );
+  const totalValue = plan.decisions.reduce((sum, d) => sum + d.size.quantity * 175, 0);
   if (violatesPortfolioLimit(totalValue / portfolioValue)) {
     violations.push(
       `Total allocation ${((totalValue / portfolioValue) * 100).toFixed(1)}% exceeds portfolio limit`
@@ -233,9 +226,9 @@ describe("Agent Behavioral Properties", () => {
 
       expect(verdict.verdict).toBe("REJECT");
       expect(verdict.issues.length).toBeGreaterThan(0);
-      expect(
-        verdict.issues.some((i) => i.includes("regime") || i.includes("contradicts"))
-      ).toBe(true);
+      expect(verdict.issues.some((i) => i.includes("regime") || i.includes("contradicts"))).toBe(
+        true
+      );
     });
 
     test("rejects when momentum play claims high volume but volume is low", () => {
@@ -251,9 +244,7 @@ describe("Agent Behavioral Properties", () => {
       const verdict = evaluateCritic(plan, regime, signals);
 
       expect(verdict.verdict).toBe("REJECT");
-      expect(
-        verdict.issues.some((i) => i.includes("breakout") || i.includes("range"))
-      ).toBe(true);
+      expect(verdict.issues.some((i) => i.includes("breakout") || i.includes("range"))).toBe(true);
     });
 
     test("rejects high confidence with weak signals", () => {
@@ -459,7 +450,7 @@ describe("Agent Behavioral Properties", () => {
      * INVARIANT: Plan proceeds ONLY when BOTH Risk Manager AND Critic approve
      */
     test("rejects when Risk Manager REJECT + Critic APPROVE", () => {
-      const plan = createValidPlan();
+      const _plan = createValidPlan();
       const riskVerdict = createRiskRejectVerdict(["Test violation"]);
       const criticVerdict = createCriticApproveVerdict();
 
@@ -471,7 +462,7 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("rejects when Risk Manager APPROVE + Critic REJECT", () => {
-      const plan = createValidPlan();
+      const _plan = createValidPlan();
       const riskVerdict = createRiskApproveVerdict();
       const criticVerdict = createCriticRejectVerdict(["Rationale mismatch"]);
 
@@ -483,7 +474,7 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("rejects when Risk Manager REJECT + Critic REJECT", () => {
-      const plan = createValidPlan();
+      const _plan = createValidPlan();
       const riskVerdict = createRiskRejectVerdict(["Position too large"]);
       const criticVerdict = createCriticRejectVerdict(["Weak signals"]);
 
@@ -493,7 +484,7 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("approves when Risk Manager APPROVE + Critic APPROVE", () => {
-      const plan = createValidPlan();
+      const _plan = createValidPlan();
       const riskVerdict = createRiskApproveVerdict();
       const criticVerdict = createCriticApproveVerdict();
 
@@ -538,9 +529,7 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("mock LLM risk manager approve response has correct structure", async () => {
-      const response = await mockLLM.completeJSON<RiskManagerVerdict>(
-        "risk_manager:APPROVE"
-      );
+      const response = await mockLLM.completeJSON<RiskManagerVerdict>("risk_manager:APPROVE");
 
       expect(response.verdict).toBe("APPROVE");
       expect(Array.isArray(response.violations)).toBe(true);
@@ -548,25 +537,19 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("mock LLM risk manager reject response has violations", async () => {
-      const response = await mockLLM.completeJSON<RiskManagerVerdict>(
-        "risk_manager:REJECT"
-      );
+      const response = await mockLLM.completeJSON<RiskManagerVerdict>("risk_manager:REJECT");
 
       expect(response.verdict).toBe("REJECT");
       expect(response.violations.length).toBeGreaterThan(0);
     });
 
     test("mock LLM critic responses follow expected structure", async () => {
-      const approveResponse = await mockLLM.completeJSON<CriticVerdict>(
-        "critic:APPROVE"
-      );
+      const approveResponse = await mockLLM.completeJSON<CriticVerdict>("critic:APPROVE");
 
       expect(approveResponse.verdict).toBe("APPROVE");
       expect(Array.isArray(approveResponse.issues)).toBe(true);
 
-      const rejectResponse = await mockLLM.completeJSON<CriticVerdict>(
-        "critic:REJECT"
-      );
+      const rejectResponse = await mockLLM.completeJSON<CriticVerdict>("critic:REJECT");
 
       expect(rejectResponse.verdict).toBe("REJECT");
       expect(rejectResponse.issues.length).toBeGreaterThan(0);

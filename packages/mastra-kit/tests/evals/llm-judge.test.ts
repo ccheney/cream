@@ -8,15 +8,15 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  evaluateAgentWithJudge,
-  runBatchEvaluation,
-  generateEvalReport,
+  AGENT_THRESHOLDS,
   checkForRegression,
   createMockJudge,
-  AGENT_THRESHOLDS,
-  SCORE_INTERPRETATION,
-  SAMPLE_TEST_CASES,
+  evaluateAgentWithJudge,
+  generateEvalReport,
   type JudgeTestCase,
+  runBatchEvaluation,
+  SAMPLE_TEST_CASES,
+  SCORE_INTERPRETATION,
 } from "./llm-judge.js";
 
 // ============================================
@@ -57,12 +57,9 @@ describe("Mock Judge", () => {
   it("reduces score for error patterns", async () => {
     const judge = createMockJudge();
 
-    const errorResult = await judge(
-      {},
-      { error: "something went wrong" },
-      "Expected",
-      { model: "gemini-3-pro-preview" }
-    );
+    const errorResult = await judge({}, { error: "something went wrong" }, "Expected", {
+      model: "gemini-3-pro-preview",
+    });
 
     expect(errorResult.score).toBeLessThan(0.7);
   });
@@ -81,11 +78,10 @@ describe("evaluateAgentWithJudge", () => {
   };
 
   it("returns JudgeResult with required fields", async () => {
-    const result = await evaluateAgentWithJudge(
-      "technical_analyst",
-      testCase,
-      { trend: "bullish", rationale: "Price above MAs" }
-    );
+    const result = await evaluateAgentWithJudge("technical_analyst", testCase, {
+      trend: "bullish",
+      rationale: "Price above MAs",
+    });
 
     expect(result.testId).toBe("test-1");
     expect(typeof result.score).toBe("number");
@@ -95,17 +91,17 @@ describe("evaluateAgentWithJudge", () => {
   });
 
   it("uses agent-specific threshold", async () => {
-    const traderResult = await evaluateAgentWithJudge(
-      "trader",
-      testCase,
-      { action: "BUY", rationale: "Strong setup", risk: "managed" }
-    );
+    const traderResult = await evaluateAgentWithJudge("trader", testCase, {
+      action: "BUY",
+      rationale: "Strong setup",
+      risk: "managed",
+    });
 
-    const riskResult = await evaluateAgentWithJudge(
-      "risk_manager",
-      testCase,
-      { verdict: "APPROVE", rationale: "Within limits", risk: "acceptable" }
-    );
+    const riskResult = await evaluateAgentWithJudge("risk_manager", testCase, {
+      verdict: "APPROVE",
+      rationale: "Within limits",
+      risk: "acceptable",
+    });
 
     expect(traderResult.threshold).toBe(0.8);
     expect(riskResult.threshold).toBe(0.85);
@@ -117,11 +113,9 @@ describe("evaluateAgentWithJudge", () => {
       threshold: 0.9,
     };
 
-    const result = await evaluateAgentWithJudge(
-      "technical_analyst",
-      customCase,
-      { trend: "bullish" }
-    );
+    const result = await evaluateAgentWithJudge("technical_analyst", customCase, {
+      trend: "bullish",
+    });
 
     expect(result.threshold).toBe(0.9);
   });
@@ -183,9 +177,7 @@ describe("runBatchEvaluation", () => {
   });
 
   it("throws error if counts don't match", async () => {
-    await expect(
-      runBatchEvaluation("trader", testCases, [outputs[0]])
-    ).rejects.toThrow();
+    await expect(runBatchEvaluation("trader", testCases, [outputs[0]])).rejects.toThrow();
   });
 
   it("includes framework and timestamp", async () => {
@@ -212,11 +204,7 @@ describe("generateEvalReport", () => {
       },
     ];
 
-    const results = await runBatchEvaluation(
-      "trader",
-      testCases,
-      [{ rationale: "test" }]
-    );
+    const results = await runBatchEvaluation("trader", testCases, [{ rationale: "test" }]);
 
     const report = generateEvalReport(results);
     const parsed = JSON.parse(report);
@@ -238,11 +226,9 @@ describe("generateEvalReport", () => {
       },
     ];
 
-    const results = await runBatchEvaluation(
-      "trader",
-      testCases,
-      [{ rationale: "test", risk: "managed", confidence: 0.9 }]
-    );
+    const results = await runBatchEvaluation("trader", testCases, [
+      { rationale: "test", risk: "managed", confidence: 0.9 },
+    ]);
 
     const report = generateEvalReport(results);
     const parsed = JSON.parse(report);
@@ -394,12 +380,14 @@ describe("SAMPLE_TEST_CASES", () => {
 
     for (const agentType of agentTypes) {
       expect(SAMPLE_TEST_CASES[agentType as keyof typeof SAMPLE_TEST_CASES]).toBeDefined();
-      expect(SAMPLE_TEST_CASES[agentType as keyof typeof SAMPLE_TEST_CASES].length).toBeGreaterThan(0);
+      expect(SAMPLE_TEST_CASES[agentType as keyof typeof SAMPLE_TEST_CASES].length).toBeGreaterThan(
+        0
+      );
     }
   });
 
   it("all test cases have required fields", () => {
-    for (const [agentType, testCases] of Object.entries(SAMPLE_TEST_CASES)) {
+    for (const [_agentType, testCases] of Object.entries(SAMPLE_TEST_CASES)) {
       for (const tc of testCases) {
         expect(tc.id).toBeDefined();
         expect(tc.description).toBeDefined();

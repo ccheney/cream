@@ -183,9 +183,7 @@ export const DEFAULT_LANGSMITH_CONFIG: LangSmithConfig = {
 /**
  * Get sampling rate for environment.
  */
-export function getSamplingRateForEnvironment(
-  environment: "BACKTEST" | "PAPER" | "LIVE"
-): number {
+export function getSamplingRateForEnvironment(environment: "BACKTEST" | "PAPER" | "LIVE"): number {
   switch (environment) {
     case "BACKTEST":
       return 1.0; // 100% - need full traces for analysis
@@ -225,13 +223,10 @@ function generateId(): string {
 /**
  * Create a new span for tracing.
  */
-export function createSpan(
-  name: string,
-  parentSpanId?: string
-): Span {
+export function createSpan(_name: string, parentSpanId?: string): Span {
   const spanId = generateId();
   const traceId = parentSpanId
-    ? activeSpans.get(parentSpanId)?.traceId ?? generateId()
+    ? (activeSpans.get(parentSpanId)?.traceId ?? generateId())
     : generateId();
 
   const attributes: Record<string, unknown> = {};
@@ -254,8 +249,7 @@ export function createSpan(
     },
     end: () => {
       const endTime = new Date().toISOString();
-      const durationMs =
-        new Date(endTime).getTime() - new Date(startTime).getTime();
+      const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
 
       // Store trace record
       traceStore.push({
@@ -265,8 +259,8 @@ export function createSpan(
         agentName: attributes["agent.name"] as AgentType,
         agentVersion: attributes["agent.version"] as string,
         snapshotId: attributes["input.snapshot_id"] as string,
-        runId: attributes["run_id"] as string,
-        cycleId: attributes["cycle_id"] as string,
+        runId: attributes.run_id as string,
+        cycleId: attributes.cycle_id as string,
         startTime,
         endTime,
         durationMs,
@@ -435,11 +429,7 @@ export function getAgentTraces(
 ): TraceRecord[] {
   return traceStore.filter((t) => {
     const traceTime = new Date(t.startTime);
-    return (
-      t.agentName === agentName &&
-      traceTime >= startDate &&
-      traceTime <= endDate
-    );
+    return t.agentName === agentName && traceTime >= startDate && traceTime <= endDate;
   });
 }
 
@@ -489,10 +479,7 @@ export interface DatasetExample {
  * Export traces to dataset format.
  * In production, this would call LangSmith API to create a dataset.
  */
-export function exportTracesToDataset(
-  traceIds: string[],
-  datasetName: string
-): DatasetExample[] {
+export function exportTracesToDataset(traceIds: string[], datasetName: string): DatasetExample[] {
   const examples: DatasetExample[] = [];
 
   for (const traceId of traceIds) {
@@ -525,10 +512,7 @@ export function exportTracesToDataset(
 /**
  * Create a golden dataset from successful traces.
  */
-export function createGoldenDataset(
-  agentName: AgentType,
-  count: number = 100
-): DatasetExample[] {
+export function createGoldenDataset(agentName: AgentType, count = 100): DatasetExample[] {
   const successfulTraces = traceStore
     .filter((t) => t.agentName === agentName && t.status === "OK")
     .slice(-count);
@@ -599,24 +583,18 @@ export function getAllTraces(): TraceRecord[] {
  * Check if LangSmith is configured.
  */
 export function isLangSmithConfigured(): boolean {
-  return Boolean(
-    process.env.LANGSMITH_API_KEY || Bun.env.LANGSMITH_API_KEY
-  );
+  return Boolean(process.env.LANGSMITH_API_KEY || Bun.env.LANGSMITH_API_KEY);
 }
 
 /**
  * Get LangSmith configuration from environment.
  */
 export function getLangSmithConfigFromEnv(): LangSmithConfig {
-  const environment = (process.env.CREAM_ENV ?? "PAPER") as
-    | "BACKTEST"
-    | "PAPER"
-    | "LIVE";
+  const environment = (process.env.CREAM_ENV ?? "PAPER") as "BACKTEST" | "PAPER" | "LIVE";
 
   return {
     apiKey: process.env.LANGSMITH_API_KEY ?? Bun.env.LANGSMITH_API_KEY,
-    projectName:
-      process.env.LANGSMITH_PROJECT ?? "cream-trading-system",
+    projectName: process.env.LANGSMITH_PROJECT ?? "cream-trading-system",
     environment,
     samplingRate: getSamplingRateForEnvironment(environment),
     enabled: isLangSmithConfigured(),

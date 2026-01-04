@@ -21,12 +21,7 @@ export type OrderType = z.infer<typeof OrderType>;
 /**
  * Execution tactic
  */
-export const ExecutionTactic = z.enum([
-  "PASSIVE_LIMIT",
-  "AGGRESSIVE_LIMIT",
-  "MARKET",
-  "TWAP",
-]);
+export const ExecutionTactic = z.enum(["PASSIVE_LIMIT", "AGGRESSIVE_LIMIT", "MARKET", "TWAP"]);
 export type ExecutionTactic = z.infer<typeof ExecutionTactic>;
 
 /**

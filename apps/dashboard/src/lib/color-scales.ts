@@ -70,7 +70,7 @@ export function rgbToHex(rgb: RGB): string {
 /**
  * Convert RGB to CSS rgba string.
  */
-export function rgbToCss(rgb: RGB, alpha: number = 1): string {
+export function rgbToCss(rgb: RGB, alpha = 1): string {
   return `rgba(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)}, ${alpha})`;
 }
 
@@ -98,8 +98,8 @@ export function createDivergingScale(
   negativeColor: string,
   neutralColor: string,
   positiveColor: string,
-  minValue: number = -1,
-  maxValue: number = 1
+  minValue = -1,
+  maxValue = 1
 ): (value: number) => string {
   const negativeRgb = hexToRgb(negativeColor);
   const neutralRgb = hexToRgb(neutralColor);
@@ -111,7 +111,7 @@ export function createDivergingScale(
 
     // Normalize to [-1, 1]
     const midpoint = (minValue + maxValue) / 2;
-    const range = maxValue - minValue;
+    const _range = maxValue - minValue;
 
     if (clampedValue < midpoint) {
       // Interpolate from negative to neutral
@@ -173,8 +173,8 @@ export function clearColorCache(): void {
 export function createSequentialScale(
   startColor: string,
   endColor: string,
-  minValue: number = 0,
-  maxValue: number = 1
+  minValue = 0,
+  maxValue = 1
 ): (value: number) => string {
   const startRgb = hexToRgb(startColor);
   const endRgb = hexToRgb(endColor);
@@ -193,10 +193,7 @@ export function createSequentialScale(
 /**
  * Check if correlation is high (> threshold).
  */
-export function isHighCorrelation(
-  value: number,
-  threshold: number = 0.7
-): boolean {
+export function isHighCorrelation(value: number, threshold = 0.7): boolean {
   return Math.abs(value) > threshold;
 }
 

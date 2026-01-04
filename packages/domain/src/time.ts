@@ -37,7 +37,7 @@ import { z } from "zod";
  * - Must be UTC (Z suffix)
  * - Milliseconds required (3 digits)
  */
-const ISO_8601_FULL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const _ISO_8601_FULL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
  * ISO-8601 timestamp regex with optional milliseconds
@@ -73,21 +73,19 @@ export type Iso8601 = z.infer<typeof Iso8601Schema>;
  */
 export const Iso8601UtcSchema = z
   .string()
-  .refine(
-    (val) => ISO_8601_FLEXIBLE_REGEX.test(val),
-    { message: "Invalid ISO-8601 UTC timestamp format. Must be YYYY-MM-DDTHH:mm:ss.sssZ" }
-  )
+  .refine((val) => ISO_8601_FLEXIBLE_REGEX.test(val), {
+    message: "Invalid ISO-8601 UTC timestamp format. Must be YYYY-MM-DDTHH:mm:ss.sssZ",
+  })
   .refine(
     (val) => {
       const date = new Date(val);
-      return !isNaN(date.getTime());
+      return !Number.isNaN(date.getTime());
     },
     { message: "Invalid date value" }
   )
-  .refine(
-    (val) => new Date(val) >= UNIX_EPOCH,
-    { message: "Timestamp must be after Unix epoch (1970-01-01)" }
-  );
+  .refine((val) => new Date(val) >= UNIX_EPOCH, {
+    message: "Timestamp must be after Unix epoch (1970-01-01)",
+  });
 export type Iso8601Utc = z.infer<typeof Iso8601UtcSchema>;
 
 /**
@@ -96,20 +94,15 @@ export type Iso8601Utc = z.infer<typeof Iso8601UtcSchema>;
  */
 export const DateOnlySchema = z
   .string()
-  .refine(
-    (val) => DATE_ONLY_REGEX.test(val),
-    { message: "Invalid date format. Must be YYYY-MM-DD" }
-  )
+  .refine((val) => DATE_ONLY_REGEX.test(val), {
+    message: "Invalid date format. Must be YYYY-MM-DD",
+  })
   .refine(
     (val) => {
       // Validate it's a real date (e.g., reject 2026-02-30)
       const [year, month, day] = val.split("-").map(Number);
       const date = new Date(year, month - 1, day);
-      return (
-        date.getFullYear() === year &&
-        date.getMonth() === month - 1 &&
-        date.getDate() === day
-      );
+      return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
     },
     { message: "Invalid date value" }
   );
@@ -132,7 +125,7 @@ export type DateOnly = z.infer<typeof DateOnlySchema>;
  * ```
  */
 export function toIso8601(date: Date): Iso8601Utc {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     throw new Error("Invalid Date object");
   }
 
@@ -161,7 +154,7 @@ export function fromIso8601(str: string): Date {
 
   const date = new Date(str);
 
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     throw new Error(`Invalid date value: ${str}`);
   }
 
@@ -197,7 +190,7 @@ export function nowIso8601(): Iso8601Utc {
  * ```
  */
 export function toDateOnly(date: Date): DateOnly {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     throw new Error("Invalid Date object");
   }
 
@@ -231,7 +224,7 @@ export function fromDateOnly(str: string): Date {
   // Parse as UTC midnight
   const date = new Date(`${str}T00:00:00.000Z`);
 
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     throw new Error(`Invalid date value: ${str}`);
   }
 
@@ -261,7 +254,7 @@ export function isValidIso8601(str: string): boolean {
   }
 
   const date = new Date(str);
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return false;
   }
 
@@ -305,8 +298,12 @@ export function compareIso8601(a: string, b: string): -1 | 0 | 1 {
   const dateA = fromIso8601(a);
   const dateB = fromIso8601(b);
 
-  if (dateA < dateB) return -1;
-  if (dateA > dateB) return 1;
+  if (dateA < dateB) {
+    return -1;
+  }
+  if (dateA > dateB) {
+    return 1;
+  }
   return 0;
 }
 
@@ -474,10 +471,7 @@ export function getOptionExpirationTime(expirationDate: string): Iso8601Utc {
  * @param currentTime - Current time (defaults to now)
  * @returns true if the option has expired
  */
-export function isOptionExpired(
-  expirationDate: string,
-  currentTime?: string
-): boolean {
+export function isOptionExpired(expirationDate: string, currentTime?: string): boolean {
   const expiry = getOptionExpirationTime(expirationDate);
   const now = currentTime ?? nowIso8601();
   return isAfter(now, expiry);
@@ -490,10 +484,7 @@ export function isOptionExpired(
  * @param currentTime - Current time (defaults to now)
  * @returns Days until expiration (negative if expired)
  */
-export function daysToExpiration(
-  expirationDate: string,
-  currentTime?: string
-): number {
+export function daysToExpiration(expirationDate: string, currentTime?: string): number {
   const expiry = getOptionExpirationTime(expirationDate);
   const now = currentTime ?? nowIso8601();
   const diffMs = diffMilliseconds(expiry, now);

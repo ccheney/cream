@@ -7,12 +7,12 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import type { ConnectionStatus } from "../../lib/ws/connection-monitor.js";
 import {
+  type ConnectionBannerProps,
   formatRetryTime,
   getStatusMessage,
-  type ConnectionBannerProps,
 } from "./connection-banner.js";
-import type { ConnectionStatus } from "../../lib/ws/connection-monitor.js";
 
 // ============================================
 // formatRetryTime Tests
@@ -118,12 +118,7 @@ describe("ConnectionBannerProps Type", () => {
   });
 
   it("supports all status values", () => {
-    const statuses: ConnectionStatus[] = [
-      "connected",
-      "disconnected",
-      "reconnecting",
-      "failed",
-    ];
+    const statuses: ConnectionStatus[] = ["connected", "disconnected", "reconnecting", "failed"];
     statuses.forEach((status) => {
       const props: ConnectionBannerProps = { status };
       expect(props.status).toBe(status);

@@ -16,12 +16,7 @@ import { z } from "zod";
 /**
  * Universe source type
  */
-export const UniverseSourceType = z.enum([
-  "static",
-  "index",
-  "etf_holdings",
-  "screener",
-]);
+export const UniverseSourceType = z.enum(["static", "index", "etf_holdings", "screener"]);
 export type UniverseSourceType = z.infer<typeof UniverseSourceType>;
 
 /**
@@ -39,13 +34,7 @@ export type UniverseProvider = z.infer<typeof UniverseProvider>;
 /**
  * Index identifiers
  */
-export const IndexId = z.enum([
-  "SP500",
-  "NASDAQ100",
-  "DOWJONES",
-  "RUSSELL2000",
-  "RUSSELL3000",
-]);
+export const IndexId = z.enum(["SP500", "NASDAQ100", "DOWJONES", "RUSSELL2000", "RUSSELL3000"]);
 export type IndexId = z.infer<typeof IndexId>;
 
 // ============================================

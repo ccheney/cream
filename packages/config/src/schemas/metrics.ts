@@ -15,12 +15,7 @@ import { z } from "zod";
 /**
  * Available performance metrics
  */
-export const MetricName = z.enum([
-  "raw_return",
-  "sharpe",
-  "sortino",
-  "calmar",
-]);
+export const MetricName = z.enum(["raw_return", "sharpe", "sortino", "calmar"]);
 export type MetricName = z.infer<typeof MetricName>;
 
 // ============================================
@@ -66,13 +61,11 @@ export const MetricsConfigSchema = z.object({
    *
    * Default: 1 day, 1 week, 1 month
    */
-  windows: z
-    .array(MetricsWindowSchema)
-    .default([
-      { period: 20, label: "1d" },
-      { period: 100, label: "1w" },
-      { period: 500, label: "1m" },
-    ]),
+  windows: z.array(MetricsWindowSchema).default([
+    { period: 20, label: "1d" },
+    { period: 100, label: "1w" },
+    { period: 500, label: "1m" },
+  ]),
 
   /**
    * Risk-free rate for Sharpe/Sortino calculations

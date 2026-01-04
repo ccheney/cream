@@ -15,85 +15,63 @@ export const VERSION = "0.0.1";
 // ============================================
 
 // Metadata
-export { createMetadata, type FixtureMetadata } from "./factories";
-
 // Instruments
-export {
-  createEquityInstrument,
-  createOptionContract,
-  createOptionInstrument,
-} from "./factories";
-
 // Size
-export { createSize, createOptionsSize } from "./factories";
-
 // Order Plan
-export { createOrderPlan, createMarketOrderPlan } from "./factories";
-
 // Risk Levels
-export { createRiskLevels, createShortRiskLevels } from "./factories";
-
 // References
-export { createReferences } from "./factories";
-
 // Decisions
-export {
-  createDecision,
-  createShortDecision,
-  createHoldDecision,
-  createOptionsSpreadDecision,
-} from "./factories";
-
 // Decision Plans
-export {
-  createDecisionPlan,
-  createEmptyDecisionPlan,
-  createMultiDecisionPlan,
-} from "./factories";
-
 // Invalid decisions (for validation testing)
-export {
-  createInvalidDecisionMissingSize,
-  createInvalidDecisionMissingStop,
-  createInvalidDecisionBadRiskLevels,
-} from "./factories";
-
 // Candles and Indicators
-export {
-  createCandle,
-  createIndicators,
-  type Candle,
-  type Indicators,
-} from "./factories";
-
 // Symbol Snapshots
-export { createSymbolSnapshot, type SymbolSnapshot } from "./factories";
-
 // Market Snapshots
-export {
-  createMarketSnapshot,
-  createBullTrendSnapshot,
-  createBearTrendSnapshot,
-  createHighVolSnapshot,
-  createRangeBoundSnapshot,
-  type MarketSnapshot,
-} from "./factories";
-
 // Memory Context
-export {
-  createPastTradeCase,
-  createMemoryContext,
-  type PastTradeCase,
-  type MemoryContext,
-} from "./factories";
-
 // Portfolio State
 export {
-  createPosition,
-  createPortfolioState,
+  type Candle,
+  createBearTrendSnapshot,
+  createBullTrendSnapshot,
+  createCandle,
+  createDecision,
+  createDecisionPlan,
+  createEmptyDecisionPlan,
   createEmptyPortfolioState,
-  type Position,
+  createEquityInstrument,
+  createHighVolSnapshot,
+  createHoldDecision,
+  createIndicators,
+  createInvalidDecisionBadRiskLevels,
+  createInvalidDecisionMissingSize,
+  createInvalidDecisionMissingStop,
+  createMarketOrderPlan,
+  createMarketSnapshot,
+  createMemoryContext,
+  createMetadata,
+  createMultiDecisionPlan,
+  createOptionContract,
+  createOptionInstrument,
+  createOptionsSize,
+  createOptionsSpreadDecision,
+  createOrderPlan,
+  createPastTradeCase,
+  createPortfolioState,
+  createPosition,
+  createRangeBoundSnapshot,
+  createReferences,
+  createRiskLevels,
+  createShortDecision,
+  createShortRiskLevels,
+  createSize,
+  createSymbolSnapshot,
+  type FixtureMetadata,
+  type Indicators,
+  type MarketSnapshot,
+  type MemoryContext,
+  type PastTradeCase,
   type PortfolioState,
+  type Position,
+  type SymbolSnapshot,
 } from "./factories";
 
 // ============================================
@@ -101,25 +79,25 @@ export {
 // ============================================
 
 export {
+  checkGoldenStaleness,
+  checkStaleness,
   // Schema
   GoldenAgentType,
-  MarketRegime,
-  ScenarioCategory,
-  GoldenCaseMetadataSchema,
-  GoldenDatasetMetadataSchema,
-  STALENESS_THRESHOLDS,
-  checkStaleness,
   type GoldenCaseMetadata,
+  GoldenCaseMetadataSchema,
   type GoldenDatasetMetadata,
-  type StalenessCheckResult,
-  // Loaders
-  loadGoldenMetadata,
-  loadGoldenInput,
-  loadGoldenOutput,
-  loadGoldenCase,
+  GoldenDatasetMetadataSchema,
   getAllGoldenCaseIds,
   getAllGoldenCases,
-  checkGoldenStaleness,
-  hasGoldenDataset,
   getGoldenDatasetStats,
+  hasGoldenDataset,
+  loadGoldenCase,
+  loadGoldenInput,
+  // Loaders
+  loadGoldenMetadata,
+  loadGoldenOutput,
+  MarketRegime,
+  ScenarioCategory,
+  STALENESS_THRESHOLDS,
+  type StalenessCheckResult,
 } from "./golden/index.js";

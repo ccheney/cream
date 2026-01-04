@@ -1,9 +1,9 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
   CreamConfigSchema,
+  validateAtStartup,
   validateConfig,
   validateConfigOrThrow,
-  validateAtStartup,
 } from "./validate";
 
 describe("CreamConfigSchema", () => {

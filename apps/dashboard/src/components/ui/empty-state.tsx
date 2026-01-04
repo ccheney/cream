@@ -6,7 +6,7 @@
  * @see docs/plans/ui/28-states.md lines 47-71
  */
 
-import React from "react";
+import type React from "react";
 
 // ============================================
 // Types
@@ -167,10 +167,7 @@ export function EmptyState({
     >
       {/* Icon */}
       {icon && (
-        <div
-          style={{ ...baseStyles.icon, ...sizeStyle.icon }}
-          aria-hidden="true"
-        >
+        <div style={{ ...baseStyles.icon, ...sizeStyle.icon }} aria-hidden="true">
           {icon}
         </div>
       )}
@@ -180,9 +177,7 @@ export function EmptyState({
 
       {/* Description */}
       {description && (
-        <p style={{ ...baseStyles.description, ...sizeStyle.description }}>
-          {description}
-        </p>
+        <p style={{ ...baseStyles.description, ...sizeStyle.description }}>{description}</p>
       )}
 
       {/* Actions */}

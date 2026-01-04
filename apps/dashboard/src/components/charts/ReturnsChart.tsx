@@ -10,16 +10,16 @@
 
 import { memo, useMemo } from "react";
 import {
-  BarChart,
   Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  BarChart,
   CartesianGrid,
   Cell,
   ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
   type TooltipProps,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { CHART_COLORS } from "@/lib/chart-config";
 
@@ -77,8 +77,12 @@ export interface ReturnsChartProps {
  * Get bar color based on value.
  */
 export function getReturnColor(value: number): string {
-  if (value > 0) return CHART_COLORS.profit;
-  if (value < 0) return CHART_COLORS.loss;
+  if (value > 0) {
+    return CHART_COLORS.profit;
+  }
+  if (value < 0) {
+    return CHART_COLORS.loss;
+  }
   return CHART_COLORS.text;
 }
 
@@ -128,12 +132,8 @@ function CustomTooltip({
         fontSize: 11,
       }}
     >
-      <p style={{ color: CHART_COLORS.text, margin: 0, marginBottom: 4 }}>
-        {data.period}
-      </p>
-      <p style={{ color, margin: 0, fontWeight: 600 }}>
-        {valueFormatter(data.value)}
-      </p>
+      <p style={{ color: CHART_COLORS.text, margin: 0, marginBottom: 4 }}>{data.period}</p>
+      <p style={{ color, margin: 0, fontWeight: 600 }}>{valueFormatter(data.value)}</p>
     </div>
   );
 }
@@ -153,7 +153,7 @@ interface CustomBarProps {
 
 function CustomBar({ x, y, width, height, fill, radius }: CustomBarProps) {
   // Calculate rounded corners (only top for positive, only bottom for negative)
-  const isPositive = y < 0 || height > 0;
+  const _isPositive = y < 0 || height > 0;
   const r = Math.min(radius, Math.abs(height) / 2, width / 2);
 
   if (height === 0) {
@@ -204,7 +204,9 @@ function ReturnsChartComponent({
 }: ReturnsChartProps) {
   // Calculate Y axis domain with padding
   const yDomain = useMemo(() => {
-    if (data.length === 0) return [-10, 10];
+    if (data.length === 0) {
+      return [-10, 10];
+    }
     const values = data.map((d) => d.value);
     const min = Math.min(...values, 0);
     const max = Math.max(...values, 0);
@@ -241,16 +243,9 @@ function ReturnsChartComponent({
       }}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-        >
+        <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
           {showGrid && (
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={CHART_COLORS.grid}
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
           )}
 
           {showXAxis && (
@@ -275,9 +270,7 @@ function ReturnsChartComponent({
             />
           )}
 
-          {showZeroLine && (
-            <ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />
-          )}
+          {showZeroLine && <ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />}
 
           {showTooltip && (
             <Tooltip
@@ -289,9 +282,7 @@ function ReturnsChartComponent({
           <Bar
             dataKey="value"
             animationDuration={300}
-            shape={(props: CustomBarProps) => (
-              <CustomBar {...props} radius={barRadius} />
-            )}
+            shape={(props: CustomBarProps) => <CustomBar {...props} radius={barRadius} />}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getReturnColor(entry.value)} />

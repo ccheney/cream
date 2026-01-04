@@ -6,7 +6,7 @@
  * @see docs/plans/ui/28-states.md lines 42-44
  */
 
-import React from "react";
+import type React from "react";
 
 // ============================================
 // Types

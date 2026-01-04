@@ -9,13 +9,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   Skeleton,
-  SkeletonText,
-  SkeletonCircle,
-  SkeletonCard,
-  SkeletonTable,
-  SkeletonList,
-  SkeletonChart,
   SkeletonAvatar,
+  SkeletonCard,
+  SkeletonChart,
+  SkeletonCircle,
+  SkeletonList,
+  SkeletonTable,
+  SkeletonText,
 } from "./skeleton";
 
 // ============================================

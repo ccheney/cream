@@ -128,7 +128,7 @@ export function clearEmbeddingCache(): void {
 export function getEmbeddingCacheStats(): { size: number; keys: string[] } {
   return {
     size: embeddingCache.size,
-    keys: Array.from(embeddingCache.keys()).map((k) => k.slice(0, 50) + "..."),
+    keys: Array.from(embeddingCache.keys()).map((k) => `${k.slice(0, 50)}...`),
   };
 }
 
@@ -140,7 +140,7 @@ export function getEmbeddingCacheStats(): { size: number; keys: string[] } {
  * Generate a mock embedding vector.
  * Uses deterministic hashing for reproducible results.
  */
-function generateMockEmbedding(text: string, dimensions: number = 768): number[] {
+function generateMockEmbedding(text: string, dimensions = 768): number[] {
   // Simple deterministic hash-based embedding
   const embedding: number[] = [];
   let hash = 0;
@@ -185,10 +185,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
  * Get embedding for text (mock implementation).
  * In production, this would call Gemini or OpenAI API.
  */
-async function getEmbedding(
-  text: string,
-  config: EmbeddingConfig
-): Promise<number[]> {
+async function getEmbedding(text: string, config: EmbeddingConfig): Promise<number[]> {
   const cacheKey = getCacheKey(text, config.model);
 
   // Check cache
@@ -250,11 +247,7 @@ export async function validateBatchSimilarity(
   const results: SimilarityResult[] = [];
 
   for (const pair of pairs) {
-    const result = await validateSemanticSimilarity(
-      pair.actual,
-      pair.expected,
-      config
-    );
+    const result = await validateSemanticSimilarity(pair.actual, pair.expected, config);
     results.push(result);
   }
 
@@ -264,8 +257,7 @@ export async function validateBatchSimilarity(
     total: results.length,
     passed: results.filter((r) => r.passed).length,
     failed: results.filter((r) => !r.passed).length,
-    meanSimilarity:
-      similarities.reduce((a, b) => a + b, 0) / similarities.length,
+    meanSimilarity: similarities.reduce((a, b) => a + b, 0) / similarities.length,
     minSimilarity: Math.min(...similarities),
     maxSimilarity: Math.max(...similarities),
   };
@@ -342,7 +334,7 @@ export function interpretSimilarity(score: number): string {
 /**
  * Create a semantic assertion for testing.
  */
-export function semanticAssert(threshold: number = 0.8) {
+export function semanticAssert(threshold = 0.8) {
   return async (actual: string, expected: string): Promise<void> => {
     const result = await validateSemanticSimilarity(actual, expected, {
       ...DEFAULT_EMBEDDING_CONFIG,

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
     "test": "bun test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

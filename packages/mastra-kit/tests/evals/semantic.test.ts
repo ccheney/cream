@@ -6,20 +6,20 @@
  * @see docs/plans/14-testing.md lines 399-424
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  validateSemanticSimilarity,
-  validateBatchSimilarity,
-  matchesSimilarity,
-  getSimilarityScore,
-  cosineSimilarity,
-  interpretSimilarity,
-  semanticAssert,
   clearEmbeddingCache,
-  getEmbeddingCacheStats,
-  SIMILARITY_LEVELS,
-  SAMPLE_PAIRS,
+  cosineSimilarity,
   DEFAULT_EMBEDDING_CONFIG,
+  getEmbeddingCacheStats,
+  getSimilarityScore,
+  interpretSimilarity,
+  matchesSimilarity,
+  SAMPLE_PAIRS,
+  SIMILARITY_LEVELS,
+  semanticAssert,
+  validateBatchSimilarity,
+  validateSemanticSimilarity,
 } from "./semantic.js";
 
 // ============================================
@@ -81,11 +81,10 @@ describe("validateSemanticSimilarity", () => {
   });
 
   it("respects threshold configuration", async () => {
-    const result = await validateSemanticSimilarity(
-      "Different text A",
-      "Different text B",
-      { ...DEFAULT_EMBEDDING_CONFIG, threshold: 0.99 }
-    );
+    const result = await validateSemanticSimilarity("Different text A", "Different text B", {
+      ...DEFAULT_EMBEDDING_CONFIG,
+      threshold: 0.99,
+    });
 
     // With high threshold, should likely fail
     expect(result.threshold).toBe(0.99);
@@ -135,10 +134,10 @@ describe("validateBatchSimilarity", () => {
   });
 
   it("includes configuration in results", async () => {
-    const results = await validateBatchSimilarity(
-      [{ actual: "A", expected: "B" }],
-      { ...DEFAULT_EMBEDDING_CONFIG, threshold: 0.9 }
-    );
+    const results = await validateBatchSimilarity([{ actual: "A", expected: "B" }], {
+      ...DEFAULT_EMBEDDING_CONFIG,
+      threshold: 0.9,
+    });
 
     expect(results.config.threshold).toBe(0.9);
     expect(results.config.embeddingModel).toBe("gemini-embedding-001");
@@ -151,10 +150,7 @@ describe("validateBatchSimilarity", () => {
 
 describe("matchesSimilarity", () => {
   it("returns true for identical text", async () => {
-    const result = await matchesSimilarity(
-      "Bullish momentum",
-      "Bullish momentum"
-    );
+    const result = await matchesSimilarity("Bullish momentum", "Bullish momentum");
     expect(result).toBe(true);
   });
 

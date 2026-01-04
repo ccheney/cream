@@ -9,11 +9,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import {
-  useLoadingStore,
-  type LoadingKey,
-  type LoadingOptions,
-} from "../stores/loading-store.js";
+import { type LoadingKey, type LoadingOptions, useLoadingStore } from "../stores/loading-store.js";
 
 // ============================================
 // Types
@@ -94,7 +90,7 @@ export function useLoadingState(
       store.startLoading(key, initialOptions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialLoading, initialOptions, key, store.startLoading]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -104,7 +100,7 @@ export function useLoadingState(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCleanup]);
+  }, [autoCleanup, store.stopLoading]);
 
   const isLoading = store.isLoading(key);
 
@@ -192,12 +188,9 @@ export function useMultiLoadingState(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCleanup]);
+  }, [autoCleanup, store.stopLoading]);
 
-  const isLoading = useCallback(
-    (key: LoadingKey) => store.isLoading(key),
-    [store]
-  );
+  const isLoading = useCallback((key: LoadingKey) => store.isLoading(key), [store]);
 
   const isAnyLoading = keys.some((key) => store.isLoading(key));
 

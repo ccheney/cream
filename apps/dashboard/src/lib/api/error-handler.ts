@@ -130,9 +130,7 @@ export function isResponseError(
   error: unknown
 ): error is { status?: number; statusCode?: number; message?: string } {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    ("status" in error || "statusCode" in error)
+    typeof error === "object" && error !== null && ("status" in error || "statusCode" in error)
   );
 }
 
@@ -159,10 +157,7 @@ export function isAuthError(error: ApiError | ApiErrorType): boolean {
 /**
  * Parse any error into structured ApiError.
  */
-export function parseError(
-  error: unknown,
-  options: ErrorHandlerOptions = {}
-): ApiError {
+export function parseError(error: unknown, options: ErrorHandlerOptions = {}): ApiError {
   const type = getErrorType(error);
   const messages = { ...DEFAULT_ERROR_MESSAGES, ...options.messages };
 
@@ -301,9 +296,7 @@ export class ErrorHandler {
   /**
    * Set toast function for notifications.
    */
-  setToastFunction(
-    fn: (message: string, options?: { title?: string }) => void
-  ): void {
+  setToastFunction(fn: (message: string, options?: { title?: string }) => void): void {
     this.toastFn = fn;
   }
 
@@ -366,7 +359,9 @@ export function createQueryErrorHandler(
  */
 export function createRetryCondition(maxRetries = 3) {
   return (failureCount: number, error: unknown) => {
-    if (failureCount >= maxRetries) return false;
+    if (failureCount >= maxRetries) {
+      return false;
+    }
 
     const parsed = parseError(error);
 

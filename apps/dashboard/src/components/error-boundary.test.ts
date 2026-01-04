@@ -468,8 +468,8 @@ describe("Integration Patterns", () => {
   it("can wrap component tree", () => {
     const props: ErrorBoundaryProps = {
       children: null, // In real usage, this would be JSX
-      onError: (error) => console.error(error),
-      onReset: () => console.log("Reset"),
+      onError: (_error) => {},
+      onReset: () => {},
     };
     expect(props.children).toBeNull();
     expect(props.onError).toBeDefined();
@@ -492,7 +492,7 @@ describe("Integration Patterns", () => {
   });
 
   it("can log to error tracking service", () => {
-    let loggedErrors: Error[] = [];
+    const loggedErrors: Error[] = [];
     const props: ErrorBoundaryProps = {
       children: null,
       onError: (error) => {

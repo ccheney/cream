@@ -7,12 +7,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  SAMPLE_RETURNS_DATA,
-  getReturnColor,
-  type ReturnsDataPoint,
-} from "./ReturnsChart.js";
 import { CHART_COLORS } from "@/lib/chart-config";
+import { getReturnColor, type ReturnsDataPoint, SAMPLE_RETURNS_DATA } from "./ReturnsChart.js";
 
 // ============================================
 // Color Logic Tests
@@ -130,17 +126,13 @@ describe("Returns Statistics", () => {
   });
 
   it("finds best month", () => {
-    const best = SAMPLE_RETURNS_DATA.reduce((max, d) =>
-      d.value > max.value ? d : max
-    );
+    const best = SAMPLE_RETURNS_DATA.reduce((max, d) => (d.value > max.value ? d : max));
     expect(best.period).toBe("Aug");
     expect(best.value).toBe(5.2);
   });
 
   it("finds worst month", () => {
-    const worst = SAMPLE_RETURNS_DATA.reduce((min, d) =>
-      d.value < min.value ? d : min
-    );
+    const worst = SAMPLE_RETURNS_DATA.reduce((min, d) => (d.value < min.value ? d : min));
     expect(worst.period).toBe("Jul");
     expect(worst.value).toBe(-2.3);
   });
@@ -238,8 +230,8 @@ describe("Edge Cases", () => {
   it("handles decimal precision", () => {
     const point: ReturnsDataPoint = {
       period: "Jan",
-      value: 3.14159265,
+      value: Math.PI,
     };
-    expect(point.value).toBeCloseTo(3.14159, 5);
+    expect(point.value).toBeCloseTo(Math.PI, 5);
   });
 });

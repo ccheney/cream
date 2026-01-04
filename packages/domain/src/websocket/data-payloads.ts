@@ -225,14 +225,7 @@ export const AlertDataSchema = z.object({
   orderId: z.string().uuid().optional(),
 
   /** Alert category */
-  category: z.enum([
-    "order",
-    "position",
-    "risk",
-    "system",
-    "agent",
-    "market",
-  ]).optional(),
+  category: z.enum(["order", "position", "risk", "system", "agent", "market"]).optional(),
 
   /** Whether alert has been acknowledged */
   acknowledged: z.boolean().default(false),
@@ -312,14 +305,16 @@ export const PortfolioDataSchema = z.object({
   openPositions: z.number().int().nonnegative(),
 
   /** Positions by symbol */
-  positions: z.array(z.object({
-    symbol: z.string(),
-    quantity: z.number(),
-    marketValue: z.number(),
-    unrealizedPnl: z.number(),
-    unrealizedPnlPercent: z.number(),
-    costBasis: z.number(),
-  })),
+  positions: z.array(
+    z.object({
+      symbol: z.string(),
+      quantity: z.number(),
+      marketValue: z.number(),
+      unrealizedPnl: z.number(),
+      unrealizedPnlPercent: z.number(),
+      costBasis: z.number(),
+    })
+  ),
 
   /** ISO 8601 timestamp */
   timestamp: z.string().datetime(),

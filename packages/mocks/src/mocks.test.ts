@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  createMockBroker,
+  createMockDatabento,
+  createMockHelixDB,
+  createMockPolygon,
+  createMockTurso,
   // Broker
   MockBrokerAdapter,
-  createMockBroker,
-  // Market Data
-  MockPolygonAdapter,
   MockDatabentoAdapter,
-  createMockPolygon,
-  createMockDatabento,
   // HelixDB
   MockHelixDB,
-  createMockHelixDB,
+  // Market Data
+  MockPolygonAdapter,
   // Turso
   MockTursoClient,
-  createMockTurso,
 } from "./index";
 
 // ============================================
@@ -419,23 +419,19 @@ describe("MockTursoClient", () => {
 
   describe("table operations", () => {
     it("creates table", async () => {
-      await turso.execute(
-        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)"
-      );
+      await turso.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)");
 
       const tables = turso.getTableNames();
       expect(tables).toContain("users");
     });
 
     it("inserts rows", async () => {
-      await turso.execute(
-        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)"
-      );
+      await turso.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
 
-      const result = await turso.execute(
-        "INSERT INTO users (id, name) VALUES (?, ?)",
-        [1, "Alice"]
-      );
+      const result = await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [
+        1,
+        "Alice",
+      ]);
 
       expect(result.rowsAffected).toBe(1);
       expect(result.lastInsertRowid).toBe(1n);
@@ -457,10 +453,7 @@ describe("MockTursoClient", () => {
       await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [1, "Alice"]);
       await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [2, "Bob"]);
 
-      const result = await turso.execute(
-        "SELECT id, name FROM users WHERE id = ?",
-        [1]
-      );
+      const result = await turso.execute("SELECT id, name FROM users WHERE id = ?", [1]);
 
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0][1]).toBe("Alice");
@@ -470,10 +463,7 @@ describe("MockTursoClient", () => {
       await turso.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
       await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [1, "Alice"]);
 
-      const result = await turso.execute(
-        "UPDATE users SET name = ? WHERE id = ?",
-        ["Alicia", 1]
-      );
+      const result = await turso.execute("UPDATE users SET name = ? WHERE id = ?", ["Alicia", 1]);
 
       expect(result.rowsAffected).toBe(1);
 

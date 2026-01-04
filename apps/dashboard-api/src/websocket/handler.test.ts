@@ -6,25 +6,25 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  validateAuthToken,
-  createConnectionMetadata,
-  handleMessage,
-  handleOpen,
-  handleClose,
   broadcast,
-  broadcastQuote,
   broadcastAll,
-  sendMessage,
-  sendError,
-  getConnectionCount,
-  getConnectionIds,
+  broadcastQuote,
+  type ConnectionMetadata,
   closeAllConnections,
   closeStaleConnections,
+  createConnectionMetadata,
+  getConnectionCount,
+  getConnectionIds,
+  handleClose,
+  handleMessage,
+  handleOpen,
+  sendError,
+  sendMessage,
   startHeartbeat,
   stopHeartbeat,
-  type ConnectionMetadata,
+  validateAuthToken,
   type WebSocketWithMetadata,
 } from "./handler.js";
 
@@ -230,10 +230,7 @@ describe("handleMessage", () => {
     handleOpen(ws as unknown as WebSocketWithMetadata);
     ws.sentMessages = []; // Clear welcome message
 
-    handleMessage(
-      ws as unknown as WebSocketWithMetadata,
-      JSON.stringify({ type: "ping" })
-    );
+    handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "ping" }));
 
     expect(ws.sentMessages).toHaveLength(1);
     const message = JSON.parse(ws.sentMessages[0]);
@@ -259,10 +256,7 @@ describe("handleMessage", () => {
     handleOpen(ws as unknown as WebSocketWithMetadata);
     ws.sentMessages = [];
 
-    handleMessage(
-      ws as unknown as WebSocketWithMetadata,
-      JSON.stringify({ type: "invalid_type" })
-    );
+    handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "invalid_type" }));
 
     expect(ws.sentMessages).toHaveLength(1);
     const message = JSON.parse(ws.sentMessages[0]);
@@ -290,10 +284,7 @@ describe("handleMessage", () => {
     ws.data.lastPing = oldPing;
     handleOpen(ws as unknown as WebSocketWithMetadata);
 
-    handleMessage(
-      ws as unknown as WebSocketWithMetadata,
-      JSON.stringify({ type: "ping" })
-    );
+    handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "ping" }));
 
     expect(ws.data.lastPing.getTime()).toBeGreaterThan(oldPing.getTime());
   });

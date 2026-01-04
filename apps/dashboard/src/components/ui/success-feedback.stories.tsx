@@ -7,15 +7,15 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react";
-import React, { useState } from "react";
+import { useState } from "react";
+import type { ButtonState } from "./success-feedback";
 import {
   Checkmark,
-  SuccessText,
-  SuccessButton,
   InlineSuccess,
+  SuccessButton,
+  SuccessText,
   useAsyncButton,
 } from "./success-feedback";
-import type { ButtonState } from "./success-feedback";
 
 // ============================================
 // Checkmark Stories
@@ -28,8 +28,7 @@ const checkmarkMeta: Meta<typeof Checkmark> = {
     layout: "centered",
     docs: {
       description: {
-        component:
-          "Animated SVG checkmark with stroke-dashoffset draw animation.",
+        component: "Animated SVG checkmark with stroke-dashoffset draw animation.",
       },
     },
   },
@@ -225,9 +224,15 @@ export const ButtonAllStates: StoryObj = {
   render: () => (
     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
       <SuccessButton state="idle">Idle</SuccessButton>
-      <SuccessButton state="loading" loadingText="Loading...">Loading</SuccessButton>
-      <SuccessButton state="success" successText="Done!">Success</SuccessButton>
-      <SuccessButton state="error" errorText="Error">Error</SuccessButton>
+      <SuccessButton state="loading" loadingText="Loading...">
+        Loading
+      </SuccessButton>
+      <SuccessButton state="success" successText="Done!">
+        Success
+      </SuccessButton>
+      <SuccessButton state="error" errorText="Error">
+        Error
+      </SuccessButton>
     </div>
   ),
   parameters: {

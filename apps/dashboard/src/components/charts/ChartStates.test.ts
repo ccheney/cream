@@ -12,11 +12,11 @@ import React from "react";
 // Since we can't render React in Bun tests without jsdom,
 // we test the types and exports
 import type {
-  SkeletonVariant,
-  ChartSkeletonProps,
-  ChartErrorProps,
   ChartEmptyProps,
+  ChartErrorProps,
+  ChartSkeletonProps,
   ChartWrapperProps,
+  SkeletonVariant,
 } from "./ChartStates.js";
 
 // ============================================
@@ -209,13 +209,13 @@ describe("Skeleton Variants", () => {
 
     // Ensure we have a skeleton for each common chart type
     expect(variants).toContain("candlestick"); // TradingView
-    expect(variants).toContain("line");        // Equity curves
-    expect(variants).toContain("area");        // Area charts
-    expect(variants).toContain("bar");         // Returns charts
-    expect(variants).toContain("pie");         // Allocation
-    expect(variants).toContain("sparkline");   // Mini charts
-    expect(variants).toContain("gauge");       // Metrics
-    expect(variants).toContain("heatmap");     // Correlation
+    expect(variants).toContain("line"); // Equity curves
+    expect(variants).toContain("area"); // Area charts
+    expect(variants).toContain("bar"); // Returns charts
+    expect(variants).toContain("pie"); // Allocation
+    expect(variants).toContain("sparkline"); // Mini charts
+    expect(variants).toContain("gauge"); // Metrics
+    expect(variants).toContain("heatmap"); // Correlation
   });
 });
 

@@ -59,12 +59,7 @@ export default function Loading() {
         aria-label="Loading page..."
         data-testid="page-loading"
       >
-        <LoadingLogo
-          size="xl"
-          variant="icon"
-          label="Loading page..."
-          testId="page-loading-logo"
-        />
+        <LoadingLogo size="xl" variant="icon" label="Loading page..." testId="page-loading-logo" />
       </div>
     </>
   );

@@ -11,7 +11,9 @@
     "evals:agents": "bun run tests/evals/run-evals.ts",
     "evals:semantic": "bun run tests/evals/semantic.ts",
     "evals:compare": "bun run tests/evals/compare.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/ tests/",
+    "format": "biome format --write src/ tests/"
   },
   "dependencies": {
     "@cream/domain": "workspace:*",

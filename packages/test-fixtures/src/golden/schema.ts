@@ -142,7 +142,8 @@ export interface StalenessCheckResult {
 export function checkStaleness(lastRefreshed: string): StalenessCheckResult {
   const refreshDate = new Date(lastRefreshed);
   const now = new Date();
-  const ageMonths = (now.getFullYear() - refreshDate.getFullYear()) * 12 +
+  const ageMonths =
+    (now.getFullYear() - refreshDate.getFullYear()) * 12 +
     (now.getMonth() - refreshDate.getMonth());
 
   if (ageMonths >= STALENESS_THRESHOLDS.FAIL_MONTHS) {

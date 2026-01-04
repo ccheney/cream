@@ -2,19 +2,17 @@
  * Tests for Mock LLM Infrastructure
  */
 
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
-  MockLLM,
-  MockLLMRecorder,
   createMockLLM,
-  createMockLLMWithDefaults,
   createMockLLMRecorder,
-  extractPromptKey,
+  createMockLLMWithDefaults,
   extractKeyHash,
   extractKeyPattern,
+  extractPromptKey,
   type LLMInterface,
+  type MockLLM,
   type MockResponse,
-  type ResponseMap,
 } from "./llm";
 
 // ============================================
@@ -116,7 +114,7 @@ describe("MockLLM", () => {
     mockLLM = createMockLLM({
       "technical_analyst:AAPL": "AAPL analysis result",
       "trader:PLAN": JSON.stringify({ action: "BUY", symbol: "AAPL" }),
-      "exact_match_key": { content: "Exact match response" },
+      exact_match_key: { content: "Exact match response" },
       error_test: { content: "", error: "Simulated error" },
       delayed_test: { content: "Delayed response", delay: 50 },
     });
@@ -124,9 +122,7 @@ describe("MockLLM", () => {
 
   describe("complete", () => {
     test("returns response for matching pattern key", async () => {
-      const response = await mockLLM.complete(
-        "As a technical analyst, analyze AAPL"
-      );
+      const response = await mockLLM.complete("As a technical analyst, analyze AAPL");
       expect(response).toBe("AAPL analysis result");
     });
 
@@ -142,9 +138,9 @@ describe("MockLLM", () => {
     });
 
     test("throws error in strict mode for unmatched key", async () => {
-      expect(
-        mockLLM.complete("Unknown prompt with no match")
-      ).rejects.toThrow(/No response found for key/);
+      expect(mockLLM.complete("Unknown prompt with no match")).rejects.toThrow(
+        /No response found for key/
+      );
     });
 
     test("returns default response in non-strict mode", async () => {
@@ -177,9 +173,9 @@ describe("MockLLM", () => {
     });
 
     test("throws on non-JSON response", async () => {
-      expect(
-        mockLLM.completeJSON("As a technical analyst, analyze AAPL")
-      ).rejects.toThrow(/Failed to parse response as JSON/);
+      expect(mockLLM.completeJSON("As a technical analyst, analyze AAPL")).rejects.toThrow(
+        /Failed to parse response as JSON/
+      );
     });
   });
 
@@ -228,9 +224,7 @@ describe("MockLLM", () => {
     test("removes response at runtime", async () => {
       mockLLM.removeResponse("technical_analyst:AAPL");
 
-      expect(
-        mockLLM.complete("As a technical analyst, analyze AAPL")
-      ).rejects.toThrow();
+      expect(mockLLM.complete("As a technical analyst, analyze AAPL")).rejects.toThrow();
     });
   });
 });
@@ -332,10 +326,7 @@ describe("createMockLLM", () => {
   });
 
   test("accepts additional config", async () => {
-    const llm = createMockLLM(
-      { key: "value" },
-      { strictMode: false, defaultResponse: "fallback" }
-    );
+    const llm = createMockLLM({ key: "value" }, { strictMode: false, defaultResponse: "fallback" });
 
     const response = await llm.complete("unknown");
     expect(response).toBe("fallback");
@@ -356,9 +347,7 @@ describe("createMockLLMWithDefaults", () => {
   test("has trader plan response", async () => {
     const llm = createMockLLMWithDefaults();
 
-    const traderResponse = await llm.completeJSON<{ decisions: unknown[] }>(
-      "trader:PLAN"
-    );
+    const traderResponse = await llm.completeJSON<{ decisions: unknown[] }>("trader:PLAN");
     expect(traderResponse.decisions).toBeDefined();
     expect(traderResponse.decisions.length).toBeGreaterThan(0);
   });
@@ -366,9 +355,7 @@ describe("createMockLLMWithDefaults", () => {
   test("has risk manager approve response", async () => {
     const llm = createMockLLMWithDefaults();
 
-    const response = await llm.completeJSON<{ verdict: string }>(
-      "risk_manager:APPROVE"
-    );
+    const response = await llm.completeJSON<{ verdict: string }>("risk_manager:APPROVE");
     expect(response.verdict).toBe("APPROVE");
   });
 
@@ -385,14 +372,10 @@ describe("createMockLLMWithDefaults", () => {
   test("has critic responses", async () => {
     const llm = createMockLLMWithDefaults();
 
-    const approveResponse = await llm.completeJSON<{ verdict: string }>(
-      "critic:APPROVE"
-    );
+    const approveResponse = await llm.completeJSON<{ verdict: string }>("critic:APPROVE");
     expect(approveResponse.verdict).toBe("APPROVE");
 
-    const rejectResponse = await llm.completeJSON<{ verdict: string }>(
-      "critic:REJECT"
-    );
+    const rejectResponse = await llm.completeJSON<{ verdict: string }>("critic:REJECT");
     expect(rejectResponse.verdict).toBe("REJECT");
   });
 });
@@ -428,9 +411,7 @@ describe("Integration", () => {
     const mockLLM = createMockLLM(responses);
 
     // Verify same response
-    const response = await mockLLM.completeJSON<{ symbol: string }>(
-      "As a trader, plan for AAPL"
-    );
+    const response = await mockLLM.completeJSON<{ symbol: string }>("As a trader, plan for AAPL");
     expect(response.symbol).toBe("AAPL");
   });
 
@@ -443,19 +424,13 @@ describe("Integration", () => {
     );
     expect(analysis.confidence).toBeGreaterThan(0);
 
-    const plan = await llm.completeJSON<{ decisions: unknown[] }>(
-      "trader:PLAN"
-    );
+    const plan = await llm.completeJSON<{ decisions: unknown[] }>("trader:PLAN");
     expect(plan.decisions.length).toBeGreaterThan(0);
 
-    const riskCheck = await llm.completeJSON<{ verdict: string }>(
-      "risk_manager:APPROVE"
-    );
+    const riskCheck = await llm.completeJSON<{ verdict: string }>("risk_manager:APPROVE");
     expect(riskCheck.verdict).toBe("APPROVE");
 
-    const criticCheck = await llm.completeJSON<{ verdict: string }>(
-      "critic:APPROVE"
-    );
+    const criticCheck = await llm.completeJSON<{ verdict: string }>("critic:APPROVE");
     expect(criticCheck.verdict).toBe("APPROVE");
 
     // Verify call tracking

@@ -249,7 +249,9 @@ export class MockBrokerAdapter {
    */
   private async processOrder(orderId: string): Promise<void> {
     const order = this.orders.get(orderId);
-    if (!order) return;
+    if (!order) {
+      return;
+    }
 
     // Wait for accept delay
     await this.delay(this.config.acceptDelay);
@@ -270,10 +272,7 @@ export class MockBrokerAdapter {
    */
   private fillOrder(order: MockOrder): void {
     // Check for partial fill simulation
-    if (
-      this.config.simulateFailure &&
-      this.config.failureType === "PARTIAL_FILL"
-    ) {
+    if (this.config.simulateFailure && this.config.failureType === "PARTIAL_FILL") {
       const fillQuantity = Math.floor(order.quantity / 2);
       order.filledQuantity = fillQuantity;
       order.status = "PARTIALLY_FILLED";
@@ -328,8 +327,7 @@ export class MockBrokerAdapter {
       if (existing) {
         // Add to existing position
         const totalQuantity = existing.quantity + order.filledQuantity;
-        const totalCost =
-          existing.quantity * existing.averageEntryPrice + fillValue;
+        const totalCost = existing.quantity * existing.averageEntryPrice + fillValue;
         existing.quantity = totalQuantity;
         existing.averageEntryPrice = totalCost / totalQuantity;
         existing.marketValue = totalQuantity * (order.avgFillPrice ?? 0);
@@ -385,7 +383,9 @@ export class MockBrokerAdapter {
    */
   async cancelOrder(orderId: string): Promise<MockOrder | undefined> {
     const order = this.orders.get(orderId);
-    if (!order) return undefined;
+    if (!order) {
+      return undefined;
+    }
 
     if (order.status === "PENDING" || order.status === "ACCEPTED") {
       order.status = "CANCELLED";
@@ -430,8 +430,12 @@ export class MockBrokerAdapter {
    * Check if we should simulate a failure
    */
   private shouldFail(): boolean {
-    if (!this.config.simulateFailure) return false;
-    if (this.config.deterministic) return true;
+    if (!this.config.simulateFailure) {
+      return false;
+    }
+    if (this.config.deterministic) {
+      return true;
+    }
     return Math.random() < this.config.failureRate;
   }
 

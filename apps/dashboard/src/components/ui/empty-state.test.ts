@@ -8,10 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import React from "react";
-import type {
-  EmptyStateProps,
-  EmptyStateAction,
-} from "./empty-state.js";
+import type { EmptyStateAction, EmptyStateProps } from "./empty-state.js";
 
 // ============================================
 // Type Tests
@@ -347,7 +344,7 @@ describe("Edge Cases", () => {
       description:
         "This is a very long description that explains in detail what happened and what the user should do next. It might contain multiple sentences and should wrap nicely.",
     };
-    expect(props.description!.length).toBeGreaterThan(100);
+    expect(props.description?.length).toBeGreaterThan(100);
   });
 
   it("handles empty description", () => {

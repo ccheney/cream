@@ -6,26 +6,25 @@
  * @see docs/plans/ui/26-data-viz.md
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
+import type { OHLCVData } from "./chart-config.js";
 import {
   appendCandle,
-  updateLastCandle,
-  applyCandleUpdate,
-  trimData,
   appendEquityPoint,
-  updateLastEquityPoint,
   appendSparklineValue,
+  applyCandleUpdate,
   batchUpdateSparkline,
+  type CandleUpdate,
   createThrottledUpdater,
+  type EquityUpdate,
+  filterStaleUpdates,
   parseChartUpdateMessage,
   sortByTimestamp,
-  filterStaleUpdates,
-  type CandleUpdate,
-  type EquityUpdate,
-  type ChartUpdateMessage,
+  trimData,
+  updateLastCandle,
+  updateLastEquityPoint,
 } from "./chart-updaters.js";
-import type { OHLCVData } from "./chart-config.js";
-import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
 
 // ============================================
 // Test Helpers

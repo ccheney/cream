@@ -4,24 +4,23 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  GoldenDatasetMetadataSchema,
-  GoldenCaseMetadataSchema,
+  checkGoldenStaleness,
+  getAllGoldenCaseIds,
+  getGoldenDatasetStats,
+  hasGoldenDataset,
+  loadGoldenCase,
+  loadGoldenInput,
+  loadGoldenMetadata,
+  loadGoldenOutput,
+} from "./loader.js";
+import {
+  checkStaleness,
   GoldenAgentType,
+  GoldenCaseMetadataSchema,
+  GoldenDatasetMetadataSchema,
   MarketRegime,
   ScenarioCategory,
-  checkStaleness,
-  STALENESS_THRESHOLDS,
 } from "./schema.js";
-import {
-  loadGoldenMetadata,
-  loadGoldenInput,
-  loadGoldenOutput,
-  loadGoldenCase,
-  getAllGoldenCaseIds,
-  checkGoldenStaleness,
-  hasGoldenDataset,
-  getGoldenDatasetStats,
-} from "./loader.js";
 
 // ============================================
 // Schema Tests
@@ -52,7 +51,15 @@ describe("GoldenAgentType", () => {
 
 describe("MarketRegime", () => {
   it("should validate all regimes", () => {
-    const regimes = ["bull_trend", "bear_trend", "range", "high_vol", "low_vol", "crash", "recovery"];
+    const regimes = [
+      "bull_trend",
+      "bear_trend",
+      "range",
+      "high_vol",
+      "low_vol",
+      "crash",
+      "recovery",
+    ];
 
     for (const regime of regimes) {
       expect(() => MarketRegime.parse(regime)).not.toThrow();

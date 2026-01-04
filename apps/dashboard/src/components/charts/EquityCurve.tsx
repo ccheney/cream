@@ -10,14 +10,14 @@
 
 import { memo, useMemo } from "react";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  type TooltipProps,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  type TooltipProps,
 } from "recharts";
 import { CHART_COLORS } from "@/lib/chart-config";
 
@@ -171,7 +171,9 @@ function EquityCurveComponent({
 
   // Calculate Y axis domain with padding
   const yDomain = useMemo(() => {
-    if (data.length === 0) return [0, 100];
+    if (data.length === 0) {
+      return [0, 100];
+    }
     const values = data.map((d) => d.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -208,10 +210,7 @@ function EquityCurveComponent({
       }}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-        >
+        <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
@@ -220,11 +219,7 @@ function EquityCurveComponent({
           </defs>
 
           {showGrid && (
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={CHART_COLORS.grid}
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
           )}
 
           {showXAxis && (
@@ -253,10 +248,7 @@ function EquityCurveComponent({
           {showTooltip && (
             <Tooltip
               content={
-                <CustomTooltip
-                  valueFormatter={valueFormatter}
-                  timeFormatter={timeFormatter}
-                />
+                <CustomTooltip valueFormatter={valueFormatter} timeFormatter={timeFormatter} />
               }
             />
           )}

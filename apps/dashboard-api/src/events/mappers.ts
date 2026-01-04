@@ -7,16 +7,15 @@
  */
 
 import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
 import type {
-  MastraCycleEvent,
-  MastraAgentEvent,
-  QuoteStreamEvent,
-  OrderUpdateEvent,
-  DecisionInsertEvent,
-  SystemAlertEvent,
-  HealthCheckEvent,
   BroadcastEvent,
+  DecisionInsertEvent,
+  HealthCheckEvent,
+  MastraAgentEvent,
+  MastraCycleEvent,
+  OrderUpdateEvent,
+  QuoteStreamEvent,
+  SystemAlertEvent,
 } from "./types.js";
 
 // ============================================
@@ -278,9 +277,7 @@ export function batchQuoteEvents(events: QuoteStreamEvent[]): BroadcastEvent[] {
 /**
  * Aggregate quote events by symbol (for batch messages).
  */
-export function aggregateQuotes(
-  events: QuoteStreamEvent[]
-): Map<string, QuoteStreamEvent> {
+export function aggregateQuotes(events: QuoteStreamEvent[]): Map<string, QuoteStreamEvent> {
   const latest = new Map<string, QuoteStreamEvent>();
   for (const event of events) {
     latest.set(event.symbol, event);

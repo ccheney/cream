@@ -7,11 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type {
-  ApiError,
-  ApiErrorType,
-  ErrorHandlerOptions,
-} from "./error-handler.js";
+import type { ApiError, ApiErrorType, ErrorHandlerOptions } from "./error-handler.js";
 
 // ============================================
 // ApiErrorType Type Tests
@@ -565,10 +561,7 @@ describe("parseError", () => {
 
   it("adds code prefix when provided", async () => {
     const module = await import("./error-handler.js");
-    const result = module.parseError(
-      { status: 500 },
-      { codePrefix: "CREAM" }
-    );
+    const result = module.parseError({ status: 500 }, { codePrefix: "CREAM" });
     expect(result.code).toContain("CREAM");
   });
 });

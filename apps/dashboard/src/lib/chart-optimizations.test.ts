@@ -8,22 +8,22 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  downsampleLTTB,
-  downsampleTimeSeries,
-  downsampleOHLC,
-  simplifyDouglasPeucker,
-  simplifyTimeSeries,
-  sampleEveryN,
-  sampleToLength,
-  getVisibleWindow,
+  autoDownsample,
   calculateVisibleRange,
+  downsampleLTTB,
+  downsampleOHLC,
+  downsampleTimeSeries,
+  getVisibleWindow,
   LRUCache,
   memoize,
-  throttle,
-  autoDownsample,
-  type Point,
-  type TimePoint,
   type OHLCPoint,
+  type Point,
+  sampleEveryN,
+  sampleToLength,
+  simplifyDouglasPeucker,
+  simplifyTimeSeries,
+  type TimePoint,
+  throttle,
 } from "./chart-optimizations.js";
 
 // ============================================

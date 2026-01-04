@@ -6,7 +6,7 @@
  * @see docs/plans/ui/28-states.md
  */
 
-import React from "react";
+import type React from "react";
 
 // ============================================
 // Types
@@ -237,15 +237,7 @@ function CandlestickSkeleton({ width, height }: { width: number; height: number 
   return (
     <svg width={width} height={height} style={styles.skeleton}>
       {bars.map((bar, i) => (
-        <rect
-          key={i}
-          x={bar.x}
-          y={bar.y}
-          width={12}
-          height={bar.height}
-          fill="#d6d3d1"
-          rx={2}
-        />
+        <rect key={i} x={bar.x} y={bar.y} width={12} height={bar.height} fill="#d6d3d1" rx={2} />
       ))}
       <Shimmer />
     </svg>
@@ -285,10 +277,7 @@ function AreaSkeleton({ width, height }: { width: number; height: number }) {
     x: (i / 19) * width,
     y: height / 2 + Math.sin(i * 0.5) * (height * 0.25),
   }));
-  const pathD =
-    `M 0 ${height} ` +
-    points.map((p) => `L ${p.x} ${p.y}`).join(" ") +
-    ` L ${width} ${height} Z`;
+  const pathD = `M 0 ${height} ${points.map((p) => `L ${p.x} ${p.y}`).join(" ")} L ${width} ${height} Z`;
 
   return (
     <svg width={width} height={height} style={styles.skeleton}>
@@ -357,13 +346,7 @@ function SparklineSkeleton({ width, height }: { width: number; height: number })
 
   return (
     <svg width={width} height={height} style={styles.skeleton}>
-      <path
-        d={pathD}
-        fill="none"
-        stroke="#d6d3d1"
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
+      <path d={pathD} fill="none" stroke="#d6d3d1" strokeWidth={2} strokeLinecap="round" />
       <Shimmer />
     </svg>
   );
@@ -465,12 +448,7 @@ export function ChartSkeleton({
   }[variant];
 
   return (
-    <div
-      role="status"
-      aria-label={ariaLabel}
-      className={className}
-      style={{ width, height }}
-    >
+    <div role="status" aria-label={ariaLabel} className={className} style={{ width, height }}>
       <SkeletonComponent width={width} height={height} />
     </div>
   );
@@ -488,16 +466,10 @@ export function ChartError({
   className,
 }: ChartErrorProps) {
   return (
-    <div
-      role="alert"
-      className={className}
-      style={{ ...styles.container, minHeight: height }}
-    >
+    <div role="alert" className={className} style={{ ...styles.container, minHeight: height }}>
       <div style={styles.errorIcon}>⚠️</div>
       <div style={styles.title}>{message}</div>
-      {showDetails && error && (
-        <div style={styles.details}>{error.message}</div>
-      )}
+      {showDetails && error && <div style={styles.details}>{error.message}</div>}
       {onRetry && (
         <button
           style={styles.button}
@@ -524,11 +496,7 @@ export function ChartEmpty({
   className,
 }: ChartEmptyProps) {
   return (
-    <div
-      role="status"
-      className={className}
-      style={{ ...styles.container, minHeight: height }}
-    >
+    <div role="status" className={className} style={{ ...styles.container, minHeight: height }}>
       <div style={styles.icon}>{icon}</div>
       <div style={styles.title}>{title}</div>
       {description && <div style={styles.description}>{description}</div>}
@@ -562,34 +530,15 @@ export function ChartWrapper({
   className,
 }: ChartWrapperProps) {
   if (isLoading) {
-    return (
-      <ChartSkeleton
-        variant={skeletonVariant}
-        height={height}
-        className={className}
-      />
-    );
+    return <ChartSkeleton variant={skeletonVariant} height={height} className={className} />;
   }
 
   if (isError) {
-    return (
-      <ChartError
-        error={error}
-        onRetry={onRetry}
-        height={height}
-        className={className}
-      />
-    );
+    return <ChartError error={error} onRetry={onRetry} height={height} className={className} />;
   }
 
   if (isEmpty) {
-    return (
-      <ChartEmpty
-        {...emptyConfig}
-        height={height}
-        className={className}
-      />
-    );
+    return <ChartEmpty {...emptyConfig} height={height} className={className} />;
   }
 
   return <>{children}</>;

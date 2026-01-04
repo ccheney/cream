@@ -1,10 +1,10 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
   ClassifierType,
-  RegimeLabel,
-  RuleBasedConfigSchema,
   HMMConfigSchema,
   RegimeConfigSchema,
+  RegimeLabel,
+  RuleBasedConfigSchema,
 } from "./regime";
 
 describe("ClassifierType", () => {
@@ -87,7 +87,9 @@ describe("HMMConfigSchema", () => {
 
   it("validates retrain_frequency enum", () => {
     expect(HMMConfigSchema.parse({ retrain_frequency: "daily" }).retrain_frequency).toBe("daily");
-    expect(HMMConfigSchema.parse({ retrain_frequency: "monthly" }).retrain_frequency).toBe("monthly");
+    expect(HMMConfigSchema.parse({ retrain_frequency: "monthly" }).retrain_frequency).toBe(
+      "monthly"
+    );
   });
 
   it("validates covariance_type enum", () => {
@@ -151,12 +153,6 @@ describe("RegimeConfigSchema", () => {
       classifier_type: "rule_based",
       rule_based: {},
     });
-    expect(config.labels).toEqual([
-      "BULL_TREND",
-      "BEAR_TREND",
-      "RANGE",
-      "HIGH_VOL",
-      "LOW_VOL",
-    ]);
+    expect(config.labels).toEqual(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]);
   });
 });

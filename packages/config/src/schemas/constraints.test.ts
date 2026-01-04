@@ -1,10 +1,10 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
+  ConstraintsConfigSchema,
+  OptionsGreeksConstraintsSchema,
   PerInstrumentConstraintsSchema,
   PortfolioConstraintsSchema,
-  OptionsGreeksConstraintsSchema,
   SizingConstraintsSchema,
-  ConstraintsConfigSchema,
 } from "./constraints";
 
 describe("PerInstrumentConstraintsSchema", () => {

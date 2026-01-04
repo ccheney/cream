@@ -16,12 +16,7 @@ import { z } from "zod";
 /**
  * Supported transform names
  */
-export const TransformName = z.enum([
-  "returns",
-  "zscore",
-  "percentile_rank",
-  "volatility_scale",
-]);
+export const TransformName = z.enum(["returns", "zscore", "percentile_rank", "volatility_scale"]);
 export type TransformName = z.infer<typeof TransformName>;
 
 // ============================================

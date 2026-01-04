@@ -13,11 +13,7 @@
 /**
  * Connection status enum.
  */
-export type ConnectionStatus =
-  | "connected"
-  | "disconnected"
-  | "reconnecting"
-  | "failed";
+export type ConnectionStatus = "connected" | "disconnected" | "reconnecting" | "failed";
 
 /**
  * Connection monitor options.
@@ -54,10 +50,7 @@ export interface ConnectionMonitorState {
 // ============================================
 
 export const DEFAULT_OPTIONS: Required<
-  Omit<
-    ConnectionMonitorOptions,
-    "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed"
-  >
+  Omit<ConnectionMonitorOptions, "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed">
 > = {
   initialBackoff: 1000,
   maxBackoff: 32000,
@@ -84,7 +77,7 @@ export function calculateBackoff(
   maxBackoff: number = DEFAULT_OPTIONS.maxBackoff,
   multiplier: number = DEFAULT_OPTIONS.backoffMultiplier
 ): number {
-  const delay = initialBackoff * Math.pow(multiplier, retryCount);
+  const delay = initialBackoff * multiplier ** retryCount;
   return Math.min(delay, maxBackoff);
 }
 
@@ -94,9 +87,7 @@ export function calculateBackoff(
  * @param options - Connection monitor options
  * @returns Array of backoff delays in ms
  */
-export function getBackoffSequence(
-  options: Partial<ConnectionMonitorOptions> = {}
-): number[] {
+export function getBackoffSequence(options: Partial<ConnectionMonitorOptions> = {}): number[] {
   const {
     initialBackoff = DEFAULT_OPTIONS.initialBackoff,
     maxBackoff = DEFAULT_OPTIONS.maxBackoff,
@@ -106,9 +97,7 @@ export function getBackoffSequence(
 
   const sequence: number[] = [];
   for (let i = 0; i < maxRetries; i++) {
-    sequence.push(
-      calculateBackoff(i, initialBackoff, maxBackoff, backoffMultiplier)
-    );
+    sequence.push(calculateBackoff(i, initialBackoff, maxBackoff, backoffMultiplier));
   }
   return sequence;
 }
@@ -140,19 +129,13 @@ export function getBackoffSequence(
  */
 export class ConnectionMonitor {
   private options: Required<
-    Omit<
-      ConnectionMonitorOptions,
-      "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed"
-    >
+    Omit<ConnectionMonitorOptions, "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed">
   > &
-    Pick<
-      ConnectionMonitorOptions,
-      "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed"
-    >;
+    Pick<ConnectionMonitorOptions, "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed">;
 
   private _status: ConnectionStatus = "disconnected";
-  private _retryCount: number = 0;
-  private _nextRetryIn: number = 0;
+  private _retryCount = 0;
+  private _nextRetryIn = 0;
   private _lastDisconnectedAt: Date | null = null;
   private retryTimeout: ReturnType<typeof setTimeout> | null = null;
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -327,9 +310,7 @@ export class ConnectionMonitor {
 /**
  * Create a new connection monitor.
  */
-export function createConnectionMonitor(
-  options: ConnectionMonitorOptions = {}
-): ConnectionMonitor {
+export function createConnectionMonitor(options: ConnectionMonitorOptions = {}): ConnectionMonitor {
   return new ConnectionMonitor(options);
 }
 

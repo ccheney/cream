@@ -6,29 +6,29 @@
  * @see docs/plans/14-testing.md lines 610-644
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  trace,
+  type AgentInput,
+  clearTraces,
+  createGoldenDataset,
+  createSpan,
+  DEFAULT_LANGSMITH_CONFIG,
+  exportTracesToDataset,
+  getAgentTraces,
+  getAllTraces,
+  getErrorTraces,
+  getSamplingRateForEnvironment,
+  getTraceById,
+  getTraceCount,
+  getTracesByCycleId,
+  getTracesByRunId,
+  type LangSmithConfig,
   runAgentWithTracing,
   runCycleWithTracing,
-  createSpan,
-  getTracesByRunId,
-  getTracesByCycleId,
-  getAgentTraces,
-  getErrorTraces,
-  getTraceById,
-  exportTracesToDataset,
-  createGoldenDataset,
-  traceError,
-  clearTraces,
-  getTraceCount,
-  getAllTraces,
-  getSamplingRateForEnvironment,
-  DEFAULT_LANGSMITH_CONFIG,
   type TracedAgent,
-  type AgentInput,
   type TraceMetadata,
-  type LangSmithConfig,
+  trace,
+  traceError,
 } from "./tracing.js";
 
 // ============================================
@@ -43,14 +43,11 @@ beforeEach(() => {
 // Mock Agent
 // ============================================
 
-function createMockAgent(options?: {
-  shouldFail?: boolean;
-  delay?: number;
-}): TracedAgent {
+function createMockAgent(options?: { shouldFail?: boolean; delay?: number }): TracedAgent {
   return {
     name: "trader",
     version: "1.0.0",
-    run: async <T>(input: AgentInput): Promise<T> => {
+    run: async <T>(_input: AgentInput): Promise<T> => {
       if (options?.delay) {
         await new Promise((resolve) => setTimeout(resolve, options.delay));
       }
@@ -94,8 +91,8 @@ describe("trace", () => {
     const traces = getAllTraces();
     expect(traces).toHaveLength(1);
     expect(traces[0].attributes["test.key"]).toBe("test-value");
-    expect(traces[0].attributes["run_id"]).toBe("run-1");
-    expect(traces[0].attributes["cycle_id"]).toBe("cycle-1");
+    expect(traces[0].attributes.run_id).toBe("run-1");
+    expect(traces[0].attributes.cycle_id).toBe("cycle-1");
   });
 
   it("captures errors in trace", async () => {
@@ -240,12 +237,9 @@ describe("runCycleWithTracing", () => {
   it("traces entire cycle", async () => {
     const metadata: TraceMetadata = { runId: "run-1", cycleId: "cycle-1" };
 
-    const result = await runCycleWithTracing(
-      async () => {
-        return { success: true };
-      },
-      metadata
-    );
+    const result = await runCycleWithTracing(async () => {
+      return { success: true };
+    }, metadata);
 
     expect(result.success).toBe(true);
     expect(getTraceCount()).toBe(1);
@@ -407,8 +401,8 @@ describe("createSpan", () => {
     span.end();
 
     const traces = getAllTraces();
-    expect(traces[0].attributes["key1"]).toBe("value1");
-    expect(traces[0].attributes["key2"]).toBe(42);
+    expect(traces[0].attributes.key1).toBe("value1");
+    expect(traces[0].attributes.key2).toBe(42);
   });
 
   it("records error", () => {

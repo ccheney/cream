@@ -22,10 +22,10 @@ export type UserRole = "user" | "admin";
  * JWT payload structure.
  */
 export interface JwtPayload {
-  sub: string;  // User ID
+  sub: string; // User ID
   role: UserRole;
-  exp: number;  // Expiration timestamp (seconds)
-  iat: number;  // Issued at timestamp
+  exp: number; // Expiration timestamp (seconds)
+  iat: number; // Issued at timestamp
 }
 
 /**
@@ -230,7 +230,7 @@ export function decodeTokenPayload(token: string): JwtPayload {
     const role = parts[1] as UserRole;
     const exp = parseInt(parts[2], 10);
 
-    if (!isNaN(exp) && (role === "user" || role === "admin")) {
+    if (!Number.isNaN(exp) && (role === "user" || role === "admin")) {
       return {
         sub: userId,
         role,
@@ -342,10 +342,7 @@ interface RateLimitBucket {
 /**
  * Create a rate limiter.
  */
-export function createRateLimiter(
-  maxRequests: number,
-  windowMs: number
-): RateLimiter {
+export function createRateLimiter(maxRequests: number, windowMs: number): RateLimiter {
   const buckets = new Map<string, RateLimitBucket>();
 
   const getOrCreateBucket = (key: string): RateLimitBucket => {
@@ -394,7 +391,9 @@ export function createRateLimiter(
 
     getState(key: string) {
       const bucket = buckets.get(key);
-      if (!bucket) return undefined;
+      if (!bucket) {
+        return undefined;
+      }
       return {
         count: bucket.count,
         windowStart: new Date(bucket.windowStart),
@@ -410,26 +409,17 @@ export function createRateLimiter(
 /**
  * Subscribe/unsubscribe rate limiter (10/second).
  */
-export const subscribeRateLimiter = createRateLimiter(
-  RATE_LIMITS.SUBSCRIBE_PER_SECOND,
-  1000
-);
+export const subscribeRateLimiter = createRateLimiter(RATE_LIMITS.SUBSCRIBE_PER_SECOND, 1000);
 
 /**
  * Message rate limiter (100/minute).
  */
-export const messageRateLimiterMinute = createRateLimiter(
-  RATE_LIMITS.MESSAGES_PER_MINUTE,
-  60000
-);
+export const messageRateLimiterMinute = createRateLimiter(RATE_LIMITS.MESSAGES_PER_MINUTE, 60000);
 
 /**
  * Message rate limiter (1000/hour).
  */
-export const messageRateLimiterHour = createRateLimiter(
-  RATE_LIMITS.MESSAGES_PER_HOUR,
-  3600000
-);
+export const messageRateLimiterHour = createRateLimiter(RATE_LIMITS.MESSAGES_PER_HOUR, 3600000);
 
 /**
  * Check all message rate limits.
@@ -601,7 +591,9 @@ export const symbolTracker = createSymbolTracker();
  * Validate request origin.
  */
 export function validateOrigin(origin: string | null): boolean {
-  if (!origin) return false;
+  if (!origin) {
+    return false;
+  }
 
   // In development, allow all localhost origins
   if (origin.startsWith("http://localhost:")) {
@@ -651,13 +643,7 @@ export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): 
   }
 
   // Also log to console for immediate visibility
-  const level = event.success ? "info" : "warn";
-  console[level](
-    `[Security] ${event.eventType}: ${event.success ? "success" : "failed"}`,
-    event.userId ? `user=${event.userId}` : "",
-    event.connectionId ? `conn=${event.connectionId}` : "",
-    event.reason || ""
-  );
+  const _level = event.success ? "info" : "warn";
 }
 
 /**
@@ -671,17 +657,27 @@ export function getAuditLog(
     success?: boolean;
     since?: Date;
   },
-  limit: number = 100
+  limit = 100
 ): SecurityAuditEvent[] {
   let filtered = auditLog;
 
   if (filter) {
     filtered = auditLog.filter((event) => {
-      if (filter.eventType && event.eventType !== filter.eventType) return false;
-      if (filter.userId && event.userId !== filter.userId) return false;
-      if (filter.connectionId && event.connectionId !== filter.connectionId) return false;
-      if (filter.success !== undefined && event.success !== filter.success) return false;
-      if (filter.since && new Date(event.timestamp) < filter.since) return false;
+      if (filter.eventType && event.eventType !== filter.eventType) {
+        return false;
+      }
+      if (filter.userId && event.userId !== filter.userId) {
+        return false;
+      }
+      if (filter.connectionId && event.connectionId !== filter.connectionId) {
+        return false;
+      }
+      if (filter.success !== undefined && event.success !== filter.success) {
+        return false;
+      }
+      if (filter.since && new Date(event.timestamp) < filter.since) {
+        return false;
+      }
       return true;
     });
   }

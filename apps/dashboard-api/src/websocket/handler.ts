@@ -9,16 +9,16 @@
 
 import type { ServerWebSocket } from "bun";
 import {
-  Channel,
   CHANNELS,
-  ClientMessageSchema,
+  type Channel,
   type ClientMessage,
+  ClientMessageSchema,
+  type PingMessage,
   type ServerMessage,
   type SubscribeMessage,
-  type UnsubscribeMessage,
   type SubscribeSymbolsMessage,
+  type UnsubscribeMessage,
   type UnsubscribeSymbolsMessage,
-  type PingMessage,
 } from "../../../../packages/domain/src/websocket/index.js";
 
 // ============================================
@@ -145,10 +145,7 @@ export function validateAuthToken(token: string | null): AuthResult {
 /**
  * Handle subscribe message.
  */
-function handleSubscribe(
-  ws: WebSocketWithMetadata,
-  message: SubscribeMessage
-): void {
+function handleSubscribe(ws: WebSocketWithMetadata, message: SubscribeMessage): void {
   const metadata = ws.data;
 
   for (const channelName of message.channels) {
@@ -165,19 +162,12 @@ function handleSubscribe(
     channels: Array.from(metadata.channels),
     timestamp: new Date().toISOString(),
   });
-
-  console.log(
-    `[WS] ${metadata.connectionId} subscribed to: ${Array.from(metadata.channels).join(", ")}`
-  );
 }
 
 /**
  * Handle unsubscribe message.
  */
-function handleUnsubscribe(
-  ws: WebSocketWithMetadata,
-  message: UnsubscribeMessage
-): void {
+function handleUnsubscribe(ws: WebSocketWithMetadata, message: UnsubscribeMessage): void {
   const metadata = ws.data;
 
   for (const channelName of message.channels) {
@@ -190,19 +180,12 @@ function handleUnsubscribe(
     channels: message.channels,
     timestamp: new Date().toISOString(),
   });
-
-  console.log(
-    `[WS] ${metadata.connectionId} unsubscribed from: ${message.channels.join(", ")}`
-  );
 }
 
 /**
  * Handle subscribe symbols message.
  */
-function handleSubscribeSymbols(
-  ws: WebSocketWithMetadata,
-  message: SubscribeSymbolsMessage
-): void {
+function handleSubscribeSymbols(ws: WebSocketWithMetadata, message: SubscribeSymbolsMessage): void {
   const metadata = ws.data;
 
   for (const symbol of message.symbols) {
@@ -218,10 +201,6 @@ function handleSubscribeSymbols(
     symbols: Array.from(metadata.symbols),
     timestamp: new Date().toISOString(),
   });
-
-  console.log(
-    `[WS] ${metadata.connectionId} subscribed to symbols: ${Array.from(metadata.symbols).join(", ")}`
-  );
 }
 
 /**
@@ -243,10 +222,6 @@ function handleUnsubscribeSymbols(
     symbols: message.symbols,
     timestamp: new Date().toISOString(),
   });
-
-  console.log(
-    `[WS] ${metadata.connectionId} unsubscribed from symbols: ${message.symbols.join(", ")}`
-  );
 }
 
 /**
@@ -265,10 +240,7 @@ function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
 /**
  * Route incoming message to appropriate handler.
  */
-export function handleMessage(
-  ws: WebSocketWithMetadata,
-  rawMessage: string
-): void {
+export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): void {
   let message: ClientMessage;
 
   try {
@@ -281,7 +253,7 @@ export function handleMessage(
     }
 
     message = result.data;
-  } catch (error) {
+  } catch (_error) {
     sendError(ws, "Invalid JSON format");
     return;
   }
@@ -326,12 +298,14 @@ export function handleMessage(
 /**
  * Send message to a single connection.
  */
-export function sendMessage(ws: WebSocketWithMetadata, message: ServerMessage | Record<string, unknown>): boolean {
+export function sendMessage(
+  ws: WebSocketWithMetadata,
+  message: ServerMessage | Record<string, unknown>
+): boolean {
   try {
     ws.send(JSON.stringify(message));
     return true;
-  } catch (error) {
-    console.error(`[WS] Failed to send message to ${ws.data.connectionId}:`, error);
+  } catch (_error) {
     return false;
   }
 }
@@ -379,10 +353,7 @@ export function broadcast(channel: Channel, message: ServerMessage): number {
 /**
  * Broadcast quote message to connections subscribed to a specific symbol.
  */
-export function broadcastQuote(
-  symbol: string,
-  message: ServerMessage
-): number {
+export function broadcastQuote(symbol: string, message: ServerMessage): number {
   let sent = 0;
   const deadConnections: string[] = [];
   const upperSymbol = symbol.toUpperCase();
@@ -439,10 +410,6 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
   const metadata = ws.data;
   connections.set(metadata.connectionId, ws);
 
-  console.log(
-    `[WS] Connection opened: ${metadata.connectionId} (user: ${metadata.userId})`
-  );
-
   // Send welcome message
   sendMessage(ws, {
     type: "system_status",
@@ -459,21 +426,16 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
 /**
  * Handle WebSocket close.
  */
-export function handleClose(ws: WebSocketWithMetadata, code: number, reason: string): void {
+export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: string): void {
   const metadata = ws.data;
   removeConnection(metadata.connectionId);
-
-  console.log(
-    `[WS] Connection closed: ${metadata.connectionId} (code: ${code}, reason: ${reason || "none"})`
-  );
 }
 
 /**
  * Handle WebSocket error.
  */
-export function handleError(ws: WebSocketWithMetadata, error: Error): void {
+export function handleError(ws: WebSocketWithMetadata, _error: Error): void {
   const metadata = ws.data;
-  console.error(`[WS] Connection error: ${metadata.connectionId}`, error);
   removeConnection(metadata.connectionId);
 }
 
@@ -497,8 +459,7 @@ export function pingAllConnections(): void {
   for (const [connectionId, ws] of connections) {
     try {
       ws.send(JSON.stringify({ type: "ping", timestamp: now.toISOString() }));
-    } catch (error) {
-      console.error(`[WS] Failed to ping ${connectionId}:`, error);
+    } catch (_error) {
       removeConnection(connectionId);
     }
   }
@@ -514,7 +475,6 @@ export function closeStaleConnections(): number {
   for (const [connectionId, ws] of connections) {
     const lastPing = ws.data.lastPing.getTime();
     if (now - lastPing > STALE_CONNECTION_TIMEOUT_MS) {
-      console.log(`[WS] Closing stale connection: ${connectionId}`);
       try {
         ws.close(1000, "Connection timed out");
       } catch {
@@ -534,14 +494,14 @@ export function closeStaleConnections(): number {
 let heartbeatInterval: Timer | null = null;
 
 export function startHeartbeat(): void {
-  if (heartbeatInterval) return;
+  if (heartbeatInterval) {
+    return;
+  }
 
   heartbeatInterval = setInterval(() => {
     closeStaleConnections();
     pingAllConnections();
   }, HEARTBEAT_INTERVAL_MS);
-
-  console.log("[WS] Heartbeat started");
 }
 
 /**
@@ -551,7 +511,6 @@ export function stopHeartbeat(): void {
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
-    console.log("[WS] Heartbeat stopped");
   }
 }
 
@@ -562,10 +521,8 @@ export function stopHeartbeat(): void {
 /**
  * Close all connections gracefully.
  */
-export function closeAllConnections(reason: string = "Server shutting down"): void {
-  console.log(`[WS] Closing all connections: ${reason}`);
-
-  for (const [connectionId, ws] of connections) {
+export function closeAllConnections(reason = "Server shutting down"): void {
+  for (const [_connectionId, ws] of connections) {
     try {
       ws.close(1001, reason);
     } catch {
@@ -584,9 +541,7 @@ export function closeAllConnections(reason: string = "Server shutting down"): vo
 /**
  * Create metadata for new connection.
  */
-export function createConnectionMetadata(
-  userId: string
-): ConnectionMetadata {
+export function createConnectionMetadata(userId: string): ConnectionMetadata {
   return {
     connectionId: generateConnectionId(),
     userId,

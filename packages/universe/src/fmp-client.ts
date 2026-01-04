@@ -140,7 +140,10 @@ export class FMPClient {
   /**
    * Make a request to the FMP API with retries
    */
-  private async request<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    params: Record<string, string | number | boolean> = {}
+  ): Promise<T> {
     const url = new URL(`${this.config.baseUrl}${endpoint}`);
 
     // Add API key
@@ -164,7 +167,7 @@ export class FMPClient {
           method: "GET",
           signal: controller.signal,
           headers: {
-            "Accept": "application/json",
+            Accept: "application/json",
           },
         });
 
@@ -186,7 +189,9 @@ export class FMPClient {
 
         // Wait before retry
         if (attempt < this.config.retries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay * (attempt + 1)));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.config.retryDelay * (attempt + 1))
+          );
         }
       }
     }
@@ -300,23 +305,57 @@ export class FMPClient {
   async screenStocks(filters: FMPScreenerFilters): Promise<FMPScreenerResult[]> {
     const params: Record<string, string | number | boolean> = {};
 
-    if (filters.marketCapMoreThan) params.marketCapMoreThan = filters.marketCapMoreThan;
-    if (filters.marketCapLowerThan) params.marketCapLowerThan = filters.marketCapLowerThan;
-    if (filters.volumeMoreThan) params.volumeMoreThan = filters.volumeMoreThan;
-    if (filters.volumeLowerThan) params.volumeLowerThan = filters.volumeLowerThan;
-    if (filters.priceMoreThan) params.priceMoreThan = filters.priceMoreThan;
-    if (filters.priceLowerThan) params.priceLowerThan = filters.priceLowerThan;
-    if (filters.betaMoreThan) params.betaMoreThan = filters.betaMoreThan;
-    if (filters.betaLowerThan) params.betaLowerThan = filters.betaLowerThan;
-    if (filters.dividendMoreThan) params.dividendMoreThan = filters.dividendMoreThan;
-    if (filters.dividendLowerThan) params.dividendLowerThan = filters.dividendLowerThan;
-    if (filters.sector) params.sector = filters.sector;
-    if (filters.industry) params.industry = filters.industry;
-    if (filters.country) params.country = filters.country;
-    if (filters.exchange) params.exchange = filters.exchange;
-    if (filters.isActivelyTrading !== undefined) params.isActivelyTrading = filters.isActivelyTrading;
-    if (filters.isEtf !== undefined) params.isEtf = filters.isEtf;
-    if (filters.limit) params.limit = filters.limit;
+    if (filters.marketCapMoreThan) {
+      params.marketCapMoreThan = filters.marketCapMoreThan;
+    }
+    if (filters.marketCapLowerThan) {
+      params.marketCapLowerThan = filters.marketCapLowerThan;
+    }
+    if (filters.volumeMoreThan) {
+      params.volumeMoreThan = filters.volumeMoreThan;
+    }
+    if (filters.volumeLowerThan) {
+      params.volumeLowerThan = filters.volumeLowerThan;
+    }
+    if (filters.priceMoreThan) {
+      params.priceMoreThan = filters.priceMoreThan;
+    }
+    if (filters.priceLowerThan) {
+      params.priceLowerThan = filters.priceLowerThan;
+    }
+    if (filters.betaMoreThan) {
+      params.betaMoreThan = filters.betaMoreThan;
+    }
+    if (filters.betaLowerThan) {
+      params.betaLowerThan = filters.betaLowerThan;
+    }
+    if (filters.dividendMoreThan) {
+      params.dividendMoreThan = filters.dividendMoreThan;
+    }
+    if (filters.dividendLowerThan) {
+      params.dividendLowerThan = filters.dividendLowerThan;
+    }
+    if (filters.sector) {
+      params.sector = filters.sector;
+    }
+    if (filters.industry) {
+      params.industry = filters.industry;
+    }
+    if (filters.country) {
+      params.country = filters.country;
+    }
+    if (filters.exchange) {
+      params.exchange = filters.exchange;
+    }
+    if (filters.isActivelyTrading !== undefined) {
+      params.isActivelyTrading = filters.isActivelyTrading;
+    }
+    if (filters.isEtf !== undefined) {
+      params.isEtf = filters.isEtf;
+    }
+    if (filters.limit) {
+      params.limit = filters.limit;
+    }
 
     return this.request<FMPScreenerResult[]>("/stock-screener", params);
   }
@@ -337,38 +376,8 @@ export class FMPClient {
     price: number;
     volAvg: number;
   } | null> {
-    const profiles = await this.request<Array<{
-      symbol: string;
-      companyName: string;
-      sector: string;
-      industry: string;
-      mktCap: number;
-      price: number;
-      volAvg: number;
-    }>>(`/profile/${symbol}`);
-
-    return profiles[0] ?? null;
-  }
-
-  /**
-   * Get profiles for multiple symbols (batch)
-   */
-  async getCompanyProfiles(symbols: string[]): Promise<Map<string, {
-    symbol: string;
-    companyName: string;
-    sector: string;
-    industry: string;
-    mktCap: number;
-    price: number;
-    volAvg: number;
-  }>> {
-    const results = new Map();
-
-    // FMP allows batch requests with comma-separated symbols
-    const batchSize = 50;
-    for (let i = 0; i < symbols.length; i += batchSize) {
-      const batch = symbols.slice(i, i + batchSize);
-      const profiles = await this.request<Array<{
+    const profiles = await this.request<
+      Array<{
         symbol: string;
         companyName: string;
         sector: string;
@@ -376,7 +385,46 @@ export class FMPClient {
         mktCap: number;
         price: number;
         volAvg: number;
-      }>>(`/profile/${batch.join(",")}`);
+      }>
+    >(`/profile/${symbol}`);
+
+    return profiles[0] ?? null;
+  }
+
+  /**
+   * Get profiles for multiple symbols (batch)
+   */
+  async getCompanyProfiles(symbols: string[]): Promise<
+    Map<
+      string,
+      {
+        symbol: string;
+        companyName: string;
+        sector: string;
+        industry: string;
+        mktCap: number;
+        price: number;
+        volAvg: number;
+      }
+    >
+  > {
+    const results = new Map();
+
+    // FMP allows batch requests with comma-separated symbols
+    const batchSize = 50;
+    for (let i = 0; i < symbols.length; i += batchSize) {
+      const batch = symbols.slice(i, i + batchSize);
+      const profiles = await this.request<
+        Array<{
+          symbol: string;
+          companyName: string;
+          sector: string;
+          industry: string;
+          mktCap: number;
+          price: number;
+          volAvg: number;
+        }>
+      >(`/profile/${batch.join(",")}`);
 
       for (const profile of profiles) {
         results.set(profile.symbol, profile);

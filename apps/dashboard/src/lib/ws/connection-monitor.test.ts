@@ -8,14 +8,14 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  calculateBackoff,
-  getBackoffSequence,
-  DEFAULT_OPTIONS,
   ConnectionMonitor,
-  createConnectionMonitor,
-  type ConnectionStatus,
   type ConnectionMonitorOptions,
   type ConnectionMonitorState,
+  type ConnectionStatus,
+  calculateBackoff,
+  createConnectionMonitor,
+  DEFAULT_OPTIONS,
+  getBackoffSequence,
 } from "./connection-monitor.js";
 
 // ============================================
@@ -297,12 +297,7 @@ describe("createConnectionMonitor", () => {
 
 describe("ConnectionStatus Type", () => {
   it("supports all status values", () => {
-    const statuses: ConnectionStatus[] = [
-      "connected",
-      "disconnected",
-      "reconnecting",
-      "failed",
-    ];
+    const statuses: ConnectionStatus[] = ["connected", "disconnected", "reconnecting", "failed"];
     expect(statuses.length).toBe(4);
   });
 });

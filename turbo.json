@@ -26,6 +26,10 @@
     "clean": {
       "cache": false,
       "outputs": []
+    },
+    "format": {
+      "cache": false,
+      "outputs": []
     }
   }
 }

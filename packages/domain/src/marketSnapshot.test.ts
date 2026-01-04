@@ -2,23 +2,20 @@
  * Market Snapshot Schema Tests
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-  Iso8601Schema,
-  Iso8601UtcSchema,
-} from "./time";
-import {
-  QuoteSchema,
   BarSchema,
-  SymbolSnapshotSchema,
+  GetOptionChainRequestSchema,
+  GetSnapshotRequestSchema,
   MarketSnapshotSchema,
-  OptionQuoteSchema,
   OptionChainSchema,
+  OptionQuoteSchema,
+  QuoteSchema,
   SubscribeMarketDataRequestSchema,
   SubscribeMarketDataResponseSchema,
-  GetSnapshotRequestSchema,
-  GetOptionChainRequestSchema,
+  SymbolSnapshotSchema,
 } from "./marketSnapshot";
+import { Iso8601Schema, Iso8601UtcSchema } from "./time";
 
 // ============================================
 // Test Fixtures
@@ -28,7 +25,7 @@ const validTimestamp = "2026-01-04T16:30:00Z";
 
 const validQuote = {
   symbol: "AAPL",
-  bid: 185.50,
+  bid: 185.5,
   ask: 185.55,
   bidSize: 100,
   askSize: 200,
@@ -42,9 +39,9 @@ const validBar = {
   symbol: "AAPL",
   timestamp: validTimestamp,
   timeframeMinutes: 60,
-  open: 185.00,
-  high: 186.00,
-  low: 184.50,
+  open: 185.0,
+  high: 186.0,
+  low: 184.5,
   close: 185.75,
   volume: 500000,
   vwap: 185.25,
@@ -54,7 +51,7 @@ const validBar = {
 const validOptionContract = {
   underlying: "AAPL",
   expiration: "2026-01-17",
-  strike: 190.00,
+  strike: 190.0,
   optionType: "CALL" as const,
 };
 
@@ -111,7 +108,7 @@ describe("QuoteSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.symbol).toBe("AAPL");
-      expect(result.data.bid).toBe(185.50);
+      expect(result.data.bid).toBe(185.5);
     }
   });
 
@@ -174,8 +171,8 @@ describe("BarSchema", () => {
   test("rejects bar where high < low", () => {
     const result = BarSchema.safeParse({
       ...validBar,
-      high: 184.00,
-      low: 185.00,
+      high: 184.0,
+      low: 185.0,
     });
     expect(result.success).toBe(false);
   });
@@ -183,8 +180,8 @@ describe("BarSchema", () => {
   test("rejects bar where high < open", () => {
     const result = BarSchema.safeParse({
       ...validBar,
-      high: 184.00,
-      open: 185.00,
+      high: 184.0,
+      open: 185.0,
     });
     expect(result.success).toBe(false);
   });
@@ -192,8 +189,8 @@ describe("BarSchema", () => {
   test("rejects bar where low > close", () => {
     const result = BarSchema.safeParse({
       ...validBar,
-      low: 186.00,
-      close: 185.00,
+      low: 186.0,
+      close: 185.0,
     });
     expect(result.success).toBe(false);
   });
@@ -201,10 +198,10 @@ describe("BarSchema", () => {
   test("accepts bar where high = open = close = low (doji)", () => {
     const result = BarSchema.safeParse({
       ...validBar,
-      open: 185.00,
-      high: 185.00,
-      low: 185.00,
-      close: 185.00,
+      open: 185.0,
+      high: 185.0,
+      low: 185.0,
+      close: 185.0,
     });
     expect(result.success).toBe(true);
   });
@@ -220,9 +217,9 @@ describe("SymbolSnapshotSchema", () => {
     quote: validQuote,
     bars: [validBar],
     marketStatus: "OPEN" as const,
-    dayHigh: 186.50,
-    dayLow: 184.00,
-    prevClose: 185.00,
+    dayHigh: 186.5,
+    dayLow: 184.0,
+    prevClose: 185.0,
     open: 185.25,
     asOf: validTimestamp,
   };
@@ -243,8 +240,8 @@ describe("SymbolSnapshotSchema", () => {
   test("rejects snapshot where dayHigh < dayLow", () => {
     const result = SymbolSnapshotSchema.safeParse({
       ...validSymbolSnapshot,
-      dayHigh: 183.00,
-      dayLow: 184.00,
+      dayHigh: 183.0,
+      dayLow: 184.0,
     });
     expect(result.success).toBe(false);
   });
@@ -271,9 +268,9 @@ describe("MarketSnapshotSchema", () => {
     quote: validQuote,
     bars: [validBar],
     marketStatus: "OPEN" as const,
-    dayHigh: 186.50,
-    dayLow: 184.00,
-    prevClose: 185.00,
+    dayHigh: 186.5,
+    dayLow: 184.0,
+    prevClose: 185.0,
     open: 185.25,
     asOf: validTimestamp,
   };
@@ -341,8 +338,8 @@ describe("OptionQuoteSchema", () => {
     delta: 0.65,
     gamma: 0.05,
     theta: -0.15,
-    vega: 0.20,
-    rho: 0.10,
+    vega: 0.2,
+    rho: 0.1,
     openInterest: 5000,
   };
 
@@ -384,7 +381,7 @@ describe("OptionQuoteSchema", () => {
   test("accepts negative theta (time decay)", () => {
     const result = OptionQuoteSchema.safeParse({
       ...validOptionQuote,
-      theta: -0.50,
+      theta: -0.5,
     });
     expect(result.success).toBe(true);
   });
@@ -403,7 +400,7 @@ describe("OptionChainSchema", () => {
 
   const validOptionChain = {
     underlying: "AAPL",
-    underlyingPrice: 185.50,
+    underlyingPrice: 185.5,
     options: [validOptionQuote],
     asOf: validTimestamp,
   };
@@ -506,8 +503,8 @@ describe("GetOptionChainRequestSchema", () => {
     const result = GetOptionChainRequestSchema.safeParse({
       underlying: "AAPL",
       expirations: ["2026-01-17", "2026-02-21"],
-      minStrike: 180.00,
-      maxStrike: 200.00,
+      minStrike: 180.0,
+      maxStrike: 200.0,
     });
     expect(result.success).toBe(true);
   });
@@ -515,8 +512,8 @@ describe("GetOptionChainRequestSchema", () => {
   test("rejects minStrike > maxStrike", () => {
     const result = GetOptionChainRequestSchema.safeParse({
       underlying: "AAPL",
-      minStrike: 200.00,
-      maxStrike: 180.00,
+      minStrike: 200.0,
+      maxStrike: 180.0,
     });
     expect(result.success).toBe(false);
   });

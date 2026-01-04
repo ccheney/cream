@@ -6,14 +6,8 @@
  * @see docs/plans/ui/28-states.md lines 102-108
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
-import type {
-  Toast,
-  ToastVariant,
-  ToastPosition,
-  ToastOptions,
-  ToastStore,
-} from "./toast-store.js";
+import { beforeEach, describe, expect, it } from "bun:test";
+import type { Toast, ToastOptions, ToastPosition, ToastVariant } from "./toast-store.js";
 
 // Reset store between tests
 beforeEach(async () => {

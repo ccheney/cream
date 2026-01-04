@@ -7,11 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type {
-  ErrorPanelProps,
-  ErrorPanelVariant,
-  ErrorAction,
-} from "./error-panel.js";
+import type { ErrorAction, ErrorPanelProps, ErrorPanelVariant } from "./error-panel.js";
 
 // ============================================
 // ErrorPanelProps Type Tests

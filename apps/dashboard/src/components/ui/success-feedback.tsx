@@ -6,7 +6,8 @@
  * @see docs/plans/ui/28-states.md lines 110-114
  */
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Spinner } from "./spinner";
 
 // ============================================
@@ -37,8 +38,7 @@ export interface CheckmarkProps {
 /**
  * Success button props.
  */
-export interface SuccessButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface SuccessButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Current button state */
   state?: ButtonState;
   /** Loading text (shown during loading state) */
@@ -172,9 +172,7 @@ export function Checkmark({
 
   return (
     <>
-      {animated && (
-        <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-      )}
+      {animated && <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />}
       <svg
         viewBox="0 0 24 24"
         style={svgStyles}
@@ -214,12 +212,7 @@ export function SuccessText({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-      <span
-        role="status"
-        aria-live="polite"
-        data-testid={testId}
-        style={styles}
-      >
+      <span role="status" aria-live="polite" data-testid={testId} style={styles}>
         <Checkmark size={16} />
         <span>{children}</span>
       </span>
@@ -310,12 +303,7 @@ export function SuccessButton({
     cursor: isDisabled ? "not-allowed" : "pointer",
     transition: "background-color 0.15s, opacity 0.15s",
     opacity: isDisabled && state !== "success" ? 0.6 : 1,
-    backgroundColor:
-      state === "success"
-        ? "#22c55e"
-        : state === "error"
-          ? "#ef4444"
-          : "#1c1917",
+    backgroundColor: state === "success" ? "#22c55e" : state === "error" ? "#ef4444" : "#1c1917",
     color: "#ffffff",
     ...style,
   };
@@ -424,7 +412,9 @@ export function useAsyncButton<T>(
   }, []);
 
   const execute = useCallback(async () => {
-    if (state === "loading") return;
+    if (state === "loading") {
+      return;
+    }
 
     setState("loading");
     setError(null);
@@ -512,12 +502,7 @@ export function InlineSuccess({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-      <span
-        role="status"
-        aria-live="polite"
-        data-testid={testId}
-        style={styles}
-      >
+      <span role="status" aria-live="polite" data-testid={testId} style={styles}>
         <Checkmark size={14} />
         <span>{text}</span>
       </span>

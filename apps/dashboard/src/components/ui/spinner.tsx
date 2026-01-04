@@ -6,7 +6,7 @@
  * @see docs/plans/ui/28-states.md lines 35-40
  */
 
-import React from "react";
+import type React from "react";
 
 // ============================================
 // Types
@@ -126,19 +126,8 @@ export function Spinner({
         {...props}
       >
         {/* Circle with gap for spinning effect */}
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeOpacity="0.25"
-          fill="none"
-        />
-        <path
-          d="M12 2a10 10 0 0 1 10 10"
-          stroke="currentColor"
-          fill="none"
-        />
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" fill="none" />
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" fill="none" />
       </svg>
     </>
   );
@@ -193,18 +182,9 @@ export function SpinnerDots({
         style={containerStyle}
         {...props}
       >
-        <div
-          style={{ ...dotStyle, animationDelay: "0ms" }}
-          aria-hidden="true"
-        />
-        <div
-          style={{ ...dotStyle, animationDelay: "150ms" }}
-          aria-hidden="true"
-        />
-        <div
-          style={{ ...dotStyle, animationDelay: "300ms" }}
-          aria-hidden="true"
-        />
+        <div style={{ ...dotStyle, animationDelay: "0ms" }} aria-hidden="true" />
+        <div style={{ ...dotStyle, animationDelay: "150ms" }} aria-hidden="true" />
+        <div style={{ ...dotStyle, animationDelay: "300ms" }} aria-hidden="true" />
       </div>
     </>
   );
@@ -327,13 +307,9 @@ export function ButtonLoading({
         gap: "0.5em",
       }}
     >
-      {spinnerPosition === "left" && (
-        <Spinner size={spinnerSize} label="Processing" />
-      )}
+      {spinnerPosition === "left" && <Spinner size={spinnerSize} label="Processing" />}
       <span style={{ opacity: loadingText ? 1 : 0.8 }}>{content}</span>
-      {spinnerPosition === "right" && (
-        <Spinner size={spinnerSize} label="Processing" />
-      )}
+      {spinnerPosition === "right" && <Spinner size={spinnerSize} label="Processing" />}
     </span>
   );
 }
@@ -366,10 +342,7 @@ export function SpinnerOverlay({
   blur?: boolean;
 }) {
   return (
-    <div
-      style={{ position: "relative" }}
-      aria-busy={isLoading}
-    >
+    <div style={{ position: "relative" }} aria-busy={isLoading}>
       <div
         style={{
           opacity: isLoading ? 0.5 : 1,

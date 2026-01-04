@@ -309,8 +309,7 @@ export function createMockRiskManagerAgent(options?: {
 
       // Validate position size and stop loss
       const positionSizeOk = plan.size.quantity <= 1000;
-      const stopLossOk =
-        Math.abs(plan.stopLoss - snapshot.price) < snapshot.price * 0.1;
+      const stopLossOk = Math.abs(plan.stopLoss - snapshot.price) < snapshot.price * 0.1;
       const portfolioRiskOk = true;
 
       const allOk = positionSizeOk && stopLossOk && portfolioRiskOk;
@@ -360,12 +359,7 @@ export function createMockCriticAgent(options?: {
   return {
     name: "critic",
     version: "1.0.0",
-    run: async ({
-      plan,
-    }: {
-      plan: DecisionPlan;
-      snapshot: Snapshot;
-    }): Promise<CriticResult> => {
+    run: async ({ plan }: { plan: DecisionPlan; snapshot: Snapshot }): Promise<CriticResult> => {
       if (options?.delay) {
         await new Promise((resolve) => setTimeout(resolve, options.delay));
       }
@@ -378,16 +372,10 @@ export function createMockCriticAgent(options?: {
       const issues: string[] = [];
 
       // Check rationale vs action consistency
-      if (
-        plan.action === "BUY" &&
-        plan.rationale.toLowerCase().includes("bearish")
-      ) {
+      if (plan.action === "BUY" && plan.rationale.toLowerCase().includes("bearish")) {
         issues.push("Inconsistent: BUY action with bearish rationale");
       }
-      if (
-        plan.action === "SELL" &&
-        plan.rationale.toLowerCase().includes("bullish")
-      ) {
+      if (plan.action === "SELL" && plan.rationale.toLowerCase().includes("bullish")) {
         issues.push("Inconsistent: SELL action with bullish rationale");
       }
 
@@ -459,11 +447,9 @@ export async function executePipeline(
     const plan = traderResult.value;
 
     // Step 2: Risk manager validates
-    const riskResult = await withTimeout(
-      riskAgent.run({ plan, snapshot }),
-      timeoutMs,
-      { fallback: "SKIP" }
-    );
+    const riskResult = await withTimeout(riskAgent.run({ plan, snapshot }), timeoutMs, {
+      fallback: "SKIP",
+    });
 
     if (riskResult.status === "SKIP") {
       return {
@@ -573,20 +559,33 @@ export function validateDecisionPlan(plan: unknown): {
 
   const p = plan as Record<string, unknown>;
 
-  if (!p.id || typeof p.id !== "string") errors.push("Missing or invalid id");
-  if (!p.symbol || typeof p.symbol !== "string")
+  if (!p.id || typeof p.id !== "string") {
+    errors.push("Missing or invalid id");
+  }
+  if (!p.symbol || typeof p.symbol !== "string") {
     errors.push("Missing or invalid symbol");
-  if (!["BUY", "SELL", "HOLD", "CLOSE"].includes(p.action as string))
+  }
+  if (!["BUY", "SELL", "HOLD", "CLOSE"].includes(p.action as string)) {
     errors.push("Invalid action");
-  if (!["LONG", "SHORT", "FLAT"].includes(p.direction as string))
+  }
+  if (!["LONG", "SHORT", "FLAT"].includes(p.direction as string)) {
     errors.push("Invalid direction");
-  if (!p.size || typeof p.size !== "object") errors.push("Missing size");
-  if (typeof p.stopLoss !== "number") errors.push("Missing stopLoss");
-  if (typeof p.takeProfit !== "number") errors.push("Missing takeProfit");
-  if (typeof p.confidence !== "number" || p.confidence < 0 || p.confidence > 1)
+  }
+  if (!p.size || typeof p.size !== "object") {
+    errors.push("Missing size");
+  }
+  if (typeof p.stopLoss !== "number") {
+    errors.push("Missing stopLoss");
+  }
+  if (typeof p.takeProfit !== "number") {
+    errors.push("Missing takeProfit");
+  }
+  if (typeof p.confidence !== "number" || p.confidence < 0 || p.confidence > 1) {
     errors.push("Invalid confidence");
-  if (!p.rationale || typeof p.rationale !== "string")
+  }
+  if (!p.rationale || typeof p.rationale !== "string") {
     errors.push("Missing rationale");
+  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -600,23 +599,36 @@ export function verifyHandoffIntegrity(
 ): { intact: boolean; differences: string[] } {
   const differences: string[] = [];
 
-  if (original.id !== received.id) differences.push("id changed");
-  if (original.symbol !== received.symbol) differences.push("symbol changed");
-  if (original.action !== received.action) differences.push("action changed");
-  if (original.direction !== received.direction)
+  if (original.id !== received.id) {
+    differences.push("id changed");
+  }
+  if (original.symbol !== received.symbol) {
+    differences.push("symbol changed");
+  }
+  if (original.action !== received.action) {
+    differences.push("action changed");
+  }
+  if (original.direction !== received.direction) {
     differences.push("direction changed");
-  if (original.size.quantity !== received.size.quantity)
+  }
+  if (original.size.quantity !== received.size.quantity) {
     differences.push("size.quantity changed");
-  if (original.size.unit !== received.size.unit)
+  }
+  if (original.size.unit !== received.size.unit) {
     differences.push("size.unit changed");
-  if (original.stopLoss !== received.stopLoss)
+  }
+  if (original.stopLoss !== received.stopLoss) {
     differences.push("stopLoss changed");
-  if (original.takeProfit !== received.takeProfit)
+  }
+  if (original.takeProfit !== received.takeProfit) {
     differences.push("takeProfit changed");
-  if (original.confidence !== received.confidence)
+  }
+  if (original.confidence !== received.confidence) {
     differences.push("confidence changed");
-  if (original.rationale !== received.rationale)
+  }
+  if (original.rationale !== received.rationale) {
     differences.push("rationale changed");
+  }
 
   return { intact: differences.length === 0, differences };
 }

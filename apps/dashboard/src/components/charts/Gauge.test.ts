@@ -9,12 +9,12 @@
 import { describe, expect, it } from "bun:test";
 import {
   DEFAULT_THRESHOLDS,
+  degreesToRadians,
+  describeArc,
   GAUGE_COLORS,
   getGaugeColor,
-  describeArc,
-  valueToAngle,
   polarToCartesian,
-  degreesToRadians,
+  valueToAngle,
 } from "./Gauge.js";
 
 // ============================================
@@ -151,7 +151,7 @@ describe("valueToAngle", () => {
 
   it("handles custom max values", () => {
     expect(valueToAngle(50, 200)).toBe(-60); // 25% of range
-    expect(valueToAngle(100, 200)).toBe(0);  // 50% of range
+    expect(valueToAngle(100, 200)).toBe(0); // 50% of range
   });
 });
 
@@ -278,10 +278,10 @@ describe("Full Gauge Flow", () => {
     }
 
     // 0-50: comfortable (6 values: 0,10,20,30,40,50)
-    expect(colors.slice(0, 6).every(c => c === GAUGE_COLORS.comfortable)).toBe(true);
+    expect(colors.slice(0, 6).every((c) => c === GAUGE_COLORS.comfortable)).toBe(true);
     // 60-70: warning (2 values: 60,70)
-    expect(colors.slice(6, 8).every(c => c === GAUGE_COLORS.warning)).toBe(true);
+    expect(colors.slice(6, 8).every((c) => c === GAUGE_COLORS.warning)).toBe(true);
     // 80-100: critical (3 values: 80,90,100)
-    expect(colors.slice(8, 11).every(c => c === GAUGE_COLORS.critical)).toBe(true);
+    expect(colors.slice(8, 11).every((c) => c === GAUGE_COLORS.critical)).toBe(true);
   });
 });

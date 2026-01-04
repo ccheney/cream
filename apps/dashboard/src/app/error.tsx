@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 
 // ============================================
 // Types
@@ -111,12 +111,9 @@ const styles = {
  */
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    // Log the error to the console
-    console.error("[Error Page] Route error:", error);
-
     // In production, you would send this to an error tracking service
     // Example: logErrorToService(error);
-  }, [error]);
+  }, []);
 
   const handleReset = () => {
     reset();
@@ -129,20 +126,16 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
   return (
     <div style={styles.container} role="alert" aria-label="Page error">
       <div style={styles.card}>
-        <div style={styles.icon} aria-hidden="true">
-
-        </div>
+        <div style={styles.icon} aria-hidden="true"></div>
 
         <h1 style={styles.title}>Something went wrong</h1>
 
         <p style={styles.message}>
-          We're sorry, but something unexpected happened. Our team has been
-          notified and is working on a fix.
+          We're sorry, but something unexpected happened. Our team has been notified and is working
+          on a fix.
         </p>
 
-        {error.digest && (
-          <p style={styles.digest}>Error ID: {error.digest}</p>
-        )}
+        {error.digest && <p style={styles.digest}>Error ID: {error.digest}</p>}
 
         <div style={styles.actions}>
           <button

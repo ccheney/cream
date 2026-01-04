@@ -7,17 +7,17 @@
  * @see docs/plans/14-testing.md for test data management spec
  */
 
-import { deepmerge } from "deepmerge-ts";
 import type {
   Decision,
   DecisionPlan,
   Instrument,
   OptionContract,
   OrderPlan,
+  References,
   RiskLevels,
   Size,
-  References,
 } from "@cream/domain";
+import { deepmerge } from "deepmerge-ts";
 
 // ============================================
 // Fixture Metadata
@@ -36,9 +36,7 @@ export interface FixtureMetadata {
 /**
  * Create fixture metadata
  */
-export function createMetadata(
-  overrides: Partial<FixtureMetadata> = {}
-): FixtureMetadata {
+export function createMetadata(overrides: Partial<FixtureMetadata> = {}): FixtureMetadata {
   const defaults: FixtureMetadata = {
     _version: "1.0.0",
     scenario: "default",
@@ -54,9 +52,7 @@ export function createMetadata(
 /**
  * Create an equity instrument
  */
-export function createEquityInstrument(
-  overrides: Partial<Instrument> = {}
-): Instrument {
+export function createEquityInstrument(overrides: Partial<Instrument> = {}): Instrument {
   const defaults: Instrument = {
     instrumentId: "AAPL",
     instrumentType: "EQUITY",
@@ -67,9 +63,7 @@ export function createEquityInstrument(
 /**
  * Create an option contract
  */
-export function createOptionContract(
-  overrides: Partial<OptionContract> = {}
-): OptionContract {
+export function createOptionContract(overrides: Partial<OptionContract> = {}): OptionContract {
   const defaults: OptionContract = {
     underlying: "AAPL",
     expiration: "2026-02-21",
@@ -82,9 +76,7 @@ export function createOptionContract(
 /**
  * Create an option instrument
  */
-export function createOptionInstrument(
-  overrides: Partial<Instrument> = {}
-): Instrument {
+export function createOptionInstrument(overrides: Partial<Instrument> = {}): Instrument {
   const defaults: Instrument = {
     instrumentId: "AAPL260221C00200000",
     instrumentType: "OPTION",
@@ -150,9 +142,7 @@ export function createOrderPlan(overrides: Partial<OrderPlan> = {}): OrderPlan {
 /**
  * Create a market order plan
  */
-export function createMarketOrderPlan(
-  overrides: Partial<OrderPlan> = {}
-): OrderPlan {
+export function createMarketOrderPlan(overrides: Partial<OrderPlan> = {}): OrderPlan {
   const defaults: OrderPlan = {
     entryOrderType: "MARKET",
     exitOrderType: "MARKET",
@@ -174,9 +164,7 @@ export function createMarketOrderPlan(
  * - Entry assumed around $175
  * - Risk-reward ratio: 1.67
  */
-export function createRiskLevels(
-  overrides: Partial<RiskLevels> = {}
-): RiskLevels {
+export function createRiskLevels(overrides: Partial<RiskLevels> = {}): RiskLevels {
   const defaults: RiskLevels = {
     stopLossLevel: 160.0,
     takeProfitLevel: 200.0,
@@ -193,9 +181,7 @@ export function createRiskLevels(
  * - Take profit at $150 (below entry)
  * - Entry assumed around $175
  */
-export function createShortRiskLevels(
-  overrides: Partial<RiskLevels> = {}
-): RiskLevels {
+export function createShortRiskLevels(overrides: Partial<RiskLevels> = {}): RiskLevels {
   const defaults: RiskLevels = {
     stopLossLevel: 190.0,
     takeProfitLevel: 150.0,
@@ -211,9 +197,7 @@ export function createShortRiskLevels(
 /**
  * Create references
  */
-export function createReferences(
-  overrides: Partial<References> = {}
-): References {
+export function createReferences(overrides: Partial<References> = {}): References {
   const defaults: References = {
     usedIndicators: ["rsi_14", "sma_20", "atr_14"],
     memoryCaseIds: [],
@@ -257,9 +241,7 @@ export function createDecision(overrides: Partial<Decision> = {}): Decision {
 /**
  * Create a SELL (short) decision
  */
-export function createShortDecision(
-  overrides: Partial<Decision> = {}
-): Decision {
+export function createShortDecision(overrides: Partial<Decision> = {}): Decision {
   const defaults: Decision = {
     instrument: createEquityInstrument({ instrumentId: "SPY" }),
     action: "SELL",
@@ -279,9 +261,7 @@ export function createShortDecision(
 /**
  * Create a HOLD decision
  */
-export function createHoldDecision(
-  overrides: Partial<Decision> = {}
-): Decision {
+export function createHoldDecision(overrides: Partial<Decision> = {}): Decision {
   const defaults: Decision = {
     instrument: createEquityInstrument({ instrumentId: "TSLA" }),
     action: "HOLD",
@@ -304,9 +284,7 @@ export function createHoldDecision(
 /**
  * Create an options decision (vertical call spread)
  */
-export function createOptionsSpreadDecision(
-  overrides: Partial<Decision> = {}
-): Decision {
+export function createOptionsSpreadDecision(overrides: Partial<Decision> = {}): Decision {
   const defaults: Decision = {
     instrument: createOptionInstrument({
       instrumentId: "SPY260221C00590000",
@@ -344,9 +322,7 @@ export function createOptionsSpreadDecision(
  *
  * Defaults to BACKTEST environment with one BUY decision
  */
-export function createDecisionPlan(
-  overrides: Partial<DecisionPlan> = {}
-): DecisionPlan {
+export function createDecisionPlan(overrides: Partial<DecisionPlan> = {}): DecisionPlan {
   const now = new Date().toISOString();
 
   const defaults: DecisionPlan = {
@@ -363,9 +339,7 @@ export function createDecisionPlan(
 /**
  * Create an empty decision plan (no trades)
  */
-export function createEmptyDecisionPlan(
-  overrides: Partial<DecisionPlan> = {}
-): DecisionPlan {
+export function createEmptyDecisionPlan(overrides: Partial<DecisionPlan> = {}): DecisionPlan {
   const now = new Date().toISOString();
   const defaults: DecisionPlan = {
     cycleId: `cycle-${Date.now()}`,
@@ -380,15 +354,9 @@ export function createEmptyDecisionPlan(
 /**
  * Create a multi-decision plan
  */
-export function createMultiDecisionPlan(
-  overrides: Partial<DecisionPlan> = {}
-): DecisionPlan {
+export function createMultiDecisionPlan(overrides: Partial<DecisionPlan> = {}): DecisionPlan {
   return createDecisionPlan({
-    decisions: [
-      createDecision(),
-      createShortDecision(),
-      createHoldDecision(),
-    ],
+    decisions: [createDecision(), createShortDecision(), createHoldDecision()],
     portfolioNotes: "Multi-position portfolio rebalancing",
     ...overrides,
   });
@@ -532,9 +500,7 @@ export function createCandle(overrides: Partial<Candle> = {}): Candle {
 /**
  * Create indicators
  */
-export function createIndicators(
-  overrides: Partial<Indicators> = {}
-): Indicators {
+export function createIndicators(overrides: Partial<Indicators> = {}): Indicators {
   const defaults: Indicators = {
     rsi_14: 55,
     sma_20: 172.0,
@@ -554,9 +520,7 @@ export function createIndicators(
 /**
  * Create a symbol snapshot
  */
-export function createSymbolSnapshot(
-  overrides: Partial<SymbolSnapshot> = {}
-): SymbolSnapshot {
+export function createSymbolSnapshot(overrides: Partial<SymbolSnapshot> = {}): SymbolSnapshot {
   const defaults: SymbolSnapshot = {
     symbol: "AAPL",
     candles: [createCandle()],
@@ -573,9 +537,7 @@ export function createSymbolSnapshot(
 /**
  * Create a complete market snapshot
  */
-export function createMarketSnapshot(
-  overrides: Partial<MarketSnapshot> = {}
-): MarketSnapshot {
+export function createMarketSnapshot(overrides: Partial<MarketSnapshot> = {}): MarketSnapshot {
   const defaults: MarketSnapshot = {
     metadata: createMetadata({ scenario: "default_market" }),
     asOf: new Date().toISOString(),
@@ -772,9 +734,7 @@ export interface MemoryContext {
 /**
  * Create a past trade case
  */
-export function createPastTradeCase(
-  overrides: Partial<PastTradeCase> = {}
-): PastTradeCase {
+export function createPastTradeCase(overrides: Partial<PastTradeCase> = {}): PastTradeCase {
   const defaults: PastTradeCase = {
     caseId: `case-${Date.now()}`,
     symbol: "AAPL",
@@ -792,9 +752,7 @@ export function createPastTradeCase(
 /**
  * Create a memory context
  */
-export function createMemoryContext(
-  overrides: Partial<MemoryContext> = {}
-): MemoryContext {
+export function createMemoryContext(overrides: Partial<MemoryContext> = {}): MemoryContext {
   const defaults: MemoryContext = {
     metadata: createMetadata({ scenario: "memory_retrieval" }),
     retrievedCases: [
@@ -870,9 +828,7 @@ export function createPosition(overrides: Partial<Position> = {}): Position {
 /**
  * Create a portfolio state
  */
-export function createPortfolioState(
-  overrides: Partial<PortfolioState> = {}
-): PortfolioState {
+export function createPortfolioState(overrides: Partial<PortfolioState> = {}): PortfolioState {
   const defaults: PortfolioState = {
     metadata: createMetadata({ scenario: "portfolio_state" }),
     cash: 50000.0,
@@ -888,9 +844,7 @@ export function createPortfolioState(
 /**
  * Create an empty portfolio state
  */
-export function createEmptyPortfolioState(
-  overrides: Partial<PortfolioState> = {}
-): PortfolioState {
+export function createEmptyPortfolioState(overrides: Partial<PortfolioState> = {}): PortfolioState {
   const defaults: PortfolioState = {
     metadata: createMetadata({ scenario: "empty_portfolio" }),
     cash: 100000.0,

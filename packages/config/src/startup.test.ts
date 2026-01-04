@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { EnvConfig } from "@cream/domain/env";
 import {
+  createAuditLog,
   sanitizeConfig,
   sanitizeEnv,
   validateLiveTradingSafety,
   validateStartupNoExit,
-  createAuditLog,
 } from "./startup";
-import type { EnvConfig } from "@cream/domain/env";
 
 // Get directory of this test file
 const __dirname = dirname(fileURLToPath(import.meta.url));
