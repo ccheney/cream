@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run if Rust code exists
-    if: hashFiles('apps/execution-engine/Cargo.toml') != ''
+    if: ${{ hashFiles('apps/execution-engine/Cargo.toml') != '' }}
 
     steps:
       - name: Checkout
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run if Python code exists
-    if: hashFiles('packages/research/pyproject.toml') != '' || hashFiles('apps/filings-service/pyproject.toml') != '' || hashFiles('apps/vision-service/pyproject.toml') != ''
+    if: ${{ hashFiles('packages/research/pyproject.toml') != '' || hashFiles('apps/filings-service/pyproject.toml') != '' || hashFiles('apps/vision-service/pyproject.toml') != '' }}
 
     steps:
       - name: Checkout
@@ -130,17 +130,17 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies (research)
-        if: hashFiles('packages/research/pyproject.toml') != ''
+        if: ${{ hashFiles('packages/research/pyproject.toml') != '' }}
         run: uv pip install -e ".[dev]" --system
         working-directory: packages/research
 
       - name: Run tests with coverage (research)
-        if: hashFiles('packages/research/pyproject.toml') != ''
+        if: ${{ hashFiles('packages/research/pyproject.toml') != '' }}
         run: pytest --cov --cov-report=xml
         working-directory: packages/research
 
       - name: Upload to Codecov
-        if: hashFiles('packages/research/pyproject.toml') != ''
+        if: ${{ hashFiles('packages/research/pyproject.toml') != '' }}
         uses: codecov/codecov-action@v5
         with:
           files: packages/research/coverage.xml

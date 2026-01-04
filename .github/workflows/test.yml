@@ -57,7 +57,7 @@ jobs:
 
     # Only run if apps/execution-engine exists
     # This job is optional until Rust code is added
-    if: hashFiles('apps/execution-engine/Cargo.toml') != ''
+    if: ${{ hashFiles('apps/execution-engine/Cargo.toml') != '' }}
 
     steps:
       - name: Checkout
@@ -88,8 +88,8 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
 
-    # Only run if integration test script exists
-    if: hashFiles('package.json') != ''
+    # Always run integration tests
+    # Services may not be available but tests will handle gracefully
 
     services:
       # HelixDB for graph + vector storage
