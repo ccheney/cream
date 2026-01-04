@@ -74,6 +74,36 @@ export type StrategyFamily = z.infer<typeof StrategyFamily>;
 export const Direction = z.enum(["LONG", "SHORT", "FLAT"]);
 export type Direction = z.infer<typeof Direction>;
 
+/**
+ * Market regime classification
+ */
+export const Regime = z.enum([
+  "BULL_TREND",
+  "BEAR_TREND",
+  "RANGE_BOUND",
+  "HIGH_VOLATILITY",
+  "LOW_VOLATILITY",
+  "CRISIS",
+]);
+export type Regime = z.infer<typeof Regime>;
+
+/**
+ * Market hours status
+ */
+export const MarketStatus = z.enum([
+  "PRE_MARKET",
+  "OPEN",
+  "AFTER_HOURS",
+  "CLOSED",
+]);
+export type MarketStatus = z.infer<typeof MarketStatus>;
+
+/**
+ * Option type (call or put)
+ */
+export const OptionType = z.enum(["CALL", "PUT"]);
+export type OptionType = z.infer<typeof OptionType>;
+
 // ============================================
 // Sub-Schemas
 // ============================================
@@ -85,7 +115,7 @@ export const OptionContractSchema = z.object({
   underlying: z.string().min(1),
   expiration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
   strike: z.number().positive(),
-  optionType: z.enum(["CALL", "PUT"]),
+  optionType: OptionType,
 });
 export type OptionContract = z.infer<typeof OptionContractSchema>;
 
