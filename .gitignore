@@ -1,4 +1,56 @@
-.DS_Store
-.env
+# Dependencies
+node_modules/
+.bun/
 
+# Build outputs
+dist/
+.next/
+out/
+
+# Turborepo
+.turbo/
+
+# Test coverage
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Rust
+target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.uv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker volumes (local)
+.docker-data/
+
+# Docs (generated from plans)
 docs/

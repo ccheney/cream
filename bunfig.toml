@@ -1,0 +1,24 @@
+# Bun configuration for Cream monorepo
+# See: https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Link workspace packages from monorepo root
+linkWorkspacePackages = true
+
+# Use exact versions for deterministic builds
+exact = true
+
+# Production dependencies only in production
+production = false
+
+[test]
+# Coverage configuration
+coverage = true
+coverageDir = "coverage"
+
+# Parallel test execution
+preload = []
+
+[run]
+# Silence bun lifecycle scripts by default
+silent = false
