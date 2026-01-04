@@ -35,3 +35,13 @@ plugins:
   # Python type stubs
   - remote: buf.build/protocolbuffers/pyi
     out: ../schema-gen/python
+
+  # Rust - Prost for message types
+  - remote: buf.build/community/neoeinstein-prost
+    out: ../schema-gen/rust
+    opt:
+      - compile_well_known_types
+
+  # Rust - Prost serde for JSON serialization
+  - remote: buf.build/community/neoeinstein-prost-serde
+    out: ../schema-gen/rust

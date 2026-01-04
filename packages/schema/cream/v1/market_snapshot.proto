@@ -1,0 +1,259 @@
+// Cream Trading System - Market Snapshot Schema
+// Real-time market data structures for the trading system
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "cream/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================
+// Quote Data
+// ============================================
+
+// Real-time quote for a symbol
+message Quote {
+  // Symbol (e.g., "AAPL")
+  string symbol = 1;
+
+  // Best bid price
+  double bid = 2;
+
+  // Best ask price
+  double ask = 3;
+
+  // Bid size (shares/contracts)
+  int32 bid_size = 4;
+
+  // Ask size (shares/contracts)
+  int32 ask_size = 5;
+
+  // Last trade price
+  double last = 6;
+
+  // Last trade size
+  int32 last_size = 7;
+
+  // Cumulative volume
+  int64 volume = 8;
+
+  // Quote timestamp
+  google.protobuf.Timestamp timestamp = 9;
+}
+
+// ============================================
+// OHLCV Bar
+// ============================================
+
+// OHLCV candlestick bar
+message Bar {
+  // Symbol
+  string symbol = 1;
+
+  // Bar open time
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Bar timeframe in minutes (1, 5, 15, 60, 240, 1440)
+  int32 timeframe_minutes = 3;
+
+  // Open price
+  double open = 4;
+
+  // High price
+  double high = 5;
+
+  // Low price
+  double low = 6;
+
+  // Close price
+  double close = 7;
+
+  // Volume
+  int64 volume = 8;
+
+  // VWAP (volume-weighted average price)
+  optional double vwap = 9;
+
+  // Number of trades
+  optional int32 trade_count = 10;
+}
+
+// ============================================
+// Market Snapshot
+// ============================================
+
+// Complete market snapshot for a symbol
+message SymbolSnapshot {
+  // Symbol
+  string symbol = 1;
+
+  // Current quote
+  Quote quote = 2;
+
+  // Latest completed bars (multiple timeframes)
+  repeated Bar bars = 3;
+
+  // Market status
+  MarketStatus market_status = 4;
+
+  // Daily high
+  double day_high = 5;
+
+  // Daily low
+  double day_low = 6;
+
+  // Previous close
+  double prev_close = 7;
+
+  // Today's open
+  double open = 8;
+
+  // Snapshot timestamp
+  google.protobuf.Timestamp as_of = 9;
+}
+
+// Full market snapshot for multiple symbols
+message MarketSnapshot {
+  // Trading environment
+  Environment environment = 1;
+
+  // Snapshot timestamp
+  google.protobuf.Timestamp as_of = 2;
+
+  // Market status (overall)
+  MarketStatus market_status = 3;
+
+  // Current regime classification
+  Regime regime = 4;
+
+  // Symbol snapshots
+  repeated SymbolSnapshot symbols = 5;
+}
+
+// ============================================
+// Option Chain
+// ============================================
+
+// Option quote
+message OptionQuote {
+  // Option contract
+  OptionContract contract = 1;
+
+  // Quote data
+  Quote quote = 2;
+
+  // Implied volatility
+  optional double implied_volatility = 3;
+
+  // Delta
+  optional double delta = 4;
+
+  // Gamma
+  optional double gamma = 5;
+
+  // Theta
+  optional double theta = 6;
+
+  // Vega
+  optional double vega = 7;
+
+  // Rho
+  optional double rho = 8;
+
+  // Open interest
+  int32 open_interest = 9;
+}
+
+// Option chain for an underlying
+message OptionChain {
+  // Underlying symbol
+  string underlying = 1;
+
+  // Underlying price
+  double underlying_price = 2;
+
+  // Option quotes
+  repeated OptionQuote options = 3;
+
+  // Chain timestamp
+  google.protobuf.Timestamp as_of = 4;
+}
+
+// ============================================
+// Streaming Service
+// ============================================
+
+// Request to subscribe to market data
+message SubscribeMarketDataRequest {
+  // Symbols to subscribe to
+  repeated string symbols = 1;
+
+  // Include option chains
+  bool include_options = 2;
+
+  // Bar timeframes to include (in minutes)
+  repeated int32 bar_timeframes = 3;
+}
+
+// Market data update (streamed response)
+message SubscribeMarketDataResponse {
+  // Update type
+  oneof update {
+    Quote quote = 1;
+    Bar bar = 2;
+    OptionQuote option_quote = 3;
+    SymbolSnapshot snapshot = 4;
+  }
+}
+
+// Market data streaming service
+service MarketDataService {
+  // Subscribe to real-time market data
+  rpc SubscribeMarketData(SubscribeMarketDataRequest) returns (stream SubscribeMarketDataResponse);
+
+  // Get current snapshot for symbols
+  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+
+  // Get option chain for underlying
+  rpc GetOptionChain(GetOptionChainRequest) returns (GetOptionChainResponse);
+}
+
+// Request for snapshot
+message GetSnapshotRequest {
+  // Symbols to get snapshot for
+  repeated string symbols = 1;
+
+  // Include bars
+  bool include_bars = 2;
+
+  // Bar timeframes to include
+  repeated int32 bar_timeframes = 3;
+}
+
+// Response with snapshot
+message GetSnapshotResponse {
+  // Market snapshot
+  MarketSnapshot snapshot = 1;
+}
+
+// Request for option chain
+message GetOptionChainRequest {
+  // Underlying symbol
+  string underlying = 1;
+
+  // Expiration dates to include (YYYY-MM-DD format, empty for all)
+  repeated string expirations = 2;
+
+  // Strike range (min)
+  optional double min_strike = 3;
+
+  // Strike range (max)
+  optional double max_strike = 4;
+}
+
+// Response with option chain
+message GetOptionChainResponse {
+  // Option chain
+  OptionChain chain = 1;
+}
