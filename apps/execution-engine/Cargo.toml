@@ -22,11 +22,11 @@ repository = "https://github.com/ccheney/cream"
 
 [dependencies]
 # Async runtime
-tokio = { version = "1.42", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 
 # gRPC
-tonic = "0.12"
-prost = "0.13"
+tonic = "0.14"
+prost = "0.14"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -44,13 +44,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Decimal arithmetic (financial precision)
-rust_decimal = { version = "1.36", features = ["serde", "serde-with-str"] }
+rust_decimal = { version = "1.39", features = ["serde", "serde-with-str"] }
 
 # Configuration
 config = "0.14"
 
-# Turso/libSQL client
-libsql = "0.6"
+# Turso Database (Rust rewrite of SQLite)
+turso = "0.4.0-pre.19"
 
 [dev-dependencies]
 # Testing

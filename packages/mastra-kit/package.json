@@ -18,14 +18,14 @@
   "dependencies": {
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
-    "@mastra/core": "^0.18.0",
-    "langsmith": "^0.3.0",
-    "braintrust": "^0.0.180",
-    "autoevals": "^0.0.90",
-    "promptfoo": "^0.100.0"
+    "@mastra/core": "^0.24.9",
+    "langsmith": "^0.4.4",
+    "braintrust": "^1.1.1",
+    "autoevals": "^0.0.131",
+    "promptfoo": "^0.120.8"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5.7.0"
+    "@typescript/native-preview": "7.0.0-dev.20260104.1"
   }
 }

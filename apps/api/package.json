@@ -16,12 +16,12 @@
   "dependencies": {
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
-    "@mastra/core": "^0.18.0",
-    "hono": "^4.6.0"
+    "@mastra/core": "^0.24.9",
+    "hono": "^4.11.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "testcontainers": "^10.13.0",
-    "typescript": "^5.7.0"
+    "testcontainers": "^11.11.0",
+    "@typescript/native-preview": "7.0.0-dev.20260104.1"
   }
 }

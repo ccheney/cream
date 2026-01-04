@@ -19,12 +19,13 @@ Cream is an **agentic trading system** for equities and options that combines LL
 | Layer | Technology |
 |-------|------------|
 | Runtime | Bun v1.3+ (TypeScript), Rust 1.92+, Python 3.15+ (uv) |
-| Orchestration | Mastra v0.18+ (agents + workflows) |
+| TypeScript | TypeScript Go (tsgo) v7+ (`@typescript/native-preview`) |
+| Orchestration | Mastra v0.24+ (agents + workflows) |
 | LLM | Google Gemini (gemini-3-pro-preview, gemini-3-flash-preview) |
 | Graph + Vector DB | HelixDB (HelixQL queries) |
-| Relational DB | Turso (SQLite-compatible, embedded replicas, encryption) |
+| Relational DB | Turso Database (Rust rewrite of SQLite) |
 | Serialization | Protobuf (Buf CLI) + Zod v4 mirrors |
-| Monorepo | Turborepo v2.0+ |
+| Monorepo | Turborepo v2.7+ |
 
 ### Turso Database
 
