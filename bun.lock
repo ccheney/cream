@@ -82,6 +82,18 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/universe": {
+      "name": "@cream/universe",
+      "version": "0.0.1",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/domain": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.7.0",
+      },
+    },
   },
   "packages": {
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.10.2", "", {}, "sha512-uFsRXwIGyu+r6AMdz+XijIIZJYpoWeYzILt5yZ2d3mCjQrWUTVpVD9WL/jZAbvp+Ed04rOhrsk7FiTcEDseB5A=="],
@@ -101,6 +113,8 @@
     "@cream/schema-gen": ["@cream/schema-gen@workspace:packages/schema-gen"],
 
     "@cream/test-fixtures": ["@cream/test-fixtures@workspace:packages/test-fixtures"],
+
+    "@cream/universe": ["@cream/universe@workspace:packages/universe"],
 
     "@types/bun": ["@types/bun@1.3.5", "", { "dependencies": { "bun-types": "1.3.5" } }, "sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w=="],
 
