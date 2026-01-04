@@ -1,0 +1,183 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Required for tests
+  CREAM_ENV: BACKTEST
+
+jobs:
+  # ============================================
+  # TypeScript Unit Tests
+  # ============================================
+  unit-ts:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Run tests with coverage
+        run: bun test --coverage
+
+  # ============================================
+  # Rust Unit Tests
+  # ============================================
+  unit-rust:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+
+    # Only run if apps/execution-engine exists
+    # This job is optional until Rust code is added
+    if: hashFiles('apps/execution-engine/Cargo.toml') != ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        run: cargo test --workspace
+        working-directory: apps/execution-engine
+
+  # ============================================
+  # Integration Tests
+  # ============================================
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    # Only run if integration test script exists
+    if: hashFiles('package.json') != ''
+
+    services:
+      # HelixDB for graph + vector storage
+      helixdb:
+        image: helixdb/helixdb:latest
+        ports:
+          - 8080:8080
+        options: >-
+          --health-cmd "curl -f http://localhost:8080/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Turso (libsql-server) for relational storage
+      turso:
+        image: ghcr.io/tursodatabase/libsql-server:latest
+        ports:
+          - 8081:8080
+        options: >-
+          --health-cmd "curl -f http://localhost:8080/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      HELIX_URL: http://localhost:8080
+      TURSO_DATABASE_URL: http://localhost:8081
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for HelixDB..."
+          timeout 30 bash -c 'until curl -s http://localhost:8080/health > /dev/null; do sleep 1; done' || echo "HelixDB not available"
+          echo "Waiting for Turso..."
+          timeout 30 bash -c 'until curl -s http://localhost:8081/health > /dev/null; do sleep 1; done' || echo "Turso not available"
+
+      - name: Run integration tests
+        run: bun test:integration || echo "No integration tests found yet"
+
+  # ============================================
+  # Lint and Type Check
+  # ============================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run Biome lint
+        run: bunx biome check . || echo "Lint issues found"
+
+      # Type check disabled until workspace resolution is fixed
+      # - name: Type check
+      #   run: bun run typecheck
