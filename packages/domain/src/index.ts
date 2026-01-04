@@ -10,4 +10,16 @@
 export const PACKAGE_NAME = "@cream/domain";
 export const VERSION = "0.0.1";
 
-// Placeholder - will be populated with schemas in subsequent beads
+// Environment configuration
+export {
+  env,
+  envSchema,
+  isBacktest,
+  isPaper,
+  isLive,
+  getAlpacaBaseUrl,
+  getEnvDatabaseSuffix,
+  CreamEnvironment,
+  CreamBroker,
+  type EnvConfig,
+} from "./env";
