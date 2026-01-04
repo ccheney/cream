@@ -1,0 +1,20 @@
+# Cream Trading System - Production Configuration
+# Overrides for LIVE trading environment
+#
+# WARNING: This configuration is used for real money trading.
+# All changes should be carefully reviewed.
+
+core:
+  environment: LIVE
+  llm:
+    # Use pro model for production quality
+    model_id: "gemini-3-pro-preview"
+
+memory:
+  helixdb:
+    # Production HelixDB endpoint
+    endpoint: "https://helix.prod.internal:8080"
+
+execution:
+  alpaca:
+    live_url: "https://api.alpaca.markets"

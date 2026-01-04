@@ -1,0 +1,15 @@
+# Cream Trading System - Development Configuration
+# Overrides for development/paper trading environment
+
+core:
+  environment: PAPER
+
+memory:
+  helixdb:
+    endpoint: "http://localhost:8080"
+
+execution:
+  brokers:
+    primary: alpaca
+  alpaca:
+    paper_url: "https://paper-api.alpaca.markets"

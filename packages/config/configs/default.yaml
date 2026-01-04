@@ -1,0 +1,194 @@
+# Cream Trading System - Default Configuration
+# This file contains sensible defaults for development
+
+core:
+  environment: PAPER
+  decision_timeframe: "1h"
+  iteration_cap: 3
+  llm:
+    model_id: "gemini-3-flash-preview"
+    temperature: 0
+    max_tokens: 4096
+  timeframes:
+    primary: "1h"
+    additional:
+      - "4h"
+      - "1d"
+
+indicators:
+  - name: rsi
+    params:
+      period: 14
+    timeframes: ["1h", "4h", "1d"]
+
+  - name: sma
+    params:
+      periods: [20, 50, 200]
+    timeframes: ["1h", "1d"]
+
+  - name: ema
+    params:
+      periods: [9, 21]
+    timeframes: ["1h"]
+
+  - name: atr
+    params:
+      period: 14
+    timeframes: ["1h", "1d"]
+
+  - name: bollinger_bands
+    params:
+      period: 20
+      std_dev: 2.0
+    timeframes: ["1h"]
+
+  - name: volume_sma
+    params:
+      period: 20
+    timeframes: ["1h"]
+
+normalization:
+  transforms:
+    - name: returns
+      input: close
+      params:
+        periods: [1, 5, 20]
+      output_prefix: "return"
+
+    - name: zscore
+      inputs:
+        - rsi_14
+        - atr_14
+      params:
+        lookback: 100
+      output_suffix: "_zscore"
+
+regime:
+  classifier_type: rule_based
+  labels:
+    - BULL_TREND
+    - BEAR_TREND
+    - RANGE
+    - HIGH_VOL
+    - LOW_VOL
+  rule_based:
+    trend_ma_fast: 20
+    trend_ma_slow: 50
+    volatility_percentile_high: 80
+    volatility_percentile_low: 20
+
+constraints:
+  per_instrument:
+    max_units: 1000
+    max_notional: 50000
+    max_pct_equity: 0.10
+  portfolio:
+    max_gross_notional: 500000
+    max_net_notional: 250000
+    max_gross_pct_equity: 2.0
+    max_net_pct_equity: 1.0
+  options:
+    max_delta_notional: 100000
+    max_gamma: 1000
+    max_vega: 5000
+    max_theta: -500
+  sizing:
+    sanity_threshold_multiplier: 3.0
+
+memory:
+  helixdb:
+    endpoint: "http://localhost:8080"
+    database: "cream"
+  embedding:
+    model_id: "gemini-embedding-001"
+    dimensions: 3072
+  retrieval:
+    trade_memory:
+      k: 10
+      quality_threshold: 0.7
+      filters:
+        same_instrument: true
+        same_regime: true
+    documents:
+      k: 5
+      recency_weight: 0.3
+  correction:
+    vector_broaden: true
+    broadened_k: 25
+
+agents:
+  consensus:
+    required_approvers:
+      - risk_manager
+      - critic
+    iteration_cap: 3
+  technical_analyst:
+    enabled: true
+  news_sentiment_analyst:
+    enabled: true
+  fundamentals_macro_analyst:
+    enabled: true
+  bullish_research:
+    enabled: true
+  bearish_research:
+    enabled: true
+  trader:
+    enabled: true
+  risk_manager:
+    enabled: true
+  critic:
+    enabled: true
+
+universe:
+  compose_mode: union
+  sources:
+    - type: static
+      name: "core_watchlist"
+      enabled: true
+      tickers:
+        - SPY
+        - QQQ
+        - IWM
+        - DIA
+  filters:
+    min_avg_volume: 0
+    min_market_cap: 0
+    min_price: 0
+    exclude_tickers: []
+  max_instruments: 500
+  options:
+    enabled: false
+    min_dte: 7
+    max_dte: 60
+    min_open_interest: 100
+    max_spread_pct: 10
+  cache_ttl_seconds: 3600
+
+execution:
+  order_policy:
+    entry_default: LIMIT
+    exit_default: MARKET
+  tactics:
+    default: PASSIVE_LIMIT
+  brokers:
+    primary: alpaca
+    secondary: null
+  alpaca:
+    paper_url: "https://paper-api.alpaca.markets"
+    live_url: "https://api.alpaca.markets"
+
+metrics:
+  enabled:
+    - raw_return
+    - sharpe
+    - sortino
+    - calmar
+  windows:
+    - period: 20
+      label: "1d"
+    - period: 100
+      label: "1w"
+    - period: 500
+      label: "1m"
+  risk_free_rate: 0.05
+  sortino_target: 0
