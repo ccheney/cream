@@ -1,0 +1,91 @@
+# Execution Engine - Rust Core
+# See: docs/plans/09-rust-core.md
+#
+# This is the deterministic execution engine that:
+# - Validates DecisionPlans from TypeScript agents
+# - Routes orders to brokers (Alpaca)
+# - Enforces risk constraints
+# - Handles position management
+#
+# Build: cargo build -p execution-engine
+# Test:  cargo test -p execution-engine
+# Coverage: cargo cov (see .cargo/config.toml)
+
+[package]
+name = "execution-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Chris Cheney <chris@cheney.dev>"]
+description = "Deterministic execution engine for Cream trading system"
+license = "MIT"
+repository = "https://github.com/ccheney/cream"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+
+# gRPC
+tonic = "0.12"
+prost = "0.13"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Decimal arithmetic (financial precision)
+rust_decimal = { version = "1.36", features = ["serde", "serde-with-str"] }
+
+# Configuration
+config = "0.14"
+
+# Turso/libSQL client
+libsql = "0.6"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockall = "0.13"
+proptest = "1.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+test-case = "3.3"
+
+[build-dependencies]
+# Protobuf codegen (future)
+# tonic-build = "0.12"
+
+[[bin]]
+name = "execution-engine"
+path = "src/main.rs"
+
+[lib]
+name = "execution_engine"
+path = "src/lib.rs"
+
+# Coverage configuration
+# See .cargo/config.toml for cargo-llvm-cov aliases
+# Profile moved to workspace root Cargo.toml
+
+[lints.rust]
+# Strict lints for production code
+unsafe_code = "forbid"
+missing_docs = "warn"
+# Allow coverage cfg in build.rs
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+
+[lints.clippy]
+# Clippy lints
+pedantic = "warn"
+nursery = "warn"
+unwrap_used = "warn"
+expect_used = "warn"

@@ -1,0 +1,49 @@
+# Cream - Rust Workspace
+# See: docs/plans/09-rust-core.md
+#
+# Coverage: cargo cov (see .cargo/config.toml)
+# Test: cargo test --workspace
+# Build: cargo build --workspace
+
+[workspace]
+resolver = "2"
+members = [
+    "apps/execution-engine",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Chris Cheney <chris@cheney.dev>"]
+license = "MIT"
+repository = "https://github.com/ccheney/cream"
+
+[workspace.dependencies]
+# Shared dependencies across workspace
+tokio = { version = "1.42", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+anyhow = "1.0"
+tracing = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1.36", features = ["serde", "serde-with-str"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+# Faster compilation in dev
+debug = 1
+
+[profile.test]
+# Full debug info for tests
+debug = 2
+
+# Coverage profile for cargo-llvm-cov
+[profile.coverage]
+inherits = "dev"
+debug = true
+opt-level = 0
