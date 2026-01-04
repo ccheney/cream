@@ -6,7 +6,7 @@
  * @see docs/plans/14-testing.md lines 174-202
  */
 
-import { describe, expect, it, beforeAll, afterAll, afterEach } from "bun:test";
+import { describe, expect, it, beforeAll, afterAll, afterEach, beforeEach } from "bun:test";
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 
 // ============================================
