@@ -1,10 +1,11 @@
 /**
- * Mock Turso/LibSQL Client
+ * Mock Turso Database Client
  *
  * In-memory SQL database for testing.
- * Simulates Turso behavior using Map-based storage.
+ * Implements the same interface as @cream/storage TursoClient.
  *
  * @see docs/plans/14-testing.md for mocking strategy
+ * @see https://github.com/tursodatabase/turso
  */
 
 // ============================================
@@ -12,7 +13,20 @@
 // ============================================
 
 /**
- * Result set from a query
+ * Query result row
+ */
+export type Row = Record<string, unknown>;
+
+/**
+ * Batch statement
+ */
+export interface BatchStatement {
+  sql: string;
+  args?: unknown[];
+}
+
+/**
+ * Result set from a query (legacy API)
  */
 export interface ResultSet {
   columns: string[];
@@ -22,7 +36,7 @@ export interface ResultSet {
 }
 
 /**
- * Transaction interface
+ * Transaction interface (legacy API)
  */
 export interface Transaction {
   execute(sql: string, args?: unknown[]): Promise<ResultSet>;
@@ -416,8 +430,68 @@ export class MockTursoClient {
   /**
    * Close the connection
    */
-  async close(): Promise<void> {
+  close(): void {
     // No-op for mock
+  }
+
+  // ============================================
+  // TursoClient-Compatible Methods
+  // ============================================
+
+  /**
+   * Execute a query and return all rows (TursoClient-compatible)
+   */
+  async executeRows<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
+    const result = await this.execute(sql, args);
+    const schema = this.getSchemaForQuery(sql);
+    const columns = schema?.columns ?? result.columns;
+
+    return result.rows.map((row) => {
+      const obj: Row = {};
+      for (let i = 0; i < columns.length; i++) {
+        obj[columns[i]] = row[i];
+      }
+      return obj as T;
+    });
+  }
+
+  /**
+   * Execute a query and return first row (TursoClient-compatible)
+   */
+  async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
+    const rows = await this.executeRows<T>(sql, args);
+    return rows[0];
+  }
+
+  /**
+   * Execute a batch of statements (TursoClient-compatible)
+   */
+  async executeBatch(statements: BatchStatement[]): Promise<void> {
+    for (const { sql, args } of statements) {
+      await this.execute(sql, args ?? []);
+    }
+  }
+
+  /**
+   * Run a statement and return metadata (TursoClient-compatible)
+   */
+  async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+    const result = await this.execute(sql, args);
+    return {
+      changes: result.rowsAffected,
+      lastInsertRowid: result.lastInsertRowid ?? BigInt(0),
+    };
+  }
+
+  /**
+   * Get schema for a query (helper for executeRows)
+   */
+  private getSchemaForQuery(sql: string): TableSchema | undefined {
+    const match = sql.match(/FROM\s+["']?(\w+)["']?/i);
+    if (match) {
+      return this.schemas.get(match[1].toLowerCase());
+    }
+    return undefined;
   }
 
   /**

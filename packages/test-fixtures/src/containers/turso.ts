@@ -1,8 +1,14 @@
 /**
- * Turso (libsql-server) Container for Integration Tests
+ * LibSQL Server Container for Integration Tests
  *
- * Uses testcontainers to manage a libsql-server Docker container,
- * providing an isolated database for each test run.
+ * NOTE: The primary Turso Database approach uses embedded databases via
+ * @tursodatabase/database (no container needed). This container provides
+ * libsql-server for server-mode integration testing scenarios.
+ *
+ * For most tests, use @cream/storage createInMemoryClient() instead.
+ *
+ * @see https://github.com/tursodatabase/libsql (libSQL - SQLite fork)
+ * @see https://github.com/tursodatabase/turso (Turso - Rust rewrite, embedded)
  */
 
 import { GenericContainer, Wait } from "testcontainers";

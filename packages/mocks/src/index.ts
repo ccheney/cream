@@ -63,10 +63,12 @@ export {
 // ============================================
 
 export {
+  type BatchStatement,
   createMockTurso,
   MockTursoClient,
   type MockTursoConfig,
   type ResultSet,
+  type Row,
   type Transaction,
 } from "./turso";
 

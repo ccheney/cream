@@ -28,21 +28,47 @@ Cream is an **agentic trading system** for equities and options that combines LL
 
 ### Turso Database
 
-Turso is our SQLite-compatible database with modern features:
+Turso Database is our SQLite-compatible database - a Rust rewrite of SQLite with async-first design:
 
 | Feature | Description |
 |---------|-------------|
-| **Self-hosted** | `ghcr.io/tursodatabase/libsql-server:latest` Docker image |
-| **Cloud option** | Turso Cloud (free tier: 5GB, 500M reads/month) |
-| **TypeScript SDK** | `@libsql/client` with `createClient()` |
-| **Rust SDK** | `libsql` crate with `Builder::new_remote()` |
-| **Embedded replicas** | Local-first with `syncUrl` + `syncInterval` for remote sync |
-| **Encryption** | At-rest encryption via SQLCipher or AES-256 |
-| **Protocol** | HTTP for remote access, file:// for local |
+| **Architecture** | In-process embedded database (not a server) |
+| **TypeScript SDK** | `@tursodatabase/database` with `connect()` |
+| **Sync SDK** | `@tursodatabase/sync` for remote sync capability |
+| **Rust SDK** | `turso` crate |
+| **Storage wrapper** | `@cream/storage` package with `createTursoClient()` |
+| **Embedded sync** | Local-first with remote sync via `@tursodatabase/sync` |
+| **Encryption** | At-rest encryption support |
+
+**Note:** Turso Database is the Rust rewrite of SQLite (beta), replacing the older libSQL fork approach.
 
 **Environment variables:**
-- `TURSO_DATABASE_URL` - Database URL (http://turso:8080 for Docker, file:local.db for local)
-- `TURSO_AUTH_TOKEN` - Optional auth token for Turso Cloud
+- `TURSO_DATABASE_URL` - Remote sync URL (optional, for sync mode)
+- `TURSO_AUTH_TOKEN` - Auth token for remote sync
+
+**Usage:**
+```typescript
+import { createTursoClient, createInMemoryClient } from "@cream/storage";
+
+// Production: auto-configured based on CREAM_ENV
+const client = await createTursoClient();
+
+// Testing: in-memory database
+const testClient = await createInMemoryClient();
+
+// Execute queries
+const users = await client.execute<{ id: number; name: string }>(
+  "SELECT * FROM users WHERE active = ?",
+  [true]
+);
+
+// Cleanup
+client.close();
+```
+
+**References:**
+- [Turso Database](https://github.com/tursodatabase/turso)
+- [@tursodatabase/database](https://www.npmjs.com/package/@tursodatabase/database)
 
 ### Bun Ecosystem (All-in-One)
 
@@ -111,7 +137,7 @@ cream/
     schema/                 # Protobuf definitions (.proto) + Buf config [Phase 2]
     domain/                 # Zod schemas (mirrors Protobuf) [Phase 2]
     helix-schema/           # HelixDB schema + HelixQL helpers [Phase 7]
-    storage/                # Turso schema (@libsql/client) [Phase 5]
+    storage/                # Turso client wrapper (@tursodatabase/database) [Phase 5]
     marketdata/             # Polygon/Massive adapters [Phase 5]
     universe/               # Universe resolution (index constituents, ETF holdings, screeners) [Phase 5]
     indicators/             # Technical indicators (RSI, ATR, SMA, etc.) [Phase 6]
