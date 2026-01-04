@@ -17,7 +17,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Chris Cheney <chris@cheney.dev>"]
 description = "Deterministic execution engine for Cream trading system"
-license = "MIT"
+license = "AGPL-3.0-only"
 repository = "https://github.com/ccheney/cream"
 
 [dependencies]

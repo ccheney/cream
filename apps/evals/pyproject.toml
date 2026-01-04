@@ -14,7 +14,7 @@ name = "cream-evals"
 version = "0.1.0"
 description = "Agent evaluation framework for Cream trading system"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-only" }
 authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
 requires-python = ">=3.15"
 

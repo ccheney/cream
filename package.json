@@ -1,6 +1,7 @@
 {
   "name": "cream",
   "version": "0.0.1",
+  "license": "AGPL-3.0-only",
   "private": true,
   "packageManager": "bun@1.3.0",
   "workspaces": [
@@ -18,5 +19,11 @@
   "devDependencies": {
     "turbo": "^2.3.0",
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "5.2.2",
+    "lucide-react": "0.562.0",
+    "react-hook-form": "7.70.0",
+    "zod": "4.3.5"
   }
 }
