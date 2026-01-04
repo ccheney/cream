@@ -1,0 +1,28 @@
+# Bun configuration for @cream/metrics
+# See: https://bun.sh/docs/runtime/bunfig
+#
+# CORE TIER: 80% line, 75% branch, 80% function
+# Risk-adjusted metrics and calculations
+
+[test]
+# Core tier: High coverage requirements
+coverage = true
+coverageDir = "coverage"
+
+# Core tier thresholds (80/75/80)
+coverageThreshold = { line = 80, branch = 75, function = 80 }
+
+# Coverage reporters
+coverageReporter = ["text", "lcov"]
+
+# Patterns to exclude from coverage
+coverageIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/*.d.ts",
+  "**/node_modules/**",
+  "**/dist/**",
+]
+
+# Timeout for individual tests (ms)
+timeout = 30000

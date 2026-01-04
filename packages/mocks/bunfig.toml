@@ -1,0 +1,28 @@
+# Bun configuration for @cream/mocks
+# See: https://bun.sh/docs/runtime/bunfig
+#
+# STANDARD TIER: 70% line, 65% branch, 70% function
+# Mock adapters for testing
+
+[test]
+# Standard tier: Default coverage requirements
+coverage = true
+coverageDir = "coverage"
+
+# Standard tier thresholds (70/65/70)
+coverageThreshold = { line = 70, branch = 65, function = 70 }
+
+# Coverage reporters
+coverageReporter = ["text", "lcov"]
+
+# Patterns to exclude from coverage
+coverageIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/*.d.ts",
+  "**/node_modules/**",
+  "**/dist/**",
+]
+
+# Timeout for individual tests (ms)
+timeout = 30000

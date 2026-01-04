@@ -1,0 +1,28 @@
+# Bun configuration for @cream/domain
+# See: https://bun.sh/docs/runtime/bunfig
+#
+# CRITICAL TIER: 90% line, 85% branch, 90% function
+# Domain package contains core types and validation logic
+
+[test]
+# Critical tier: Highest coverage requirements
+coverage = true
+coverageDir = "coverage"
+
+# Critical tier thresholds (90/85/90)
+coverageThreshold = { line = 90, branch = 85, function = 90 }
+
+# Coverage reporters
+coverageReporter = ["text", "lcov"]
+
+# Patterns to exclude from coverage
+coverageIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/*.d.ts",
+  "**/node_modules/**",
+  "**/dist/**",
+]
+
+# Timeout for individual tests (ms)
+timeout = 30000
