@@ -17,7 +17,7 @@
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
     "@mastra/core": "^0.18.0",
-    "@langsmith/sdk": "^0.3.0",
+    "langsmith": "^0.3.0",
     "braintrust": "^0.0.180",
     "autoevals": "^0.0.90",
     "promptfoo": "^0.100.0"
