@@ -182,31 +182,15 @@ jobs:
           fi
 
   # ============================================
-  # Integration Tests (with services)
+  # Integration Tests (using testcontainers)
   # ============================================
-  # Note: Integration tests are optional until testcontainers is implemented
-  # See bead: cream-6shg7 for testcontainers migration
+  # Integration tests use testcontainers to manage Docker containers.
+  # Tests spin up containers on demand - no external services needed.
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: changes
     if: ${{ needs.changes.outputs.typescript == 'true' || github.event_name == 'push' }}
-    continue-on-error: true  # Optional until services are properly configured
-
-    services:
-      # Turso (libsql-server) for relational storage
-      turso:
-        image: ghcr.io/tursodatabase/libsql-server:latest
-        ports:
-          - 8081:8080
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/health || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      TURSO_DATABASE_URL: http://localhost:8081
 
     steps:
       - name: Checkout
@@ -228,13 +212,11 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Wait for Turso
-        run: |
-          echo "Waiting for Turso..."
-          timeout 30 bash -c 'until curl -s http://localhost:8081/health > /dev/null; do sleep 1; done' || echo "Turso not available"
-
       - name: Run integration tests
         run: bun test:integration || echo "No integration tests found yet"
+        env:
+          CREAM_ENV: BACKTEST
+          # Testcontainers will manage containers automatically
 
   # ============================================
   # Lint and Type Check
