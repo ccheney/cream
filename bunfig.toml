@@ -16,9 +16,6 @@ production = false
 coverage = true
 coverageDir = "coverage"
 
-# Parallel test execution
-preload = []
-
 [run]
 # Silence bun lifecycle scripts by default
 silent = false

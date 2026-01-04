@@ -31,3 +31,17 @@ export {
   loadConfigWithEnv,
   type ConfigEnvironment,
 } from "./loader";
+
+// Startup validation utilities
+export {
+  sanitizeConfig,
+  sanitizeEnv,
+  validateStartup,
+  validateLiveTradingSafety,
+  runStartupValidation,
+  validateStartupNoExit,
+  createAuditLog,
+  logStartupAudit,
+  type StartupResult,
+  type StartupAuditLog,
+} from "./startup";

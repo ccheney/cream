@@ -13,6 +13,7 @@
       "name": "@cream/config",
       "version": "0.0.1",
       "dependencies": {
+        "@cream/domain": "workspace:*",
         "deepmerge-ts": "^7.0.0",
         "yaml": "^2.6.0",
         "zod": "^4.0.0",

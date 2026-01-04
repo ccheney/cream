@@ -19,6 +19,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@cream/domain": "workspace:*",
     "zod": "^4.0.0",
     "yaml": "^2.6.0",
     "deepmerge-ts": "^7.0.0"
