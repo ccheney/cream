@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout current
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Buf
         uses: bufbuild/buf-action@v1
@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Buf
         uses: bufbuild/buf-setup-action@v1
@@ -57,6 +57,14 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
         run: bun install

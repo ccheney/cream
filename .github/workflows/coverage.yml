@@ -26,7 +26,7 @@ jobs:
       python: ${{ steps.filter.outputs.python }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check for changed paths
         uses: dorny/paths-filter@v3
@@ -51,7 +51,7 @@ jobs:
               - '**/pyproject.toml'
 
   # ============================================
-  # TypeScript Coverage
+  # TypeScript Coverage (built-in Bun coverage)
   # ============================================
   coverage-ts:
     name: TypeScript Coverage
@@ -61,7 +61,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -82,17 +82,16 @@ jobs:
       - name: Run tests with coverage
         run: bun test --coverage
 
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: ./coverage/lcov.info
-          flags: typescript
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+          name: coverage-typescript
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
 
   # ============================================
-  # Rust Coverage
+  # Rust Coverage (cargo-llvm-cov)
   # ============================================
   coverage-rust:
     name: Rust Coverage
@@ -102,7 +101,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if Rust code exists
         id: rust-check
@@ -140,18 +139,17 @@ jobs:
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
         working-directory: apps/execution-engine
 
-      - name: Upload to Codecov
+      - name: Upload coverage artifact
         if: steps.rust-check.outputs.exists == 'true'
-        uses: codecov/codecov-action@v5
+        uses: actions/upload-artifact@v4
         with:
-          files: apps/execution-engine/lcov.info
-          flags: rust
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+          name: coverage-rust
+          path: apps/execution-engine/lcov.info
+          retention-days: 7
+          if-no-files-found: ignore
 
   # ============================================
-  # Python Coverage
+  # Python Coverage (pytest-cov)
   # ============================================
   coverage-python:
     name: Python Coverage
@@ -161,7 +159,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if Python code exists
         id: python-check
@@ -174,48 +172,43 @@ jobs:
 
       - name: Setup Python
         if: steps.python-check.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
-      - name: Cache pip
-        if: steps.python-check.outputs.exists == 'true'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: "pip"
 
       - name: Install uv
         if: steps.python-check.outputs.exists == 'true'
         run: pip install uv
 
-      - name: Install dependencies (research)
+      - name: Install dependencies and run coverage (research)
         if: steps.python-check.outputs.exists == 'true'
         run: |
           if [ -f "packages/research/pyproject.toml" ]; then
             cd packages/research
             uv pip install -e ".[dev]" --system || true
+            pytest --cov --cov-report=html:coverage --cov-report=term-missing || echo "No tests found"
           fi
 
-      - name: Run tests with coverage (research)
+      - name: Install dependencies and run coverage (filings-service)
         if: steps.python-check.outputs.exists == 'true'
         run: |
-          if [ -f "packages/research/pyproject.toml" ]; then
-            cd packages/research
-            pytest --cov --cov-report=xml || echo "No tests found"
+          if [ -f "apps/filings-service/pyproject.toml" ]; then
+            cd apps/filings-service
+            uv pip install -e ".[dev]" --system || true
+            pytest --cov --cov-report=html:coverage --cov-report=term-missing || echo "No tests found"
           fi
 
-      - name: Upload to Codecov
+      - name: Upload coverage artifact
         if: steps.python-check.outputs.exists == 'true'
-        uses: codecov/codecov-action@v5
+        uses: actions/upload-artifact@v4
         with:
-          files: packages/research/coverage.xml
-          flags: python
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+          name: coverage-python
+          path: |
+            packages/research/coverage/
+            apps/filings-service/coverage/
+          retention-days: 7
+          if-no-files-found: ignore
 
   # ============================================
   # Coverage Gate (for required checks)
