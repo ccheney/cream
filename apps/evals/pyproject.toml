@@ -1,0 +1,70 @@
+# Agent Evaluations - Python Package
+# See: docs/plans/14-testing.md lines 288-296
+#
+# This package contains:
+# - DeepEval integration for LLM-as-Judge evaluations
+# - G-Eval metric configuration
+# - TaskCompletionMetric for agent scoring
+#
+# Install: uv pip install -e ".[dev]"
+# Run: pytest tests/
+
+[project]
+name = "cream-evals"
+version = "0.1.0"
+description = "Agent evaluation framework for Cream trading system"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
+requires-python = ">=3.15"
+
+dependencies = [
+    "deepeval>=2.0.0",
+    "openai>=1.60.0",
+    "google-generativeai>=0.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.15",
+    "ruff>=0.8",
+]
+
+# ============================================
+# pytest Configuration
+# ============================================
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = "-v"
+
+markers = [
+    "llm: marks tests that require LLM API calls",
+    "slow: marks tests as slow",
+]
+
+# ============================================
+# DeepEval Configuration
+# ============================================
+# Note: DeepEval configuration is in deepeval.yaml
+
+# ============================================
+# Ruff Configuration
+# ============================================
+[tool.ruff]
+target-version = "py315"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+
+# ============================================
+# MyPy Configuration
+# ============================================
+[tool.mypy]
+python_version = "3.15"
+strict = true

@@ -1,0 +1,99 @@
+# DeepEval Configuration
+# See: docs/plans/14-testing.md lines 288-296
+#
+# This file configures DeepEval metrics for agent evaluation.
+# API Keys required:
+#   - GOOGLE_API_KEY: For Gemini judge model
+#   - OPENAI_API_KEY: Alternative judge model (GPT-4o)
+
+# ============================================
+# Metric Configurations
+# ============================================
+metrics:
+  # Task Completion Metric
+  # Evaluates if agent completed the assigned task
+  task_completion:
+    model: "gemini-3-pro-preview"  # Or "gpt-4o"
+    threshold: 0.7
+    include_reason: true
+    strict_mode: false
+
+  # G-Eval Metric
+  # General evaluation with custom criteria
+  g_eval:
+    model: "gemini-3-pro-preview"
+    evaluation_params:
+      - coherence
+      - relevance
+      - consistency
+      - fluency
+
+  # Answer Relevancy
+  # Checks if output is relevant to input
+  answer_relevancy:
+    model: "gemini-3-pro-preview"
+    threshold: 0.8
+
+# ============================================
+# Scoring Thresholds
+# ============================================
+thresholds:
+  # Hard failure - block merge
+  hard_fail: 0.5
+
+  # Soft failure - require review
+  soft_fail: 0.8
+
+  # Pass - no action needed
+  pass: 0.8
+
+# ============================================
+# Agent-Specific Thresholds
+# ============================================
+agents:
+  technical_analyst:
+    task_completion: 0.75
+    answer_relevancy: 0.8
+
+  trader:
+    task_completion: 0.8
+    answer_relevancy: 0.85
+
+  risk_manager:
+    task_completion: 0.85
+    answer_relevancy: 0.9
+
+  critic:
+    task_completion: 0.8
+    answer_relevancy: 0.85
+
+# ============================================
+# Test Configuration
+# ============================================
+test:
+  # Number of test cases per agent
+  cases_per_agent: 10
+
+  # Retry failed evaluations
+  max_retries: 3
+
+  # Timeout per evaluation (seconds)
+  timeout: 60
+
+  # Run in parallel
+  parallel: true
+  max_workers: 4
+
+# ============================================
+# Output Configuration
+# ============================================
+output:
+  # Save results to JSON
+  json_path: "eval-results.json"
+
+  # Generate HTML report
+  html_report: true
+  html_path: "eval-report.html"
+
+  # Verbose logging
+  verbose: true
