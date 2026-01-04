@@ -23,3 +23,35 @@ export {
   CreamBroker,
   type EnvConfig,
 } from "./env";
+
+// Safety mechanisms
+export {
+  // Order ID
+  generateOrderId,
+  validateOrderIdEnvironment,
+  // Broker validation
+  validateBrokerEndpoint,
+  // Live execution guards
+  requireLiveConfirmation,
+  isLiveConfirmed,
+  preventAccidentalLiveExecution,
+  // Environment validation
+  validateEnvironmentConsistency,
+  // State isolation
+  getIsolatedDatabaseName,
+  validateDatabaseIsolation,
+  // Audit logging
+  auditLog,
+  getAuditLog,
+  clearAuditLog,
+  // Circuit breaker
+  recordCircuitFailure,
+  isCircuitOpen,
+  resetCircuit,
+  requireCircuitClosed,
+  // Error
+  SafetyError,
+  type SafetyErrorCode,
+  // Testing
+  resetSafetyState,
+} from "./safety";
