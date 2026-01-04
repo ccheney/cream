@@ -26,6 +26,9 @@ coverage/
 *.swo
 .DS_Store
 
+# Claude Code
+.claude/
+
 # Logs
 *.log
 npm-debug.log*

@@ -12,10 +12,16 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "format": "turbo run format && cargo fmt --all && ruff format apps/filings-service apps/vision-service apps/evals packages/research",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "bun run format:ts && bun run format:rust && bun run format:py",
+    "format:ts": "biome format --write .",
+    "format:rust": "cargo fmt --all",
+    "format:py": "ruff format apps/filings-service apps/vision-service apps/evals packages/research",
+    "lint": "bun run lint:ts && bun run lint:rust && bun run lint:py",
+    "lint:ts": "biome check .",
+    "lint:rust": "cargo clippy --all-targets --all-features -- -D warnings",
+    "lint:py": "ruff check apps/filings-service apps/vision-service apps/evals packages/research"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

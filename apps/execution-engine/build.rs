@@ -4,9 +4,9 @@
 //! See: docs/plans/14-testing.md lines 866-873
 //!
 //! Coverage exclusions are handled via:
-//! 1. #[cfg(not(coverage))] attributes on code
-//! 2. LLVM_PROFILE_FILE environment variable
-//! 3. cargo-llvm-cov ignore comments
+//! 1. `#[cfg(not(coverage))]` attributes on code
+//! 2. `LLVM_PROFILE_FILE` environment variable
+//! 3. `cargo-llvm-cov` ignore comments
 
 fn main() {
     // Set profile file pattern for coverage runs

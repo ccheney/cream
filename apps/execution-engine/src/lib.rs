@@ -5,7 +5,7 @@
 //! # Architecture
 //!
 //! The execution engine handles:
-//! - **Validation**: Validates DecisionPlans from TypeScript agents
+//! - **Validation**: Validates `DecisionPlans` from TypeScript agents
 //! - **Risk Checks**: Enforces position limits, drawdown constraints
 //! - **Order Routing**: Routes orders to brokers (Alpaca)
 //! - **Position Management**: Tracks positions and P&L
