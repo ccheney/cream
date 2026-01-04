@@ -1,0 +1,57 @@
+{
+  "_version": "1.0.0",
+  "scenario": "range_bound_tsla",
+  "regime": "RANGE",
+  "created": "2026-01-04T00:00:00.000Z",
+  "description": "TSLA trading sideways with low ADX, narrow bands, mean reversion setup",
+  "asOf": "2026-01-04T15:00:00.000Z",
+  "symbols": [
+    {
+      "symbol": "TSLA",
+      "lastPrice": 250.00,
+      "bid": 249.95,
+      "ask": 250.05,
+      "bidSize": 600,
+      "askSize": 550,
+      "candles": [
+        {
+          "timestamp": "2026-01-04T14:00:00.000Z",
+          "open": 248.00,
+          "high": 252.00,
+          "low": 247.00,
+          "close": 250.00,
+          "volume": 3500000
+        },
+        {
+          "timestamp": "2026-01-04T13:00:00.000Z",
+          "open": 251.00,
+          "high": 253.00,
+          "low": 247.50,
+          "close": 248.00,
+          "volume": 3200000
+        },
+        {
+          "timestamp": "2026-01-04T12:00:00.000Z",
+          "open": 249.00,
+          "high": 252.50,
+          "low": 248.00,
+          "close": 251.00,
+          "volume": 2800000
+        }
+      ],
+      "indicators": {
+        "rsi_14": 50,
+        "sma_20": 248.00,
+        "sma_50": 252.00,
+        "sma_200": 245.00,
+        "ema_9": 249.50,
+        "ema_21": 249.00,
+        "atr_14": 8.00,
+        "bb_upper": 262.00,
+        "bb_middle": 250.00,
+        "bb_lower": 238.00,
+        "volume_sma_20": 3000000
+      }
+    }
+  ]
+}

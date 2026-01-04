@@ -1,0 +1,28 @@
+{
+  "_version": "1.0.0",
+  "scenario": "invalid_missing_size",
+  "description": "INVALID: Decision missing required size field - should fail schema validation",
+  "created": "2026-01-04T00:00:00.000Z",
+  "expectedError": "size: Required",
+  "decision": {
+    "instrument": {
+      "instrumentId": "AAPL",
+      "instrumentType": "EQUITY"
+    },
+    "action": "BUY",
+    "orderPlan": {
+      "entryOrderType": "LIMIT",
+      "entryLimitPrice": 175.00,
+      "exitOrderType": "MARKET",
+      "timeInForce": "DAY"
+    },
+    "riskLevels": {
+      "stopLossLevel": 160.00,
+      "takeProfitLevel": 200.00,
+      "denomination": "UNDERLYING_PRICE"
+    },
+    "strategyFamily": "TREND",
+    "rationale": "Test decision missing size field for validation testing",
+    "confidence": 0.80
+  }
+}

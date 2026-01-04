@@ -1,0 +1,57 @@
+{
+  "_version": "1.0.0",
+  "scenario": "high_vol_nvda",
+  "regime": "HIGH_VOL",
+  "created": "2026-01-04T00:00:00.000Z",
+  "description": "NVDA with elevated volatility, wide Bollinger Bands, ATR spike",
+  "asOf": "2026-01-04T15:00:00.000Z",
+  "symbols": [
+    {
+      "symbol": "NVDA",
+      "lastPrice": 480.00,
+      "bid": 479.50,
+      "ask": 480.50,
+      "bidSize": 400,
+      "askSize": 350,
+      "candles": [
+        {
+          "timestamp": "2026-01-04T14:00:00.000Z",
+          "open": 465.00,
+          "high": 490.00,
+          "low": 460.00,
+          "close": 480.00,
+          "volume": 15000000
+        },
+        {
+          "timestamp": "2026-01-04T13:00:00.000Z",
+          "open": 475.00,
+          "high": 485.00,
+          "low": 455.00,
+          "close": 465.00,
+          "volume": 12000000
+        },
+        {
+          "timestamp": "2026-01-04T12:00:00.000Z",
+          "open": 490.00,
+          "high": 495.00,
+          "low": 470.00,
+          "close": 475.00,
+          "volume": 14000000
+        }
+      ],
+      "indicators": {
+        "rsi_14": 45,
+        "sma_20": 475.00,
+        "sma_50": 465.00,
+        "sma_200": 420.00,
+        "ema_9": 478.00,
+        "ema_21": 472.00,
+        "atr_14": 25.00,
+        "bb_upper": 520.00,
+        "bb_middle": 475.00,
+        "bb_lower": 430.00,
+        "volume_sma_20": 8000000
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@cream/test-fixtures",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./snapshots/*": "./snapshots/*",
+    "./decisions/*": "./decisions/*",
+    "./memory/*": "./memory/*"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "typecheck": "tsc --noEmit",
+    "test": "CREAM_ENV=BACKTEST bun test",
+    "lint": "biome check src/",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@cream/domain": "workspace:*",
+    "deepmerge-ts": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

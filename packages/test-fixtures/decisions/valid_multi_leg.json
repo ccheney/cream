@@ -1,0 +1,49 @@
+{
+  "_version": "1.0.0",
+  "scenario": "valid_multi_leg",
+  "description": "Valid options spread decision (vertical call spread)",
+  "created": "2026-01-04T00:00:00.000Z",
+  "decision": {
+    "instrument": {
+      "instrumentId": "SPY260221C00590000",
+      "instrumentType": "OPTION",
+      "optionContract": {
+        "underlying": "SPY",
+        "expiration": "2026-02-21",
+        "strike": 590,
+        "optionType": "CALL"
+      }
+    },
+    "action": "BUY",
+    "size": {
+      "quantity": 1,
+      "unit": "CONTRACTS",
+      "targetPositionQuantity": 1
+    },
+    "orderPlan": {
+      "entryOrderType": "LIMIT",
+      "entryLimitPrice": 5.50,
+      "exitOrderType": "MARKET",
+      "timeInForce": "DAY",
+      "executionTactic": "SPREAD_ORDER",
+      "executionParams": {
+        "spreadType": "VERTICAL_CALL",
+        "shortStrike": 600,
+        "maxSpreadWidth": 0.15
+      }
+    },
+    "riskLevels": {
+      "stopLossLevel": 2.75,
+      "takeProfitLevel": 8.25,
+      "denomination": "OPTION_PRICE"
+    },
+    "strategyFamily": "VOLATILITY",
+    "rationale": "Bullish SPY options play with defined risk. Buying 590/600 call spread for February expiration. Implied volatility is low relative to historical levels.",
+    "confidence": 0.70,
+    "references": {
+      "usedIndicators": ["rsi_14", "atr_14"],
+      "memoryCaseIds": ["case-opt-001", "case-opt-002"],
+      "eventIds": []
+    }
+  }
+}

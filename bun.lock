@@ -34,11 +34,25 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/test-fixtures": {
+      "name": "@cream/test-fixtures",
+      "version": "0.0.1",
+      "dependencies": {
+        "@cream/domain": "workspace:*",
+        "deepmerge-ts": "^7.0.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.7.0",
+      },
+    },
   },
   "packages": {
     "@cream/config": ["@cream/config@workspace:packages/config"],
 
     "@cream/domain": ["@cream/domain@workspace:packages/domain"],
+
+    "@cream/test-fixtures": ["@cream/test-fixtures@workspace:packages/test-fixtures"],
 
     "@types/bun": ["@types/bun@1.3.5", "", { "dependencies": { "bun-types": "1.3.5" } }, "sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w=="],
 
