@@ -1,0 +1,76 @@
+name: Buf Breaking Check
+
+on:
+  pull_request:
+    paths:
+      - "packages/schema/**"
+      - "buf.yaml"
+      - "buf.gen.yaml"
+      - "buf.lock"
+
+concurrency:
+  group: buf-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Buf Lint and Breaking Change Detection
+  # ============================================
+  buf:
+    name: Buf Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-action@v1
+        with:
+          # Run lint check
+          lint: true
+
+          # Run breaking change detection
+          breaking: true
+
+          # Compare against master branch
+          breaking_against: "https://github.com/${{ github.repository }}.git#branch=master"
+
+          # Buf token for BSR access (optional)
+          # token: ${{ secrets.BUF_TOKEN }}
+
+  # ============================================
+  # Protobuf Generation Check
+  # ============================================
+  generate:
+    name: Buf Generate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Generate Protobuf code
+        run: buf generate
+        working-directory: packages/schema
+
+      - name: Check for uncommitted changes
+        run: |
+          if [[ -n $(git status --porcelain packages/schema-gen/) ]]; then
+            echo "Error: Generated code is out of sync with proto files"
+            echo "Please run 'buf generate' and commit the changes"
+            git diff packages/schema-gen/
+            exit 1
+          fi
+          echo "Generated code is in sync"
