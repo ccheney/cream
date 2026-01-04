@@ -13,6 +13,10 @@
     "./env": {
       "types": "./src/env.ts",
       "import": "./src/env.ts"
+    },
+    "./websocket": {
+      "types": "./src/websocket/index.ts",
+      "import": "./src/websocket/index.ts"
     }
   },
   "scripts": {
