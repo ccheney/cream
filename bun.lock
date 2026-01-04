@@ -34,6 +34,18 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/mocks": {
+      "name": "@cream/mocks",
+      "version": "0.0.1",
+      "dependencies": {
+        "@cream/domain": "workspace:*",
+        "@cream/test-fixtures": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.7.0",
+      },
+    },
     "packages/test-fixtures": {
       "name": "@cream/test-fixtures",
       "version": "0.0.1",
@@ -51,6 +63,8 @@
     "@cream/config": ["@cream/config@workspace:packages/config"],
 
     "@cream/domain": ["@cream/domain@workspace:packages/domain"],
+
+    "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
 
     "@cream/test-fixtures": ["@cream/test-fixtures@workspace:packages/test-fixtures"],
 
