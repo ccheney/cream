@@ -34,6 +34,14 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/metrics": {
+      "name": "@cream/metrics",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.7.0",
+      },
+    },
     "packages/mocks": {
       "name": "@cream/mocks",
       "version": "0.0.1",
@@ -82,6 +90,8 @@
     "@cream/config": ["@cream/config@workspace:packages/config"],
 
     "@cream/domain": ["@cream/domain@workspace:packages/domain"],
+
+    "@cream/metrics": ["@cream/metrics@workspace:packages/metrics"],
 
     "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
 
