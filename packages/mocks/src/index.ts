@@ -69,3 +69,24 @@ export {
   type Transaction,
   type MockTursoConfig,
 } from "./turso";
+
+// ============================================
+// Mock LLM
+// ============================================
+
+export {
+  MockLLM,
+  MockLLMRecorder,
+  createMockLLM,
+  createMockLLMWithDefaults,
+  createMockLLMRecorder,
+  extractPromptKey,
+  extractKeyHash,
+  extractKeyPattern,
+  type LLMInterface,
+  type MockResponse,
+  type ResponseMap,
+  type MockLLMConfig,
+  type CompletionOptions,
+  type RecordedCall,
+} from "./llm";
