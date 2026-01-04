@@ -1,0 +1,96 @@
+# Cream Infrastructure - Docker Compose Configuration
+# =====================================================
+# This file configures local development infrastructure.
+#
+# Services:
+# - turso: SQLite-compatible database (libsql-server)
+# - helix: Graph + Vector database (HelixDB)
+#
+# Usage:
+#   docker compose up -d        # Start all services
+#   docker compose ps           # Check service status
+#   docker compose logs -f      # View logs
+#   docker compose down         # Stop all services
+#   docker compose down -v      # Stop and remove volumes
+
+services:
+  # Turso - SQLite-compatible database with HTTP protocol
+  # https://github.com/tursodatabase/libsql
+  turso:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: cream-turso
+    ports:
+      - "8080:8080"     # HTTP endpoint for libsql client
+      - "5001:5001"     # gRPC endpoint (optional)
+    environment:
+      - SQLD_NODE=primary
+      # Uncomment for authentication:
+      # - SQLD_HTTP_AUTH=basic:$(echo -n "admin:password" | base64)
+    volumes:
+      - turso_data:/var/lib/sqld
+    healthcheck:
+      # Use bash TCP check since container doesn't have curl/wget
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080 && echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | head -1 | grep -q HTTP'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
+  # HelixDB - Graph + Vector Database
+  # https://github.com/HelixDB/helix-db
+  #
+  # NOTE: HelixDB does not provide a pre-built Docker image.
+  # For local development, use the helix CLI:
+  #
+  #   1. Install helix CLI:
+  #      curl -sSL https://install.helix-db.com | bash
+  #
+  #   2. Initialize project (in packages/helix-schema/):
+  #      helix init
+  #
+  #   3. Define schema in schema.hx and queries in queries.hx
+  #
+  #   4. Run locally:
+  #      helix deploy local
+  #
+  # The helix service below is a placeholder that will be enabled
+  # once we have a custom HelixDB build with our schema.
+  #
+  # Default port: 6969 (or next available)
+  # API: REST endpoints from defined HQL queries
+  #
+  # helix:
+  #   build:
+  #     context: ../packages/helix-schema
+  #     dockerfile: Dockerfile
+  #   container_name: cream-helix
+  #   ports:
+  #     - "6969:6969"
+  #   volumes:
+  #     - helix_data:/var/lib/helix
+  #   environment:
+  #     - HELIX_PORT=6969
+  #     - HELIX_DATA_DIR=/var/lib/helix
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:6969/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - cream-network
+  #   restart: unless-stopped
+
+networks:
+  cream-network:
+    driver: bridge
+    name: cream-network
+
+volumes:
+  turso_data:
+    name: cream-turso-data
+  helix_data:
+    name: cream-helix-data
