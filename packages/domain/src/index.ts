@@ -211,5 +211,46 @@ export {
   type GetPositionsResponse,
 } from "./execution";
 
+// Number precision utilities
+export {
+  // Constants
+  SINT32_MIN,
+  SINT32_MAX,
+  UINT32_MAX,
+  BASIS_POINTS_PER_PERCENT,
+  // Zod schemas
+  Sint32Schema,
+  type Sint32,
+  Uint32Schema,
+  type Uint32,
+  PositivePriceSchema,
+  type PositivePrice,
+  NonNegativePriceSchema,
+  type NonNegativePrice,
+  BasisPointsSchema,
+  type BasisPoints,
+  QuantitySchema,
+  type Quantity,
+  // Validation functions
+  validateSint32,
+  validateUint32,
+  isSafeInteger,
+  isInSint32Range,
+  isInUint32Range,
+  // Basis points conversion
+  toBasisPoints,
+  fromBasisPoints,
+  // Money formatting
+  formatMoney,
+  parseMoney,
+  formatPrice,
+  // Clamping
+  clampToSint32,
+  clampToUint32,
+  // Position utilities
+  calculateQtyChange,
+  getPositionDirection,
+} from "./numbers";
+
 // WebSocket schemas
 export * from "./websocket/index.js";
