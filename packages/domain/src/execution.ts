@@ -14,7 +14,7 @@ import {
   TimeInForce,
   DecisionPlanSchema,
 } from "./decision";
-import { TimestampSchema } from "./marketSnapshot";
+import { Iso8601Schema } from "./time";
 
 // ============================================
 // Constraint Check Enums
@@ -77,7 +77,7 @@ export const AccountStateSchema = z.object({
   isPdtRestricted: z.boolean(),
 
   /** Timestamp of state snapshot */
-  asOf: TimestampSchema,
+  asOf: Iso8601Schema,
 });
 export type AccountState = z.infer<typeof AccountStateSchema>;
 
@@ -163,7 +163,7 @@ export const CheckConstraintsResponseSchema = z.object({
   checks: z.array(ConstraintCheckSchema),
 
   /** Timestamp of validation */
-  validatedAt: TimestampSchema,
+  validatedAt: Iso8601Schema,
 
   /** Rejection reason (if not approved) */
   rejectionReason: z.string().optional(),
@@ -228,7 +228,7 @@ export const SubmitOrderResponseSchema = z.object({
   status: OrderStatus,
 
   /** Submission timestamp */
-  submittedAt: TimestampSchema,
+  submittedAt: Iso8601Schema,
 
   /** Error message if rejected */
   errorMessage: z.string().optional(),
@@ -258,7 +258,7 @@ export const ExecutionAckSchema = z.object({
   remainingQuantity: z.number().int().nonnegative(),
 
   /** Last update timestamp */
-  updatedAt: TimestampSchema,
+  updatedAt: Iso8601Schema,
 
   /** Commission charged */
   commission: z.number().nonnegative(),
@@ -328,6 +328,6 @@ export const GetPositionsResponseSchema = z.object({
   positions: z.array(PositionSchema),
 
   /** Timestamp of snapshot */
-  asOf: TimestampSchema,
+  asOf: Iso8601Schema,
 });
 export type GetPositionsResponse = z.infer<typeof GetPositionsResponseSchema>;

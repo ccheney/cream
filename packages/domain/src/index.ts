@@ -95,11 +95,48 @@ export {
   validateDecisionPlan,
 } from "./decision";
 
+// Time utilities
+export {
+  // Zod schemas
+  Iso8601Schema,
+  Iso8601UtcSchema,
+  DateOnlySchema,
+  type Iso8601,
+  type Iso8601Utc,
+  type DateOnly,
+  // Conversion functions
+  toIso8601,
+  fromIso8601,
+  nowIso8601,
+  toDateOnly,
+  fromDateOnly,
+  // Validation functions
+  isValidIso8601,
+  isValidDateOnly,
+  // Comparison functions
+  compareIso8601,
+  isBefore,
+  isAfter,
+  isBetween,
+  // Arithmetic functions
+  addMilliseconds,
+  addSeconds,
+  addMinutes,
+  addHours,
+  addDays,
+  diffMilliseconds,
+  // Trading-specific utilities
+  startOfHour,
+  startOfDay,
+  isSameTradingDay,
+  getTradingDay,
+  getOptionExpirationTime,
+  isOptionExpired,
+  daysToExpiration,
+} from "./time";
+
 // Market snapshot schemas
 export {
-  // Timestamps
-  TimestampSchema,
-  type Timestamp,
   // Quote
   QuoteSchema,
   type Quote,

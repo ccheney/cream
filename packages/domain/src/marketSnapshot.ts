@@ -16,17 +16,7 @@ import {
   Regime,
 } from "./decision";
 import { CreamEnvironment } from "./env";
-
-// ============================================
-// ISO-8601 Timestamp Validation
-// ============================================
-
-/**
- * ISO-8601 timestamp string with timezone
- * Matches formats like: 2026-01-04T16:30:00Z or 2026-01-04T16:30:00-06:00
- */
-export const TimestampSchema = z.string().datetime({ offset: true });
-export type Timestamp = z.infer<typeof TimestampSchema>;
+import { Iso8601Schema } from "./time";
 
 // ============================================
 // Quote Data
@@ -61,7 +51,7 @@ export const QuoteSchema = z.object({
   volume: z.number().int().nonnegative(),
 
   /** Quote timestamp */
-  timestamp: TimestampSchema,
+  timestamp: Iso8601Schema,
 });
 export type Quote = z.infer<typeof QuoteSchema>;
 
@@ -83,7 +73,7 @@ export const BarSchema = z.object({
   symbol: z.string().min(1),
 
   /** Bar open time */
-  timestamp: TimestampSchema,
+  timestamp: Iso8601Schema,
 
   /** Bar timeframe in minutes (1, 5, 15, 60, 240, 1440) */
   timeframeMinutes: z.number().int().refine(
@@ -185,7 +175,7 @@ export const SymbolSnapshotSchema = z.object({
   open: z.number().positive(),
 
   /** Snapshot timestamp */
-  asOf: TimestampSchema,
+  asOf: Iso8601Schema,
 }).superRefine((data, ctx) => {
   if (data.dayHigh < data.dayLow) {
     ctx.addIssue({
@@ -209,7 +199,7 @@ export const MarketSnapshotSchema = z.object({
   environment: CreamEnvironment,
 
   /** Snapshot timestamp */
-  asOf: TimestampSchema,
+  asOf: Iso8601Schema,
 
   /** Market status (overall) */
   marketStatus: MarketStatus,
@@ -273,7 +263,7 @@ export const OptionChainSchema = z.object({
   options: z.array(OptionQuoteSchema),
 
   /** Chain timestamp */
-  asOf: TimestampSchema,
+  asOf: Iso8601Schema,
 });
 export type OptionChain = z.infer<typeof OptionChainSchema>;
 
