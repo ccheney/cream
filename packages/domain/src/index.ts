@@ -91,3 +91,6 @@ export {
   validateRiskLevels,
   validateDecisionPlan,
 } from "./decision";
+
+// WebSocket schemas
+export * from "./websocket/index.js";
