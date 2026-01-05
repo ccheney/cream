@@ -17,6 +17,10 @@
     "./websocket": {
       "types": "./src/websocket/index.ts",
       "import": "./src/websocket/index.ts"
+    },
+    "./grpc": {
+      "types": "./src/grpc/index.ts",
+      "import": "./src/grpc/index.ts"
     }
   },
   "scripts": {
@@ -28,6 +32,10 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "@cream/schema-gen": "workspace:*",
     "zod": "^4.0.0"
   },
   "devDependencies": {

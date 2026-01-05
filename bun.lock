@@ -120,6 +120,10 @@
       "name": "@cream/domain",
       "version": "0.0.1",
       "dependencies": {
+        "@bufbuild/protobuf": "^2.0.0",
+        "@connectrpc/connect": "^2.0.0",
+        "@connectrpc/connect-node": "^2.0.0",
+        "@cream/schema-gen": "workspace:*",
         "zod": "^4.0.0",
       },
       "devDependencies": {
@@ -526,6 +530,8 @@
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 
     "@connectrpc/connect": ["@connectrpc/connect@2.1.1", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.7.0" } }, "sha512-JzhkaTvM73m2K1URT6tv53k2RwngSmCXLZJgK580qNQOXRzZRR/BCMfZw3h+90JpnG6XksP5bYT+cz0rpUzUWQ=="],
+
+    "@connectrpc/connect-node": ["@connectrpc/connect-node@2.1.1", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.7.0", "@connectrpc/connect": "2.1.1" } }, "sha512-s3TfsI1XF+n+1z6MBS9rTnFsxxR4Rw5wmdEnkQINli81ESGxcsfaEet8duzq8LVuuCupmhUsgpRo0Nv9pZkufg=="],
 
     "@cream/api": ["@cream/api@workspace:apps/api"],
 
