@@ -466,35 +466,48 @@ export class DatabentoClient {
       const text = data.toString("utf-8");
 
       // Try to parse as JSON first (control messages)
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        // Not JSON, skip
+        return;
+      }
+
+      if (typeof json !== "object" || json === null) {
+        return;
+      }
+
+      const jsonObj = json as Record<string, unknown>;
+
       if (text.startsWith("{")) {
-        const json = JSON.parse(text);
 
         // Handle authentication response
-        if (json.message_type === "authentication_response") {
-          if (json.status === "authenticated") {
+        if (jsonObj.message_type === "authentication_response") {
+          if (jsonObj.status === "authenticated") {
             this.state = ConnectionState.AUTHENTICATED;
-            this.sessionId = json.session_id;
-            this.emit({ type: "authenticated", sessionId: json.session_id });
+            this.sessionId = jsonObj.session_id as string;
+            this.emit({ type: "authenticated", sessionId: jsonObj.session_id as string });
             this.startHeartbeat();
           } else {
-            throw new Error(`Authentication failed: ${json.error ?? "Unknown error"}`);
+            throw new Error(`Authentication failed: ${(jsonObj.error as string) ?? "Unknown error"}`);
           }
           return;
         }
 
         // Handle subscription confirmation
-        if (json.message_type === "subscription_confirmation") {
+        if (jsonObj.message_type === "subscription_confirmation") {
           this.state = ConnectionState.SUBSCRIBED;
           this.emit({
             type: "subscribed",
-            subscriptionId: json.subscription_id ?? "unknown",
+            subscriptionId: (jsonObj.subscription_id as string) ?? "unknown",
           });
           return;
         }
 
         // Handle system messages
-        if (json.message_type === "system" || json.msg) {
-          const systemMsg = SystemMessageSchema.parse(json);
+        if (jsonObj.message_type === "system" || jsonObj.msg) {
+          const systemMsg = SystemMessageSchema.parse(jsonObj);
           if (!systemMsg.is_heartbeat) {
             this.emit({ type: "message", message: systemMsg, schema: "tbbo" });
           }
@@ -502,36 +515,32 @@ export class DatabentoClient {
         }
 
         // Handle symbol mapping
-        if (json.stype_in_symbol || json.stype_out_symbol) {
-          const symbolMsg = SymbolMappingMessageSchema.parse(json);
+        if (jsonObj.stype_in_symbol || jsonObj.stype_out_symbol) {
+          const symbolMsg = SymbolMappingMessageSchema.parse(jsonObj);
           this.emit({ type: "message", message: symbolMsg, schema: "tbbo" });
           return;
         }
       }
 
-      // For binary DBN messages, we'd need to implement DBN decoding
-      // For now, we'll treat JSON data messages
-      const json = JSON.parse(text);
-
       // Detect schema from message structure
       let schema: DatabentoSchema = "tbbo";
       let message: DatabentoMessage;
 
-      if ("price" in json && "size" in json && !("bid_px" in json)) {
+      if ("price" in jsonObj && "size" in jsonObj && !("bid_px" in jsonObj)) {
         schema = "trades";
-        message = TradeMessageSchema.parse(json);
-      } else if ("bid_px" in json && "ask_px" in json && "levels" in json) {
+        message = TradeMessageSchema.parse(jsonObj);
+      } else if ("bid_px" in jsonObj && "ask_px" in jsonObj && "levels" in jsonObj) {
         schema = "mbp-10";
-        message = MBP10MessageSchema.parse(json);
-      } else if ("bid_px" in json && "ask_px" in json) {
+        message = MBP10MessageSchema.parse(jsonObj);
+      } else if ("bid_px" in jsonObj && "ask_px" in jsonObj) {
         schema = "mbp-1";
-        message = QuoteMessageSchema.parse(json);
-      } else if ("open" in json && "high" in json) {
+        message = QuoteMessageSchema.parse(jsonObj);
+      } else if ("open" in jsonObj && "high" in jsonObj) {
         schema = "ohlcv-1m";
-        message = OHLCVMessageSchema.parse(json);
+        message = OHLCVMessageSchema.parse(jsonObj);
       } else {
         // Unknown message type, skip
-        console.warn("Unknown message type:", json);
+        console.warn("Unknown message type:", jsonObj);
         return;
       }
 

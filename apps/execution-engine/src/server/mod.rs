@@ -6,13 +6,13 @@
 //! - **gRPC**: ExecutionService and MarketDataService (port 50051)
 //! - **Arrow Flight**: High-performance data transport (port 50052)
 
-mod arrow_flight;
-// TODO: Fix grpc module (requires generated protobuf code)
-// mod grpc;
+// TODO: Fix arrow_flight module (tonic version conflict with arrow-flight crate)
+// mod arrow_flight;
+pub mod grpc;
 mod http;
 
-pub use arrow_flight::{build_flight_server, CreamFlightService};
-// pub use grpc::{ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services, run_grpc_server};
+// pub use arrow_flight::{build_flight_server, CreamFlightService};
+pub use grpc::{ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services, run_grpc_server};
 pub use http::{ExecutionServer, create_router};
 
 // Re-export for compatibility

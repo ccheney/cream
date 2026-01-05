@@ -53,19 +53,26 @@ class MockWebSocketServer {
    * Stop the mock server.
    */
   async stop(): Promise<void> {
+    if (!this.server) {
+      return;
+    }
+
     return new Promise((resolve) => {
       for (const client of this.clients) {
-        client.close();
+        try {
+          client.close();
+        } catch {
+          // Ignore
+        }
       }
       this.clients.clear();
 
-      if (this.server) {
-        this.server.close(() => {
-          resolve();
-        });
-      } else {
+      const server = this.server;
+      this.server = null;
+
+      server.close(() => {
         resolve();
-      }
+      });
     });
   }
 
@@ -243,8 +250,14 @@ describe("DatabentoClient", () => {
   });
 
   afterEach(async () => {
-    client.disconnect();
-    await server.stop();
+    if (client) {
+      client.disconnect();
+    }
+    if (server) {
+      await server.stop().catch(() => {
+        // Ignore errors if server already stopped
+      });
+    }
   });
 
   describe("Connection Management", () => {
@@ -273,7 +286,7 @@ describe("DatabentoClient", () => {
       await waitForEvent(client, "authenticated");
 
       const disconnectPromise = waitForEvent(client, "disconnected");
-      server.stop();
+      await server.stop();
 
       const event = await disconnectPromise;
       expect(event.type).toBe("disconnected");

@@ -51,8 +51,8 @@ pub struct ExecutionServiceImpl {
     validator: Arc<ConstraintValidator>,
     /// Order state manager.
     state_manager: Arc<OrderStateManager>,
-    /// Execution gateway.
-    gateway: Arc<ExecutionGateway>,
+    /// Execution gateway (using Alpaca as the broker).
+    gateway: Arc<ExecutionGateway<crate::execution::AlpacaAdapter>>,
 }
 
 impl std::fmt::Debug for ExecutionServiceImpl {
@@ -70,7 +70,7 @@ impl ExecutionServiceImpl {
     pub fn new(
         validator: ConstraintValidator,
         state_manager: OrderStateManager,
-        gateway: ExecutionGateway,
+        gateway: ExecutionGateway<crate::execution::AlpacaAdapter>,
     ) -> Self {
         Self {
             validator: Arc::new(validator),
@@ -311,9 +311,6 @@ impl ExecutionService for ExecutionServiceImpl {
             instrument: Some(proto::cream::v1::Instrument {
                 instrument_id: order_state.instrument_id.clone(),
                 instrument_type: proto::cream::v1::InstrumentType::Equity.into(), // Default
-                underlying: None,
-                strike: None,
-                expiry: None,
                 option_contract: None,
             }),
             status: convert_order_status(order_state.status),
@@ -374,21 +371,20 @@ impl ExecutionService for ExecutionServiceImpl {
                     error_message: None,
                 }))
             }
-            Err(e) => {
+            Err(cancel_error) => {
                 tracing::error!(
                     order_id = %order_id,
-                    error = %e,
+                    error = %cancel_error,
                     "Cancel order failed"
                 );
 
                 // Still return success but with error message
                 // since this matches FIX protocol behavior
-                let error_msg: String = e.to_string();
                 Ok(Response::new(CancelOrderResponse {
                     accepted: false,
                     order_id: order_id.clone(),
                     status: proto::cream::v1::OrderStatus::Unspecified.into(),
-                    error_message: Some(error_msg),
+                    error_message: Some(format!("{}", cancel_error)),
                 }))
             }
         }
