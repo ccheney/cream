@@ -2,8 +2,10 @@
  * @cream/mastra-kit - Agent Prompts, Tools, and Evaluation Utilities
  *
  * This package provides:
- * - Agent prompt templates
- * - Agent tool definitions
+ * - Agent configurations for the 8-agent network
+ * - System prompts optimized for Gemini
+ * - Consensus gate with dual-approval (Risk Manager + Critic)
+ * - Agent tools (stubbed until gRPC ready)
  * - Evaluation framework integrations (LangSmith, Braintrust, Promptfoo)
  * - Tracing infrastructure
  *
@@ -15,22 +17,20 @@ export const PACKAGE_NAME = "@cream/mastra-kit";
 export const VERSION = "0.1.0";
 
 // ============================================
+// Agent Types and Configuration
+// ============================================
+
+export * from "./types.js";
+export * from "./agents/index.js";
+export * from "./prompts/index.js";
+export * from "./consensus.js";
+export * from "./tools/index.js";
+
+// ============================================
 // Evaluation Framework Exports
 // ============================================
 
 export { default as braintrustConfig } from "../braintrust.config.js";
-
-// ============================================
-// Placeholder Exports
-// ============================================
-
-/**
- * Placeholder for agent definitions.
- * Full implementation coming in Phase 4.
- */
-export function placeholder(): string {
-  return "Mastra Kit - Coming in Phase 4";
-}
 
 // ============================================
 // Agent Types
