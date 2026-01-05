@@ -1,18 +1,9 @@
 {
-  "name": "@cream/api",
+  "name": "@cream/worker",
   "version": "0.1.0",
   "private": true,
-  "description": "Mastra server with trading agents and workflows",
+  "description": "Hourly scheduler triggering trading cycle workflow",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
@@ -23,11 +14,8 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
-    "@cream/domain": "workspace:*",
-    "@cream/mastra-kit": "workspace:*",
-    "@cream/storage": "workspace:*",
+    "@cream/api": "workspace:*",
     "@mastra/core": "^0.24.9",
-    "nice-grpc": "^2.1.10",
     "zod": "^4.0.0-beta.20"
   },
   "devDependencies": {

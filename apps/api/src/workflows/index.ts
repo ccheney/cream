@@ -1,7 +1,4 @@
 /**
- * Workflows
- *
- * Re-exports all workflow definitions.
+ * Workflow exports
  */
-
-export * from "./tradingCycle";
+export * from "./trading-cycle.js";

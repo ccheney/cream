@@ -277,7 +277,7 @@ describe("BacktestAdapter", () => {
 
       const closedOrders = await adapter.getOrders("closed");
       expect(closedOrders.length).toBe(1);
-      expect(closedOrders[0].status).toBe("filled");
+      expect(closedOrders[0]?.status).toBe("filled");
     });
   });
 

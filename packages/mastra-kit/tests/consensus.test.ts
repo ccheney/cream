@@ -193,8 +193,8 @@ describe("ConsensusGate", () => {
 
       const history = gate.getRejectionHistory();
       expect(history).toHaveLength(1);
-      expect(history[0].iteration).toBe(1);
-      expect(history[0].riskManagerVerdict).toBe("REJECT");
+      expect(history[0]?.iteration).toBe(1);
+      expect(history[0]?.riskManagerVerdict).toBe("REJECT");
     });
   });
 
