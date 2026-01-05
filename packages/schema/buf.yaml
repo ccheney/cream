@@ -7,9 +7,9 @@ modules:
   - path: .
     name: buf.build/cream/schema
 
-# Dependencies (common Google types)
+# Dependencies (Google well-known types: Timestamp, Struct)
 deps:
-  - buf.build/googleapis/googleapis
+  - buf.build/protocolbuffers/wellknowntypes
 
 # Linting configuration
 lint:

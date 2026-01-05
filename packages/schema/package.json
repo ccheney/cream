@@ -5,9 +5,10 @@
   "description": "Protobuf schema definitions for Cream trading system",
   "scripts": {
     "lint": "buf lint",
-    "breaking": "buf breaking --against '.git#branch=main'",
+    "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/schema'",
     "generate": "buf generate",
-    "clean": "rm -rf ../schema-gen/ts ../schema-gen/python ../schema-gen/rust"
+    "clean": "rm -rf ../schema-gen/ts ../schema-gen/python ../schema-gen/rust",
+    "build": "bun run lint && bun run generate"
   },
   "devDependencies": {}
 }

@@ -6,19 +6,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+import { CheckConstraintsRequest, CheckConstraintsResponse, GetAccountStateRequest, GetAccountStateResponse, GetPositionsRequest, GetPositionsResponse, StreamExecutionsRequest, StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse } from "./execution_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import {
-  CheckConstraintsRequest,
-  CheckConstraintsResponse,
-  GetAccountStateRequest,
-  GetAccountStateResponse,
-  GetPositionsRequest,
-  GetPositionsResponse,
-  StreamExecutionsRequest,
-  StreamExecutionsResponse,
-  SubmitOrderRequest,
-  SubmitOrderResponse,
-} from "./execution_pb.js";
 
 /**
  * Execution engine service
@@ -83,5 +72,6 @@ export const ExecutionService = {
       O: GetPositionsResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+
