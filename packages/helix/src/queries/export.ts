@@ -45,6 +45,25 @@ export interface ExportOptions {
   maxNodesPerType?: number;
   /** Include embeddings in export (default: true) */
   includeEmbeddings?: boolean;
+  /** Only export changes since this timestamp (ISO 8601) for incremental backups */
+  since?: string;
+}
+
+/**
+ * Incremental export result.
+ */
+export interface IncrementalExport extends HelixExport {
+  /** Whether this is an incremental export */
+  incremental: true;
+  /** Timestamp to use as 'since' for next incremental export */
+  nextSinceTimestamp: string;
+  /** Changes detected */
+  changes: {
+    nodesAdded: number;
+    nodesModified: number;
+    edgesAdded: number;
+    edgesModified: number;
+  };
 }
 
 /**
@@ -261,6 +280,321 @@ export async function importFromJson(
 ): Promise<ImportResult> {
   const data = JSON.parse(json) as HelixExport;
   return importData(client, data, options);
+}
+
+/**
+ * Export incremental changes since a timestamp.
+ *
+ * @param client - HelixDB client
+ * @param since - ISO 8601 timestamp to export changes from
+ * @param options - Export options (nodeTypes, edgeTypes, etc.)
+ * @returns Incremental export with change tracking
+ *
+ * @example
+ * ```typescript
+ * // First full export
+ * const full = await exportData(client);
+ * const lastExport = full.exportedAt;
+ *
+ * // Later: incremental export
+ * const incremental = await exportIncremental(client, lastExport);
+ * console.log(`Added: ${incremental.changes.nodesAdded} nodes`);
+ *
+ * // Use nextSinceTimestamp for next incremental
+ * const next = await exportIncremental(client, incremental.nextSinceTimestamp);
+ * ```
+ */
+export async function exportIncremental(
+  client: HelixClient,
+  since: string,
+  options: Omit<ExportOptions, "since"> = {}
+): Promise<IncrementalExport> {
+  const config = client.getConfig();
+  const exportTimestamp = new Date().toISOString();
+
+  // Get all node types if not specified
+  const nodeTypes = options.nodeTypes ?? (await getAllNodeTypes(client));
+  const edgeTypes = options.edgeTypes ?? (await getAllEdgeTypes(client));
+
+  const nodes: Record<string, GraphNode[]> = {};
+  const edges: Record<string, GraphEdge[]> = {};
+
+  let nodesAdded = 0;
+  let nodesModified = 0;
+  let edgesAdded = 0;
+  let edgesModified = 0;
+
+  // Export nodes changed since timestamp
+  for (const nodeType of nodeTypes) {
+    const typeNodes = await client.query<GraphNode[]>("exportNodesChangedSince", {
+      type: nodeType,
+      since,
+      limit: options.maxNodesPerType,
+      include_embeddings: options.includeEmbeddings ?? true,
+    });
+
+    if (typeNodes.data.length > 0) {
+      nodes[nodeType] = typeNodes.data;
+
+      // Count added vs modified based on created_at vs updated_at
+      for (const node of typeNodes.data) {
+        const createdAt = (node as Record<string, unknown>).created_at as string | undefined;
+        if (createdAt && createdAt >= since) {
+          nodesAdded++;
+        } else {
+          nodesModified++;
+        }
+      }
+    }
+  }
+
+  // Export edges changed since timestamp
+  for (const edgeType of edgeTypes) {
+    const typeEdges = await client.query<GraphEdge[]>("exportEdgesChangedSince", {
+      type: edgeType,
+      since,
+    });
+
+    if (typeEdges.data.length > 0) {
+      edges[edgeType] = typeEdges.data;
+
+      // Count added vs modified
+      for (const edge of typeEdges.data) {
+        const createdAt = (edge as Record<string, unknown>).created_at as string | undefined;
+        if (createdAt && createdAt >= since) {
+          edgesAdded++;
+        } else {
+          edgesModified++;
+        }
+      }
+    }
+  }
+
+  const nodeCount = Object.values(nodes).reduce((sum, arr) => sum + arr.length, 0);
+  const edgeCount = Object.values(edges).reduce((sum, arr) => sum + arr.length, 0);
+
+  return {
+    version: EXPORT_VERSION,
+    exportedAt: exportTimestamp,
+    source: `${config.host}:${config.port}`,
+    nodes,
+    edges,
+    metadata: {
+      nodeCount,
+      edgeCount,
+      nodeTypes: Object.keys(nodes),
+      edgeTypes: Object.keys(edges),
+    },
+    incremental: true,
+    nextSinceTimestamp: exportTimestamp,
+    changes: {
+      nodesAdded,
+      nodesModified,
+      edgesAdded,
+      edgesModified,
+    },
+  };
+}
+
+/**
+ * Validate export data structure.
+ *
+ * @param data - Data to validate
+ * @returns Validation result with any errors
+ */
+export function validateExport(data: unknown): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!data || typeof data !== "object") {
+    return { valid: false, errors: ["Export data must be an object"] };
+  }
+
+  const export_ = data as Record<string, unknown>;
+
+  // Check required fields
+  if (typeof export_.version !== "string") {
+    errors.push("Missing or invalid 'version' field");
+  }
+
+  if (typeof export_.exportedAt !== "string") {
+    errors.push("Missing or invalid 'exportedAt' field");
+  }
+
+  if (typeof export_.source !== "string") {
+    errors.push("Missing or invalid 'source' field");
+  }
+
+  if (!export_.nodes || typeof export_.nodes !== "object") {
+    errors.push("Missing or invalid 'nodes' field");
+  }
+
+  if (!export_.edges || typeof export_.edges !== "object") {
+    errors.push("Missing or invalid 'edges' field");
+  }
+
+  if (!export_.metadata || typeof export_.metadata !== "object") {
+    errors.push("Missing or invalid 'metadata' field");
+  } else {
+    const meta = export_.metadata as Record<string, unknown>;
+    if (typeof meta.nodeCount !== "number") {
+      errors.push("Missing or invalid 'metadata.nodeCount'");
+    }
+    if (typeof meta.edgeCount !== "number") {
+      errors.push("Missing or invalid 'metadata.edgeCount'");
+    }
+    if (!Array.isArray(meta.nodeTypes)) {
+      errors.push("Missing or invalid 'metadata.nodeTypes'");
+    }
+    if (!Array.isArray(meta.edgeTypes)) {
+      errors.push("Missing or invalid 'metadata.edgeTypes'");
+    }
+  }
+
+  // Check version compatibility
+  if (typeof export_.version === "string" && !isCompatibleVersion(export_.version)) {
+    errors.push(`Incompatible version: ${export_.version} (expected major version ${EXPORT_VERSION.split(".")[0]})`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Merge two exports together.
+ * Useful for combining incremental exports with a base export.
+ *
+ * @param base - Base export
+ * @param incremental - Incremental export to merge
+ * @returns Merged export
+ */
+export function mergeExports(base: HelixExport, incremental: HelixExport): HelixExport {
+  const nodes: Record<string, GraphNode[]> = { ...base.nodes };
+  const edges: Record<string, GraphEdge[]> = { ...base.edges };
+
+  // Merge nodes (incremental overwrites base for same IDs)
+  for (const [nodeType, typeNodes] of Object.entries(incremental.nodes)) {
+    if (!nodes[nodeType]) {
+      nodes[nodeType] = [];
+    }
+
+    const existingIds = new Set(nodes[nodeType].map((n) => n.id));
+    for (const node of typeNodes) {
+      if (existingIds.has(node.id)) {
+        // Replace existing node
+        const index = nodes[nodeType].findIndex((n) => n.id === node.id);
+        nodes[nodeType][index] = node;
+      } else {
+        nodes[nodeType].push(node);
+      }
+    }
+  }
+
+  // Merge edges
+  for (const [edgeType, typeEdges] of Object.entries(incremental.edges)) {
+    if (!edges[edgeType]) {
+      edges[edgeType] = [];
+    }
+
+    const existingIds = new Set(edges[edgeType].map((e) => `${e.source}-${e.target}`));
+    for (const edge of typeEdges) {
+      const edgeId = `${edge.source}-${edge.target}`;
+      if (existingIds.has(edgeId)) {
+        // Replace existing edge
+        const index = edges[edgeType].findIndex((e) => `${e.source}-${e.target}` === edgeId);
+        edges[edgeType][index] = edge;
+      } else {
+        edges[edgeType].push(edge);
+      }
+    }
+  }
+
+  const nodeCount = Object.values(nodes).reduce((sum, arr) => sum + arr.length, 0);
+  const edgeCount = Object.values(edges).reduce((sum, arr) => sum + arr.length, 0);
+
+  return {
+    version: incremental.version,
+    exportedAt: incremental.exportedAt,
+    source: incremental.source,
+    nodes,
+    edges,
+    metadata: {
+      nodeCount,
+      edgeCount,
+      nodeTypes: [...new Set([...base.metadata.nodeTypes, ...incremental.metadata.nodeTypes])],
+      edgeTypes: [...new Set([...base.metadata.edgeTypes, ...incremental.metadata.edgeTypes])],
+    },
+  };
+}
+
+// ============================================================================
+// Abstraction Layer Interface
+// ============================================================================
+
+/**
+ * Graph database abstraction interface.
+ * Allows swapping HelixDB for Neo4j, Weaviate, or other graph databases.
+ */
+export interface IGraphDatabase {
+  /** Export all data */
+  exportAll(options?: ExportOptions): Promise<HelixExport>;
+
+  /** Export incremental changes */
+  exportIncremental(since: string, options?: Omit<ExportOptions, "since">): Promise<IncrementalExport>;
+
+  /** Import data */
+  importData(data: HelixExport, options?: ImportOptions): Promise<ImportResult>;
+
+  /** Get all node types */
+  getNodeTypes(): Promise<string[]>;
+
+  /** Get all edge types */
+  getEdgeTypes(): Promise<string[]>;
+
+  /** Check connection health */
+  healthCheck(): Promise<{ healthy: boolean; latencyMs: number }>;
+}
+
+/**
+ * HelixDB implementation of IGraphDatabase.
+ */
+export class HelixGraphDatabase implements IGraphDatabase {
+  constructor(private client: HelixClient) {}
+
+  async exportAll(options?: ExportOptions): Promise<HelixExport> {
+    return exportData(this.client, options);
+  }
+
+  async exportIncremental(since: string, options?: Omit<ExportOptions, "since">): Promise<IncrementalExport> {
+    return exportIncremental(this.client, since, options);
+  }
+
+  async importData(data: HelixExport, options?: ImportOptions): Promise<ImportResult> {
+    return importData(this.client, data, options);
+  }
+
+  async getNodeTypes(): Promise<string[]> {
+    return getAllNodeTypes(this.client);
+  }
+
+  async getEdgeTypes(): Promise<string[]> {
+    return getAllEdgeTypes(this.client);
+  }
+
+  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number }> {
+    const start = Date.now();
+    try {
+      await this.client.query("healthCheck", {});
+      return { healthy: true, latencyMs: Date.now() - start };
+    } catch {
+      return { healthy: false, latencyMs: Date.now() - start };
+    }
+  }
+}
+
+/**
+ * Create a graph database instance from a HelixDB client.
+ */
+export function createGraphDatabase(client: HelixClient): IGraphDatabase {
+  return new HelixGraphDatabase(client);
 }
 
 // ============================================================================

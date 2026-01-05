@@ -43,14 +43,21 @@ export {
 } from "./client";
 // Export/Import
 export {
+  createGraphDatabase,
   type ExportOptions,
   exportData,
+  exportIncremental,
   exportToJson,
   type HelixExport,
+  HelixGraphDatabase,
+  type IGraphDatabase,
   type ImportOptions,
   type ImportResult,
   importData,
   importFromJson,
+  type IncrementalExport,
+  mergeExports,
+  validateExport,
 } from "./queries/export";
 
 // Graph traversal
