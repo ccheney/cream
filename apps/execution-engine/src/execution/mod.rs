@@ -5,7 +5,13 @@
 mod alpaca;
 mod gateway;
 mod state;
+pub mod tactics;
 
 pub use alpaca::AlpacaAdapter;
-pub use gateway::ExecutionGateway;
+pub use gateway::{BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError};
 pub use state::OrderStateManager;
+pub use tactics::{
+    AdaptiveConfig, AggressiveLimitConfig, IcebergConfig, MarketState, OrderPurpose,
+    PassiveLimitConfig, SliceType, TacticConfig, TacticSelector, TacticSelectionContext,
+    TacticType, TacticUrgency, TwapConfig, Urgency, VwapConfig,
+};
