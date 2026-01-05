@@ -138,6 +138,55 @@ export const TickersSnapshotResponseSchema = z.object({
 });
 export type TickersSnapshotResponse = z.infer<typeof TickersSnapshotResponseSchema>;
 
+/**
+ * Stock split schema.
+ */
+export const StockSplitSchema = z.object({
+  ticker: z.string(),
+  execution_date: z.string(),
+  split_from: z.number(),
+  split_to: z.number(),
+});
+export type StockSplit = z.infer<typeof StockSplitSchema>;
+
+/**
+ * Stock splits response.
+ */
+export const StockSplitsResponseSchema = z.object({
+  results: z.array(StockSplitSchema).optional(),
+  status: z.string(),
+  request_id: z.string().optional(),
+  next_url: z.string().optional(),
+});
+export type StockSplitsResponse = z.infer<typeof StockSplitsResponseSchema>;
+
+/**
+ * Dividend schema.
+ */
+export const DividendSchema = z.object({
+  ticker: z.string(),
+  cash_amount: z.number(),
+  currency: z.string().optional(),
+  declaration_date: z.string().optional(),
+  dividend_type: z.string(), // CD, SC, LT, ST
+  ex_dividend_date: z.string(),
+  frequency: z.number().optional(), // 1=annual, 2=biannual, 4=quarterly, 12=monthly
+  pay_date: z.string().optional(),
+  record_date: z.string().optional(),
+});
+export type Dividend = z.infer<typeof DividendSchema>;
+
+/**
+ * Dividends response.
+ */
+export const DividendsResponseSchema = z.object({
+  results: z.array(DividendSchema).optional(),
+  status: z.string(),
+  request_id: z.string().optional(),
+  next_url: z.string().optional(),
+});
+export type DividendsResponse = z.infer<typeof DividendsResponseSchema>;
+
 // ============================================
 // Polygon Client
 // ============================================
@@ -273,6 +322,60 @@ export class PolygonClient {
   async getTickerSnapshot(ticker: string): Promise<Snapshot | undefined> {
     const response = await this.getAllTickersSnapshot([ticker]);
     return response.tickers?.[0];
+  }
+
+  /**
+   * Get stock splits for a ticker.
+   *
+   * @see https://polygon.io/docs/stocks/get_v3_reference_splits
+   */
+  async getStockSplits(
+    options: {
+      ticker?: string;
+      executionDateGte?: string; // YYYY-MM-DD
+      executionDateLte?: string;
+      limit?: number;
+    } = {}
+  ): Promise<StockSplitsResponse> {
+    return this.client.get(
+      "/v3/reference/splits",
+      {
+        ticker: options.ticker,
+        "execution_date.gte": options.executionDateGte,
+        "execution_date.lte": options.executionDateLte,
+        limit: options.limit ?? 1000,
+        apiKey: this.apiKey,
+      },
+      StockSplitsResponseSchema
+    );
+  }
+
+  /**
+   * Get dividends for a ticker.
+   *
+   * @see https://polygon.io/docs/stocks/get_v3_reference_dividends
+   */
+  async getDividends(
+    options: {
+      ticker?: string;
+      exDividendDateGte?: string; // YYYY-MM-DD
+      exDividendDateLte?: string;
+      dividendType?: "CD" | "SC" | "LT" | "ST"; // Cash, Special cash, Long-term, Short-term
+      limit?: number;
+    } = {}
+  ): Promise<DividendsResponse> {
+    return this.client.get(
+      "/v3/reference/dividends",
+      {
+        ticker: options.ticker,
+        "ex_dividend_date.gte": options.exDividendDateGte,
+        "ex_dividend_date.lte": options.exDividendDateLte,
+        dividend_type: options.dividendType,
+        limit: options.limit ?? 1000,
+        apiKey: this.apiKey,
+      },
+      DividendsResponseSchema
+    );
   }
 
   /**

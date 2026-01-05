@@ -153,6 +153,41 @@ export {
   type ValidationResult,
 } from "./validation";
 
+// Corporate actions
+export {
+  // Split adjustments
+  type SplitAdjustment,
+  type AdjustedCandle,
+  type CandleWithTimestamp,
+  calculateSplitRatio,
+  toSplitAdjustment,
+  adjustPrice,
+  adjustVolume,
+  calculateCumulativeAdjustmentFactor,
+  getApplicableSplits,
+  adjustCandleForSplits,
+  adjustCandlesForSplits,
+  unadjustPrice,
+
+  // Dividend adjustments
+  type DividendInfo,
+  type DividendAdjustedReturn,
+  toDividendInfo,
+  calculateDividendYield,
+  calculateAnnualizedYield,
+  getDividendsFromDate,
+  getDividendsInRange,
+  sumDividends,
+  calculateDividendAdjustedReturn,
+  adjustPriceForDividend,
+  calculateDRIPShares,
+  isSpecialDividend,
+  getRegularDividends,
+  getSpecialDividends,
+  getUpcomingDividends,
+  getDividendsGoingExWithin,
+} from "./corporate-actions";
+
 /**
  * Package version.
  */
