@@ -8,9 +8,13 @@
  * @see docs/plans/ui/30-themes.md
  */
 
+/* CSS Reset - must load first for consistent baseline */
+@import '../styles/reset.css';
+
+/* Tailwind CSS */
 @import 'tailwindcss';
 
-/* Import Design Tokens */
+/* Design Tokens */
 @import '../styles/tokens/index.css';
 
 /* ============================================
