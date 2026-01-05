@@ -38,6 +38,7 @@ pub mod error;
 pub mod execution;
 pub mod models;
 pub mod observability;
+pub mod options;
 pub mod resilience;
 pub mod risk;
 pub mod server;
@@ -48,6 +49,13 @@ pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
     OrderState, SubmitOrdersRequest,
+};
+pub use options::{
+    aggregate_greeks, assess_early_exercise_risk, calculate_assignment_risk,
+    calculate_portfolio_greeks, validate_leg_ratios, validate_multi_leg_order, AssignmentRisk,
+    AssignmentRiskLevel, EarlyExerciseAlert, EarlyExerciseRisk, Greeks, MultiLegOrder,
+    MultiLegPosition, MultiLegValidationResult, OptionContract, OptionLeg, OptionStyle, OptionType,
+    PositionLimits, PositionTracker,
 };
 pub use risk::ConstraintValidator;
 pub use server::ExecutionServer;
