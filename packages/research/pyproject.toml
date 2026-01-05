@@ -36,6 +36,10 @@ dependencies = [
     # LLM Integration
     "google-generativeai>=0.8",  # Google Gemini API for LLM-as-judge
     "tenacity>=9.0",  # Retry logic with exponential backoff
+
+    # Options Greeks computation
+    "scipy>=1.13",  # Statistical functions for Black-Scholes
+    "optionlab>=1.5",  # Options strategy analysis and visualization
 ]
 
 [project.optional-dependencies]
