@@ -246,5 +246,27 @@ export {
   toIso8601,
 } from "./time";
 
+// LLM parsing with retry logic
+export {
+  type AgentType,
+  allowsSkipOnFailure,
+  cleanLLMOutput,
+  defaultLogger,
+  formatJsonParseError,
+  formatZodErrors,
+  formatZodErrorString,
+  type FormattedZodError,
+  generateRetryPrompt,
+  generateSchemaExample,
+  type ParseAttempt,
+  type ParseLogger,
+  parseOnce,
+  type ParseOptions,
+  type ParseResult,
+  parseWithRetry,
+  redactSensitiveData,
+  requiresRejectionOnFailure,
+  schemaToDescription,
+} from "./llm-parsing";
 // WebSocket schemas
 export * from "./websocket/index.js";
