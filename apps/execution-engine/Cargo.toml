@@ -32,6 +32,14 @@ prost = "0.14.1"
 prost-types = "0.14.1"
 tokio-stream = "0.1.18"
 
+# Arrow Flight (high-performance data transport)
+arrow = { version = "54.0.0", features = ["ipc", "json"] }
+arrow-flight = { version = "54.0.0", features = ["flight-sql-experimental"] }
+arrow-schema = "54.0.0"
+arrow-array = "54.0.0"
+arrow-ipc = "54.0.0"
+futures = "0.3"
+
 # HTTP server (using Axum for JSON API until buf generate is available)
 axum = "0.8.8"
 tower = "0.5.2"
@@ -75,8 +83,12 @@ tracing-opentelemetry = "0.32"
 config = "0.15.19"
 regex = "1.12.2"
 
+# HTTP client for broker APIs
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
 # Turso Database (Rust rewrite of SQLite)
 turso = "0.4.0-pre.19"
+async-trait = "0.1.89"
 
 [dev-dependencies]
 # Testing
@@ -85,6 +97,7 @@ mockall = "0.14"
 proptest = "1.9"
 criterion = { version = "0.8.1", features = ["html_reports"] }
 test-case = "3.3.1"
+wiremock = "0.6"
 
 [build-dependencies]
 # Protobuf codegen (future)

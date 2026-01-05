@@ -8,6 +8,8 @@ use crate::models::{
     OrderType, SubmitOrdersRequest, TimeInForce,
 };
 
+use super::gateway::{BrokerAdapter, BrokerError};
+
 /// Errors from the Alpaca adapter.
 #[derive(Debug, Error)]
 pub enum AlpacaError {
@@ -215,6 +217,68 @@ impl AlpacaAdapter {
             buying_power: Decimal::new(200000, 0),
             cash: Decimal::new(50000, 0),
         })
+    }
+}
+
+// Implement BrokerAdapter trait for AlpacaAdapter
+#[async_trait::async_trait]
+impl BrokerAdapter for AlpacaAdapter {
+    async fn submit_orders(
+        &self,
+        request: &SubmitOrdersRequest,
+    ) -> Result<ExecutionAck, BrokerError> {
+        self.submit_orders(request)
+            .await
+            .map_err(|e| match e {
+                AlpacaError::Http(msg) => BrokerError::Http(msg),
+                AlpacaError::Api { code, message } => BrokerError::Api { code, message },
+                AlpacaError::OrderRejected(msg) => BrokerError::OrderRejected(msg),
+                AlpacaError::AuthenticationFailed => BrokerError::AuthenticationFailed,
+                AlpacaError::RateLimited { retry_after_secs } => {
+                    BrokerError::RateLimited { retry_after_secs }
+                }
+                AlpacaError::EnvironmentMismatch { expected, actual } => {
+                    BrokerError::EnvironmentMismatch { expected, actual }
+                }
+            })
+    }
+
+    async fn get_order_status(&self, broker_order_id: &str) -> Result<OrderState, BrokerError> {
+        self.get_order_status(broker_order_id)
+            .await
+            .map_err(|e| match e {
+                AlpacaError::Http(msg) => BrokerError::Http(msg),
+                AlpacaError::Api { code, message } => BrokerError::Api { code, message },
+                AlpacaError::OrderRejected(msg) => BrokerError::OrderRejected(msg),
+                AlpacaError::AuthenticationFailed => BrokerError::AuthenticationFailed,
+                AlpacaError::RateLimited { retry_after_secs } => {
+                    BrokerError::RateLimited { retry_after_secs }
+                }
+                AlpacaError::EnvironmentMismatch { expected, actual } => {
+                    BrokerError::EnvironmentMismatch { expected, actual }
+                }
+            })
+    }
+
+    async fn cancel_order(&self, broker_order_id: &str) -> Result<(), BrokerError> {
+        self.cancel_order(broker_order_id)
+            .await
+            .map_err(|e| match e {
+                AlpacaError::Http(msg) => BrokerError::Http(msg),
+                AlpacaError::Api { code, message } => BrokerError::Api { code, message },
+                AlpacaError::OrderRejected(msg) => BrokerError::OrderRejected(msg),
+                AlpacaError::AuthenticationFailed => BrokerError::AuthenticationFailed,
+                AlpacaError::RateLimited { retry_after_secs } => {
+                    BrokerError::RateLimited { retry_after_secs }
+                }
+                AlpacaError::EnvironmentMismatch { expected, actual } => {
+                    BrokerError::EnvironmentMismatch { expected, actual }
+                }
+            })
+    }
+
+    fn broker_name(&self) -> &str {
+        "Alpaca"
     }
 }
 

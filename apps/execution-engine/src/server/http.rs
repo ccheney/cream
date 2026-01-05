@@ -18,19 +18,19 @@ use std::str::FromStr;
 use tonic::Code;
 
 use crate::error::{ErrorCode, ExecutionError};
-use crate::execution::ExecutionGateway;
+use crate::execution::{ExecutionGateway, AlpacaAdapter};
 use crate::models::{DecisionPlan, Environment};
 
 /// Shared state for the HTTP server.
 #[derive(Clone)]
 pub struct ExecutionServer {
-    gateway: Arc<ExecutionGateway>,
+    gateway: Arc<ExecutionGateway<AlpacaAdapter>>,
 }
 
 impl ExecutionServer {
     /// Create a new execution server.
     #[must_use]
-    pub fn new(gateway: ExecutionGateway) -> Self {
+    pub fn new(gateway: ExecutionGateway<AlpacaAdapter>) -> Self {
         Self {
             gateway: Arc::new(gateway),
         }
