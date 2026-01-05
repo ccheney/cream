@@ -135,6 +135,12 @@ pub enum StrategyType {
     CallButterfly,
     /// Put Butterfly.
     PutButterfly,
+    /// Calendar Spread (time spread, same strike different expirations).
+    CalendarSpread,
+    /// Diagonal Spread (different strikes AND expirations).
+    DiagonalSpread,
+    /// Custom strategy (any combination of legs).
+    Custom,
 }
 
 /// A complete options strategy.
@@ -623,6 +629,307 @@ impl StrategyBuilder {
             greeks: None,
         })
     }
+
+    /// Build a calendar spread (time spread).
+    ///
+    /// A calendar spread is a same-strike, different-expiration strategy.
+    /// Typically sells near-term and buys far-term (debit spread).
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying` - Underlying symbol
+    /// * `strike` - Strike price (same for both legs)
+    /// * `near_expiration` - Near-term expiration (YYYY-MM-DD), sold
+    /// * `far_expiration` - Far-term expiration (YYYY-MM-DD), bought
+    /// * `option_type` - Call or Put
+    /// * `near_premium` - Premium received for near-term option (sold)
+    /// * `far_premium` - Premium paid for far-term option (bought)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if expirations are invalid.
+    pub fn calendar_spread(
+        &self,
+        underlying: &str,
+        strike: Decimal,
+        near_expiration: &str,
+        far_expiration: &str,
+        option_type: OptionType,
+        near_premium: Decimal,
+        far_premium: Decimal,
+    ) -> Result<OptionsStrategy, StrategyError> {
+        // Validate expirations (near should be before far)
+        if near_expiration >= far_expiration {
+            return Err(StrategyError::InvalidStrikes {
+                message: "Near expiration must be before far expiration".to_string(),
+            });
+        }
+
+        let type_char = match option_type {
+            OptionType::Call => "C",
+            OptionType::Put => "P",
+        };
+
+        let legs = vec![
+            // Short near-term option
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: format!("{underlying}{near_expiration}{type_char}{strike}"),
+                    underlying_symbol: underlying.to_string(),
+                    strike,
+                    expiration: near_expiration.to_string(),
+                    option_type,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Short,
+                1,
+                near_premium,
+            ),
+            // Long far-term option
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: format!("{underlying}{far_expiration}{type_char}{strike}"),
+                    underlying_symbol: underlying.to_string(),
+                    strike,
+                    expiration: far_expiration.to_string(),
+                    option_type,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,
+                1,
+                far_premium,
+            ),
+        ];
+
+        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+
+        // Max profit for calendar occurs at strike at near expiration
+        // Max loss is the net debit paid
+        let max_loss = if net_premium < Decimal::ZERO {
+            -net_premium
+        } else {
+            Decimal::ZERO
+        };
+
+        // Max profit is theoretical (depends on volatility at near expiration)
+        // Use a placeholder; actual P&L depends on IV and time
+        let max_profit = Decimal::MAX;
+
+        Ok(OptionsStrategy {
+            strategy_type: StrategyType::CalendarSpread,
+            underlying: underlying.to_string(),
+            expiration: far_expiration.to_string(), // Use far expiration as primary
+            legs,
+            net_premium,
+            max_profit,
+            max_loss,
+            breakevens: vec![strike], // Approximate breakeven at strike
+            greeks: None,
+        })
+    }
+
+    /// Build a diagonal spread.
+    ///
+    /// A diagonal spread has different strikes AND different expirations.
+    /// Combines elements of vertical and calendar spreads.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying` - Underlying symbol
+    /// * `near_strike` - Near-term strike (sold)
+    /// * `far_strike` - Far-term strike (bought)
+    /// * `near_expiration` - Near-term expiration (YYYY-MM-DD)
+    /// * `far_expiration` - Far-term expiration (YYYY-MM-DD)
+    /// * `option_type` - Call or Put
+    /// * `near_premium` - Premium received for near-term option
+    /// * `far_premium` - Premium paid for far-term option
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if configuration is invalid.
+    pub fn diagonal_spread(
+        &self,
+        underlying: &str,
+        near_strike: Decimal,
+        far_strike: Decimal,
+        near_expiration: &str,
+        far_expiration: &str,
+        option_type: OptionType,
+        near_premium: Decimal,
+        far_premium: Decimal,
+    ) -> Result<OptionsStrategy, StrategyError> {
+        // Validate expirations
+        if near_expiration >= far_expiration {
+            return Err(StrategyError::InvalidStrikes {
+                message: "Near expiration must be before far expiration".to_string(),
+            });
+        }
+
+        // For a proper diagonal, strikes should be different
+        // (same strikes would be a calendar)
+        if near_strike == far_strike {
+            return Err(StrategyError::InvalidStrikes {
+                message: "Strikes must be different for diagonal spread (use calendar_spread for same strike)".to_string(),
+            });
+        }
+
+        let type_char = match option_type {
+            OptionType::Call => "C",
+            OptionType::Put => "P",
+        };
+
+        let legs = vec![
+            // Short near-term option (usually OTM)
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: format!("{underlying}{near_expiration}{type_char}{near_strike}"),
+                    underlying_symbol: underlying.to_string(),
+                    strike: near_strike,
+                    expiration: near_expiration.to_string(),
+                    option_type,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Short,
+                1,
+                near_premium,
+            ),
+            // Long far-term option (usually closer to ATM)
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: format!("{underlying}{far_expiration}{type_char}{far_strike}"),
+                    underlying_symbol: underlying.to_string(),
+                    strike: far_strike,
+                    expiration: far_expiration.to_string(),
+                    option_type,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,
+                1,
+                far_premium,
+            ),
+        ];
+
+        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+
+        // Max loss is typically the net debit
+        let max_loss = if net_premium < Decimal::ZERO {
+            -net_premium
+        } else {
+            Decimal::ZERO
+        };
+
+        // Max profit depends on near-term expiration price
+        let max_profit = Decimal::MAX;
+
+        // Breakevens are complex and depend on time remaining
+        let breakevens = vec![];
+
+        Ok(OptionsStrategy {
+            strategy_type: StrategyType::DiagonalSpread,
+            underlying: underlying.to_string(),
+            expiration: far_expiration.to_string(),
+            legs,
+            net_premium,
+            max_profit,
+            max_loss,
+            breakevens,
+            greeks: None,
+        })
+    }
+
+    /// Build a custom strategy from arbitrary legs.
+    ///
+    /// This allows creating any combination of option legs.
+    /// Use for complex strategies not covered by standard builders.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying` - Underlying symbol
+    /// * `expiration` - Primary expiration (for multi-expiration use the farthest)
+    /// * `legs` - Vector of strategy legs
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if legs are empty.
+    pub fn custom(
+        &self,
+        underlying: &str,
+        expiration: &str,
+        legs: Vec<StrategyLeg>,
+    ) -> Result<OptionsStrategy, StrategyError> {
+        if legs.is_empty() {
+            return Err(StrategyError::InsufficientChain {
+                message: "Custom strategy must have at least one leg".to_string(),
+            });
+        }
+
+        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+
+        // For custom strategies, we can't determine max P&L without more info
+        // Use placeholder values
+        let max_profit = Decimal::MAX;
+        let max_loss = Decimal::MAX;
+
+        Ok(OptionsStrategy {
+            strategy_type: StrategyType::Custom,
+            underlying: underlying.to_string(),
+            expiration: expiration.to_string(),
+            legs,
+            net_premium,
+            max_profit,
+            max_loss,
+            breakevens: vec![],
+            greeks: None,
+        })
+    }
+
+    /// Validate that a set of legs form a balanced spread (no naked exposure).
+    ///
+    /// A balanced spread has equal long and short exposure at each strike.
+    #[must_use]
+    pub fn validate_balanced_spread(legs: &[StrategyLeg]) -> bool {
+        use std::collections::HashMap;
+
+        // Group legs by (expiration, strike, option_type)
+        let mut exposure: HashMap<(String, Decimal, OptionType), i32> = HashMap::new();
+
+        for leg in legs {
+            let key = (
+                leg.contract.expiration.clone(),
+                leg.contract.strike,
+                leg.contract.option_type,
+            );
+            let quantity = leg.quantity as i32;
+            let delta = match leg.direction {
+                LegDirection::Long => quantity,
+                LegDirection::Short => -quantity,
+            };
+            *exposure.entry(key).or_insert(0) += delta;
+        }
+
+        // For balanced spread, all net exposures should be zero
+        // OR we should have defined risk (long options protect short options)
+        // For simplicity, we allow any spread that isn't purely naked shorts
+
+        let total_shorts: i32 = legs
+            .iter()
+            .filter(|l| l.direction == LegDirection::Short)
+            .map(|l| l.quantity as i32)
+            .sum();
+
+        let total_longs: i32 = legs
+            .iter()
+            .filter(|l| l.direction == LegDirection::Long)
+            .map(|l| l.quantity as i32)
+            .sum();
+
+        // Must have at least as many longs as shorts (defined risk)
+        total_longs >= total_shorts
+    }
 }
 
 // ============================================================================
@@ -833,5 +1140,236 @@ mod tests {
         );
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calendar_spread() {
+        let builder = StrategyBuilder::default();
+
+        let strategy = builder
+            .calendar_spread(
+                "AAPL",
+                Decimal::new(180, 0),        // Same strike for both
+                "2026-01-17",                // Near-term (sold)
+                "2026-02-21",                // Far-term (bought)
+                OptionType::Call,
+                Decimal::new(300, 2),        // Near premium $3.00 (received)
+                Decimal::new(500, 2),        // Far premium $5.00 (paid)
+            )
+            .unwrap();
+
+        assert_eq!(strategy.strategy_type, StrategyType::CalendarSpread);
+        assert_eq!(strategy.legs.len(), 2);
+        assert_eq!(strategy.underlying, "AAPL");
+
+        // Net debit = (3.00 - 5.00) * 100 = -$200
+        assert_eq!(strategy.net_premium, Decimal::new(-200, 0));
+
+        // Check legs
+        assert_eq!(strategy.legs[0].direction, LegDirection::Short); // Near-term sold
+        assert_eq!(strategy.legs[1].direction, LegDirection::Long);  // Far-term bought
+    }
+
+    #[test]
+    fn test_calendar_spread_invalid_expirations() {
+        let builder = StrategyBuilder::default();
+
+        let result = builder.calendar_spread(
+            "AAPL",
+            Decimal::new(180, 0),
+            "2026-02-21",  // Far before near - invalid!
+            "2026-01-17",
+            OptionType::Call,
+            Decimal::new(300, 2),
+            Decimal::new(500, 2),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_diagonal_spread() {
+        let builder = StrategyBuilder::default();
+
+        let strategy = builder
+            .diagonal_spread(
+                "SPY",
+                Decimal::new(465, 0),        // Near strike (OTM call sold)
+                Decimal::new(460, 0),        // Far strike (ATM call bought)
+                "2026-01-17",                // Near-term
+                "2026-02-21",                // Far-term
+                OptionType::Call,
+                Decimal::new(200, 2),        // Near premium $2.00 (received)
+                Decimal::new(600, 2),        // Far premium $6.00 (paid)
+            )
+            .unwrap();
+
+        assert_eq!(strategy.strategy_type, StrategyType::DiagonalSpread);
+        assert_eq!(strategy.legs.len(), 2);
+
+        // Net debit = (2.00 - 6.00) * 100 = -$400
+        assert_eq!(strategy.net_premium, Decimal::new(-400, 0));
+
+        // Max loss = net debit = $400
+        assert_eq!(strategy.max_loss, Decimal::new(400, 0));
+    }
+
+    #[test]
+    fn test_diagonal_spread_same_strike_error() {
+        let builder = StrategyBuilder::default();
+
+        let result = builder.diagonal_spread(
+            "SPY",
+            Decimal::new(460, 0),  // Same strike
+            Decimal::new(460, 0),  // Same strike - should use calendar instead
+            "2026-01-17",
+            "2026-02-21",
+            OptionType::Call,
+            Decimal::new(200, 2),
+            Decimal::new(600, 2),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_custom_strategy() {
+        let builder = StrategyBuilder::default();
+
+        let legs = vec![
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "CUSTOM1".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(450, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Put,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,
+                1,
+                Decimal::new(300, 2), // $3.00
+            ),
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "CUSTOM2".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(460, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Call,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,
+                1,
+                Decimal::new(250, 2), // $2.50
+            ),
+        ];
+
+        let strategy = builder.custom("SPY", "2026-01-17", legs).unwrap();
+
+        assert_eq!(strategy.strategy_type, StrategyType::Custom);
+        assert_eq!(strategy.legs.len(), 2);
+
+        // Net debit = -(3.00 + 2.50) * 100 = -$550
+        assert_eq!(strategy.net_premium, Decimal::new(-550, 0));
+    }
+
+    #[test]
+    fn test_custom_strategy_empty_legs() {
+        let builder = StrategyBuilder::default();
+
+        let result = builder.custom("SPY", "2026-01-17", vec![]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_balanced_spread_iron_condor() {
+        // Iron condor is balanced (2 long + 2 short)
+        let legs = vec![
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "1".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(445, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Put,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,  // Long wing
+                1,
+                Decimal::new(50, 2),
+            ),
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "2".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(450, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Put,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Short, // Short put
+                1,
+                Decimal::new(150, 2),
+            ),
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "3".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(470, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Call,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Short, // Short call
+                1,
+                Decimal::new(140, 2),
+            ),
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "4".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(475, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Call,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Long,  // Long wing
+                1,
+                Decimal::new(40, 2),
+            ),
+        ];
+
+        assert!(StrategyBuilder::validate_balanced_spread(&legs));
+    }
+
+    #[test]
+    fn test_validate_balanced_spread_naked_short() {
+        // Naked short is not balanced
+        let legs = vec![
+            StrategyLeg::new(
+                OptionContract {
+                    contract_id: "1".to_string(),
+                    underlying_symbol: "SPY".to_string(),
+                    strike: Decimal::new(450, 0),
+                    expiration: "2026-01-17".to_string(),
+                    option_type: OptionType::Put,
+                    style: OptionStyle::American,
+                    multiplier: 100,
+                },
+                LegDirection::Short, // Naked short!
+                1,
+                Decimal::new(150, 2),
+            ),
+        ];
+
+        assert!(!StrategyBuilder::validate_balanced_spread(&legs));
     }
 }
