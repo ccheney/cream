@@ -130,6 +130,105 @@ export const QuoteSchema = z.object({
 });
 export type Quote = z.infer<typeof QuoteSchema>;
 
+/**
+ * Historical constituent change schema.
+ */
+export const ConstituentChangeSchema = z.object({
+  dateAdded: z.string().nullable(),
+  addedSecurity: z.string().nullable(),
+  removedTicker: z.string().nullable(),
+  removedSecurity: z.string().nullable(),
+  symbol: z.string(),
+  reason: z.string().optional(),
+});
+export type ConstituentChange = z.infer<typeof ConstituentChangeSchema>;
+
+/**
+ * Stock screener result schema.
+ */
+export const ScreenerResultSchema = z.object({
+  symbol: z.string(),
+  companyName: z.string(),
+  marketCap: z.number().nullable(),
+  sector: z.string().nullable(),
+  industry: z.string().nullable(),
+  beta: z.number().nullable(),
+  price: z.number(),
+  lastAnnualDividend: z.number().nullable(),
+  volume: z.number(),
+  exchange: z.string(),
+  exchangeShortName: z.string().optional(),
+  country: z.string().nullable(),
+  isEtf: z.boolean().optional(),
+  isActivelyTrading: z.boolean().optional(),
+});
+export type ScreenerResult = z.infer<typeof ScreenerResultSchema>;
+
+/**
+ * Earnings calendar event schema.
+ */
+export const EarningsEventSchema = z.object({
+  date: z.string(),
+  symbol: z.string(),
+  eps: z.number().nullable(),
+  epsEstimated: z.number().nullable(),
+  time: z.string().nullable(), // "bmo" (before market open), "amc" (after market close)
+  revenue: z.number().nullable(),
+  revenueEstimated: z.number().nullable(),
+  updatedFromDate: z.string().optional(),
+  fiscalDateEnding: z.string().optional(),
+});
+export type EarningsEvent = z.infer<typeof EarningsEventSchema>;
+
+/**
+ * Stock split schema.
+ */
+export const StockSplitSchema = z.object({
+  date: z.string(),
+  label: z.string(),
+  symbol: z.string(),
+  numerator: z.number(),
+  denominator: z.number(),
+});
+export type StockSplit = z.infer<typeof StockSplitSchema>;
+
+/**
+ * Stock dividend schema.
+ */
+export const StockDividendSchema = z.object({
+  date: z.string(),
+  label: z.string(),
+  symbol: z.string(),
+  dividend: z.number().nullable(),
+  adjDividend: z.number().nullable(),
+  recordDate: z.string().nullable(),
+  paymentDate: z.string().nullable(),
+  declarationDate: z.string().nullable(),
+});
+export type StockDividend = z.infer<typeof StockDividendSchema>;
+
+/**
+ * Symbol change schema.
+ */
+export const SymbolChangeSchema = z.object({
+  date: z.string(),
+  name: z.string(),
+  oldSymbol: z.string(),
+  newSymbol: z.string(),
+});
+export type SymbolChange = z.infer<typeof SymbolChangeSchema>;
+
+/**
+ * Press release schema.
+ */
+export const PressReleaseSchema = z.object({
+  symbol: z.string(),
+  date: z.string(),
+  title: z.string(),
+  text: z.string(),
+});
+export type PressRelease = z.infer<typeof PressReleaseSchema>;
+
 // ============================================
 // FMP Client
 // ============================================
@@ -268,6 +367,177 @@ export class FmpClient {
   async getQuote(symbol: string): Promise<Quote | undefined> {
     const quotes = await this.getQuotes([symbol]);
     return quotes[0];
+  }
+
+  // ============================================
+  // Historical Constituent Tracking
+  // ============================================
+
+  /**
+   * Get historical S&P 500 constituent changes.
+   */
+  async getSP500ConstituentChanges(): Promise<ConstituentChange[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical/sp500_constituent`,
+      { apikey: this.apiKey },
+      z.array(ConstituentChangeSchema)
+    );
+  }
+
+  /**
+   * Get historical NASDAQ 100 constituent changes.
+   */
+  async getNasdaq100ConstituentChanges(): Promise<ConstituentChange[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical/nasdaq_constituent`,
+      { apikey: this.apiKey },
+      z.array(ConstituentChangeSchema)
+    );
+  }
+
+  /**
+   * Get historical Dow Jones constituent changes.
+   */
+  async getDowJonesConstituentChanges(): Promise<ConstituentChange[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical/dowjones_constituent`,
+      { apikey: this.apiKey },
+      z.array(ConstituentChangeSchema)
+    );
+  }
+
+  // ============================================
+  // Stock Screener
+  // ============================================
+
+  /**
+   * Screen stocks by various filters.
+   */
+  async screenStocks(filters: {
+    marketCapMoreThan?: number;
+    marketCapLowerThan?: number;
+    priceMoreThan?: number;
+    priceLowerThan?: number;
+    betaMoreThan?: number;
+    betaLowerThan?: number;
+    volumeMoreThan?: number;
+    volumeLowerThan?: number;
+    dividendMoreThan?: number;
+    dividendLowerThan?: number;
+    sector?: string;
+    industry?: string;
+    country?: string;
+    exchange?: string;
+    isEtf?: boolean;
+    isActivelyTrading?: boolean;
+    limit?: number;
+  } = {}): Promise<ScreenerResult[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/stock-screener`,
+      {
+        marketCapMoreThan: filters.marketCapMoreThan,
+        marketCapLowerThan: filters.marketCapLowerThan,
+        priceMoreThan: filters.priceMoreThan,
+        priceLowerThan: filters.priceLowerThan,
+        betaMoreThan: filters.betaMoreThan,
+        betaLowerThan: filters.betaLowerThan,
+        volumeMoreThan: filters.volumeMoreThan,
+        volumeLowerThan: filters.volumeLowerThan,
+        dividendMoreThan: filters.dividendMoreThan,
+        dividendLowerThan: filters.dividendLowerThan,
+        sector: filters.sector,
+        industry: filters.industry,
+        country: filters.country,
+        exchange: filters.exchange,
+        isEtf: filters.isEtf,
+        isActivelyTrading: filters.isActivelyTrading,
+        limit: filters.limit ?? 1000,
+        apikey: this.apiKey,
+      },
+      z.array(ScreenerResultSchema)
+    );
+  }
+
+  // ============================================
+  // Earnings Calendar
+  // ============================================
+
+  /**
+   * Get earnings calendar events.
+   * Supports future dates when from/to parameters are provided.
+   */
+  async getEarningsCalendar(options: {
+    from?: string; // YYYY-MM-DD
+    to?: string; // YYYY-MM-DD
+  } = {}): Promise<EarningsEvent[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/earning_calendar`,
+      { from: options.from, to: options.to, apikey: this.apiKey },
+      z.array(EarningsEventSchema)
+    );
+  }
+
+  /**
+   * Get historical earnings for a symbol.
+   */
+  async getHistoricalEarnings(symbol: string, limit = 80): Promise<EarningsEvent[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical/earning_calendar/${symbol}`,
+      { limit, apikey: this.apiKey },
+      z.array(EarningsEventSchema)
+    );
+  }
+
+  // ============================================
+  // Corporate Actions
+  // ============================================
+
+  /**
+   * Get stock splits for a symbol.
+   */
+  async getStockSplits(symbol: string): Promise<StockSplit[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical-price-full/stock_split/${symbol}`,
+      { apikey: this.apiKey },
+      z.object({ historical: z.array(StockSplitSchema) }).transform((r) => r.historical)
+    );
+  }
+
+  /**
+   * Get stock dividends for a symbol.
+   */
+  async getStockDividends(symbol: string): Promise<StockDividend[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/historical-price-full/stock_dividend/${symbol}`,
+      { apikey: this.apiKey },
+      z.object({ historical: z.array(StockDividendSchema) }).transform((r) => r.historical)
+    );
+  }
+
+  /**
+   * Get symbol changes (ticker changes).
+   */
+  async getSymbolChanges(): Promise<SymbolChange[]> {
+    return this.client.get(
+      `/v4/symbol_change`,
+      { apikey: this.apiKey },
+      z.array(SymbolChangeSchema)
+    );
+  }
+
+  // ============================================
+  // Press Releases
+  // ============================================
+
+  /**
+   * Get press releases for a symbol.
+   */
+  async getPressReleases(symbol: string, limit = 100): Promise<PressRelease[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/press-releases/${symbol}`,
+      { limit, apikey: this.apiKey },
+      z.array(PressReleaseSchema)
+    );
   }
 }
 
