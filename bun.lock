@@ -167,6 +167,19 @@
         "@typescript/native-preview": "7.0.0-dev.20260104.1",
       },
     },
+    "packages/marketdata": {
+      "name": "@cream/marketdata",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/domain": "workspace:*",
+      },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
     "packages/mastra-kit": {
       "name": "@cream/mastra-kit",
       "version": "0.1.0",
@@ -531,6 +544,8 @@
     "@cream/helix-schema": ["@cream/helix-schema@workspace:packages/helix-schema"],
 
     "@cream/indicators": ["@cream/indicators@workspace:packages/indicators"],
+
+    "@cream/marketdata": ["@cream/marketdata@workspace:packages/marketdata"],
 
     "@cream/mastra-kit": ["@cream/mastra-kit@workspace:packages/mastra-kit"],
 
