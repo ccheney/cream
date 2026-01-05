@@ -34,6 +34,7 @@
 #![warn(clippy::pedantic)]
 
 pub mod broker;
+pub mod config;
 pub mod error;
 pub mod execution;
 pub mod models;

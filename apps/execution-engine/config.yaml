@@ -1,0 +1,170 @@
+# Execution Engine Configuration
+# See: docs/plans/09-rust-core.md for full documentation
+#
+# Environment variables are interpolated at runtime using ${VAR_NAME} syntax.
+# Required variables must be set in the environment before starting the server.
+# Optional variables have default values shown below.
+
+# Server Configuration
+# Ports for gRPC and Arrow Flight services
+server:
+  # gRPC server port for execution and market data services
+  grpc_port: 50051
+  # Arrow Flight server port for high-performance data streaming
+  flight_port: 50052
+  # Bind address (0.0.0.0 for all interfaces, 127.0.0.1 for localhost only)
+  bind_address: "0.0.0.0"
+
+# Data Feeds Configuration
+# External market data providers
+feeds:
+  databento:
+    # Databento API key (REQUIRED for LIVE/PAPER)
+    # Register at: https://databento.com/
+    api_key: ${DATABENTO_KEY}
+    # Dataset for market data
+    # XNAS.ITCH = Nasdaq TotalView-ITCH (full depth order book)
+    # XNYS.ITCH = NYSE TotalView (coming soon)
+    dataset: "XNAS.ITCH"
+    # Reconnection settings
+    reconnect_delay_ms: 1000
+    max_reconnect_attempts: 5
+
+# Broker Configuration
+# Trading broker connections
+brokers:
+  alpaca:
+    # Alpaca API credentials (REQUIRED for LIVE/PAPER)
+    # Get from: https://alpaca.markets/
+    api_key: ${ALPACA_KEY}
+    api_secret: ${ALPACA_SECRET}
+    # Base URL: paper or live trading
+    # Paper: https://paper-api.alpaca.markets
+    # Live:  https://api.alpaca.markets
+    base_url: "https://paper-api.alpaca.markets"
+    # Data feed URL for market data
+    # Paper: wss://stream.data.sandbox.alpaca.markets
+    # Live:  wss://stream.data.alpaca.markets
+    data_url: "wss://stream.data.sandbox.alpaca.markets"
+
+# Pricing Model Configuration
+# Parameters for options pricing and Greeks calculation
+pricing:
+  # Risk-free rate (annualized, e.g., 0.05 = 5%)
+  risk_free_rate: 0.05
+  # Default dividend yield when unknown (annualized)
+  default_dividend_yield: 0.0
+  # Volatility calculation window (days)
+  volatility_window_days: 30
+  # Use implied volatility when available
+  use_implied_volatility: true
+
+# Risk Constraint Configuration
+# Position and portfolio limits
+constraints:
+  # Per-Instrument Limits
+  per_instrument:
+    # Maximum notional value per instrument (USD)
+    max_notional: 50000
+    # Maximum number of shares/contracts
+    max_units: 1000
+    # Maximum percentage of portfolio equity
+    max_equity_pct: 0.10  # 10%
+
+  # Portfolio-Level Limits
+  portfolio:
+    # Maximum gross exposure (sum of all position absolute values)
+    max_gross_notional: 500000
+    # Maximum net exposure (long - short)
+    max_net_notional: 200000
+    # Maximum leverage ratio (gross / equity)
+    max_leverage: 2.0
+
+  # Options-Specific Limits
+  options:
+    # Maximum delta per underlying
+    max_delta_per_underlying: 100.0
+    # Maximum portfolio delta
+    max_portfolio_delta: 500.0
+    # Maximum portfolio gamma
+    max_portfolio_gamma: 50.0
+    # Maximum portfolio vega
+    max_portfolio_vega: 1000.0
+    # Maximum portfolio theta
+    max_portfolio_theta: -500.0
+    # Maximum contracts per underlying
+    max_contracts_per_underlying: 100
+
+  # Buying Power Requirements
+  buying_power:
+    # Minimum required buying power ratio (reserve)
+    min_buying_power_ratio: 0.20  # Keep 20% available
+    # Margin buffer for safety
+    margin_buffer: 0.10  # 10% margin safety buffer
+
+# Observability Configuration
+# Metrics, tracing, and logging settings
+observability:
+  # Prometheus Metrics
+  metrics:
+    enabled: true
+    # Endpoint for Prometheus scraping
+    endpoint: "0.0.0.0:9090"
+    # Optional push gateway for batch jobs
+    push_gateway: null
+
+  # OpenTelemetry Tracing
+  tracing:
+    enabled: true
+    # OTLP endpoint for trace export
+    otlp_endpoint: "http://otel-collector:4317"
+    # Sampling ratio (1.0 = 100% sampling)
+    sampling_ratio: 1.0
+    # Batch export settings
+    batch_size: 512
+    batch_timeout_ms: 5000
+
+  # Logging
+  logging:
+    # Log level: trace, debug, info, warn, error
+    level: "info"
+    # Output format: json (production) or pretty (development)
+    format: "json"
+    # Include span information in logs
+    include_spans: true
+
+# Circuit Breaker Configuration
+# Resilience settings for external service calls
+circuit_breaker:
+  # Default settings for all circuit breakers
+  default:
+    # Failure rate threshold to open circuit (0.0 - 1.0)
+    failure_rate_threshold: 0.5
+    # Minimum calls before evaluating failure rate
+    minimum_calls: 5
+    # Duration in open state before attempting half-open (seconds)
+    wait_duration_secs: 30
+    # Calls permitted in half-open state
+    permitted_calls_in_half_open: 3
+    # Sliding window type: count or time
+    sliding_window_type: "count"
+    # Sliding window size (count or seconds)
+    sliding_window_size: 10
+
+  # Override settings for specific services
+  alpaca:
+    failure_rate_threshold: 0.3
+    wait_duration_secs: 60
+    minimum_calls: 10
+
+  databento:
+    failure_rate_threshold: 0.4
+    wait_duration_secs: 30
+    minimum_calls: 5
+
+# Environment Configuration
+# Runtime environment settings
+environment:
+  # Trading environment: BACKTEST, PAPER, or LIVE
+  # Override with CREAM_ENV environment variable
+  mode: ${CREAM_ENV:-PAPER}
