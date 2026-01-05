@@ -37,6 +37,7 @@ pub mod broker;
 pub mod error;
 pub mod execution;
 pub mod models;
+pub mod resilience;
 pub mod risk;
 pub mod server;
 
