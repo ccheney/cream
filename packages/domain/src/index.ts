@@ -288,5 +288,39 @@ export {
   validateTimestamp,
   validateTimestampConsistency,
 } from "./clock";
+// Execution errors and gRPC mapping
+export {
+  // gRPC status codes
+  GrpcStatusCode,
+  GRPC_STATUS_NAMES,
+  // Error details types
+  type ConstraintViolationDetails,
+  type ErrorDetails,
+  type GrpcError,
+  // Base error class
+  ExecutionError,
+  // Specific error classes
+  ConstraintViolationError,
+  DeadlineExceededError,
+  InsufficientFundsError,
+  InternalError,
+  InvalidArgumentError,
+  NotFoundError,
+  PermissionDeniedError,
+  ResourceExhaustedError,
+  ServiceUnavailableError,
+  // Error mapping
+  mapGrpcError,
+  // Retry logic
+  type RetryOptions,
+  DEFAULT_RETRY_OPTIONS,
+  isRetryableError,
+  calculateRetryDelay,
+  withRetry,
+  // Type guards
+  isExecutionError,
+  isConstraintViolation,
+  isInsufficientFunds,
+} from "./errors";
 // WebSocket schemas
 export * from "./websocket/index.js";
