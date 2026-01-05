@@ -5,8 +5,10 @@
 //! - Greeks aggregation for multi-leg strategies
 //! - Early exercise risk monitoring
 //! - Assignment risk tracking
+//! - Rolling logic for position management
 
 mod multileg;
+mod rolling;
 
 pub use multileg::{
     // Assignment risk
@@ -35,4 +37,31 @@ pub use multileg::{
     // Validation
     validate_leg_ratios,
     validate_multi_leg_order,
+};
+
+pub use rolling::{
+    // Configuration
+    RollConfig,
+    // Roll triggers
+    check_roll_trigger,
+    PositionForRoll,
+    RollReason,
+    RollTriggerResult,
+    // Roll orders
+    calculate_roll_quantity,
+    round_contracts_conservative,
+    RollError,
+    RollLeg,
+    RollOrder,
+    RollOrderBuilder,
+    RollOrderType,
+    // Roll timing
+    check_roll_timing,
+    RollTimingRecommendation,
+    RollTimingResult,
+    // Partial fill monitoring
+    evaluate_partial_fill,
+    PartialFillAction,
+    PartialFillMonitor,
+    RollExecutionState,
 };
