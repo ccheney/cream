@@ -1,0 +1,240 @@
+/**
+ * The Cream Glow - Visual Signature
+ *
+ * Warm ambient glow effects for active states, primary actions,
+ * and system health indicators.
+ *
+ * @see docs/plans/ui/20-design-philosophy.md lines 85-86
+ */
+
+/* ============================================
+   Glow Color Variables
+   ============================================ */
+
+:root {
+  /* Primary glow (warm amber) */
+  --glow-primary-color: var(--active, #f5a623);
+  --glow-primary-alpha: var(--active-glow, rgba(245, 166, 35, 0.4));
+  --glow-primary-size: 20px;
+  --glow-primary-size-lg: 40px;
+
+  /* Success glow (warm green) */
+  --glow-success-color: var(--profit, #22c55e);
+  --glow-success-alpha: rgba(34, 197, 94, 0.35);
+  --glow-success-size: 16px;
+
+  /* Critical glow (warm red) */
+  --glow-critical-color: var(--loss, #ef4444);
+  --glow-critical-alpha: var(--critical-glow, rgba(220, 38, 38, 0.3));
+  --glow-critical-size: 20px;
+
+  /* Neutral glow (soft stone) */
+  --glow-neutral-color: var(--neutral, #eab308);
+  --glow-neutral-alpha: rgba(234, 179, 8, 0.25);
+  --glow-neutral-size: 12px;
+}
+
+/* ============================================
+   Static Glow Utilities
+   ============================================ */
+
+.glow-primary {
+  box-shadow: 0 0 var(--glow-primary-size) var(--glow-primary-alpha);
+}
+
+.glow-success {
+  box-shadow: 0 0 var(--glow-success-size) var(--glow-success-alpha);
+}
+
+.glow-critical {
+  box-shadow: 0 0 var(--glow-critical-size) var(--glow-critical-alpha);
+}
+
+.glow-neutral {
+  box-shadow: 0 0 var(--glow-neutral-size) var(--glow-neutral-alpha);
+}
+
+/* ============================================
+   Hover Glow Utilities
+   ============================================ */
+
+.hover\:glow-primary:hover {
+  box-shadow: 0 0 var(--glow-primary-size) var(--glow-primary-alpha);
+  transition: box-shadow var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+.hover\:glow-success:hover {
+  box-shadow: 0 0 var(--glow-success-size) var(--glow-success-alpha);
+  transition: box-shadow var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+.hover\:glow-critical:hover {
+  box-shadow: 0 0 var(--glow-critical-size) var(--glow-critical-alpha);
+  transition: box-shadow var(--duration-normal, 200ms) var(--ease-out, ease-out);
+}
+
+/* ============================================
+   Focus Glow Utilities (Accessibility)
+   ============================================ */
+
+.focus\:glow-primary:focus-visible {
+  box-shadow: 0 0 0 3px var(--glow-primary-alpha);
+  outline: none;
+}
+
+.focus\:glow-success:focus-visible {
+  box-shadow: 0 0 0 3px var(--glow-success-alpha);
+  outline: none;
+}
+
+.focus\:glow-critical:focus-visible {
+  box-shadow: 0 0 0 3px var(--glow-critical-alpha);
+  outline: none;
+}
+
+/* ============================================
+   Pulsing Glow Animation (The Cream Glow)
+   ============================================ */
+
+@keyframes pulse-glow-primary {
+  0%, 100% {
+    box-shadow: 0 0 var(--glow-primary-size) var(--glow-primary-alpha);
+  }
+  50% {
+    box-shadow: 0 0 var(--glow-primary-size-lg) var(--glow-primary-alpha);
+  }
+}
+
+@keyframes pulse-glow-success {
+  0%, 100% {
+    box-shadow: 0 0 16px var(--glow-success-alpha);
+  }
+  50% {
+    box-shadow: 0 0 32px var(--glow-success-alpha);
+  }
+}
+
+@keyframes pulse-glow-critical {
+  0%, 100% {
+    box-shadow: 0 0 var(--glow-critical-size) var(--glow-critical-alpha);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--glow-critical-alpha);
+  }
+}
+
+.animate-glow-primary {
+  animation: pulse-glow-primary 2s var(--ease-in-out, ease-in-out) infinite;
+}
+
+.animate-glow-success {
+  animation: pulse-glow-success 2s var(--ease-in-out, ease-in-out) infinite;
+}
+
+.animate-glow-critical {
+  animation: pulse-glow-critical 1.5s var(--ease-in-out, ease-in-out) infinite;
+}
+
+/* ============================================
+   Ring Glow (For Active States)
+   ============================================ */
+
+.ring-glow-primary {
+  box-shadow:
+    0 0 0 2px var(--glow-primary-color),
+    0 0 var(--glow-primary-size) var(--glow-primary-alpha);
+}
+
+.ring-glow-success {
+  box-shadow:
+    0 0 0 2px var(--glow-success-color),
+    0 0 var(--glow-success-size) var(--glow-success-alpha);
+}
+
+.ring-glow-critical {
+  box-shadow:
+    0 0 0 2px var(--glow-critical-color),
+    0 0 var(--glow-critical-size) var(--glow-critical-alpha);
+}
+
+/* ============================================
+   Inset Glow (For Cards/Containers)
+   ============================================ */
+
+.inset-glow-primary {
+  box-shadow: inset 0 0 30px var(--glow-primary-alpha);
+}
+
+.inset-glow-success {
+  box-shadow: inset 0 0 20px var(--glow-success-alpha);
+}
+
+.inset-glow-critical {
+  box-shadow: inset 0 0 30px var(--glow-critical-alpha);
+}
+
+/* ============================================
+   Text Glow
+   ============================================ */
+
+.text-glow-primary {
+  text-shadow: 0 0 10px var(--glow-primary-alpha);
+}
+
+.text-glow-success {
+  text-shadow: 0 0 8px var(--glow-success-alpha);
+}
+
+.text-glow-critical {
+  text-shadow: 0 0 10px var(--glow-critical-alpha);
+}
+
+/* ============================================
+   Reduced Motion Support
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-glow-primary,
+  .animate-glow-success,
+  .animate-glow-critical {
+    animation: none;
+  }
+
+  /* Keep static glow for reduced motion */
+  .animate-glow-primary {
+    box-shadow: 0 0 var(--glow-primary-size) var(--glow-primary-alpha);
+  }
+
+  .animate-glow-success {
+    box-shadow: 0 0 var(--glow-success-size) var(--glow-success-alpha);
+  }
+
+  .animate-glow-critical {
+    box-shadow: 0 0 var(--glow-critical-size) var(--glow-critical-alpha);
+  }
+}
+
+/* ============================================
+   Dark Mode Adjustments
+   ============================================ */
+
+[data-theme="dark"],
+.dark {
+  /* Increase glow intensity for dark mode */
+  --glow-primary-alpha: rgba(245, 166, 35, 0.5);
+  --glow-success-alpha: rgba(34, 197, 94, 0.45);
+  --glow-critical-alpha: rgba(220, 38, 38, 0.4);
+  --glow-neutral-alpha: rgba(234, 179, 8, 0.35);
+}
+
+/* ============================================
+   Performance Optimization Classes
+   ============================================ */
+
+.glow-optimized {
+  will-change: box-shadow;
+}
+
+.glow-optimized-off {
+  will-change: auto;
+}
