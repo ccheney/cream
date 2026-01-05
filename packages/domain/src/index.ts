@@ -120,6 +120,9 @@ export {
   type AccountState,
   // Account state
   AccountStateSchema,
+  // Action mapping
+  ActionMappingError,
+  type BrokerOrderMapping,
   type CheckConstraintsRequest,
   CheckConstraintsRequestSchema,
   type CheckConstraintsResponse,
@@ -129,6 +132,7 @@ export {
   ConstraintCheckSchema,
   // Enums
   ConstraintResult,
+  deriveActionFromPositions,
   type ExecutionAck,
   ExecutionAckSchema,
   type GetAccountStateRequest,
@@ -139,6 +143,7 @@ export {
   GetPositionsRequestSchema,
   type GetPositionsResponse,
   GetPositionsResponseSchema,
+  mapActionToBrokerOrder,
   OrderSide,
   OrderStatus,
   type Position,
@@ -211,6 +216,22 @@ export {
   // Symbol snapshot
   SymbolSnapshotSchema,
 } from "./marketSnapshot";
+// Position sizing calculators
+export {
+  calculateAdaptiveAdjustment,
+  calculateDeltaAdjustedSize,
+  calculateFixedFractional,
+  calculateFractionalKelly,
+  calculateLiquidityLimit,
+  calculateVolatilityTargeted,
+  DEFAULT_RISK_LIMITS,
+  type KellySizingInput,
+  type MarketConditions,
+  type OptionsSizingInput,
+  type SizingInput,
+  type SizingResult,
+  type VolatilitySizingInput,
+} from "./position-sizing";
 // Number precision utilities
 export {
   BASIS_POINTS_PER_PERCENT,
