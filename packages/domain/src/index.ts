@@ -10,6 +10,36 @@
 export const PACKAGE_NAME = "@cream/domain";
 export const VERSION = "0.0.1";
 
+// Market calendar and session handling
+export {
+  canStartCycle,
+  DEFAULT_CLOSE_TIME,
+  EARLY_CLOSE_TIME,
+  type ExpirationCycle,
+  getAllHolidays,
+  getExpirationCycle,
+  getHoliday,
+  getMarketCloseTime,
+  getMonthlyExpiration,
+  getMonthlyExpirations,
+  getNextTradingDay,
+  getPreviousTradingDay,
+  getThirdFriday,
+  getTradingSession,
+  hasDailyOptions,
+  type Holiday,
+  HolidayType,
+  isDailyExpiration,
+  isMarketOpen,
+  isMonthlyExpiration,
+  isRTH,
+  isWeeklyExpiration,
+  MIN_MINUTES_BEFORE_CLOSE,
+  NYSE_HOLIDAYS_2026,
+  NYSE_SESSIONS,
+  type SessionHours,
+  TradingSession,
+} from "./calendar";
 // Clock synchronization and timestamp validation
 export {
   alignToDailyCandle,
