@@ -655,9 +655,9 @@ fn parse_timestamp(timestamp_str: &str) -> Option<prost_types::Timestamp> {
 // Server Builder
 // ============================================
 
-/// Run the gRPC server on the specified address.
+/// Run the gRPC server on the specified address (without TLS).
 pub async fn run_grpc_server(addr: std::net::SocketAddr) -> Result<(), tonic::transport::Error> {
-    tracing::info!(%addr, "Starting gRPC server");
+    tracing::info!(%addr, "Starting gRPC server (no TLS)");
 
     let execution_service = ExecutionServiceImpl::with_defaults();
     let market_data_service = MarketDataServiceImpl::new();
@@ -667,6 +667,66 @@ pub async fn run_grpc_server(addr: std::net::SocketAddr) -> Result<(), tonic::tr
         .add_service(MarketDataServiceServer::new(market_data_service));
 
     router.serve(addr).await
+}
+
+/// Run the gRPC server with TLS support.
+///
+/// TLS configuration is loaded from the provided `TlsConfig`.
+/// If TLS config is `None`, the server runs without TLS (equivalent to `run_grpc_server`).
+///
+/// # Example
+///
+/// ```ignore
+/// use execution_engine::server::{TlsConfigBuilder, run_grpc_server_with_tls};
+///
+/// // Load TLS config from environment
+/// let tls_config = TlsConfigBuilder::from_env().build()?;
+///
+/// // Start server with or without TLS based on config
+/// let addr = "0.0.0.0:50051".parse()?;
+/// run_grpc_server_with_tls(addr, tls_config).await?;
+/// ```
+pub async fn run_grpc_server_with_tls(
+    addr: std::net::SocketAddr,
+    tls_config: Option<super::tls::TlsConfig>,
+) -> anyhow::Result<()> {
+    let execution_service = ExecutionServiceImpl::with_defaults();
+    let market_data_service = MarketDataServiceImpl::new();
+
+    match tls_config {
+        Some(tls) => {
+            tracing::info!(
+                %addr,
+                client_auth = tls.client_auth_required,
+                "Starting gRPC server with TLS"
+            );
+
+            let server_tls_config = tls.build_server_config().map_err(|e| {
+                tracing::error!(error = %e, "Failed to build TLS config");
+                e
+            })?;
+
+            tonic::transport::Server::builder()
+                .tls_config(server_tls_config)?
+                .add_service(ExecutionServiceServer::new(execution_service))
+                .add_service(MarketDataServiceServer::new(market_data_service))
+                .serve(addr)
+                .await?;
+
+            Ok(())
+        }
+        None => {
+            tracing::info!(%addr, "Starting gRPC server (no TLS)");
+
+            tonic::transport::Server::builder()
+                .add_service(ExecutionServiceServer::new(execution_service))
+                .add_service(MarketDataServiceServer::new(market_data_service))
+                .serve(addr)
+                .await?;
+
+            Ok(())
+        }
+    }
 }
 
 /// Build the gRPC services for testing or custom server setup.
