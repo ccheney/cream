@@ -9,6 +9,7 @@ Provides scoring and evaluation of trading plans:
 - Synthetic preference generation for training data augmentation
 - Pre-execution evaluation with weighted aggregation
 - Post-execution evaluation with Brinson-style attribution
+- Evaluator training pipeline with four-phase curriculum
 """
 
 from research.evaluator.bradley_terry import (
@@ -41,17 +42,30 @@ from research.evaluator.synthetic_preferences import (
     TradingPlan,
     generate_random_contexts,
 )
+from research.evaluator.training import (
+    EvaluatorTrainingPipeline,
+    ExpertAnnotation,
+    HistoricalOutcome,
+    PhaseProgress,
+    TrainingConfig,
+    TrainingPhase,
+    TrainingResult,
+)
 
 __all__ = [
     "Attribution",
     "BradleyTerryRewardModel",
     "CalibrationDriftDetector",
     "DimensionScores",
+    "EvaluatorTrainingPipeline",
     "ExecutedTradeOutcome",
+    "ExpertAnnotation",
+    "HistoricalOutcome",
     "LLMJudge",
     "MarketContext",
     "MarketData",
     "OutcomeScore",
+    "PhaseProgress",
     "PlanScore",
     "PostExecutionEvaluator",
     "PreExecutionEvaluator",
@@ -62,6 +76,9 @@ __all__ = [
     "SyntheticPreferenceGenerator",
     "TradeOutcome",
     "TradingPlan",
+    "TrainingConfig",
+    "TrainingPhase",
+    "TrainingResult",
     "generate_random_contexts",
     "train_bradley_terry_model",
 ]
