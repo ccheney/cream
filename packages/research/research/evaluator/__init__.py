@@ -7,6 +7,8 @@ Provides scoring and evaluation of trading plans:
 - LLM-based evaluation for qualitative aspects (Phase 12)
 - Probability calibration for confidence output
 - Synthetic preference generation for training data augmentation
+- Pre-execution evaluation with weighted aggregation
+- Post-execution evaluation with Brinson-style attribution
 """
 
 from research.evaluator.bradley_terry import (
@@ -18,6 +20,18 @@ from research.evaluator.calibration import (
     ProbabilityCalibrator,
 )
 from research.evaluator.llm_judge import LLMJudge
+from research.evaluator.post_execution import (
+    Attribution,
+    MarketData,
+    OutcomeScore,
+    PostExecutionEvaluator,
+)
+from research.evaluator.post_execution import TradeOutcome as ExecutedTradeOutcome
+from research.evaluator.pre_execution import (
+    DimensionScores,
+    PlanScore,
+    PreExecutionEvaluator,
+)
 from research.evaluator.rule_scorer import RuleBasedScorer, ScoringResult
 from research.evaluator.synthetic_preferences import (
     MarketContext,
@@ -29,10 +43,18 @@ from research.evaluator.synthetic_preferences import (
 )
 
 __all__ = [
+    "Attribution",
     "BradleyTerryRewardModel",
     "CalibrationDriftDetector",
+    "DimensionScores",
+    "ExecutedTradeOutcome",
     "LLMJudge",
     "MarketContext",
+    "MarketData",
+    "OutcomeScore",
+    "PlanScore",
+    "PostExecutionEvaluator",
+    "PreExecutionEvaluator",
     "PreferencePair",
     "ProbabilityCalibrator",
     "RuleBasedScorer",
