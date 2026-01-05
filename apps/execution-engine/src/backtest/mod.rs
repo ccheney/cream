@@ -47,6 +47,7 @@ mod multi_leg;
 mod replay;
 mod slippage;
 mod triggers;
+mod walkforward;
 
 use std::collections::HashMap;
 
@@ -83,6 +84,10 @@ pub use triggers::{
 pub use metrics::{
     DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary,
     TradeRecord, format_decimal, format_pct, format_ratio,
+};
+pub use walkforward::{
+    AggregatedMetrics, OverfittingAnalysis, ParameterStability, WalkForwardBuilder,
+    WalkForwardConfig, WalkForwardEngine, WalkForwardResult, WalkForwardWindow, WindowMode,
 };
 
 use crate::models::{
