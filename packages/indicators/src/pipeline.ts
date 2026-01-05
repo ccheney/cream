@@ -10,15 +10,15 @@ import type {
   Timeframe,
   NamedIndicatorOutput,
   IndicatorSnapshot,
-} from "./types.js";
+} from "./types";
 
-import { calculateRSI, RSI_DEFAULTS } from "./momentum/rsi.js";
-import { calculateStochastic, STOCHASTIC_DEFAULTS } from "./momentum/stochastic.js";
-import { calculateSMA, SMA_PERIODS } from "./trend/sma.js";
-import { calculateEMA, EMA_PERIODS } from "./trend/ema.js";
-import { calculateATR, ATR_DEFAULTS } from "./volatility/atr.js";
-import { calculateBollingerBands, BOLLINGER_DEFAULTS } from "./volatility/bollinger.js";
-import { calculateVolumeSMA, VOLUME_SMA_DEFAULTS } from "./volume/volumeSma.js";
+import { calculateRSI, RSI_DEFAULTS } from "./momentum/rsi";
+import { calculateStochastic, STOCHASTIC_DEFAULTS } from "./momentum/stochastic";
+import { calculateSMA, SMA_PERIODS } from "./trend/sma";
+import { calculateEMA, EMA_PERIODS } from "./trend/ema";
+import { calculateATR, ATR_DEFAULTS } from "./volatility/atr";
+import { calculateBollingerBands, BOLLINGER_DEFAULTS } from "./volatility/bollinger";
+import { calculateVolumeSMA, VOLUME_SMA_DEFAULTS } from "./volume/volumeSma";
 
 // ============================================
 // Configuration Types

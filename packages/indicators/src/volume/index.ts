@@ -16,4 +16,4 @@ export {
   isVolumeDivergence,
   VOLUME_SMA_DEFAULTS,
   VOLUME_THRESHOLDS,
-} from "./volumeSma.js";
+} from "./volumeSma";

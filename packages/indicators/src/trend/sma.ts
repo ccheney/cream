@@ -26,7 +26,7 @@ import {
   type MAResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Common SMA periods.

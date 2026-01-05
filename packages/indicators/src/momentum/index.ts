@@ -13,7 +13,7 @@ export {
   RSI_DEFAULTS,
   RSI_OVERBOUGHT,
   RSI_OVERSOLD,
-} from "./rsi.js";
+} from "./rsi";
 
 export {
   calculateStochastic,
@@ -26,4 +26,4 @@ export {
   STOCHASTIC_DEFAULTS,
   STOCHASTIC_OVERBOUGHT,
   STOCHASTIC_OVERSOLD,
-} from "./stochastic.js";
+} from "./stochastic";

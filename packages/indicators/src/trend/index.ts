@@ -13,7 +13,7 @@ export {
   isDeathCross,
   SMA_DEFAULTS,
   SMA_PERIODS,
-} from "./sma.js";
+} from "./sma";
 
 export {
   calculateEMA,
@@ -24,4 +24,4 @@ export {
   calculateMultiplier,
   EMA_DEFAULTS,
   EMA_PERIODS,
-} from "./ema.js";
+} from "./ema";

@@ -23,7 +23,7 @@ import {
   type VolumeSMAResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Default Volume SMA parameters.

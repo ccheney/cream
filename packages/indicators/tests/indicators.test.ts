@@ -5,8 +5,8 @@
  */
 
 import { describe, expect, it, beforeAll } from "bun:test";
-import type { Candle, Timeframe } from "../src/types.js";
-import { IndicatorError, validateCandleCount } from "../src/types.js";
+import type { Candle, Timeframe } from "../src/types";
+import { IndicatorError, validateCandleCount } from "../src/types";
 
 // Momentum
 import {
@@ -15,7 +15,7 @@ import {
   isOverbought,
   isOversold,
   RSI_DEFAULTS,
-} from "../src/momentum/rsi.js";
+} from "../src/momentum/rsi";
 import {
   calculateStochastic,
   stochasticRequiredPeriods,
@@ -24,7 +24,7 @@ import {
   isBullishCrossover,
   isBearishCrossover,
   STOCHASTIC_DEFAULTS,
-} from "../src/momentum/stochastic.js";
+} from "../src/momentum/stochastic";
 
 // Trend
 import {
@@ -34,7 +34,7 @@ import {
   isGoldenCross,
   isDeathCross,
   SMA_DEFAULTS,
-} from "../src/trend/sma.js";
+} from "../src/trend/sma";
 import {
   calculateEMA,
   emaRequiredPeriods,
@@ -42,7 +42,7 @@ import {
   calculateMultiplier,
   calculateMACD,
   EMA_DEFAULTS,
-} from "../src/trend/ema.js";
+} from "../src/trend/ema";
 
 // Volatility
 import {
@@ -52,7 +52,7 @@ import {
   calculateATRStop,
   calculateATRPositionSize,
   ATR_DEFAULTS,
-} from "../src/volatility/atr.js";
+} from "../src/volatility/atr";
 import {
   calculateBollingerBands,
   bollingerRequiredPeriods,
@@ -61,7 +61,7 @@ import {
   isBollingerSqueeze,
   getBollingerSignal,
   BOLLINGER_DEFAULTS,
-} from "../src/volatility/bollinger.js";
+} from "../src/volatility/bollinger";
 
 // Volume
 import {
@@ -71,7 +71,7 @@ import {
   isLowVolume,
   getVolumeSignal,
   VOLUME_SMA_DEFAULTS,
-} from "../src/volume/volumeSma.js";
+} from "../src/volume/volumeSma";
 
 // Pipeline
 import {
@@ -79,7 +79,7 @@ import {
   calculateMultiTimeframeIndicators,
   getRequiredWarmupPeriod,
   DEFAULT_PIPELINE_CONFIG,
-} from "../src/pipeline.js";
+} from "../src/pipeline";
 
 // ============================================
 // Test Data Generation

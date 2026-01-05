@@ -22,7 +22,7 @@ import {
   type RSIResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Default RSI parameters.

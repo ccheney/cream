@@ -26,7 +26,7 @@ import {
   type StochasticResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Default Stochastic parameters.

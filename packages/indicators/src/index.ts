@@ -24,21 +24,24 @@
  */
 
 // Types
-export * from "./types.js";
+export * from "./types";
 
 // Momentum Indicators
-export * from "./momentum/index.js";
+export * from "./momentum/index";
 
 // Trend Indicators
-export * from "./trend/index.js";
+export * from "./trend/index";
 
 // Volatility Indicators
-export * from "./volatility/index.js";
+export * from "./volatility/index";
 
 // Volume Indicators
-export * from "./volume/index.js";
+export * from "./volume/index";
 
-// Pipeline
+// Normalization Transforms
+export * from "./transforms/index";
+
+// Indicator Pipeline
 export {
   calculateIndicators,
   calculateMultiTimeframeIndicators,
@@ -46,4 +49,4 @@ export {
   getRequiredWarmupPeriod,
   DEFAULT_PIPELINE_CONFIG,
   type IndicatorPipelineConfig,
-} from "./pipeline.js";
+} from "./pipeline";

@@ -12,7 +12,7 @@ export {
   calculateATRStop,
   calculateATRPositionSize,
   ATR_DEFAULTS,
-} from "./atr.js";
+} from "./atr";
 
 export {
   calculateBollingerBands,
@@ -24,4 +24,4 @@ export {
   isBollingerExpansion,
   getBollingerSignal,
   BOLLINGER_DEFAULTS,
-} from "./bollinger.js";
+} from "./bollinger";

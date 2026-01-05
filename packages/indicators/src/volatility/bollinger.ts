@@ -29,7 +29,7 @@ import {
   type BollingerBandsResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Default Bollinger Bands parameters (John Bollinger's standard).

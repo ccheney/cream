@@ -26,7 +26,7 @@ import {
   type ATRResult,
   type IndicatorCalculator,
   validateCandleCount,
-} from "../types.js";
+} from "../types";
 
 /**
  * Default ATR parameters (Wilder's standard).
