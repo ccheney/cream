@@ -14,7 +14,8 @@ import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
 import { closeDb } from "./db.js";
-import { alertsRoutes, decisionsRoutes, portfolioRoutes, systemRoutes } from "./routes/index.js";
+import { alertsRoutes, authRoutes, decisionsRoutes, portfolioRoutes, systemRoutes } from "./routes/index.js";
+import { requireAuth, liveProtection, type AuthVariables } from "./auth/index.js";
 import {
   closeAllConnections,
   createConnectionMetadata,
@@ -95,8 +96,24 @@ app.openapi(healthRoute, (c) => {
 });
 
 // ============================================
-// API Routes
+// Auth Routes (public)
 // ============================================
+
+app.route("/api/auth", authRoutes);
+
+// ============================================
+// API Routes (protected)
+// ============================================
+
+// Apply authentication to all /api routes except /api/auth
+app.use("/api/system/*", requireAuth);
+app.use("/api/decisions/*", requireAuth);
+app.use("/api/portfolio/*", requireAuth);
+app.use("/api/alerts/*", requireAuth);
+
+// Apply LIVE protection to sensitive operations
+app.use("/api/decisions/*", liveProtection());
+app.use("/api/portfolio/*", liveProtection());
 
 app.route("/api/system", systemRoutes);
 app.route("/api/decisions", decisionsRoutes);
