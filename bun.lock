@@ -65,6 +65,18 @@
         "@typescript/native-preview": "7.0.0-dev.20260104.1",
       },
     },
+    "packages/broker": {
+      "name": "@cream/broker",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/domain": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
     "packages/config": {
       "name": "@cream/config",
       "version": "0.0.1",
@@ -412,6 +424,8 @@
     "@connectrpc/connect": ["@connectrpc/connect@2.1.1", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.7.0" } }, "sha512-JzhkaTvM73m2K1URT6tv53k2RwngSmCXLZJgK580qNQOXRzZRR/BCMfZw3h+90JpnG6XksP5bYT+cz0rpUzUWQ=="],
 
     "@cream/api": ["@cream/api@workspace:apps/api"],
+
+    "@cream/broker": ["@cream/broker@workspace:packages/broker"],
 
     "@cream/config": ["@cream/config@workspace:packages/config"],
 

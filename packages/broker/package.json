@@ -1,0 +1,23 @@
+{
+  "name": "@cream/broker",
+  "version": "0.1.0",
+  "description": "Broker integration for Cream trading system (Alpaca Markets)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist",
+    "test": "CREAM_ENV=BACKTEST bun test",
+    "test:paper": "CREAM_ENV=PAPER bun test tests/paper",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/ tests/",
+    "format": "biome format --write src/ tests/"
+  },
+  "dependencies": {
+    "@cream/domain": "workspace:*",
+    "@cream/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript/native-preview": "7.0.0-dev.20260104.1"
+  }
+}
