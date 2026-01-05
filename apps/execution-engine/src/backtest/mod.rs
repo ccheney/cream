@@ -43,6 +43,7 @@ mod commission;
 mod config;
 mod fill_engine;
 mod metrics;
+mod monte_carlo;
 mod multi_leg;
 mod replay;
 mod slippage;
@@ -88,6 +89,10 @@ pub use metrics::{
 pub use walkforward::{
     AggregatedMetrics, OverfittingAnalysis, ParameterStability, WalkForwardBuilder,
     WalkForwardConfig, WalkForwardEngine, WalkForwardResult, WalkForwardWindow, WindowMode,
+};
+pub use monte_carlo::{
+    DistributionStats, IterationResult, LuckVsSkillAnalysis, MonteCarloBuilder,
+    MonteCarloConfig, MonteCarloResult, MonteCarloSimulator, RandomizationMethod, VaRAnalysis,
 };
 
 use crate::models::{
