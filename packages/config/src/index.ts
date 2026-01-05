@@ -42,3 +42,24 @@ export {
   validateConfigOrThrow,
   validatePartialConfig,
 } from "./validate";
+// Feature flags runtime
+export {
+  areFlagsInitialized,
+  BUILT_IN_FLAGS,
+  type BuiltInFlagId,
+  createFlagEvaluator,
+  type Environment,
+  type FeatureFlag,
+  type FeatureFlagsConfig,
+  type FlagContext,
+  type FlagEvaluator,
+  type FlagResult,
+  getFlags,
+  initializeFlags,
+  isCBRMemoryEnabled,
+  isDebugLoggingEnabled,
+  isHITLEnabled,
+  isLiveExecutionEnabled,
+  isOptionsEnabled,
+  resetFlags,
+} from "./flags";

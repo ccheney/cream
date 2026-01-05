@@ -161,3 +161,21 @@ export {
   UniverseSourceSchema,
   UniverseSourceType,
 } from "./universe";
+// Feature flags configuration
+export {
+  BUILT_IN_FLAGS,
+  type BuiltInFlagId,
+  DEFAULT_FLAGS,
+  type EnvironmentOverride,
+  EnvironmentOverrideSchema,
+  type FeatureFlag,
+  FeatureFlagSchema,
+  type FeatureFlagsConfig,
+  FeatureFlagsConfigSchema,
+  FlagVariantType,
+  type InstrumentOverride,
+  InstrumentOverrideSchema,
+  getDefaultFlagsConfig,
+  mergeFlagsWithDefaults,
+  validateUniqueFlags,
+} from "./flags";

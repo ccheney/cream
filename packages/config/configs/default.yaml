@@ -192,3 +192,18 @@ metrics:
       label: "1m"
   risk_free_rate: 0.05
   sortino_target: 0
+
+# Feature flags for gradual rollout
+# See packages/config/src/schemas/flags.ts for built-in flags
+feature_flags:
+  defaults:
+    allow_env_override: true
+  flags:
+    # Override built-in flags or add custom flags here
+    # Example:
+    # - id: enable_new_strategy
+    #   type: boolean
+    #   default_value: false
+    #   environment_overrides:
+    #     - environment: PAPER
+    #       value: true
