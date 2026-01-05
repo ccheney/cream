@@ -408,5 +408,43 @@ export {
   // Conversion functions
   toIso8601,
 } from "./time";
+// Universe resolution types
+export {
+  ComposeMode,
+  createEmptyFilterStats,
+  type DiversificationRules,
+  DiversificationRulesSchema,
+  type ETFHoldingsSource,
+  ETFHoldingsSourceSchema,
+  type FilterStats,
+  FilterStatsSchema,
+  type IndexSource,
+  IndexSourceSchema,
+  IndexType,
+  isReasonableAttrition,
+  type LiquidityFilter,
+  LiquidityFilterSchema,
+  RankingMetric,
+  type ResolvedUniverse,
+  ResolvedUniverseSchema,
+  type ScreenerSource,
+  ScreenerSourceSchema,
+  type StaticSource,
+  StaticSourceSchema,
+  type UniverseConfig,
+  UniverseConfigSchema,
+  type UniverseFilters,
+  UniverseFiltersSchema,
+  type UniverseLimits,
+  UniverseLimitsSchema,
+  type UniverseMetadata,
+  UniverseMetadataSchema,
+  type UniverseSource,
+  UniverseSourceSchema,
+  UniverseSourceType,
+  validateUniverseConfig,
+  type VolatilityFilter,
+  VolatilityFilterSchema,
+} from "./universe";
 // WebSocket schemas
 export * from "./websocket/index.js";
