@@ -37,7 +37,8 @@ yarn-error.log*
 
 # Rust
 target/
-Cargo.lock
+# NOTE: Cargo.lock is committed per Rust 2023 guidance
+# Use `cargo build --locked` in CI for reproducible builds
 
 # Python
 __pycache__/
