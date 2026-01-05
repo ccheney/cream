@@ -1,0 +1,21 @@
+{
+  "name": "@cream/helix-schema",
+  "version": "0.1.0",
+  "description": "HelixDB schema definitions for Cream trading system",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/"
+  },
+  "dependencies": {
+    "@cream/domain": "workspace:*",
+    "@cream/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript/native-preview": "7.0.0-dev.20260104.1"
+  }
+}
