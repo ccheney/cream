@@ -79,3 +79,14 @@ export {
   validateLegRatios,
   validateQuantity,
 } from "./utils.js";
+
+// Adapters
+export {
+  type BacktestAdapterConfig,
+  type BacktestUtils,
+  createBacktestAdapter,
+  createBacktestAdapterWithUtils,
+} from "./adapters/index.js";
+
+// Factory
+export { createBrokerClient } from "./factory.js";
