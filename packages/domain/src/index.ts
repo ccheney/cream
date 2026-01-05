@@ -559,5 +559,30 @@ export {
   type TypedSplitEvent,
   TypedSplitEventSchema,
 } from "./events";
+// Options Symbology Initiative (OSI) format utilities
+export {
+  extractExpiration,
+  extractStrike,
+  extractSymbol,
+  fromOSI,
+  isCall,
+  isPut,
+  isValidOSI,
+  normalizeOSI,
+  OSI_COMPONENTS,
+  OSI_LENGTH,
+  OSI_REGEX,
+  OSIError,
+  type OSIErrorCode,
+  type OSIParseResult,
+  OSISymbolLenientSchema,
+  OSISymbolSchema,
+  type OSISymbol,
+  OptionContractWithOSISchema,
+  type OptionContractWithOSI,
+  parseOSI,
+  parseOSIOrThrow,
+  toOSI,
+} from "./options";
 // WebSocket schemas
 export * from "./websocket/index.js";
