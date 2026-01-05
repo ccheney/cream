@@ -6,19 +6,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+import { CancelOrderRequest, CancelOrderResponse, CheckConstraintsRequest, CheckConstraintsResponse, GetAccountStateRequest, GetAccountStateResponse, GetOrderStateRequest, GetOrderStateResponse, GetPositionsRequest, GetPositionsResponse, StreamExecutionsRequest, StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse } from "./execution_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import {
-  CheckConstraintsRequest,
-  CheckConstraintsResponse,
-  GetAccountStateRequest,
-  GetAccountStateResponse,
-  GetPositionsRequest,
-  GetPositionsResponse,
-  StreamExecutionsRequest,
-  StreamExecutionsResponse,
-  SubmitOrderRequest,
-  SubmitOrderResponse,
-} from "./execution_pb.js";
 
 /**
  * Execution engine service
@@ -48,6 +37,28 @@ export const ExecutionService = {
       name: "SubmitOrder",
       I: SubmitOrderRequest,
       O: SubmitOrderResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Get order state by order ID
+     *
+     * @generated from rpc cream.v1.ExecutionService.GetOrderState
+     */
+    getOrderState: {
+      name: "GetOrderState",
+      I: GetOrderStateRequest,
+      O: GetOrderStateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Cancel an order
+     *
+     * @generated from rpc cream.v1.ExecutionService.CancelOrder
+     */
+    cancelOrder: {
+      name: "CancelOrder",
+      I: CancelOrderRequest,
+      O: CancelOrderResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -83,5 +94,6 @@ export const ExecutionService = {
       O: GetPositionsResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

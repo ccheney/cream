@@ -4,6 +4,33 @@
  * API clients for market data providers.
  */
 
+// Databento (execution-grade)
+export {
+  ConnectionState,
+  createDatabentoClientFromEnv,
+  DatabentoClient,
+  type DatabentoClientConfig,
+  type DatabentoDataset,
+  type DatabentoEvent,
+  type DatabentoMessage,
+  type DatabentoSchema,
+  type EventHandler,
+  MBP10MessageSchema,
+  type MBP10Message,
+  OHLCVMessageSchema,
+  type OHLCVMessage,
+  QuoteMessageSchema,
+  type QuoteMessage,
+  type SubscriptionConfig,
+  SymbolMappingMessageSchema,
+  type SymbolMappingMessage,
+  type SymbolType,
+  SystemMessageSchema,
+  type SystemMessage,
+  TradeMessageSchema,
+  type TradeMessage,
+} from "./databento";
+
 // Alpha Vantage
 export {
   ALPHA_VANTAGE_RATE_LIMITS,

@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@cream/config": "workspace:*",
-    "@cream/domain": "workspace:*"
+    "@cream/domain": "workspace:*",
+    "@types/ws": "8.18.1",
+    "ws": "8.18.3"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

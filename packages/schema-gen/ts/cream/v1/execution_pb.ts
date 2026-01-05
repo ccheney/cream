@@ -5,25 +5,21 @@
 // @generated from file cream/v1/execution.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Instrument, OrderType, TimeInForce } from "./common_pb";
 import { file_cream_v1_common } from "./common_pb";
 import type { DecisionPlan } from "./decision_pb";
 import { file_cream_v1_decision } from "./decision_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file cream/v1/execution.proto.
  */
-export const file_cream_v1_execution: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "ChhjcmVhbS92MS9leGVjdXRpb24ucHJvdG8SCGNyZWFtLnYxIrIBCg9Db25zdHJhaW50Q2hlY2sSDAoEbmFtZRgBIAEoCRIqCgZyZXN1bHQYAiABKA4yGi5jcmVhbS52MS5Db25zdHJhaW50UmVzdWx0EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhkKDGFjdHVhbF92YWx1ZRgEIAEoAUgAiAEBEhYKCXRocmVzaG9sZBgFIAEoAUgBiAEBQg8KDV9hY3R1YWxfdmFsdWVCDAoKX3RocmVzaG9sZCKeAQoXQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QSLQoNZGVjaXNpb25fcGxhbhgBIAEoCzIWLmNyZWFtLnYxLkRlY2lzaW9uUGxhbhItCg1hY2NvdW50X3N0YXRlGAIgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlEiUKCXBvc2l0aW9ucxgDIAMoCzISLmNyZWFtLnYxLlBvc2l0aW9uIr0BChhDaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USEAoIYXBwcm92ZWQYASABKAgSKQoGY2hlY2tzGAIgAygLMhkuY3JlYW0udjEuQ29uc3RyYWludENoZWNrEjAKDHZhbGlkYXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASHQoQcmVqZWN0aW9uX3JlYXNvbhgEIAEoCUgAiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uIrwBCgxBY2NvdW50U3RhdGUSEgoKYWNjb3VudF9pZBgBIAEoCRIOCgZlcXVpdHkYAiABKAESFAoMYnV5aW5nX3Bvd2VyGAMgASgBEhMKC21hcmdpbl91c2VkGAQgASgBEhcKD2RheV90cmFkZV9jb3VudBgFIAEoBRIZChFpc19wZHRfcmVzdHJpY3RlZBgGIAEoCBIpCgVhc19vZhgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAivQEKCFBvc2l0aW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EhAKCHF1YW50aXR5GAIgASgFEhcKD2F2Z19lbnRyeV9wcmljZRgDIAEoARIUCgxtYXJrZXRfdmFsdWUYBCABKAESFgoOdW5yZWFsaXplZF9wbmwYBSABKAESGgoSdW5yZWFsaXplZF9wbmxfcGN0GAYgASgBEhIKCmNvc3RfYmFzaXMYByABKAEinwIKElN1Ym1pdE9yZGVyUmVxdWVzdBIoCgppbnN0cnVtZW50GAEgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIhCgRzaWRlGAIgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEhAKCHF1YW50aXR5GAMgASgFEicKCm9yZGVyX3R5cGUYBCABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGAoLbGltaXRfcHJpY2UYBSABKAFIAIgBARIsCg10aW1lX2luX2ZvcmNlGAYgASgOMhUuY3JlYW0udjEuVGltZUluRm9yY2USFwoPY2xpZW50X29yZGVyX2lkGAcgASgJEhAKCGN5Y2xlX2lkGAggASgJQg4KDF9saW1pdF9wcmljZSLHAQoTU3VibWl0T3JkZXJSZXNwb25zZRIQCghvcmRlcl9pZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSJQoGc3RhdHVzGAMgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSMAoMc3VibWl0dGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaCg1lcnJvcl9tZXNzYWdlGAUgASgJSACIAQFCEAoOX2Vycm9yX21lc3NhZ2Ui8QEKDEV4ZWN1dGlvbkFjaxIQCghvcmRlcl9pZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSJQoGc3RhdHVzGAMgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSFwoPZmlsbGVkX3F1YW50aXR5GAQgASgFEhYKDmF2Z19maWxsX3ByaWNlGAUgASgBEhoKEnJlbWFpbmluZ19xdWFudGl0eRgGIAEoBRIuCgp1cGRhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjb21taXNzaW9uGAggASgBIlAKF1N0cmVhbUV4ZWN1dGlvbnNSZXF1ZXN0EhUKCGN5Y2xlX2lkGAEgASgJSACIAQESEQoJb3JkZXJfaWRzGAIgAygJQgsKCV9jeWNsZV9pZCJFChhTdHJlYW1FeGVjdXRpb25zUmVzcG9uc2USKQoJZXhlY3V0aW9uGAEgASgLMhYuY3JlYW0udjEuRXhlY3V0aW9uQWNrIkAKFkdldEFjY291bnRTdGF0ZVJlcXVlc3QSFwoKYWNjb3VudF9pZBgBIAEoCUgAiAEBQg0KC19hY2NvdW50X2lkIkgKF0dldEFjY291bnRTdGF0ZVJlc3BvbnNlEi0KDWFjY291bnRfc3RhdGUYASABKAsyFi5jcmVhbS52MS5BY2NvdW50U3RhdGUiTgoTR2V0UG9zaXRpb25zUmVxdWVzdBIXCgphY2NvdW50X2lkGAEgASgJSACIAQESDwoHc3ltYm9scxgCIAMoCUINCgtfYWNjb3VudF9pZCJoChRHZXRQb3NpdGlvbnNSZXNwb25zZRIlCglwb3NpdGlvbnMYASADKAsyEi5jcmVhbS52MS5Qb3NpdGlvbhIpCgVhc19vZhgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAqiQEKEENvbnN0cmFpbnRSZXN1bHQSIQodQ09OU1RSQUlOVF9SRVNVTFRfVU5TUEVDSUZJRUQQABIaChZDT05TVFJBSU5UX1JFU1VMVF9QQVNTEAESGgoWQ09OU1RSQUlOVF9SRVNVTFRfRkFJTBACEhoKFkNPTlNUUkFJTlRfUkVTVUxUX1dBUk4QAyrpAQoLT3JkZXJTdGF0dXMSHAoYT1JERVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUT1JERVJfU1RBVFVTX1BFTkRJTkcQARIZChVPUkRFUl9TVEFUVVNfQUNDRVBURUQQAhIdChlPUkRFUl9TVEFUVVNfUEFSVElBTF9GSUxMEAMSFwoTT1JERVJfU1RBVFVTX0ZJTExFRBAEEhoKFk9SREVSX1NUQVRVU19DQU5DRUxMRUQQBRIZChVPUkRFUl9TVEFUVVNfUkVKRUNURUQQBhIYChRPUkRFUl9TVEFUVVNfRVhQSVJFRBAHKlAKCU9yZGVyU2lkZRIaChZPUkRFUl9TSURFX1VOU1BFQ0lGSUVEEAASEgoOT1JERVJfU0lERV9CVVkQARITCg9PUkRFUl9TSURFX1NFTEwQAjK9AwoQRXhlY3V0aW9uU2VydmljZRJZChBDaGVja0NvbnN0cmFpbnRzEiEuY3JlYW0udjEuQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QaIi5jcmVhbS52MS5DaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USSgoLU3VibWl0T3JkZXISHC5jcmVhbS52MS5TdWJtaXRPcmRlclJlcXVlc3QaHS5jcmVhbS52MS5TdWJtaXRPcmRlclJlc3BvbnNlElsKEFN0cmVhbUV4ZWN1dGlvbnMSIS5jcmVhbS52MS5TdHJlYW1FeGVjdXRpb25zUmVxdWVzdBoiLmNyZWFtLnYxLlN0cmVhbUV4ZWN1dGlvbnNSZXNwb25zZTABElYKD0dldEFjY291bnRTdGF0ZRIgLmNyZWFtLnYxLkdldEFjY291bnRTdGF0ZVJlcXVlc3QaIS5jcmVhbS52MS5HZXRBY2NvdW50U3RhdGVSZXNwb25zZRJNCgxHZXRQb3NpdGlvbnMSHS5jcmVhbS52MS5HZXRQb3NpdGlvbnNSZXF1ZXN0Gh4uY3JlYW0udjEuR2V0UG9zaXRpb25zUmVzcG9uc2VClwEKDGNvbS5jcmVhbS52MUIORXhlY3V0aW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM",
-    [file_cream_v1_common, file_cream_v1_decision, file_google_protobuf_timestamp]
-  );
+export const file_cream_v1_execution: GenFile = /*@__PURE__*/
+  fileDesc("ChhjcmVhbS92MS9leGVjdXRpb24ucHJvdG8SCGNyZWFtLnYxIrIBCg9Db25zdHJhaW50Q2hlY2sSDAoEbmFtZRgBIAEoCRIqCgZyZXN1bHQYAiABKA4yGi5jcmVhbS52MS5Db25zdHJhaW50UmVzdWx0EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhkKDGFjdHVhbF92YWx1ZRgEIAEoAUgAiAEBEhYKCXRocmVzaG9sZBgFIAEoAUgBiAEBQg8KDV9hY3R1YWxfdmFsdWVCDAoKX3RocmVzaG9sZCKeAQoXQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QSLQoNZGVjaXNpb25fcGxhbhgBIAEoCzIWLmNyZWFtLnYxLkRlY2lzaW9uUGxhbhItCg1hY2NvdW50X3N0YXRlGAIgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlEiUKCXBvc2l0aW9ucxgDIAMoCzISLmNyZWFtLnYxLlBvc2l0aW9uIr0BChhDaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USEAoIYXBwcm92ZWQYASABKAgSKQoGY2hlY2tzGAIgAygLMhkuY3JlYW0udjEuQ29uc3RyYWludENoZWNrEjAKDHZhbGlkYXRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASHQoQcmVqZWN0aW9uX3JlYXNvbhgEIAEoCUgAiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uIrwBCgxBY2NvdW50U3RhdGUSEgoKYWNjb3VudF9pZBgBIAEoCRIOCgZlcXVpdHkYAiABKAESFAoMYnV5aW5nX3Bvd2VyGAMgASgBEhMKC21hcmdpbl91c2VkGAQgASgBEhcKD2RheV90cmFkZV9jb3VudBgFIAEoBRIZChFpc19wZHRfcmVzdHJpY3RlZBgGIAEoCBIpCgVhc19vZhgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAivQEKCFBvc2l0aW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EhAKCHF1YW50aXR5GAIgASgFEhcKD2F2Z19lbnRyeV9wcmljZRgDIAEoARIUCgxtYXJrZXRfdmFsdWUYBCABKAESFgoOdW5yZWFsaXplZF9wbmwYBSABKAESGgoSdW5yZWFsaXplZF9wbmxfcGN0GAYgASgBEhIKCmNvc3RfYmFzaXMYByABKAEinwIKElN1Ym1pdE9yZGVyUmVxdWVzdBIoCgppbnN0cnVtZW50GAEgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIhCgRzaWRlGAIgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEhAKCHF1YW50aXR5GAMgASgFEicKCm9yZGVyX3R5cGUYBCABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGAoLbGltaXRfcHJpY2UYBSABKAFIAIgBARIsCg10aW1lX2luX2ZvcmNlGAYgASgOMhUuY3JlYW0udjEuVGltZUluRm9yY2USFwoPY2xpZW50X29yZGVyX2lkGAcgASgJEhAKCGN5Y2xlX2lkGAggASgJQg4KDF9saW1pdF9wcmljZSLHAQoTU3VibWl0T3JkZXJSZXNwb25zZRIQCghvcmRlcl9pZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSJQoGc3RhdHVzGAMgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSMAoMc3VibWl0dGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaCg1lcnJvcl9tZXNzYWdlGAUgASgJSACIAQFCEAoOX2Vycm9yX21lc3NhZ2Ui8QEKDEV4ZWN1dGlvbkFjaxIQCghvcmRlcl9pZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSJQoGc3RhdHVzGAMgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSFwoPZmlsbGVkX3F1YW50aXR5GAQgASgFEhYKDmF2Z19maWxsX3ByaWNlGAUgASgBEhoKEnJlbWFpbmluZ19xdWFudGl0eRgGIAEoBRIuCgp1cGRhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjb21taXNzaW9uGAggASgBIigKFEdldE9yZGVyU3RhdGVSZXF1ZXN0EhAKCG9yZGVyX2lkGAEgASgJIvwDChVHZXRPcmRlclN0YXRlUmVzcG9uc2USEAoIb3JkZXJfaWQYASABKAkSFwoPYnJva2VyX29yZGVyX2lkGAIgASgJEigKCmluc3RydW1lbnQYAyABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiUKBnN0YXR1cxgEIAEoDjIVLmNyZWFtLnYxLk9yZGVyU3RhdHVzEiEKBHNpZGUYBSABKA4yEy5jcmVhbS52MS5PcmRlclNpZGUSJwoKb3JkZXJfdHlwZRgGIAEoDjITLmNyZWFtLnYxLk9yZGVyVHlwZRIaChJyZXF1ZXN0ZWRfcXVhbnRpdHkYByABKAUSFwoPZmlsbGVkX3F1YW50aXR5GAggASgFEhYKDmF2Z19maWxsX3ByaWNlGAkgASgBEhgKC2xpbWl0X3ByaWNlGAogASgBSACIAQESFwoKc3RvcF9wcmljZRgLIAEoAUgBiAEBEjAKDHN1Ym1pdHRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoObGFzdF91cGRhdGVfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDnN0YXR1c19tZXNzYWdlGA4gASgJQg4KDF9saW1pdF9wcmljZUINCgtfc3RvcF9wcmljZSImChJDYW5jZWxPcmRlclJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkijgEKE0NhbmNlbE9yZGVyUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKAgSEAoIb3JkZXJfaWQYAiABKAkSJQoGc3RhdHVzGAMgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSGgoNZXJyb3JfbWVzc2FnZRgEIAEoCUgAiAEBQhAKDl9lcnJvcl9tZXNzYWdlIlAKF1N0cmVhbUV4ZWN1dGlvbnNSZXF1ZXN0EhUKCGN5Y2xlX2lkGAEgASgJSACIAQESEQoJb3JkZXJfaWRzGAIgAygJQgsKCV9jeWNsZV9pZCJFChhTdHJlYW1FeGVjdXRpb25zUmVzcG9uc2USKQoJZXhlY3V0aW9uGAEgASgLMhYuY3JlYW0udjEuRXhlY3V0aW9uQWNrIkAKFkdldEFjY291bnRTdGF0ZVJlcXVlc3QSFwoKYWNjb3VudF9pZBgBIAEoCUgAiAEBQg0KC19hY2NvdW50X2lkIkgKF0dldEFjY291bnRTdGF0ZVJlc3BvbnNlEi0KDWFjY291bnRfc3RhdGUYASABKAsyFi5jcmVhbS52MS5BY2NvdW50U3RhdGUiTgoTR2V0UG9zaXRpb25zUmVxdWVzdBIXCgphY2NvdW50X2lkGAEgASgJSACIAQESDwoHc3ltYm9scxgCIAMoCUINCgtfYWNjb3VudF9pZCJoChRHZXRQb3NpdGlvbnNSZXNwb25zZRIlCglwb3NpdGlvbnMYASADKAsyEi5jcmVhbS52MS5Qb3NpdGlvbhIpCgVhc19vZhgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAqiQEKEENvbnN0cmFpbnRSZXN1bHQSIQodQ09OU1RSQUlOVF9SRVNVTFRfVU5TUEVDSUZJRUQQABIaChZDT05TVFJBSU5UX1JFU1VMVF9QQVNTEAESGgoWQ09OU1RSQUlOVF9SRVNVTFRfRkFJTBACEhoKFkNPTlNUUkFJTlRfUkVTVUxUX1dBUk4QAyrpAQoLT3JkZXJTdGF0dXMSHAoYT1JERVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGAoUT1JERVJfU1RBVFVTX1BFTkRJTkcQARIZChVPUkRFUl9TVEFUVVNfQUNDRVBURUQQAhIdChlPUkRFUl9TVEFUVVNfUEFSVElBTF9GSUxMEAMSFwoTT1JERVJfU1RBVFVTX0ZJTExFRBAEEhoKFk9SREVSX1NUQVRVU19DQU5DRUxMRUQQBRIZChVPUkRFUl9TVEFUVVNfUkVKRUNURUQQBhIYChRPUkRFUl9TVEFUVVNfRVhQSVJFRBAHKlAKCU9yZGVyU2lkZRIaChZPUkRFUl9TSURFX1VOU1BFQ0lGSUVEEAASEgoOT1JERVJfU0lERV9CVVkQARITCg9PUkRFUl9TSURFX1NFTEwQAjLbBAoQRXhlY3V0aW9uU2VydmljZRJZChBDaGVja0NvbnN0cmFpbnRzEiEuY3JlYW0udjEuQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QaIi5jcmVhbS52MS5DaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USSgoLU3VibWl0T3JkZXISHC5jcmVhbS52MS5TdWJtaXRPcmRlclJlcXVlc3QaHS5jcmVhbS52MS5TdWJtaXRPcmRlclJlc3BvbnNlElAKDUdldE9yZGVyU3RhdGUSHi5jcmVhbS52MS5HZXRPcmRlclN0YXRlUmVxdWVzdBofLmNyZWFtLnYxLkdldE9yZGVyU3RhdGVSZXNwb25zZRJKCgtDYW5jZWxPcmRlchIcLmNyZWFtLnYxLkNhbmNlbE9yZGVyUmVxdWVzdBodLmNyZWFtLnYxLkNhbmNlbE9yZGVyUmVzcG9uc2USWwoQU3RyZWFtRXhlY3V0aW9ucxIhLmNyZWFtLnYxLlN0cmVhbUV4ZWN1dGlvbnNSZXF1ZXN0GiIuY3JlYW0udjEuU3RyZWFtRXhlY3V0aW9uc1Jlc3BvbnNlMAESVgoPR2V0QWNjb3VudFN0YXRlEiAuY3JlYW0udjEuR2V0QWNjb3VudFN0YXRlUmVxdWVzdBohLmNyZWFtLnYxLkdldEFjY291bnRTdGF0ZVJlc3BvbnNlEk0KDEdldFBvc2l0aW9ucxIdLmNyZWFtLnYxLkdldFBvc2l0aW9uc1JlcXVlc3QaHi5jcmVhbS52MS5HZXRQb3NpdGlvbnNSZXNwb25zZUKXAQoMY29tLmNyZWFtLnYxQg5FeGVjdXRpb25Qcm90b1ABWjZnaXRodWIuY29tL2NyZWFtLXRyYWRpbmcvY3JlYW0vZ2VuL2dvL2NyZWFtL3YxO2NyZWFtdjGiAgNDWFiqAghDcmVhbS5WMcoCCENyZWFtXFYx4gIUQ3JlYW1cVjFcR1BCTWV0YWRhdGHqAglDcmVhbTo6VjFiBnByb3RvMw", [file_cream_v1_common, file_cream_v1_decision, file_google_protobuf_timestamp]);
 
 /**
  * Individual constraint check result
@@ -71,8 +67,7 @@ export type ConstraintCheck = Message<"cream.v1.ConstraintCheck"> & {
  * Describes the message cream.v1.ConstraintCheck.
  * Use `create(ConstraintCheckSchema)` to create a new message.
  */
-export const ConstraintCheckSchema: GenMessage<ConstraintCheck> =
-  /*@__PURE__*/
+export const ConstraintCheckSchema: GenMessage<ConstraintCheck> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 0);
 
 /**
@@ -107,8 +102,7 @@ export type CheckConstraintsRequest = Message<"cream.v1.CheckConstraintsRequest"
  * Describes the message cream.v1.CheckConstraintsRequest.
  * Use `create(CheckConstraintsRequestSchema)` to create a new message.
  */
-export const CheckConstraintsRequestSchema: GenMessage<CheckConstraintsRequest> =
-  /*@__PURE__*/
+export const CheckConstraintsRequestSchema: GenMessage<CheckConstraintsRequest> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 1);
 
 /**
@@ -150,8 +144,7 @@ export type CheckConstraintsResponse = Message<"cream.v1.CheckConstraintsRespons
  * Describes the message cream.v1.CheckConstraintsResponse.
  * Use `create(CheckConstraintsResponseSchema)` to create a new message.
  */
-export const CheckConstraintsResponseSchema: GenMessage<CheckConstraintsResponse> =
-  /*@__PURE__*/
+export const CheckConstraintsResponseSchema: GenMessage<CheckConstraintsResponse> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 2);
 
 /**
@@ -214,8 +207,7 @@ export type AccountState = Message<"cream.v1.AccountState"> & {
  * Describes the message cream.v1.AccountState.
  * Use `create(AccountStateSchema)` to create a new message.
  */
-export const AccountStateSchema: GenMessage<AccountState> =
-  /*@__PURE__*/
+export const AccountStateSchema: GenMessage<AccountState> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 3);
 
 /**
@@ -278,8 +270,7 @@ export type Position = Message<"cream.v1.Position"> & {
  * Describes the message cream.v1.Position.
  * Use `create(PositionSchema)` to create a new message.
  */
-export const PositionSchema: GenMessage<Position> =
-  /*@__PURE__*/
+export const PositionSchema: GenMessage<Position> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 4);
 
 /**
@@ -349,8 +340,7 @@ export type SubmitOrderRequest = Message<"cream.v1.SubmitOrderRequest"> & {
  * Describes the message cream.v1.SubmitOrderRequest.
  * Use `create(SubmitOrderRequestSchema)` to create a new message.
  */
-export const SubmitOrderRequestSchema: GenMessage<SubmitOrderRequest> =
-  /*@__PURE__*/
+export const SubmitOrderRequestSchema: GenMessage<SubmitOrderRequest> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 5);
 
 /**
@@ -399,8 +389,7 @@ export type SubmitOrderResponse = Message<"cream.v1.SubmitOrderResponse"> & {
  * Describes the message cream.v1.SubmitOrderResponse.
  * Use `create(SubmitOrderResponseSchema)` to create a new message.
  */
-export const SubmitOrderResponseSchema: GenMessage<SubmitOrderResponse> =
-  /*@__PURE__*/
+export const SubmitOrderResponseSchema: GenMessage<SubmitOrderResponse> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 6);
 
 /**
@@ -470,9 +459,204 @@ export type ExecutionAck = Message<"cream.v1.ExecutionAck"> & {
  * Describes the message cream.v1.ExecutionAck.
  * Use `create(ExecutionAckSchema)` to create a new message.
  */
-export const ExecutionAckSchema: GenMessage<ExecutionAck> =
-  /*@__PURE__*/
+export const ExecutionAckSchema: GenMessage<ExecutionAck> = /*@__PURE__*/
   messageDesc(file_cream_v1_execution, 7);
+
+/**
+ * Request to get order state
+ *
+ * @generated from message cream.v1.GetOrderStateRequest
+ */
+export type GetOrderStateRequest = Message<"cream.v1.GetOrderStateRequest"> & {
+  /**
+   * Order ID to query (can be broker order ID or internal order ID)
+   *
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message cream.v1.GetOrderStateRequest.
+ * Use `create(GetOrderStateRequestSchema)` to create a new message.
+ */
+export const GetOrderStateRequestSchema: GenMessage<GetOrderStateRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 8);
+
+/**
+ * Response with order state
+ *
+ * @generated from message cream.v1.GetOrderStateResponse
+ */
+export type GetOrderStateResponse = Message<"cream.v1.GetOrderStateResponse"> & {
+  /**
+   * Order ID
+   *
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * Broker order ID
+   *
+   * @generated from field: string broker_order_id = 2;
+   */
+  brokerOrderId: string;
+
+  /**
+   * Instrument
+   *
+   * @generated from field: cream.v1.Instrument instrument = 3;
+   */
+  instrument?: Instrument;
+
+  /**
+   * Current status
+   *
+   * @generated from field: cream.v1.OrderStatus status = 4;
+   */
+  status: OrderStatus;
+
+  /**
+   * Order side
+   *
+   * @generated from field: cream.v1.OrderSide side = 5;
+   */
+  side: OrderSide;
+
+  /**
+   * Order type
+   *
+   * @generated from field: cream.v1.OrderType order_type = 6;
+   */
+  orderType: OrderType;
+
+  /**
+   * Requested quantity
+   *
+   * @generated from field: int32 requested_quantity = 7;
+   */
+  requestedQuantity: number;
+
+  /**
+   * Filled quantity
+   *
+   * @generated from field: int32 filled_quantity = 8;
+   */
+  filledQuantity: number;
+
+  /**
+   * Average fill price
+   *
+   * @generated from field: double avg_fill_price = 9;
+   */
+  avgFillPrice: number;
+
+  /**
+   * Limit price (if applicable)
+   *
+   * @generated from field: optional double limit_price = 10;
+   */
+  limitPrice?: number;
+
+  /**
+   * Stop price (if applicable)
+   *
+   * @generated from field: optional double stop_price = 11;
+   */
+  stopPrice?: number;
+
+  /**
+   * Submission timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp submitted_at = 12;
+   */
+  submittedAt?: Timestamp;
+
+  /**
+   * Last update timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp last_update_at = 13;
+   */
+  lastUpdateAt?: Timestamp;
+
+  /**
+   * Status message from broker
+   *
+   * @generated from field: string status_message = 14;
+   */
+  statusMessage: string;
+};
+
+/**
+ * Describes the message cream.v1.GetOrderStateResponse.
+ * Use `create(GetOrderStateResponseSchema)` to create a new message.
+ */
+export const GetOrderStateResponseSchema: GenMessage<GetOrderStateResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 9);
+
+/**
+ * Request to cancel an order
+ *
+ * @generated from message cream.v1.CancelOrderRequest
+ */
+export type CancelOrderRequest = Message<"cream.v1.CancelOrderRequest"> & {
+  /**
+   * Order ID to cancel (can be broker order ID or internal order ID)
+   *
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message cream.v1.CancelOrderRequest.
+ * Use `create(CancelOrderRequestSchema)` to create a new message.
+ */
+export const CancelOrderRequestSchema: GenMessage<CancelOrderRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 10);
+
+/**
+ * Response from cancel request
+ *
+ * @generated from message cream.v1.CancelOrderResponse
+ */
+export type CancelOrderResponse = Message<"cream.v1.CancelOrderResponse"> & {
+  /**
+   * Whether cancel request was accepted
+   *
+   * @generated from field: bool accepted = 1;
+   */
+  accepted: boolean;
+
+  /**
+   * Order ID that was canceled
+   *
+   * @generated from field: string order_id = 2;
+   */
+  orderId: string;
+
+  /**
+   * Current order status after cancel request
+   *
+   * @generated from field: cream.v1.OrderStatus status = 3;
+   */
+  status: OrderStatus;
+
+  /**
+   * Error message if cancel was rejected
+   *
+   * @generated from field: optional string error_message = 4;
+   */
+  errorMessage?: string;
+};
+
+/**
+ * Describes the message cream.v1.CancelOrderResponse.
+ * Use `create(CancelOrderResponseSchema)` to create a new message.
+ */
+export const CancelOrderResponseSchema: GenMessage<CancelOrderResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 11);
 
 /**
  * Request to stream executions
@@ -499,9 +683,8 @@ export type StreamExecutionsRequest = Message<"cream.v1.StreamExecutionsRequest"
  * Describes the message cream.v1.StreamExecutionsRequest.
  * Use `create(StreamExecutionsRequestSchema)` to create a new message.
  */
-export const StreamExecutionsRequestSchema: GenMessage<StreamExecutionsRequest> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 8);
+export const StreamExecutionsRequestSchema: GenMessage<StreamExecutionsRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 12);
 
 /**
  * Response with execution update (streamed)
@@ -521,9 +704,8 @@ export type StreamExecutionsResponse = Message<"cream.v1.StreamExecutionsRespons
  * Describes the message cream.v1.StreamExecutionsResponse.
  * Use `create(StreamExecutionsResponseSchema)` to create a new message.
  */
-export const StreamExecutionsResponseSchema: GenMessage<StreamExecutionsResponse> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 9);
+export const StreamExecutionsResponseSchema: GenMessage<StreamExecutionsResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 13);
 
 /**
  * Request for account state
@@ -543,9 +725,8 @@ export type GetAccountStateRequest = Message<"cream.v1.GetAccountStateRequest"> 
  * Describes the message cream.v1.GetAccountStateRequest.
  * Use `create(GetAccountStateRequestSchema)` to create a new message.
  */
-export const GetAccountStateRequestSchema: GenMessage<GetAccountStateRequest> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 10);
+export const GetAccountStateRequestSchema: GenMessage<GetAccountStateRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 14);
 
 /**
  * Response with account state
@@ -565,9 +746,8 @@ export type GetAccountStateResponse = Message<"cream.v1.GetAccountStateResponse"
  * Describes the message cream.v1.GetAccountStateResponse.
  * Use `create(GetAccountStateResponseSchema)` to create a new message.
  */
-export const GetAccountStateResponseSchema: GenMessage<GetAccountStateResponse> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 11);
+export const GetAccountStateResponseSchema: GenMessage<GetAccountStateResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 15);
 
 /**
  * Request for positions
@@ -594,9 +774,8 @@ export type GetPositionsRequest = Message<"cream.v1.GetPositionsRequest"> & {
  * Describes the message cream.v1.GetPositionsRequest.
  * Use `create(GetPositionsRequestSchema)` to create a new message.
  */
-export const GetPositionsRequestSchema: GenMessage<GetPositionsRequest> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 12);
+export const GetPositionsRequestSchema: GenMessage<GetPositionsRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 16);
 
 /**
  * Response with positions
@@ -623,9 +802,8 @@ export type GetPositionsResponse = Message<"cream.v1.GetPositionsResponse"> & {
  * Describes the message cream.v1.GetPositionsResponse.
  * Use `create(GetPositionsResponseSchema)` to create a new message.
  */
-export const GetPositionsResponseSchema: GenMessage<GetPositionsResponse> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 13);
+export const GetPositionsResponseSchema: GenMessage<GetPositionsResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_execution, 17);
 
 /**
  * Result of a constraint check
@@ -657,8 +835,7 @@ export enum ConstraintResult {
 /**
  * Describes the enum cream.v1.ConstraintResult.
  */
-export const ConstraintResultSchema: GenEnum<ConstraintResult> =
-  /*@__PURE__*/
+export const ConstraintResultSchema: GenEnum<ConstraintResult> = /*@__PURE__*/
   enumDesc(file_cream_v1_execution, 0);
 
 /**
@@ -711,8 +888,7 @@ export enum OrderStatus {
 /**
  * Describes the enum cream.v1.OrderStatus.
  */
-export const OrderStatusSchema: GenEnum<OrderStatus> =
-  /*@__PURE__*/
+export const OrderStatusSchema: GenEnum<OrderStatus> = /*@__PURE__*/
   enumDesc(file_cream_v1_execution, 1);
 
 /**
@@ -740,8 +916,7 @@ export enum OrderSide {
 /**
  * Describes the enum cream.v1.OrderSide.
  */
-export const OrderSideSchema: GenEnum<OrderSide> =
-  /*@__PURE__*/
+export const OrderSideSchema: GenEnum<OrderSide> = /*@__PURE__*/
   enumDesc(file_cream_v1_execution, 2);
 
 /**
@@ -759,7 +934,7 @@ export const ExecutionService: GenService<{
     methodKind: "unary";
     input: typeof CheckConstraintsRequestSchema;
     output: typeof CheckConstraintsResponseSchema;
-  };
+  },
   /**
    * Submit an order for execution
    *
@@ -769,7 +944,27 @@ export const ExecutionService: GenService<{
     methodKind: "unary";
     input: typeof SubmitOrderRequestSchema;
     output: typeof SubmitOrderResponseSchema;
-  };
+  },
+  /**
+   * Get order state by order ID
+   *
+   * @generated from rpc cream.v1.ExecutionService.GetOrderState
+   */
+  getOrderState: {
+    methodKind: "unary";
+    input: typeof GetOrderStateRequestSchema;
+    output: typeof GetOrderStateResponseSchema;
+  },
+  /**
+   * Cancel an order
+   *
+   * @generated from rpc cream.v1.ExecutionService.CancelOrder
+   */
+  cancelOrder: {
+    methodKind: "unary";
+    input: typeof CancelOrderRequestSchema;
+    output: typeof CancelOrderResponseSchema;
+  },
   /**
    * Stream order execution updates
    *
@@ -779,7 +974,7 @@ export const ExecutionService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamExecutionsRequestSchema;
     output: typeof StreamExecutionsResponseSchema;
-  };
+  },
   /**
    * Get current account state
    *
@@ -789,7 +984,7 @@ export const ExecutionService: GenService<{
     methodKind: "unary";
     input: typeof GetAccountStateRequestSchema;
     output: typeof GetAccountStateResponseSchema;
-  };
+  },
   /**
    * Get current positions
    *
@@ -799,5 +994,7 @@ export const ExecutionService: GenService<{
     methodKind: "unary";
     input: typeof GetPositionsRequestSchema;
     output: typeof GetPositionsResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_cream_v1_execution, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_cream_v1_execution, 0);
+

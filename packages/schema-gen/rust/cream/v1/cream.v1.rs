@@ -805,6 +805,82 @@ pub struct ExecutionAck {
     #[prost(double, tag="8")]
     pub commission: f64,
 }
+/// Request to get order state
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetOrderStateRequest {
+    /// Order ID to query (can be broker order ID or internal order ID)
+    #[prost(string, tag="1")]
+    pub order_id: ::prost::alloc::string::String,
+}
+/// Response with order state
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetOrderStateResponse {
+    /// Order ID
+    #[prost(string, tag="1")]
+    pub order_id: ::prost::alloc::string::String,
+    /// Broker order ID
+    #[prost(string, tag="2")]
+    pub broker_order_id: ::prost::alloc::string::String,
+    /// Instrument
+    #[prost(message, optional, tag="3")]
+    pub instrument: ::core::option::Option<Instrument>,
+    /// Current status
+    #[prost(enumeration="OrderStatus", tag="4")]
+    pub status: i32,
+    /// Order side
+    #[prost(enumeration="OrderSide", tag="5")]
+    pub side: i32,
+    /// Order type
+    #[prost(enumeration="OrderType", tag="6")]
+    pub order_type: i32,
+    /// Requested quantity
+    #[prost(int32, tag="7")]
+    pub requested_quantity: i32,
+    /// Filled quantity
+    #[prost(int32, tag="8")]
+    pub filled_quantity: i32,
+    /// Average fill price
+    #[prost(double, tag="9")]
+    pub avg_fill_price: f64,
+    /// Limit price (if applicable)
+    #[prost(double, optional, tag="10")]
+    pub limit_price: ::core::option::Option<f64>,
+    /// Stop price (if applicable)
+    #[prost(double, optional, tag="11")]
+    pub stop_price: ::core::option::Option<f64>,
+    /// Submission timestamp
+    #[prost(message, optional, tag="12")]
+    pub submitted_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Last update timestamp
+    #[prost(message, optional, tag="13")]
+    pub last_update_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Status message from broker
+    #[prost(string, tag="14")]
+    pub status_message: ::prost::alloc::string::String,
+}
+/// Request to cancel an order
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CancelOrderRequest {
+    /// Order ID to cancel (can be broker order ID or internal order ID)
+    #[prost(string, tag="1")]
+    pub order_id: ::prost::alloc::string::String,
+}
+/// Response from cancel request
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CancelOrderResponse {
+    /// Whether cancel request was accepted
+    #[prost(bool, tag="1")]
+    pub accepted: bool,
+    /// Order ID that was canceled
+    #[prost(string, tag="2")]
+    pub order_id: ::prost::alloc::string::String,
+    /// Current order status after cancel request
+    #[prost(enumeration="OrderStatus", tag="3")]
+    pub status: i32,
+    /// Error message if cancel was rejected
+    #[prost(string, optional, tag="4")]
+    pub error_message: ::core::option::Option<::prost::alloc::string::String>,
+}
 /// Request to stream executions
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct StreamExecutionsRequest {

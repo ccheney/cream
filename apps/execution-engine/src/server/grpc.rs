@@ -30,12 +30,13 @@ pub mod proto {
 }
 
 use proto::cream::v1::{
-    AccountState, CheckConstraintsRequest, CheckConstraintsResponse, ConstraintCheck,
-    ConstraintResult, GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest,
-    GetOptionChainResponse, GetPositionsRequest, GetPositionsResponse, GetSnapshotRequest,
-    GetSnapshotResponse, Position, StreamExecutionsRequest, StreamExecutionsResponse,
-    SubmitOrderRequest, SubmitOrderResponse, SubscribeMarketDataRequest,
-    SubscribeMarketDataResponse,
+    AccountState, CancelOrderRequest, CancelOrderResponse, CheckConstraintsRequest,
+    CheckConstraintsResponse, ConstraintCheck, ConstraintResult, GetAccountStateRequest,
+    GetAccountStateResponse, GetOptionChainRequest, GetOptionChainResponse,
+    GetOrderStateRequest, GetOrderStateResponse, GetPositionsRequest, GetPositionsResponse,
+    GetSnapshotRequest, GetSnapshotResponse, Position, StreamExecutionsRequest,
+    StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse,
+    SubscribeMarketDataRequest, SubscribeMarketDataResponse,
     execution_service_server::{ExecutionService, ExecutionServiceServer},
     market_data_service_server::{MarketDataService, MarketDataServiceServer},
 };
@@ -286,6 +287,112 @@ impl ExecutionService for ExecutionServiceImpl {
             as_of: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
         }))
     }
+
+    async fn get_order_state(
+        &self,
+        request: Request<GetOrderStateRequest>,
+    ) -> Result<Response<GetOrderStateResponse>, Status> {
+        let req = request.into_inner();
+        let order_id = req.order_id;
+
+        tracing::debug!(order_id = %order_id, "Getting order state");
+
+        // Try to get order from state manager (by internal ID or broker ID)
+        let order_state = self
+            .state_manager
+            .get(&order_id)
+            .or_else(|| self.state_manager.get_by_broker_id(&order_id))
+            .ok_or_else(|| Status::not_found(format!("Order not found: {order_id}")))?;
+
+        // Convert internal OrderState to proto GetOrderStateResponse
+        let response = GetOrderStateResponse {
+            order_id: order_state.order_id.clone(),
+            broker_order_id: order_state.broker_order_id.clone(),
+            instrument: Some(proto::cream::v1::Instrument {
+                instrument_id: order_state.instrument_id.clone(),
+                instrument_type: proto::cream::v1::InstrumentType::Equity.into(), // Default
+                underlying: None,
+                strike: None,
+                expiry: None,
+                option_contract: None,
+            }),
+            status: convert_order_status(order_state.status),
+            side: convert_order_side(order_state.side),
+            order_type: convert_order_type(order_state.order_type),
+            requested_quantity: order_state.requested_quantity.to_string().parse().unwrap_or(0),
+            filled_quantity: order_state.filled_quantity.to_string().parse().unwrap_or(0),
+            avg_fill_price: order_state
+                .avg_fill_price
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            limit_price: order_state
+                .limit_price
+                .map(|p| p.to_string().parse().unwrap_or(0.0)),
+            stop_price: order_state
+                .stop_price
+                .map(|p| p.to_string().parse().unwrap_or(0.0)),
+            submitted_at: parse_timestamp(&order_state.submitted_at),
+            last_update_at: parse_timestamp(&order_state.last_update_at),
+            status_message: order_state.status_message.clone(),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    async fn cancel_order(
+        &self,
+        request: Request<CancelOrderRequest>,
+    ) -> Result<Response<CancelOrderResponse>, Status> {
+        let req = request.into_inner();
+        let order_id = req.order_id;
+
+        tracing::info!(order_id = %order_id, "Canceling order");
+
+        // Determine if this is a broker order ID or internal order ID
+        let broker_order_id = if let Some(order_state) = self.state_manager.get(&order_id) {
+            order_state.broker_order_id.clone()
+        } else if let Some(order_state) = self.state_manager.get_by_broker_id(&order_id) {
+            order_state.broker_order_id.clone()
+        } else {
+            return Err(Status::not_found(format!("Order not found: {order_id}")));
+        };
+
+        // Cancel via gateway
+        match self.gateway.cancel_order(&broker_order_id).await {
+            Ok(()) => {
+                // Get updated order state
+                let order_state = self
+                    .state_manager
+                    .get_by_broker_id(&broker_order_id)
+                    .ok_or_else(|| Status::internal("Order state missing after cancel"))?;
+
+                Ok(Response::new(CancelOrderResponse {
+                    accepted: true,
+                    order_id: order_state.order_id.clone(),
+                    status: convert_order_status(order_state.status),
+                    error_message: None,
+                }))
+            }
+            Err(e) => {
+                tracing::error!(
+                    order_id = %order_id,
+                    error = %e,
+                    "Cancel order failed"
+                );
+
+                // Still return success but with error message
+                // since this matches FIX protocol behavior
+                let error_msg: String = e.to_string();
+                Ok(Response::new(CancelOrderResponse {
+                    accepted: false,
+                    order_id: order_id.clone(),
+                    status: proto::cream::v1::OrderStatus::Unspecified.into(),
+                    error_message: Some(error_msg),
+                }))
+            }
+        }
+    }
 }
 
 // ============================================
@@ -483,6 +590,51 @@ fn convert_decision_plan(
         critic_approved: true,
         plan_rationale: proto.portfolio_notes.clone().unwrap_or_default(),
     })
+}
+
+/// Convert internal OrderStatus to proto OrderStatus.
+fn convert_order_status(status: crate::models::OrderStatus) -> i32 {
+    use crate::models::OrderStatus;
+    match status {
+        OrderStatus::New => proto::cream::v1::OrderStatus::Pending.into(),
+        OrderStatus::Accepted => proto::cream::v1::OrderStatus::Accepted.into(),
+        OrderStatus::PartiallyFilled => proto::cream::v1::OrderStatus::PartialFill.into(),
+        OrderStatus::Filled => proto::cream::v1::OrderStatus::Filled.into(),
+        OrderStatus::Canceled => proto::cream::v1::OrderStatus::Cancelled.into(),
+        OrderStatus::Rejected => proto::cream::v1::OrderStatus::Rejected.into(),
+        OrderStatus::Expired => proto::cream::v1::OrderStatus::Expired.into(),
+    }
+}
+
+/// Convert internal OrderSide to proto OrderSide.
+fn convert_order_side(side: crate::models::OrderSide) -> i32 {
+    use crate::models::OrderSide;
+    match side {
+        OrderSide::Buy => proto::cream::v1::OrderSide::Buy.into(),
+        OrderSide::Sell => proto::cream::v1::OrderSide::Sell.into(),
+    }
+}
+
+/// Convert internal OrderType to proto OrderType.
+fn convert_order_type(order_type: crate::models::OrderType) -> i32 {
+    use crate::models::OrderType;
+    match order_type {
+        OrderType::Market => proto::cream::v1::OrderType::Market.into(),
+        OrderType::Limit => proto::cream::v1::OrderType::Limit.into(),
+        // Proto doesn't have Stop/StopLimit yet, map to Market for now
+        OrderType::Stop => proto::cream::v1::OrderType::Market.into(),
+        OrderType::StopLimit => proto::cream::v1::OrderType::Limit.into(),
+    }
+}
+
+/// Parse ISO 8601 timestamp string to protobuf Timestamp.
+fn parse_timestamp(timestamp_str: &str) -> Option<prost_types::Timestamp> {
+    chrono::DateTime::parse_from_rfc3339(timestamp_str)
+        .ok()
+        .map(|dt| prost_types::Timestamp {
+            seconds: dt.timestamp(),
+            nanos: dt.timestamp_subsec_nanos() as i32,
+        })
 }
 
 // ============================================

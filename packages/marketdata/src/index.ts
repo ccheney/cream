@@ -6,10 +6,25 @@
  * @example
  * ```ts
  * import {
+ *   createDatabentoClientFromEnv,
  *   createPolygonClientFromEnv,
  *   createFmpClientFromEnv,
  *   createAlphaVantageClientFromEnv,
  * } from "@cream/marketdata";
+ *
+ * // Execution-grade feed (real-time quotes, order book, trades)
+ * const databento = createDatabentoClientFromEnv();
+ * await databento.connect();
+ * databento.on((event) => {
+ *   if (event.type === "message") {
+ *     console.log("Market data:", event.message);
+ *   }
+ * });
+ * await databento.subscribe({
+ *   dataset: "XNAS.ITCH",
+ *   schema: "mbp-1",
+ *   symbols: ["AAPL", "MSFT"],
+ * });
  *
  * // Cognitive feed (candles, options)
  * const polygon = createPolygonClientFromEnv();

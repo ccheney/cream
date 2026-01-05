@@ -18,6 +18,11 @@
     "@cream/config": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/helix-schema": "workspace:*",
+    "@cream/marketdata": "workspace:*",
+    "@cream/indicators": "workspace:*",
+    "@cream/regime": "workspace:*",
+    "@cream/broker": "workspace:*",
+    "@cream/universe": "workspace:*",
     "@mastra/core": "^0.24.9",
     "hono": "^4.11.3"
   },

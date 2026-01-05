@@ -6,6 +6,6 @@
 mod retry;
 
 pub use retry::{
-    BrokerRetryPolicy, ExponentialBackoffCalculator, RetryAfterExtractor, is_retryable_error,
-    is_retryable_status,
+    AlpacaErrorHandler, BrokerRetryPolicy, ErrorCategory, ExponentialBackoffCalculator,
+    RetryAfterExtractor, is_retryable_error, is_retryable_status,
 };

@@ -177,6 +177,62 @@ class ExecutionAck(_message.Message):
     commission: float
     def __init__(self, order_id: _Optional[str] = ..., client_order_id: _Optional[str] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., filled_quantity: _Optional[int] = ..., avg_fill_price: _Optional[float] = ..., remaining_quantity: _Optional[int] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., commission: _Optional[float] = ...) -> None: ...
 
+class GetOrderStateRequest(_message.Message):
+    __slots__ = ()
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    def __init__(self, order_id: _Optional[str] = ...) -> None: ...
+
+class GetOrderStateResponse(_message.Message):
+    __slots__ = ()
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    BROKER_ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    ORDER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    REQUESTED_QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    FILLED_QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    AVG_FILL_PRICE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_PRICE_FIELD_NUMBER: _ClassVar[int]
+    STOP_PRICE_FIELD_NUMBER: _ClassVar[int]
+    SUBMITTED_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_UPDATE_AT_FIELD_NUMBER: _ClassVar[int]
+    STATUS_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    broker_order_id: str
+    instrument: _common_pb2.Instrument
+    status: OrderStatus
+    side: OrderSide
+    order_type: _common_pb2.OrderType
+    requested_quantity: int
+    filled_quantity: int
+    avg_fill_price: float
+    limit_price: float
+    stop_price: float
+    submitted_at: _timestamp_pb2.Timestamp
+    last_update_at: _timestamp_pb2.Timestamp
+    status_message: str
+    def __init__(self, order_id: _Optional[str] = ..., broker_order_id: _Optional[str] = ..., instrument: _Optional[_Union[_common_pb2.Instrument, _Mapping]] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., side: _Optional[_Union[OrderSide, str]] = ..., order_type: _Optional[_Union[_common_pb2.OrderType, str]] = ..., requested_quantity: _Optional[int] = ..., filled_quantity: _Optional[int] = ..., avg_fill_price: _Optional[float] = ..., limit_price: _Optional[float] = ..., stop_price: _Optional[float] = ..., submitted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_update_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., status_message: _Optional[str] = ...) -> None: ...
+
+class CancelOrderRequest(_message.Message):
+    __slots__ = ()
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    def __init__(self, order_id: _Optional[str] = ...) -> None: ...
+
+class CancelOrderResponse(_message.Message):
+    __slots__ = ()
+    ACCEPTED_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    accepted: bool
+    order_id: str
+    status: OrderStatus
+    error_message: str
+    def __init__(self, accepted: _Optional[bool] = ..., order_id: _Optional[str] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., error_message: _Optional[str] = ...) -> None: ...
+
 class StreamExecutionsRequest(_message.Message):
     __slots__ = ()
     CYCLE_ID_FIELD_NUMBER: _ClassVar[int]

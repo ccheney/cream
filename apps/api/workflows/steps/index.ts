@@ -24,10 +24,22 @@ export {
   DEFAULT_RETRIEVAL_CONFIG,
   type DecisionSummary,
   executeHelixRetrieval,
-  PERFORMANCE_TARGETS,
+  PERFORMANCE_TARGETS as RETRIEVAL_PERFORMANCE_TARGETS,
   type RetrievalInput,
   type RetrievalResult,
   retrieveRegimeDecisions,
   retrieveSimilarDecisions,
   retrieveVectorOnly,
 } from "./helixRetrieval";
+
+// Market Snapshot Builder
+export {
+  buildHistoricalSnapshot,
+  buildSnapshotForSymbols,
+  buildSnapshotForUniverse,
+  DEFAULT_SNAPSHOT_CONFIG,
+  executeMarketSnapshotBuilder,
+  type SnapshotBuilderInput,
+  type SnapshotBuilderResult,
+} from "./marketSnapshotBuilder";
+export { PERFORMANCE_TARGETS as SNAPSHOT_PERFORMANCE_TARGETS } from "./marketSnapshotBuilder";

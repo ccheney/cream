@@ -229,6 +229,12 @@ service ExecutionService {
   // Submit an order for execution
   rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse);
 
+  // Get order state by order ID
+  rpc GetOrderState(GetOrderStateRequest) returns (GetOrderStateResponse);
+
+  // Cancel an order
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+
   // Stream order execution updates
   rpc StreamExecutions(StreamExecutionsRequest) returns (stream StreamExecutionsResponse);
 
@@ -237,6 +243,78 @@ service ExecutionService {
 
   // Get current positions
   rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+}
+
+// Request to get order state
+message GetOrderStateRequest {
+  // Order ID to query (can be broker order ID or internal order ID)
+  string order_id = 1;
+}
+
+// Response with order state
+message GetOrderStateResponse {
+  // Order ID
+  string order_id = 1;
+
+  // Broker order ID
+  string broker_order_id = 2;
+
+  // Instrument
+  Instrument instrument = 3;
+
+  // Current status
+  OrderStatus status = 4;
+
+  // Order side
+  OrderSide side = 5;
+
+  // Order type
+  OrderType order_type = 6;
+
+  // Requested quantity
+  int32 requested_quantity = 7;
+
+  // Filled quantity
+  int32 filled_quantity = 8;
+
+  // Average fill price
+  double avg_fill_price = 9;
+
+  // Limit price (if applicable)
+  optional double limit_price = 10;
+
+  // Stop price (if applicable)
+  optional double stop_price = 11;
+
+  // Submission timestamp
+  google.protobuf.Timestamp submitted_at = 12;
+
+  // Last update timestamp
+  google.protobuf.Timestamp last_update_at = 13;
+
+  // Status message from broker
+  string status_message = 14;
+}
+
+// Request to cancel an order
+message CancelOrderRequest {
+  // Order ID to cancel (can be broker order ID or internal order ID)
+  string order_id = 1;
+}
+
+// Response from cancel request
+message CancelOrderResponse {
+  // Whether cancel request was accepted
+  bool accepted = 1;
+
+  // Order ID that was canceled
+  string order_id = 2;
+
+  // Current order status after cancel request
+  OrderStatus status = 3;
+
+  // Error message if cancel was rejected
+  optional string error_message = 4;
 }
 
 // Request to stream executions
