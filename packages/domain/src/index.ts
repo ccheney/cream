@@ -482,5 +482,23 @@ export {
   type ValuationMetrics,
   ValuationMetricsSchema,
 } from "./external-context";
+// Memory context and CBR types
+export {
+  calculateCaseStatistics,
+  CaseResult,
+  type CaseStatistics,
+  CaseStatisticsSchema,
+  createEmptyMemoryContext,
+  filterByResult,
+  filterBySimilarity,
+  getMostSimilarCase,
+  hasMemoryContext,
+  type KeyOutcomes,
+  KeyOutcomesSchema,
+  type MemoryContext,
+  MemoryContextSchema,
+  type RetrievedCase,
+  RetrievedCaseSchema,
+} from "./memory-context";
 // WebSocket schemas
 export * from "./websocket/index.js";
