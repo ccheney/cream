@@ -33,6 +33,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 
+pub mod backtest;
 pub mod broker;
 pub mod config;
 pub mod error;
@@ -47,6 +48,11 @@ pub mod safety;
 pub mod server;
 
 // Re-export commonly used types
+pub use backtest::{
+    BacktestConfig, Candle, FillResult, MultiLegFillResult, SimOrder, SimPosition,
+    SimTrade, SimulationEngine, simulate_market_order, simulate_limit_order,
+    simulate_order, simulate_multi_leg_order,
+};
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
 pub use models::{
