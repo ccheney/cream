@@ -36,3 +36,15 @@ export {
   type TursoClient,
   type TursoConfig,
 } from "./turso.js";
+// Connection pooling
+export {
+  type ConnectionPool,
+  createHttpPool,
+  createPool,
+  createTursoPool,
+  type HttpPool,
+  type HttpPoolConfig,
+  type PoolConfig,
+  type PooledConnection,
+  type PoolStats,
+} from "./pool.js";
