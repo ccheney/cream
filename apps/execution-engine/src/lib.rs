@@ -10,6 +10,13 @@
 //! - **Order Routing**: Routes orders to brokers (Alpaca)
 //! - **Position Management**: Tracks positions and P&L
 //!
+//! # Modules
+//!
+//! - [`models`]: Core domain types (orders, decisions, constraints)
+//! - [`risk`]: Constraint validation and risk checks
+//! - [`execution`]: Order routing and state management
+//! - [`server`]: gRPC service implementation
+//!
 //! # Coverage
 //!
 //! Coverage threshold: 90% (Critical tier)
@@ -26,21 +33,16 @@
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 
-/// Placeholder module - implementation coming in Phase 3
-pub mod placeholder {
-    /// Placeholder function for initial setup
-    #[must_use]
-    pub const fn hello() -> &'static str {
-        "Execution Engine - Coming Soon"
-    }
-}
+pub mod execution;
+pub mod models;
+pub mod risk;
+pub mod server;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_placeholder() {
-        assert_eq!(placeholder::hello(), "Execution Engine - Coming Soon");
-    }
-}
+// Re-export commonly used types
+pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
+pub use models::{
+    ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
+    OrderState, SubmitOrdersRequest,
+};
+pub use risk::ConstraintValidator;
+pub use server::ExecutionServer;
