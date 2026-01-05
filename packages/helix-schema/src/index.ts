@@ -320,3 +320,32 @@ export {
   needsReembedding,
   batchEmbedWithProgress,
 } from "./embeddings";
+
+// ============================================
+// HNSW Vector Index Configuration
+// ============================================
+
+export {
+  // Schemas
+  DistanceMetric,
+  type DistanceMetric as DistanceMetricType,
+  HnswConfigSchema,
+  type HnswConfig,
+  TuningProfileName,
+  type TuningProfileName as TuningProfileNameType,
+  TuningProfileSchema,
+  type TuningProfile,
+  // Defaults
+  DEFAULT_HNSW_CONFIG,
+  DISTANCE_METRIC_NOTES,
+  // Tuning profiles
+  TUNING_PROFILES,
+  ENVIRONMENT_PROFILE_MAP,
+  // Functions
+  getConfigForEnvironment,
+  getTuningProfile,
+  listTuningProfiles,
+  validateHnswConfig,
+  adjustEfSearchForRecall,
+  generateVectorIndexConfig,
+} from "./hnsw-config";
