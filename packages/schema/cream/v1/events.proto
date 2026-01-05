@@ -1,0 +1,386 @@
+// Cream Trading System - External Events Schema
+// Event types for news, sentiment, fundamentals, and macro data
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// ============================================
+// Event Type Enumeration
+// ============================================
+
+// Category of external event
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_EARNINGS = 1;        // Earnings report
+  EVENT_TYPE_GUIDANCE = 2;        // Forward guidance update
+  EVENT_TYPE_MACRO = 3;           // Macro economic release
+  EVENT_TYPE_NEWS = 4;            // General news
+  EVENT_TYPE_SENTIMENT_SPIKE = 5; // Social/sentiment volume spike
+  EVENT_TYPE_SEC_FILING = 6;      // SEC filing (10-K, 10-Q, 8-K)
+  EVENT_TYPE_DIVIDEND = 7;        // Dividend announcement
+  EVENT_TYPE_SPLIT = 8;           // Stock split
+  EVENT_TYPE_M_AND_A = 9;         // Merger and acquisition
+  EVENT_TYPE_ANALYST_RATING = 10; // Analyst rating change
+  EVENT_TYPE_CONFERENCE = 11;     // Conference/investor day
+  EVENT_TYPE_PRODUCT_LAUNCH = 12; // Product launch
+  EVENT_TYPE_REGULATORY = 13;     // Regulatory decision
+  EVENT_TYPE_EXECUTIVE_CHANGE = 14; // Executive appointment/departure
+  EVENT_TYPE_LEGAL = 15;          // Legal/litigation
+  EVENT_TYPE_OTHER = 16;          // Other/unclassified
+}
+
+// Data source for external events
+enum DataSource {
+  DATA_SOURCE_UNSPECIFIED = 0;
+  DATA_SOURCE_FMP = 1;            // Financial Modeling Prep
+  DATA_SOURCE_ALPHA_VANTAGE = 2;  // Alpha Vantage
+  DATA_SOURCE_POLYGON = 3;        // Polygon/Massive
+  DATA_SOURCE_BENZINGA = 4;       // Benzinga
+  DATA_SOURCE_SEC_EDGAR = 5;      // SEC EDGAR
+  DATA_SOURCE_SOCIAL = 6;         // Social media aggregation
+  DATA_SOURCE_INTERNAL = 7;       // Internal system-generated
+}
+
+// Sentiment classification
+enum Sentiment {
+  SENTIMENT_UNSPECIFIED = 0;
+  SENTIMENT_BULLISH = 1;
+  SENTIMENT_BEARISH = 2;
+  SENTIMENT_NEUTRAL = 3;
+}
+
+// ============================================
+// Payload Messages for Specific Event Types
+// ============================================
+
+// Earnings event payload
+message EarningsEventPayload {
+  // Symbol this earnings relates to
+  string symbol = 1;
+
+  // Fiscal quarter (e.g., "Q1", "Q2")
+  string quarter = 2;
+
+  // Fiscal year
+  int32 year = 3;
+
+  // Actual EPS reported
+  optional double eps_actual = 4;
+
+  // Expected/consensus EPS
+  optional double eps_expected = 5;
+
+  // EPS surprise percentage ((actual - expected) / expected * 100)
+  optional double eps_surprise_pct = 6;
+
+  // Actual revenue reported (in dollars)
+  optional double revenue_actual = 7;
+
+  // Expected/consensus revenue
+  optional double revenue_expected = 8;
+
+  // Revenue surprise percentage
+  optional double revenue_surprise_pct = 9;
+
+  // Management guidance update
+  optional string guidance_summary = 10;
+
+  // Earnings call transcript available
+  bool transcript_available = 11;
+}
+
+// Macro economic event payload
+message MacroEventPayload {
+  // Indicator name (e.g., "Non-Farm Payrolls", "CPI", "GDP")
+  string indicator_name = 1;
+
+  // Actual value released
+  double value = 2;
+
+  // Previous period value
+  optional double previous_value = 3;
+
+  // Expected/consensus value
+  optional double expected_value = 4;
+
+  // Surprise percentage
+  optional double surprise_pct = 5;
+
+  // Unit of measurement
+  string unit = 6;
+
+  // Country (default: "US")
+  string country = 7;
+
+  // Period this data covers
+  optional string period = 8;
+}
+
+// News event payload
+message NewsEventPayload {
+  // Article headline
+  string headline = 1;
+
+  // Article body/summary
+  string body = 2;
+
+  // Source publication
+  string source = 3;
+
+  // URL to full article
+  optional string url = 4;
+
+  // Extracted entities (company names, people, products)
+  repeated ExtractedEntity entities = 5;
+
+  // LLM-extracted key insights
+  repeated string key_insights = 6;
+}
+
+// Extracted entity from content
+message ExtractedEntity {
+  // Entity name as it appears
+  string name = 1;
+
+  // Entity type
+  string entity_type = 2; // "company", "person", "product", "event", "location"
+
+  // Resolved ticker symbol (if company)
+  optional string ticker = 3;
+}
+
+// Sentiment spike event payload
+message SentimentEventPayload {
+  // Platform (Twitter/X, Reddit, StockTwits)
+  string platform = 1;
+
+  // Volume of mentions
+  int64 mention_count = 2;
+
+  // Normal average volume
+  optional int64 average_volume = 3;
+
+  // Volume z-score
+  optional double volume_zscore = 4;
+
+  // Aggregate sentiment of mentions
+  Sentiment aggregate_sentiment = 5;
+
+  // Time window in minutes
+  int32 window_minutes = 6;
+}
+
+// Merger/acquisition event payload
+message MergerAcquisitionPayload {
+  // Type: "merger", "acquisition", "spinoff", "divestiture"
+  string transaction_type = 1;
+
+  // Acquirer symbol (if acquisition)
+  optional string acquirer_symbol = 2;
+
+  // Target symbol (if acquisition)
+  optional string target_symbol = 3;
+
+  // Deal value (if disclosed)
+  optional double deal_value = 4;
+
+  // Currency of deal value
+  string currency = 5;
+
+  // Expected close date
+  optional string expected_close_date = 6;
+
+  // Deal status: "announced", "pending", "approved", "closed", "terminated"
+  string status = 7;
+}
+
+// Analyst rating event payload
+message AnalystRatingPayload {
+  // Analyst firm name
+  string firm = 1;
+
+  // Analyst name (if available)
+  optional string analyst_name = 2;
+
+  // Previous rating (if upgrade/downgrade)
+  optional string previous_rating = 3;
+
+  // New rating
+  string new_rating = 4;
+
+  // Previous price target
+  optional double previous_target = 5;
+
+  // New price target
+  optional double new_target = 6;
+
+  // Action type: "initiated", "upgrade", "downgrade", "reiterated"
+  string action_type = 7;
+}
+
+// Regulatory event payload
+message RegulatoryPayload {
+  // Regulatory body (FDA, SEC, FTC, DOJ, etc.)
+  string regulatory_body = 1;
+
+  // Action type (approval, rejection, investigation, settlement, etc.)
+  string action_type = 2;
+
+  // Product or matter name (if applicable)
+  optional string subject = 3;
+
+  // Decision or status
+  string decision = 4;
+
+  // Next steps or timeline
+  optional string next_steps = 5;
+}
+
+// Dividend event payload
+message DividendPayload {
+  // Dividend amount per share
+  double amount = 1;
+
+  // Currency
+  string currency = 2;
+
+  // Ex-dividend date
+  string ex_date = 3;
+
+  // Record date
+  optional string record_date = 4;
+
+  // Payment date
+  optional string payment_date = 5;
+
+  // Dividend type: "regular", "special", "variable"
+  string dividend_type = 6;
+
+  // Year-over-year change percentage
+  optional double yoy_change_pct = 7;
+}
+
+// Stock split event payload
+message SplitPayload {
+  // Split ratio numerator (e.g., 4 for 4:1)
+  int32 split_from = 1;
+
+  // Split ratio denominator (e.g., 1 for 4:1)
+  int32 split_to = 2;
+
+  // Effective date
+  string effective_date = 3;
+
+  // Announcement date
+  optional string announcement_date = 4;
+}
+
+// ============================================
+// External Event (Main Message)
+// ============================================
+
+// A discrete external event
+message ExternalEvent {
+  // Unique identifier (UUID v4)
+  string event_id = 1;
+
+  // Category of event
+  EventType event_type = 2;
+
+  // When the event occurred
+  google.protobuf.Timestamp event_time = 3;
+
+  // Event payload (structure varies by event_type)
+  // Using oneof for type-safe payloads
+  oneof payload {
+    EarningsEventPayload earnings = 10;
+    MacroEventPayload macro = 11;
+    NewsEventPayload news = 12;
+    SentimentEventPayload sentiment_spike = 13;
+    MergerAcquisitionPayload merger_acquisition = 14;
+    AnalystRatingPayload analyst_rating = 15;
+    RegulatoryPayload regulatory = 16;
+    DividendPayload dividend = 17;
+    SplitPayload split = 18;
+    google.protobuf.Struct generic_payload = 19; // Fallback for other types
+  }
+
+  // Affected instrument IDs (tickers)
+  repeated string related_instrument_ids = 4;
+
+  // Data source
+  DataSource source = 5;
+
+  // Headline or summary (for quick display)
+  optional string headline = 6;
+
+  // ============================================
+  // Computed Scores (from extraction pipeline)
+  // ============================================
+
+  // Sentiment score (-1.0 bearish to 1.0 bullish)
+  optional double sentiment_score = 20;
+
+  // Importance/relevance score (0.0 to 1.0)
+  optional double importance_score = 21;
+
+  // Surprise score (-1.0 big miss to 1.0 big beat)
+  optional double surprise_score = 22;
+
+  // Confidence in extraction (0.0 to 1.0)
+  optional double confidence = 23;
+
+  // ============================================
+  // Metadata
+  // ============================================
+
+  // When the event was processed/extracted
+  google.protobuf.Timestamp processed_at = 30;
+
+  // Original content (for reference/debugging)
+  optional string original_content = 31;
+}
+
+// ============================================
+// Event Collections
+// ============================================
+
+// Collection of external events
+message ExternalEventList {
+  // Events in the collection
+  repeated ExternalEvent events = 1;
+
+  // Total count (may exceed list if paginated)
+  int32 total_count = 2;
+
+  // Pagination cursor for next page
+  optional string next_cursor = 3;
+}
+
+// Event query request
+message EventQueryRequest {
+  // Filter by event types
+  repeated EventType event_types = 1;
+
+  // Filter by instrument IDs
+  repeated string instrument_ids = 2;
+
+  // Start time (inclusive)
+  optional google.protobuf.Timestamp start_time = 3;
+
+  // End time (exclusive)
+  optional google.protobuf.Timestamp end_time = 4;
+
+  // Maximum events to return
+  int32 limit = 5;
+
+  // Pagination cursor
+  optional string cursor = 6;
+
+  // Minimum importance score
+  optional double min_importance = 7;
+}
