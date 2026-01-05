@@ -21,6 +21,10 @@
     "./grpc": {
       "types": "./src/grpc/index.ts",
       "import": "./src/grpc/index.ts"
+    },
+    "./arrow": {
+      "types": "./src/arrow/index.ts",
+      "import": "./src/arrow/index.ts"
     }
   },
   "scripts": {
