@@ -1,0 +1,476 @@
+/**
+ * Data Quality Validation Tests
+ */
+
+import { describe, expect, it, beforeAll } from "bun:test";
+import {
+  checkStaleness,
+  DEFAULT_STALENESS_THRESHOLDS,
+  getStaleSymbols,
+  isFresh,
+} from "./staleness";
+import {
+  detectGaps,
+  fillGaps,
+  interpolateCandle,
+  type Candle,
+} from "./gaps";
+import {
+  detectVolumeAnomalies,
+  detectPriceSpikes,
+  detectFlashCrashes,
+  detectAllAnomalies,
+  DEFAULT_ANOMALY_CONFIG,
+} from "./anomalies";
+import {
+  isWeekend,
+  isHoliday,
+  isTradingDay,
+  isMarketOpen,
+  getNextTradingDay,
+  getPreviousTradingDay,
+  getTradingDaysBetween,
+} from "./calendar";
+import {
+  validateCandleData,
+  isValidCandleData,
+  getQualityScore,
+} from "./index";
+import type { Timeframe } from "../ingestion/candleIngestion";
+
+// ============================================
+// Test Data
+// ============================================
+
+function createCandle(
+  timestamp: string,
+  close: number,
+  volume = 1000000,
+  overrides: Partial<Candle> = {}
+): Candle {
+  return {
+    symbol: "AAPL",
+    timeframe: "1h" as Timeframe,
+    timestamp,
+    open: close * 0.99,
+    high: close * 1.01,
+    low: close * 0.98,
+    close,
+    volume,
+    ...overrides,
+  };
+}
+
+function createCandleSeries(
+  count: number,
+  startPrice = 100,
+  intervalMs = 3600000 // 1 hour
+): Candle[] {
+  const candles: Candle[] = [];
+  const baseTime = Date.now() - count * intervalMs;
+
+  for (let i = 0; i < count; i++) {
+    // Deterministic small variation to avoid anomaly detection
+    const variation = Math.sin(i * 0.5) * 2;
+    const price = startPrice + variation;
+    candles.push(
+      createCandle(
+        new Date(baseTime + i * intervalMs).toISOString(),
+        price,
+        1000000 + (i % 10) * 10000 // Deterministic volume variation
+      )
+    );
+  }
+
+  return candles;
+}
+
+// ============================================
+// Staleness Tests
+// ============================================
+
+describe("Staleness Detection", () => {
+  describe("checkStaleness", () => {
+    it("should detect stale data", () => {
+      const oldTimestamp = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(); // 3 hours ago
+      const result = checkStaleness(oldTimestamp, "1h");
+
+      expect(result.isStale).toBe(true);
+      expect(result.staleMinutes).toBeGreaterThan(120);
+    });
+
+    it("should detect fresh data", () => {
+      const recentTimestamp = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30 min ago
+      const result = checkStaleness(recentTimestamp, "1h");
+
+      expect(result.isStale).toBe(false);
+      expect(result.staleMinutes).toBeLessThan(120);
+    });
+
+    it("should handle null timestamp", () => {
+      const result = checkStaleness(null, "1h");
+
+      expect(result.isStale).toBe(true);
+      expect(result.staleMinutes).toBe(Infinity);
+    });
+
+    it("should use correct thresholds per timeframe", () => {
+      const timestamp = new Date(Date.now() - 15 * 60 * 1000).toISOString(); // 15 min ago
+
+      const result1m = checkStaleness(timestamp, "1m");
+      const result1d = checkStaleness(timestamp, "1d");
+
+      expect(result1m.isStale).toBe(true); // 15 > 2 minutes threshold
+      expect(result1d.isStale).toBe(false); // 15 < 2880 minutes threshold
+    });
+  });
+
+  describe("getStaleSymbols", () => {
+    it("should return only stale symbols", () => {
+      const timestamps = new Map<string, string | null>();
+      timestamps.set("AAPL", new Date(Date.now() - 30 * 60 * 1000).toISOString()); // Fresh
+      timestamps.set("MSFT", new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()); // Stale
+      timestamps.set("GOOGL", null); // Stale
+
+      const stale = getStaleSymbols(timestamps, "1h");
+
+      expect(stale).toContain("MSFT");
+      expect(stale).toContain("GOOGL");
+      expect(stale).not.toContain("AAPL");
+    });
+  });
+
+  describe("isFresh", () => {
+    it("should return true for fresh data", () => {
+      const timestamp = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      expect(isFresh(timestamp, "1h")).toBe(true);
+    });
+
+    it("should return false for stale data", () => {
+      const timestamp = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      expect(isFresh(timestamp, "1h")).toBe(false);
+    });
+  });
+});
+
+// ============================================
+// Gap Detection Tests
+// ============================================
+
+describe("Gap Detection", () => {
+  describe("detectGaps", () => {
+    it("should detect gaps in candle data", () => {
+      const candles = createCandleSeries(5);
+      // Create a 3-hour gap
+      candles[2] = createCandle(
+        new Date(new Date(candles[1]!.timestamp).getTime() + 3 * 3600000).toISOString(),
+        100
+      );
+
+      const result = detectGaps(candles);
+
+      expect(result.hasGaps).toBe(true);
+      expect(result.gapCount).toBe(1);
+      expect(result.gaps[0]!.gapCandles).toBe(2);
+    });
+
+    it("should detect no gaps in continuous data", () => {
+      const candles = createCandleSeries(10);
+      const result = detectGaps(candles);
+
+      expect(result.hasGaps).toBe(false);
+      expect(result.gapCount).toBe(0);
+    });
+
+    it("should handle empty input", () => {
+      const result = detectGaps([]);
+
+      expect(result.hasGaps).toBe(false);
+      expect(result.totalCandles).toBe(0);
+    });
+  });
+
+  describe("fillGaps", () => {
+    it("should fill single-candle gaps", () => {
+      const candles: Candle[] = [
+        createCandle(new Date(1000 * 3600000).toISOString(), 100),
+        createCandle(new Date(1002 * 3600000).toISOString(), 102), // 2 hour gap
+      ];
+
+      const filled = fillGaps(candles, 1);
+
+      expect(filled.length).toBe(3);
+      expect((filled[1] as any).interpolated).toBe(true);
+    });
+
+    it("should not fill multi-candle gaps by default", () => {
+      const candles: Candle[] = [
+        createCandle(new Date(1000 * 3600000).toISOString(), 100),
+        createCandle(new Date(1005 * 3600000).toISOString(), 105), // 5 hour gap
+      ];
+
+      const filled = fillGaps(candles, 1);
+
+      expect(filled.length).toBe(2); // No interpolation
+    });
+  });
+
+  describe("interpolateCandle", () => {
+    it("should create interpolated candle correctly", () => {
+      const prev = createCandle("2024-01-01T10:00:00Z", 100);
+      const next = createCandle("2024-01-01T12:00:00Z", 102);
+
+      const interpolated = interpolateCandle(prev, next, "2024-01-01T11:00:00Z");
+
+      expect(interpolated.interpolated).toBe(true);
+      expect(interpolated.open).toBe(prev.close); // prev close
+      expect(interpolated.close).toBe(next.open); // next open
+      expect(interpolated.volume).toBe(0);
+    });
+  });
+});
+
+// ============================================
+// Anomaly Detection Tests
+// ============================================
+
+describe("Anomaly Detection", () => {
+  describe("detectVolumeAnomalies", () => {
+    it("should detect volume spikes", () => {
+      const candles = createCandleSeries(30);
+      // Add a massive volume spike
+      candles[25]!.volume = 10000000; // 10x normal
+
+      const anomalies = detectVolumeAnomalies(candles);
+
+      expect(anomalies.length).toBeGreaterThan(0);
+      expect(anomalies.some((a) => a.type === "volume_spike")).toBe(true);
+    });
+
+    it("should not flag normal volume variation", () => {
+      const candles = createCandleSeries(30);
+      const anomalies = detectVolumeAnomalies(candles);
+
+      // Random variation should not trigger 5σ anomalies
+      expect(anomalies.filter((a) => a.type === "volume_spike").length).toBe(0);
+    });
+  });
+
+  describe("detectPriceSpikes", () => {
+    it("should detect price spikes >10%", () => {
+      const candles = createCandleSeries(10);
+      candles[5]!.close = candles[4]!.close * 1.15; // 15% spike
+
+      const anomalies = detectPriceSpikes(candles);
+
+      expect(anomalies.length).toBeGreaterThan(0);
+      expect(anomalies.some((a) => a.type === "price_spike")).toBe(true);
+    });
+
+    it("should detect gap up/down", () => {
+      const candles = createCandleSeries(10);
+      candles[5]!.open = candles[4]!.close * 1.12; // 12% gap up
+
+      const anomalies = detectPriceSpikes(candles);
+
+      expect(anomalies.some((a) => a.type === "gap_up")).toBe(true);
+    });
+  });
+
+  describe("detectFlashCrashes", () => {
+    it("should detect flash crash pattern", () => {
+      const candles = createCandleSeries(20);
+      const basePrice = candles[10]!.close;
+
+      // Create flash crash: 6% drop then recovery
+      candles[11]!.low = basePrice * 0.94;
+      candles[11]!.close = basePrice * 0.95;
+      candles[12]!.close = basePrice * 0.98; // Recovery
+
+      const anomalies = detectFlashCrashes(candles);
+
+      expect(anomalies.some((a) => a.type === "flash_crash")).toBe(true);
+    });
+  });
+
+  describe("detectAllAnomalies", () => {
+    it("should combine all anomaly types", () => {
+      const candles = createCandleSeries(30);
+      candles[25]!.volume = 10000000; // Volume spike
+      candles[20]!.close = candles[19]!.close * 1.15; // Price spike
+
+      const result = detectAllAnomalies(candles);
+
+      expect(result.hasAnomalies).toBe(true);
+      expect(result.anomalies.length).toBeGreaterThan(0);
+    });
+  });
+});
+
+// ============================================
+// Calendar Tests
+// ============================================
+
+describe("Trading Calendar", () => {
+  describe("isWeekend", () => {
+    it("should detect Saturday", () => {
+      const saturday = new Date("2024-01-06T12:00:00Z"); // Saturday
+      expect(isWeekend(saturday)).toBe(true);
+    });
+
+    it("should detect Sunday", () => {
+      const sunday = new Date("2024-01-07T12:00:00Z"); // Sunday
+      expect(isWeekend(sunday)).toBe(true);
+    });
+
+    it("should not detect weekday", () => {
+      const monday = new Date("2024-01-08T12:00:00Z"); // Monday
+      expect(isWeekend(monday)).toBe(false);
+    });
+  });
+
+  describe("isHoliday", () => {
+    it("should detect Christmas", () => {
+      const christmas = new Date("2024-12-25T12:00:00Z");
+      expect(isHoliday(christmas)).toBe(true);
+    });
+
+    it("should not flag regular day", () => {
+      const regularDay = new Date("2024-06-15T12:00:00Z");
+      expect(isHoliday(regularDay)).toBe(false);
+    });
+  });
+
+  describe("isTradingDay", () => {
+    it("should return false for weekend", () => {
+      const saturday = new Date("2024-01-06T12:00:00Z");
+      expect(isTradingDay(saturday)).toBe(false);
+    });
+
+    it("should return false for holiday", () => {
+      const thanksgiving = new Date("2024-11-28T12:00:00Z");
+      expect(isTradingDay(thanksgiving)).toBe(false);
+    });
+
+    it("should return true for regular weekday", () => {
+      const tuesday = new Date("2024-06-18T12:00:00Z");
+      expect(isTradingDay(tuesday)).toBe(true);
+    });
+  });
+
+  describe("getNextTradingDay", () => {
+    it("should skip weekend", () => {
+      const friday = new Date("2024-01-05T12:00:00Z");
+      const next = getNextTradingDay(friday);
+
+      expect(next.getDay()).toBe(1); // Monday
+    });
+
+    it("should skip holiday", () => {
+      const dayBeforeChristmas = new Date("2024-12-24T12:00:00Z");
+      const next = getNextTradingDay(dayBeforeChristmas);
+
+      expect(next.getDate()).toBe(26);
+    });
+  });
+
+  describe("getTradingDaysBetween", () => {
+    it("should count trading days correctly", () => {
+      const monday = new Date("2024-01-08T00:00:00Z");
+      const friday = new Date("2024-01-12T00:00:00Z");
+
+      const days = getTradingDaysBetween(monday, friday);
+
+      expect(days).toBe(4); // Tue, Wed, Thu, Fri
+    });
+  });
+});
+
+// ============================================
+// Combined Validation Tests
+// ============================================
+
+describe("Combined Validation", () => {
+  describe("validateCandleData", () => {
+    it("should return valid for good data", () => {
+      const candles = createCandleSeries(50);
+      // Make last candle recent
+      candles[candles.length - 1]!.timestamp = new Date().toISOString();
+
+      const result = validateCandleData(candles);
+
+      expect(result.isValid).toBe(true);
+      expect(result.qualityScore).toBeGreaterThan(80);
+    });
+
+    it("should detect stale data", () => {
+      const candles = createCandleSeries(50);
+      // Make last candle old
+      candles[candles.length - 1]!.timestamp = new Date(
+        Date.now() - 5 * 60 * 60 * 1000
+      ).toISOString();
+
+      const result = validateCandleData(candles);
+
+      expect(result.staleness?.isStale).toBe(true);
+      expect(result.issues.some((i) => i.type === "staleness")).toBe(true);
+    });
+
+    it("should detect gaps", () => {
+      const candles = createCandleSeries(20);
+      // Create a gap
+      candles[10]!.timestamp = new Date(
+        new Date(candles[9]!.timestamp).getTime() + 5 * 3600000
+      ).toISOString();
+
+      const result = validateCandleData(candles);
+
+      expect(result.gaps?.hasGaps).toBe(true);
+      expect(result.issues.some((i) => i.type === "gap")).toBe(true);
+    });
+
+    it("should handle empty input", () => {
+      const result = validateCandleData([]);
+
+      expect(result.isValid).toBe(false);
+      expect(result.qualityScore).toBe(0);
+      expect(result.issues.some((i) => i.type === "insufficient_data")).toBe(true);
+    });
+  });
+
+  describe("isValidCandleData", () => {
+    it("should return true for valid data", () => {
+      const candles = createCandleSeries(50);
+      candles[candles.length - 1]!.timestamp = new Date().toISOString();
+
+      expect(isValidCandleData(candles)).toBe(true);
+    });
+
+    it("should return false for invalid data", () => {
+      expect(isValidCandleData([])).toBe(false);
+    });
+  });
+
+  describe("getQualityScore", () => {
+    it("should return high score for good data", () => {
+      const candles = createCandleSeries(50);
+      candles[candles.length - 1]!.timestamp = new Date().toISOString();
+
+      const score = getQualityScore(candles);
+
+      expect(score).toBeGreaterThanOrEqual(70); // Reasonable threshold
+    });
+
+    it("should return low score for bad data", () => {
+      const candles = createCandleSeries(5);
+      // Old data
+      candles[candles.length - 1]!.timestamp = new Date(
+        Date.now() - 10 * 60 * 60 * 1000
+      ).toISOString();
+
+      const score = getQualityScore(candles);
+
+      expect(score).toBeLessThan(80);
+    });
+  });
+});

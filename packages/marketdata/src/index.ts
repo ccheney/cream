@@ -92,6 +92,67 @@ export {
   type Timeframe,
 } from "./ingestion";
 
+// Data quality validation
+export {
+  // Staleness detection
+  checkStaleness as checkDataStaleness,
+  checkMultipleStaleness,
+  getStaleSymbols,
+  isFresh,
+  DEFAULT_STALENESS_THRESHOLDS,
+  type StalenessThresholds,
+  type StalenessCheckResult,
+
+  // Gap detection
+  detectGaps,
+  fillGaps,
+  interpolateCandle,
+  shouldInterpolate,
+  getExtendedGaps,
+  getExpectedIntervalMs,
+  type GapDetectionResult,
+  type InterpolatedCandle,
+
+  // Anomaly detection
+  detectVolumeAnomalies,
+  detectPriceSpikes,
+  detectFlashCrashes,
+  detectAllAnomalies,
+  filterAnomalousCandles,
+  DEFAULT_ANOMALY_CONFIG,
+  type Anomaly,
+  type AnomalyType,
+  type AnomalyDetectionConfig,
+  type AnomalyDetectionResult,
+
+  // Trading calendar
+  isWeekend,
+  isHoliday,
+  isEarlyClose,
+  isTradingDay,
+  isMarketOpen,
+  getNextTradingDay,
+  getPreviousTradingDay,
+  getTradingDaysBetween,
+  isExpectedGap,
+  DEFAULT_US_CALENDAR,
+  US_MARKET_HOURS,
+  US_EXTENDED_HOURS,
+  US_MARKET_HOLIDAYS_2024_2026,
+  US_EARLY_CLOSES_2024_2026,
+  type MarketHours,
+  type MarketCalendarConfig,
+
+  // Combined validation
+  validateCandleData,
+  isValidCandleData,
+  getQualityScore,
+  DEFAULT_VALIDATION_CONFIG,
+  type ValidationConfig,
+  type ValidationIssue,
+  type ValidationResult,
+} from "./validation";
+
 /**
  * Package version.
  */
