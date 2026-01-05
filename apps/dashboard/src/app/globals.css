@@ -20,6 +20,9 @@
 /* The Cream Glow - Visual Signature */
 @import '../styles/glow.css';
 
+/* Elevation & Layered Surfaces */
+@import '../styles/elevation.css';
+
 /* ============================================
  * Font Face Declarations
  * ============================================ */

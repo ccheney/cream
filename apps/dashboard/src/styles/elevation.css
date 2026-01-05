@@ -1,0 +1,255 @@
+/**
+ * Elevation System - Layered Surfaces
+ *
+ * Implements layered surfaces with subtle depth, soft shadows,
+ * gentle borders, and translucency for overlays.
+ *
+ * @see docs/plans/ui/20-design-philosophy.md lines 91-92
+ */
+
+/* ============================================
+   Elevation Level Variables
+   ============================================ */
+
+:root {
+  /* Elevation levels (z-index baseline + shadow intensity) */
+  --elevation-0: 0;    /* Page background */
+  --elevation-1: 1;    /* Cards, panels */
+  --elevation-2: 2;    /* Elevated cards, dropdowns */
+  --elevation-3: 3;    /* Modals, drawers */
+  --elevation-4: 4;    /* Tooltips, popovers */
+
+  /* Translucent backgrounds */
+  --bg-translucent: rgba(255, 255, 255, 0.95);
+  --bg-translucent-heavy: rgba(255, 255, 255, 0.85);
+
+  /* Backdrop overlays */
+  --backdrop-modal: rgba(0, 0, 0, 0.5);
+  --backdrop-drawer: rgba(0, 0, 0, 0.3);
+  --backdrop-blur-modal: 4px;
+  --backdrop-blur-drawer: 2px;
+}
+
+[data-theme="dark"],
+.dark {
+  --bg-translucent: rgba(12, 10, 9, 0.95);
+  --bg-translucent-heavy: rgba(12, 10, 9, 0.85);
+  --backdrop-modal: rgba(0, 0, 0, 0.7);
+  --backdrop-drawer: rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   Surface Classes (Elevation Levels)
+   ============================================ */
+
+/* Level 0: Page/app background */
+.surface-0 {
+  background-color: var(--bg-page);
+  box-shadow: none;
+}
+
+/* Level 1: Cards, panels, sections */
+.surface-1 {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Level 2: Elevated cards, hover states, dropdowns */
+.surface-2 {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* Level 3: Modals, drawers, dialogs */
+.surface-3 {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Level 4: Tooltips, popovers, floating elements */
+.surface-4 {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   Translucent Surfaces
+   ============================================ */
+
+.surface-translucent {
+  background-color: var(--bg-translucent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.surface-translucent-heavy {
+  background-color: var(--bg-translucent-heavy);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   Backdrop Overlays
+   ============================================ */
+
+.backdrop-modal {
+  background-color: var(--backdrop-modal);
+  backdrop-filter: blur(var(--backdrop-blur-modal));
+  -webkit-backdrop-filter: blur(var(--backdrop-blur-modal));
+}
+
+.backdrop-drawer {
+  background-color: var(--backdrop-drawer);
+  backdrop-filter: blur(var(--backdrop-blur-drawer));
+  -webkit-backdrop-filter: blur(var(--backdrop-blur-drawer));
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-modal {
+    background-color: rgba(0, 0, 0, 0.75);
+  }
+
+  .backdrop-drawer {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+
+  .surface-translucent,
+  .surface-translucent-heavy {
+    background-color: var(--bg-card);
+  }
+}
+
+/* ============================================
+   Interactive Surface States
+   ============================================ */
+
+.surface-interactive {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+.surface-interactive:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+}
+
+.surface-interactive:active {
+  transform: scale(0.99);
+}
+
+.surface-interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+/* ============================================
+   Inset Surfaces (Sunken)
+   ============================================ */
+
+.surface-inset {
+  background-color: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-inner);
+}
+
+/* ============================================
+   Floating Surface (Auto-elevate on scroll)
+   ============================================ */
+
+.surface-floating {
+  background-color: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  transition:
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+.surface-floating[data-scrolled="true"] {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Shadow utilities */
+.shadow-none { box-shadow: none; }
+.shadow-xs { box-shadow: var(--shadow-xs); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+.shadow-2xl { box-shadow: var(--shadow-2xl); }
+.shadow-inner { box-shadow: var(--shadow-inner); }
+
+/* Hover shadow transitions */
+.hover\:shadow-md:hover { box-shadow: var(--shadow-md); }
+.hover\:shadow-lg:hover { box-shadow: var(--shadow-lg); }
+.hover\:shadow-xl:hover { box-shadow: var(--shadow-xl); }
+
+/* Border utilities */
+.border-subtle { border-color: var(--border-subtle); }
+.border-default { border-color: var(--border-default); }
+.border-emphasis { border-color: var(--border-emphasis); }
+
+/* ============================================
+   Reduced Motion Support
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .surface-interactive,
+  .surface-floating {
+    transition: none;
+  }
+
+  .surface-interactive:active {
+    transform: none;
+  }
+}
+
+/* ============================================
+   Z-Index Scale (for stacking)
+   ============================================ */
+
+:root {
+  --z-dropdown: 50;
+  --z-sticky: 100;
+  --z-drawer: 200;
+  --z-modal: 300;
+  --z-popover: 400;
+  --z-tooltip: 500;
+  --z-toast: 600;
+}
+
+.z-dropdown { z-index: var(--z-dropdown); }
+.z-sticky { z-index: var(--z-sticky); }
+.z-drawer { z-index: var(--z-drawer); }
+.z-modal { z-index: var(--z-modal); }
+.z-popover { z-index: var(--z-popover); }
+.z-tooltip { z-index: var(--z-tooltip); }
+.z-toast { z-index: var(--z-toast); }
