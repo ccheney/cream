@@ -291,3 +291,32 @@ export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
   Company: [],
   MacroEntity: [],
 };
+
+// ============================================
+// Embedding Generation
+// ============================================
+
+export {
+  // Configuration
+  DEFAULT_EMBEDDING_CONFIG,
+  DEFAULT_RETRY_CONFIG,
+  EMBEDDING_MODELS,
+  type EmbeddingConfig,
+  type RetryConfig,
+  // Client
+  EmbeddingClient,
+  createEmbeddingClient,
+  // Types
+  type EmbeddingResult,
+  type BatchEmbeddingResult,
+  type EmbeddingMetadata,
+  type BatchEmbeddingOptions,
+  type BatchProgressCallback,
+  // Helpers
+  EMBEDDABLE_FIELDS,
+  extractEmbeddableText,
+  isEmbeddingStale,
+  createEmbeddingMetadata,
+  needsReembedding,
+  batchEmbedWithProgress,
+} from "./embeddings";
