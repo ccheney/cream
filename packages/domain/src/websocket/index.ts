@@ -100,3 +100,40 @@ export {
   type UnsubscribedMessage,
   UnsubscribedMessageSchema,
 } from "./server-messages.js";
+
+// ============================================
+// Error Protocol
+// ============================================
+
+export {
+  // Error codes
+  ErrorCode,
+  ERROR_CODE_DESCRIPTIONS,
+  // Severity
+  ErrorSeverity,
+  ERROR_SEVERITY,
+  // Recovery actions
+  RecoveryAction,
+  ERROR_RECOVERY,
+  // Schemas
+  type ErrorDetails,
+  ErrorDetailsSchema,
+  type EnhancedErrorMessage,
+  EnhancedErrorMessageSchema,
+  // Factory functions
+  createErrorDetails,
+  createErrorMessage,
+  // Convenience creators
+  authError,
+  channelError,
+  messageError,
+  rateLimitError,
+  limitError,
+  internalError,
+  connectionError,
+  // Classification
+  isRetryable,
+  requiresAuthRefresh,
+  isCritical,
+  getRetryDelay,
+} from "./errors.js";
