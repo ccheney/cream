@@ -251,14 +251,9 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         match path.as_str() {
             "market_data" => {
                 let schema = Self::market_data_schema();
-                let ipc_message =
-                    IpcMessage::try_from(SchemaAsIpc::new(&schema, &Default::default()))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!("Failed to encode schema: {e}"))
-                        })?;
 
                 let info = FlightInfo::new()
-                    .try_with_schema(&ipc_message)
+                    .try_with_schema(&schema)
                     .map_err(|e| {
                         tonic::Status::internal(format!("Failed to set schema: {e}"))
                     })?
@@ -301,7 +296,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                         })?;
 
                 Ok(tonic::Response::new(arrow_flight::SchemaResult {
-                    schema: ipc_message,
+                    schema: ipc_message.0,
                 }))
             }
             _ => Err(tonic::Status::not_found(format!("Unknown flight: {path}"))),
@@ -340,7 +335,9 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                             .into_iter()
                             .map(Ok::<_, arrow_flight::error::FlightError>),
                     ))
-                    .map_err(|e| tonic::Status::internal(format!("Encoding error: {e}")));
+                    .map(|result| {
+                        result.map_err(|e| tonic::Status::internal(format!("Encoding error: {e}")))
+                    });
 
                 Ok(tonic::Response::new(Box::pin(flight_data_stream)))
             }
@@ -358,9 +355,11 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         tracing::info!("DoPut request");
 
         // Decode the FlightData stream into RecordBatches
-        let mut decoder = arrow_flight::decode::FlightRecordBatchStream::new_from_flight_data(
-            stream.map_err(arrow_flight::error::FlightError::from),
-        );
+        let mapped_stream = stream.map(|result| {
+            result.map_err(arrow_flight::error::FlightError::from)
+        });
+        let mut decoder =
+            arrow_flight::decode::FlightRecordBatchStream::new_from_flight_data(mapped_stream);
 
         let mut total_rows = 0;
 

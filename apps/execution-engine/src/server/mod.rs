@@ -16,13 +16,12 @@
 //!
 //! See the `tls` module for more details.
 
-// TODO: Fix arrow_flight module (tonic version conflict with arrow-flight crate)
-// mod arrow_flight;
+mod arrow_flight;
 pub mod grpc;
 mod http;
 pub mod tls;
 
-// pub use arrow_flight::{build_flight_server, CreamFlightService};
+pub use arrow_flight::{build_flight_server, CreamFlightService};
 pub use grpc::{
     build_grpc_services, run_grpc_server, run_grpc_server_with_tls, ExecutionServiceImpl,
     MarketDataServiceImpl,

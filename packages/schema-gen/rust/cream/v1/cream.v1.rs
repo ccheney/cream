@@ -632,6 +632,548 @@ pub struct DecisionPlanValidationResult {
     #[prost(string, repeated, tag="4")]
     pub warnings: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+// ============================================
+// Payload Messages for Specific Event Types
+// ============================================
+
+/// Earnings event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EarningsEventPayload {
+    /// Symbol this earnings relates to
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Fiscal quarter (e.g., "Q1", "Q2")
+    #[prost(string, tag="2")]
+    pub quarter: ::prost::alloc::string::String,
+    /// Fiscal year
+    #[prost(int32, tag="3")]
+    pub year: i32,
+    /// Actual EPS reported
+    #[prost(double, optional, tag="4")]
+    pub eps_actual: ::core::option::Option<f64>,
+    /// Expected/consensus EPS
+    #[prost(double, optional, tag="5")]
+    pub eps_expected: ::core::option::Option<f64>,
+    /// EPS surprise percentage ((actual - expected) / expected * 100)
+    #[prost(double, optional, tag="6")]
+    pub eps_surprise_pct: ::core::option::Option<f64>,
+    /// Actual revenue reported (in dollars)
+    #[prost(double, optional, tag="7")]
+    pub revenue_actual: ::core::option::Option<f64>,
+    /// Expected/consensus revenue
+    #[prost(double, optional, tag="8")]
+    pub revenue_expected: ::core::option::Option<f64>,
+    /// Revenue surprise percentage
+    #[prost(double, optional, tag="9")]
+    pub revenue_surprise_pct: ::core::option::Option<f64>,
+    /// Management guidance update
+    #[prost(string, optional, tag="10")]
+    pub guidance_summary: ::core::option::Option<::prost::alloc::string::String>,
+    /// Earnings call transcript available
+    #[prost(bool, tag="11")]
+    pub transcript_available: bool,
+}
+/// Macro economic event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MacroEventPayload {
+    /// Indicator name (e.g., "Non-Farm Payrolls", "CPI", "GDP")
+    #[prost(string, tag="1")]
+    pub indicator_name: ::prost::alloc::string::String,
+    /// Actual value released
+    #[prost(double, tag="2")]
+    pub value: f64,
+    /// Previous period value
+    #[prost(double, optional, tag="3")]
+    pub previous_value: ::core::option::Option<f64>,
+    /// Expected/consensus value
+    #[prost(double, optional, tag="4")]
+    pub expected_value: ::core::option::Option<f64>,
+    /// Surprise percentage
+    #[prost(double, optional, tag="5")]
+    pub surprise_pct: ::core::option::Option<f64>,
+    /// Unit of measurement
+    #[prost(string, tag="6")]
+    pub unit: ::prost::alloc::string::String,
+    /// Country (default: "US")
+    #[prost(string, tag="7")]
+    pub country: ::prost::alloc::string::String,
+    /// Period this data covers
+    #[prost(string, optional, tag="8")]
+    pub period: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// News event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NewsEventPayload {
+    /// Article headline
+    #[prost(string, tag="1")]
+    pub headline: ::prost::alloc::string::String,
+    /// Article body/summary
+    #[prost(string, tag="2")]
+    pub body: ::prost::alloc::string::String,
+    /// Source publication
+    #[prost(string, tag="3")]
+    pub source: ::prost::alloc::string::String,
+    /// URL to full article
+    #[prost(string, optional, tag="4")]
+    pub url: ::core::option::Option<::prost::alloc::string::String>,
+    /// Extracted entities (company names, people, products)
+    #[prost(message, repeated, tag="5")]
+    pub entities: ::prost::alloc::vec::Vec<ExtractedEntity>,
+    /// LLM-extracted key insights
+    #[prost(string, repeated, tag="6")]
+    pub key_insights: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Extracted entity from content
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ExtractedEntity {
+    /// Entity name as it appears
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// Entity type
+    ///
+    /// "company", "person", "product", "event", "location"
+    #[prost(string, tag="2")]
+    pub entity_type: ::prost::alloc::string::String,
+    /// Resolved ticker symbol (if company)
+    #[prost(string, optional, tag="3")]
+    pub ticker: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Sentiment spike event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SentimentEventPayload {
+    /// Platform (Twitter/X, Reddit, StockTwits)
+    #[prost(string, tag="1")]
+    pub platform: ::prost::alloc::string::String,
+    /// Volume of mentions
+    #[prost(int64, tag="2")]
+    pub mention_count: i64,
+    /// Normal average volume
+    #[prost(int64, optional, tag="3")]
+    pub average_volume: ::core::option::Option<i64>,
+    /// Volume z-score
+    #[prost(double, optional, tag="4")]
+    pub volume_zscore: ::core::option::Option<f64>,
+    /// Aggregate sentiment of mentions
+    #[prost(enumeration="Sentiment", tag="5")]
+    pub aggregate_sentiment: i32,
+    /// Time window in minutes
+    #[prost(int32, tag="6")]
+    pub window_minutes: i32,
+}
+/// Merger/acquisition event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MergerAcquisitionPayload {
+    /// Type: "merger", "acquisition", "spinoff", "divestiture"
+    #[prost(string, tag="1")]
+    pub transaction_type: ::prost::alloc::string::String,
+    /// Acquirer symbol (if acquisition)
+    #[prost(string, optional, tag="2")]
+    pub acquirer_symbol: ::core::option::Option<::prost::alloc::string::String>,
+    /// Target symbol (if acquisition)
+    #[prost(string, optional, tag="3")]
+    pub target_symbol: ::core::option::Option<::prost::alloc::string::String>,
+    /// Deal value (if disclosed)
+    #[prost(double, optional, tag="4")]
+    pub deal_value: ::core::option::Option<f64>,
+    /// Currency of deal value
+    #[prost(string, tag="5")]
+    pub currency: ::prost::alloc::string::String,
+    /// Expected close date
+    #[prost(string, optional, tag="6")]
+    pub expected_close_date: ::core::option::Option<::prost::alloc::string::String>,
+    /// Deal status: "announced", "pending", "approved", "closed", "terminated"
+    #[prost(string, tag="7")]
+    pub status: ::prost::alloc::string::String,
+}
+/// Analyst rating event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AnalystRatingPayload {
+    /// Analyst firm name
+    #[prost(string, tag="1")]
+    pub firm: ::prost::alloc::string::String,
+    /// Analyst name (if available)
+    #[prost(string, optional, tag="2")]
+    pub analyst_name: ::core::option::Option<::prost::alloc::string::String>,
+    /// Previous rating (if upgrade/downgrade)
+    #[prost(string, optional, tag="3")]
+    pub previous_rating: ::core::option::Option<::prost::alloc::string::String>,
+    /// New rating
+    #[prost(string, tag="4")]
+    pub new_rating: ::prost::alloc::string::String,
+    /// Previous price target
+    #[prost(double, optional, tag="5")]
+    pub previous_target: ::core::option::Option<f64>,
+    /// New price target
+    #[prost(double, optional, tag="6")]
+    pub new_target: ::core::option::Option<f64>,
+    /// Action type: "initiated", "upgrade", "downgrade", "reiterated"
+    #[prost(string, tag="7")]
+    pub action_type: ::prost::alloc::string::String,
+}
+/// Regulatory event payload
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RegulatoryPayload {
+    /// Regulatory body (FDA, SEC, FTC, DOJ, etc.)
+    #[prost(string, tag="1")]
+    pub regulatory_body: ::prost::alloc::string::String,
+    /// Action type (approval, rejection, investigation, settlement, etc.)
+    #[prost(string, tag="2")]
+    pub action_type: ::prost::alloc::string::String,
+    /// Product or matter name (if applicable)
+    #[prost(string, optional, tag="3")]
+    pub subject: ::core::option::Option<::prost::alloc::string::String>,
+    /// Decision or status
+    #[prost(string, tag="4")]
+    pub decision: ::prost::alloc::string::String,
+    /// Next steps or timeline
+    #[prost(string, optional, tag="5")]
+    pub next_steps: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Dividend event payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DividendPayload {
+    /// Dividend amount per share
+    #[prost(double, tag="1")]
+    pub amount: f64,
+    /// Currency
+    #[prost(string, tag="2")]
+    pub currency: ::prost::alloc::string::String,
+    /// Ex-dividend date
+    #[prost(string, tag="3")]
+    pub ex_date: ::prost::alloc::string::String,
+    /// Record date
+    #[prost(string, optional, tag="4")]
+    pub record_date: ::core::option::Option<::prost::alloc::string::String>,
+    /// Payment date
+    #[prost(string, optional, tag="5")]
+    pub payment_date: ::core::option::Option<::prost::alloc::string::String>,
+    /// Dividend type: "regular", "special", "variable"
+    #[prost(string, tag="6")]
+    pub dividend_type: ::prost::alloc::string::String,
+    /// Year-over-year change percentage
+    #[prost(double, optional, tag="7")]
+    pub yoy_change_pct: ::core::option::Option<f64>,
+}
+/// Stock split event payload
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SplitPayload {
+    /// Split ratio numerator (e.g., 4 for 4:1)
+    #[prost(int32, tag="1")]
+    pub split_from: i32,
+    /// Split ratio denominator (e.g., 1 for 4:1)
+    #[prost(int32, tag="2")]
+    pub split_to: i32,
+    /// Effective date
+    #[prost(string, tag="3")]
+    pub effective_date: ::prost::alloc::string::String,
+    /// Announcement date
+    #[prost(string, optional, tag="4")]
+    pub announcement_date: ::core::option::Option<::prost::alloc::string::String>,
+}
+// ============================================
+// External Event (Main Message)
+// ============================================
+
+/// A discrete external event
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ExternalEvent {
+    /// Unique identifier (UUID v4)
+    #[prost(string, tag="1")]
+    pub event_id: ::prost::alloc::string::String,
+    /// Category of event
+    #[prost(enumeration="EventType", tag="2")]
+    pub event_type: i32,
+    /// When the event occurred
+    #[prost(message, optional, tag="3")]
+    pub event_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// Affected instrument IDs (tickers)
+    #[prost(string, repeated, tag="4")]
+    pub related_instrument_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Data source
+    #[prost(enumeration="DataSource", tag="5")]
+    pub source: i32,
+    /// Headline or summary (for quick display)
+    #[prost(string, optional, tag="6")]
+    pub headline: ::core::option::Option<::prost::alloc::string::String>,
+    // ============================================
+    // Computed Scores (from extraction pipeline)
+    // ============================================
+
+    /// Sentiment score (-1.0 bearish to 1.0 bullish)
+    #[prost(double, optional, tag="20")]
+    pub sentiment_score: ::core::option::Option<f64>,
+    /// Importance/relevance score (0.0 to 1.0)
+    #[prost(double, optional, tag="21")]
+    pub importance_score: ::core::option::Option<f64>,
+    /// Surprise score (-1.0 big miss to 1.0 big beat)
+    #[prost(double, optional, tag="22")]
+    pub surprise_score: ::core::option::Option<f64>,
+    /// Confidence in extraction (0.0 to 1.0)
+    #[prost(double, optional, tag="23")]
+    pub confidence: ::core::option::Option<f64>,
+    // ============================================
+    // Metadata
+    // ============================================
+
+    /// When the event was processed/extracted
+    #[prost(message, optional, tag="30")]
+    pub processed_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Original content (for reference/debugging)
+    #[prost(string, optional, tag="31")]
+    pub original_content: ::core::option::Option<::prost::alloc::string::String>,
+    /// Event payload (structure varies by event_type)
+    /// Using oneof for type-safe payloads
+    #[prost(oneof="external_event::Payload", tags="10, 11, 12, 13, 14, 15, 16, 17, 18, 19")]
+    pub payload: ::core::option::Option<external_event::Payload>,
+}
+/// Nested message and enum types in `ExternalEvent`.
+pub mod external_event {
+    /// Event payload (structure varies by event_type)
+    /// Using oneof for type-safe payloads
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Payload {
+        #[prost(message, tag="10")]
+        Earnings(super::EarningsEventPayload),
+        #[prost(message, tag="11")]
+        Macro(super::MacroEventPayload),
+        #[prost(message, tag="12")]
+        News(super::NewsEventPayload),
+        #[prost(message, tag="13")]
+        SentimentSpike(super::SentimentEventPayload),
+        #[prost(message, tag="14")]
+        MergerAcquisition(super::MergerAcquisitionPayload),
+        #[prost(message, tag="15")]
+        AnalystRating(super::AnalystRatingPayload),
+        #[prost(message, tag="16")]
+        Regulatory(super::RegulatoryPayload),
+        #[prost(message, tag="17")]
+        Dividend(super::DividendPayload),
+        #[prost(message, tag="18")]
+        Split(super::SplitPayload),
+        /// Fallback for other types
+        #[prost(message, tag="19")]
+        GenericPayload(::prost_types::Struct),
+    }
+}
+// ============================================
+// Event Collections
+// ============================================
+
+/// Collection of external events
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ExternalEventList {
+    /// Events in the collection
+    #[prost(message, repeated, tag="1")]
+    pub events: ::prost::alloc::vec::Vec<ExternalEvent>,
+    /// Total count (may exceed list if paginated)
+    #[prost(int32, tag="2")]
+    pub total_count: i32,
+    /// Pagination cursor for next page
+    #[prost(string, optional, tag="3")]
+    pub next_cursor: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Event query request
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EventQueryRequest {
+    /// Filter by event types
+    #[prost(enumeration="EventType", repeated, tag="1")]
+    pub event_types: ::prost::alloc::vec::Vec<i32>,
+    /// Filter by instrument IDs
+    #[prost(string, repeated, tag="2")]
+    pub instrument_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Start time (inclusive)
+    #[prost(message, optional, tag="3")]
+    pub start_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// End time (exclusive)
+    #[prost(message, optional, tag="4")]
+    pub end_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// Maximum events to return
+    #[prost(int32, tag="5")]
+    pub limit: i32,
+    /// Pagination cursor
+    #[prost(string, optional, tag="6")]
+    pub cursor: ::core::option::Option<::prost::alloc::string::String>,
+    /// Minimum importance score
+    #[prost(double, optional, tag="7")]
+    pub min_importance: ::core::option::Option<f64>,
+}
+// ============================================
+// Event Type Enumeration
+// ============================================
+
+/// Category of external event
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum EventType {
+    Unspecified = 0,
+    /// Earnings report
+    Earnings = 1,
+    /// Forward guidance update
+    Guidance = 2,
+    /// Macro economic release
+    Macro = 3,
+    /// General news
+    News = 4,
+    /// Social/sentiment volume spike
+    SentimentSpike = 5,
+    /// SEC filing (10-K, 10-Q, 8-K)
+    SecFiling = 6,
+    /// Dividend announcement
+    Dividend = 7,
+    /// Stock split
+    Split = 8,
+    /// Merger and acquisition
+    MAndA = 9,
+    /// Analyst rating change
+    AnalystRating = 10,
+    /// Conference/investor day
+    Conference = 11,
+    /// Product launch
+    ProductLaunch = 12,
+    /// Regulatory decision
+    Regulatory = 13,
+    /// Executive appointment/departure
+    ExecutiveChange = 14,
+    /// Legal/litigation
+    Legal = 15,
+    /// Other/unclassified
+    Other = 16,
+}
+impl EventType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "EVENT_TYPE_UNSPECIFIED",
+            Self::Earnings => "EVENT_TYPE_EARNINGS",
+            Self::Guidance => "EVENT_TYPE_GUIDANCE",
+            Self::Macro => "EVENT_TYPE_MACRO",
+            Self::News => "EVENT_TYPE_NEWS",
+            Self::SentimentSpike => "EVENT_TYPE_SENTIMENT_SPIKE",
+            Self::SecFiling => "EVENT_TYPE_SEC_FILING",
+            Self::Dividend => "EVENT_TYPE_DIVIDEND",
+            Self::Split => "EVENT_TYPE_SPLIT",
+            Self::MAndA => "EVENT_TYPE_M_AND_A",
+            Self::AnalystRating => "EVENT_TYPE_ANALYST_RATING",
+            Self::Conference => "EVENT_TYPE_CONFERENCE",
+            Self::ProductLaunch => "EVENT_TYPE_PRODUCT_LAUNCH",
+            Self::Regulatory => "EVENT_TYPE_REGULATORY",
+            Self::ExecutiveChange => "EVENT_TYPE_EXECUTIVE_CHANGE",
+            Self::Legal => "EVENT_TYPE_LEGAL",
+            Self::Other => "EVENT_TYPE_OTHER",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "EVENT_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "EVENT_TYPE_EARNINGS" => Some(Self::Earnings),
+            "EVENT_TYPE_GUIDANCE" => Some(Self::Guidance),
+            "EVENT_TYPE_MACRO" => Some(Self::Macro),
+            "EVENT_TYPE_NEWS" => Some(Self::News),
+            "EVENT_TYPE_SENTIMENT_SPIKE" => Some(Self::SentimentSpike),
+            "EVENT_TYPE_SEC_FILING" => Some(Self::SecFiling),
+            "EVENT_TYPE_DIVIDEND" => Some(Self::Dividend),
+            "EVENT_TYPE_SPLIT" => Some(Self::Split),
+            "EVENT_TYPE_M_AND_A" => Some(Self::MAndA),
+            "EVENT_TYPE_ANALYST_RATING" => Some(Self::AnalystRating),
+            "EVENT_TYPE_CONFERENCE" => Some(Self::Conference),
+            "EVENT_TYPE_PRODUCT_LAUNCH" => Some(Self::ProductLaunch),
+            "EVENT_TYPE_REGULATORY" => Some(Self::Regulatory),
+            "EVENT_TYPE_EXECUTIVE_CHANGE" => Some(Self::ExecutiveChange),
+            "EVENT_TYPE_LEGAL" => Some(Self::Legal),
+            "EVENT_TYPE_OTHER" => Some(Self::Other),
+            _ => None,
+        }
+    }
+}
+/// Data source for external events
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum DataSource {
+    Unspecified = 0,
+    /// Financial Modeling Prep
+    Fmp = 1,
+    /// Alpha Vantage
+    AlphaVantage = 2,
+    /// Polygon/Massive
+    Polygon = 3,
+    /// Benzinga
+    Benzinga = 4,
+    /// SEC EDGAR
+    SecEdgar = 5,
+    /// Social media aggregation
+    Social = 6,
+    /// Internal system-generated
+    Internal = 7,
+}
+impl DataSource {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "DATA_SOURCE_UNSPECIFIED",
+            Self::Fmp => "DATA_SOURCE_FMP",
+            Self::AlphaVantage => "DATA_SOURCE_ALPHA_VANTAGE",
+            Self::Polygon => "DATA_SOURCE_POLYGON",
+            Self::Benzinga => "DATA_SOURCE_BENZINGA",
+            Self::SecEdgar => "DATA_SOURCE_SEC_EDGAR",
+            Self::Social => "DATA_SOURCE_SOCIAL",
+            Self::Internal => "DATA_SOURCE_INTERNAL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "DATA_SOURCE_UNSPECIFIED" => Some(Self::Unspecified),
+            "DATA_SOURCE_FMP" => Some(Self::Fmp),
+            "DATA_SOURCE_ALPHA_VANTAGE" => Some(Self::AlphaVantage),
+            "DATA_SOURCE_POLYGON" => Some(Self::Polygon),
+            "DATA_SOURCE_BENZINGA" => Some(Self::Benzinga),
+            "DATA_SOURCE_SEC_EDGAR" => Some(Self::SecEdgar),
+            "DATA_SOURCE_SOCIAL" => Some(Self::Social),
+            "DATA_SOURCE_INTERNAL" => Some(Self::Internal),
+            _ => None,
+        }
+    }
+}
+/// Sentiment classification
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Sentiment {
+    Unspecified = 0,
+    Bullish = 1,
+    Bearish = 2,
+    Neutral = 3,
+}
+impl Sentiment {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "SENTIMENT_UNSPECIFIED",
+            Self::Bullish => "SENTIMENT_BULLISH",
+            Self::Bearish => "SENTIMENT_BEARISH",
+            Self::Neutral => "SENTIMENT_NEUTRAL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SENTIMENT_UNSPECIFIED" => Some(Self::Unspecified),
+            "SENTIMENT_BULLISH" => Some(Self::Bullish),
+            "SENTIMENT_BEARISH" => Some(Self::Bearish),
+            "SENTIMENT_NEUTRAL" => Some(Self::Neutral),
+            _ => None,
+        }
+    }
+}
 /// Individual constraint check result
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConstraintCheck {
