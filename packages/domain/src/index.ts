@@ -146,6 +146,8 @@ export {
   mapActionToBrokerOrder,
   OrderSide,
   OrderStatus,
+  type PortfolioState,
+  PortfolioStateSchema,
   type Position,
   // Positions
   PositionSchema,

@@ -328,6 +328,36 @@ export const GetPositionsResponseSchema = z.object({
 export type GetPositionsResponse = z.infer<typeof GetPositionsResponseSchema>;
 
 // ============================================
+// Portfolio State
+// ============================================
+
+/**
+ * Complete portfolio state combining account and positions
+ *
+ * Used for snapshot creation and constraint validation
+ */
+export const PortfolioStateSchema = z.object({
+  /** Account state */
+  account: AccountStateSchema,
+
+  /** Current positions */
+  positions: z.array(PositionSchema),
+
+  /** Total portfolio market value (equity + unrealized P&L) */
+  totalMarketValue: z.number(),
+
+  /** Gross exposure (sum of absolute position values) */
+  grossExposure: z.number().nonnegative(),
+
+  /** Net exposure (long - short) */
+  netExposure: z.number(),
+
+  /** Snapshot timestamp */
+  asOf: Iso8601Schema,
+});
+export type PortfolioState = z.infer<typeof PortfolioStateSchema>;
+
+// ============================================
 // Action Semantics and Broker Order Mapping
 // ============================================
 
