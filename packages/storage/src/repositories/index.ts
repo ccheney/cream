@@ -86,3 +86,41 @@ export {
   type PositionStatus,
   PositionsRepository,
 } from "./positions.js";
+
+// Market data repositories (migration 003)
+export {
+  type Candle,
+  type CandleInsert,
+  CandlesRepository,
+  type Timeframe,
+  TimeframeSchema,
+} from "./candles.js";
+export {
+  type ActionType,
+  ActionTypeSchema,
+  type CorporateAction,
+  type CorporateActionInsert,
+  CorporateActionsRepository,
+} from "./corporate-actions.js";
+export {
+  type Feature,
+  type FeatureInsert,
+  FeaturesRepository,
+} from "./features.js";
+export {
+  MARKET_SYMBOL,
+  type RegimeLabel,
+  type RegimeLabelInsert,
+  RegimeLabelsRepository,
+  type RegimeTimeframe,
+  RegimeTimeframeSchema,
+  type RegimeType,
+  RegimeTypeSchema,
+} from "./regime-labels.js";
+export {
+  type SourceType,
+  SourceTypeSchema,
+  type UniverseCache,
+  type UniverseCacheInsert,
+  UniverseCacheRepository,
+} from "./universe-cache.js";
