@@ -31,12 +31,13 @@ pub mod proto {
 
 use proto::cream::v1::{
     AccountState, CancelOrderRequest, CancelOrderResponse, CheckConstraintsRequest,
-    CheckConstraintsResponse, ConstraintCheck, ConstraintResult, GetAccountStateRequest,
-    GetAccountStateResponse, GetOptionChainRequest, GetOptionChainResponse,
-    GetOrderStateRequest, GetOrderStateResponse, GetPositionsRequest, GetPositionsResponse,
-    GetSnapshotRequest, GetSnapshotResponse, Position, StreamExecutionsRequest,
-    StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse,
-    SubscribeMarketDataRequest, SubscribeMarketDataResponse,
+    CheckConstraintsResponse, ConstraintCheck, ConstraintResult, ConstraintViolation,
+    GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest,
+    GetOptionChainResponse, GetOrderStateRequest, GetOrderStateResponse,
+    GetPositionsRequest, GetPositionsResponse, GetSnapshotRequest, GetSnapshotResponse,
+    Position, StreamExecutionsRequest, StreamExecutionsResponse, SubmitOrderRequest,
+    SubmitOrderResponse, SubscribeMarketDataRequest, SubscribeMarketDataResponse,
+    ViolationSeverity,
     execution_service_server::{ExecutionService, ExecutionServiceServer},
     market_data_service_server::{MarketDataService, MarketDataServiceServer},
 };
@@ -155,6 +156,23 @@ impl ExecutionService for ExecutionServiceImpl {
                     description: v.message.clone(),
                     actual_value: v.observed.parse().ok(),
                     threshold: v.limit.parse().ok(),
+                })
+                .collect(),
+            violations: response
+                .violations
+                .iter()
+                .map(|v| ConstraintViolation {
+                    code: v.code.clone(),
+                    severity: match v.severity {
+                        crate::models::ViolationSeverity::Warning => ViolationSeverity::Warning.into(),
+                        crate::models::ViolationSeverity::Error => ViolationSeverity::Error.into(),
+                    },
+                    message: v.message.clone(),
+                    instrument_id: if v.instrument_id.is_empty() { None } else { Some(v.instrument_id.clone()) },
+                    field_path: if v.field_path.is_empty() { None } else { Some(v.field_path.clone()) },
+                    observed_value: v.observed.parse().ok(),
+                    limit_value: v.limit.parse().ok(),
+                    constraint_name: v.code.clone(),
                 })
                 .collect(),
             validated_at: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
