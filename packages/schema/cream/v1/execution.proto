@@ -59,11 +59,50 @@ message CheckConstraintsResponse {
   // Individual constraint results
   repeated ConstraintCheck checks = 2;
 
+  // Detailed violations (when not approved)
+  repeated ConstraintViolation violations = 3;
+
   // Timestamp of validation
-  google.protobuf.Timestamp validated_at = 3;
+  google.protobuf.Timestamp validated_at = 4;
 
   // Rejection reason (if not approved)
-  optional string rejection_reason = 4;
+  optional string rejection_reason = 5;
+}
+
+// Severity of constraint violation
+enum ViolationSeverity {
+  VIOLATION_SEVERITY_UNSPECIFIED = 0;
+  VIOLATION_SEVERITY_INFO = 1;      // Informational, does not block
+  VIOLATION_SEVERITY_WARNING = 2;   // Warning, may proceed with caution
+  VIOLATION_SEVERITY_ERROR = 3;     // Error, blocks execution
+  VIOLATION_SEVERITY_CRITICAL = 4;  // Critical, requires immediate attention
+}
+
+// Detailed constraint violation
+message ConstraintViolation {
+  // Violation code (e.g., "MAX_POSITION_SIZE", "INSUFFICIENT_MARGIN")
+  string code = 1;
+
+  // Severity level
+  ViolationSeverity severity = 2;
+
+  // Human-readable description
+  string message = 3;
+
+  // Instrument that violated (if applicable)
+  optional string instrument_id = 4;
+
+  // Field path that violated (e.g., "size.quantity")
+  optional string field_path = 5;
+
+  // Observed value that triggered violation
+  optional double observed_value = 6;
+
+  // Limit that was exceeded
+  optional double limit_value = 7;
+
+  // Constraint name that was violated
+  string constraint_name = 8;
 }
 
 // ============================================
@@ -129,13 +168,14 @@ message Position {
 // Order status
 enum OrderStatus {
   ORDER_STATUS_UNSPECIFIED = 0;
-  ORDER_STATUS_PENDING = 1;
-  ORDER_STATUS_ACCEPTED = 2;
-  ORDER_STATUS_PARTIAL_FILL = 3;
-  ORDER_STATUS_FILLED = 4;
-  ORDER_STATUS_CANCELLED = 5;
-  ORDER_STATUS_REJECTED = 6;
-  ORDER_STATUS_EXPIRED = 7;
+  ORDER_STATUS_NEW = 1;           // Order created but not yet sent to broker
+  ORDER_STATUS_PENDING = 2;       // Sent to broker, awaiting acknowledgment
+  ORDER_STATUS_ACCEPTED = 3;      // Accepted by broker
+  ORDER_STATUS_PARTIAL_FILL = 4;  // Partially filled
+  ORDER_STATUS_FILLED = 5;        // Completely filled
+  ORDER_STATUS_CANCELLED = 6;     // Cancelled by user or system
+  ORDER_STATUS_REJECTED = 7;      // Rejected by broker
+  ORDER_STATUS_EXPIRED = 8;       // Expired (e.g., DAY order at close)
 }
 
 // Order side
@@ -192,29 +232,137 @@ message SubmitOrderResponse {
 
 // Order execution acknowledgment
 message ExecutionAck {
-  // Order ID
+  // Decision cycle ID
+  string cycle_id = 1;
+
+  // Environment the execution ran in
+  Environment environment = 2;
+
+  // Timestamp of acknowledgment
+  google.protobuf.Timestamp ack_time = 3;
+
+  // Orders that were executed
+  repeated OrderState orders = 4;
+
+  // Errors encountered during execution
+  repeated ExecutionError errors = 5;
+}
+
+// Complete order state for tracking
+message OrderState {
+  // Internal order ID
   string order_id = 1;
 
+  // Broker-assigned order ID
+  string broker_order_id = 2;
+
   // Client order ID
-  string client_order_id = 2;
+  string client_order_id = 3;
+
+  // Whether this is a multi-leg order
+  bool is_multi_leg = 4;
+
+  // Leg states (for multi-leg orders)
+  repeated OrderLegState legs = 5;
 
   // Current status
-  OrderStatus status = 3;
+  OrderStatus status = 6;
+
+  // Order side
+  OrderSide side = 7;
+
+  // Order type
+  OrderType order_type = 8;
+
+  // Instrument (for single-leg orders)
+  Instrument instrument = 9;
+
+  // Requested quantity
+  int32 requested_quantity = 10;
 
   // Filled quantity
-  int32 filled_quantity = 4;
+  int32 filled_quantity = 11;
 
   // Average fill price
-  double avg_fill_price = 5;
+  double avg_fill_price = 12;
 
-  // Remaining quantity
-  int32 remaining_quantity = 6;
+  // Limit price (if applicable)
+  optional double limit_price = 13;
+
+  // Stop price (if applicable)
+  optional double stop_price = 14;
+
+  // Time in force
+  TimeInForce time_in_force = 15;
+
+  // Submission timestamp
+  google.protobuf.Timestamp submitted_at = 16;
 
   // Last update timestamp
-  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp last_update_at = 17;
 
   // Commission charged
-  double commission = 8;
+  double commission = 18;
+
+  // Reference to decision cycle
+  string cycle_id = 19;
+
+  // Status message from broker
+  string status_message = 20;
+}
+
+// State of a single leg in a multi-leg order
+message OrderLegState {
+  // Leg identifier within the order
+  string leg_id = 1;
+
+  // Instrument for this leg
+  Instrument instrument = 2;
+
+  // Side for this leg (BUY or SELL)
+  OrderSide side = 3;
+
+  // Requested quantity for this leg
+  int32 quantity = 4;
+
+  // Order type for this leg
+  OrderType order_type = 5;
+
+  // Limit price for this leg (if applicable)
+  optional double limit_price = 6;
+
+  // Status of this leg
+  OrderStatus status = 7;
+
+  // Filled quantity for this leg
+  int32 filled_quantity = 8;
+
+  // Average fill price for this leg
+  double avg_fill_price = 9;
+
+  // Last update timestamp for this leg
+  google.protobuf.Timestamp last_update_at = 10;
+}
+
+// Execution error
+message ExecutionError {
+  // Error code
+  string code = 1;
+
+  // Human-readable error message
+  string message = 2;
+
+  // Instrument that caused the error (if applicable)
+  optional string instrument_id = 3;
+
+  // Order ID that caused the error (if applicable)
+  optional string order_id = 4;
+
+  // Whether this error is retryable
+  bool retryable = 5;
+
+  // Suggested action
+  string suggested_action = 6;
 }
 
 // ============================================

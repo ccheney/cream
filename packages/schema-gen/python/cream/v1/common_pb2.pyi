@@ -61,6 +61,8 @@ class TimeInForce(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TIME_IN_FORCE_GTC: _ClassVar[TimeInForce]
     TIME_IN_FORCE_IOC: _ClassVar[TimeInForce]
     TIME_IN_FORCE_FOK: _ClassVar[TimeInForce]
+    TIME_IN_FORCE_OPG: _ClassVar[TimeInForce]
+    TIME_IN_FORCE_CLS: _ClassVar[TimeInForce]
 
 class RiskDenomination(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -126,6 +128,8 @@ TIME_IN_FORCE_DAY: TimeInForce
 TIME_IN_FORCE_GTC: TimeInForce
 TIME_IN_FORCE_IOC: TimeInForce
 TIME_IN_FORCE_FOK: TimeInForce
+TIME_IN_FORCE_OPG: TimeInForce
+TIME_IN_FORCE_CLS: TimeInForce
 RISK_DENOMINATION_UNSPECIFIED: RiskDenomination
 RISK_DENOMINATION_UNDERLYING_PRICE: RiskDenomination
 RISK_DENOMINATION_OPTION_PRICE: RiskDenomination

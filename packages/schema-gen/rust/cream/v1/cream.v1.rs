@@ -313,6 +313,10 @@ pub enum TimeInForce {
     Ioc = 3,
     /// Fill or kill
     Fok = 4,
+    /// Market-on-open
+    Opg = 5,
+    /// Market-on-close
+    Cls = 6,
 }
 impl TimeInForce {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -326,6 +330,8 @@ impl TimeInForce {
             Self::Gtc => "TIME_IN_FORCE_GTC",
             Self::Ioc => "TIME_IN_FORCE_IOC",
             Self::Fok => "TIME_IN_FORCE_FOK",
+            Self::Opg => "TIME_IN_FORCE_OPG",
+            Self::Cls => "TIME_IN_FORCE_CLS",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -336,6 +342,8 @@ impl TimeInForce {
             "TIME_IN_FORCE_GTC" => Some(Self::Gtc),
             "TIME_IN_FORCE_IOC" => Some(Self::Ioc),
             "TIME_IN_FORCE_FOK" => Some(Self::Fok),
+            "TIME_IN_FORCE_OPG" => Some(Self::Opg),
+            "TIME_IN_FORCE_CLS" => Some(Self::Cls),
             _ => None,
         }
     }
@@ -665,12 +673,43 @@ pub struct CheckConstraintsResponse {
     /// Individual constraint results
     #[prost(message, repeated, tag="2")]
     pub checks: ::prost::alloc::vec::Vec<ConstraintCheck>,
+    /// Detailed violations (when not approved)
+    #[prost(message, repeated, tag="3")]
+    pub violations: ::prost::alloc::vec::Vec<ConstraintViolation>,
     /// Timestamp of validation
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag="4")]
     pub validated_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Rejection reason (if not approved)
-    #[prost(string, optional, tag="4")]
+    #[prost(string, optional, tag="5")]
     pub rejection_reason: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Detailed constraint violation
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConstraintViolation {
+    /// Violation code (e.g., "MAX_POSITION_SIZE", "INSUFFICIENT_MARGIN")
+    #[prost(string, tag="1")]
+    pub code: ::prost::alloc::string::String,
+    /// Severity level
+    #[prost(enumeration="ViolationSeverity", tag="2")]
+    pub severity: i32,
+    /// Human-readable description
+    #[prost(string, tag="3")]
+    pub message: ::prost::alloc::string::String,
+    /// Instrument that violated (if applicable)
+    #[prost(string, optional, tag="4")]
+    pub instrument_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Field path that violated (e.g., "size.quantity")
+    #[prost(string, optional, tag="5")]
+    pub field_path: ::core::option::Option<::prost::alloc::string::String>,
+    /// Observed value that triggered violation
+    #[prost(double, optional, tag="6")]
+    pub observed_value: ::core::option::Option<f64>,
+    /// Limit that was exceeded
+    #[prost(double, optional, tag="7")]
+    pub limit_value: ::core::option::Option<f64>,
+    /// Constraint name that was violated
+    #[prost(string, tag="8")]
+    pub constraint_name: ::prost::alloc::string::String,
 }
 // ============================================
 // Account State
@@ -780,30 +819,141 @@ pub struct SubmitOrderResponse {
 /// Order execution acknowledgment
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExecutionAck {
-    /// Order ID
+    /// Decision cycle ID
+    #[prost(string, tag="1")]
+    pub cycle_id: ::prost::alloc::string::String,
+    /// Environment the execution ran in
+    #[prost(enumeration="Environment", tag="2")]
+    pub environment: i32,
+    /// Timestamp of acknowledgment
+    #[prost(message, optional, tag="3")]
+    pub ack_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// Orders that were executed
+    #[prost(message, repeated, tag="4")]
+    pub orders: ::prost::alloc::vec::Vec<OrderState>,
+    /// Errors encountered during execution
+    #[prost(message, repeated, tag="5")]
+    pub errors: ::prost::alloc::vec::Vec<ExecutionError>,
+}
+/// Complete order state for tracking
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OrderState {
+    /// Internal order ID
     #[prost(string, tag="1")]
     pub order_id: ::prost::alloc::string::String,
-    /// Client order ID
+    /// Broker-assigned order ID
     #[prost(string, tag="2")]
+    pub broker_order_id: ::prost::alloc::string::String,
+    /// Client order ID
+    #[prost(string, tag="3")]
     pub client_order_id: ::prost::alloc::string::String,
+    /// Whether this is a multi-leg order
+    #[prost(bool, tag="4")]
+    pub is_multi_leg: bool,
+    /// Leg states (for multi-leg orders)
+    #[prost(message, repeated, tag="5")]
+    pub legs: ::prost::alloc::vec::Vec<OrderLegState>,
     /// Current status
-    #[prost(enumeration="OrderStatus", tag="3")]
+    #[prost(enumeration="OrderStatus", tag="6")]
     pub status: i32,
+    /// Order side
+    #[prost(enumeration="OrderSide", tag="7")]
+    pub side: i32,
+    /// Order type
+    #[prost(enumeration="OrderType", tag="8")]
+    pub order_type: i32,
+    /// Instrument (for single-leg orders)
+    #[prost(message, optional, tag="9")]
+    pub instrument: ::core::option::Option<Instrument>,
+    /// Requested quantity
+    #[prost(int32, tag="10")]
+    pub requested_quantity: i32,
     /// Filled quantity
-    #[prost(int32, tag="4")]
+    #[prost(int32, tag="11")]
     pub filled_quantity: i32,
     /// Average fill price
-    #[prost(double, tag="5")]
+    #[prost(double, tag="12")]
     pub avg_fill_price: f64,
-    /// Remaining quantity
-    #[prost(int32, tag="6")]
-    pub remaining_quantity: i32,
+    /// Limit price (if applicable)
+    #[prost(double, optional, tag="13")]
+    pub limit_price: ::core::option::Option<f64>,
+    /// Stop price (if applicable)
+    #[prost(double, optional, tag="14")]
+    pub stop_price: ::core::option::Option<f64>,
+    /// Time in force
+    #[prost(enumeration="TimeInForce", tag="15")]
+    pub time_in_force: i32,
+    /// Submission timestamp
+    #[prost(message, optional, tag="16")]
+    pub submitted_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Last update timestamp
-    #[prost(message, optional, tag="7")]
-    pub updated_at: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(message, optional, tag="17")]
+    pub last_update_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Commission charged
-    #[prost(double, tag="8")]
+    #[prost(double, tag="18")]
     pub commission: f64,
+    /// Reference to decision cycle
+    #[prost(string, tag="19")]
+    pub cycle_id: ::prost::alloc::string::String,
+    /// Status message from broker
+    #[prost(string, tag="20")]
+    pub status_message: ::prost::alloc::string::String,
+}
+/// State of a single leg in a multi-leg order
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OrderLegState {
+    /// Leg identifier within the order
+    #[prost(string, tag="1")]
+    pub leg_id: ::prost::alloc::string::String,
+    /// Instrument for this leg
+    #[prost(message, optional, tag="2")]
+    pub instrument: ::core::option::Option<Instrument>,
+    /// Side for this leg (BUY or SELL)
+    #[prost(enumeration="OrderSide", tag="3")]
+    pub side: i32,
+    /// Requested quantity for this leg
+    #[prost(int32, tag="4")]
+    pub quantity: i32,
+    /// Order type for this leg
+    #[prost(enumeration="OrderType", tag="5")]
+    pub order_type: i32,
+    /// Limit price for this leg (if applicable)
+    #[prost(double, optional, tag="6")]
+    pub limit_price: ::core::option::Option<f64>,
+    /// Status of this leg
+    #[prost(enumeration="OrderStatus", tag="7")]
+    pub status: i32,
+    /// Filled quantity for this leg
+    #[prost(int32, tag="8")]
+    pub filled_quantity: i32,
+    /// Average fill price for this leg
+    #[prost(double, tag="9")]
+    pub avg_fill_price: f64,
+    /// Last update timestamp for this leg
+    #[prost(message, optional, tag="10")]
+    pub last_update_at: ::core::option::Option<::prost_types::Timestamp>,
+}
+/// Execution error
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ExecutionError {
+    /// Error code
+    #[prost(string, tag="1")]
+    pub code: ::prost::alloc::string::String,
+    /// Human-readable error message
+    #[prost(string, tag="2")]
+    pub message: ::prost::alloc::string::String,
+    /// Instrument that caused the error (if applicable)
+    #[prost(string, optional, tag="3")]
+    pub instrument_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Order ID that caused the error (if applicable)
+    #[prost(string, optional, tag="4")]
+    pub order_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Whether this error is retryable
+    #[prost(bool, tag="5")]
+    pub retryable: bool,
+    /// Suggested action
+    #[prost(string, tag="6")]
+    pub suggested_action: ::prost::alloc::string::String,
 }
 /// Request to get order state
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -969,6 +1119,46 @@ impl ConstraintResult {
         }
     }
 }
+/// Severity of constraint violation
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ViolationSeverity {
+    Unspecified = 0,
+    /// Informational, does not block
+    Info = 1,
+    /// Warning, may proceed with caution
+    Warning = 2,
+    /// Error, blocks execution
+    Error = 3,
+    /// Critical, requires immediate attention
+    Critical = 4,
+}
+impl ViolationSeverity {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "VIOLATION_SEVERITY_UNSPECIFIED",
+            Self::Info => "VIOLATION_SEVERITY_INFO",
+            Self::Warning => "VIOLATION_SEVERITY_WARNING",
+            Self::Error => "VIOLATION_SEVERITY_ERROR",
+            Self::Critical => "VIOLATION_SEVERITY_CRITICAL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "VIOLATION_SEVERITY_UNSPECIFIED" => Some(Self::Unspecified),
+            "VIOLATION_SEVERITY_INFO" => Some(Self::Info),
+            "VIOLATION_SEVERITY_WARNING" => Some(Self::Warning),
+            "VIOLATION_SEVERITY_ERROR" => Some(Self::Error),
+            "VIOLATION_SEVERITY_CRITICAL" => Some(Self::Critical),
+            _ => None,
+        }
+    }
+}
 // ============================================
 // Order Execution
 // ============================================
@@ -978,13 +1168,22 @@ impl ConstraintResult {
 #[repr(i32)]
 pub enum OrderStatus {
     Unspecified = 0,
-    Pending = 1,
-    Accepted = 2,
-    PartialFill = 3,
-    Filled = 4,
-    Cancelled = 5,
-    Rejected = 6,
-    Expired = 7,
+    /// Order created but not yet sent to broker
+    New = 1,
+    /// Sent to broker, awaiting acknowledgment
+    Pending = 2,
+    /// Accepted by broker
+    Accepted = 3,
+    /// Partially filled
+    PartialFill = 4,
+    /// Completely filled
+    Filled = 5,
+    /// Cancelled by user or system
+    Cancelled = 6,
+    /// Rejected by broker
+    Rejected = 7,
+    /// Expired (e.g., DAY order at close)
+    Expired = 8,
 }
 impl OrderStatus {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -994,6 +1193,7 @@ impl OrderStatus {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "ORDER_STATUS_UNSPECIFIED",
+            Self::New => "ORDER_STATUS_NEW",
             Self::Pending => "ORDER_STATUS_PENDING",
             Self::Accepted => "ORDER_STATUS_ACCEPTED",
             Self::PartialFill => "ORDER_STATUS_PARTIAL_FILL",
@@ -1007,6 +1207,7 @@ impl OrderStatus {
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "ORDER_STATUS_UNSPECIFIED" => Some(Self::Unspecified),
+            "ORDER_STATUS_NEW" => Some(Self::New),
             "ORDER_STATUS_PENDING" => Some(Self::Pending),
             "ORDER_STATUS_ACCEPTED" => Some(Self::Accepted),
             "ORDER_STATUS_PARTIAL_FILL" => Some(Self::PartialFill),

@@ -19,9 +19,18 @@ class ConstraintResult(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONSTRAINT_RESULT_FAIL: _ClassVar[ConstraintResult]
     CONSTRAINT_RESULT_WARN: _ClassVar[ConstraintResult]
 
+class ViolationSeverity(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    VIOLATION_SEVERITY_UNSPECIFIED: _ClassVar[ViolationSeverity]
+    VIOLATION_SEVERITY_INFO: _ClassVar[ViolationSeverity]
+    VIOLATION_SEVERITY_WARNING: _ClassVar[ViolationSeverity]
+    VIOLATION_SEVERITY_ERROR: _ClassVar[ViolationSeverity]
+    VIOLATION_SEVERITY_CRITICAL: _ClassVar[ViolationSeverity]
+
 class OrderStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ORDER_STATUS_UNSPECIFIED: _ClassVar[OrderStatus]
+    ORDER_STATUS_NEW: _ClassVar[OrderStatus]
     ORDER_STATUS_PENDING: _ClassVar[OrderStatus]
     ORDER_STATUS_ACCEPTED: _ClassVar[OrderStatus]
     ORDER_STATUS_PARTIAL_FILL: _ClassVar[OrderStatus]
@@ -39,7 +48,13 @@ CONSTRAINT_RESULT_UNSPECIFIED: ConstraintResult
 CONSTRAINT_RESULT_PASS: ConstraintResult
 CONSTRAINT_RESULT_FAIL: ConstraintResult
 CONSTRAINT_RESULT_WARN: ConstraintResult
+VIOLATION_SEVERITY_UNSPECIFIED: ViolationSeverity
+VIOLATION_SEVERITY_INFO: ViolationSeverity
+VIOLATION_SEVERITY_WARNING: ViolationSeverity
+VIOLATION_SEVERITY_ERROR: ViolationSeverity
+VIOLATION_SEVERITY_CRITICAL: ViolationSeverity
 ORDER_STATUS_UNSPECIFIED: OrderStatus
+ORDER_STATUS_NEW: OrderStatus
 ORDER_STATUS_PENDING: OrderStatus
 ORDER_STATUS_ACCEPTED: OrderStatus
 ORDER_STATUS_PARTIAL_FILL: OrderStatus
@@ -79,13 +94,35 @@ class CheckConstraintsResponse(_message.Message):
     __slots__ = ()
     APPROVED_FIELD_NUMBER: _ClassVar[int]
     CHECKS_FIELD_NUMBER: _ClassVar[int]
+    VIOLATIONS_FIELD_NUMBER: _ClassVar[int]
     VALIDATED_AT_FIELD_NUMBER: _ClassVar[int]
     REJECTION_REASON_FIELD_NUMBER: _ClassVar[int]
     approved: bool
     checks: _containers.RepeatedCompositeFieldContainer[ConstraintCheck]
+    violations: _containers.RepeatedCompositeFieldContainer[ConstraintViolation]
     validated_at: _timestamp_pb2.Timestamp
     rejection_reason: str
-    def __init__(self, approved: _Optional[bool] = ..., checks: _Optional[_Iterable[_Union[ConstraintCheck, _Mapping]]] = ..., validated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., rejection_reason: _Optional[str] = ...) -> None: ...
+    def __init__(self, approved: _Optional[bool] = ..., checks: _Optional[_Iterable[_Union[ConstraintCheck, _Mapping]]] = ..., violations: _Optional[_Iterable[_Union[ConstraintViolation, _Mapping]]] = ..., validated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., rejection_reason: _Optional[str] = ...) -> None: ...
+
+class ConstraintViolation(_message.Message):
+    __slots__ = ()
+    CODE_FIELD_NUMBER: _ClassVar[int]
+    SEVERITY_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    FIELD_PATH_FIELD_NUMBER: _ClassVar[int]
+    OBSERVED_VALUE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    CONSTRAINT_NAME_FIELD_NUMBER: _ClassVar[int]
+    code: str
+    severity: ViolationSeverity
+    message: str
+    instrument_id: str
+    field_path: str
+    observed_value: float
+    limit_value: float
+    constraint_name: str
+    def __init__(self, code: _Optional[str] = ..., severity: _Optional[_Union[ViolationSeverity, str]] = ..., message: _Optional[str] = ..., instrument_id: _Optional[str] = ..., field_path: _Optional[str] = ..., observed_value: _Optional[float] = ..., limit_value: _Optional[float] = ..., constraint_name: _Optional[str] = ...) -> None: ...
 
 class AccountState(_message.Message):
     __slots__ = ()
@@ -159,23 +196,101 @@ class SubmitOrderResponse(_message.Message):
 
 class ExecutionAck(_message.Message):
     __slots__ = ()
+    CYCLE_ID_FIELD_NUMBER: _ClassVar[int]
+    ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
+    ACK_TIME_FIELD_NUMBER: _ClassVar[int]
+    ORDERS_FIELD_NUMBER: _ClassVar[int]
+    ERRORS_FIELD_NUMBER: _ClassVar[int]
+    cycle_id: str
+    environment: _common_pb2.Environment
+    ack_time: _timestamp_pb2.Timestamp
+    orders: _containers.RepeatedCompositeFieldContainer[OrderState]
+    errors: _containers.RepeatedCompositeFieldContainer[ExecutionError]
+    def __init__(self, cycle_id: _Optional[str] = ..., environment: _Optional[_Union[_common_pb2.Environment, str]] = ..., ack_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., orders: _Optional[_Iterable[_Union[OrderState, _Mapping]]] = ..., errors: _Optional[_Iterable[_Union[ExecutionError, _Mapping]]] = ...) -> None: ...
+
+class OrderState(_message.Message):
+    __slots__ = ()
     ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    BROKER_ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     CLIENT_ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    IS_MULTI_LEG_FIELD_NUMBER: _ClassVar[int]
+    LEGS_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    ORDER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_FIELD_NUMBER: _ClassVar[int]
+    REQUESTED_QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    FILLED_QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    AVG_FILL_PRICE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_PRICE_FIELD_NUMBER: _ClassVar[int]
+    STOP_PRICE_FIELD_NUMBER: _ClassVar[int]
+    TIME_IN_FORCE_FIELD_NUMBER: _ClassVar[int]
+    SUBMITTED_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_UPDATE_AT_FIELD_NUMBER: _ClassVar[int]
+    COMMISSION_FIELD_NUMBER: _ClassVar[int]
+    CYCLE_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    broker_order_id: str
+    client_order_id: str
+    is_multi_leg: bool
+    legs: _containers.RepeatedCompositeFieldContainer[OrderLegState]
+    status: OrderStatus
+    side: OrderSide
+    order_type: _common_pb2.OrderType
+    instrument: _common_pb2.Instrument
+    requested_quantity: int
+    filled_quantity: int
+    avg_fill_price: float
+    limit_price: float
+    stop_price: float
+    time_in_force: _common_pb2.TimeInForce
+    submitted_at: _timestamp_pb2.Timestamp
+    last_update_at: _timestamp_pb2.Timestamp
+    commission: float
+    cycle_id: str
+    status_message: str
+    def __init__(self, order_id: _Optional[str] = ..., broker_order_id: _Optional[str] = ..., client_order_id: _Optional[str] = ..., is_multi_leg: _Optional[bool] = ..., legs: _Optional[_Iterable[_Union[OrderLegState, _Mapping]]] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., side: _Optional[_Union[OrderSide, str]] = ..., order_type: _Optional[_Union[_common_pb2.OrderType, str]] = ..., instrument: _Optional[_Union[_common_pb2.Instrument, _Mapping]] = ..., requested_quantity: _Optional[int] = ..., filled_quantity: _Optional[int] = ..., avg_fill_price: _Optional[float] = ..., limit_price: _Optional[float] = ..., stop_price: _Optional[float] = ..., time_in_force: _Optional[_Union[_common_pb2.TimeInForce, str]] = ..., submitted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_update_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., commission: _Optional[float] = ..., cycle_id: _Optional[str] = ..., status_message: _Optional[str] = ...) -> None: ...
+
+class OrderLegState(_message.Message):
+    __slots__ = ()
+    LEG_ID_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_FIELD_NUMBER: _ClassVar[int]
+    SIDE_FIELD_NUMBER: _ClassVar[int]
+    QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    ORDER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_PRICE_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     FILLED_QUANTITY_FIELD_NUMBER: _ClassVar[int]
     AVG_FILL_PRICE_FIELD_NUMBER: _ClassVar[int]
-    REMAINING_QUANTITY_FIELD_NUMBER: _ClassVar[int]
-    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
-    COMMISSION_FIELD_NUMBER: _ClassVar[int]
-    order_id: str
-    client_order_id: str
+    LAST_UPDATE_AT_FIELD_NUMBER: _ClassVar[int]
+    leg_id: str
+    instrument: _common_pb2.Instrument
+    side: OrderSide
+    quantity: int
+    order_type: _common_pb2.OrderType
+    limit_price: float
     status: OrderStatus
     filled_quantity: int
     avg_fill_price: float
-    remaining_quantity: int
-    updated_at: _timestamp_pb2.Timestamp
-    commission: float
-    def __init__(self, order_id: _Optional[str] = ..., client_order_id: _Optional[str] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., filled_quantity: _Optional[int] = ..., avg_fill_price: _Optional[float] = ..., remaining_quantity: _Optional[int] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., commission: _Optional[float] = ...) -> None: ...
+    last_update_at: _timestamp_pb2.Timestamp
+    def __init__(self, leg_id: _Optional[str] = ..., instrument: _Optional[_Union[_common_pb2.Instrument, _Mapping]] = ..., side: _Optional[_Union[OrderSide, str]] = ..., quantity: _Optional[int] = ..., order_type: _Optional[_Union[_common_pb2.OrderType, str]] = ..., limit_price: _Optional[float] = ..., status: _Optional[_Union[OrderStatus, str]] = ..., filled_quantity: _Optional[int] = ..., avg_fill_price: _Optional[float] = ..., last_update_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ExecutionError(_message.Message):
+    __slots__ = ()
+    CODE_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    RETRYABLE_FIELD_NUMBER: _ClassVar[int]
+    SUGGESTED_ACTION_FIELD_NUMBER: _ClassVar[int]
+    code: str
+    message: str
+    instrument_id: str
+    order_id: str
+    retryable: bool
+    suggested_action: str
+    def __init__(self, code: _Optional[str] = ..., message: _Optional[str] = ..., instrument_id: _Optional[str] = ..., order_id: _Optional[str] = ..., retryable: _Optional[bool] = ..., suggested_action: _Optional[str] = ...) -> None: ...
 
 class GetOrderStateRequest(_message.Message):
     __slots__ = ()

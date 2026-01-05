@@ -75,6 +75,8 @@ enum TimeInForce {
   TIME_IN_FORCE_GTC = 2;  // Good 'til canceled
   TIME_IN_FORCE_IOC = 3;  // Immediate or cancel
   TIME_IN_FORCE_FOK = 4;  // Fill or kill
+  TIME_IN_FORCE_OPG = 5;  // Market-on-open
+  TIME_IN_FORCE_CLS = 6;  // Market-on-close
 }
 
 // Risk level denomination

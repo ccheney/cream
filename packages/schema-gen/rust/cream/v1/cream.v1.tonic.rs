@@ -10,6 +10,8 @@ pub mod execution_service_client {
     )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    /** Execution engine service
+*/
     #[derive(Debug, Clone)]
     pub struct ExecutionServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -90,6 +92,8 @@ pub mod execution_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
+        /** Validate a decision plan against constraints
+*/
         pub async fn check_constraints(
             &mut self,
             request: impl tonic::IntoRequest<super::CheckConstraintsRequest>,
@@ -116,6 +120,8 @@ pub mod execution_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /** Submit an order for execution
+*/
         pub async fn submit_order(
             &mut self,
             request: impl tonic::IntoRequest<super::SubmitOrderRequest>,
@@ -140,6 +146,8 @@ pub mod execution_service_client {
                 .insert(GrpcMethod::new("cream.v1.ExecutionService", "SubmitOrder"));
             self.inner.unary(req, path, codec).await
         }
+        /** Get order state by order ID
+*/
         pub async fn get_order_state(
             &mut self,
             request: impl tonic::IntoRequest<super::GetOrderStateRequest>,
@@ -277,6 +285,8 @@ pub mod execution_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ExecutionServiceServer.
     #[async_trait]
     pub trait ExecutionService: std::marker::Send + std::marker::Sync + 'static {
+        /** Validate a decision plan against constraints
+*/
         async fn check_constraints(
             &self,
             request: tonic::Request<super::CheckConstraintsRequest>,
@@ -284,6 +294,8 @@ pub mod execution_service_server {
             tonic::Response<super::CheckConstraintsResponse>,
             tonic::Status,
         >;
+        /** Submit an order for execution
+*/
         async fn submit_order(
             &self,
             request: tonic::Request<super::SubmitOrderRequest>,
@@ -291,6 +303,8 @@ pub mod execution_service_server {
             tonic::Response<super::SubmitOrderResponse>,
             tonic::Status,
         >;
+        /** Get order state by order ID
+*/
         async fn get_order_state(
             &self,
             request: tonic::Request<super::GetOrderStateRequest>,
@@ -336,6 +350,8 @@ pub mod execution_service_server {
             tonic::Status,
         >;
     }
+    /** Execution engine service
+*/
     #[derive(Debug)]
     pub struct ExecutionServiceServer<T> {
         inner: Arc<T>,
