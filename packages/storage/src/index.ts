@@ -22,4 +22,16 @@ export {
   type Row,
   type TursoClient,
   type TursoConfig,
-} from "./turso";
+} from "./turso.js";
+
+// Migrations
+export {
+  type AppliedMigration,
+  getMigrationStatus,
+  type Migration,
+  MigrationError,
+  type MigrationOptions,
+  type MigrationResult,
+  rollbackMigrations,
+  runMigrations,
+} from "./migrations.js";

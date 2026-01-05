@@ -231,7 +231,9 @@ async function createSyncClient(config: {
 }
 
 /**
- * Create an in-memory Turso client for testing
+ * Create an in-memory client for testing
+ *
+ * Uses Bun's native SQLite for better compatibility with in-memory databases.
  *
  * @example
  * ```typescript
@@ -243,7 +245,52 @@ async function createSyncClient(config: {
  * ```
  */
 export async function createInMemoryClient(): Promise<TursoClient> {
-  return createLocalClient(":memory:");
+  // Use Bun's native SQLite for in-memory databases
+  // The @tursodatabase/database library has issues with in-memory sequential schema changes
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(":memory:");
+
+  return {
+    async execute<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
+      const stmt = db.prepare(sql);
+      if (args.length > 0) {
+        return stmt.all(...args) as T[];
+      }
+      return stmt.all() as T[];
+    },
+
+    async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
+      const stmt = db.prepare(sql);
+      if (args.length > 0) {
+        return stmt.get(...args) as T | undefined;
+      }
+      return stmt.get() as T | undefined;
+    },
+
+    async batch(statements: BatchStatement[]): Promise<void> {
+      for (const { sql, args } of statements) {
+        const stmt = db.prepare(sql);
+        if (args && args.length > 0) {
+          stmt.run(...args);
+        } else {
+          stmt.run();
+        }
+      }
+    },
+
+    async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+      const stmt = db.prepare(sql);
+      const result = args.length > 0 ? stmt.run(...args) : stmt.run();
+      return {
+        changes: result.changes,
+        lastInsertRowid: BigInt(result.lastInsertRowid ?? 0),
+      };
+    },
+
+    close(): void {
+      db.close();
+    },
+  };
 }
 
 // ============================================
