@@ -1,18 +1,8 @@
 /**
- * Cream API Server
+ * @cream/api
  *
- * Mastra-powered API server for the Cream trading system.
- * Handles agent orchestration, workflows, and HTTP endpoints.
- *
- * @see docs/plans/01-architecture.md
+ * Mastra server for agents, workflows, and HTTP endpoints.
  */
 
-export const API_VERSION = "0.1.0";
-
-/**
- * Placeholder for API server.
- * Full implementation coming in Phase 4.
- */
-export function placeholder(): string {
-  return "Cream API - Coming in Phase 4";
-}
+export * from "./steps";
+export * from "./workflows";

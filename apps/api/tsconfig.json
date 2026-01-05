@@ -2,9 +2,9 @@
   "extends": "@cream/tsconfig/bun.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": ".",
-    "types": ["@types/bun"]
+    "types": ["bun"],
+    "skipLibCheck": true
   },
   "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
