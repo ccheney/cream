@@ -97,6 +97,137 @@ export type TreasuryMaturity = "3month" | "2year" | "5year" | "7year" | "10year"
 export type EconomicInterval = "daily" | "weekly" | "monthly" | "quarterly" | "annual";
 
 /**
+ * Economic indicator types.
+ */
+export type EconomicIndicatorType =
+  | "REAL_GDP"
+  | "REAL_GDP_PER_CAPITA"
+  | "TREASURY_YIELD"
+  | "FEDERAL_FUNDS_RATE"
+  | "CPI"
+  | "INFLATION"
+  | "INFLATION_EXPECTATION"
+  | "CONSUMER_SENTIMENT"
+  | "RETAIL_SALES"
+  | "DURABLE_GOODS"
+  | "UNEMPLOYMENT"
+  | "NONFARM_PAYROLL";
+
+/**
+ * Indicator metadata for display and caching.
+ */
+export interface IndicatorMetadata {
+  code: EconomicIndicatorType;
+  name: string;
+  description: string;
+  unit: string;
+  frequency: "daily" | "weekly" | "monthly" | "quarterly" | "annual";
+  cacheTtlMs: number;
+}
+
+/**
+ * Indicator metadata registry.
+ */
+export const INDICATOR_METADATA: Record<EconomicIndicatorType, IndicatorMetadata> = {
+  REAL_GDP: {
+    code: "REAL_GDP",
+    name: "Real GDP",
+    description: "Gross Domestic Product adjusted for inflation",
+    unit: "billions of dollars",
+    frequency: "quarterly",
+    cacheTtlMs: 86400000 * 7, // 7 days (quarterly data)
+  },
+  REAL_GDP_PER_CAPITA: {
+    code: "REAL_GDP_PER_CAPITA",
+    name: "Real GDP per Capita",
+    description: "Real GDP divided by population",
+    unit: "chained 2017 dollars",
+    frequency: "quarterly",
+    cacheTtlMs: 86400000 * 7, // 7 days
+  },
+  TREASURY_YIELD: {
+    code: "TREASURY_YIELD",
+    name: "Treasury Yield",
+    description: "US Treasury bond yield by maturity",
+    unit: "percent",
+    frequency: "daily",
+    cacheTtlMs: 86400000, // 24 hours
+  },
+  FEDERAL_FUNDS_RATE: {
+    code: "FEDERAL_FUNDS_RATE",
+    name: "Federal Funds Rate",
+    description: "Interest rate at which banks lend to each other overnight",
+    unit: "percent",
+    frequency: "daily",
+    cacheTtlMs: 86400000, // 24 hours
+  },
+  CPI: {
+    code: "CPI",
+    name: "Consumer Price Index",
+    description: "Measure of average change in prices paid by consumers",
+    unit: "index",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days (monthly data)
+  },
+  INFLATION: {
+    code: "INFLATION",
+    name: "Inflation Rate",
+    description: "Annual inflation rate",
+    unit: "percent",
+    frequency: "annual",
+    cacheTtlMs: 86400000 * 7, // 7 days
+  },
+  INFLATION_EXPECTATION: {
+    code: "INFLATION_EXPECTATION",
+    name: "Inflation Expectation",
+    description: "Market-based inflation expectations",
+    unit: "percent",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+  CONSUMER_SENTIMENT: {
+    code: "CONSUMER_SENTIMENT",
+    name: "Consumer Sentiment",
+    description: "University of Michigan Consumer Sentiment Index",
+    unit: "index",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+  RETAIL_SALES: {
+    code: "RETAIL_SALES",
+    name: "Retail Sales",
+    description: "Total retail and food services sales",
+    unit: "millions of dollars",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+  DURABLE_GOODS: {
+    code: "DURABLE_GOODS",
+    name: "Durable Goods Orders",
+    description: "New orders for manufactured durable goods",
+    unit: "millions of dollars",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+  UNEMPLOYMENT: {
+    code: "UNEMPLOYMENT",
+    name: "Unemployment Rate",
+    description: "Percentage of labor force that is unemployed",
+    unit: "percent",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+  NONFARM_PAYROLL: {
+    code: "NONFARM_PAYROLL",
+    name: "Nonfarm Payroll",
+    description: "Total number of paid U.S. workers excluding farm employees",
+    unit: "thousands of persons",
+    frequency: "monthly",
+    cacheTtlMs: 86400000 * 3, // 3 days
+  },
+};
+
+/**
  * Alpha Vantage API client.
  */
 export class AlphaVantageClient {
@@ -245,6 +376,93 @@ export class AlphaVantageClient {
   }
 
   /**
+   * Get durable goods orders data.
+   */
+  async getDurableGoods(): Promise<EconomicIndicatorResponse> {
+    return this.client.get(
+      "/query",
+      {
+        function: "DURABLES",
+        apikey: this.apiKey,
+      },
+      EconomicIndicatorResponseSchema
+    );
+  }
+
+  /**
+   * Get Real GDP per capita data.
+   */
+  async getRealGDPPerCapita(
+    interval: "quarterly" | "annual" = "quarterly"
+  ): Promise<EconomicIndicatorResponse> {
+    return this.client.get(
+      "/query",
+      {
+        function: "REAL_GDP_PER_CAPITA",
+        apikey: this.apiKey,
+      },
+      EconomicIndicatorResponseSchema
+    );
+  }
+
+  /**
+   * Get inflation expectation data.
+   */
+  async getInflationExpectation(): Promise<EconomicIndicatorResponse> {
+    return this.client.get(
+      "/query",
+      {
+        function: "INFLATION_EXPECTATION",
+        apikey: this.apiKey,
+      },
+      EconomicIndicatorResponseSchema
+    );
+  }
+
+  /**
+   * Get consumer sentiment data.
+   */
+  async getConsumerSentiment(): Promise<EconomicIndicatorResponse> {
+    return this.client.get(
+      "/query",
+      {
+        function: "CONSUMER_SENTIMENT",
+        apikey: this.apiKey,
+      },
+      EconomicIndicatorResponseSchema
+    );
+  }
+
+  /**
+   * Get all treasury yields for yield curve analysis.
+   */
+  async getYieldCurve(interval: EconomicInterval = "daily"): Promise<Map<TreasuryMaturity, TreasuryYieldResponse>> {
+    const maturities: TreasuryMaturity[] = ["3month", "2year", "5year", "7year", "10year", "30year"];
+    const results = new Map<TreasuryMaturity, TreasuryYieldResponse>();
+
+    for (const maturity of maturities) {
+      const response = await this.getTreasuryYield(maturity, interval);
+      results.set(maturity, response);
+    }
+
+    return results;
+  }
+
+  /**
+   * Get indicator metadata.
+   */
+  static getMetadata(indicator: EconomicIndicatorType): IndicatorMetadata {
+    return INDICATOR_METADATA[indicator];
+  }
+
+  /**
+   * Get all indicator metadata.
+   */
+  static getAllMetadata(): Record<EconomicIndicatorType, IndicatorMetadata> {
+    return INDICATOR_METADATA;
+  }
+
+  /**
    * Get latest value for an economic indicator.
    */
   static getLatestValue(response: EconomicIndicatorResponse): number | null {
@@ -253,6 +471,40 @@ export class AlphaVantageClient {
       return null;
     }
     return latest.value;
+  }
+
+  /**
+   * Get value at a specific date (or nearest prior).
+   */
+  static getValueAtDate(
+    response: EconomicIndicatorResponse,
+    targetDate: string
+  ): { date: string; value: number | null } | null {
+    // Data is typically sorted newest first
+    for (const point of response.data) {
+      if (point.date <= targetDate) {
+        return { date: point.date, value: point.value };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get percent change between two dates.
+   */
+  static getPercentChange(
+    response: EconomicIndicatorResponse,
+    fromDate: string,
+    toDate: string
+  ): number | null {
+    const fromValue = AlphaVantageClient.getValueAtDate(response, fromDate);
+    const toValue = AlphaVantageClient.getValueAtDate(response, toDate);
+
+    if (!fromValue?.value || !toValue?.value || fromValue.value === 0) {
+      return null;
+    }
+
+    return ((toValue.value - fromValue.value) / fromValue.value) * 100;
   }
 }
 
