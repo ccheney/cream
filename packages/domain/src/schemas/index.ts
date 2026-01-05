@@ -169,3 +169,63 @@ export {
   withSoftDelete,
   withTimestamps,
 } from "./validation.js";
+
+// ============================================
+// DecisionPlan Schemas (Protobuf mirrors)
+// ============================================
+
+export {
+  // Enums
+  type Action,
+  ActionSchema,
+  type Direction,
+  DirectionSchema,
+  EnvironmentSchema as DecisionEnvironmentSchema,
+  type Environment as DecisionEnvironment,
+  type ExecutionTactic,
+  ExecutionTacticSchema,
+  type InstrumentType,
+  InstrumentTypeSchema,
+  OptionTypeSchema as DecisionOptionTypeSchema,
+  type OptionType as DecisionOptionType,
+  OrderTypeSchema as DecisionOrderTypeSchema,
+  type OrderType as DecisionOrderType,
+  type Regime,
+  RegimeSchema,
+  type RiskDenomination,
+  RiskDenominationSchema,
+  type SizeUnit,
+  SizeUnitSchema,
+  type StrategyFamily,
+  StrategyFamilySchema,
+  type TimeInForce,
+  TimeInForceSchema,
+  // Messages
+  type Decision,
+  type DecisionPlan,
+  type DecisionPlanValidationResult,
+  DecisionPlanSchema,
+  DecisionPlanValidationResultSchema,
+  DecisionSchema,
+  type ExecutionParams,
+  ExecutionParamsSchema,
+  type Instrument,
+  InstrumentSchema,
+  ISO8601TimestampSchema,
+  type ISO8601Timestamp,
+  type OptionContract,
+  OptionContractSchema,
+  type OrderPlan,
+  OrderPlanSchema,
+  type References,
+  ReferencesSchema,
+  type RiskLevels,
+  RiskLevelsSchema,
+  type RiskValidationResult,
+  RiskValidationResultSchema,
+  type Size,
+  SizeSchema,
+  // Utilities
+  validateDecisionPlan,
+  validateRiskReward,
+} from "./decision-plan.js";
