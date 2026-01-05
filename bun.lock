@@ -55,6 +55,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@happy-dom/global-registrator": "20.0.11",
+        "@playwright/test": "^1.50.0",
         "@testing-library/dom": "10.4.1",
         "@testing-library/react": "16.3.1",
         "@types/bun": "latest",
@@ -148,6 +149,15 @@
         "@cream/domain": "workspace:*",
         "@google/genai": "1.34.0",
       },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
+    "packages/indicators": {
+      "name": "@cream/indicators",
+      "version": "0.0.1",
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
@@ -503,6 +513,8 @@
     "@cream/helix": ["@cream/helix@workspace:packages/helix"],
 
     "@cream/helix-schema": ["@cream/helix-schema@workspace:packages/helix-schema"],
+
+    "@cream/indicators": ["@cream/indicators@workspace:packages/indicators"],
 
     "@cream/mastra-kit": ["@cream/mastra-kit@workspace:packages/mastra-kit"],
 
@@ -927,6 +939,8 @@
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 
     "@playwright/browser-chromium": ["@playwright/browser-chromium@1.57.0", "", { "dependencies": { "playwright-core": "1.57.0" } }, "sha512-pUg+2p6HwewLp8KCD9G6VYaS2iewdkNkyqMcSIxXBXOlp1ojTxLF6/bwyR4ixLMy6tyv75jhE8PzzMZiX5KzwQ=="],
+
+    "@playwright/test": ["@playwright/test@1.57.0", "", { "dependencies": { "playwright": "1.57.0" }, "bin": { "playwright": "cli.js" } }, "sha512-6TyEnHgd6SArQO8UO2OMTxshln3QMWBtPGrOCgs3wVEmQmwyuNtB10IZMfmYDE0riwNR1cu4q+pPcxMVtaG3TA=="],
 
     "@posthog/core": ["@posthog/core@1.9.0", "", { "dependencies": { "cross-spawn": "^7.0.6" } }, "sha512-j7KSWxJTUtNyKynLt/p0hfip/3I46dWU2dk+pt7dKRoz2l5CYueHuHK4EO7Wlgno5yo1HO4sc4s30MXMTICHJw=="],
 
