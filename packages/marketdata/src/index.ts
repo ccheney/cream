@@ -188,6 +188,58 @@ export {
   getDividendsGoingExWithin,
 } from "./corporate-actions";
 
+// Feature snapshot builder
+export {
+  // Builder
+  buildSnapshot,
+  buildSnapshots,
+  compactSnapshot,
+  createMockCandleSource,
+  createMockEventSource,
+  createMockUniverseSource,
+  getSnapshotSummary,
+  serializeSnapshot,
+  type BuildSnapshotOptions,
+  type CandleDataSource,
+  type ExternalEventSource,
+  type SnapshotDataSources,
+  type UniverseMetadataSource,
+
+  // Cache
+  DEFAULT_CACHE_CONFIG,
+  getGlobalCache,
+  resetGlobalCache,
+  SnapshotCache,
+  type SnapshotCacheConfig,
+
+  // Schema
+  CandlesByTimeframeSchema,
+  classifyMarketCap,
+  DEFAULT_SNAPSHOT_CONFIG,
+  ExternalEventSummarySchema,
+  ExternalEventTypeSchema,
+  FeatureSnapshotSchema,
+  IndicatorValuesSchema,
+  isValidFeatureSnapshot,
+  MarketCapBucketSchema,
+  NormalizedValuesSchema,
+  parseFeatureSnapshot,
+  RegimeClassificationSchema,
+  RegimeLabelSchema,
+  SnapshotBuilderConfigSchema,
+  UniverseMetadataSchema,
+  type CandlesByTimeframe,
+  type ExternalEventSummary,
+  type FeatureSnapshot,
+  type IndicatorValues,
+  type MarketCapBucket,
+  type NormalizedValues,
+  type RegimeClassification,
+  type RegimeLabel,
+  type SnapshotBuilderConfig,
+  type UniverseMetadata,
+} from "./snapshot";
+
 /**
  * Package version.
  */

@@ -17,8 +17,12 @@
   "dependencies": {
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/indicators": "workspace:*",
+    "@cream/regime": "workspace:*",
+    "@cream/universe": "workspace:*",
     "@types/ws": "8.18.1",
-    "ws": "8.18.3"
+    "ws": "8.18.3",
+    "zod": "^3.25.11"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
