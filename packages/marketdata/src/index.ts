@@ -60,6 +60,22 @@ export {
 // Provider clients
 export * from "./providers";
 
+// Option chain scanning
+export {
+  buildOptionTicker,
+  calculateDte,
+  DEFAULT_FILTERS,
+  type GreeksProvider,
+  type OptionFilterCriteria,
+  type OptionGreeks,
+  type OptionType,
+  type OptionWithMarketData,
+  OptionChainScanner,
+  OptionWithMarketDataSchema,
+  parseOptionTicker,
+  type ScoringWeights,
+} from "./optionChain";
+
 /**
  * Package version.
  */
