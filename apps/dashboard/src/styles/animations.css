@@ -199,6 +199,51 @@
   }
 }
 
+/**
+ * Breathing animation for idle/ready indicators.
+ * Subtle opacity pulsing that feels alive.
+ */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/**
+ * Flowing gradient animation for data streaming indicators.
+ * Horizontal gradient sweep.
+ */
+@keyframes flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/**
+ * Pulse with scale animation for active status dots.
+ * More pronounced than standard pulse.
+ */
+@keyframes pulse-scale {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+}
+
 /* ============================================
    Animation Utility Classes
    ============================================ */
@@ -258,6 +303,19 @@
   stroke-dasharray: 50;
   stroke-dashoffset: 50;
   animation: checkmark-draw 300ms var(--ease-out) forwards;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-flow {
+  animation: flow 4s linear infinite;
+  background-size: 200% 100%;
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
 }
 
 /* ============================================
@@ -325,7 +383,10 @@
   .animate-slide-in-bottom,
   .animate-scale-in,
   .animate-bounce,
-  .animate-checkmark {
+  .animate-checkmark,
+  .animate-breathe,
+  .animate-flow,
+  .animate-pulse-scale {
     animation: none;
   }
 
