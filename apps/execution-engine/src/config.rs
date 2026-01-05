@@ -35,7 +35,7 @@ pub enum ConfigError {
 
     /// Failed to parse YAML configuration.
     #[error("Failed to parse config YAML: {0}")]
-    ParseError(#[from] serde_yaml::Error),
+    ParseError(#[from] serde_yaml_bw::Error),
 
     /// Configuration validation failed.
     #[error("Config validation failed: {0}")]
@@ -635,7 +635,7 @@ pub fn load_config(path: Option<&str>) -> Result<Config, ConfigError> {
     let interpolated = interpolate_env_vars(&contents)?;
 
     // Parse YAML
-    let config: Config = serde_yaml::from_str(&interpolated)?;
+    let config: Config = serde_yaml_bw::from_str(&interpolated)?;
 
     // Validate configuration
     validate_config(&config)?;
@@ -650,7 +650,7 @@ pub fn load_config(path: Option<&str>) -> Result<Config, ConfigError> {
 /// Returns a `ConfigError` if the YAML cannot be parsed or validated.
 pub fn load_config_from_string(yaml: &str) -> Result<Config, ConfigError> {
     let interpolated = interpolate_env_vars(yaml)?;
-    let config: Config = serde_yaml::from_str(&interpolated)?;
+    let config: Config = serde_yaml_bw::from_str(&interpolated)?;
     validate_config(&config)?;
     Ok(config)
 }
