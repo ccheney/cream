@@ -10,7 +10,9 @@ mod state;
 pub mod stops;
 pub mod tactics;
 
-pub use alpaca::AlpacaAdapter;
+pub use alpaca::{
+    AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, RegulatoryFeeCalculator,
+};
 pub use gateway::{BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError};
 pub use reconciliation::{
     BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot, BrokerStateSnapshot,
