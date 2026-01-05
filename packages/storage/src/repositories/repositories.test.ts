@@ -13,9 +13,11 @@ import { createInMemoryClient, type TursoClient } from "../turso.js";
 import {
   AlertsRepository,
   DecisionsRepository,
+  isValidTransition,
   OrdersRepository,
   PositionsRepository,
   RepositoryError,
+  ThesisStateRepository,
   withTransaction,
 } from "./index.js";
 
@@ -116,6 +118,49 @@ async function setupTables(client: TursoClient): Promise<void> {
       opened_at TEXT NOT NULL DEFAULT (datetime('now')),
       closed_at TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  await client.run(`
+    CREATE TABLE IF NOT EXISTS thesis_state (
+      thesis_id TEXT PRIMARY KEY,
+      instrument_id TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('WATCHING', 'ENTERED', 'ADDING', 'MANAGING', 'EXITING', 'CLOSED')),
+      entry_price REAL,
+      entry_date TEXT,
+      current_stop REAL,
+      current_target REAL,
+      conviction REAL CHECK (conviction IS NULL OR (conviction >= 0 AND conviction <= 1)),
+      entry_thesis TEXT,
+      invalidation_conditions TEXT,
+      add_count INTEGER NOT NULL DEFAULT 0,
+      max_position_reached INTEGER NOT NULL DEFAULT 0 CHECK (max_position_reached IN (0, 1)),
+      peak_unrealized_pnl REAL,
+      close_reason TEXT,
+      exit_price REAL,
+      realized_pnl REAL,
+      realized_pnl_pct REAL,
+      environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+      notes TEXT,
+      last_updated TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      closed_at TEXT
+    )
+  `);
+
+  await client.run(`
+    CREATE TABLE IF NOT EXISTS thesis_state_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      thesis_id TEXT NOT NULL,
+      from_state TEXT NOT NULL,
+      to_state TEXT NOT NULL,
+      trigger_reason TEXT,
+      cycle_id TEXT,
+      price_at_transition REAL,
+      conviction_at_transition REAL,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (thesis_id) REFERENCES thesis_state(thesis_id) ON DELETE CASCADE
     )
   `);
 }
@@ -664,5 +709,361 @@ describe("withTransaction", () => {
 
     const decision = await decisionsRepo.findById("tx-rollback");
     expect(decision).toBeNull();
+  });
+});
+
+// ============================================
+// ThesisStateRepository Tests
+// ============================================
+
+describe("ThesisStateRepository", () => {
+  let client: TursoClient;
+  let repo: ThesisStateRepository;
+
+  beforeEach(async () => {
+    client = await createInMemoryClient();
+    await setupTables(client);
+    repo = new ThesisStateRepository(client);
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  test("creates a thesis in WATCHING state", async () => {
+    const thesis = await repo.create({
+      thesisId: "thesis-001",
+      instrumentId: "AAPL",
+      entryThesis: "Strong technical setup",
+      conviction: 0.8,
+      environment: "PAPER",
+    });
+
+    expect(thesis.thesisId).toBe("thesis-001");
+    expect(thesis.instrumentId).toBe("AAPL");
+    expect(thesis.state).toBe("WATCHING");
+    expect(thesis.conviction).toBe(0.8);
+    expect(thesis.entryThesis).toBe("Strong technical setup");
+  });
+
+  test("creates a thesis with custom state", async () => {
+    const thesis = await repo.create({
+      thesisId: "thesis-002",
+      instrumentId: "MSFT",
+      state: "ENTERED",
+      environment: "PAPER",
+    });
+
+    expect(thesis.state).toBe("ENTERED");
+  });
+
+  test("finds thesis by ID", async () => {
+    await repo.create({
+      thesisId: "thesis-find",
+      instrumentId: "GOOGL",
+      environment: "PAPER",
+    });
+
+    const found = await repo.findById("thesis-find");
+    expect(found).not.toBeNull();
+    expect(found!.instrumentId).toBe("GOOGL");
+  });
+
+  test("returns null for non-existent thesis", async () => {
+    const found = await repo.findById("non-existent");
+    expect(found).toBeNull();
+  });
+
+  test("finds active thesis for instrument", async () => {
+    await repo.create({
+      thesisId: "thesis-active",
+      instrumentId: "NVDA",
+      environment: "PAPER",
+    });
+
+    const active = await repo.findActiveForInstrument("NVDA", "PAPER");
+    expect(active).not.toBeNull();
+    expect(active!.thesisId).toBe("thesis-active");
+  });
+
+  test("finds all active theses", async () => {
+    await repo.create({ thesisId: "t1", instrumentId: "AAPL", environment: "PAPER" });
+    await repo.create({ thesisId: "t2", instrumentId: "MSFT", environment: "PAPER" });
+    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "CLOSED", environment: "PAPER" });
+
+    const active = await repo.findActive("PAPER");
+    expect(active).toHaveLength(2);
+  });
+
+  test("transitions state correctly", async () => {
+    await repo.create({
+      thesisId: "thesis-transition",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    const updated = await repo.transitionState("thesis-transition", {
+      toState: "ENTERED",
+      triggerReason: "Entry signal",
+      cycleId: "cycle-001",
+    });
+
+    expect(updated.state).toBe("ENTERED");
+
+    // Check history was recorded
+    const history = await repo.getHistory("thesis-transition");
+    expect(history).toHaveLength(1);
+    expect(history[0]!.fromState).toBe("WATCHING");
+    expect(history[0]!.toState).toBe("ENTERED");
+    expect(history[0]!.triggerReason).toBe("Entry signal");
+  });
+
+  test("rejects invalid state transitions", async () => {
+    await repo.create({
+      thesisId: "thesis-invalid",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    // WATCHING -> MANAGING is not valid
+    await expect(
+      repo.transitionState("thesis-invalid", { toState: "MANAGING" })
+    ).rejects.toThrow("Invalid state transition");
+  });
+
+  test("enters position correctly", async () => {
+    await repo.create({
+      thesisId: "thesis-enter",
+      instrumentId: "AAPL",
+      conviction: 0.7,
+      environment: "PAPER",
+    });
+
+    const entered = await repo.enterPosition("thesis-enter", 150.0, 145.0, 165.0, "cycle-001");
+
+    expect(entered.state).toBe("ENTERED");
+    expect(entered.entryPrice).toBe(150.0);
+    expect(entered.currentStop).toBe(145.0);
+    expect(entered.currentTarget).toBe(165.0);
+    expect(entered.entryDate).not.toBeNull();
+
+    // Check history
+    const history = await repo.getHistory("thesis-enter");
+    expect(history[0]!.priceAtTransition).toBe(150.0);
+  });
+
+  test("closes thesis correctly", async () => {
+    await repo.create({
+      thesisId: "thesis-close",
+      instrumentId: "AAPL",
+      state: "MANAGING",
+      environment: "PAPER",
+    });
+
+    const closed = await repo.close("thesis-close", "TARGET_HIT", 165.0, 15.0);
+
+    expect(closed.state).toBe("CLOSED");
+    expect(closed.closeReason).toBe("TARGET_HIT");
+    expect(closed.exitPrice).toBe(165.0);
+    expect(closed.realizedPnl).toBe(15.0);
+    expect(closed.closedAt).not.toBeNull();
+  });
+
+  test("updates conviction", async () => {
+    await repo.create({
+      thesisId: "thesis-conv",
+      instrumentId: "AAPL",
+      conviction: 0.5,
+      environment: "PAPER",
+    });
+
+    const updated = await repo.updateConviction("thesis-conv", 0.9);
+    expect(updated.conviction).toBe(0.9);
+  });
+
+  test("rejects invalid conviction values", async () => {
+    await repo.create({
+      thesisId: "thesis-conv-invalid",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    await expect(repo.updateConviction("thesis-conv-invalid", 1.5)).rejects.toThrow();
+  });
+
+  test("updates stop and target levels", async () => {
+    await repo.create({
+      thesisId: "thesis-levels",
+      instrumentId: "AAPL",
+      currentStop: 145.0,
+      currentTarget: 165.0,
+      environment: "PAPER",
+    });
+
+    const updated = await repo.updateLevels("thesis-levels", 147.0, 170.0);
+    expect(updated.currentStop).toBe(147.0);
+    expect(updated.currentTarget).toBe(170.0);
+  });
+
+  test("increments add count", async () => {
+    await repo.create({
+      thesisId: "thesis-add",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    await repo.incrementAddCount("thesis-add");
+    await repo.incrementAddCount("thesis-add");
+
+    const thesis = await repo.findById("thesis-add");
+    expect(thesis!.addCount).toBe(2);
+  });
+
+  test("marks max position reached", async () => {
+    await repo.create({
+      thesisId: "thesis-max",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    const updated = await repo.markMaxPositionReached("thesis-max");
+    expect(updated.maxPositionReached).toBe(true);
+  });
+
+  test("updates peak unrealized P&L", async () => {
+    await repo.create({
+      thesisId: "thesis-peak",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    await repo.updatePeakPnl("thesis-peak", 100.0);
+    let thesis = await repo.findById("thesis-peak");
+    expect(thesis!.peakUnrealizedPnl).toBe(100.0);
+
+    // Should keep the higher value
+    await repo.updatePeakPnl("thesis-peak", 50.0);
+    thesis = await repo.findById("thesis-peak");
+    expect(thesis!.peakUnrealizedPnl).toBe(100.0);
+
+    // Should update to new higher value
+    await repo.updatePeakPnl("thesis-peak", 150.0);
+    thesis = await repo.findById("thesis-peak");
+    expect(thesis!.peakUnrealizedPnl).toBe(150.0);
+  });
+
+  test("adds notes to thesis", async () => {
+    await repo.create({
+      thesisId: "thesis-notes",
+      instrumentId: "AAPL",
+      notes: { cycle1: "Initial entry" },
+      environment: "PAPER",
+    });
+
+    const updated = await repo.addNotes("thesis-notes", "cycle2", "Added to position");
+    expect(updated.notes.cycle1).toBe("Initial entry");
+    expect(updated.notes.cycle2).toBe("Added to position");
+  });
+
+  test("gets thesis context", async () => {
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    await repo.create({
+      thesisId: "thesis-context",
+      instrumentId: "AAPL",
+      state: "MANAGING",
+      environment: "PAPER",
+    });
+
+    // Manually set entry date for test
+    await client.run(
+      `UPDATE thesis_state SET entry_price = 150.0, entry_date = ?, current_stop = 145.0, current_target = 165.0 WHERE thesis_id = ?`,
+      [oneWeekAgo, "thesis-context"]
+    );
+
+    const context = await repo.getContext("thesis-context", 155.0);
+
+    expect(context.instrumentId).toBe("AAPL");
+    expect(context.currentState).toBe("MANAGING");
+    expect(context.entryPrice).toBe(150.0);
+    expect(context.currentPnL).toBe(5.0);
+    expect(context.stopLoss).toBe(145.0);
+    expect(context.takeProfit).toBe(165.0);
+    expect(context.daysHeld).toBeGreaterThanOrEqual(6); // At least 6 days
+  });
+
+  test("gets thesis statistics", async () => {
+    // Create various theses
+    await repo.create({ thesisId: "t1", instrumentId: "AAPL", state: "WATCHING", environment: "PAPER" });
+    await repo.create({ thesisId: "t2", instrumentId: "MSFT", state: "MANAGING", environment: "PAPER" });
+    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "CLOSED", environment: "PAPER" });
+
+    const stats = await repo.getStats("PAPER");
+
+    expect(stats.total).toBe(3);
+    expect(stats.byState.WATCHING).toBe(1);
+    expect(stats.byState.MANAGING).toBe(1);
+    expect(stats.byState.CLOSED).toBe(1);
+  });
+
+  test("finds theses by states", async () => {
+    await repo.create({ thesisId: "t1", instrumentId: "AAPL", state: "WATCHING", environment: "PAPER" });
+    await repo.create({ thesisId: "t2", instrumentId: "MSFT", state: "MANAGING", environment: "PAPER" });
+    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "EXITING", environment: "PAPER" });
+
+    const result = await repo.findByStates(["MANAGING", "EXITING"], "PAPER");
+    expect(result).toHaveLength(2);
+  });
+
+  test("deletes thesis", async () => {
+    await repo.create({
+      thesisId: "thesis-delete",
+      instrumentId: "AAPL",
+      environment: "PAPER",
+    });
+
+    const deleted = await repo.delete("thesis-delete");
+    expect(deleted).toBe(true);
+
+    const found = await repo.findById("thesis-delete");
+    expect(found).toBeNull();
+  });
+});
+
+// ============================================
+// State Transition Validation Tests
+// ============================================
+
+describe("isValidTransition", () => {
+  test("allows WATCHING -> ENTERED", () => {
+    expect(isValidTransition("WATCHING", "ENTERED")).toBe(true);
+  });
+
+  test("allows WATCHING -> CLOSED", () => {
+    expect(isValidTransition("WATCHING", "CLOSED")).toBe(true);
+  });
+
+  test("allows ENTERED -> MANAGING", () => {
+    expect(isValidTransition("ENTERED", "MANAGING")).toBe(true);
+  });
+
+  test("allows MANAGING -> EXITING", () => {
+    expect(isValidTransition("MANAGING", "EXITING")).toBe(true);
+  });
+
+  test("allows EXITING -> CLOSED", () => {
+    expect(isValidTransition("EXITING", "CLOSED")).toBe(true);
+  });
+
+  test("allows CLOSED -> WATCHING", () => {
+    expect(isValidTransition("CLOSED", "WATCHING")).toBe(true);
+  });
+
+  test("rejects WATCHING -> MANAGING (skip)", () => {
+    expect(isValidTransition("WATCHING", "MANAGING")).toBe(false);
+  });
+
+  test("rejects CLOSED -> ENTERED (invalid)", () => {
+    expect(isValidTransition("CLOSED", "ENTERED")).toBe(false);
   });
 });

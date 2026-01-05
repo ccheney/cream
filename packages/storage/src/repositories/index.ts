@@ -124,3 +124,17 @@ export {
   type UniverseCacheInsert,
   UniverseCacheRepository,
 } from "./universe-cache.js";
+
+// Thesis state management (migration 004)
+export {
+  type CloseReason,
+  type CreateThesisInput,
+  isValidTransition,
+  type StateTransitionInput,
+  type Thesis,
+  type ThesisContext,
+  type ThesisFilters,
+  type ThesisState,
+  type ThesisStateHistoryEntry,
+  ThesisStateRepository,
+} from "./thesis-state.js";
