@@ -1,0 +1,28 @@
+{
+  "name": "@cream/external-context",
+  "version": "0.1.0",
+  "description": "External context extraction pipeline for news, sentiment, and fundamentals",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist",
+    "test": "CREAM_ENV=BACKTEST bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/ tests/",
+    "format": "biome format --write src/ tests/"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@cream/config": "workspace:*",
+    "@cream/domain": "workspace:*",
+    "zod": "^3.25.11"
+  },
+  "devDependencies": {
+    "@cream/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@typescript/native-preview": "7.0.0-dev.20260104.1"
+  }
+}
