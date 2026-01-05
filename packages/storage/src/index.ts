@@ -13,17 +13,6 @@
 export const PACKAGE_NAME = "@cream/storage";
 export const VERSION = "0.0.1";
 
-// Turso client
-export {
-  type BatchStatement,
-  createInMemoryClient,
-  createTursoClient,
-  getDefaultDatabasePath,
-  type Row,
-  type TursoClient,
-  type TursoConfig,
-} from "./turso.js";
-
 // Migrations
 export {
   type AppliedMigration,
@@ -35,6 +24,15 @@ export {
   rollbackMigrations,
   runMigrations,
 } from "./migrations.js";
-
 // Repositories
 export * from "./repositories/index.js";
+// Turso client
+export {
+  type BatchStatement,
+  createInMemoryClient,
+  createTursoClient,
+  getDefaultDatabasePath,
+  type Row,
+  type TursoClient,
+  type TursoConfig,
+} from "./turso.js";

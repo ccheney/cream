@@ -31,11 +31,12 @@ export function mapCycleEvent(event: MastraCycleEvent): BroadcastEvent {
     data: {
       cycleId: event.cycleId,
       phase: event.phase,
+      step: event.status, // Map status to step
       progress: event.progress ?? 0,
-      status: event.status,
-      message: event.message,
+      message: event.message ?? "",
       startedAt: event.timestamp,
       estimatedCompletion: undefined,
+      timestamp: event.timestamp,
     },
   };
 
@@ -49,14 +50,33 @@ export function mapCycleEvent(event: MastraCycleEvent): BroadcastEvent {
  * Map Mastra agent event to AgentOutputMessage.
  */
 export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
+  // Map event agent types to domain agent types
+  const agentTypeMap: Record<MastraAgentEvent["agentType"], string> = {
+    technical: "technical_analyst",
+    sentiment: "news_analyst",
+    fundamentals: "fundamentals_analyst",
+    bullish: "bullish_researcher",
+    bearish: "bearish_researcher",
+    trader: "trader",
+    risk: "risk_manager",
+    critic: "critic",
+  };
+
+  // Map event status to domain status
+  const statusMap: Record<MastraAgentEvent["status"], "running" | "complete" | "error"> = {
+    started: "running",
+    thinking: "running",
+    complete: "complete",
+    error: "error",
+  };
+
   const message: ServerMessage = {
     type: "agent_output",
     data: {
       cycleId: event.cycleId,
-      agentType: event.agentType,
-      status: event.status,
-      reasoning: event.reasoning,
-      output: event.output,
+      agentType: agentTypeMap[event.agentType] as any,
+      status: statusMap[event.status],
+      output: typeof event.output === "string" ? event.output : JSON.stringify(event.output ?? ""),
       timestamp: event.timestamp,
     },
   };
@@ -81,12 +101,10 @@ export function mapQuoteEvent(event: QuoteStreamEvent): BroadcastEvent {
       symbol: event.symbol,
       bid: event.bid,
       ask: event.ask,
+      last: event.last ?? event.bid, // Use bid as fallback for last
       bidSize: event.bidSize,
       askSize: event.askSize,
-      last: event.last,
-      lastSize: event.lastSize,
-      volume: event.volume,
-      change: undefined,
+      volume: event.volume ?? 0,
       changePercent: undefined,
       timestamp: event.timestamp,
     },
@@ -102,20 +120,36 @@ export function mapQuoteEvent(event: QuoteStreamEvent): BroadcastEvent {
  * Map order update event to OrderMessage.
  */
 export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
+  // Map event side to domain side (lowercase)
+  const sideMap: Record<OrderUpdateEvent["side"], "buy" | "sell"> = {
+    BUY: "buy",
+    SELL: "sell",
+  };
+
+  // Map event status to domain status
+  const statusMap: Record<OrderUpdateEvent["status"], any> = {
+    pending: "pending",
+    open: "submitted",
+    partially_filled: "partial_fill",
+    filled: "filled",
+    cancelled: "cancelled",
+    rejected: "rejected",
+    expired: "expired",
+  };
+
   const message: ServerMessage = {
     type: "order",
     data: {
       id: event.orderId,
       symbol: event.symbol,
-      side: event.side,
-      type: event.type,
+      side: sideMap[event.side],
+      orderType: event.type,
+      status: statusMap[event.status],
       quantity: event.quantity,
-      filledQuantity: event.filledQuantity,
-      price: event.price,
-      avgFillPrice: event.avgFillPrice,
-      status: event.status,
-      createdAt: event.timestamp,
-      updatedAt: event.timestamp,
+      filledQty: event.filledQuantity,
+      limitPrice: event.price,
+      avgPrice: event.avgFillPrice,
+      timestamp: event.timestamp,
     },
   };
 
@@ -133,31 +167,40 @@ export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
  * Map decision insert event to DecisionMessage.
  */
 export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
+  // Map CLOSE action to NO_TRADE since CLOSE is not in the domain Action type
+  const actionMap: Record<DecisionInsertEvent["action"], any> = {
+    BUY: "BUY",
+    SELL: "SELL",
+    HOLD: "HOLD",
+    CLOSE: "NO_TRADE",
+  };
+
   const message: ServerMessage = {
     type: "decision",
     data: {
       instrument: {
-        ticker: event.symbol,
-        assetType: "EQUITY",
+        instrumentId: event.symbol,
+        instrumentType: "EQUITY",
       },
-      action: event.action,
-      direction: event.direction,
-      entry: { amount: 0, unit: "SHARES" },
-      sizing: { amount: 0, unit: "SHARES" },
-      stopLoss: { price: 0 },
-      takeProfit: {},
-      rationale: {
-        summary: "Decision loaded from database",
-        bullishFactors: [],
-        bearishFactors: [],
-        keyRisks: [],
+      action: actionMap[event.action],
+      size: {
+        quantity: 0,
+        unit: "SHARES",
+        targetPositionQuantity: 0,
       },
+      orderPlan: {
+        entryOrderType: "MARKET",
+        exitOrderType: "MARKET",
+        timeInForce: "DAY",
+      },
+      riskLevels: {
+        stopLossLevel: 0,
+        takeProfitLevel: 0,
+        denomination: "UNDERLYING_PRICE",
+      },
+      strategyFamily: "TREND",
+      rationale: "Decision loaded from database",
       confidence: event.confidence,
-      metadata: {
-        cycleId: event.cycleId,
-        decisionId: event.decisionId,
-        timestamp: event.createdAt,
-      },
     },
     cycleId: event.cycleId,
   };
@@ -183,9 +226,8 @@ export function mapAlertEvent(event: SystemAlertEvent): BroadcastEvent {
       severity: event.severity,
       title: event.title,
       message: event.message,
-      source: event.source,
+      acknowledged: false,
       timestamp: event.timestamp,
-      dismissible: true,
     },
   };
 
@@ -202,10 +244,19 @@ export function mapHealthCheckEvent(event: HealthCheckEvent): BroadcastEvent {
   const message: ServerMessage = {
     type: "system_status",
     data: {
-      status: event.status,
-      version: event.version,
-      uptime: event.uptime,
-      connections: event.connections,
+      health: event.status,
+      uptimeSeconds: event.uptime,
+      activeConnections: event.connections,
+      services: Object.fromEntries(
+        Object.entries(event.sources).map(([name, status]) => [
+          name,
+          {
+            status: status === "connected" ? ("healthy" as const) : ("unhealthy" as const),
+            lastCheck: event.timestamp,
+          },
+        ])
+      ),
+      environment: "PAPER" as const,
       timestamp: event.timestamp,
     },
   };

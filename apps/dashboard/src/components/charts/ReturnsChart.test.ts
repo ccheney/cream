@@ -70,11 +70,11 @@ describe("SAMPLE_RETURNS_DATA", () => {
   });
 
   it("starts with January", () => {
-    expect(SAMPLE_RETURNS_DATA[0].period).toBe("Jan");
+    expect(SAMPLE_RETURNS_DATA[0]?.period).toBe("Jan");
   });
 
   it("ends with December", () => {
-    expect(SAMPLE_RETURNS_DATA[11].period).toBe("Dec");
+    expect(SAMPLE_RETURNS_DATA[11]?.period).toBe("Dec");
   });
 });
 
@@ -223,8 +223,8 @@ describe("Edge Cases", () => {
       { period: "Jan", value: 100 },
       { period: "Feb", value: -50 },
     ];
-    expect(getReturnColor(data[0].value)).toBe(CHART_COLORS.profit);
-    expect(getReturnColor(data[1].value)).toBe(CHART_COLORS.loss);
+    expect(getReturnColor(data[0]?.value ?? 0)).toBe(CHART_COLORS.profit);
+    expect(getReturnColor(data[1]?.value ?? 0)).toBe(CHART_COLORS.loss);
   });
 
   it("handles decimal precision", () => {

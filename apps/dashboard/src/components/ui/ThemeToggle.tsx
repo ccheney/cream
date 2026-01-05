@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useTheme, type Theme } from "../../hooks/useTheme";
+import { type Theme, useTheme } from "../../hooks/useTheme";
 
 // ============================================
 // Types
@@ -144,10 +144,7 @@ const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
  * <ThemeToggle compact />
  * ```
  */
-export function ThemeToggle({
-  compact = false,
-  testId = "theme-toggle",
-}: ThemeToggleProps) {
+export function ThemeToggle({ compact = false, testId = "theme-toggle" }: ThemeToggleProps) {
   const { theme, setTheme, mounted } = useTheme();
 
   // Prevent hydration mismatch by not rendering until mounted

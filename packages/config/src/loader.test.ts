@@ -2,9 +2,9 @@
  * Configuration Loader Tests
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { join } from "node:path";
-import { loadConfig, loadConfigWithEnv, loadConfigFromFile } from "./loader";
+import { loadConfig, loadConfigFromFile, loadConfigWithEnv } from "./loader";
 
 const TEST_CONFIG_DIR = join(import.meta.dirname, "..", "configs");
 
@@ -111,9 +111,7 @@ describe("loadConfigFromFile", () => {
   });
 
   it("throws on nonexistent file", async () => {
-    await expect(loadConfigFromFile("/nonexistent.yaml")).rejects.toThrow(
-      "Failed to load YAML"
-    );
+    await expect(loadConfigFromFile("/nonexistent.yaml")).rejects.toThrow("Failed to load YAML");
   });
 });
 

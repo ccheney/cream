@@ -118,7 +118,7 @@ function CustomTooltip({
     return null;
   }
 
-  const data = payload[0].payload as CustomTooltipPayload;
+  const data = payload[0]?.payload as CustomTooltipPayload;
   const color = getReturnColor(data.value);
 
   return (
@@ -153,7 +153,6 @@ interface CustomBarProps {
 
 function CustomBar({ x, y, width, height, fill, radius }: CustomBarProps) {
   // Calculate rounded corners (only top for positive, only bottom for negative)
-  const _isPositive = y < 0 || height > 0;
   const r = Math.min(radius, Math.abs(height) / 2, width / 2);
 
   if (height === 0) {
@@ -282,7 +281,9 @@ function ReturnsChartComponent({
           <Bar
             dataKey="value"
             animationDuration={300}
-            shape={(props: CustomBarProps) => <CustomBar {...props} radius={barRadius} />}
+            shape={(props: unknown) => (
+              <CustomBar {...(props as CustomBarProps)} radius={barRadius} />
+            )}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getReturnColor(entry.value)} />

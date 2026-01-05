@@ -4,20 +4,20 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  adjustEfSearchForRecall,
   DEFAULT_HNSW_CONFIG,
   DISTANCE_METRIC_NOTES,
   DistanceMetric,
   ENVIRONMENT_PROFILE_MAP,
-  HnswConfigSchema,
-  TUNING_PROFILES,
-  TuningProfileName,
-  adjustEfSearchForRecall,
   generateVectorIndexConfig,
   getConfigForEnvironment,
   getTuningProfile,
-  listTuningProfiles,
-  validateHnswConfig,
   type HnswConfig,
+  HnswConfigSchema,
+  listTuningProfiles,
+  TUNING_PROFILES,
+  TuningProfileName,
+  validateHnswConfig,
 } from "../src/hnsw-config";
 
 // ============================================

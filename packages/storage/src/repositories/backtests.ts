@@ -6,15 +6,15 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
-  parseJson,
-  toJson,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  parseJson,
+  query,
+  RepositoryError,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -220,10 +220,7 @@ export class BacktestsRepository {
    * Find backtest by ID
    */
   async findById(id: string): Promise<Backtest | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM backtests WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM backtests WHERE id = ?`, [id]);
 
     return row ? mapBacktestRow(row) : null;
   }
@@ -257,11 +254,11 @@ export class BacktestsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM backtests`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),
       pagination
@@ -307,10 +304,10 @@ export class BacktestsRepository {
    * Update backtest progress
    */
   async updateProgress(id: string, progressPct: number): Promise<void> {
-    await this.client.run(
-      `UPDATE backtests SET progress_pct = ? WHERE id = ?`,
-      [Math.min(100, Math.max(0, progressPct)), id]
-    );
+    await this.client.run(`UPDATE backtests SET progress_pct = ? WHERE id = ?`, [
+      Math.min(100, Math.max(0, progressPct)),
+      id,
+    ]);
   }
 
   /**
@@ -389,10 +386,7 @@ export class BacktestsRepository {
    * Cancel backtest
    */
   async cancel(id: string): Promise<Backtest> {
-    await this.client.run(
-      `UPDATE backtests SET status = 'cancelled' WHERE id = ?`,
-      [id]
-    );
+    await this.client.run(`UPDATE backtests SET status = 'cancelled' WHERE id = ?`, [id]);
 
     return this.findByIdOrThrow(id);
   }
@@ -401,10 +395,7 @@ export class BacktestsRepository {
    * Delete backtest and related data
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM backtests WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM backtests WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }
@@ -438,10 +429,9 @@ export class BacktestsRepository {
       ]
     );
 
-    const row = await this.client.get<Row>(
-      `SELECT * FROM backtest_trades WHERE id = ?`,
-      [Number(result.lastInsertRowid)]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM backtest_trades WHERE id = ?`, [
+      Number(result.lastInsertRowid),
+    ]);
 
     return mapTradeRow(row!);
   }

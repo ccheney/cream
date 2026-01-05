@@ -84,7 +84,7 @@ export function getAllocationColor(index: number, customColor?: string): string 
   if (customColor) {
     return customColor;
   }
-  return ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
+  return ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] || ALLOCATION_COLORS[0];
 }
 
 // ============================================
@@ -130,7 +130,7 @@ function CustomTooltip({
     return null;
   }
 
-  const data = payload[0].payload as CustomTooltipPayload;
+  const data = payload[0]?.payload as CustomTooltipPayload;
   const percentage = calculatePercentage(data.value, total);
 
   return (
@@ -197,8 +197,11 @@ function renderCustomLabel({ cx, cy, midAngle, outerRadius, percent, name }: Lab
 
 interface LegendPayload {
   value: string;
-  color: string;
-  payload: { value: number };
+  color?: string;
+  payload?: {
+    value?: number;
+    strokeDasharray?: string | number;
+  };
 }
 
 function renderCustomLegend(props: {
@@ -223,7 +226,7 @@ function renderCustomLegend(props: {
       }}
     >
       {payload.map((entry, index) => {
-        const percentage = calculatePercentage(entry.payload.value, total);
+        const percentage = calculatePercentage(entry.payload?.value ?? 0, total);
         return (
           <li
             key={`legend-${index}`}
@@ -239,7 +242,7 @@ function renderCustomLegend(props: {
                 width: 10,
                 height: 10,
                 borderRadius: 2,
-                backgroundColor: entry.color,
+                backgroundColor: entry.color || CHART_COLORS.primary,
                 marginRight: 8,
               }}
             />

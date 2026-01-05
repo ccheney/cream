@@ -185,7 +185,7 @@ describe("runBatchEvaluation", () => {
 
     expect(results.config.framework).toBe("deepeval");
     expect(results.timestamp).toBeDefined();
-    expect(results.results[0].framework).toBe("deepeval");
+    expect(results.results[0]?.framework).toBe("deepeval");
   });
 });
 

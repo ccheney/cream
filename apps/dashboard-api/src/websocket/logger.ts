@@ -231,8 +231,6 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
       return;
     }
 
-    const _output = fullConfig.pretty ? JSON.stringify(entry, null, 2) : JSON.stringify(entry);
-
     switch (entry.level) {
       case "error":
         break;

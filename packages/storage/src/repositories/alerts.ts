@@ -6,17 +6,17 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
-  toBoolean,
   fromBoolean,
-  parseJson,
-  toJson,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  parseJson,
+  query,
+  RepositoryError,
+  toBoolean,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -149,10 +149,7 @@ export class AlertsRepository {
    * Find alert by ID
    */
   async findById(id: string): Promise<Alert | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapAlertRow(row) : null;
   }
@@ -205,11 +202,11 @@ export class AlertsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),
       pagination
@@ -272,7 +269,9 @@ export class AlertsRepository {
    * Acknowledge multiple alerts
    */
   async acknowledgeMany(ids: string[], acknowledgedBy: string): Promise<number> {
-    if (ids.length === 0) return 0;
+    if (ids.length === 0) {
+      return 0;
+    }
 
     const now = new Date().toISOString();
     const placeholders = ids.map(() => "?").join(", ");
@@ -303,10 +302,7 @@ export class AlertsRepository {
    * Delete alert
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }
@@ -328,7 +324,10 @@ export class AlertsRepository {
   /**
    * Count alerts by severity
    */
-  async countBySeverity(environment: string, acknowledgedOnly = false): Promise<Record<AlertSeverity, number>> {
+  async countBySeverity(
+    environment: string,
+    acknowledgedOnly = false
+  ): Promise<Record<AlertSeverity, number>> {
     const whereClause = acknowledgedOnly
       ? "WHERE environment = ?"
       : "WHERE environment = ? AND acknowledged = 0";

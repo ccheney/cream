@@ -32,8 +32,8 @@ use std::env;
 use std::net::SocketAddr;
 
 use execution_engine::{
-    server::create_router, AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway,
-    ExecutionServer, OrderStateManager,
+    AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway, ExecutionServer,
+    OrderStateManager, server::create_router,
 };
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

@@ -2,36 +2,35 @@
  * HelixDB Query Timeout and Fallback Tests
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  classifyError,
+  DEFAULT_CACHE_TTL_MS,
+  DEFAULT_COMBINED_TIMEOUT_MS,
+  DEFAULT_GRAPH_TIMEOUT_MS,
+  DEFAULT_TIMEOUT_CONFIG,
   // Constants
   DEFAULT_VECTOR_TIMEOUT_MS,
-  DEFAULT_GRAPH_TIMEOUT_MS,
-  DEFAULT_COMBINED_TIMEOUT_MS,
-  DEFAULT_CACHE_TTL_MS,
-  STALE_EMBEDDING_THRESHOLD_MS,
-  TIMEOUT_RATE_ALERT_THRESHOLD,
-  DEFAULT_TIMEOUT_CONFIG,
-  // Types
-  QueryType,
-  QueryErrorType,
-  type QueryOptions,
+  detectContradiction,
+  executeWithFallback,
+  getEmbeddingAgeHours,
   // Functions
   getTimeoutForQueryType,
-  withTimeout,
-  QueryCache,
   isEmbeddingStale,
-  getEmbeddingAgeHours,
-  validateFreshness,
-  needsReembedding,
-  detectContradiction,
-  resolveContradictions,
-  executeWithFallback,
-  MetricsCollector,
-  QueryError,
-  classifyError,
   isRetryableError,
+  MetricsCollector,
+  needsReembedding,
+  QueryCache,
+  QueryError,
+  type QueryOptions,
+  // Types
+  QueryType,
   QueryWrapper,
+  resolveContradictions,
+  STALE_EMBEDDING_THRESHOLD_MS,
+  TIMEOUT_RATE_ALERT_THRESHOLD,
+  validateFreshness,
+  withTimeout,
 } from "../src/query/timeout";
 
 // ============================================
@@ -324,11 +323,7 @@ describe("resolveContradictions", () => {
     const retrieved = { price: 100, volume: 1000, name: "AAPL" };
     const current = { price: 120 };
 
-    const { resolved, contradictions } = resolveContradictions(
-      retrieved,
-      current,
-      ["price"],
-    );
+    const { resolved, contradictions } = resolveContradictions(retrieved, current, ["price"]);
 
     expect(resolved.price).toBe(120);
     expect(contradictions.length).toBe(1);
@@ -339,11 +334,7 @@ describe("resolveContradictions", () => {
     const retrieved = { price: 100, volume: 1000 };
     const current = { price: 105 };
 
-    const { resolved } = resolveContradictions(
-      retrieved,
-      current,
-      ["price"],
-    );
+    const { resolved } = resolveContradictions(retrieved, current, ["price"]);
 
     expect(resolved.volume).toBe(1000);
   });
@@ -482,8 +473,12 @@ describe("MetricsCollector", () => {
 
   it("alerts when timeout rate exceeds threshold", () => {
     // 6 timeouts out of 100 = 6%
-    for (let i = 0; i < 94; i++) metrics.record(10, false, false);
-    for (let i = 0; i < 6; i++) metrics.record(10, true, false);
+    for (let i = 0; i < 94; i++) {
+      metrics.record(10, false, false);
+    }
+    for (let i = 0; i < 6; i++) {
+      metrics.record(10, true, false);
+    }
 
     const result = metrics.getMetrics();
     expect(result.alertRequired).toBe(true);
@@ -570,10 +565,10 @@ describe("isRetryableError", () => {
 describe("QueryWrapper", () => {
   it("executes queries with full handling", async () => {
     const wrapper = new QueryWrapper<number>();
-    const result = await wrapper.execute(
-      async () => [1, 2, 3],
-      { queryType: "vector", cacheKey: "test" },
-    );
+    const result = await wrapper.execute(async () => [1, 2, 3], {
+      queryType: "vector",
+      cacheKey: "test",
+    });
 
     expect(result.data).toEqual([1, 2, 3]);
     expect(result.fromCache).toBe(false);
@@ -588,7 +583,7 @@ describe("QueryWrapper", () => {
     // Second call - cache hit
     const result = await wrapper.execute(
       async () => [4, 5, 6], // Should not be called
-      { queryType: "vector", cacheKey: "cached" },
+      { queryType: "vector", cacheKey: "cached" }
     );
 
     expect(result.data).toEqual([1, 2, 3]);

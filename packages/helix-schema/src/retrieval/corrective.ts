@@ -261,7 +261,9 @@ export interface CorrectionLogEntry {
  * @returns Average score (0 if empty)
  */
 export function calculateAvgScore<T>(results: RetrievalResult<T>[]): number {
-  if (results.length === 0) return 0;
+  if (results.length === 0) {
+    return 0;
+  }
   const sum = results.reduce((acc, r) => acc + r.score, 0);
   return sum / results.length;
 }
@@ -277,10 +279,12 @@ export function calculateAvgScore<T>(results: RetrievalResult<T>[]): number {
  * @returns Standard deviation of scores (0 if < 2 results)
  */
 export function calculateDiversityScore<T>(results: RetrievalResult<T>[]): number {
-  if (results.length < 2) return 0;
+  if (results.length < 2) {
+    return 0;
+  }
 
   const avg = calculateAvgScore(results);
-  const squaredDiffs = results.map((r) => Math.pow(r.score - avg, 2));
+  const squaredDiffs = results.map((r) => (r.score - avg) ** 2);
   const variance = squaredDiffs.reduce((acc, d) => acc + d, 0) / results.length;
 
   return Math.sqrt(variance);
@@ -294,7 +298,9 @@ export function calculateDiversityScore<T>(results: RetrievalResult<T>[]): numbe
  * @returns Coverage score (0-1, capped at 1)
  */
 export function calculateCoverageScore(resultCount: number, expectedCount: number): number {
-  if (expectedCount <= 0) return 1;
+  if (expectedCount <= 0) {
+    return 1;
+  }
   return Math.min(1, resultCount / expectedCount);
 }
 
@@ -307,7 +313,7 @@ export function calculateCoverageScore(resultCount: number, expectedCount: numbe
  */
 export function assessRetrievalQuality<T>(
   results: RetrievalResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
+  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): QualityAssessment {
   const avgScore = calculateAvgScore(results);
   const diversityScore = calculateDiversityScore(results);
@@ -317,24 +323,26 @@ export function assessRetrievalQuality<T>(
 
   // Check each threshold
   if (avgScore < thresholds.minAvgScore) {
-    correctionReasons.push(`Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`);
+    correctionReasons.push(
+      `Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`
+    );
   }
 
   if (results.length < thresholds.minResultCount) {
     correctionReasons.push(
-      `Result count ${results.length} below minimum ${thresholds.minResultCount}`,
+      `Result count ${results.length} below minimum ${thresholds.minResultCount}`
     );
   }
 
   if (results.length >= 2 && diversityScore < thresholds.minDiversityScore) {
     correctionReasons.push(
-      `Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`,
+      `Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`
     );
   }
 
   if (coverageScore < thresholds.minCoverageScore) {
     correctionReasons.push(
-      `Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`,
+      `Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`
     );
   }
 
@@ -377,7 +385,10 @@ export function shouldCorrect(quality: QualityAssessment): boolean {
  * @param factor - Broadening factor (default: 5)
  * @returns New k value
  */
-export function calculateBroadenedK(initialK: number, factor: number = DEFAULT_BROADENING_FACTOR): number {
+export function calculateBroadenedK(
+  initialK: number,
+  factor: number = DEFAULT_BROADENING_FACTOR
+): number {
   return Math.ceil(initialK * factor);
 }
 
@@ -390,7 +401,7 @@ export function calculateBroadenedK(initialK: number, factor: number = DEFAULT_B
  */
 export function calculateLoweredThreshold(
   initialThreshold: number,
-  reduction: number = THRESHOLD_REDUCTION_STEP,
+  reduction: number = THRESHOLD_REDUCTION_STEP
 ): number {
   return Math.max(0, initialThreshold - reduction);
 }
@@ -408,7 +419,10 @@ export function calculateLoweredThreshold(
 export function generateExpansionTerms(query: string): string[] {
   // Simple implementation: return the original query terms
   // In production, this would use an LLM or thesaurus
-  const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 2);
   return terms;
 }
 
@@ -421,7 +435,7 @@ export function generateExpansionTerms(query: string): string[] {
  */
 export function selectCorrectionStrategy(
   quality: QualityAssessment,
-  attemptNumber: number,
+  attemptNumber: number
 ): CorrectionStrategy {
   // First attempt: broaden (fastest, most likely to help)
   if (attemptNumber === 1) {
@@ -452,7 +466,7 @@ export function selectCorrectionStrategy(
 export async function correctiveRetrieval<T>(
   retrieveFn: RetrievalFunction<T>,
   initialParams: { k: number; minScore: number; query?: string },
-  options: CorrectiveRetrievalOptions = {},
+  options: CorrectiveRetrievalOptions = {}
 ): Promise<CorrectiveRetrievalResult<T>> {
   const startTime = Date.now();
 
@@ -517,7 +531,10 @@ export async function correctiveRetrieval<T>(
         if (initialParams.query) {
           const expansionTerms = generateExpansionTerms(initialParams.query);
           attemptParams.expansionTerms = expansionTerms;
-          params = { ...initialParams, query: `${initialParams.query} ${expansionTerms.join(" ")}` };
+          params = {
+            ...initialParams,
+            query: `${initialParams.query} ${expansionTerms.join(" ")}`,
+          };
         } else {
           params = initialParams;
         }
@@ -577,8 +594,12 @@ export async function correctiveRetrieval<T>(
  */
 export function withCorrectiveRetrieval<T>(
   retrieveFn: RetrievalFunction<T>,
-  options: CorrectiveRetrievalOptions = {},
-): (params: { k: number; minScore: number; query?: string }) => Promise<CorrectiveRetrievalResult<T>> {
+  options: CorrectiveRetrievalOptions = {}
+): (params: {
+  k: number;
+  minScore: number;
+  query?: string;
+}) => Promise<CorrectiveRetrievalResult<T>> {
   return (params) => correctiveRetrieval(retrieveFn, params, options);
 }
 
@@ -591,7 +612,7 @@ export function withCorrectiveRetrieval<T>(
  */
 export function assessRRFQuality<T>(
   results: RRFResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
+  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): QualityAssessment {
   // Convert RRF results to retrieval results for assessment
   const retrievalResults: RetrievalResult<T>[] = results.map((r) => ({
@@ -608,7 +629,7 @@ export function assessRRFQuality<T>(
  */
 export function shouldCorrectRRF<T>(
   results: RRFResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
+  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): boolean {
   const quality = assessRRFQuality(results, thresholds);
   return shouldCorrect(quality);
@@ -673,9 +694,10 @@ export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): Corre
 
   const avgAttemptsPerCorrection = totalAttempts / entries.length;
 
-  const qualityImprovements = entries.map((e) => e.finalQuality.overallScore - e.initialQuality.overallScore);
-  const avgQualityImprovement =
-    qualityImprovements.reduce((sum, i) => sum + i, 0) / entries.length;
+  const qualityImprovements = entries.map(
+    (e) => e.finalQuality.overallScore - e.initialQuality.overallScore
+  );
+  const avgQualityImprovement = qualityImprovements.reduce((sum, i) => sum + i, 0) / entries.length;
 
   const avgCorrectionTimeMs =
     entries.reduce((sum, e) => sum + e.correctionTimeMs, 0) / entries.length;
@@ -704,7 +726,7 @@ export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): Corre
  */
 export function createCorrectionLogEntry<T>(
   result: CorrectiveRetrievalResult<T>,
-  queryId?: string,
+  queryId?: string
 ): CorrectionLogEntry {
   return {
     timestamp: new Date(),

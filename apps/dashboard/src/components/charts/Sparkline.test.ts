@@ -131,7 +131,7 @@ describe("getLastPoint", () => {
     const point1 = getLastPoint([10, 10], 80, 24);
     const point2 = getLastPoint([10, 20], 80, 24);
     // Higher value = lower y (SVG coordinate system)
-    expect(point2?.y).toBeLessThan(point1?.y);
+    expect(point2?.y ?? 0).toBeLessThan(point1?.y ?? 0);
   });
 
   it("returns valid coordinates for all same values", () => {

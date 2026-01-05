@@ -504,7 +504,11 @@ impl ConstraintValidator {
     }
 
     /// Check options Greeks limits.
-    fn check_greeks_limits(&self, greeks: &GreeksSnapshot, violations: &mut Vec<ConstraintViolation>) {
+    fn check_greeks_limits(
+        &self,
+        greeks: &GreeksSnapshot,
+        violations: &mut Vec<ConstraintViolation>,
+    ) {
         // Check delta-adjusted notional
         if greeks.delta_notional.abs() > self.limits.options.max_delta_notional {
             violations.push(ConstraintViolation {
@@ -701,10 +705,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PER_INSTRUMENT_NOTIONAL_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PER_INSTRUMENT_NOTIONAL_EXCEEDED")
+        );
     }
 
     #[test]
@@ -723,10 +729,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "MISSING_STOP_LOSS"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "MISSING_STOP_LOSS")
+        );
     }
 
     #[test]
@@ -745,10 +753,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PLAN_NOT_APPROVED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PLAN_NOT_APPROVED")
+        );
     }
 
     // ============ Net Exposure Tests ============
@@ -800,10 +810,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PORTFOLIO_NET_NOTIONAL_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PORTFOLIO_NET_NOTIONAL_EXCEEDED")
+        );
     }
 
     // ============ Conflicting Orders Tests ============
@@ -830,10 +842,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "CONFLICTING_ORDERS"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "CONFLICTING_ORDERS")
+        );
     }
 
     #[test]
@@ -859,10 +873,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "CONFLICTING_DIRECTIONS"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "CONFLICTING_DIRECTIONS")
+        );
     }
 
     // ============ Greeks Limits Tests ============
@@ -891,10 +907,12 @@ mod tests {
 
         let response = validator.validate_with_context(&request, &context);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "OPTIONS_DELTA_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_DELTA_EXCEEDED")
+        );
     }
 
     #[test]
@@ -921,10 +939,12 @@ mod tests {
 
         let response = validator.validate_with_context(&request, &context);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "OPTIONS_GAMMA_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_GAMMA_EXCEEDED")
+        );
     }
 
     #[test]
@@ -951,10 +971,12 @@ mod tests {
 
         let response = validator.validate_with_context(&request, &context);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "OPTIONS_VEGA_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_VEGA_EXCEEDED")
+        );
     }
 
     #[test]
@@ -981,10 +1003,12 @@ mod tests {
 
         let response = validator.validate_with_context(&request, &context);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "OPTIONS_THETA_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_THETA_EXCEEDED")
+        );
     }
 
     #[test]
@@ -1037,10 +1061,12 @@ mod tests {
 
         let response = validator.validate_with_context(&request, &context);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "INSUFFICIENT_BUYING_POWER"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "INSUFFICIENT_BUYING_POWER")
+        );
     }
 
     #[test]
@@ -1089,10 +1115,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PER_INSTRUMENT_UNITS_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PER_INSTRUMENT_UNITS_EXCEEDED")
+        );
     }
 
     // ============ Position Mismatch Tests ============
@@ -1118,10 +1146,12 @@ mod tests {
             .insert("AAPL".to_string(), Decimal::ZERO); // No position
 
         let response = validator.validate_with_context(&request, &context);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "POSITION_MISMATCH"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "POSITION_MISMATCH")
+        );
     }
 
     // ============ Edge Cases ============
@@ -1182,10 +1212,12 @@ mod tests {
 
         let response = validator.validate(&request);
         assert!(!response.ok);
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PORTFOLIO_GROSS_PCT_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PORTFOLIO_GROSS_PCT_EXCEEDED")
+        );
     }
 
     #[test]
@@ -1208,10 +1240,12 @@ mod tests {
         let response = validator.validate(&request);
         assert!(!response.ok);
         // Should fail due to net exposure (short side)
-        assert!(response
-            .violations
-            .iter()
-            .any(|v| v.code == "PORTFOLIO_NET_NOTIONAL_EXCEEDED"));
+        assert!(
+            response
+                .violations
+                .iter()
+                .any(|v| v.code == "PORTFOLIO_NET_NOTIONAL_EXCEEDED")
+        );
     }
 
     // ============ Sizing Sanity Tests ============
@@ -1260,11 +1294,7 @@ mod tests {
         let threshold = Decimal::new(30, 1); // 3.0
 
         // Proposed $25k is ~2.3x median $11k - within threshold
-        let result = super::check_sizing_sanity(
-            Decimal::new(25000, 0),
-            &historical,
-            threshold,
-        );
+        let result = super::check_sizing_sanity(Decimal::new(25000, 0), &historical, threshold);
         assert!(result.is_none());
     }
 
@@ -1280,11 +1310,7 @@ mod tests {
         let threshold = Decimal::new(30, 1); // 3.0
 
         // Proposed $50k is ~4.5x median $11k - exceeds 3x threshold
-        let result = super::check_sizing_sanity(
-            Decimal::new(50000, 0),
-            &historical,
-            threshold,
-        );
+        let result = super::check_sizing_sanity(Decimal::new(50000, 0), &historical, threshold);
         assert!(result.is_some());
         let warning = result.unwrap();
         assert!(warning.size_multiplier > Decimal::new(4, 0));
@@ -1302,11 +1328,7 @@ mod tests {
         let threshold = Decimal::new(30, 1);
 
         // Should return None (can't assess with insufficient data)
-        let result = super::check_sizing_sanity(
-            Decimal::new(100000, 0),
-            &historical,
-            threshold,
-        );
+        let result = super::check_sizing_sanity(Decimal::new(100000, 0), &historical, threshold);
         assert!(result.is_none());
     }
 }

@@ -55,9 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="font-ui antialiased">
-        {children}
-      </body>
+      <body className="font-ui antialiased">{children}</body>
     </html>
   );
 }

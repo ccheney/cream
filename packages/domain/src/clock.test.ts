@@ -2,22 +2,22 @@
  * Clock Synchronization and Timestamp Validation Tests
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  DEFAULT_CLOCK_THRESHOLDS,
+  alignToDailyCandle,
+  alignToHourlyCandle,
+  calculateDatabentoLatency,
   checkClockSkew,
+  type DatabentoTimestamps,
+  DEFAULT_CLOCK_THRESHOLDS,
+  getClockMonitorState,
+  isHourlyAligned,
+  periodicClockCheck,
+  resetClockMonitorState,
+  selectDatabentoTimestamp,
+  validateCandleSequence,
   validateTimestamp,
   validateTimestampConsistency,
-  alignToHourlyCandle,
-  alignToDailyCandle,
-  isHourlyAligned,
-  validateCandleSequence,
-  selectDatabentoTimestamp,
-  calculateDatabentoLatency,
-  periodicClockCheck,
-  getClockMonitorState,
-  resetClockMonitorState,
-  type DatabentoTimestamps,
 } from "./clock";
 
 // ============================================

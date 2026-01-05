@@ -489,7 +489,7 @@ describe("batchQuoteEvents", () => {
   it("maps single event", () => {
     const result = batchQuoteEvents([sampleQuoteEvent]);
     expect(result.length).toBe(1);
-    expect(result[0].message.type).toBe("quote");
+    expect(result[0]?.message.type).toBe("quote");
   });
 
   it("deduplicates by symbol (keeps latest)", () => {
@@ -500,7 +500,7 @@ describe("batchQuoteEvents", () => {
     ];
     const result = batchQuoteEvents(events);
     expect(result.length).toBe(1);
-    expect((result[0].message as any).data.bid).toBe(185.2);
+    expect((result[0]!.message as any).data.bid).toBe(185.2);
   });
 
   it("keeps one event per symbol", () => {

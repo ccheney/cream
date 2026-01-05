@@ -470,7 +470,7 @@ describe("logSecurityEvent", () => {
     });
     const log = getAuditLog();
     expect(log.length).toBe(1);
-    expect(log[0].timestamp).toBeDefined();
+    expect(log[0]?.timestamp).toBeDefined();
   });
 
   it("includes all event fields", () => {
@@ -482,11 +482,12 @@ describe("logSecurityEvent", () => {
       reason: "Invalid token",
     });
     const log = getAuditLog();
-    expect(log[0].eventType).toBe("auth.failure");
-    expect(log[0].userId).toBe("user-123");
-    expect(log[0].connectionId).toBe("conn-456");
-    expect(log[0].success).toBe(false);
-    expect(log[0].reason).toBe("Invalid token");
+    const firstEntry = log[0];
+    expect(firstEntry?.eventType).toBe("auth.failure");
+    expect(firstEntry?.userId).toBe("user-123");
+    expect(firstEntry?.connectionId).toBe("conn-456");
+    expect(firstEntry?.success).toBe(false);
+    expect(firstEntry?.reason).toBe("Invalid token");
   });
 });
 
@@ -507,7 +508,7 @@ describe("getAuditLog", () => {
 
     const log = getAuditLog({ eventType: "auth.failure" });
     expect(log.length).toBe(1);
-    expect(log[0].eventType).toBe("auth.failure");
+    expect(log[0]?.eventType).toBe("auth.failure");
   });
 
   it("filters by userId", () => {
@@ -516,7 +517,7 @@ describe("getAuditLog", () => {
 
     const log = getAuditLog({ userId: "user-1" });
     expect(log.length).toBe(1);
-    expect(log[0].userId).toBe("user-1");
+    expect(log[0]?.userId).toBe("user-1");
   });
 
   it("filters by success", () => {
@@ -525,7 +526,7 @@ describe("getAuditLog", () => {
 
     const log = getAuditLog({ success: false });
     expect(log.length).toBe(1);
-    expect(log[0].success).toBe(false);
+    expect(log[0]?.success).toBe(false);
   });
 
   it("limits results", () => {
@@ -542,12 +543,8 @@ describe("getAuditLog", () => {
 // ============================================
 
 describe("checkConnectionSecurity", () => {
-  let _tracker: ReturnType<typeof createConnectionTracker>;
-
   beforeEach(() => {
     clearAuditLog();
-    // Reset connection tracker state
-    _tracker = createConnectionTracker();
   });
 
   it("rejects invalid origin", () => {

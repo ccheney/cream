@@ -91,10 +91,7 @@ export interface HelixClient {
    * @returns Query result with execution time
    * @throws HelixError on failure
    */
-  query<T = unknown>(
-    queryName: string,
-    params?: Record<string, unknown>
-  ): Promise<QueryResult<T>>;
+  query<T = unknown>(queryName: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
 
   /**
    * Check if the client is connected to HelixDB.
@@ -146,11 +143,9 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
     if (!helixInstance) {
       try {
         // Dynamic import to handle missing module gracefully
-        const HelixDB = (await import("helix-ts")).default;
-        helixInstance = new HelixDB({
-          host: mergedConfig.host,
-          port: mergedConfig.port,
-        });
+        const { HelixDB } = await import("helix-ts");
+        const url = `http://${mergedConfig.host}:${mergedConfig.port}`;
+        helixInstance = new HelixDB(url);
         connected = true;
       } catch (error) {
         throw new HelixError(
@@ -160,7 +155,9 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
         );
       }
     }
-    return helixInstance as { query: (name: string, params?: Record<string, unknown>) => Promise<unknown> };
+    return helixInstance as {
+      query: (name: string, params?: Record<string, unknown>) => Promise<unknown>;
+    };
   };
 
   /**
@@ -169,7 +166,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
   const executeWithRetry = async <T>(
     queryName: string,
     params: Record<string, unknown> | undefined,
-    attempt: number = 1
+    attempt = 1
   ): Promise<QueryResult<T>> => {
     const startTime = performance.now();
 
@@ -190,7 +187,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
     } catch (error) {
       if (attempt < mergedConfig.maxRetries && isRetryable(error)) {
         // Exponential backoff
-        const delay = mergedConfig.retryDelay * Math.pow(2, attempt - 1);
+        const delay = mergedConfig.retryDelay * 2 ** (attempt - 1);
         await sleep(delay);
         return executeWithRetry(queryName, params, attempt + 1);
       }
@@ -242,10 +239,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 export function createHelixClientFromEnv(): HelixClient {
   const host = process.env.HELIX_HOST ?? DEFAULT_CONFIG.host;
   const port = parseInt(process.env.HELIX_PORT ?? String(DEFAULT_CONFIG.port), 10);
-  const timeout = parseInt(
-    process.env.HELIX_TIMEOUT ?? String(DEFAULT_CONFIG.timeout),
-    10
-  );
+  const timeout = parseInt(process.env.HELIX_TIMEOUT ?? String(DEFAULT_CONFIG.timeout), 10);
   const maxRetries = parseInt(
     process.env.HELIX_MAX_RETRIES ?? String(DEFAULT_CONFIG.maxRetries),
     10

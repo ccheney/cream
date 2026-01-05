@@ -35,53 +35,51 @@
 export {
   createHelixClient,
   createHelixClientFromEnv,
-  HelixError,
   type HelixClient,
   type HelixClientConfig,
+  HelixError,
   type HelixErrorCode,
   type QueryResult,
 } from "./client.js";
-
-// Vector search
+// Export/Import
 export {
-  vectorSearch,
-  searchSimilarDecisions,
-  searchSimilarNews,
-  searchSimilarFilings,
-  searchSimilarTranscripts,
-  type VectorSearchOptions,
-  type VectorSearchResult,
-  type VectorSearchResponse,
-} from "./queries/vector.js";
+  type ExportOptions,
+  exportData,
+  exportToJson,
+  type HelixExport,
+  type ImportOptions,
+  type ImportResult,
+  importData,
+  importFromJson,
+} from "./queries/export.js";
 
 // Graph traversal
 export {
+  type GraphEdge,
+  type GraphNode,
+  type GraphPath,
+  getCompanyNodes,
+  getInfluencedDecisions,
+  getInfluencingEvents,
+  getLifecycleEvents,
+  getNeighbors,
   getNode,
   getNodesByType,
-  traverse,
-  getNeighbors,
-  getInfluencingEvents,
-  getInfluencedDecisions,
-  getLifecycleEvents,
-  getCompanyNodes,
   type TraversalOptions,
-  type GraphNode,
-  type GraphEdge,
-  type GraphPath,
   type TraversalResponse,
+  traverse,
 } from "./queries/graph.js";
-
-// Export/Import
+// Vector search
 export {
-  exportData,
-  importData,
-  exportToJson,
-  importFromJson,
-  type HelixExport,
-  type ExportOptions,
-  type ImportOptions,
-  type ImportResult,
-} from "./queries/export.js";
+  searchSimilarDecisions,
+  searchSimilarFilings,
+  searchSimilarNews,
+  searchSimilarTranscripts,
+  type VectorSearchOptions,
+  type VectorSearchResponse,
+  type VectorSearchResult,
+  vectorSearch,
+} from "./queries/vector.js";
 
 /**
  * Package version.

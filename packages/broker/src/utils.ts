@@ -50,8 +50,14 @@ export function gcd(a: number, b: number): number {
  * @returns GCD of all numbers
  */
 export function gcdArray(numbers: number[]): number {
-  if (numbers.length === 0) return 1;
-  return numbers.reduce((acc, n) => gcd(acc, n), numbers[0]);
+  if (numbers.length === 0) {
+    return 1;
+  }
+  const first = numbers[0];
+  if (first === undefined) {
+    return 1;
+  }
+  return numbers.reduce((acc, n) => gcd(acc, n), first);
 }
 
 /**
@@ -73,7 +79,9 @@ export function gcdArray(numbers: number[]): number {
  * ```
  */
 export function validateLegRatios(legs: OrderLeg[]): boolean {
-  if (legs.length === 0) return true;
+  if (legs.length === 0) {
+    return true;
+  }
 
   const ratios = legs.map((leg) => Math.abs(leg.ratio));
   const legGcd = gcdArray(ratios);
@@ -88,12 +96,16 @@ export function validateLegRatios(legs: OrderLeg[]): boolean {
  * @returns Legs with simplified ratios
  */
 export function simplifyLegRatios(legs: OrderLeg[]): OrderLeg[] {
-  if (legs.length === 0) return [];
+  if (legs.length === 0) {
+    return [];
+  }
 
   const ratios = legs.map((leg) => Math.abs(leg.ratio));
   const legGcd = gcdArray(ratios);
 
-  if (legGcd === 1) return legs;
+  if (legGcd === 1) {
+    return legs;
+  }
 
   return legs.map((leg) => ({
     ...leg,
@@ -119,17 +131,31 @@ export function parseOptionSymbol(optionSymbol: string): {
   // Remove spaces and validate length
   const symbol = optionSymbol.replace(/\s+/g, "");
 
-  if (symbol.length < 15) return null;
+  if (symbol.length < 15) {
+    return null;
+  }
 
   // OCC format: SYMBOL (up to 6 chars) + YYMMDD (6 chars) + C/P (1 char) + STRIKE (8 chars)
   // Find C or P that's followed by 8 digits (the strike price)
   const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
-  const [, underlying, dateStr, typeChar, strikeStr] = match;
+  const underlying = match[1];
+  const dateStr = match[2];
+  const typeChar = match[3];
+  const strikeStr = match[4];
+
+  // Validate all captured groups exist
+  if (!underlying || !dateStr || !typeChar || !strikeStr) {
+    return null;
+  }
 
   // Validate underlying (1-6 chars)
-  if (underlying.length < 1 || underlying.length > 6) return null;
+  if (underlying.length < 1 || underlying.length > 6) {
+    return null;
+  }
 
   // Parse date (YYMMDD)
   const year = 2000 + parseInt(dateStr.substring(0, 2), 10);
@@ -138,7 +164,7 @@ export function parseOptionSymbol(optionSymbol: string): {
   const expiration = `${year}-${month}-${day}`;
 
   // Option type
-  const optionType = typeChar === "C" ? "call" : "put";
+  const optionType: "call" | "put" = typeChar === "C" ? "call" : "put";
 
   // Parse strike (8 digits, last 3 are decimals -> divide by 1000)
   const strike = parseInt(strikeStr, 10) / 1000;
@@ -165,7 +191,10 @@ export function buildOptionSymbol(
   const paddedUnderlying = underlying.padEnd(6, " ");
 
   // Format date (YYMMDD)
-  const [year, month, day] = expiration.split("-");
+  const parts = expiration.split("-");
+  const year = parts[0] ?? "";
+  const month = parts[1] ?? "";
+  const day = parts[2] ?? "";
   const dateStr = year.substring(2) + month + day;
 
   // Format option type
@@ -186,12 +215,18 @@ export function buildOptionSymbol(
  * @returns True if quantity is valid
  */
 export function validateQuantity(qty: number, isOption = false): boolean {
-  if (qty <= 0) return false;
-  if (!Number.isInteger(qty)) return false;
+  if (qty <= 0) {
+    return false;
+  }
+  if (!Number.isInteger(qty)) {
+    return false;
+  }
 
   // Options must be in contract units (typically 1 contract = 100 shares)
   // No fractional contracts allowed
-  if (isOption && qty < 1) return false;
+  if (isOption && qty < 1) {
+    return false;
+  }
 
   return true;
 }

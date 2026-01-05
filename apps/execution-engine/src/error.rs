@@ -355,8 +355,11 @@ mod tests {
 
     #[test]
     fn test_to_http_response() {
-        let error =
-            ExecutionError::constraint_violation(ErrorCode::NotionalLimitExceeded, "Over limit", Some("AAPL"));
+        let error = ExecutionError::constraint_violation(
+            ErrorCode::NotionalLimitExceeded,
+            "Over limit",
+            Some("AAPL"),
+        );
         let response = error.to_http_response();
 
         assert_eq!(response.code, "NOTIONAL_LIMIT_EXCEEDED");

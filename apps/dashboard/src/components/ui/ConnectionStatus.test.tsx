@@ -2,8 +2,8 @@
  * Connection Status Indicator Tests
  */
 
-import { describe, expect, test, mock } from "bun:test";
-import { ConnectionStatus } from "./ConnectionStatus.js";
+import { describe, expect, mock, test } from "bun:test";
+import type { ConnectionStatus } from "./ConnectionStatus.js";
 
 // Mock React's render for testing
 // In a real test environment, use @testing-library/react

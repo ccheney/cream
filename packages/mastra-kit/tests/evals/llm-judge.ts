@@ -229,7 +229,11 @@ export async function runBatchEvaluation(
   const results: EvalResult[] = [];
 
   for (let i = 0; i < testCases.length; i++) {
-    const judgeResult = await evaluateAgentWithJudge(agentType, testCases[i], outputs[i], config);
+    const testCase = testCases[i];
+    if (!testCase) {
+      throw new Error(`Test case at index ${i} is undefined`);
+    }
+    const judgeResult = await evaluateAgentWithJudge(agentType, testCase, outputs[i], config);
 
     results.push({
       testId: judgeResult.testId,
@@ -254,11 +258,11 @@ export async function runBatchEvaluation(
     passed: results.filter((r) => r.passed).length,
     failed: results.filter((r) => !r.passed).length,
     mean: scores.reduce((a, b) => a + b, 0) / scores.length,
-    min: scores[0],
-    max: scores[scores.length - 1],
-    p50: scores[Math.floor(scores.length * 0.5)],
-    p90: scores[Math.floor(scores.length * 0.9)],
-    p95: scores[Math.floor(scores.length * 0.95)],
+    min: scores[0] ?? 0,
+    max: scores[scores.length - 1] ?? 0,
+    p50: scores[Math.floor(scores.length * 0.5)] ?? 0,
+    p90: scores[Math.floor(scores.length * 0.9)] ?? 0,
+    p95: scores[Math.floor(scores.length * 0.95)] ?? 0,
   };
 
   const threshold = AGENT_THRESHOLDS[agentType];

@@ -7,21 +7,21 @@ import {
   ALL_RETENTION_POLICIES,
   BACKTEST_RETENTION_POLICIES,
   DURATIONS,
-  LIVE_RETENTION_POLICIES,
-  PAPER_RETENTION_POLICIES,
-  PERMANENT,
-  STORAGE_TIER_SPECS,
-  StorageTier,
   getCompliancePolicies,
   getPoliciesForEnvironment,
   getRetentionPolicy,
   getTargetTier,
   getTransitionDecision,
   isSECCompliant,
-  validateCompliancePolicies,
+  LIVE_RETENTION_POLICIES,
   type NodeAgeInfo,
+  PAPER_RETENTION_POLICIES,
+  PERMANENT,
   type RetentionNodeType,
   type RetentionPolicy,
+  STORAGE_TIER_SPECS,
+  StorageTier,
+  validateCompliancePolicies,
 } from "./retention";
 
 // ============================================
@@ -119,7 +119,7 @@ describe("LIVE_RETENTION_POLICIES", () => {
 
   it("ExternalEvent_SENTIMENT_SPIKE has 90 days retention", () => {
     const policy = LIVE_RETENTION_POLICIES.find(
-      (p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE",
+      (p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE"
     );
     expect(policy).toBeDefined();
     expect(policy!.totalRetentionDays).toBe(DURATIONS.DAYS_90);
@@ -209,7 +209,7 @@ describe("getCompliancePolicies", () => {
   it("includes LIVE TradeDecision", () => {
     const policies = getCompliancePolicies();
     const hasTradeDecision = policies.some(
-      (p) => p.nodeType === "TradeDecision" && p.environment === "LIVE",
+      (p) => p.nodeType === "TradeDecision" && p.environment === "LIVE"
     );
     expect(hasTradeDecision).toBe(true);
   });
@@ -398,11 +398,9 @@ describe("ALL_RETENTION_POLICIES", () => {
   });
 
   it("LIVE has the most policies", () => {
+    expect(ALL_RETENTION_POLICIES.LIVE.length).toBeGreaterThan(ALL_RETENTION_POLICIES.PAPER.length);
     expect(ALL_RETENTION_POLICIES.LIVE.length).toBeGreaterThan(
-      ALL_RETENTION_POLICIES.PAPER.length,
-    );
-    expect(ALL_RETENTION_POLICIES.LIVE.length).toBeGreaterThan(
-      ALL_RETENTION_POLICIES.BACKTEST.length,
+      ALL_RETENTION_POLICIES.BACKTEST.length
     );
   });
 });

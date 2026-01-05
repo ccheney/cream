@@ -14,27 +14,27 @@
 
 // Audit logging
 export {
+  AuditEntityType,
+  type AuditLogEntry,
   // Schemas
   AuditLogEntrySchema,
-  type AuditLogEntry,
-  AuditTrailQuerySchema,
-  type AuditTrailQuery,
-  VersionHistoryEntrySchema,
-  type VersionHistoryEntry,
-  // Enums
-  AuditOperationType,
-  AuditEntityType,
   // Audit Logger
   AuditLogger,
   type AuditLoggerConfig,
+  // Enums
+  AuditOperationType,
+  // Retention
+  AuditRetentionPolicy,
   type AuditStorage,
+  type AuditTrailQuery,
+  AuditTrailQuerySchema,
   // Immutability
   checkImmutability,
   type ImmutabilityCheckResult,
-  requireMutable,
   ImmutabilityViolationError,
-  // Retention
-  AuditRetentionPolicy,
   // Storage implementations
   InMemoryAuditStorage,
+  requireMutable,
+  type VersionHistoryEntry,
+  VersionHistoryEntrySchema,
 } from "./audit";

@@ -9,16 +9,16 @@
 process.env.CREAM_ENV = "BACKTEST";
 process.env.CREAM_BROKER = "ALPACA";
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createInMemoryClient, type TursoClient } from "./turso.js";
 import {
-  runMigrations,
-  rollbackMigrations,
   getMigrationStatus,
   MigrationError,
+  rollbackMigrations,
+  runMigrations,
 } from "./migrations.js";
+import { createInMemoryClient, type TursoClient } from "./turso.js";
 
 // ============================================
 // Test Setup
@@ -142,17 +142,21 @@ describe("runMigrations", () => {
     });
 
     expect(result.applied).toHaveLength(3);
-    expect(result.applied[0].version).toBe(1);
-    expect(result.applied[1].version).toBe(2);
-    expect(result.applied[2].version).toBe(3);
+    expect(result.applied[0]!.version).toBe(1);
+    expect(result.applied[1]!.version).toBe(2);
+    expect(result.applied[2]!.version).toBe(3);
     expect(result.currentVersion).toBe(3);
     expect(result.durationMs).toBeGreaterThan(0);
 
     // Verify tables exist
-    const users = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    const users = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    );
     expect(users).toHaveLength(1);
 
-    const posts = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='posts'");
+    const posts = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='posts'"
+    );
     expect(posts).toHaveLength(1);
   });
 
@@ -187,9 +191,7 @@ describe("runMigrations", () => {
     expect(result.currentVersion).toBe(2);
 
     // Verify posts table exists but doesn't have status column
-    const columns = await client.execute<{ name: string }>(
-      "PRAGMA table_info(posts)"
-    );
+    const columns = await client.execute<{ name: string }>("PRAGMA table_info(posts)");
     const columnNames = columns.map((c) => c.name);
     expect(columnNames).not.toContain("status");
   });
@@ -205,7 +207,9 @@ describe("runMigrations", () => {
     expect(logs.some((l) => l.includes("[DRY RUN]"))).toBe(true);
 
     // Verify no tables were created
-    const users = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    const users = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    );
     expect(users).toHaveLength(0);
   });
 });
@@ -240,16 +244,20 @@ describe("rollbackMigrations", () => {
     });
 
     expect(result.rolledBack).toHaveLength(2);
-    expect(result.rolledBack[0].version).toBe(3); // Rolled back in reverse order
-    expect(result.rolledBack[1].version).toBe(2);
+    expect(result.rolledBack[0]!.version).toBe(3); // Rolled back in reverse order
+    expect(result.rolledBack[1]!.version).toBe(2);
     expect(result.currentVersion).toBe(1);
 
     // Verify posts table is gone
-    const posts = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='posts'");
+    const posts = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='posts'"
+    );
     expect(posts).toHaveLength(0);
 
     // Users should still exist
-    const users = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    const users = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    );
     expect(users).toHaveLength(1);
   });
 
@@ -348,7 +356,7 @@ describe("getMigrationStatus", () => {
     expect(status.currentVersion).toBe(2);
     expect(status.applied).toHaveLength(2);
     expect(status.pending).toHaveLength(1);
-    expect(status.pending[0].version).toBe(3);
+    expect(status.pending[0]!.version).toBe(3);
   });
 
   test("returns status after all migrations applied", async () => {

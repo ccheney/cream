@@ -84,7 +84,7 @@ export function updateLastCandle(data: OHLCVData[], candle: OHLCVData): OHLCVDat
   const lastCandle = newData[lastIndex];
 
   // Only update if same time period
-  if (lastCandle.time === candle.time) {
+  if (lastCandle?.time === candle.time) {
     newData[lastIndex] = candle;
   } else {
     // Different time, append new candle
@@ -150,7 +150,7 @@ export function updateLastEquityPoint(
   const lastPoint = newData[lastIndex];
 
   // Compare timestamps (handle both string and number)
-  const lastTime = typeof lastPoint.time === "string" ? lastPoint.time : lastPoint.time;
+  const lastTime = typeof lastPoint?.time === "string" ? lastPoint?.time : lastPoint?.time;
   const updateTime = typeof update.timestamp === "string" ? update.timestamp : update.timestamp;
 
   if (lastTime === updateTime) {

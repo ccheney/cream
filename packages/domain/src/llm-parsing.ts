@@ -7,7 +7,7 @@
  * @see docs/plans/00-overview.md for Agent Consensus Edge Cases
  */
 
-import { z, type ZodError, type ZodSchema, type ZodIssue } from "zod";
+import type { ZodError, ZodIssue, ZodSchema } from "zod";
 
 // ============================================
 // Types
@@ -94,10 +94,10 @@ export interface ParseLogger {
  * Default console logger
  */
 export const defaultLogger: ParseLogger = {
-  debug: (message, data) => console.debug(`[LLM-PARSE] ${message}`, data ?? ""),
-  info: (message, data) => console.info(`[LLM-PARSE] ${message}`, data ?? ""),
-  warn: (message, data) => console.warn(`[LLM-PARSE] ${message}`, data ?? ""),
-  error: (message, data) => console.error(`[LLM-PARSE] ${message}`, data ?? ""),
+  debug: (_message, _data) => {},
+  info: (_message, _data) => {},
+  warn: (_message, _data) => {},
+  error: (_message, _data) => {},
 };
 
 /**
@@ -140,23 +140,19 @@ function formatZodIssue(issue: ZodIssue): FormattedZodError {
 
   // Add type information for type errors
   if (issue.code === "invalid_type") {
+    // Zod v4 type narrowing - issue has expected/received properties
     formatted.expected = issue.expected;
-    formatted.received = issue.received;
+    // Use type assertion for received property (Zod v4 types)
+    formatted.received = String((issue as { received?: unknown }).received ?? "unknown");
   }
 
-  // Zod v4 uses "invalid_option" for enum validation failures
-  // Extract expected values from the message format: 'expected one of "A"|"B"|"C"'
-  if (issue.code === "invalid_option" || issue.message.includes("expected one of")) {
+  // Zod v4 uses "invalid_value" for enum/literal validation failures
+  // Extract expected values from the message if present
+  if (issue.code === "invalid_value" || issue.message.includes("expected one of")) {
     const match = issue.message.match(/expected one of (.+)$/);
     if (match) {
       formatted.expected = match[1];
     }
-  }
-
-  // Add expected values for enum errors (Zod v3 compatibility)
-  if (issue.code === "invalid_enum_value" && "options" in issue) {
-    formatted.expected = (issue.options as string[]).join(" | ");
-    formatted.received = String(issue.received);
   }
 
   // Add union errors
@@ -190,7 +186,7 @@ export function formatJsonParseError(error: unknown, rawOutput: string): string 
   if (error instanceof SyntaxError) {
     // Try to extract position from error message
     const posMatch = error.message.match(/position (\d+)/i);
-    if (posMatch) {
+    if (posMatch?.[1]) {
       const position = Number.parseInt(posMatch[1], 10);
       const context = extractErrorContext(rawOutput, position);
       return `JSON syntax error at position ${position}: ${error.message}. Context: "${context}"`;
@@ -208,8 +204,12 @@ function extractErrorContext(text: string, position: number, contextLength = 20)
   const end = Math.min(text.length, position + contextLength);
   let context = text.slice(start, end);
 
-  if (start > 0) context = "..." + context;
-  if (end < text.length) context = context + "...";
+  if (start > 0) {
+    context = `...${context}`;
+  }
+  if (end < text.length) {
+    context = `${context}...`;
+  }
 
   return context;
 }
@@ -235,10 +235,10 @@ export function schemaToDescription<T>(schema: ZodSchema<T>): string {
 /**
  * Generate example JSON from schema shape (best-effort)
  */
-export function generateSchemaExample<T>(schema: ZodSchema<T>): string {
+export function generateSchemaExample<T>(_schema: ZodSchema<T>): string {
   // This is a simplified implementation
   // In production, you'd want to introspect the schema to generate real examples
-  return '{ /* valid JSON matching the schema */ }';
+  return "{ /* valid JSON matching the schema */ }";
 }
 
 // ============================================
@@ -251,7 +251,7 @@ export function generateSchemaExample<T>(schema: ZodSchema<T>): string {
 export function generateRetryPrompt(
   originalTask: string,
   error: string,
-  schemaDescription: string,
+  schemaDescription: string
 ): string {
   return `Your previous output was invalid. Error: ${error}
 
@@ -287,7 +287,7 @@ IMPORTANT:
 export async function parseWithRetry<T>(
   rawOutput: string,
   schema: ZodSchema<T>,
-  options: ParseOptions = {},
+  options: ParseOptions = {}
 ): Promise<ParseResult<T>> {
   const {
     agentType,
@@ -337,7 +337,7 @@ export async function parseWithRetry<T>(
   const retryPrompt = generateRetryPrompt(
     taskContext,
     firstAttempt.error!,
-    schemaToDescription(schema),
+    schemaToDescription(schema)
   );
 
   logger.info("Invoking retry callback with enhanced prompt", {
@@ -354,7 +354,11 @@ export async function parseWithRetry<T>(
       agentType,
       error: String(callbackError),
     });
-    return createFailureResult(attempts, `Retry callback failed: ${String(callbackError)}`, agentType);
+    return createFailureResult(
+      attempts,
+      `Retry callback failed: ${String(callbackError)}`,
+      agentType
+    );
   }
 
   const secondAttempt = attemptParse(retryOutput, schema, 2);
@@ -387,7 +391,7 @@ export async function parseWithRetry<T>(
 export function parseOnce<T>(
   rawOutput: string,
   schema: ZodSchema<T>,
-  options: Omit<ParseOptions, "retryCallback"> = {},
+  options: Omit<ParseOptions, "retryCallback"> = {}
 ): ParseResult<T> {
   const { agentType, logger = defaultLogger, redactSecrets = true } = options;
   const logOutput = redactSecrets ? redactSensitiveData(rawOutput) : rawOutput;
@@ -433,7 +437,7 @@ interface AttemptResult {
 function attemptParse<T>(
   rawOutput: string,
   schema: ZodSchema<T>,
-  attemptNumber: 1 | 2,
+  attemptNumber: 1 | 2
 ): AttemptResult {
   const timestamp = new Date().toISOString();
 
@@ -488,7 +492,7 @@ export function cleanLLMOutput(output: string): string {
   // Remove markdown JSON code blocks
   // Match ```json ... ``` or ``` ... ```
   const codeBlockMatch = cleaned.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (codeBlockMatch) {
+  if (codeBlockMatch?.[1]) {
     cleaned = codeBlockMatch[1].trim();
   }
 
@@ -531,7 +535,7 @@ export function cleanLLMOutput(output: string): string {
 function createFailureResult<T>(
   attempts: ParseAttempt[],
   finalError: string,
-  agentType?: AgentType,
+  agentType?: AgentType
 ): ParseResult<T> {
   let agentAction: "REJECT" | "SKIP" = "REJECT";
 
@@ -565,9 +569,9 @@ export function redactSensitiveData(output: string): string {
     // API keys in JSON (various formats including camelCase)
     /"(?:api[_-]?[Kk]ey|apiKey|api_secret|secret[_-]?key|auth[_-]?token)":\s*"[^"]+"/gi,
     // API keys (various formats, non-JSON)
-    /(?:api[_-]?key|apikey|api_secret|secret[_-]?key|auth[_-]?token)["\s:=]+["']?[A-Za-z0-9_\-]{16,}["']?/gi,
+    /(?:api[_-]?key|apikey|api_secret|secret[_-]?key|auth[_-]?token)["\s:=]+["']?[A-Za-z0-9_-]{16,}["']?/gi,
     // Bearer tokens
-    /Bearer\s+[A-Za-z0-9_\-\.]+/gi,
+    /Bearer\s+[A-Za-z0-9_\-.]+/gi,
     // AWS keys
     /(?:AKIA|ASIA)[A-Z0-9]{16}/g,
     // Private keys

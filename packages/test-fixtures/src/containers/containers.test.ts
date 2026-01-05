@@ -5,8 +5,8 @@
  * They require Docker to be running.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { startTursoContainer, stopAllContainers, getRunningContainers } from "./index";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { getRunningContainers, startTursoContainer, stopAllContainers } from "./index";
 import type { StartedTursoContainer } from "./turso";
 
 // Skip if Docker is not available (CI without Docker)

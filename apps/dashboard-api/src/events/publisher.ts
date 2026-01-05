@@ -40,16 +40,6 @@ import type {
 // ============================================
 
 /**
- * Default reconnection delay (ms).
- */
-const _DEFAULT_RECONNECT_DELAY_MS = 1000;
-
-/**
- * Maximum reconnection delay (ms).
- */
-const _MAX_RECONNECT_DELAY_MS = 30000;
-
-/**
  * Quote batch interval (ms).
  */
 const QUOTE_BATCH_INTERVAL_MS = 100;
@@ -90,7 +80,7 @@ export interface EventPublisher {
  * Create event publisher.
  */
 export function createEventPublisher(config: EventPublisherConfig = {}): EventPublisher {
-  const _logger = createWebSocketLogger({ level: "info" });
+  createWebSocketLogger({ level: "info" });
   const metrics = createWebSocketMetrics();
   const emitter = new EventEmitter();
 
@@ -144,14 +134,6 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
     });
   }
 
-  function _setSourceError(source: EventSource, error: Error): void {
-    updateSourceState(source, {
-      status: "error",
-      lastError: error,
-      reconnectAttempts: sourceStates[source].reconnectAttempts + 1,
-    });
-  }
-
   // ============================================
   // Broadcasting
   // ============================================
@@ -159,17 +141,16 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
   function broadcastEvent(event: BroadcastEvent): void {
     try {
       const { target, message } = event;
-      let _sent = 0;
 
       if (target.channel === null) {
         // Broadcast to all
-        _sent = broadcastAll(message);
+        broadcastAll(message);
       } else if (target.symbol) {
         // Broadcast to symbol subscribers
-        _sent = broadcastQuote(target.symbol, message);
+        broadcastQuote(target.symbol, message);
       } else {
         // Broadcast to channel subscribers
-        _sent = broadcast(target.channel, message);
+        broadcast(target.channel, message);
       }
 
       eventsBroadcast++;
@@ -221,10 +202,16 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
         uptime: process.uptime(),
         connections: metrics.getActiveConnections(),
         sources: {
-          redis: sourceStates.redis.status,
-          grpc: sourceStates.grpc.status,
-          turso: sourceStates.turso.status,
-          internal: sourceStates.internal.status,
+          redis:
+            sourceStates.redis.status === "connecting" ? "disconnected" : sourceStates.redis.status,
+          grpc:
+            sourceStates.grpc.status === "connecting" ? "disconnected" : sourceStates.grpc.status,
+          turso:
+            sourceStates.turso.status === "connecting" ? "disconnected" : sourceStates.turso.status,
+          internal:
+            sourceStates.internal.status === "connecting"
+              ? "disconnected"
+              : sourceStates.internal.status,
         },
         timestamp: new Date().toISOString(),
       };

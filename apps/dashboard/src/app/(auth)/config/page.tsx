@@ -6,9 +6,7 @@ export default function ConfigPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
-          Configuration
-        </h1>
+        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Configuration</h1>
         <div className="flex items-center gap-2">
           <span className="text-sm px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
             PAPER
@@ -61,18 +59,10 @@ export default function ConfigPage() {
   );
 }
 
-function ConfigSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ConfigSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-        {title}
-      </h2>
+      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">{title}</h2>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -81,12 +71,8 @@ function ConfigSection({
 function ConfigField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-cream-600 dark:text-cream-400">
-        {label}
-      </span>
-      <span className="text-sm font-mono text-cream-900 dark:text-cream-100">
-        {value}
-      </span>
+      <span className="text-sm text-cream-600 dark:text-cream-400">{label}</span>
+      <span className="text-sm font-mono text-cream-900 dark:text-cream-100">{value}</span>
     </div>
   );
 }

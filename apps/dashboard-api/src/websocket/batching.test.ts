@@ -134,7 +134,7 @@ describe("QuoteBatcher", () => {
     batcher.flush();
     expect(batcher.getBufferSize()).toBe(0);
     expect(receivedBatches.length).toBe(1);
-    expect(receivedBatches[0].length).toBe(1);
+    expect(receivedBatches[0]?.length).toBe(1);
   });
 
   it("does not flush empty buffer", () => {
@@ -169,7 +169,7 @@ describe("QuoteBatcher - Size Limit", () => {
     batcher.add(createTestQuote("MSFT"));
     batcher.add(createTestQuote("GOOGL")); // Should trigger flush
     expect(receivedBatches.length).toBe(1);
-    expect(receivedBatches[0].length).toBe(3);
+    expect(receivedBatches[0]?.length).toBe(3);
   });
 
   it("accepts quotes after size flush", () => {

@@ -246,9 +246,7 @@ export function ConnectionStatus({
         />
 
         {/* Label (optional) */}
-        {showLabel && (
-          <span style={{ ...styles.label, color: config.color }}>{config.label}</span>
-        )}
+        {showLabel && <span style={{ ...styles.label, color: config.color }}>{config.label}</span>}
 
         {/* Tooltip */}
         {showTooltip && (

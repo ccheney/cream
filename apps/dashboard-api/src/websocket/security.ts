@@ -228,9 +228,10 @@ export function decodeTokenPayload(token: string): JwtPayload {
   if (parts.length >= 3) {
     const userId = parts[0];
     const role = parts[1] as UserRole;
-    const exp = parseInt(parts[2], 10);
+    const expStr = parts[2];
+    const exp = expStr ? parseInt(expStr, 10) : NaN;
 
-    if (!Number.isNaN(exp) && (role === "user" || role === "admin")) {
+    if (userId && !Number.isNaN(exp) && (role === "user" || role === "admin")) {
       return {
         sub: userId,
         role,
@@ -642,8 +643,8 @@ export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): 
     auditLog.splice(0, auditLog.length - MAX_AUDIT_LOG_SIZE);
   }
 
-  // Also log to console for immediate visibility
-  const _level = event.success ? "info" : "warn";
+  // Note: Could log to console for immediate visibility
+  // const level = event.success ? "info" : "warn";
 }
 
 /**
@@ -731,10 +732,11 @@ export function checkConnectionSecurity(
   }
 
   // Check connection limit
-  if (!connectionTracker.canConnect(tokenResult.userId!)) {
+  const validUserId = tokenResult.userId;
+  if (validUserId && !connectionTracker.canConnect(validUserId)) {
     logSecurityEvent({
       eventType: "connection_limit.exceeded",
-      userId: tokenResult.userId,
+      userId: validUserId,
       success: false,
       reason: `Max ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_USER} connections per user`,
     });
@@ -768,14 +770,15 @@ export function checkSubscriptionSecurity(
   // Check rate limit
   const rateResult = checkSubscribeRateLimit(connectionId);
   if (!rateResult.allowed) {
+    const reason = rateResult.reason ?? "Rate limit exceeded";
     logSecurityEvent({
       eventType: "rate_limit.exceeded",
       connectionId,
       userId,
       success: false,
-      reason: rateResult.reason,
+      reason,
     });
-    return { allowed: false, authorizedChannels: [], errors: [rateResult.reason!] };
+    return { allowed: false, authorizedChannels: [], errors: [reason] };
   }
 
   // Filter to authorized channels
@@ -785,14 +788,15 @@ export function checkSubscriptionSecurity(
     if (authResult.authorized) {
       authorizedChannels.push(channel);
     } else {
-      errors.push(authResult.reason!);
+      const reason = authResult.reason ?? "Unauthorized";
+      errors.push(reason);
       logSecurityEvent({
         eventType: "authorization.denied",
         connectionId,
         userId,
         channel,
         success: false,
-        reason: authResult.reason,
+        reason,
       });
     }
   }

@@ -291,7 +291,7 @@ export function createHighConfidenceSetup(confidence = 0.99): DecisionPlan {
  */
 export function createPlanMissingStopLoss(): DecisionPlan {
   const decision = createValidDecision();
-  // @ts-expect-error - Intentionally invalid for testing
+  // @ts-expect-error - Intentionally deleting required field for testing
   delete decision.riskLevels;
   return createValidPlan([decision]);
 }

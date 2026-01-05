@@ -3,11 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  createHelixClient,
-  createHelixClientFromEnv,
-  HelixError,
-} from "../src/client.js";
+import { createHelixClient, createHelixClientFromEnv, HelixError } from "../src/client.js";
 
 describe("HelixDB Client", () => {
   describe("createHelixClient", () => {
@@ -76,8 +72,12 @@ describe("HelixDB Client", () => {
         expect(config.port).toBe(6969);
       } finally {
         // Restore
-        if (originalHost) process.env.HELIX_HOST = originalHost;
-        if (originalPort) process.env.HELIX_PORT = originalPort;
+        if (originalHost) {
+          process.env.HELIX_HOST = originalHost;
+        }
+        if (originalPort) {
+          process.env.HELIX_PORT = originalPort;
+        }
       }
     });
   });

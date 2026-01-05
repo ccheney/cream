@@ -192,8 +192,8 @@ describe("MockLLM", () => {
 
       const calls = mockLLM.getCalls();
       expect(calls).toHaveLength(1);
-      expect(calls[0].key).toBe("technical_analyst:AAPL");
-      expect(calls[0].response).toBe("AAPL analysis result");
+      expect(calls[0]?.key).toBe("technical_analyst:AAPL");
+      expect(calls[0]?.response).toBe("AAPL analysis result");
     });
 
     test("checks if key was called", async () => {

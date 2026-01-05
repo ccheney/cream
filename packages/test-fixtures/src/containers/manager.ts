@@ -38,10 +38,7 @@ export async function stopAllContainers(): Promise<void> {
   const stopPromises = runningContainers.map(async (container) => {
     try {
       await container.stop();
-    } catch (error) {
-      // Container may already be stopped
-      console.warn(`Failed to stop container: ${error}`);
-    }
+    } catch (_error) {}
   });
 
   await Promise.all(stopPromises);

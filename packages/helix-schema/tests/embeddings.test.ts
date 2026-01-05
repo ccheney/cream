@@ -5,20 +5,19 @@
  * Note: Tests requiring API calls are skipped without GEMINI_API_KEY.
  */
 
-import { describe, expect, it, beforeAll, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-  DEFAULT_EMBEDDING_CONFIG,
-  EMBEDDING_MODELS,
-  EMBEDDABLE_FIELDS,
-  EmbeddingClient,
+  batchEmbedWithProgress,
   createEmbeddingClient,
+  createEmbeddingMetadata,
+  DEFAULT_EMBEDDING_CONFIG,
+  EMBEDDABLE_FIELDS,
+  EMBEDDING_MODELS,
+  EmbeddingClient,
+  type EmbeddingMetadata,
   extractEmbeddableText,
   isEmbeddingStale,
-  createEmbeddingMetadata,
   needsReembedding,
-  batchEmbedWithProgress,
-  type EmbeddingMetadata,
-  type EmbeddingConfig,
 } from "../src/embeddings";
 
 // ============================================
@@ -101,7 +100,9 @@ describe("extractEmbeddableText", () => {
     };
 
     const text = extractEmbeddableText("NewsItem", node);
-    expect(text).toBe("Apple Announces New Product\n\nApple Inc. today announced a new product line...");
+    expect(text).toBe(
+      "Apple Announces New Product\n\nApple Inc. today announced a new product line..."
+    );
   });
 
   it("skips empty fields", () => {
@@ -351,11 +352,7 @@ describe("EmbeddingClient API", () => {
 
   it.skipIf(!hasApiKey)("generates batch embeddings", async () => {
     const client = createEmbeddingClient();
-    const texts = [
-      "First text to embed",
-      "Second text to embed",
-      "Third text to embed",
-    ];
+    const texts = ["First text to embed", "Second text to embed", "Third text to embed"];
 
     const result = await client.batchGenerateEmbeddings(texts);
 

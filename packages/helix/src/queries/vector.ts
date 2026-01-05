@@ -7,7 +7,7 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type { HelixClient, QueryResult } from "../client.js";
+import type { HelixClient } from "../client.js";
 
 /**
  * Vector search options.
@@ -102,10 +102,7 @@ export async function vectorSearch<T = Record<string, unknown>>(
 
   // Execute the vector search query
   // Query name matches the compiled HelixQL query
-  const result = await client.query<VectorSearchResult<T>[]>(
-    "vectorSearch",
-    params
-  );
+  const result = await client.query<VectorSearchResult<T>[]>("vectorSearch", params);
 
   return {
     results: result.data,

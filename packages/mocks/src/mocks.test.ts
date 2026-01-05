@@ -181,9 +181,9 @@ describe("MockPolygonAdapter", () => {
       const candles = await polygon.getCandles("AAPL", "1h", 10);
 
       expect(candles.length).toBeGreaterThan(0);
-      expect(candles[0].open).toBeDefined();
-      expect(candles[0].close).toBeDefined();
-      expect(candles[0].volume).toBeDefined();
+      expect(candles[0]?.open).toBeDefined();
+      expect(candles[0]?.close).toBeDefined();
+      expect(candles[0]?.volume).toBeDefined();
     });
 
     it("uses pre-loaded fixture data", async () => {
@@ -219,8 +219,11 @@ describe("MockPolygonAdapter", () => {
       const chain = await polygon.getOptionChain("AAPL");
 
       expect(chain.length).toBeGreaterThan(0);
-      expect(chain[0].underlying).toBe("AAPL");
-      expect(["CALL", "PUT"]).toContain(chain[0].optionType);
+      const firstOption = chain[0];
+      expect(firstOption?.underlying).toBe("AAPL");
+      if (firstOption) {
+        expect(["CALL", "PUT"]).toContain(firstOption.optionType);
+      }
     });
   });
 
@@ -255,9 +258,9 @@ describe("MockDatabentoAdapter", () => {
       const trades = await databento.getTrades("AAPL", 10);
 
       expect(trades.length).toBe(10);
-      expect(trades[0].symbol).toBe("AAPL");
-      expect(trades[0].price).toBeDefined();
-      expect(trades[0].size).toBeDefined();
+      expect(trades[0]?.symbol).toBe("AAPL");
+      expect(trades[0]?.price).toBeDefined();
+      expect(trades[0]?.size).toBeDefined();
     });
   });
 
@@ -345,7 +348,7 @@ describe("MockHelixDB", () => {
 
       const edgesFrom = await helix.getEdgesFrom("a");
       expect(edgesFrom).toHaveLength(1);
-      expect(edgesFrom[0].toId).toBe("b");
+      expect(edgesFrom[0]?.toId).toBe("b");
     });
   });
 
@@ -354,8 +357,8 @@ describe("MockHelixDB", () => {
       const memories = await helix.retrieveTradeMemory({}, 5);
 
       expect(memories.length).toBeGreaterThan(0);
-      expect(memories[0].item.caseId).toBeDefined();
-      expect(memories[0].score).toBeDefined();
+      expect(memories[0]?.item.caseId).toBeDefined();
+      expect(memories[0]?.score).toBeDefined();
     });
 
     it("filters by symbol", async () => {
@@ -456,7 +459,7 @@ describe("MockTursoClient", () => {
       const result = await turso.execute("SELECT id, name FROM users WHERE id = ?", [1]);
 
       expect(result.rows).toHaveLength(1);
-      expect(result.rows[0][1]).toBe("Alice");
+      expect(result.rows[0]?.[1]).toBe("Alice");
     });
 
     it("updates rows", async () => {
@@ -468,7 +471,7 @@ describe("MockTursoClient", () => {
       expect(result.rowsAffected).toBe(1);
 
       const select = await turso.execute("SELECT name FROM users WHERE id = ?", [1]);
-      expect(select.rows[0][0]).toBe("Alicia");
+      expect(select.rows[0]?.[0]).toBe("Alicia");
     });
 
     it("deletes rows", async () => {
@@ -503,7 +506,7 @@ describe("MockTursoClient", () => {
       ]);
 
       expect(results).toHaveLength(4);
-      expect(results[3].rows).toHaveLength(2);
+      expect(results[3]?.rows).toHaveLength(2);
     });
   });
 

@@ -52,7 +52,7 @@ describe("appendCandle", () => {
   it("appends candle to empty array", () => {
     const candle = createCandle("2026-01-01", 100);
     const result = appendCandle([], candle);
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(1 as any);
     expect(result[0]).toEqual(candle);
   });
 
@@ -60,7 +60,7 @@ describe("appendCandle", () => {
     const existing = [createCandle("2026-01-01", 100)];
     const newCandle = createCandle("2026-01-02", 101);
     const result = appendCandle(existing, newCandle);
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(2 as any);
     expect(result[1]).toEqual(newCandle);
   });
 
@@ -68,7 +68,7 @@ describe("appendCandle", () => {
     const existing = [createCandle("2026-01-01", 100)];
     const newCandle = createCandle("2026-01-02", 101);
     appendCandle(existing, newCandle);
-    expect(existing.length).toBe(1);
+    expect(existing.length).toBe(1 as any);
   });
 });
 
@@ -76,7 +76,7 @@ describe("updateLastCandle", () => {
   it("adds candle to empty array", () => {
     const candle = createCandle("2026-01-01", 100);
     const result = updateLastCandle([], candle);
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(1 as any);
     expect(result[0]).toEqual(candle);
   });
 
@@ -84,15 +84,15 @@ describe("updateLastCandle", () => {
     const existing = [createCandle("2026-01-01", 100)];
     const updated = createCandle("2026-01-01", 105);
     const result = updateLastCandle(existing, updated);
-    expect(result.length).toBe(1);
-    expect(result[0].close).toBe(105);
+    expect(result.length).toBe(1 as any);
+    expect(result[0]!.close).toBe(105 as any);
   });
 
   it("appends candle with different time", () => {
     const existing = [createCandle("2026-01-01", 100)];
     const newCandle = createCandle("2026-01-02", 101);
     const result = updateLastCandle(existing, newCandle);
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(2 as any);
     expect(result[1]).toEqual(newCandle);
   });
 });
@@ -105,7 +105,7 @@ describe("applyCandleUpdate", () => {
       candle: createCandle("2026-01-02", 101),
     };
     const result = applyCandleUpdate(data, update);
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(2 as any);
   });
 
   it("applies update to last candle", () => {
@@ -115,8 +115,8 @@ describe("applyCandleUpdate", () => {
       candle: createCandle("2026-01-01", 105),
     };
     const result = applyCandleUpdate(data, update);
-    expect(result.length).toBe(1);
-    expect(result[0].close).toBe(105);
+    expect(result.length).toBe(1 as any);
+    expect(result[0]!.close).toBe(105 as any);
   });
 });
 
@@ -160,8 +160,8 @@ describe("appendEquityPoint", () => {
       timestamp: "2026-01-01",
     };
     const result = appendEquityPoint([], update);
-    expect(result.length).toBe(1);
-    expect(result[0].value).toBe(100000);
+    expect(result.length).toBe(1 as any);
+    expect(result[0]!.value).toBe(100000 as any);
   });
 
   it("includes drawdown if provided", () => {
@@ -171,7 +171,7 @@ describe("appendEquityPoint", () => {
       drawdown: -0.05,
     };
     const result = appendEquityPoint([], update);
-    expect(result[0].drawdown).toBe(-0.05);
+    expect(result[0]!.drawdown).toBe(-0.05);
   });
 });
 
@@ -182,7 +182,7 @@ describe("updateLastEquityPoint", () => {
       timestamp: "2026-01-01",
     };
     const result = updateLastEquityPoint([], update);
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(1 as any);
   });
 
   it("updates last point with same timestamp", () => {
@@ -192,8 +192,8 @@ describe("updateLastEquityPoint", () => {
       timestamp: "2026-01-01",
     };
     const result = updateLastEquityPoint(existing, update);
-    expect(result.length).toBe(1);
-    expect(result[0].value).toBe(100500);
+    expect(result.length).toBe(1 as any);
+    expect(result[0]!.value).toBe(100500 as any);
   });
 
   it("appends with different timestamp", () => {
@@ -203,7 +203,7 @@ describe("updateLastEquityPoint", () => {
       timestamp: "2026-01-02",
     };
     const result = updateLastEquityPoint(existing, update);
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(2 as any);
   });
 });
 
@@ -230,9 +230,9 @@ describe("appendSparklineValue", () => {
   it("uses default max length of 20", () => {
     const data = Array.from({ length: 20 }, (_, i) => i);
     const result = appendSparklineValue(data, 20);
-    expect(result.length).toBe(20);
-    expect(result[0]).toBe(1);
-    expect(result[19]).toBe(20);
+    expect(result.length).toBe(20 as any);
+    expect(result[0]).toBe(1 as any);
+    expect(result[19]).toBe(20 as any);
   });
 });
 
@@ -270,7 +270,7 @@ describe("createThrottledUpdater", () => {
     }, 50);
 
     throttled.update(1);
-    expect(value).toBe(1);
+    expect(value).toBe(1 as any);
     throttled.cancel();
   });
 
@@ -393,9 +393,9 @@ describe("sortByTimestamp", () => {
       { timestamp: "2026-01-02T00:00:00Z", value: 2 },
     ];
     const result = sortByTimestamp(updates);
-    expect(result[0].value).toBe(1);
-    expect(result[1].value).toBe(2);
-    expect(result[2].value).toBe(3);
+    expect(result[0]!.value).toBe(1 as any);
+    expect(result[1]!.value).toBe(2 as any);
+    expect(result[2]!.value).toBe(3 as any);
   });
 
   it("does not mutate original array", () => {
@@ -404,7 +404,7 @@ describe("sortByTimestamp", () => {
       { timestamp: "2026-01-01T00:00:00Z", value: 1 },
     ];
     sortByTimestamp(updates);
-    expect(updates[0].value).toBe(2);
+    expect(updates[0]!.value).toBe(2 as any);
   });
 
   it("handles empty array", () => {
@@ -425,8 +425,8 @@ describe("filterStaleUpdates", () => {
     ];
 
     const result = filterStaleUpdates(updates, 5000);
-    expect(result.length).toBe(1);
-    expect(result[0].value).toBe(2);
+    expect(result.length).toBe(1 as any);
+    expect(result[0]!.value).toBe(2 as any);
   });
 
   it("keeps all recent updates", () => {
@@ -440,7 +440,7 @@ describe("filterStaleUpdates", () => {
     ];
 
     const result = filterStaleUpdates(updates, 5000);
-    expect(result.length).toBe(2);
+    expect(result.length).toBe(2 as any);
   });
 
   it("handles empty array", () => {

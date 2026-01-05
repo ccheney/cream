@@ -258,7 +258,7 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
   return {
     type: message.type as ServerMessageType,
     data: message.data,
-    timestamp: (message.timestamp as string) || new Date().toISOString(),
+    timestamp: (message.timestamp! as string) || new Date().toISOString(),
   };
 }
 
@@ -286,6 +286,9 @@ function createInvalidationBatcher(queryClient: QueryClient, debounceMs: number)
     for (const keyStr of keys) {
       const key = JSON.parse(keyStr) as string[];
       const topLevel = key[0];
+      if (!topLevel) {
+        continue;
+      }
       if (!keyGroups.has(topLevel)) {
         keyGroups.set(topLevel, []);
       }

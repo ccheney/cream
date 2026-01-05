@@ -15,34 +15,34 @@ export const VERSION = "0.0.1";
 
 // Parity validation
 export {
-  // Schemas
-  IndicatorVersionSchema,
-  type IndicatorVersion,
-  VersionRegistrySchema,
-  type VersionRegistry,
-  CandleSchema,
   type Candle,
-  FillRecordSchema,
-  type FillRecord,
-  PerformanceMetricsSchema,
-  type PerformanceMetrics,
-  DataSourceMetadataSchema,
-  type DataSourceMetadata,
-  // Result types
-  type VersionComparisonResult,
-  type LookAheadBiasResult,
-  type FillModelComparisonResult,
-  type StatisticalParityResult,
-  type DataConsistencyResult,
-  type ParityValidationResult,
-  // Validation functions
-  compareVersionRegistries,
+  CandleSchema,
   checkLookAheadBias,
-  validateAdjustedData,
   compareFillModels,
   comparePerformanceMetrics,
-  validateDataConsistency,
-  runParityValidation,
+  // Validation functions
+  compareVersionRegistries,
+  type DataConsistencyResult,
+  type DataSourceMetadata,
+  DataSourceMetadataSchema,
   // Constants
   DEFAULT_METRIC_TOLERANCES,
+  type FillModelComparisonResult,
+  type FillRecord,
+  FillRecordSchema,
+  type IndicatorVersion,
+  // Schemas
+  IndicatorVersionSchema,
+  type LookAheadBiasResult,
+  type ParityValidationResult,
+  type PerformanceMetrics,
+  PerformanceMetricsSchema,
+  runParityValidation,
+  type StatisticalParityResult,
+  // Result types
+  type VersionComparisonResult,
+  type VersionRegistry,
+  VersionRegistrySchema,
+  validateAdjustedData,
+  validateDataConsistency,
 } from "./parity";

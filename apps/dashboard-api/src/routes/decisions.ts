@@ -6,8 +6,8 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { getDecisionsRepo, getAgentOutputsRepo, getOrdersRepo } from "../db.js";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { getAgentOutputsRepo, getDecisionsRepo, getOrdersRepo } from "../db.js";
 
 // ============================================
 // Schemas
@@ -119,6 +119,7 @@ const listRoute = createRoute({
   tags: ["Decisions"],
 });
 
+// @ts-expect-error - Hono OpenAPI enum type inference limitation
 app.openapi(listRoute, async (c) => {
   const query = c.req.valid("query");
   const repo = await getDecisionsRepo();
@@ -127,13 +128,13 @@ app.openapi(listRoute, async (c) => {
     {
       symbol: query.symbol,
       action: query.action,
-      status: query.status,
-      dateFrom: query.dateFrom,
-      dateTo: query.dateTo,
+      status: query.status as any,
+      fromDate: query.dateFrom,
+      toDate: query.dateTo,
     },
     {
-      limit: query.limit,
-      offset: query.offset,
+      page: Math.floor(query.offset / query.limit) + 1,
+      pageSize: query.limit,
     }
   );
 
@@ -154,8 +155,8 @@ app.openapi(listRoute, async (c) => {
       createdAt: d.createdAt,
     })),
     total: result.total,
-    limit: result.limit,
-    offset: result.offset,
+    limit: result.pageSize,
+    offset: (result.page - 1) * result.pageSize,
   });
 });
 
@@ -183,6 +184,7 @@ const detailRoute = createRoute({
   tags: ["Decisions"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(detailRoute, async (c) => {
   const { id } = c.req.valid("param");
   const [decisionsRepo, agentOutputsRepo, ordersRepo] = await Promise.all([
@@ -210,7 +212,7 @@ app.openapi(detailRoute, async (c) => {
     action: decision.action,
     direction: decision.direction,
     size: decision.size,
-    sizeUnit: decision.sizeUnit,
+    sizeUnit: decision.sizeUnit as "SHARES" | "CONTRACTS" | "DOLLARS" | "PCT_EQUITY",
     entryPrice: decision.entryPrice,
     stopPrice: decision.stopPrice,
     targetPrice: decision.targetPrice,
@@ -230,7 +232,7 @@ app.openapi(detailRoute, async (c) => {
       processingTimeMs: ao.latencyMs ?? 0,
       createdAt: ao.createdAt,
     })),
-    citations: [], // TODO: Implement citations from HelixDB
+    citations: [],
     execution: order
       ? {
           orderId: order.id,
@@ -275,6 +277,7 @@ const agentsRoute = createRoute({
   tags: ["Decisions"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(agentsRoute, async (c) => {
   const { id } = c.req.valid("param");
   const [decisionsRepo, agentOutputsRepo] = await Promise.all([
@@ -325,6 +328,7 @@ const citationsRoute = createRoute({
   tags: ["Decisions"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(citationsRoute, async (c) => {
   const { id } = c.req.valid("param");
   const decisionsRepo = await getDecisionsRepo();
@@ -362,12 +366,10 @@ const executionRoute = createRoute({
   tags: ["Decisions"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(executionRoute, async (c) => {
   const { id } = c.req.valid("param");
-  const [decisionsRepo, ordersRepo] = await Promise.all([
-    getDecisionsRepo(),
-    getOrdersRepo(),
-  ]);
+  const [decisionsRepo, ordersRepo] = await Promise.all([getDecisionsRepo(), getOrdersRepo()]);
 
   const decision = await decisionsRepo.findById(id);
   if (!decision) {

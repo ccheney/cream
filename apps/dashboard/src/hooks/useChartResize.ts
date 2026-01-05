@@ -62,7 +62,7 @@ export interface UseChartResizeOptions {
  */
 export interface UseChartResizeReturn {
   /** Container ref to attach */
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 
   /** Current dimensions */
   dimensions: ChartDimensions;

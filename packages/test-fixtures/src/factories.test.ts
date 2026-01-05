@@ -229,7 +229,7 @@ describe("createDecision", () => {
 
   it("merges nested overrides", () => {
     const decision = createDecision({
-      instrument: { instrumentId: "MSFT" },
+      instrument: { instrumentId: "MSFT", instrumentType: "EQUITY" },
       confidence: 0.9,
     });
     expect(decision.instrument.instrumentId).toBe("MSFT");
@@ -240,7 +240,11 @@ describe("createDecision", () => {
 
   it("merges deeply nested overrides", () => {
     const decision = createDecision({
-      riskLevels: { stopLossLevel: 155.0 },
+      riskLevels: {
+        stopLossLevel: 155.0,
+        takeProfitLevel: 200.0,
+        denomination: "UNDERLYING_PRICE",
+      },
     });
     expect(decision.riskLevels.stopLossLevel).toBe(155.0);
     // Other risk level fields should still have defaults
@@ -390,25 +394,25 @@ describe("scenario snapshots", () => {
   it("creates bull trend snapshot", () => {
     const snapshot = createBullTrendSnapshot();
     expect(snapshot.regime).toBe("BULL_TREND");
-    expect(snapshot.symbols[0].indicators.rsi_14).toBeGreaterThan(70);
+    expect(snapshot.symbols[0]?.indicators.rsi_14).toBeGreaterThan(70);
   });
 
   it("creates bear trend snapshot", () => {
     const snapshot = createBearTrendSnapshot();
     expect(snapshot.regime).toBe("BEAR_TREND");
-    expect(snapshot.symbols[0].indicators.rsi_14).toBeLessThan(30);
+    expect(snapshot.symbols[0]?.indicators.rsi_14).toBeLessThan(30);
   });
 
   it("creates high vol snapshot", () => {
     const snapshot = createHighVolSnapshot();
     expect(snapshot.regime).toBe("HIGH_VOL");
-    expect(snapshot.symbols[0].indicators.atr_14).toBeGreaterThan(20);
+    expect(snapshot.symbols[0]?.indicators.atr_14).toBeGreaterThan(20);
   });
 
   it("creates range bound snapshot", () => {
     const snapshot = createRangeBoundSnapshot();
     expect(snapshot.regime).toBe("RANGE");
-    expect(snapshot.symbols[0].indicators.rsi_14).toBe(50);
+    expect(snapshot.symbols[0]?.indicators.rsi_14).toBe(50);
   });
 });
 

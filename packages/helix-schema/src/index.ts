@@ -297,28 +297,28 @@ export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
 // ============================================
 
 export {
+  type BatchEmbeddingOptions,
+  type BatchEmbeddingResult,
+  type BatchProgressCallback,
+  batchEmbedWithProgress,
+  createEmbeddingClient,
+  createEmbeddingMetadata,
   // Configuration
   DEFAULT_EMBEDDING_CONFIG,
   DEFAULT_RETRY_CONFIG,
-  EMBEDDING_MODELS,
-  type EmbeddingConfig,
-  type RetryConfig,
-  // Client
-  EmbeddingClient,
-  createEmbeddingClient,
-  // Types
-  type EmbeddingResult,
-  type BatchEmbeddingResult,
-  type EmbeddingMetadata,
-  type BatchEmbeddingOptions,
-  type BatchProgressCallback,
   // Helpers
   EMBEDDABLE_FIELDS,
+  EMBEDDING_MODELS,
+  // Client
+  EmbeddingClient,
+  type EmbeddingConfig,
+  type EmbeddingMetadata,
+  // Types
+  type EmbeddingResult,
   extractEmbeddableText,
   isEmbeddingStale,
-  createEmbeddingMetadata,
   needsReembedding,
-  batchEmbedWithProgress,
+  type RetryConfig,
 } from "./embeddings";
 
 // ============================================
@@ -326,28 +326,28 @@ export {
 // ============================================
 
 export {
-  // Schemas
-  DistanceMetric,
-  type DistanceMetric as DistanceMetricType,
-  HnswConfigSchema,
-  type HnswConfig,
-  TuningProfileName,
-  type TuningProfileName as TuningProfileNameType,
-  TuningProfileSchema,
-  type TuningProfile,
+  adjustEfSearchForRecall,
   // Defaults
   DEFAULT_HNSW_CONFIG,
   DISTANCE_METRIC_NOTES,
-  // Tuning profiles
-  TUNING_PROFILES,
+  // Schemas
+  DistanceMetric,
+  type DistanceMetric as DistanceMetricType,
   ENVIRONMENT_PROFILE_MAP,
+  generateVectorIndexConfig,
   // Functions
   getConfigForEnvironment,
   getTuningProfile,
+  type HnswConfig,
+  HnswConfigSchema,
   listTuningProfiles,
+  // Tuning profiles
+  TUNING_PROFILES,
+  type TuningProfile,
+  TuningProfileName,
+  type TuningProfileName as TuningProfileNameType,
+  TuningProfileSchema,
   validateHnswConfig,
-  adjustEfSearchForRecall,
-  generateVectorIndexConfig,
 } from "./hnsw-config";
 
 // ============================================
@@ -355,57 +355,57 @@ export {
 // ============================================
 
 export {
-  // Types
-  type RetrievalResult,
-  type RankedResult,
-  type RRFResult,
-  type RRFOptions,
+  assessRetrievalQuality,
+  assessRRFQuality,
+  assignRanks,
+  type CorrectionAttempt,
+  type CorrectionLogEntry,
+  type CorrectionMetrics,
+  type CorrectionStrategy,
+  type CorrectionStrategyConfig,
+  type CorrectiveRetrievalOptions,
+  type CorrectiveRetrievalResult,
+  calculateAvgScore,
+  calculateBroadenedK,
+  // Utilities
+  calculateCombinedRRFScore,
+  calculateCorrectionMetrics,
+  calculateCoverageScore,
+  calculateDiversityScore,
+  calculateLoweredThreshold,
+  calculateMultiMethodBoost,
+  // Core functions
+  calculateRRFScore,
+  correctiveRetrieval,
+  createCorrectionLogEntry,
+  DEFAULT_BROADENING_FACTOR,
+  DEFAULT_DIVERSITY_THRESHOLD,
+  DEFAULT_MIN_RESULTS,
+  // Corrective Retrieval
+  DEFAULT_QUALITY_THRESHOLD,
+  DEFAULT_QUALITY_THRESHOLDS,
   // Constants
   DEFAULT_RRF_K,
   DEFAULT_TOP_K,
-  // Core functions
-  calculateRRFScore,
-  assignRanks,
-  fuseWithRRF,
   fuseMultipleWithRRF,
-  // Utilities
-  calculateCombinedRRFScore,
+  fuseWithRRF,
+  generateExpansionTerms,
   getMaxRRFScore,
-  normalizeRRFScores,
-  calculateMultiMethodBoost,
-  // Corrective Retrieval
-  DEFAULT_QUALITY_THRESHOLD,
-  DEFAULT_MIN_RESULTS,
-  DEFAULT_DIVERSITY_THRESHOLD,
-  DEFAULT_BROADENING_FACTOR,
   MAX_CORRECTION_ATTEMPTS,
-  THRESHOLD_REDUCTION_STEP,
-  DEFAULT_QUALITY_THRESHOLDS,
+  normalizeRRFScores,
   type QualityAssessment,
   type QualityThresholds,
-  type CorrectionStrategy,
-  type CorrectionStrategyConfig,
-  type CorrectionAttempt,
-  type CorrectiveRetrievalResult,
-  type CorrectiveRetrievalOptions,
+  type RankedResult,
   type RetrievalFunction,
-  type CorrectionLogEntry,
-  type CorrectionMetrics,
-  calculateAvgScore,
-  calculateDiversityScore,
-  calculateCoverageScore,
-  assessRetrievalQuality,
-  shouldCorrect,
-  calculateBroadenedK,
-  calculateLoweredThreshold,
-  generateExpansionTerms,
+  // Types
+  type RetrievalResult,
+  type RRFOptions,
+  type RRFResult,
   selectCorrectionStrategy,
-  correctiveRetrieval,
-  withCorrectiveRetrieval,
-  assessRRFQuality,
+  shouldCorrect,
   shouldCorrectRRF,
-  calculateCorrectionMetrics,
-  createCorrectionLogEntry,
+  THRESHOLD_REDUCTION_STEP,
+  withCorrectiveRetrieval,
 } from "./retrieval";
 
 // ============================================
@@ -413,60 +413,60 @@ export {
 // ============================================
 
 export {
+  type AccessRecord,
+  // Batch processing
+  batchGetForgettingDecisions,
+  COMPLIANCE_PERIOD_DAYS,
+  // Metrics
+  calculateForgettingMetrics,
+  calculateFrequency,
+  calculateImportance,
+  // Core forgetting functions
+  calculateRecency,
+  calculateRetentionScore,
+  // Trade cohort summarization
+  createTradeCohortSummary,
   // Constants
   DECAY_CONSTANT_DAYS,
-  COMPLIANCE_PERIOD_DAYS,
-  FREQUENCY_SCALE_FACTOR,
-  PNL_NORMALIZATION_FACTOR,
-  EDGE_COUNT_NORMALIZATION_FACTOR,
-  SUMMARIZATION_THRESHOLD,
-  DELETION_THRESHOLD,
-  INFINITE_RETENTION,
   DEFAULT_PRUNING_CONFIG,
+  DELETION_THRESHOLD,
+  daysSinceLastAccess,
+  EDGE_COUNT_NORMALIZATION_FACTOR,
+  type EdgeInfo,
+  evaluateSubgraphForMerge,
+  type ForgettingDecision,
   // Types
   ForgettingEnvironment,
   type ForgettingEnvironment as ForgettingEnvironmentType,
+  type ForgettingMetrics,
   ForgettingNodeType,
   type ForgettingNodeType as ForgettingNodeTypeValue,
-  type NodeInfo,
-  type RetentionScoreBreakdown,
-  type ForgettingDecision,
-  type TradeCohortSummary,
+  FREQUENCY_SCALE_FACTOR,
+  filterForDeletion,
+  filterForSummarization,
+  findHubsTooPrune,
+  findIsolatedNodes,
+  formatMonthlyPeriod,
+  formatQuarterlyPeriod,
   type GraphPruningAction,
   type GraphPruningConfig,
-  type TradeDecisionInfo,
-  type EdgeInfo,
-  type NodeConnectivity,
-  type AccessRecord,
-  type ForgettingMetrics,
-  // Core forgetting functions
-  calculateRecency,
-  calculateFrequency,
-  calculateImportance,
-  hasComplianceOverride,
-  calculateRetentionScore,
-  shouldSummarize,
-  shouldDelete,
   getForgettingDecision,
-  // Batch processing
-  batchGetForgettingDecisions,
-  filterForSummarization,
-  filterForDeletion,
-  // Trade cohort summarization
-  createTradeCohortSummary,
   groupDecisionsForSummarization,
-  formatQuarterlyPeriod,
-  formatMonthlyPeriod,
+  hasComplianceOverride,
+  INFINITE_RETENTION,
+  type NodeConnectivity,
+  type NodeInfo,
+  PNL_NORMALIZATION_FACTOR,
   // Graph pruning
   pruneEdgesByWeight,
-  findIsolatedNodes,
-  findHubsTooPrune,
-  evaluateSubgraphForMerge,
+  type RetentionScoreBreakdown,
   // Access tracking
   recordAccess,
-  daysSinceLastAccess,
-  // Metrics
-  calculateForgettingMetrics,
+  SUMMARIZATION_THRESHOLD,
+  shouldDelete,
+  shouldSummarize,
+  type TradeCohortSummary,
+  type TradeDecisionInfo,
 } from "./retention";
 
 // ============================================
@@ -474,50 +474,50 @@ export {
 // ============================================
 
 export {
+  type CacheEntry,
+  type ContradictionResult,
+  classifyError,
+  DEFAULT_CACHE_TTL_MS,
+  DEFAULT_COMBINED_TIMEOUT_MS,
+  DEFAULT_GRAPH_TIMEOUT_MS,
+  DEFAULT_TIMEOUT_CONFIG,
   // Constants
   DEFAULT_VECTOR_TIMEOUT_MS,
-  DEFAULT_GRAPH_TIMEOUT_MS,
-  DEFAULT_COMBINED_TIMEOUT_MS,
-  DEFAULT_CACHE_TTL_MS,
-  STALE_EMBEDDING_THRESHOLD_MS,
-  TIMEOUT_RATE_ALERT_THRESHOLD,
-  DEFAULT_TIMEOUT_CONFIG,
+  // Contradiction resolution
+  detectContradiction,
+  // Fallback strategies
+  executeWithFallback,
+  type FallbackStrategy,
+  type FreshnessInfo,
+  // Freshness validation (isEmbeddingStale and needsReembedding exported from embeddings)
+  getEmbeddingAgeHours,
+  // Timeout functions
+  getTimeoutForQueryType,
+  isRetryableError,
+  // Metrics
+  MetricsCollector,
+  // Cache
+  QueryCache,
+  // Error handling
+  QueryError,
+  QueryErrorType,
+  type QueryErrorType as QueryErrorTypeValue,
+  type QueryFunction,
+  type QueryMetrics,
+  type QueryOptions,
+  type QueryResult,
   // Types
   QueryType,
   type QueryType as QueryTypeValue,
-  type TimeoutConfig,
-  type QueryResult,
-  type CacheEntry,
-  type FreshnessInfo,
-  type ContradictionResult,
-  type QueryMetrics,
-  type FallbackStrategy,
-  type QueryOptions,
-  type QueryFunction,
-  type QueryWrapperOptions,
-  QueryErrorType,
-  type QueryErrorType as QueryErrorTypeValue,
-  // Timeout functions
-  getTimeoutForQueryType,
-  withTimeout,
-  // Cache
-  QueryCache,
-  // Freshness validation (isEmbeddingStale and needsReembedding exported from embeddings)
-  getEmbeddingAgeHours,
-  validateFreshness,
-  // Contradiction resolution
-  detectContradiction,
-  resolveContradictions,
-  // Fallback strategies
-  executeWithFallback,
-  // Metrics
-  MetricsCollector,
-  // Error handling
-  QueryError,
-  classifyError,
-  isRetryableError,
   // High-level wrapper
   QueryWrapper,
+  type QueryWrapperOptions,
+  resolveContradictions,
+  STALE_EMBEDDING_THRESHOLD_MS,
+  TIMEOUT_RATE_ALERT_THRESHOLD,
+  type TimeoutConfig,
+  validateFreshness,
+  withTimeout,
 } from "./query";
 
 // ============================================
@@ -525,27 +525,27 @@ export {
 // ============================================
 
 export {
+  AuditEntityType,
+  type AuditLogEntry,
   // Schemas
   AuditLogEntrySchema,
-  type AuditLogEntry,
-  AuditTrailQuerySchema,
-  type AuditTrailQuery,
-  VersionHistoryEntrySchema,
-  type VersionHistoryEntry,
-  // Enums
-  AuditOperationType,
-  AuditEntityType,
   // Audit Logger
   AuditLogger,
   type AuditLoggerConfig,
+  // Enums
+  AuditOperationType,
+  // Retention
+  AuditRetentionPolicy,
   type AuditStorage,
+  type AuditTrailQuery,
+  AuditTrailQuerySchema,
   // Immutability
   checkImmutability,
   type ImmutabilityCheckResult,
-  requireMutable,
   ImmutabilityViolationError,
-  // Retention
-  AuditRetentionPolicy,
   // Storage implementations
   InMemoryAuditStorage,
+  requireMutable,
+  type VersionHistoryEntry,
+  VersionHistoryEntrySchema,
 } from "./compliance";

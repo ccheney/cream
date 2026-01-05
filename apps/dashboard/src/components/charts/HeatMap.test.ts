@@ -32,7 +32,7 @@ describe("SAMPLE_CORRELATION_DATA", () => {
     const keys = Object.keys(SAMPLE_CORRELATION_DATA);
     for (const a of keys) {
       for (const b of keys) {
-        expect(SAMPLE_CORRELATION_DATA[a][b]).toBe(SAMPLE_CORRELATION_DATA[b][a]);
+        expect(SAMPLE_CORRELATION_DATA[a]?.[b]).toBe(SAMPLE_CORRELATION_DATA[b]?.[a]);
       }
     }
   });
@@ -40,7 +40,7 @@ describe("SAMPLE_CORRELATION_DATA", () => {
   it("has diagonal values of 1.0", () => {
     const keys = Object.keys(SAMPLE_CORRELATION_DATA);
     for (const key of keys) {
-      expect(SAMPLE_CORRELATION_DATA[key][key]).toBe(1.0);
+      expect(SAMPLE_CORRELATION_DATA[key]?.[key]).toBe(1.0);
     }
   });
 
@@ -48,9 +48,11 @@ describe("SAMPLE_CORRELATION_DATA", () => {
     const keys = Object.keys(SAMPLE_CORRELATION_DATA);
     for (const a of keys) {
       for (const b of keys) {
-        const value = SAMPLE_CORRELATION_DATA[a][b];
-        expect(value).toBeGreaterThanOrEqual(-1);
-        expect(value).toBeLessThanOrEqual(1);
+        const value = SAMPLE_CORRELATION_DATA[a]?.[b];
+        if (value !== undefined) {
+          expect(value).toBeGreaterThanOrEqual(-1);
+          expect(value).toBeLessThanOrEqual(1);
+        }
       }
     }
   });
@@ -70,7 +72,7 @@ describe("CorrelationMatrix structure", () => {
     const matrix: CorrelationMatrix = {
       AAPL: { AAPL: 1.0 },
     };
-    expect(matrix.AAPL.AAPL).toBe(1.0);
+    expect(matrix.AAPL?.AAPL).toBe(1.0);
   });
 
   it("can create 2x2 matrix", () => {
@@ -78,8 +80,8 @@ describe("CorrelationMatrix structure", () => {
       AAPL: { AAPL: 1.0, MSFT: 0.75 },
       MSFT: { AAPL: 0.75, MSFT: 1.0 },
     };
-    expect(matrix.AAPL.MSFT).toBe(0.75);
-    expect(matrix.MSFT.AAPL).toBe(0.75);
+    expect(matrix.AAPL?.MSFT).toBe(0.75);
+    expect(matrix.MSFT?.AAPL).toBe(0.75);
   });
 
   it("handles negative correlations", () => {
@@ -87,7 +89,7 @@ describe("CorrelationMatrix structure", () => {
       AAPL: { AAPL: 1.0, INVERSE: -0.8 },
       INVERSE: { AAPL: -0.8, INVERSE: 1.0 },
     };
-    expect(matrix.AAPL.INVERSE).toBe(-0.8);
+    expect(matrix.AAPL?.INVERSE).toBe(-0.8);
   });
 });
 
@@ -98,8 +100,8 @@ describe("CorrelationMatrix structure", () => {
 describe("Matrix key operations", () => {
   it("extracts sorted keys", () => {
     const keys = Object.keys(SAMPLE_CORRELATION_DATA).sort();
-    expect(keys[0]).toBe("AAPL");
-    expect(keys[4]).toBe("NVDA");
+    expect(keys[0]!).toBe("AAPL");
+    expect(keys[4]!).toBe("NVDA");
   });
 
   it("counts correct number of cells", () => {
@@ -137,8 +139,8 @@ describe("High correlation detection", () => {
     for (const a of keys) {
       for (const b of keys) {
         if (a !== b) {
-          const value = SAMPLE_CORRELATION_DATA[a][b];
-          if (value > threshold) {
+          const value = SAMPLE_CORRELATION_DATA[a]?.[b];
+          if (value !== undefined && value > threshold) {
             highPositive.push(`${a}-${b}`);
           }
         }
@@ -158,8 +160,8 @@ describe("High correlation detection", () => {
     for (const a of keys) {
       for (const b of keys) {
         if (a !== b && a < b) {
-          const value = SAMPLE_CORRELATION_DATA[a][b];
-          if (value > maxCorr) {
+          const value = SAMPLE_CORRELATION_DATA[a]?.[b];
+          if (value !== undefined && value > maxCorr) {
             maxCorr = value;
             maxPair = `${a}-${b}`;
           }
@@ -179,8 +181,8 @@ describe("High correlation detection", () => {
     for (const a of keys) {
       for (const b of keys) {
         if (a !== b && a < b) {
-          const value = SAMPLE_CORRELATION_DATA[a][b];
-          if (value < minCorr) {
+          const value = SAMPLE_CORRELATION_DATA[a]?.[b];
+          if (value !== undefined && value < minCorr) {
             minCorr = value;
             minPair = `${a}-${b}`;
           }
@@ -222,7 +224,7 @@ describe("Cell value processing", () => {
     for (const a of keys) {
       for (const b of keys) {
         if (a < b) {
-          sum += SAMPLE_CORRELATION_DATA[a][b];
+          sum += SAMPLE_CORRELATION_DATA[a]?.[b] ?? 0;
           count++;
         }
       }
@@ -278,7 +280,7 @@ describe("Edge cases", () => {
     const matrix: CorrelationMatrix = {
       [longName]: { [longName]: 1.0 },
     };
-    expect(Object.keys(matrix)[0]).toBe(longName);
+    expect(Object.keys(matrix)[0]!).toBe(longName);
   });
 
   it("handles special characters in keys", () => {
@@ -286,7 +288,7 @@ describe("Edge cases", () => {
       "BRK.A": { "BRK.A": 1.0, "BRK.B": 0.99 },
       "BRK.B": { "BRK.A": 0.99, "BRK.B": 1.0 },
     };
-    expect(matrix["BRK.A"]["BRK.B"]).toBe(0.99);
+    expect(matrix["BRK.A"]?.["BRK.B"]).toBe(0.99);
   });
 
   it("handles near-zero correlations", () => {
@@ -294,7 +296,7 @@ describe("Edge cases", () => {
       A: { A: 1.0, B: 0.001 },
       B: { A: 0.001, B: 1.0 },
     };
-    expect(matrix.A.B).toBeCloseTo(0, 2);
+    expect(matrix.A?.B).toBeCloseTo(0, 2);
   });
 
   it("handles perfect negative correlation", () => {
@@ -302,6 +304,6 @@ describe("Edge cases", () => {
       LONG: { LONG: 1.0, SHORT: -1.0 },
       SHORT: { LONG: -1.0, SHORT: 1.0 },
     };
-    expect(matrix.LONG.SHORT).toBe(-1.0);
+    expect(matrix.LONG?.SHORT).toBe(-1.0);
   });
 });

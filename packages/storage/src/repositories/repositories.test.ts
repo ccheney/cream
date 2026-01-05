@@ -8,11 +8,11 @@
 process.env.CREAM_ENV = "BACKTEST";
 process.env.CREAM_BROKER = "ALPACA";
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "../turso.js";
 import {
-  DecisionsRepository,
   AlertsRepository,
+  DecisionsRepository,
   OrdersRepository,
   PositionsRepository,
   RepositoryError,
@@ -322,7 +322,7 @@ describe("AlertsRepository", () => {
     const alerts = await repo.findUnacknowledged("PAPER");
     expect(alerts).toHaveLength(2);
     // Critical should come first
-    expect(alerts[0].severity).toBe("critical");
+    expect(alerts[0]!.severity).toBe("critical");
   });
 
   test("acknowledges an alert", async () => {

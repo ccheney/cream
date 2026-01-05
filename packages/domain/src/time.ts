@@ -36,8 +36,9 @@ import { z } from "zod";
  * Format: YYYY-MM-DDTHH:mm:ss.sssZ
  * - Must be UTC (Z suffix)
  * - Milliseconds required (3 digits)
+ * Note: Currently unused - retained for reference
  */
-const _ISO_8601_FULL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+// const _ISO_8601_FULL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
  * ISO-8601 timestamp regex with optional milliseconds
@@ -100,7 +101,15 @@ export const DateOnlySchema = z
   .refine(
     (val) => {
       // Validate it's a real date (e.g., reject 2026-02-30)
-      const [year, month, day] = val.split("-").map(Number);
+      const parts = val.split("-");
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
+      const day = Number(parts[2]);
+
+      if (!month || !day) {
+        return false;
+      }
+
       const date = new Date(year, month - 1, day);
       return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
     },

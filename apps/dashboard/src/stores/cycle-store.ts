@@ -257,8 +257,7 @@ export const useCycleStore = create<CycleStore>((set, get) => ({
 
 export const selectActiveCycle = (state: CycleStore) => state.activeCycle;
 export const selectCyclePhase = (state: CycleStore) => state.activeCycle?.phase;
-export const selectCycleProgress = (state: CycleStore) =>
-  state.activeCycle?.progress ?? 0;
+export const selectCycleProgress = (state: CycleStore) => state.activeCycle?.progress ?? 0;
 export const selectIsRunning = (state: CycleStore) =>
   state.activeCycle !== null && state.activeCycle.phase !== "complete";
 export const selectAgentOutputs = (state: CycleStore) => state.agentOutputs;
@@ -277,8 +276,7 @@ export function useActiveCycle() {
     cycle: state.activeCycle,
     phase: state.activeCycle?.phase,
     progress: state.activeCycle?.progress ?? 0,
-    isRunning:
-      state.activeCycle !== null && state.activeCycle.phase !== "complete",
+    isRunning: state.activeCycle !== null && state.activeCycle.phase !== "complete",
   }));
 }
 

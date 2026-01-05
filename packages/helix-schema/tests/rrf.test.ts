@@ -4,12 +4,12 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  DEFAULT_RRF_K,
-  DEFAULT_TOP_K,
   assignRanks,
   calculateCombinedRRFScore,
   calculateMultiMethodBoost,
   calculateRRFScore,
+  DEFAULT_RRF_K,
+  DEFAULT_TOP_K,
   fuseMultipleWithRRF,
   fuseWithRRF,
   getMaxRRFScore,
@@ -79,11 +79,7 @@ describe("calculateRRFScore", () => {
 
 describe("assignRanks", () => {
   it("assigns ranks in score order", () => {
-    const results = [
-      createResult("a", 0.9),
-      createResult("b", 0.7),
-      createResult("c", 0.5),
-    ];
+    const results = [createResult("a", 0.9), createResult("b", 0.7), createResult("c", 0.5)];
 
     const ranked = assignRanks(results, "vector");
 
@@ -145,10 +141,7 @@ describe("assignRanks", () => {
 
 describe("fuseWithRRF", () => {
   it("fuses vector-only results", () => {
-    const vectorResults = [
-      createResult("a", 0.9),
-      createResult("b", 0.7),
-    ];
+    const vectorResults = [createResult("a", 0.9), createResult("b", 0.7)];
 
     const fused = fuseWithRRF(vectorResults, []);
 
@@ -160,10 +153,7 @@ describe("fuseWithRRF", () => {
   });
 
   it("fuses graph-only results", () => {
-    const graphResults = [
-      createResult("a", 0.9),
-      createResult("b", 0.7),
-    ];
+    const graphResults = [createResult("a", 0.9), createResult("b", 0.7)];
 
     const fused = fuseWithRRF([], graphResults);
 
@@ -306,9 +296,7 @@ describe("fuseMultipleWithRRF", () => {
   });
 
   it("handles single method", () => {
-    const resultSets = [
-      { method: "vector", results: [createResult("a", 0.9)] },
-    ];
+    const resultSets = [{ method: "vector", results: [createResult("a", 0.9)] }];
 
     const fused = fuseMultipleWithRRF(resultSets);
 

@@ -136,7 +136,11 @@ describe("LATENCY_BUCKETS", () => {
 
   it("is sorted ascending", () => {
     for (let i = 1; i < LATENCY_BUCKETS.length; i++) {
-      expect(LATENCY_BUCKETS[i]).toBeGreaterThan(LATENCY_BUCKETS[i - 1]);
+      const current = LATENCY_BUCKETS[i];
+      const previous = LATENCY_BUCKETS[i - 1];
+      if (current !== undefined && previous !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
     }
   });
 });
@@ -150,7 +154,11 @@ describe("SIZE_BUCKETS", () => {
 
   it("is sorted ascending", () => {
     for (let i = 1; i < SIZE_BUCKETS.length; i++) {
-      expect(SIZE_BUCKETS[i]).toBeGreaterThan(SIZE_BUCKETS[i - 1]);
+      const current = SIZE_BUCKETS[i];
+      const previous = SIZE_BUCKETS[i - 1];
+      if (current !== undefined && previous !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
     }
   });
 });
@@ -164,7 +172,11 @@ describe("DURATION_BUCKETS", () => {
 
   it("is sorted ascending", () => {
     for (let i = 1; i < DURATION_BUCKETS.length; i++) {
-      expect(DURATION_BUCKETS[i]).toBeGreaterThan(DURATION_BUCKETS[i - 1]);
+      const current = DURATION_BUCKETS[i];
+      const previous = DURATION_BUCKETS[i - 1];
+      if (current !== undefined && previous !== undefined) {
+        expect(current).toBeGreaterThan(previous);
+      }
     }
   });
 });
@@ -364,15 +376,18 @@ describe("createMetricsRegistry", () => {
       registry.inc("test_counter");
       const metrics = registry.getMetrics();
       expect(metrics.length).toBe(1);
-      expect(metrics[0].name).toBe("test_counter");
-      expect(metrics[0].type).toBe("counter");
+      const firstMetric = metrics[0];
+      expect(firstMetric?.name).toBe("test_counter");
+      expect(firstMetric?.type).toBe("counter");
     });
 
     it("includes samples with labels", () => {
       registry.inc("test_counter", { type: "a" });
       const metrics = registry.getMetrics();
-      expect(metrics[0].samples[0].labels).toEqual({ type: "a" });
-      expect(metrics[0].samples[0].value).toBe(1);
+      const firstMetric = metrics[0];
+      const firstSample = firstMetric?.samples[0];
+      expect(firstSample?.labels).toEqual({ type: "a" });
+      expect(firstSample?.value).toBe(1);
     });
 
     it("formats histogram with bucket samples", () => {
@@ -475,17 +490,17 @@ describe("createWebSocketMetrics", () => {
     it("decrements active connections", () => {
       metrics.connectionOpened();
       metrics.connectionOpened();
-      metrics.connectionClosed(undefined, 60);
+      metrics.connectionClosed(60);
       expect(metrics.getActiveConnections()).toBe(1);
     });
 
     it("does not go below 0", () => {
-      metrics.connectionClosed(undefined, 60);
+      metrics.connectionClosed(60);
       expect(metrics.getActiveConnections()).toBe(0);
     });
 
     it("records connection duration", () => {
-      metrics.connectionClosed(undefined, 120.5);
+      metrics.connectionClosed(120.5);
       const metric = metrics.registry.metrics.get(WS_METRICS.CONNECTION_DURATION);
       expect(metric?.type).toBe("histogram");
     });
@@ -751,7 +766,7 @@ describe("Integration", () => {
     metrics.observeHeartbeatLatency(7);
 
     // Connection closes
-    metrics.connectionClosed("user-123", 300);
+    metrics.connectionClosed(300, "user-123");
     expect(metrics.getActiveConnections()).toBe(0);
 
     // Verify Prometheus output
@@ -774,8 +789,10 @@ describe("Integration", () => {
     expect(metrics.getActiveConnections()).toBe(3);
 
     const counter = metrics.registry.metrics.get(WS_METRICS.TOTAL_CONNECTIONS);
-    expect(counter?.values.get('user_id="user-a"')).toBe(2);
-    expect(counter?.values.get('user_id="user-b"')).toBe(1);
+    const userACount = counter?.values.get('user_id="user-a"');
+    const userBCount = counter?.values.get('user_id="user-b"');
+    expect(userACount).toBe(2);
+    expect(userBCount).toBe(1);
   });
 
   it("histogram cumulative buckets", () => {

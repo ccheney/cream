@@ -6,16 +6,16 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  type TradeDecision,
-  type TradeLifecycleEvent,
+  type Company,
+  EMBEDDED_FIELDS,
   type ExternalEvent,
   type FilingChunk,
-  type TranscriptChunk,
-  type NewsItem,
-  type Company,
   type MacroEntity,
+  type NewsItem,
   NODE_TYPES,
-  EMBEDDED_FIELDS,
+  type TradeDecision,
+  type TradeLifecycleEvent,
+  type TranscriptChunk,
 } from "../src/index.js";
 
 describe("Node Types", () => {

@@ -6,15 +6,15 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
-  parseJson,
-  toJson,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  parseJson,
+  query,
+  RepositoryError,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -164,10 +164,7 @@ export class PositionsRepository {
    * Find position by ID
    */
   async findById(id: string): Promise<Position | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapPositionRow(row) : null;
   }
@@ -209,11 +206,11 @@ export class PositionsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),
       pagination
@@ -280,11 +277,7 @@ export class PositionsRepository {
   /**
    * Update position quantity (partial close or add)
    */
-  async updateQuantity(
-    id: string,
-    newQuantity: number,
-    avgPrice: number
-  ): Promise<Position> {
+  async updateQuantity(id: string, newQuantity: number, avgPrice: number): Promise<Position> {
     const position = await this.findByIdOrThrow(id);
     const now = new Date().toISOString();
 
@@ -339,10 +332,7 @@ export class PositionsRepository {
    * Delete position
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }

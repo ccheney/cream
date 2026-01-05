@@ -169,6 +169,9 @@ describe("GoldenDatasetMetadataSchema", () => {
 describe("checkStaleness", () => {
   it("should return fresh for recent dataset", () => {
     const today = new Date().toISOString().split("T")[0];
+    if (!today) {
+      throw new Error("Failed to get today's date");
+    }
     const result = checkStaleness(today);
 
     expect(result.isStale).toBe(false);
@@ -180,6 +183,9 @@ describe("checkStaleness", () => {
     const sevenMonthsAgo = new Date();
     sevenMonthsAgo.setMonth(sevenMonthsAgo.getMonth() - 7);
     const dateStr = sevenMonthsAgo.toISOString().split("T")[0];
+    if (!dateStr) {
+      throw new Error("Failed to get date string");
+    }
 
     const result = checkStaleness(dateStr);
 
@@ -192,6 +198,9 @@ describe("checkStaleness", () => {
     const thirteenMonthsAgo = new Date();
     thirteenMonthsAgo.setMonth(thirteenMonthsAgo.getMonth() - 13);
     const dateStr = thirteenMonthsAgo.toISOString().split("T")[0];
+    if (!dateStr) {
+      throw new Error("Failed to get date string");
+    }
 
     const result = checkStaleness(dateStr);
 

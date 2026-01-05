@@ -4,28 +4,28 @@
 
 import { describe, expect, it, mock } from "bun:test";
 import {
+  type ConstraintViolationDetails,
   ConstraintViolationError,
+  calculateRetryDelay,
   DEFAULT_RETRY_OPTIONS,
   DeadlineExceededError,
   ExecutionError,
   GRPC_STATUS_NAMES,
+  type GrpcError,
   GrpcStatusCode,
   InsufficientFundsError,
   InternalError,
   InvalidArgumentError,
-  NotFoundError,
-  PermissionDeniedError,
-  ResourceExhaustedError,
-  ServiceUnavailableError,
-  calculateRetryDelay,
   isConstraintViolation,
   isExecutionError,
   isInsufficientFunds,
   isRetryableError,
   mapGrpcError,
+  NotFoundError,
+  PermissionDeniedError,
+  ResourceExhaustedError,
+  ServiceUnavailableError,
   withRetry,
-  type ConstraintViolationDetails,
-  type GrpcError,
 } from "./errors";
 
 // ============================================
@@ -481,7 +481,7 @@ describe("withRetry", () => {
     });
 
     await expect(withRetry(fn, { maxRetries: 2, initialDelayMs: 1 })).rejects.toThrow(
-      ServiceUnavailableError,
+      ServiceUnavailableError
     );
     expect(fn).toHaveBeenCalledTimes(3); // Initial + 2 retries
   });

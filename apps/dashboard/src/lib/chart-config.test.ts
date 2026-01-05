@@ -51,7 +51,9 @@ describe("CHART_COLORS", () => {
 
 describe("DEFAULT_CHART_OPTIONS", () => {
   it("has transparent background", () => {
-    expect(DEFAULT_CHART_OPTIONS.layout?.background?.color).toBe("transparent");
+    expect((DEFAULT_CHART_OPTIONS.layout?.background as { color?: string })?.color).toBe(
+      "transparent"
+    );
   });
 
   it("has correct text color", () => {

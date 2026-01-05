@@ -328,27 +328,27 @@ describe("Button State Machine", () => {
 
   it("transitions idle → loading on click", () => {
     const states: ButtonState[] = ["idle", "loading"];
-    expect(states[1]).toBe("loading");
+    expect(states[1]!).toBe("loading");
   });
 
   it("transitions loading → success on completion", () => {
     const states: ButtonState[] = ["loading", "success"];
-    expect(states[1]).toBe("success");
+    expect(states[1]!).toBe("success");
   });
 
   it("transitions loading → error on failure", () => {
     const states: ButtonState[] = ["loading", "error"];
-    expect(states[1]).toBe("error");
+    expect(states[1]!).toBe("error");
   });
 
   it("transitions success → idle after duration", () => {
     const states: ButtonState[] = ["success", "idle"];
-    expect(states[1]).toBe("idle");
+    expect(states[1]!).toBe("idle");
   });
 
   it("transitions error → idle after duration", () => {
     const states: ButtonState[] = ["error", "idle"];
-    expect(states[1]).toBe("idle");
+    expect(states[1]!).toBe("idle");
   });
 
   it("success duration is 2000ms", async () => {
@@ -374,19 +374,19 @@ describe("Disabled State", () => {
   });
 
   it("disabled during success", () => {
-    const state: ButtonState = "success";
+    const state = "success" as ButtonState;
     const isDisabled = state === "loading" || state === "success";
     expect(isDisabled).toBe(true);
   });
 
   it("not disabled during idle", () => {
-    const state: ButtonState = "idle";
+    const state = "idle" as ButtonState;
     const isDisabled = state === "loading" || state === "success";
     expect(isDisabled).toBe(false);
   });
 
   it("not disabled during error (allows retry)", () => {
-    const state: ButtonState = "error";
+    const state = "error" as ButtonState;
     const isDisabled = state === "loading" || state === "success";
     expect(isDisabled).toBe(false);
   });
@@ -438,7 +438,7 @@ describe("Content Rendering", () => {
   });
 
   it("hides icons during non-idle states", () => {
-    const state: ButtonState = "loading";
+    const state = "loading" as ButtonState;
     const showsIcons = state === "idle";
     expect(showsIcons).toBe(false);
   });

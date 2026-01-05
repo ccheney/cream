@@ -17,9 +17,7 @@ export default function AgentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
-          Agent Network
-        </h1>
+        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Agent Network</h1>
         <div className="text-sm text-cream-500 dark:text-cream-400">
           Consensus: APPROVE / REJECT requires Risk + Critic agreement
         </div>
@@ -47,25 +45,14 @@ export default function AgentsPage() {
   );
 }
 
-function AgentCard({
-  agent,
-}: {
-  agent: { id: string; name: string; color: string };
-}) {
+function AgentCard({ agent }: { agent: { id: string; name: string; color: string } }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center gap-2">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: agent.color }}
-        />
-        <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
-          {agent.name}
-        </span>
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: agent.color }} />
+        <span className="text-sm font-medium text-cream-900 dark:text-cream-100">{agent.name}</span>
       </div>
-      <div className="mt-2 text-sm text-cream-500 dark:text-cream-400">
-        Status: Idle
-      </div>
+      <div className="mt-2 text-sm text-cream-500 dark:text-cream-400">Status: Idle</div>
       <div className="mt-1 text-xs text-cream-400">Last output: --</div>
     </div>
   );

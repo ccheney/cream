@@ -204,7 +204,13 @@ export type GraphPruningAction =
   | { type: "remove_edge"; edgeId: string; reason: string }
   | { type: "remove_node"; nodeId: string; reason: string }
   | { type: "merge_subgraph"; nodeIds: string[]; summaryNodeId: string; reason: string }
-  | { type: "prune_hub"; nodeId: string; retainedEdges: number; prunedEdges: number; reason: string };
+  | {
+      type: "prune_hub";
+      nodeId: string;
+      retainedEdges: number;
+      prunedEdges: number;
+      reason: string;
+    };
 
 /**
  * Graph pruning configuration
@@ -251,7 +257,10 @@ export const DEFAULT_PRUNING_CONFIG: GraphPruningConfig = {
  * @param decayConstant - Decay constant in days (default: 365)
  * @returns Recency factor between 0 and 1
  */
-export function calculateRecency(ageDays: number, decayConstant: number = DECAY_CONSTANT_DAYS): number {
+export function calculateRecency(
+  ageDays: number,
+  decayConstant: number = DECAY_CONSTANT_DAYS
+): number {
   if (ageDays < 0) {
     throw new Error("Age cannot be negative");
   }
@@ -274,7 +283,7 @@ export function calculateRecency(ageDays: number, decayConstant: number = DECAY_
  */
 export function calculateFrequency(
   accessCount: number,
-  scaleFactor: number = FREQUENCY_SCALE_FACTOR,
+  scaleFactor: number = FREQUENCY_SCALE_FACTOR
 ): number {
   if (accessCount < 0) {
     throw new Error("Access count cannot be negative");
@@ -345,9 +354,11 @@ export function hasComplianceOverride(nodeInfo: NodeInfo, ageDays: number): bool
  */
 export function calculateRetentionScore(
   nodeInfo: NodeInfo,
-  referenceDate: Date = new Date(),
+  referenceDate: Date = new Date()
 ): RetentionScoreBreakdown {
-  const ageDays = Math.floor((referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  const ageDays = Math.floor(
+    (referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
   const baseScore = 1.0;
   const recencyFactor = calculateRecency(ageDays);
@@ -380,7 +391,10 @@ export function calculateRetentionScore(
  * @param threshold - Summarization threshold (default: 0.1)
  * @returns True if node should be summarized
  */
-export function shouldSummarize(score: number, threshold: number = SUMMARIZATION_THRESHOLD): boolean {
+export function shouldSummarize(
+  score: number,
+  threshold: number = SUMMARIZATION_THRESHOLD
+): boolean {
   if (!Number.isFinite(score)) {
     return false; // Infinite retention = never summarize
   }
@@ -401,7 +415,7 @@ export function shouldSummarize(score: number, threshold: number = SUMMARIZATION
 export function shouldDelete(
   score: number,
   environment: ForgettingEnvironment,
-  threshold: number = DELETION_THRESHOLD,
+  threshold: number = DELETION_THRESHOLD
 ): boolean {
   if (!Number.isFinite(score)) {
     return false; // Infinite retention = never delete
@@ -421,7 +435,7 @@ export function shouldDelete(
  */
 export function getForgettingDecision(
   nodeInfo: NodeInfo,
-  referenceDate: Date = new Date(),
+  referenceDate: Date = new Date()
 ): ForgettingDecision {
   const breakdown = calculateRetentionScore(nodeInfo, referenceDate);
   const { finalScore } = breakdown;
@@ -463,7 +477,7 @@ export function getForgettingDecision(
  */
 export function batchGetForgettingDecisions(
   nodes: NodeInfo[],
-  referenceDate: Date = new Date(),
+  referenceDate: Date = new Date()
 ): ForgettingDecision[] {
   return nodes.map((node) => getForgettingDecision(node, referenceDate));
 }
@@ -529,7 +543,7 @@ export function createTradeCohortSummary(
   instrumentId: string,
   regimeLabel: string,
   decisions: TradeDecisionInfo[],
-  maxNotableDecisions: number = 5,
+  maxNotableDecisions = 5
 ): TradeCohortSummary {
   if (decisions.length === 0) {
     throw new Error("Cannot create summary from empty decisions array");
@@ -544,17 +558,18 @@ export function createTradeCohortSummary(
   const holdingDays = decisions
     .filter((d) => d.closedAt)
     .map((d) => {
-      const diff = d.closedAt!.getTime() - d.createdAt.getTime();
+      const diff = d.closedAt?.getTime() - d.createdAt.getTime();
       return diff / (1000 * 60 * 60 * 24);
     });
-  const avgHoldingDays = holdingDays.length > 0
-    ? holdingDays.reduce((sum, d) => sum + d, 0) / holdingDays.length
-    : 0;
+  const avgHoldingDays =
+    holdingDays.length > 0 ? holdingDays.reduce((sum, d) => sum + d, 0) / holdingDays.length : 0;
 
   const totalPnl = decisions.reduce((sum, d) => sum + d.realizedPnl, 0);
 
   // Select notable decisions (top by absolute P/L)
-  const sortedByAbsPnl = [...decisions].sort((a, b) => Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl));
+  const sortedByAbsPnl = [...decisions].sort(
+    (a, b) => Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl)
+  );
   const notableDecisionIds = sortedByAbsPnl.slice(0, maxNotableDecisions).map((d) => d.decisionId);
 
   return {
@@ -582,7 +597,7 @@ export function createTradeCohortSummary(
  */
 export function groupDecisionsForSummarization(
   decisions: TradeDecisionInfo[],
-  periodFormatter: (date: Date) => string = formatQuarterlyPeriod,
+  periodFormatter: (date: Date) => string = formatQuarterlyPeriod
 ): Map<string, TradeDecisionInfo[]> {
   const groups = new Map<string, TradeDecisionInfo[]>();
 
@@ -593,7 +608,7 @@ export function groupDecisionsForSummarization(
     if (!groups.has(key)) {
       groups.set(key, []);
     }
-    groups.get(key)!.push(decision);
+    groups.get(key)?.push(decision);
   }
 
   return groups;
@@ -656,7 +671,7 @@ export interface NodeConnectivity {
  */
 export function pruneEdgesByWeight(
   edges: EdgeInfo[],
-  minWeight: number = DEFAULT_PRUNING_CONFIG.minEdgeWeight,
+  minWeight: number = DEFAULT_PRUNING_CONFIG.minEdgeWeight
 ): GraphPruningAction[] {
   return edges
     .filter((edge) => edge.weight < minWeight)
@@ -692,7 +707,7 @@ export function findIsolatedNodes(nodes: NodeConnectivity[]): GraphPruningAction
  */
 export function findHubsTooPrune(
   nodes: NodeConnectivity[],
-  config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG,
+  config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG
 ): GraphPruningAction[] {
   const actions: GraphPruningAction[] = [];
 
@@ -726,7 +741,7 @@ export function findHubsTooPrune(
 export function evaluateSubgraphForMerge(
   subgraphNodeIds: string[],
   maxSize: number = DEFAULT_PRUNING_CONFIG.maxIsolatedSubgraphSize,
-  summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`,
+  summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`
 ): GraphPruningAction | null {
   if (subgraphNodeIds.length >= maxSize || subgraphNodeIds.length <= 1) {
     return null;
@@ -769,7 +784,7 @@ export interface AccessRecord {
 export function recordAccess(
   existing: AccessRecord | undefined,
   nodeId: string,
-  accessTime: Date = new Date(),
+  accessTime: Date = new Date()
 ): AccessRecord {
   if (!existing) {
     return {
@@ -794,7 +809,10 @@ export function recordAccess(
  * @param referenceDate - Reference date (default: now)
  * @returns Days since last access
  */
-export function daysSinceLastAccess(record: AccessRecord, referenceDate: Date = new Date()): number {
+export function daysSinceLastAccess(
+  record: AccessRecord,
+  referenceDate: Date = new Date()
+): number {
   const diffMs = referenceDate.getTime() - record.lastAccessedAt.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
@@ -841,19 +859,19 @@ export function calculateForgettingMetrics(decisions: ForgettingDecision[]): For
     .filter((s) => Number.isFinite(s))
     .sort((a, b) => a - b);
 
-  const avgScore = finiteScores.length > 0
-    ? finiteScores.reduce((sum, s) => sum + s, 0) / finiteScores.length
-    : 0;
+  const avgScore =
+    finiteScores.length > 0 ? finiteScores.reduce((sum, s) => sum + s, 0) / finiteScores.length : 0;
 
-  const medianScore = finiteScores.length > 0
-    ? finiteScores[Math.floor(finiteScores.length / 2)]
-    : 0;
+  const medianScore =
+    finiteScores.length > 0 ? (finiteScores[Math.floor(finiteScores.length / 2)] ?? 0) : 0;
 
   const distribution = {
     infinite: decisions.filter((d) => !Number.isFinite(d.score)).length,
     high: decisions.filter((d) => Number.isFinite(d.score) && d.score >= 0.5).length,
-    medium: decisions.filter((d) => Number.isFinite(d.score) && d.score >= 0.1 && d.score < 0.5).length,
-    low: decisions.filter((d) => Number.isFinite(d.score) && d.score >= 0.05 && d.score < 0.1).length,
+    medium: decisions.filter((d) => Number.isFinite(d.score) && d.score >= 0.1 && d.score < 0.5)
+      .length,
+    low: decisions.filter((d) => Number.isFinite(d.score) && d.score >= 0.05 && d.score < 0.1)
+      .length,
     veryLow: decisions.filter((d) => Number.isFinite(d.score) && d.score < 0.05).length,
   };
 

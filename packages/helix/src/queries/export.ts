@@ -8,7 +8,7 @@
  */
 
 import type { HelixClient } from "../client.js";
-import type { GraphNode, GraphEdge } from "./graph.js";
+import type { GraphEdge, GraphNode } from "./graph.js";
 
 /**
  * Export format for HelixDB data.
@@ -184,9 +184,7 @@ export async function importData(
 
   // Validate export version
   if (opts.validate && !isCompatibleVersion(data.version)) {
-    result.errors.push(
-      `Incompatible export version: ${data.version} (expected ${EXPORT_VERSION})`
-    );
+    result.errors.push(`Incompatible export version: ${data.version} (expected ${EXPORT_VERSION})`);
     return result;
   }
 
@@ -300,13 +298,7 @@ async function getAllEdgeTypes(client: HelixClient): Promise<string[]> {
     return result.data;
   } catch {
     // Return known types as fallback
-    return [
-      "INFLUENCED_DECISION",
-      "HAS_EVENT",
-      "MENTIONS_COMPANY",
-      "IN_SECTOR",
-      "RELATED_TO",
-    ];
+    return ["INFLUENCED_DECISION", "HAS_EVENT", "MENTIONS_COMPANY", "IN_SECTOR", "RELATED_TO"];
   }
 }
 

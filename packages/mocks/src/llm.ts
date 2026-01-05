@@ -120,7 +120,7 @@ export function extractKeyPattern(prompt: string): string {
 
   for (const pattern of patterns) {
     const match = prompt.match(pattern);
-    if (match) {
+    if (match?.[1] && match[2]) {
       const agent = match[1].toLowerCase().replace(/\s+/g, "_");
       const target = match[2].toUpperCase();
       return `${agent}:${target}`;

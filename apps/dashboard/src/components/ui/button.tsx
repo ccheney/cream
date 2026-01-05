@@ -249,6 +249,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }, ERROR_STATE_DURATION);
         return () => clearTimeout(timeout);
       }
+      return undefined;
     }, [state, onStateReset]);
 
     const buttonStyles: React.CSSProperties = {

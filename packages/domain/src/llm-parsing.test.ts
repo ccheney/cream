@@ -4,22 +4,21 @@
  * Tests for JSON parsing with retry logic for malformed LLM outputs.
  */
 
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import {
-  parseWithRetry,
-  parseOnce,
-  formatZodErrors,
-  formatZodErrorString,
-  formatJsonParseError,
-  generateRetryPrompt,
+  type AgentType,
+  allowsSkipOnFailure,
   cleanLLMOutput,
+  formatJsonParseError,
+  formatZodErrorString,
+  formatZodErrors,
+  generateRetryPrompt,
+  type ParseLogger,
+  parseOnce,
+  parseWithRetry,
   redactSensitiveData,
   requiresRejectionOnFailure,
-  allowsSkipOnFailure,
-  type AgentType,
-  type ParseLogger,
-  type ParseResult,
 } from "./llm-parsing";
 
 // ============================================
@@ -37,13 +36,15 @@ const ComplexSchema = z.object({
   quantity: z.number().int().positive(),
   confidence: z.number().min(0).max(1),
   rationale: z.string().min(10),
-  nested: z.object({
-    level: z.number(),
-    tags: z.array(z.string()),
-  }).optional(),
+  nested: z
+    .object({
+      level: z.number(),
+      tags: z.array(z.string()),
+    })
+    .optional(),
 });
 
-const ApprovalSchema = z.object({
+const _ApprovalSchema = z.object({
   decision: z.enum(["APPROVE", "REJECT"]),
   reason: z.string(),
 });
@@ -324,11 +325,7 @@ describe("parseWithRetry - agent-specific handling", () => {
   });
 
   it("returns SUCCESS for all agents when parse succeeds", async () => {
-    const allAgents: AgentType[] = [
-      "TechnicalAnalyst",
-      "RiskManagerAgent",
-      "TraderAgent",
-    ];
+    const allAgents: AgentType[] = ["TechnicalAnalyst", "RiskManagerAgent", "TraderAgent"];
 
     for (const agentType of allAgents) {
       const result = await parseWithRetry('{"name":"test","value":1}', SimpleSchema, {
@@ -409,11 +406,7 @@ describe("generateRetryPrompt", () => {
   });
 
   it("includes error details", () => {
-    const prompt = generateRetryPrompt(
-      "Task",
-      "value: Expected number, received string",
-      "Schema"
-    );
+    const prompt = generateRetryPrompt("Task", "value: Expected number, received string", "Schema");
 
     expect(prompt).toContain("Expected number");
     expect(prompt).toContain("received string");
@@ -444,7 +437,9 @@ describe("generateRetryPrompt", () => {
 describe("formatZodErrors", () => {
   it("formats missing field errors", () => {
     const result = SimpleSchema.safeParse({ name: "test" });
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const formatted = formatZodErrors(result.error);
 
@@ -455,7 +450,9 @@ describe("formatZodErrors", () => {
 
   it("formats type mismatch errors", () => {
     const result = SimpleSchema.safeParse({ name: "test", value: "not number" });
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const formatted = formatZodErrors(result.error);
 
@@ -467,7 +464,9 @@ describe("formatZodErrors", () => {
   it("formats enum errors", () => {
     const EnumSchema = z.object({ status: z.enum(["OPEN", "CLOSED"]) });
     const result = EnumSchema.safeParse({ status: "INVALID" });
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const formatted = formatZodErrors(result.error);
 
@@ -488,7 +487,9 @@ describe("formatZodErrors", () => {
     const result = NestedSchema.safeParse({
       outer: { inner: { value: "not number" } },
     });
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const formatted = formatZodErrors(result.error);
 
@@ -499,7 +500,9 @@ describe("formatZodErrors", () => {
 describe("formatZodErrorString", () => {
   it("creates single-line error string", () => {
     const result = SimpleSchema.safeParse({});
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const errorString = formatZodErrorString(result.error);
 
@@ -509,7 +512,9 @@ describe("formatZodErrorString", () => {
 
   it("includes type information", () => {
     const result = SimpleSchema.safeParse({ name: 123, value: "str" });
-    if (result.success) throw new Error("Expected failure");
+    if (result.success) {
+      throw new Error("Expected failure");
+    }
 
     const errorString = formatZodErrorString(result.error);
 
@@ -570,10 +575,10 @@ describe("cleanLLMOutput", () => {
   });
 
   it("handles arrays", () => {
-    const input = 'Array: [1, 2, 3]';
+    const input = "Array: [1, 2, 3]";
     const cleaned = cleanLLMOutput(input);
 
-    expect(cleaned).toBe('[1, 2, 3]');
+    expect(cleaned).toBe("[1, 2, 3]");
   });
 
   it("preserves valid JSON as-is", () => {
@@ -598,7 +603,7 @@ describe("redactSensitiveData", () => {
   });
 
   it("redacts Bearer tokens", () => {
-    const input = 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test';
+    const input = "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test";
     const redacted = redactSensitiveData(input);
 
     expect(redacted).toContain("[REDACTED]");
@@ -606,7 +611,7 @@ describe("redactSensitiveData", () => {
   });
 
   it("redacts AWS access keys", () => {
-    const input = 'AWS_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE';
+    const input = "AWS_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE";
     const redacted = redactSensitiveData(input);
 
     expect(redacted).toContain("[REDACTED]");
@@ -715,10 +720,7 @@ describe("edge cases", () => {
       optional: z.number().nullable(),
     });
 
-    const result = await parseWithRetry(
-      '{"name":"test","optional":null}',
-      NullableSchema
-    );
+    const result = await parseWithRetry('{"name":"test","optional":null}', NullableSchema);
 
     expect(result.success).toBe(true);
     expect(result.data?.optional).toBeNull();

@@ -21,20 +21,8 @@ const config: Config = {
       // Font Families
       // ============================================
       fontFamily: {
-        ui: [
-          "Satoshi",
-          "SF Pro Display",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "sans-serif",
-        ],
-        mono: [
-          "Geist Mono",
-          "JetBrains Mono",
-          "SF Mono",
-          "Consolas",
-          "monospace",
-        ],
+        ui: ["Satoshi", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        mono: ["Geist Mono", "JetBrains Mono", "SF Mono", "Consolas", "monospace"],
       },
 
       // ============================================
@@ -180,10 +168,8 @@ const config: Config = {
         // Dark mode shadows
         "dark-sm": "0 1px 2px rgba(0, 0, 0, 0.3)",
         "dark-md": "0 4px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3)",
-        "dark-lg":
-          "0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4)",
-        "dark-xl":
-          "0 20px 25px rgba(0, 0, 0, 0.5), 0 10px 10px rgba(0, 0, 0, 0.4)",
+        "dark-lg": "0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4)",
+        "dark-xl": "0 20px 25px rgba(0, 0, 0, 0.5), 0 10px 10px rgba(0, 0, 0, 0.4)",
       },
 
       // ============================================
@@ -304,20 +290,6 @@ const config: Config = {
         "500": "500ms",
         "700": "700ms",
         "1000": "1000ms",
-      },
-
-      // ============================================
-      // Colors (Animation-specific)
-      // ============================================
-      colors: {
-        profit: {
-          DEFAULT: "#22c55e", // green-500
-          bg: "rgba(34, 197, 94, 0.2)",
-        },
-        loss: {
-          DEFAULT: "#ef4444", // red-500
-          bg: "rgba(239, 68, 68, 0.2)",
-        },
       },
     },
   },

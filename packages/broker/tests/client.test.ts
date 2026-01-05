@@ -3,10 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  createAlpacaClient,
-  createAlpacaClientFromEnv,
-} from "../src/client.js";
+import { createAlpacaClient, createAlpacaClientFromEnv } from "../src/client.js";
 import { BrokerError } from "../src/types.js";
 
 describe("createAlpacaClient", () => {
@@ -94,12 +91,21 @@ describe("createAlpacaClientFromEnv", () => {
       expect(client.getEnvironment()).toBe("PAPER");
     } finally {
       // Restore
-      if (originalKey) process.env.ALPACA_KEY = originalKey;
-      else delete process.env.ALPACA_KEY;
-      if (originalSecret) process.env.ALPACA_SECRET = originalSecret;
-      else delete process.env.ALPACA_SECRET;
-      if (originalEnv) process.env.CREAM_ENV = originalEnv;
-      else delete process.env.CREAM_ENV;
+      if (originalKey) {
+        process.env.ALPACA_KEY = originalKey;
+      } else {
+        delete process.env.ALPACA_KEY;
+      }
+      if (originalSecret) {
+        process.env.ALPACA_SECRET = originalSecret;
+      } else {
+        delete process.env.ALPACA_SECRET;
+      }
+      if (originalEnv) {
+        process.env.CREAM_ENV = originalEnv;
+      } else {
+        delete process.env.CREAM_ENV;
+      }
     }
   });
 });
@@ -114,12 +120,7 @@ describe("BrokerError", () => {
   });
 
   it("creates error with symbol and order ID", () => {
-    const error = new BrokerError(
-      "Order not found",
-      "ORDER_NOT_FOUND",
-      "AAPL",
-      "order-123"
-    );
+    const error = new BrokerError("Order not found", "ORDER_NOT_FOUND", "AAPL", "order-123");
 
     expect(error.symbol).toBe("AAPL");
     expect(error.orderId).toBe("order-123");

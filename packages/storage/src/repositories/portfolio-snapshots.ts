@@ -6,13 +6,13 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  query,
+  RepositoryError,
 } from "./base.js";
 
 // ============================================
@@ -151,10 +151,7 @@ export class PortfolioSnapshotsRepository {
    * Find snapshot by ID
    */
   async findById(id: number): Promise<PortfolioSnapshot | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapSnapshotRow(row) : null;
   }
@@ -179,11 +176,11 @@ export class PortfolioSnapshotsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),
       pagination
@@ -297,10 +294,9 @@ export class PortfolioSnapshotsRepository {
    * Delete old snapshots (cleanup)
    */
   async deleteOlderThan(cutoffDate: string): Promise<number> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE timestamp < ?`,
-      [cutoffDate]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE timestamp < ?`, [
+      cutoffDate,
+    ]);
 
     return result.changes;
   }

@@ -195,7 +195,7 @@ describe("ConnectionMonitor", () => {
         },
       });
       monitor.onConnected();
-      expect(lastStatus).toBe("connected");
+      expect(lastStatus).toBe("connected" as any);
     });
   });
 
@@ -350,8 +350,8 @@ describe("Callbacks", () => {
       },
     });
     monitor.onConnected();
-    expect(receivedStatus).toBe("connected");
-    expect(receivedRetryCount).toBe(0);
+    expect(receivedStatus).toBe("connected" as any);
+    expect(receivedRetryCount).toBe(0 as any);
   });
 
   it("onReconnectSuccess is called on connection", () => {

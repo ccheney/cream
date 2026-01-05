@@ -371,9 +371,13 @@ export class MockHelixDB {
     let normB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      const aVal = a[i];
+      const bVal = b[i];
+      if (aVal !== undefined && bVal !== undefined) {
+        dotProduct += aVal * bVal;
+        normA += aVal * aVal;
+        normB += bVal * bVal;
+      }
     }
 
     if (normA === 0 || normB === 0) {
@@ -404,8 +408,10 @@ export class MockHelixDB {
     const matchType = helixql.match(/\(n:(\w+)\)/);
     if (matchType) {
       const nodeType = matchType[1];
-      const nodes = await this.getNodesByType(nodeType);
-      return nodes.map((n) => ({ n }));
+      if (nodeType) {
+        const nodes = await this.getNodesByType(nodeType);
+        return nodes.map((n) => ({ n }));
+      }
     }
 
     return [];

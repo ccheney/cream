@@ -50,9 +50,9 @@ export function hexToRgb(hex: string): RGB {
     throw new Error(`Invalid hex color: ${hex}`);
   }
   return {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16),
+    r: parseInt(result[1]!, 16),
+    g: parseInt(result[2]!, 16),
+    b: parseInt(result[3]!, 16),
   };
 }
 
@@ -111,7 +111,6 @@ export function createDivergingScale(
 
     // Normalize to [-1, 1]
     const midpoint = (minValue + maxValue) / 2;
-    const _range = maxValue - minValue;
 
     if (clampedValue < midpoint) {
       // Interpolate from negative to neutral

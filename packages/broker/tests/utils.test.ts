@@ -4,15 +4,15 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  generateOrderId,
+  buildOptionSymbol,
   gcd,
   gcdArray,
-  validateLegRatios,
-  simplifyLegRatios,
-  parseOptionSymbol,
-  buildOptionSymbol,
-  validateQuantity,
+  generateOrderId,
   isOptionSymbol,
+  parseOptionSymbol,
+  simplifyLegRatios,
+  validateLegRatios,
+  validateQuantity,
 } from "../src/utils.js";
 
 describe("generateOrderId", () => {
@@ -33,7 +33,9 @@ describe("generateOrderId", () => {
     const after = Date.now();
 
     const parts = id.split("-");
-    const timestamp = parseInt(parts[1], 10);
+    const timestampPart = parts[1];
+    expect(timestampPart).toBeDefined();
+    const timestamp = parseInt(timestampPart!, 10);
 
     expect(timestamp).toBeGreaterThanOrEqual(before);
     expect(timestamp).toBeLessThanOrEqual(after);
@@ -117,8 +119,8 @@ describe("simplifyLegRatios", () => {
       { symbol: "B", ratio: -4 },
     ]);
 
-    expect(simplified[0].ratio).toBe(1);
-    expect(simplified[1].ratio).toBe(-2);
+    expect(simplified[0]?.ratio).toBe(1);
+    expect(simplified[1]?.ratio).toBe(-2);
   });
 
   it("preserves already simplified ratios", () => {
@@ -128,8 +130,8 @@ describe("simplifyLegRatios", () => {
     ];
     const simplified = simplifyLegRatios(original);
 
-    expect(simplified[0].ratio).toBe(1);
-    expect(simplified[1].ratio).toBe(-2);
+    expect(simplified[0]?.ratio).toBe(1);
+    expect(simplified[1]?.ratio).toBe(-2);
   });
 
   it("handles empty legs", () => {

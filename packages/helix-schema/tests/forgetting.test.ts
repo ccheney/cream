@@ -6,51 +6,49 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  // Batch processing
+  batchGetForgettingDecisions,
+  COMPLIANCE_PERIOD_DAYS,
+  // Metrics
+  calculateForgettingMetrics,
+  calculateFrequency,
+  calculateImportance,
+  // Core functions
+  calculateRecency,
+  calculateRetentionScore,
+  // Trade cohort summarization
+  createTradeCohortSummary,
   // Constants
   DECAY_CONSTANT_DAYS,
-  COMPLIANCE_PERIOD_DAYS,
-  FREQUENCY_SCALE_FACTOR,
-  PNL_NORMALIZATION_FACTOR,
-  EDGE_COUNT_NORMALIZATION_FACTOR,
-  SUMMARIZATION_THRESHOLD,
-  DELETION_THRESHOLD,
-  INFINITE_RETENTION,
   DEFAULT_PRUNING_CONFIG,
+  DELETION_THRESHOLD,
+  daysSinceLastAccess,
+  type EdgeInfo,
+  evaluateSubgraphForMerge,
   // Types
   ForgettingEnvironment,
   ForgettingNodeType,
-  type NodeInfo,
-  type EdgeInfo,
-  type NodeConnectivity,
-  type TradeDecisionInfo,
-  // Core functions
-  calculateRecency,
-  calculateFrequency,
-  calculateImportance,
-  hasComplianceOverride,
-  calculateRetentionScore,
-  shouldSummarize,
-  shouldDelete,
-  getForgettingDecision,
-  // Batch processing
-  batchGetForgettingDecisions,
-  filterForSummarization,
+  FREQUENCY_SCALE_FACTOR,
   filterForDeletion,
-  // Trade cohort summarization
-  createTradeCohortSummary,
-  groupDecisionsForSummarization,
-  formatQuarterlyPeriod,
+  filterForSummarization,
+  findHubsTooPrune,
+  findIsolatedNodes,
   formatMonthlyPeriod,
+  formatQuarterlyPeriod,
+  getForgettingDecision,
+  groupDecisionsForSummarization,
+  hasComplianceOverride,
+  INFINITE_RETENTION,
+  type NodeConnectivity,
+  type NodeInfo,
   // Graph pruning
   pruneEdgesByWeight,
-  findIsolatedNodes,
-  findHubsTooPrune,
-  evaluateSubgraphForMerge,
   // Access tracking
   recordAccess,
-  daysSinceLastAccess,
-  // Metrics
-  calculateForgettingMetrics,
+  SUMMARIZATION_THRESHOLD,
+  shouldDelete,
+  shouldSummarize,
+  type TradeDecisionInfo,
 } from "../src/retention/forgetting";
 
 // ============================================
@@ -633,7 +631,9 @@ describe("createTradeCohortSummary", () => {
   });
 
   it("throws for empty decisions", () => {
-    expect(() => createTradeCohortSummary("2024-Q3", "AAPL", "BULLISH", [])).toThrow("Cannot create summary");
+    expect(() => createTradeCohortSummary("2024-Q3", "AAPL", "BULLISH", [])).toThrow(
+      "Cannot create summary"
+    );
   });
 
   it("limits notable decisions", () => {
@@ -745,9 +745,7 @@ describe("pruneEdgesByWeight", () => {
   });
 
   it("accepts custom threshold", () => {
-    const edges: EdgeInfo[] = [
-      { edgeId: "e1", sourceId: "n1", targetId: "n2", weight: 0.4 },
-    ];
+    const edges: EdgeInfo[] = [{ edgeId: "e1", sourceId: "n1", targetId: "n2", weight: 0.4 }];
 
     expect(pruneEdgesByWeight(edges, 0.3).length).toBe(0);
     expect(pruneEdgesByWeight(edges, 0.5).length).toBe(1);

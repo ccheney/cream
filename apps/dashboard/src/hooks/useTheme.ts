@@ -20,9 +20,7 @@ const STORAGE_KEY = "theme";
 function getResolvedTheme(theme: Theme): "light" | "dark" {
   if (theme === "system") {
     if (typeof window !== "undefined") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }
     return "light";
   }
@@ -33,7 +31,9 @@ function getResolvedTheme(theme: Theme): "light" | "dark" {
  * Apply theme to document
  */
 function applyTheme(resolvedTheme: "light" | "dark"): void {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined") {
+    return;
+  }
 
   // Add transition class for smooth theme change
   document.documentElement.classList.add("transitioning");
@@ -86,7 +86,9 @@ export function useTheme() {
 
   // Listen for system theme changes
   useEffect(() => {
-    if (theme !== "system") return;
+    if (theme !== "system") {
+      return;
+    }
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 

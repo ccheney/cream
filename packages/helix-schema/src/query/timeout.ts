@@ -225,7 +225,7 @@ export type QueryFunction<T> = () => Promise<T[]>;
  */
 export function getTimeoutForQueryType(
   queryType: QueryType,
-  config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG,
+  config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
 ): number {
   switch (queryType) {
     case "vector":
@@ -248,7 +248,7 @@ export function getTimeoutForQueryType(
  */
 export async function withTimeout<T>(
   queryFn: QueryFunction<T>,
-  timeoutMs: number,
+  timeoutMs: number
 ): Promise<{ data: T[]; timedOut: boolean; executionTimeMs: number }> {
   const startTime = Date.now();
 
@@ -256,7 +256,7 @@ export async function withTimeout<T>(
     const result = await Promise.race([
       queryFn(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Query timeout")), timeoutMs),
+        setTimeout(() => reject(new Error("Query timeout")), timeoutMs)
       ),
     ]);
 
@@ -299,7 +299,9 @@ export class QueryCache<T = unknown> {
    */
   get(key: string): CacheEntry<T> | undefined {
     const entry = this.cache.get(key);
-    if (!entry) return undefined;
+    if (!entry) {
+      return undefined;
+    }
 
     // Check if expired
     const now = Date.now();
@@ -352,7 +354,7 @@ export class QueryCache<T = unknown> {
    * @param queryType - Query type to invalidate
    */
   invalidateByType(queryType: QueryType): void {
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (entry.queryType === queryType) {
         this.cache.delete(key);
       }
@@ -383,7 +385,7 @@ export class QueryCache<T = unknown> {
  */
 export function isEmbeddingStale(
   lastUpdate: Date,
-  thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS,
+  thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS
 ): boolean {
   const ageMs = Date.now() - lastUpdate.getTime();
   return ageMs > thresholdMs;
@@ -411,11 +413,12 @@ export function getEmbeddingAgeHours(lastUpdate: Date): number {
 export function validateFreshness(
   lastEmbeddingUpdate: Date,
   currentRegime?: string,
-  embeddingRegime?: string,
+  embeddingRegime?: string
 ): FreshnessInfo {
   const isStale = isEmbeddingStale(lastEmbeddingUpdate);
   const ageHours = getEmbeddingAgeHours(lastEmbeddingUpdate);
-  const regimeChanged = currentRegime !== undefined &&
+  const regimeChanged =
+    currentRegime !== undefined &&
     embeddingRegime !== undefined &&
     currentRegime !== embeddingRegime;
 
@@ -458,7 +461,7 @@ export function needsReembedding(freshness: FreshnessInfo): boolean {
 export function detectContradiction(
   retrievedValue: number,
   currentValue: number,
-  tolerance: number = 0.1,
+  tolerance = 0.1
 ): ContradictionResult {
   if (currentValue === 0) {
     return {
@@ -492,7 +495,7 @@ export function detectContradiction(
 export function resolveContradictions<T extends Record<string, unknown>>(
   retrievedData: T,
   currentData: Partial<T>,
-  contradictionFields: (keyof T)[],
+  contradictionFields: (keyof T)[]
 ): { resolved: T; contradictions: ContradictionResult[] } {
   const resolved = { ...retrievedData };
   const contradictions: ContradictionResult[] = [];
@@ -533,7 +536,7 @@ export async function executeWithFallback<T>(
   queryFn: QueryFunction<T>,
   cache: QueryCache<T>,
   options: QueryOptions,
-  config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG,
+  config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
 ): Promise<QueryResult<T>> {
   const timeoutMs = options.timeoutMs ?? getTimeoutForQueryType(options.queryType, config);
   const cacheKey = options.cacheKey ?? `${options.queryType}:default`;
@@ -626,8 +629,12 @@ export class MetricsCollector {
     this.totalQueries++;
     this.latencies.push(latencyMs);
 
-    if (timedOut) this.timeouts++;
-    if (fromCache) this.cacheHits++;
+    if (timedOut) {
+      this.timeouts++;
+    }
+    if (fromCache) {
+      this.cacheHits++;
+    }
 
     // Keep last 1000 latencies for percentile calculation
     if (this.latencies.length > 1000) {
@@ -639,9 +646,11 @@ export class MetricsCollector {
    * Calculate percentile from sorted array.
    */
   private percentile(sorted: number[], p: number): number {
-    if (sorted.length === 0) return 0;
+    if (sorted.length === 0) {
+      return 0;
+    }
     const index = Math.ceil((p / 100) * sorted.length) - 1;
-    return sorted[Math.max(0, Math.min(index, sorted.length - 1))];
+    return sorted[Math.max(0, Math.min(index, sorted.length - 1))] ?? 0;
   }
 
   /**
@@ -700,7 +709,7 @@ export class QueryError extends Error {
   readonly errorType: QueryErrorType;
   readonly retryable: boolean;
 
-  constructor(message: string, errorType: QueryErrorType, retryable: boolean = false) {
+  constructor(message: string, errorType: QueryErrorType, retryable = false) {
     super(message);
     this.name = "QueryError";
     this.errorType = errorType;
@@ -800,7 +809,7 @@ export class QueryWrapper<T = unknown> {
       queryFn,
       this.cache,
       { ...options, useCache: this.enableCache },
-      this.timeoutConfig,
+      this.timeoutConfig
     );
 
     if (this.enableMetrics) {

@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
   type Candle,
-  type DataSourceMetadata,
-  type FillRecord,
-  type PerformanceMetrics,
-  type VersionRegistry,
   checkLookAheadBias,
   compareFillModels,
   comparePerformanceMetrics,
   compareVersionRegistries,
+  type DataSourceMetadata,
+  type FillRecord,
+  type PerformanceMetrics,
   runParityValidation,
+  type VersionRegistry,
   validateAdjustedData,
   validateDataConsistency,
 } from "./parity";
@@ -116,9 +116,30 @@ describe("compareVersionRegistries", () => {
 describe("checkLookAheadBias", () => {
   test("passes for valid sequential candles", () => {
     const candles: Candle[] = [
-      { timestamp: "2026-01-04T09:00:00Z", open: 100, high: 105, low: 99, close: 103, volume: 1000 },
-      { timestamp: "2026-01-04T10:00:00Z", open: 103, high: 108, low: 102, close: 107, volume: 1200 },
-      { timestamp: "2026-01-04T11:00:00Z", open: 107, high: 110, low: 105, close: 108, volume: 1100 },
+      {
+        timestamp: "2026-01-04T09:00:00Z",
+        open: 100,
+        high: 105,
+        low: 99,
+        close: 103,
+        volume: 1000,
+      },
+      {
+        timestamp: "2026-01-04T10:00:00Z",
+        open: 103,
+        high: 108,
+        low: 102,
+        close: 107,
+        volume: 1200,
+      },
+      {
+        timestamp: "2026-01-04T11:00:00Z",
+        open: 107,
+        high: 110,
+        low: 105,
+        close: 108,
+        volume: 1100,
+      },
     ];
 
     const result = checkLookAheadBias(candles, "2026-01-04T12:00:00Z");
@@ -129,9 +150,30 @@ describe("checkLookAheadBias", () => {
 
   test("detects future data", () => {
     const candles: Candle[] = [
-      { timestamp: "2026-01-04T09:00:00Z", open: 100, high: 105, low: 99, close: 103, volume: 1000 },
-      { timestamp: "2026-01-04T10:00:00Z", open: 103, high: 108, low: 102, close: 107, volume: 1200 },
-      { timestamp: "2026-01-04T12:00:00Z", open: 107, high: 110, low: 105, close: 108, volume: 1100 }, // Future!
+      {
+        timestamp: "2026-01-04T09:00:00Z",
+        open: 100,
+        high: 105,
+        low: 99,
+        close: 103,
+        volume: 1000,
+      },
+      {
+        timestamp: "2026-01-04T10:00:00Z",
+        open: 103,
+        high: 108,
+        low: 102,
+        close: 107,
+        volume: 1200,
+      },
+      {
+        timestamp: "2026-01-04T12:00:00Z",
+        open: 107,
+        high: 110,
+        low: 105,
+        close: 108,
+        volume: 1100,
+      }, // Future!
     ];
 
     const result = checkLookAheadBias(candles, "2026-01-04T11:00:00Z");
@@ -143,9 +185,30 @@ describe("checkLookAheadBias", () => {
 
   test("detects non-sequential timestamps", () => {
     const candles: Candle[] = [
-      { timestamp: "2026-01-04T10:00:00Z", open: 100, high: 105, low: 99, close: 103, volume: 1000 },
-      { timestamp: "2026-01-04T09:00:00Z", open: 103, high: 108, low: 102, close: 107, volume: 1200 }, // Out of order
-      { timestamp: "2026-01-04T11:00:00Z", open: 107, high: 110, low: 105, close: 108, volume: 1100 },
+      {
+        timestamp: "2026-01-04T10:00:00Z",
+        open: 100,
+        high: 105,
+        low: 99,
+        close: 103,
+        volume: 1000,
+      },
+      {
+        timestamp: "2026-01-04T09:00:00Z",
+        open: 103,
+        high: 108,
+        low: 102,
+        close: 107,
+        volume: 1200,
+      }, // Out of order
+      {
+        timestamp: "2026-01-04T11:00:00Z",
+        open: 107,
+        high: 110,
+        low: 105,
+        close: 108,
+        volume: 1100,
+      },
     ];
 
     const result = checkLookAheadBias(candles, "2026-01-04T12:00:00Z");
@@ -259,13 +322,41 @@ describe("compareFillModels", () => {
 
   test("calculates fill rates correctly", () => {
     const backtestFills: FillRecord[] = [
-      { orderId: "1", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 100, orderType: "limit" },
-      { orderId: "2", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 0, orderType: "limit" },
+      {
+        orderId: "1",
+        symbol: "AAPL",
+        side: "buy",
+        requestedQty: 100,
+        filledQty: 100,
+        orderType: "limit",
+      },
+      {
+        orderId: "2",
+        symbol: "AAPL",
+        side: "buy",
+        requestedQty: 100,
+        filledQty: 0,
+        orderType: "limit",
+      },
     ];
 
     const liveFills: FillRecord[] = [
-      { orderId: "1", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 100, orderType: "limit" },
-      { orderId: "2", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 100, orderType: "limit" },
+      {
+        orderId: "1",
+        symbol: "AAPL",
+        side: "buy",
+        requestedQty: 100,
+        filledQty: 100,
+        orderType: "limit",
+      },
+      {
+        orderId: "2",
+        symbol: "AAPL",
+        side: "buy",
+        requestedQty: 100,
+        filledQty: 100,
+        orderType: "limit",
+      },
     ];
 
     const result = compareFillModels(backtestFills, liveFills);
@@ -453,7 +544,14 @@ describe("runParityValidation", () => {
         },
       },
       candles: [
-        { timestamp: "2026-01-04T09:00:00Z", open: 100, high: 105, low: 99, close: 103, volume: 1000 },
+        {
+          timestamp: "2026-01-04T09:00:00Z",
+          open: 100,
+          high: 105,
+          low: 99,
+          close: 103,
+          volume: 1000,
+        },
       ],
       decisionTimestamp: "2026-01-04T10:00:00Z",
     });
@@ -489,7 +587,14 @@ describe("runParityValidation", () => {
   test("blocks on look-ahead bias", () => {
     const result = runParityValidation({
       candles: [
-        { timestamp: "2026-01-04T12:00:00Z", open: 100, high: 105, low: 99, close: 103, volume: 1000 },
+        {
+          timestamp: "2026-01-04T12:00:00Z",
+          open: 100,
+          high: 105,
+          low: 99,
+          close: 103,
+          volume: 1000,
+        },
       ],
       decisionTimestamp: "2026-01-04T10:00:00Z", // Decision before candle!
     });
@@ -502,10 +607,26 @@ describe("runParityValidation", () => {
   test("needs investigation when fill model diverges", () => {
     const result = runParityValidation({
       backtestFills: [
-        { orderId: "1", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 100, orderType: "market", slippageBps: 2 },
+        {
+          orderId: "1",
+          symbol: "AAPL",
+          side: "buy",
+          requestedQty: 100,
+          filledQty: 100,
+          orderType: "market",
+          slippageBps: 2,
+        },
       ],
       liveFills: [
-        { orderId: "1", symbol: "AAPL", side: "buy", requestedQty: 100, filledQty: 100, orderType: "market", slippageBps: 30 },
+        {
+          orderId: "1",
+          symbol: "AAPL",
+          side: "buy",
+          requestedQty: 100,
+          filledQty: 100,
+          orderType: "market",
+          slippageBps: 30,
+        },
       ],
     });
 

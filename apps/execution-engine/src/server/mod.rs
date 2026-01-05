@@ -8,10 +8,8 @@
 mod grpc;
 mod http;
 
-pub use grpc::{
-    build_grpc_services, run_grpc_server, ExecutionServiceImpl, MarketDataServiceImpl,
-};
-pub use http::{create_router, ExecutionServer};
+pub use grpc::{ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services, run_grpc_server};
+pub use http::{ExecutionServer, create_router};
 
 // Re-export for compatibility
 pub use http::ExecutionServer as ExecutionServiceServer;

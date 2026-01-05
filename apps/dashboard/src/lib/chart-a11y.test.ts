@@ -512,7 +512,7 @@ describe("toAccessibleTableData", () => {
       },
     ];
     const result = toAccessibleTableData(data, columns);
-    expect(result.rows[0][0]).toBe("$1500.00");
+    expect(result.rows[0]![0]).toBe("$1500.00");
   });
 
   it("handles null and undefined values", () => {

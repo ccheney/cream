@@ -10,6 +10,26 @@
 export const PACKAGE_NAME = "@cream/domain";
 export const VERSION = "0.0.1";
 
+// Clock synchronization and timestamp validation
+export {
+  alignToDailyCandle,
+  alignToHourlyCandle,
+  type ClockCheckResult,
+  type ClockSkewThresholds,
+  calculateDatabentoLatency,
+  checkClockSkew,
+  type DatabentoTimestamps,
+  DEFAULT_CLOCK_THRESHOLDS,
+  getClockMonitorState,
+  isHourlyAligned,
+  periodicClockCheck,
+  resetClockMonitorState,
+  selectDatabentoTimestamp,
+  type TimestampValidationResult,
+  validateCandleSequence,
+  validateTimestamp,
+  validateTimestampConsistency,
+} from "./clock";
 // Decision contracts
 export {
   // Enums
@@ -61,6 +81,40 @@ export {
   isLive,
   isPaper,
 } from "./env";
+// Execution errors and gRPC mapping
+export {
+  // Error details types
+  type ConstraintViolationDetails,
+  // Specific error classes
+  ConstraintViolationError,
+  calculateRetryDelay,
+  DEFAULT_RETRY_OPTIONS,
+  DeadlineExceededError,
+  type ErrorDetails,
+  // Base error class
+  ExecutionError,
+  GRPC_STATUS_NAMES,
+  type GrpcError,
+  // gRPC status codes
+  GrpcStatusCode,
+  InsufficientFundsError,
+  InternalError,
+  InvalidArgumentError,
+  isConstraintViolation,
+  // Type guards
+  isExecutionError,
+  isInsufficientFunds,
+  isRetryableError,
+  // Error mapping
+  mapGrpcError,
+  NotFoundError,
+  PermissionDeniedError,
+  ResourceExhaustedError,
+  // Retry logic
+  type RetryOptions,
+  ServiceUnavailableError,
+  withRetry,
+} from "./errors";
 // Execution schemas
 export {
   type AccountState,
@@ -101,6 +155,28 @@ export {
   type SubmitOrderResponse,
   SubmitOrderResponseSchema,
 } from "./execution";
+// LLM parsing with retry logic
+export {
+  type AgentType,
+  allowsSkipOnFailure,
+  cleanLLMOutput,
+  defaultLogger,
+  type FormattedZodError,
+  formatJsonParseError,
+  formatZodErrorString,
+  formatZodErrors,
+  generateRetryPrompt,
+  generateSchemaExample,
+  type ParseAttempt,
+  type ParseLogger,
+  type ParseOptions,
+  type ParseResult,
+  parseOnce,
+  parseWithRetry,
+  redactSensitiveData,
+  requiresRejectionOnFailure,
+  schemaToDescription,
+} from "./llm-parsing";
 // Market snapshot schemas
 export {
   type Bar,
@@ -175,6 +251,40 @@ export {
   validateSint32,
   validateUint32,
 } from "./numbers";
+// Retention policies and storage tier management
+export {
+  ALL_RETENTION_POLICIES,
+  BACKTEST_RETENTION_POLICIES,
+  DURATIONS,
+  getCompliancePolicies,
+  getPoliciesForEnvironment,
+  // Lookup functions
+  getRetentionPolicy,
+  getTargetTier,
+  getTransitionDecision,
+  // Compliance helpers
+  isSECCompliant,
+  // Policy collections
+  LIVE_RETENTION_POLICIES,
+  // Transition logic
+  type NodeAgeInfo,
+  PAPER_RETENTION_POLICIES,
+  // Duration constants
+  PERMANENT,
+  RetentionEnvironment,
+  RetentionNodeType,
+  type RetentionPeriod,
+  RetentionPeriodSchema,
+  type RetentionPolicy,
+  RetentionPolicySchema,
+  STORAGE_TIER_SPECS,
+  // Schemas
+  StorageTier,
+  // Storage tier specs
+  type StorageTierCharacteristics,
+  type TierTransitionResult,
+  validateCompliancePolicies,
+} from "./retention";
 // Safety mechanisms
 export {
   // Audit logging
@@ -245,116 +355,5 @@ export {
   // Conversion functions
   toIso8601,
 } from "./time";
-
-// LLM parsing with retry logic
-export {
-  type AgentType,
-  allowsSkipOnFailure,
-  cleanLLMOutput,
-  defaultLogger,
-  formatJsonParseError,
-  formatZodErrors,
-  formatZodErrorString,
-  type FormattedZodError,
-  generateRetryPrompt,
-  generateSchemaExample,
-  type ParseAttempt,
-  type ParseLogger,
-  parseOnce,
-  type ParseOptions,
-  type ParseResult,
-  parseWithRetry,
-  redactSensitiveData,
-  requiresRejectionOnFailure,
-  schemaToDescription,
-} from "./llm-parsing";
-// Clock synchronization and timestamp validation
-export {
-  alignToDailyCandle,
-  alignToHourlyCandle,
-  calculateDatabentoLatency,
-  checkClockSkew,
-  type ClockCheckResult,
-  type ClockSkewThresholds,
-  type DatabentoTimestamps,
-  DEFAULT_CLOCK_THRESHOLDS,
-  getClockMonitorState,
-  isHourlyAligned,
-  periodicClockCheck,
-  resetClockMonitorState,
-  selectDatabentoTimestamp,
-  type TimestampValidationResult,
-  validateCandleSequence,
-  validateTimestamp,
-  validateTimestampConsistency,
-} from "./clock";
-// Execution errors and gRPC mapping
-export {
-  // gRPC status codes
-  GrpcStatusCode,
-  GRPC_STATUS_NAMES,
-  // Error details types
-  type ConstraintViolationDetails,
-  type ErrorDetails,
-  type GrpcError,
-  // Base error class
-  ExecutionError,
-  // Specific error classes
-  ConstraintViolationError,
-  DeadlineExceededError,
-  InsufficientFundsError,
-  InternalError,
-  InvalidArgumentError,
-  NotFoundError,
-  PermissionDeniedError,
-  ResourceExhaustedError,
-  ServiceUnavailableError,
-  // Error mapping
-  mapGrpcError,
-  // Retry logic
-  type RetryOptions,
-  DEFAULT_RETRY_OPTIONS,
-  isRetryableError,
-  calculateRetryDelay,
-  withRetry,
-  // Type guards
-  isExecutionError,
-  isConstraintViolation,
-  isInsufficientFunds,
-} from "./errors";
-// Retention policies and storage tier management
-export {
-  // Schemas
-  StorageTier,
-  RetentionEnvironment,
-  RetentionNodeType,
-  RetentionPeriodSchema,
-  type RetentionPeriod,
-  RetentionPolicySchema,
-  type RetentionPolicy,
-  // Storage tier specs
-  type StorageTierCharacteristics,
-  STORAGE_TIER_SPECS,
-  // Duration constants
-  PERMANENT,
-  DURATIONS,
-  // Policy collections
-  LIVE_RETENTION_POLICIES,
-  PAPER_RETENTION_POLICIES,
-  BACKTEST_RETENTION_POLICIES,
-  ALL_RETENTION_POLICIES,
-  // Lookup functions
-  getRetentionPolicy,
-  getPoliciesForEnvironment,
-  getCompliancePolicies,
-  // Transition logic
-  type NodeAgeInfo,
-  type TierTransitionResult,
-  getTransitionDecision,
-  getTargetTier,
-  // Compliance helpers
-  isSECCompliant,
-  validateCompliancePolicies,
-} from "./retention";
 // WebSocket schemas
 export * from "./websocket/index.js";

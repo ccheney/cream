@@ -6,7 +6,7 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 
 // ============================================
 // Error Handling
@@ -39,11 +39,7 @@ export class RepositoryError extends Error {
   }
 
   static notFound(table: string, id: string): RepositoryError {
-    return new RepositoryError(
-      `${table} with id '${id}' not found`,
-      "NOT_FOUND",
-      table
-    );
+    return new RepositoryError(`${table} with id '${id}' not found`, "NOT_FOUND", table);
   }
 
   static duplicateKey(table: string, key: string, value: string): RepositoryError {
@@ -67,21 +63,11 @@ export class RepositoryError extends Error {
     const message = error.message.toLowerCase();
 
     if (message.includes("unique constraint")) {
-      return new RepositoryError(
-        error.message,
-        "DUPLICATE_KEY",
-        table,
-        error
-      );
+      return new RepositoryError(error.message, "DUPLICATE_KEY", table, error);
     }
 
     if (message.includes("foreign key") || message.includes("constraint")) {
-      return new RepositoryError(
-        error.message,
-        "CONSTRAINT_VIOLATION",
-        table,
-        error
-      );
+      return new RepositoryError(error.message, "CONSTRAINT_VIOLATION", table, error);
     }
 
     return new RepositoryError(
@@ -138,7 +124,17 @@ export async function withTransaction<T>(
 /**
  * Filter operator types
  */
-export type FilterOperator = "=" | "!=" | ">" | "<" | ">=" | "<=" | "LIKE" | "IN" | "IS NULL" | "IS NOT NULL";
+export type FilterOperator =
+  | "="
+  | "!="
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "LIKE"
+  | "IN"
+  | "IS NULL"
+  | "IS NOT NULL";
 
 /**
  * Filter definition
@@ -168,8 +164,8 @@ export interface Order {
 export class QueryBuilder {
   private filters: Filter[] = [];
   private orders: Order[] = [];
-  private limitValue: number = 100;
-  private offsetValue: number = 0;
+  private limitValue = 100;
+  private offsetValue = 0;
 
   /**
    * Add a WHERE clause
@@ -334,20 +330,14 @@ export async function paginate<T extends Row>(
 /**
  * Convert database row to domain type with validation
  */
-export function mapRow<T>(
-  row: Row,
-  mapper: (row: Row) => T
-): T {
+export function mapRow<T>(row: Row, mapper: (row: Row) => T): T {
   return mapper(row);
 }
 
 /**
  * Convert multiple rows to domain types
  */
-export function mapRows<T>(
-  rows: Row[],
-  mapper: (row: Row) => T
-): T[] {
+export function mapRows<T>(rows: Row[], mapper: (row: Row) => T): T[] {
   return rows.map(mapper);
 }
 

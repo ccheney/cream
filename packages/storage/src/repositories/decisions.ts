@@ -6,16 +6,15 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
-  toBoolean,
-  parseJson,
-  toJson,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  parseJson,
+  query,
+  RepositoryError,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -207,10 +206,7 @@ export class DecisionsRepository {
    * Find decision by ID
    */
   async findById(id: string): Promise<Decision | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapDecisionRow(row) : null;
   }
@@ -265,11 +261,11 @@ export class DecisionsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2), // Remove limit/offset args
       pagination
@@ -425,10 +421,7 @@ export class DecisionsRepository {
    * Delete decision
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }

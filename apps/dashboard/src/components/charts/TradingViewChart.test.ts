@@ -127,6 +127,7 @@ describe("PriceLineConfig Type", () => {
       lineWidth: 2,
       lineStyle: 2,
       title: "Stop Loss",
+      axisLabelVisible: true,
     };
     expect(line.price).toBe(100);
   });
@@ -138,6 +139,7 @@ describe("PriceLineConfig Type", () => {
       lineWidth: 2,
       lineStyle: 2,
       title: "Stop Loss",
+      axisLabelVisible: true,
     };
     expect(line.color).toBe("#ef4444");
   });
@@ -154,6 +156,7 @@ describe("PriceLineConfig Type", () => {
       lineWidth: 1,
       lineStyle: 0,
       title: "Take Profit",
+      axisLabelVisible: true,
     };
     expect(line.title).toBe("Take Profit");
   });
@@ -286,8 +289,8 @@ describe("Data Validation", () => {
 
   it("data is sorted by time", () => {
     for (let i = 1; i < sampleOHLCVData.length; i++) {
-      const prev = new Date(sampleOHLCVData[i - 1].time).getTime();
-      const curr = new Date(sampleOHLCVData[i].time).getTime();
+      const prev = new Date(sampleOHLCVData[i - 1]!.time).getTime();
+      const curr = new Date(sampleOHLCVData[i]!.time).getTime();
       expect(curr).toBeGreaterThan(prev);
     }
   });
@@ -362,7 +365,7 @@ describe("Edge Cases", () => {
 
   it("handles single candle", () => {
     expect(singleCandleData.length).toBe(1);
-    expect(singleCandleData[0].open).toBeDefined();
+    expect(singleCandleData[0]!.open).toBeDefined();
   });
 
   it("handles large dataset (1000+ candles)", () => {
@@ -450,6 +453,6 @@ describe("Performance", () => {
   it("data lookup is efficient", () => {
     const dataMap = new Map(sampleOHLCVData.map((c) => [c.time, c]));
     expect(dataMap.size).toBe(sampleOHLCVData.length);
-    expect(dataMap.get(sampleOHLCVData[0].time)).toBeDefined();
+    expect(dataMap.get(sampleOHLCVData[0]!.time)).toBeDefined();
   });
 });

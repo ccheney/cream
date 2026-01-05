@@ -6,7 +6,7 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAlertsRepo } from "../db.js";
 
 // ============================================
@@ -21,7 +21,7 @@ const AlertSchema = z.object({
   type: z.string(),
   title: z.string(),
   message: z.string(),
-  metadata: z.record(z.unknown()),
+  metadata: z.record(z.string(), z.unknown()),
   acknowledged: z.boolean(),
   createdAt: z.string(),
 });
@@ -100,8 +100,8 @@ app.openapi(listRoute, async (c) => {
       acknowledged: query.acknowledged,
     },
     {
-      limit: query.limit,
-      offset: query.offset,
+      page: Math.floor(query.offset / query.limit) + 1,
+      pageSize: query.limit,
     }
   );
 
@@ -144,27 +144,27 @@ const acknowledgeRoute = createRoute({
   tags: ["Alerts"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(acknowledgeRoute, async (c) => {
   const { id } = c.req.valid("param");
   const repo = await getAlertsRepo();
 
-  const alert = await repo.findById(id);
-  if (!alert) {
+  try {
+    const updated = await repo.acknowledge(id, "system");
+
+    return c.json({
+      id: updated.id,
+      severity: updated.severity,
+      type: updated.type,
+      title: updated.title,
+      message: updated.message,
+      metadata: updated.metadata,
+      acknowledged: updated.acknowledged,
+      createdAt: updated.createdAt,
+    });
+  } catch {
     return c.json({ error: "Alert not found" }, 404);
   }
-
-  const updated = await repo.acknowledge(id, "system");
-
-  return c.json({
-    id: updated.id,
-    severity: updated.severity,
-    type: updated.type,
-    title: updated.title,
-    message: updated.message,
-    metadata: updated.metadata,
-    acknowledged: updated.acknowledged,
-    createdAt: updated.createdAt,
-  });
 });
 
 // DELETE /api/alerts/:id

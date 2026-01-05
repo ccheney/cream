@@ -134,11 +134,12 @@ export function calculateReturns(values: number[]): number[] {
 
   const returns: number[] = [];
   for (let i = 1; i < values.length; i++) {
+    const current = values[i];
     const prev = values[i - 1];
-    if (prev === 0) {
+    if (current === undefined || prev === undefined || prev === 0) {
       returns.push(0);
     } else {
-      returns.push((values[i] - prev) / prev);
+      returns.push((current - prev) / prev);
     }
   }
 
@@ -176,7 +177,7 @@ export function calculateRawReturn(equity: number[]): number {
   }
   const first = equity[0];
   const last = equity[equity.length - 1];
-  if (first === 0) {
+  if (first === undefined || last === undefined || first === 0) {
     return 0;
   }
   return (last - first) / first;
@@ -197,12 +198,21 @@ export function calculateMaxDrawdown(equity: number[]): number {
     return 0;
   }
 
+  const firstValue = equity[0];
+  if (firstValue === undefined) {
+    return 0;
+  }
+
   let maxDrawdown = 0;
-  let peak = equity[0];
+  let peak = firstValue;
 
   for (const value of equity) {
     if (value > peak) {
       peak = value;
+    }
+
+    if (peak === 0) {
+      continue;
     }
 
     const drawdown = (peak - value) / peak;
@@ -228,7 +238,7 @@ export function calculateCurrentDrawdown(equity: number[]): number {
   const peak = Math.max(...equity);
   const current = equity[equity.length - 1];
 
-  if (peak === 0) {
+  if (current === undefined || peak === 0) {
     return 0;
   }
   return (peak - current) / peak;

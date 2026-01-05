@@ -156,7 +156,7 @@ export function getAllGoldenCaseIds(agent: GoldenAgentType): string[] {
   const caseIds: string[] = [];
   for (const file of files) {
     const match = file.match(pattern);
-    if (match) {
+    if (match?.[1]) {
       caseIds.push(match[1]);
     }
   }

@@ -5,50 +5,50 @@
  */
 
 export {
+  type CacheEntry,
+  type ContradictionResult,
+  classifyError,
+  DEFAULT_CACHE_TTL_MS,
+  DEFAULT_COMBINED_TIMEOUT_MS,
+  DEFAULT_GRAPH_TIMEOUT_MS,
+  DEFAULT_TIMEOUT_CONFIG,
   // Constants
   DEFAULT_VECTOR_TIMEOUT_MS,
-  DEFAULT_GRAPH_TIMEOUT_MS,
-  DEFAULT_COMBINED_TIMEOUT_MS,
-  DEFAULT_CACHE_TTL_MS,
-  STALE_EMBEDDING_THRESHOLD_MS,
-  TIMEOUT_RATE_ALERT_THRESHOLD,
-  DEFAULT_TIMEOUT_CONFIG,
+  // Contradiction resolution
+  detectContradiction,
+  // Fallback strategies
+  executeWithFallback,
+  type FallbackStrategy,
+  type FreshnessInfo,
+  getEmbeddingAgeHours,
+  // Timeout functions
+  getTimeoutForQueryType,
+  // Freshness validation
+  isEmbeddingStale,
+  isRetryableError,
+  // Metrics
+  MetricsCollector,
+  needsReembedding,
+  // Cache
+  QueryCache,
+  // Error handling
+  QueryError,
+  QueryErrorType,
+  type QueryErrorType as QueryErrorTypeValue,
+  type QueryFunction,
+  type QueryMetrics,
+  type QueryOptions,
+  type QueryResult,
   // Types
   QueryType,
   type QueryType as QueryTypeValue,
-  type TimeoutConfig,
-  type QueryResult,
-  type CacheEntry,
-  type FreshnessInfo,
-  type ContradictionResult,
-  type QueryMetrics,
-  type FallbackStrategy,
-  type QueryOptions,
-  type QueryFunction,
-  type QueryWrapperOptions,
-  QueryErrorType,
-  type QueryErrorType as QueryErrorTypeValue,
-  // Timeout functions
-  getTimeoutForQueryType,
-  withTimeout,
-  // Cache
-  QueryCache,
-  // Freshness validation
-  isEmbeddingStale,
-  getEmbeddingAgeHours,
-  validateFreshness,
-  needsReembedding,
-  // Contradiction resolution
-  detectContradiction,
-  resolveContradictions,
-  // Fallback strategies
-  executeWithFallback,
-  // Metrics
-  MetricsCollector,
-  // Error handling
-  QueryError,
-  classifyError,
-  isRetryableError,
   // High-level wrapper
   QueryWrapper,
+  type QueryWrapperOptions,
+  resolveContradictions,
+  STALE_EMBEDDING_THRESHOLD_MS,
+  TIMEOUT_RATE_ALERT_THRESHOLD,
+  type TimeoutConfig,
+  validateFreshness,
+  withTimeout,
 } from "./timeout";

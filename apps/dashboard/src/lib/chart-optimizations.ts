@@ -77,7 +77,7 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
 
   if (threshold <= 2) {
     // Return first and last point
-    return [data[0], data[data.length - 1]];
+    return [data[0]!, data[data.length - 1]!];
   }
 
   const sampled: Point[] = [];
@@ -86,7 +86,7 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
   const bucketSize = (data.length - 2) / (threshold - 2);
 
   // Always add first point
-  sampled.push(data[0]);
+  sampled.push(data[0]!);
 
   let a = 0; // Previous selected point index
 
@@ -102,8 +102,8 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
     const nextBucketEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, data.length);
 
     for (let j = nextBucketStart; j < nextBucketEnd; j++) {
-      avgX += data[j].x;
-      avgY += data[j].y;
+      avgX += data[j]?.x;
+      avgY += data[j]?.y;
     }
     const avgCount = nextBucketEnd - nextBucketStart;
     avgX /= avgCount || 1;
@@ -118,7 +118,8 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
     for (let j = bucketStart; j < bucketEnd; j++) {
       // Calculate triangle area using cross product
       const area = Math.abs(
-        (pointA.x - avgX) * (data[j].y - pointA.y) - (pointA.x - data[j].x) * (avgY - pointA.y)
+        (pointA?.x - avgX) * (data[j]?.y - pointA?.y) -
+          (pointA?.x - data[j]?.x) * (avgY - pointA?.y)
       );
 
       if (area > maxArea) {
@@ -127,12 +128,12 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
       }
     }
 
-    sampled.push(data[maxAreaPoint]);
+    sampled.push(data[maxAreaPoint]!);
     a = maxAreaPoint;
   }
 
   // Always add last point
-  sampled.push(data[data.length - 1]);
+  sampled.push(data[data.length - 1]!);
 
   return sampled;
 }
@@ -155,7 +156,7 @@ export function downsampleTimeSeries(data: TimePoint[], threshold: number): Time
   const sampled = downsampleLTTB(points, { threshold });
 
   // Map back to TimePoint format
-  return sampled.map((p) => data[p.x]);
+  return sampled.map((p) => data[p.x]!) as TimePoint[];
 }
 
 /**
@@ -178,7 +179,7 @@ export function downsampleOHLC(data: OHLCPoint[], threshold: number): OHLCPoint[
   const sampled = downsampleLTTB(points, { threshold });
 
   // Map back to OHLC format
-  return sampled.map((p) => data[p.x]);
+  return sampled.map((p) => data[p.x]!) as OHLCPoint[];
 }
 
 // ============================================
@@ -235,11 +236,11 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
   let maxDistance = 0;
   let maxIndex = 0;
 
-  const start = points[0];
-  const end = points[points.length - 1];
+  const start = points[0]!;
+  const end = points[points.length - 1]!;
 
   for (let i = 1; i < points.length - 1; i++) {
-    const distance = perpendicularDistance(points[i], start, end);
+    const distance = perpendicularDistance(points[i]!, start, end);
     if (distance > maxDistance) {
       maxDistance = distance;
       maxIndex = i;
@@ -256,7 +257,7 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
   }
 
   // If max distance is within epsilon, return just the endpoints
-  return [start, end];
+  return [start!, end!];
 }
 
 /**
@@ -268,7 +269,6 @@ export function simplifyTimeSeries(data: TimePoint[], epsilon: number): TimePoin
   }
 
   // Convert to normalized points
-  const _minTime = 0;
   const maxTime = data.length - 1;
   const minVal = Math.min(...data.map((d) => d.value));
   const maxVal = Math.max(...data.map((d) => d.value));
@@ -286,7 +286,9 @@ export function simplifyTimeSeries(data: TimePoint[], epsilon: number): TimePoin
   const simplified = simplifyDouglasPeucker(points, normalizedEpsilon);
 
   // Map back to TimePoint format
-  return simplified.map((p) => data[Math.round(p.x * maxTime)]);
+  return simplified
+    .map((p) => data[Math.round(p.x * maxTime)]!)
+    .filter((p): p is TimePoint => p !== undefined);
 }
 
 // ============================================
@@ -303,12 +305,12 @@ export function sampleEveryN<T>(data: T[], n: number): T[] {
 
   const sampled: T[] = [];
   for (let i = 0; i < data.length; i += n) {
-    sampled.push(data[i]);
+    sampled.push(data[i]!);
   }
 
   // Always include last point
   if (sampled[sampled.length - 1] !== data[data.length - 1]) {
-    sampled.push(data[data.length - 1]);
+    sampled.push(data[data.length - 1]!);
   }
 
   return sampled;

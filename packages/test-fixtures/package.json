@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "@cream/domain": "workspace:*",
-    "@cream/mocks": "workspace:*",
     "deepmerge-ts": "^7.0.0",
     "testcontainers": "^11.11.0",
     "zod": "^4.0.0"

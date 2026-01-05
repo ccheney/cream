@@ -203,12 +203,20 @@ export function observeHistogram(histogram: HistogramBuckets, value: number): vo
   histogram.count += 1;
 
   for (let i = 0; i < histogram.boundaries.length; i++) {
-    if (value <= histogram.boundaries[i]) {
-      histogram.counts[i] += 1;
+    const boundary = histogram.boundaries[i];
+    if (boundary !== undefined && value <= boundary) {
+      const count = histogram.counts[i];
+      if (count !== undefined) {
+        histogram.counts[i] = count + 1;
+      }
       return;
     }
   }
-  histogram.counts[histogram.counts.length - 1] += 1;
+  const lastIndex = histogram.counts.length - 1;
+  const lastCount = histogram.counts[lastIndex];
+  if (lastCount !== undefined) {
+    histogram.counts[lastIndex] = lastCount + 1;
+  }
 }
 
 // ============================================
@@ -308,20 +316,29 @@ export function createMetricsRegistry(): MetricsRegistry {
             if (labelKey) {
               labelKey.split(",").forEach((pair) => {
                 const [k, v] = pair.split("=");
-                baseLabels[k] = v.replace(/"/g, "");
+                if (k && v) {
+                  baseLabels[k] = v.replace(/"/g, "");
+                }
               });
             }
 
             const buckets = histogram as HistogramBuckets;
             let cumulative = 0;
             for (let i = 0; i < buckets.boundaries.length; i++) {
-              cumulative += buckets.counts[i];
-              samples.push({
-                labels: { ...baseLabels, le: String(buckets.boundaries[i]) },
-                value: cumulative,
-              });
+              const count = buckets.counts[i];
+              const boundary = buckets.boundaries[i];
+              if (count !== undefined && boundary !== undefined) {
+                cumulative += count;
+                samples.push({
+                  labels: { ...baseLabels, le: String(boundary) },
+                  value: cumulative,
+                });
+              }
             }
-            cumulative += buckets.counts[buckets.counts.length - 1];
+            const lastCount = buckets.counts[buckets.counts.length - 1];
+            if (lastCount !== undefined) {
+              cumulative += lastCount;
+            }
             samples.push({
               labels: { ...baseLabels, le: "+Inf" },
               value: cumulative,
@@ -333,7 +350,9 @@ export function createMetricsRegistry(): MetricsRegistry {
             if (labelKey) {
               labelKey.split(",").forEach((pair) => {
                 const [k, v] = pair.split("=");
-                labels[k] = v.replace(/"/g, "");
+                if (k && v) {
+                  labels[k] = v.replace(/"/g, "");
+                }
               });
             }
             samples.push({ labels, value: value as number });
@@ -360,18 +379,23 @@ export function createMetricsRegistry(): MetricsRegistry {
 
         if (metric.type === "histogram") {
           for (const [labelKey, histogram] of metric.values) {
-            const _baseLabels = labelKey ? `{${labelKey}}` : "";
             const buckets = histogram as HistogramBuckets;
             let cumulative = 0;
 
             for (let i = 0; i < buckets.boundaries.length; i++) {
-              cumulative += buckets.counts[i];
+              const count = buckets.counts[i];
               const le = buckets.boundaries[i];
-              const labels = labelKey ? `{${labelKey},le="${le}"}` : `{le="${le}"}`;
-              lines.push(`${name}_bucket${labels} ${cumulative}`);
+              if (count !== undefined && le !== undefined) {
+                cumulative += count;
+                const labels = labelKey ? `{${labelKey},le="${le}"}` : `{le="${le}"}`;
+                lines.push(`${name}_bucket${labels} ${cumulative}`);
+              }
             }
 
-            cumulative += buckets.counts[buckets.counts.length - 1];
+            const lastCount = buckets.counts[buckets.counts.length - 1];
+            if (lastCount !== undefined) {
+              cumulative += lastCount;
+            }
             const infLabels = labelKey ? `{${labelKey},le="+Inf"}` : `{le="+Inf"}`;
             lines.push(`${name}_bucket${infLabels} ${cumulative}`);
 
@@ -410,7 +434,7 @@ export interface WebSocketMetrics {
 
   // Connection metrics
   connectionOpened(userId?: string): void;
-  connectionClosed(userId?: string, durationSeconds: number): void;
+  connectionClosed(durationSeconds: number, userId?: string): void;
   connectionError(reason: string): void;
 
   // Message metrics
@@ -458,7 +482,7 @@ export function createWebSocketMetrics(): WebSocketMetrics {
       registry.inc(WS_METRICS.TOTAL_CONNECTIONS, userId ? { user_id: userId } : {});
     },
 
-    connectionClosed(_userId?: string, durationSeconds: number) {
+    connectionClosed(durationSeconds: number, _userId?: string) {
       activeConnections = Math.max(0, activeConnections - 1);
       registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections);
       registry.observe(WS_METRICS.CONNECTION_DURATION, durationSeconds);

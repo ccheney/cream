@@ -10,8 +10,8 @@
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { type ReactNode, useState } from "react";
 import { getQueryClient } from "../api/query-client.js";
-import { useState, type ReactNode } from "react";
 
 // ============================================
 // Types
@@ -49,12 +49,7 @@ export function QueryProvider({
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {showDevtools && (
-        <ReactQueryDevtools
-          initialIsOpen={false}
-          buttonPosition="bottom-right"
-        />
-      )}
+      {showDevtools && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />}
     </QueryClientProvider>
   );
 }

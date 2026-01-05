@@ -72,8 +72,8 @@ function getTrendColor(data: number[]): SparklineColor {
   if (data.length < 2) {
     return "neutral";
   }
-  const first = data[0];
-  const last = data[data.length - 1];
+  const first = data[0] ?? 0;
+  const last = data[data.length - 1] ?? 0;
   if (last > first) {
     return "profit";
   }
@@ -114,7 +114,7 @@ function generatePath(data: number[], width: number, height: number, padding = 2
   });
 
   // Generate smooth path using catmull-rom spline
-  let path = `M ${points[0][0]} ${points[0][1]}`;
+  let path = `M ${points[0]?.[0] ?? 0} ${points[0]?.[1] ?? 0}`;
 
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[Math.max(0, i - 1)];
@@ -123,12 +123,12 @@ function generatePath(data: number[], width: number, height: number, padding = 2
     const p3 = points[Math.min(points.length - 1, i + 2)];
 
     // Catmull-Rom to Bezier conversion
-    const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+    const cp1x = (p1?.[0] ?? 0) + ((p2?.[0] ?? 0) - (p0?.[0] ?? 0)) / 6;
+    const cp1y = (p1?.[1] ?? 0) + ((p2?.[1] ?? 0) - (p0?.[1] ?? 0)) / 6;
+    const cp2x = (p2?.[0] ?? 0) - ((p3?.[0] ?? 0) - (p1?.[0] ?? 0)) / 6;
+    const cp2y = (p2?.[1] ?? 0) - ((p3?.[1] ?? 0) - (p1?.[1] ?? 0)) / 6;
 
-    path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+    path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2?.[0] ?? 0} ${p2?.[1] ?? 0}`;
   }
 
   return path;
@@ -151,7 +151,7 @@ function getLastPoint(
   const max = Math.max(...data);
   const range = max - min || 1;
 
-  const lastValue = data[data.length - 1];
+  const lastValue = data[data.length - 1] ?? 0;
   const x = width - padding;
   const y = height - padding - ((lastValue - min) / range) * (height - padding * 2);
 

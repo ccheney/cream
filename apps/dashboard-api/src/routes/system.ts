@@ -6,8 +6,8 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { getAlertsRepo, getPositionsRepo, getOrdersRepo } from "../db.js";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { getAlertsRepo, getOrdersRepo, getPositionsRepo } from "../db.js";
 
 // ============================================
 // Schemas
@@ -21,7 +21,7 @@ const AlertSchema = z.object({
   severity: z.enum(["critical", "warning", "info"]),
   type: z.string(),
   message: z.string(),
-  details: z.record(z.unknown()).nullable(),
+  metadata: z.record(z.string(), z.unknown()),
   acknowledged: z.boolean(),
   createdAt: z.string(),
 });
@@ -112,7 +112,7 @@ app.openapi(statusRoute, async (c) => {
   const [positions, orders, alerts] = await Promise.all([
     positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
     ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { limit: 10 }),
+    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
   // Calculate next cycle time (next hour boundary)
@@ -134,7 +134,7 @@ app.openapi(statusRoute, async (c) => {
       severity: a.severity,
       type: a.type,
       message: a.message,
-      details: a.details,
+      metadata: a.metadata,
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
@@ -167,6 +167,7 @@ const startRoute = createRoute({
   tags: ["System"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(startRoute, async (c) => {
   const body = c.req.valid("json");
 
@@ -190,7 +191,7 @@ app.openapi(startRoute, async (c) => {
   const [positions, orders, alerts] = await Promise.all([
     positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
     ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { limit: 10 }),
+    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
   const nextHour = new Date();
@@ -210,7 +211,7 @@ app.openapi(startRoute, async (c) => {
       severity: a.severity,
       type: a.type,
       message: a.message,
-      details: a.details,
+      metadata: a.metadata,
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
@@ -236,7 +237,7 @@ const stopRoute = createRoute({
 });
 
 app.openapi(stopRoute, async (c) => {
-  const body = c.req.valid("json");
+  c.req.valid("json");
 
   systemState.status = "STOPPED";
 
@@ -251,7 +252,7 @@ app.openapi(stopRoute, async (c) => {
   const [positions, orders, alerts] = await Promise.all([
     positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
     ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { limit: 10 }),
+    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
   return c.json({
@@ -267,7 +268,7 @@ app.openapi(stopRoute, async (c) => {
       severity: a.severity,
       type: a.type,
       message: a.message,
-      details: a.details,
+      metadata: a.metadata,
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
@@ -299,7 +300,7 @@ app.openapi(pauseRoute, async (c) => {
   const [positions, orders, alerts] = await Promise.all([
     positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
     ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { limit: 10 }),
+    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
   return c.json({
@@ -315,7 +316,7 @@ app.openapi(pauseRoute, async (c) => {
       severity: a.severity,
       type: a.type,
       message: a.message,
-      details: a.details,
+      metadata: a.metadata,
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
@@ -348,6 +349,7 @@ const environmentRoute = createRoute({
   tags: ["System"],
 });
 
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(environmentRoute, async (c) => {
   const body = c.req.valid("json");
 
@@ -372,7 +374,7 @@ app.openapi(environmentRoute, async (c) => {
   const [positions, orders, alerts] = await Promise.all([
     positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
     ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { limit: 10 }),
+    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
   return c.json({
@@ -388,7 +390,7 @@ app.openapi(environmentRoute, async (c) => {
       severity: a.severity,
       type: a.type,
       message: a.message,
-      details: a.details,
+      metadata: a.metadata,
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
@@ -413,7 +415,7 @@ app.openapi(healthRoute, async (c) => {
 
   try {
     const alertsRepo = await getAlertsRepo();
-    await alertsRepo.findMany({}, { limit: 1 });
+    await alertsRepo.findMany({}, { page: 1, pageSize: 1 });
   } catch {
     dbStatus = "error";
   }

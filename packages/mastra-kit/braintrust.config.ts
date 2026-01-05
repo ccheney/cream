@@ -171,13 +171,19 @@ export async function initAgentEval(
   agentName: keyof typeof AGENT_EVAL_CONFIGS,
   experimentSuffix?: string
 ) {
-  const _config = AGENT_EVAL_CONFIGS[agentName];
+  // const _config = AGENT_EVAL_CONFIGS[agentName];
   const experimentName = getExperimentName("paper", experimentSuffix);
 
+  // NOTE: This is a placeholder. The Eval() function requires data, task, and scores
+  // properties which should be provided by the caller when actually running evaluations.
+  // See Braintrust documentation for complete Evaluator configuration.
   return Eval(BRAINTRUST_PROJECT, {
     experimentName: `${agentName}-${experimentName}`,
     maxConcurrency: DEFAULT_EVAL_CONFIG.maxConcurrency,
     timeout: DEFAULT_EVAL_CONFIG.timeout,
+    data: () => [], // Placeholder - should be provided by caller
+    task: async () => {}, // Placeholder - should be provided by caller
+    scores: [], // Placeholder - should be provided by caller
   });
 }
 

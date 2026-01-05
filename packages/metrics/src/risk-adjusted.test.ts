@@ -346,9 +346,9 @@ describe("calculateAllMetrics", () => {
     const metrics = calculateAllMetrics(equity);
 
     expect(metrics).toHaveLength(3); // Default 3 windows
-    expect(metrics[0].window).toBe("1d");
-    expect(metrics[1].window).toBe("1w");
-    expect(metrics[2].window).toBe("1m");
+    expect(metrics[0]?.window).toBe("1d");
+    expect(metrics[1]?.window).toBe("1w");
+    expect(metrics[2]?.window).toBe("1m");
   });
 
   test("accepts custom windows", () => {
@@ -357,7 +357,7 @@ describe("calculateAllMetrics", () => {
     const metrics = calculateAllMetrics(equity, windows);
 
     expect(metrics).toHaveLength(1);
-    expect(metrics[0].window).toBe("10h");
+    expect(metrics[0]?.window).toBe("10h");
   });
 });
 
@@ -555,8 +555,8 @@ describe("Best Practices", () => {
       { period: 500, label: "1m" }, // Long term
     ];
 
-    expect(windows[0].period).toBeLessThan(windows[1].period);
-    expect(windows[1].period).toBeLessThan(windows[2].period);
+    expect(windows[0]?.period).toBeLessThan(windows[1]?.period ?? Infinity);
+    expect(windows[1]?.period).toBeLessThan(windows[2]?.period ?? Infinity);
   });
 
   test("target thresholds are documented", () => {

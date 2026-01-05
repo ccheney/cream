@@ -36,9 +36,7 @@ pub struct MetricsConfig {
 impl Default for MetricsConfig {
     fn default() -> Self {
         Self {
-            listen_addr: "0.0.0.0:9090"
-                .parse()
-                .expect("valid default address"),
+            listen_addr: "0.0.0.0:9090".parse().expect("valid default address"),
             // Latency buckets from 100us to 1s
             latency_buckets: vec![
                 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,

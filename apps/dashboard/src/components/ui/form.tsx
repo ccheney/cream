@@ -231,7 +231,7 @@ export function FormControl({ children }: { children: React.ReactElement }) {
     id: formItemId,
     "aria-describedby": describedBy,
     "aria-invalid": !!error,
-  });
+  } as any);
 }
 
 /**

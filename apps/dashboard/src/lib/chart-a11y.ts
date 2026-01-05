@@ -136,12 +136,12 @@ export function calculateStats(data: number[]): ChartStats {
     return {};
   }
 
-  const current = data[data.length - 1];
+  const current = data[data.length - 1]!;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const mean = data.reduce((sum, v) => sum + v, 0) / data.length;
 
-  const first = data[0];
+  const first = data[0]!;
   const change = current - first;
   const changePercent = first !== 0 ? (change / first) * 100 : 0;
 
@@ -455,7 +455,7 @@ function formatDate(date: string | Date): string {
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
+  if (!result || !result[1] || !result[2] || !result[3]) {
     throw new Error(`Invalid hex color: ${hex}`);
   }
   return {
@@ -467,9 +467,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number {
   const { r, g, b } = rgb;
-  const [R, G, B] = [r, g, b].map((c) => {
+  const components = [r, g, b].map((c) => {
     const sRGB = c / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : ((sRGB + 0.055) / 1.055) ** 2.4;
   });
+  const R = components[0]!;
+  const G = components[1]!;
+  const B = components[2]!;
   return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }

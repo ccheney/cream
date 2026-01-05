@@ -723,15 +723,14 @@ describe("BroadcastEvent Type", () => {
       message: {
         type: "order",
         data: {
-          id: "order-123",
+          id: "00000000-0000-0000-0000-000000000123",
           symbol: "AAPL",
-          side: "BUY",
-          type: "limit",
-          quantity: 100,
-          filledQuantity: 0,
+          side: "buy",
+          orderType: "limit",
           status: "pending",
-          createdAt: "2026-01-04T12:00:00.000Z",
-          updatedAt: "2026-01-04T12:00:00.000Z",
+          quantity: 100,
+          filledQty: 0,
+          timestamp: "2026-01-04T12:00:00.000Z",
         },
       },
     };

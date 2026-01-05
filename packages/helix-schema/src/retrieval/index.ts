@@ -5,24 +5,24 @@
  */
 
 export {
-  // Types
-  type RetrievalResult,
-  type RankedResult,
-  type RRFResult,
-  type RRFOptions,
+  assignRanks,
+  // Utilities
+  calculateCombinedRRFScore,
+  calculateMultiMethodBoost,
+  // Core functions
+  calculateRRFScore,
   // Constants
   DEFAULT_RRF_K,
   DEFAULT_TOP_K,
-  // Core functions
-  calculateRRFScore,
-  assignRanks,
-  fuseWithRRF,
   fuseMultipleWithRRF,
-  // Utilities
-  calculateCombinedRRFScore,
+  fuseWithRRF,
   getMaxRRFScore,
   normalizeRRFScores,
-  calculateMultiMethodBoost,
+  type RankedResult,
+  // Types
+  type RetrievalResult,
+  type RRFOptions,
+  type RRFResult,
 } from "./rrf";
 
 // ============================================
@@ -30,43 +30,43 @@ export {
 // ============================================
 
 export {
+  assessRetrievalQuality,
+  // RRF integration
+  assessRRFQuality,
+  type CorrectionAttempt,
+  type CorrectionLogEntry,
+  type CorrectionMetrics,
+  type CorrectionStrategy,
+  type CorrectionStrategyConfig,
+  type CorrectiveRetrievalOptions,
+  type CorrectiveRetrievalResult,
+  // Quality assessment functions
+  calculateAvgScore,
+  // Correction strategies
+  calculateBroadenedK,
+  // Logging and metrics
+  calculateCorrectionMetrics,
+  calculateCoverageScore,
+  calculateDiversityScore,
+  calculateLoweredThreshold,
+  // Corrective retrieval pipeline
+  correctiveRetrieval,
+  createCorrectionLogEntry,
+  DEFAULT_BROADENING_FACTOR,
+  DEFAULT_DIVERSITY_THRESHOLD,
+  DEFAULT_MIN_RESULTS,
   // Constants
   DEFAULT_QUALITY_THRESHOLD,
-  DEFAULT_MIN_RESULTS,
-  DEFAULT_DIVERSITY_THRESHOLD,
-  DEFAULT_BROADENING_FACTOR,
-  MAX_CORRECTION_ATTEMPTS,
-  THRESHOLD_REDUCTION_STEP,
   DEFAULT_QUALITY_THRESHOLDS,
+  generateExpansionTerms,
+  MAX_CORRECTION_ATTEMPTS,
   // Types
   type QualityAssessment,
   type QualityThresholds,
-  type CorrectionStrategy,
-  type CorrectionStrategyConfig,
-  type CorrectionAttempt,
-  type CorrectiveRetrievalResult,
-  type CorrectiveRetrievalOptions,
   type RetrievalFunction,
-  type CorrectionLogEntry,
-  type CorrectionMetrics,
-  // Quality assessment functions
-  calculateAvgScore,
-  calculateDiversityScore,
-  calculateCoverageScore,
-  assessRetrievalQuality,
-  shouldCorrect,
-  // Correction strategies
-  calculateBroadenedK,
-  calculateLoweredThreshold,
-  generateExpansionTerms,
   selectCorrectionStrategy,
-  // Corrective retrieval pipeline
-  correctiveRetrieval,
-  withCorrectiveRetrieval,
-  // RRF integration
-  assessRRFQuality,
+  shouldCorrect,
   shouldCorrectRRF,
-  // Logging and metrics
-  calculateCorrectionMetrics,
-  createCorrectionLogEntry,
+  THRESHOLD_REDUCTION_STEP,
+  withCorrectiveRetrieval,
 } from "./corrective";

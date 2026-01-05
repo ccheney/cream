@@ -145,7 +145,13 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = "#1c1917";
             }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = "#1c1917";
+            }}
             onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#292524";
+            }}
+            onBlur={(e) => {
               e.currentTarget.style.backgroundColor = "#292524";
             }}
             onMouseDown={(e) => {
@@ -165,7 +171,13 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             onMouseOver={(e) => {
               e.currentTarget.style.backgroundColor = "#f5f5f4";
             }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f4";
+            }}
             onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            onBlur={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
           >

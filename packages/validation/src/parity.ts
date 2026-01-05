@@ -30,7 +30,7 @@ export const IndicatorVersionSchema = z.object({
   /** SHA-256 hash of the indicator implementation for change detection */
   implementationHash: z.string().length(64).optional(),
   /** Parameters used for this indicator */
-  parameters: z.record(z.unknown()).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type IndicatorVersion = z.infer<typeof IndicatorVersionSchema>;
@@ -44,7 +44,7 @@ export const VersionRegistrySchema = z.object({
   /** Environment this registry applies to */
   environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
   /** Map of indicator ID to version info */
-  indicators: z.record(IndicatorVersionSchema),
+  indicators: z.record(z.string(), IndicatorVersionSchema),
 });
 
 export type VersionRegistry = z.infer<typeof VersionRegistrySchema>;
@@ -84,7 +84,9 @@ export function compareVersionRegistries(
   // Check for mismatches and missing from live
   for (const id of backtestIds) {
     const backtestIndicator = backtest.indicators[id];
-    if (!backtestIndicator) continue;
+    if (!backtestIndicator) {
+      continue;
+    }
 
     if (!liveIds.has(id)) {
       missingFromLive.push(id);
@@ -109,9 +111,7 @@ export function compareVersionRegistries(
 
   return {
     match:
-      mismatches.length === 0 &&
-      missingFromLive.length === 0 &&
-      missingFromBacktest.length === 0,
+      mismatches.length === 0 && missingFromLive.length === 0 && missingFromBacktest.length === 0,
     mismatches,
     missingFromLive,
     missingFromBacktest,
@@ -190,7 +190,9 @@ export function checkLookAheadBias(
   for (let i = 1; i < candles.length; i++) {
     const prev = candles[i - 1];
     const curr = candles[i];
-    if (!prev || !curr) continue;
+    if (!prev || !curr) {
+      continue;
+    }
 
     const prevTime = new Date(prev.timestamp).getTime();
     const currTime = new Date(curr.timestamp).getTime();
@@ -343,14 +345,10 @@ export function compareFillModels(
     .map((f) => f.slippageBps)
     .filter((s): s is number => s !== undefined);
   const avgSlippageLive =
-    liveSlippages.length > 0
-      ? liveSlippages.reduce((a, b) => a + b, 0) / liveSlippages.length
-      : 0;
+    liveSlippages.length > 0 ? liveSlippages.reduce((a, b) => a + b, 0) / liveSlippages.length : 0;
 
   const liveFillRate =
-    liveFills.length > 0
-      ? liveFills.filter((f) => f.filledQty > 0).length / liveFills.length
-      : 0;
+    liveFills.length > 0 ? liveFills.filter((f) => f.filledQty > 0).length / liveFills.length : 0;
 
   // Check for discrepancies
   if (Math.abs(avgSlippageBacktest - avgSlippageLive) > tolerance.slippageBps) {
@@ -362,9 +360,7 @@ export function compareFillModels(
     });
   }
 
-  if (
-    Math.abs((backtestFillRate - liveFillRate) * 100) > tolerance.fillRatePct
-  ) {
+  if (Math.abs((backtestFillRate - liveFillRate) * 100) > tolerance.fillRatePct) {
     discrepancies.push({
       orderId: "aggregate",
       field: "fillRate",
@@ -389,8 +385,7 @@ export function compareFillModels(
     }
   }
 
-  const matchScore =
-    backtestFills.length > 0 ? matchedFills / backtestFills.length : 1;
+  const matchScore = backtestFills.length > 0 ? matchedFills / backtestFills.length : 1;
 
   return {
     matchScore,
@@ -650,9 +645,7 @@ export function validateDataConsistency(
   }
 
   if (delistedSymbols.length > 0 && issues.some((i) => i.type === "survivorship_bias")) {
-    recommendations.push(
-      "Include delisted symbols in historical data to avoid survivorship bias."
-    );
+    recommendations.push("Include delisted symbols in historical data to avoid survivorship bias.");
   }
 
   return {
@@ -675,15 +668,15 @@ export interface ParityValidationResult {
   /** Timestamp of validation */
   validatedAt: string;
   /** Version comparison result */
-  versionComparison?: VersionComparisonResult;
+  versionComparison?: VersionComparisonResult | undefined;
   /** Look-ahead bias check result */
-  lookAheadBiasCheck?: LookAheadBiasResult;
+  lookAheadBiasCheck?: LookAheadBiasResult | undefined;
   /** Fill model comparison result */
-  fillModelComparison?: FillModelComparisonResult;
+  fillModelComparison?: FillModelComparisonResult | undefined;
   /** Statistical parity result */
-  statisticalParity?: StatisticalParityResult;
+  statisticalParity?: StatisticalParityResult | undefined;
   /** Data consistency result */
-  dataConsistency?: DataConsistencyResult;
+  dataConsistency?: DataConsistencyResult | undefined;
   /** Overall recommendation */
   recommendation: "APPROVE_FOR_LIVE" | "NEEDS_INVESTIGATION" | "NOT_READY";
   /** Blocking issues that must be resolved */
@@ -721,10 +714,7 @@ export function runParityValidation(params: {
 
   // Version comparison
   if (params.backtestRegistry && params.liveRegistry) {
-    versionComparison = compareVersionRegistries(
-      params.backtestRegistry,
-      params.liveRegistry
-    );
+    versionComparison = compareVersionRegistries(params.backtestRegistry, params.liveRegistry);
 
     if (!versionComparison.match) {
       if (versionComparison.mismatches.length > 0) {
@@ -771,16 +761,15 @@ export function runParityValidation(params: {
     }
 
     for (const d of fillModelComparison.discrepancies) {
-      warnings.push(`Fill discrepancy in ${d.field}: backtest=${d.backtestValue}, live=${d.liveValue}`);
+      warnings.push(
+        `Fill discrepancy in ${d.field}: backtest=${d.backtestValue}, live=${d.liveValue}`
+      );
     }
   }
 
   // Statistical parity
   if (params.backtestMetrics && params.liveMetrics) {
-    statisticalParity = comparePerformanceMetrics(
-      params.backtestMetrics,
-      params.liveMetrics
-    );
+    statisticalParity = comparePerformanceMetrics(params.backtestMetrics, params.liveMetrics);
 
     if (statisticalParity.recommendation === "REJECT") {
       blockingIssues.push(statisticalParity.reason);

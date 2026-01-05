@@ -253,7 +253,7 @@ export function parseLoadingKey(key: LoadingKey): {
 } {
   const [namespace, ...rest] = key.split(":");
   return {
-    namespace,
+    namespace: namespace || "",
     operation: rest.join(":"),
   };
 }

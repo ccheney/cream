@@ -108,7 +108,6 @@ interface CustomTooltipPayload {
 function CustomTooltip({
   active,
   payload,
-  label,
   valueFormatter,
   timeFormatter,
 }: TooltipProps<number, string> & {
@@ -119,7 +118,7 @@ function CustomTooltip({
     return null;
   }
 
-  const data = payload[0].payload as CustomTooltipPayload;
+  const data = payload[0]?.payload as CustomTooltipPayload;
 
   return (
     <div

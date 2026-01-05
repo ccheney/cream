@@ -104,9 +104,14 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let normB = 0;
 
   for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+    const aVal = a[i];
+    const bVal = b[i];
+    if (aVal === undefined || bVal === undefined) {
+      continue;
+    }
+    dotProduct += aVal * bVal;
+    normA += aVal * aVal;
+    normB += bVal * bVal;
   }
 
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
@@ -195,7 +200,7 @@ function createMockClient(): HelixClient {
 // ============================================
 
 describe("HelixDB Integration", () => {
-  const container: StartedTestContainer | null = null;
+  let container: StartedTestContainer | null = null;
   let client: HelixClient;
 
   // NOTE: Container-based tests are skipped until HelixDB Docker image is available.
@@ -212,12 +217,15 @@ describe("HelixDB Integration", () => {
     //   `http://localhost:${container.getMappedPort(8000)}`
     // );
 
+    // Dummy assignment to avoid type narrowing to never (remove when container code is uncommented)
+    container = container;
+
     // Use mock client for now
     client = createMockClient();
   });
 
   afterAll(async () => {
-    if (container) {
+    if (container !== null) {
       await container.stop();
     }
   });
@@ -352,7 +360,7 @@ describe("HelixDB Integration", () => {
       });
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].similarity).toBeDefined();
+      expect(results[0]?.similarity).toBeDefined();
     });
 
     it("filters by type in vector search", async () => {
@@ -399,7 +407,11 @@ describe("HelixDB Integration", () => {
       });
 
       for (let i = 1; i < results.length; i++) {
-        expect(results[i - 1].similarity).toBeGreaterThanOrEqual(results[i].similarity);
+        const prev = results[i - 1];
+        const curr = results[i];
+        if (prev && curr) {
+          expect(prev.similarity).toBeGreaterThanOrEqual(curr.similarity);
+        }
       }
     });
   });

@@ -18,7 +18,7 @@
  * @see docs/plans/00-overview.md for clock sync requirements
  */
 
-import { env, isBacktest } from "./env";
+import { isBacktest } from "./env";
 
 // ============================================
 // Configuration
@@ -84,12 +84,13 @@ export interface TimestampValidationResult {
 /**
  * NTP pool servers for time checks
  * Using public NTP pool - in production, use dedicated time servers
+ * Note: Currently unused - reserved for future NTP implementation
  */
-const NTP_SERVERS = [
-  "time.google.com",
-  "time.cloudflare.com",
-  "pool.ntp.org",
-];
+// const NTP_SERVERS = [
+//   "time.google.com",
+//   "time.cloudflare.com",
+//   "pool.ntp.org",
+// ];
 
 /**
  * Check system clock against reference time
@@ -100,7 +101,7 @@ const NTP_SERVERS = [
  * @returns Clock check result
  */
 export async function checkClockSkew(
-  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS,
+  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
   const checkedAt = new Date().toISOString();
 
@@ -207,7 +208,7 @@ export function validateTimestamp(
     maxAgeMs?: number;
     /** Tolerance for future timestamps in ms (default: 5000 = 5s) */
     futureTolerance?: number;
-  } = {},
+  } = {}
 ): TimestampValidationResult {
   const {
     allowFuture = false,
@@ -244,12 +245,12 @@ export function validateTimestamp(
   if (timestampMs > now + futureTolerance) {
     if (allowFuture) {
       result.warnings.push(
-        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`,
+        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`
       );
     } else {
       result.valid = false;
       result.errors.push(
-        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`,
+        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`
       );
     }
   }
@@ -259,7 +260,7 @@ export function validateTimestamp(
   if (ageMs > maxAgeMs) {
     result.valid = false;
     result.errors.push(
-      `Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`,
+      `Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`
     );
   }
 
@@ -279,7 +280,7 @@ export function validateTimestamp(
 export function validateTimestampConsistency(
   timestamp1: string,
   timestamp2: string,
-  maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs,
+  maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs
 ): { consistent: boolean; diffMs: number; warning?: string } {
   const time1 = new Date(timestamp1).getTime();
   const time2 = new Date(timestamp2).getTime();
@@ -345,9 +346,7 @@ export function alignToDailyCandle(timestamp: string): string {
 export function isHourlyAligned(timestamp: string): boolean {
   const date = new Date(timestamp);
   return (
-    date.getUTCMinutes() === 0 &&
-    date.getUTCSeconds() === 0 &&
-    date.getUTCMilliseconds() === 0
+    date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0
   );
 }
 
@@ -372,12 +371,19 @@ export function validateCandleSequence(timestamps: string[]): {
   const hourMs = 60 * 60 * 1000;
 
   for (let i = 1; i < timestamps.length; i++) {
-    const prevTime = new Date(timestamps[i - 1]).getTime();
-    const currTime = new Date(timestamps[i]).getTime();
+    const prevTimestamp = timestamps[i - 1];
+    const currTimestamp = timestamps[i];
+
+    if (!prevTimestamp || !currTimestamp) {
+      continue;
+    }
+
+    const prevTime = new Date(prevTimestamp).getTime();
+    const currTime = new Date(currTimestamp).getTime();
 
     // Check for out-of-order
     if (currTime <= prevTime) {
-      outOfOrder.push({ index: i, timestamp: timestamps[i] });
+      outOfOrder.push({ index: i, timestamp: currTimestamp });
     }
 
     // Check for gaps (more than 1 hour apart)
@@ -386,8 +392,8 @@ export function validateCandleSequence(timestamps: string[]): {
       const missingHours = Math.floor(diff / hourMs) - 1;
       if (missingHours > 0) {
         gaps.push({
-          from: timestamps[i - 1],
-          to: timestamps[i],
+          from: prevTimestamp,
+          to: currTimestamp,
           missingHours,
         });
       }
@@ -442,7 +448,7 @@ export interface DatabentoTimestamps {
  */
 export function selectDatabentoTimestamp(
   timestamps: DatabentoTimestamps,
-  useCase: "analysis" | "latency" | "processing",
+  useCase: "analysis" | "latency" | "processing"
 ): string {
   switch (useCase) {
     case "analysis":
@@ -509,7 +515,7 @@ let monitorState: ClockMonitorState = {
  * @returns Check result
  */
 export async function periodicClockCheck(
-  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS,
+  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
   const result = await checkClockSkew(thresholds);
 

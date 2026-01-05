@@ -835,10 +835,12 @@ server:
 
         let result = load_config_from_string(yaml);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("must be different"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("must be different")
+        );
     }
 
     #[test]
@@ -853,10 +855,7 @@ pricing:
 
         let result = load_config_from_string(yaml);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("risk_free_rate"));
+        assert!(result.unwrap_err().to_string().contains("risk_free_rate"));
     }
 
     #[test]
@@ -936,10 +935,7 @@ environment:
         assert_eq!(config.observability.metrics.endpoint, "0.0.0.0:9091");
         assert_eq!(config.observability.tracing.sampling_ratio, 0.5);
         assert_eq!(config.observability.logging.level, "debug");
-        assert_eq!(
-            config.circuit_breaker.default.failure_rate_threshold,
-            0.3
-        );
+        assert_eq!(config.circuit_breaker.default.failure_rate_threshold, 0.3);
         assert_eq!(config.environment.mode, "LIVE");
     }
 

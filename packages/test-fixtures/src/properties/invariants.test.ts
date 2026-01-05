@@ -278,6 +278,9 @@ describe("Agent Behavioral Properties", () => {
 
       // Position limit is enforced regardless of confidence
       const decision = plan.decisions[0];
+      if (!decision) {
+        throw new Error("No decision found");
+      }
       const positionValue = decision.size.quantity * 175;
       const portfolioValue = 100000;
 
@@ -294,6 +297,9 @@ describe("Agent Behavioral Properties", () => {
 
       // Same limits apply regardless of confidence
       const decision = plan.decisions[0];
+      if (!decision) {
+        throw new Error("No decision found");
+      }
       const positionValue = decision.size.quantity * 175;
       const portfolioValue = 100000;
 
@@ -344,6 +350,9 @@ describe("Agent Behavioral Properties", () => {
     test("validates stop-loss is below entry for LONG position", () => {
       const plan = createPlanWithInvalidStopLoss("LONG");
       const decision = plan.decisions[0];
+      if (!decision) {
+        throw new Error("No decision found");
+      }
       const entryPrice = decision.orderPlan.entryLimitPrice!;
 
       const validationResult = validateRiskLevels(decision, entryPrice);
@@ -355,6 +364,9 @@ describe("Agent Behavioral Properties", () => {
     test("validates stop-loss is above entry for SHORT position", () => {
       const plan = createPlanWithInvalidStopLoss("SHORT");
       const decision = plan.decisions[0];
+      if (!decision) {
+        throw new Error("No decision found");
+      }
       const entryPrice = decision.orderPlan.entryLimitPrice!;
 
       const validationResult = validateRiskLevels(decision, entryPrice);
@@ -450,7 +462,6 @@ describe("Agent Behavioral Properties", () => {
      * INVARIANT: Plan proceeds ONLY when BOTH Risk Manager AND Critic approve
      */
     test("rejects when Risk Manager REJECT + Critic APPROVE", () => {
-      const _plan = createValidPlan();
       const riskVerdict = createRiskRejectVerdict(["Test violation"]);
       const criticVerdict = createCriticApproveVerdict();
 
@@ -462,7 +473,6 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("rejects when Risk Manager APPROVE + Critic REJECT", () => {
-      const _plan = createValidPlan();
       const riskVerdict = createRiskApproveVerdict();
       const criticVerdict = createCriticRejectVerdict(["Rationale mismatch"]);
 
@@ -474,7 +484,6 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("rejects when Risk Manager REJECT + Critic REJECT", () => {
-      const _plan = createValidPlan();
       const riskVerdict = createRiskRejectVerdict(["Position too large"]);
       const criticVerdict = createCriticRejectVerdict(["Weak signals"]);
 
@@ -484,7 +493,6 @@ describe("Agent Behavioral Properties", () => {
     });
 
     test("approves when Risk Manager APPROVE + Critic APPROVE", () => {
-      const _plan = createValidPlan();
       const riskVerdict = createRiskApproveVerdict();
       const criticVerdict = createCriticApproveVerdict();
 

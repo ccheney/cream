@@ -283,7 +283,9 @@ describe("parseServerMessage", () => {
       const result = parseServerMessage(raw);
       expect(result?.timestamp).toBeDefined();
       // Should be a valid ISO string
-      expect(new Date(result?.timestamp).toISOString()).toBe(result?.timestamp);
+      if (result?.timestamp) {
+        expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+      }
     });
   });
 

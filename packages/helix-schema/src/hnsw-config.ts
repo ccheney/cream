@@ -113,9 +113,7 @@ export const HnswConfigSchema = z.object({
    *
    * - Default: cosine (standard for text embeddings)
    */
-  metric: DistanceMetric.default("cosine").describe(
-    "Distance metric for similarity computation",
-  ),
+  metric: DistanceMetric.default("cosine").describe("Distance metric for similarity computation"),
 });
 
 export type HnswConfig = z.infer<typeof HnswConfigSchema>;
@@ -361,7 +359,7 @@ export function validateHnswConfig(config: HnswConfig): {
   }
   if (config.efSearch > config.efConstruction) {
     warnings.push(
-      "efSearch > efConstruction provides diminishing returns (graph quality limits recall)",
+      "efSearch > efConstruction provides diminishing returns (graph quality limits recall)"
     );
   }
 

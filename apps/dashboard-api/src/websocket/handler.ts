@@ -160,7 +160,6 @@ function handleSubscribe(ws: WebSocketWithMetadata, message: SubscribeMessage): 
   sendMessage(ws, {
     type: "subscribed",
     channels: Array.from(metadata.channels),
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -178,7 +177,6 @@ function handleUnsubscribe(ws: WebSocketWithMetadata, message: UnsubscribeMessag
   sendMessage(ws, {
     type: "unsubscribed",
     channels: message.channels,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -198,8 +196,6 @@ function handleSubscribeSymbols(ws: WebSocketWithMetadata, message: SubscribeSym
   sendMessage(ws, {
     type: "subscribed",
     channels: ["quotes"],
-    symbols: Array.from(metadata.symbols),
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -219,8 +215,6 @@ function handleUnsubscribeSymbols(
   sendMessage(ws, {
     type: "unsubscribed",
     channels: [],
-    symbols: message.symbols,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -316,8 +310,8 @@ export function sendMessage(
 export function sendError(ws: WebSocketWithMetadata, message: string): void {
   sendMessage(ws, {
     type: "error",
+    code: "ERROR",
     message,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -414,10 +408,11 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
   sendMessage(ws, {
     type: "system_status",
     data: {
-      status: "healthy",
-      version: "0.1.0",
-      uptime: process.uptime(),
-      connections: connections.size,
+      health: "healthy",
+      uptimeSeconds: Math.floor(process.uptime()),
+      activeConnections: connections.size,
+      services: {},
+      environment: "PAPER",
       timestamp: new Date().toISOString(),
     },
   });

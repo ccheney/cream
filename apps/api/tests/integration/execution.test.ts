@@ -218,8 +218,9 @@ describe("Execution Engine Integration", () => {
   });
 
   afterAll(async () => {
-    if (container) {
-      await container.stop();
+    // Container is currently null (creation commented out), but typed for future use
+    if (container !== null) {
+      await (container as StartedTestContainer).stop();
     }
   });
 

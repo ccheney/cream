@@ -107,8 +107,7 @@ export const queryKeys = {
   market: {
     all: ["market"] as const,
     symbol: (symbol: string) => [...queryKeys.market.all, symbol] as const,
-    quote: (symbol: string) =>
-      [...queryKeys.market.all, symbol, "quote"] as const,
+    quote: (symbol: string) => [...queryKeys.market.all, symbol, "quote"] as const,
     candles: (symbol: string, timeframe: string) =>
       [...queryKeys.market.all, symbol, "candles", timeframe] as const,
   },

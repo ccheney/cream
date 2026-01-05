@@ -6,14 +6,8 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
-import {
-  RepositoryError,
-  toBoolean,
-  fromBoolean,
-  parseJson,
-  toJson,
-} from "./base.js";
+import type { Row, TursoClient } from "../turso.js";
+import { parseJson, RepositoryError, toBoolean, toJson } from "./base.js";
 
 // ============================================
 // Types
@@ -103,10 +97,7 @@ export class ConfigVersionsRepository {
    * Find config version by ID
    */
   async findById(id: string): Promise<ConfigVersion | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapConfigVersionRow(row) : null;
   }
@@ -175,10 +166,10 @@ export class ConfigVersionsRepository {
     );
 
     // Activate the new config
-    await this.client.run(
-      `UPDATE ${this.table} SET active = 1, activated_at = ? WHERE id = ?`,
-      [now, id]
-    );
+    await this.client.run(`UPDATE ${this.table} SET active = 1, activated_at = ? WHERE id = ?`, [
+      now,
+      id,
+    ]);
 
     return this.findByIdOrThrow(id);
   }
@@ -204,7 +195,10 @@ export class ConfigVersionsRepository {
   /**
    * Compare two config versions
    */
-  async compare(id1: string, id2: string): Promise<{
+  async compare(
+    id1: string,
+    id2: string
+  ): Promise<{
     config1: ConfigVersion;
     config2: ConfigVersion;
     differences: { path: string; value1: unknown; value2: unknown }[];
@@ -215,10 +209,7 @@ export class ConfigVersionsRepository {
     const differences: { path: string; value1: unknown; value2: unknown }[] = [];
 
     // Simple shallow diff - in production you'd want deep diff
-    const allKeys = new Set([
-      ...Object.keys(config1.config),
-      ...Object.keys(config2.config),
-    ]);
+    const allKeys = new Set([...Object.keys(config1.config), ...Object.keys(config2.config)]);
 
     for (const key of allKeys) {
       const v1 = config1.config[key];
@@ -246,10 +237,7 @@ export class ConfigVersionsRepository {
       );
     }
 
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }
@@ -257,7 +245,10 @@ export class ConfigVersionsRepository {
   /**
    * Get config history for environment
    */
-  async getHistory(environment: string, limit = 50): Promise<{
+  async getHistory(
+    environment: string,
+    limit = 50
+  ): Promise<{
     versions: ConfigVersion[];
     activationHistory: { id: string; activatedAt: string; deactivatedAt: string | null }[];
   }> {

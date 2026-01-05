@@ -145,7 +145,7 @@ export function SpinnerDots({
   style,
   className,
   ...props
-}: SpinnerProps) {
+}: SpinnerProps & React.HTMLAttributes<HTMLDivElement>) {
   const dotSize = sizePx ? sizePx / 4 : SIZE_PX_MAP[size] / 4;
   const gap = dotSize / 2;
 

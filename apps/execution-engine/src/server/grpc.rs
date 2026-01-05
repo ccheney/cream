@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use tokio::sync::mpsc;
-use tokio_stream::{wrappers::ReceiverStream, Stream};
+use tokio_stream::{Stream, wrappers::ReceiverStream};
 use tonic::{Request, Response, Status};
 
 use crate::execution::{ExecutionGateway, OrderStateManager};
@@ -30,14 +30,14 @@ pub mod proto {
 }
 
 use proto::cream::v1::{
-    execution_service_server::{ExecutionService, ExecutionServiceServer},
-    market_data_service_server::{MarketDataService, MarketDataServiceServer},
     AccountState, CheckConstraintsRequest, CheckConstraintsResponse, ConstraintCheck,
     ConstraintResult, GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest,
     GetOptionChainResponse, GetPositionsRequest, GetPositionsResponse, GetSnapshotRequest,
     GetSnapshotResponse, Position, StreamExecutionsRequest, StreamExecutionsResponse,
     SubmitOrderRequest, SubmitOrderResponse, SubscribeMarketDataRequest,
     SubscribeMarketDataResponse,
+    execution_service_server::{ExecutionService, ExecutionServiceServer},
+    market_data_service_server::{MarketDataService, MarketDataServiceServer},
 };
 
 // ============================================
@@ -320,10 +320,7 @@ impl MarketDataService for MarketDataServiceImpl {
         // Spawn a task to send market data updates
         let symbols = req.symbols;
         tokio::spawn(async move {
-            tracing::info!(
-                symbol_count = symbols.len(),
-                "Market data stream started"
-            );
+            tracing::info!(symbol_count = symbols.len(), "Market data stream started");
             let _ = tx;
         });
 
@@ -372,9 +369,7 @@ impl MarketDataService for MarketDataServiceImpl {
 fn convert_decision_plan(
     proto: &proto::cream::v1::DecisionPlan,
 ) -> Result<crate::models::DecisionPlan, Status> {
-    use crate::models::{
-        Action, Decision, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon,
-    };
+    use crate::models::{Action, Decision, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon};
     use rust_decimal::Decimal;
 
     let decisions: Vec<Decision> = proto
@@ -401,48 +396,60 @@ fn convert_decision_plan(
             };
 
             // Extract risk levels
-            let (stop_loss, take_profit) = d.risk_levels.as_ref().map_or(
-                (Decimal::ZERO, Decimal::ZERO),
-                |r| {
-                    (
-                        Decimal::from_f64_retain(r.stop_loss_level).unwrap_or_default(),
-                        Decimal::from_f64_retain(r.take_profit_level).unwrap_or_default(),
-                    )
-                },
-            );
+            let (stop_loss, take_profit) =
+                d.risk_levels
+                    .as_ref()
+                    .map_or((Decimal::ZERO, Decimal::ZERO), |r| {
+                        (
+                            Decimal::from_f64_retain(r.stop_loss_level).unwrap_or_default(),
+                            Decimal::from_f64_retain(r.take_profit_level).unwrap_or_default(),
+                        )
+                    });
 
             // Extract size
-            let (quantity, unit) = d.size.as_ref().map_or((Decimal::ZERO, SizeUnit::Shares), |s| {
-                let unit = match proto::cream::v1::SizeUnit::try_from(s.unit) {
-                    Ok(proto::cream::v1::SizeUnit::Shares) => SizeUnit::Shares,
-                    Ok(proto::cream::v1::SizeUnit::Contracts) => SizeUnit::Contracts,
-                    _ => SizeUnit::Shares,
-                };
-                (Decimal::from(s.quantity), unit)
-            });
+            let (quantity, unit) = d
+                .size
+                .as_ref()
+                .map_or((Decimal::ZERO, SizeUnit::Shares), |s| {
+                    let unit = match proto::cream::v1::SizeUnit::try_from(s.unit) {
+                        Ok(proto::cream::v1::SizeUnit::Shares) => SizeUnit::Shares,
+                        Ok(proto::cream::v1::SizeUnit::Contracts) => SizeUnit::Contracts,
+                        _ => SizeUnit::Shares,
+                    };
+                    (Decimal::from(s.quantity), unit)
+                });
 
             // Extract strategy family
             // Proto: Unspecified, Trend, MeanReversion, EventDriven, Volatility, RelativeValue
             // Internal: Momentum, MeanReversion, TrendFollowing, Volatility, EventDriven, Fundamental
-            let strategy_family = match proto::cream::v1::StrategyFamily::try_from(d.strategy_family) {
-                Ok(proto::cream::v1::StrategyFamily::Trend) => StrategyFamily::TrendFollowing,
-                Ok(proto::cream::v1::StrategyFamily::MeanReversion) => StrategyFamily::MeanReversion,
-                Ok(proto::cream::v1::StrategyFamily::Volatility) => StrategyFamily::Volatility,
-                Ok(proto::cream::v1::StrategyFamily::EventDriven) => StrategyFamily::EventDriven,
-                Ok(proto::cream::v1::StrategyFamily::RelativeValue) => StrategyFamily::Fundamental,
-                _ => StrategyFamily::Momentum, // Default
-            };
+            let strategy_family =
+                match proto::cream::v1::StrategyFamily::try_from(d.strategy_family) {
+                    Ok(proto::cream::v1::StrategyFamily::Trend) => StrategyFamily::TrendFollowing,
+                    Ok(proto::cream::v1::StrategyFamily::MeanReversion) => {
+                        StrategyFamily::MeanReversion
+                    }
+                    Ok(proto::cream::v1::StrategyFamily::Volatility) => StrategyFamily::Volatility,
+                    Ok(proto::cream::v1::StrategyFamily::EventDriven) => {
+                        StrategyFamily::EventDriven
+                    }
+                    Ok(proto::cream::v1::StrategyFamily::RelativeValue) => {
+                        StrategyFamily::Fundamental
+                    }
+                    _ => StrategyFamily::Momentum, // Default
+                };
 
             // Extract limit price from order plan
             let limit_price = d.order_plan.as_ref().and_then(|op| {
-                op.entry_limit_price.map(|p| Decimal::from_f64_retain(p).unwrap_or_default())
+                op.entry_limit_price
+                    .map(|p| Decimal::from_f64_retain(p).unwrap_or_default())
             });
 
             Decision {
                 decision_id: format!("{}-{}", proto.cycle_id, idx),
-                instrument_id: d.instrument.as_ref().map_or(String::new(), |i| {
-                    i.instrument_id.clone()
-                }),
+                instrument_id: d
+                    .instrument
+                    .as_ref()
+                    .map_or(String::new(), |i| i.instrument_id.clone()),
                 action,
                 direction,
                 size: Size { quantity, unit },
@@ -451,8 +458,8 @@ fn convert_decision_plan(
                 limit_price,
                 strategy_family,
                 time_horizon: TimeHorizon::Swing, // Default
-                bullish_factors: vec![], // Not in proto
-                bearish_factors: vec![], // Not in proto
+                bullish_factors: vec![],          // Not in proto
+                bearish_factors: vec![],          // Not in proto
                 rationale: d.rationale.clone(),
                 confidence: Decimal::from_f64_retain(d.confidence).unwrap_or_default(),
             }
@@ -497,7 +504,10 @@ pub async fn run_grpc_server(addr: std::net::SocketAddr) -> Result<(), tonic::tr
 }
 
 /// Build the gRPC services for testing or custom server setup.
-pub fn build_grpc_services() -> (ExecutionServiceServer<ExecutionServiceImpl>, MarketDataServiceServer<MarketDataServiceImpl>) {
+pub fn build_grpc_services() -> (
+    ExecutionServiceServer<ExecutionServiceImpl>,
+    MarketDataServiceServer<MarketDataServiceImpl>,
+) {
     let execution_service = ExecutionServiceImpl::with_defaults();
     let market_data_service = MarketDataServiceImpl::new();
 

@@ -436,12 +436,14 @@ describe("Edge Cases", () => {
   });
 
   it("SkeletonCard with no options uses defaults", () => {
-    const _props: SkeletonCardProps = {};
+    const props: SkeletonCardProps = {};
     const defaults = {
       avatar: false,
       lines: 2,
       actions: false,
     };
+    // Avoid unused variable warning
+    expect(props).toBeDefined();
     expect(defaults.avatar).toBe(false);
     expect(defaults.lines).toBe(2);
     expect(defaults.actions).toBe(false);

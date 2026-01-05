@@ -125,7 +125,7 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 export interface StartupResult {
   success: boolean;
   env: EnvConfig;
-  config?: CreamConfig;
+  config?: CreamConfig | undefined;
   errors: string[];
   warnings: string[];
 }

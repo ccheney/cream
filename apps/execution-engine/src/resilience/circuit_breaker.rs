@@ -41,8 +41,8 @@
 //! ```
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::RwLock;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -258,7 +258,10 @@ impl CircuitBreaker {
 
     /// Update the sliding window with a new outcome.
     fn update_sliding_window(&self, outcome: CallOutcome) {
-        let mut window = self.sliding_window.write().unwrap_or_else(|e| e.into_inner());
+        let mut window = self
+            .sliding_window
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
 
         window.push_back(outcome);
 
@@ -270,7 +273,10 @@ impl CircuitBreaker {
 
     /// Evaluate CLOSED state and potentially transition to OPEN.
     fn evaluate_closed_state(&self) {
-        let window = self.sliding_window.read().unwrap_or_else(|e| e.into_inner());
+        let window = self
+            .sliding_window
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
 
         // Don't evaluate until minimum calls
         if window.len() < self.config.minimum_calls as usize {
@@ -379,7 +385,10 @@ impl CircuitBreaker {
             drop(state);
 
             // Clear sliding window
-            let mut window = self.sliding_window.write().unwrap_or_else(|e| e.into_inner());
+            let mut window = self
+                .sliding_window
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             window.clear();
             drop(window);
 
@@ -419,7 +428,10 @@ impl CircuitBreaker {
 
     /// Calculate current failure rate from sliding window.
     fn current_failure_rate(&self) -> f64 {
-        let window = self.sliding_window.read().unwrap_or_else(|e| e.into_inner());
+        let window = self
+            .sliding_window
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
 
         if window.is_empty() {
             return 0.0;
@@ -477,7 +489,10 @@ impl ServiceCircuitBreakers {
     #[must_use]
     pub fn with_defaults() -> Self {
         Self {
-            alpaca: Some(CircuitBreaker::new("alpaca", CircuitBreakerConfig::alpaca())),
+            alpaca: Some(CircuitBreaker::new(
+                "alpaca",
+                CircuitBreakerConfig::alpaca(),
+            )),
             databento: Some(CircuitBreaker::new(
                 "databento",
                 CircuitBreakerConfig::databento(),

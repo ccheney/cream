@@ -385,7 +385,7 @@ export const ALL_RETENTION_POLICIES: Record<RetentionEnvironment, RetentionPolic
  */
 export function getRetentionPolicy(
   nodeType: RetentionNodeType,
-  environment: RetentionEnvironment,
+  environment: RetentionEnvironment
 ): RetentionPolicy | undefined {
   const policies = ALL_RETENTION_POLICIES[environment];
   return policies.find((p) => p.nodeType === nodeType);
@@ -477,7 +477,10 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
 
   for (let i = 0; i < tierThresholds.length; i++) {
     const threshold = tierThresholds[i];
-    const previousEnd = i > 0 ? tierThresholds[i - 1].endDay : 0;
+
+    if (!threshold) {
+      continue;
+    }
 
     if (nodeInfo.ageDays < threshold.endDay) {
       expectedTier = threshold.tier;
@@ -491,7 +494,11 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
   // Check if node should be deleted (beyond all tiers)
   if (!expectedTier) {
     const lastThreshold = tierThresholds[tierThresholds.length - 1];
-    if (lastThreshold.endDay !== Number.MAX_SAFE_INTEGER && nodeInfo.ageDays >= lastThreshold.endDay) {
+    if (
+      lastThreshold &&
+      lastThreshold.endDay !== Number.MAX_SAFE_INTEGER &&
+      nodeInfo.ageDays >= lastThreshold.endDay
+    ) {
       return {
         shouldTransition: false,
         shouldDelete: true,
@@ -537,10 +544,12 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
 export function getTargetTier(
   ageDays: number,
   nodeType: RetentionNodeType,
-  environment: RetentionEnvironment,
+  environment: RetentionEnvironment
 ): StorageTier | null {
   const policy = getRetentionPolicy(nodeType, environment);
-  if (!policy) return null;
+  if (!policy) {
+    return null;
+  }
 
   let cumulativeDays = 0;
 
@@ -584,7 +593,9 @@ export function isSECCompliant(policy: RetentionPolicy): boolean {
         accessibleDays += period.durationDays;
       }
     }
-    if (accessibleDays >= DURATIONS.YEAR_2) break;
+    if (accessibleDays >= DURATIONS.YEAR_2) {
+      break;
+    }
   }
 
   return accessibleDays >= DURATIONS.YEAR_2;

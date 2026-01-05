@@ -11,7 +11,7 @@
  */
 
 import { readdir, readFile } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import type { TursoClient } from "./turso.js";
 
 // ============================================
@@ -39,6 +39,7 @@ export interface AppliedMigration {
   version: number;
   name: string;
   applied_at: string;
+  [key: string]: unknown; // Index signature for Row compatibility
 }
 
 /**
@@ -157,7 +158,7 @@ export async function runMigrations(
     }
   }
 
-  const newVersion = applied.length > 0 ? applied[applied.length - 1].version : currentVersion;
+  const newVersion = applied.length > 0 ? applied[applied.length - 1]?.version : currentVersion;
 
   logger(`Applied ${applied.length} migration(s). Current version: ${newVersion}`);
 
@@ -333,10 +334,7 @@ async function getAppliedMigrations(client: TursoClient): Promise<AppliedMigrati
 /**
  * Load migration files from directory
  */
-async function loadMigrations(
-  dir: string,
-  direction: "up" | "down"
-): Promise<Migration[]> {
+async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Migration[]> {
   const pattern = direction === "up" ? MIGRATION_FILE_PATTERN : ROLLBACK_FILE_PATTERN;
   const migrations: Migration[] = [];
 
@@ -345,13 +343,17 @@ async function loadMigrations(
 
     for (const file of files) {
       const match = file.match(pattern);
-      if (!match) continue;
+      if (!match) {
+        continue;
+      }
 
       // Skip rollback files when loading "up" migrations
-      if (direction === "up" && file.includes("_down.sql")) continue;
+      if (direction === "up" && file.includes("_down.sql")) {
+        continue;
+      }
 
-      const version = parseInt(match[1], 10);
-      const name = match[2].replace(/_down$/, "");
+      const version = parseInt(match[1]!, 10);
+      const name = match[2]?.replace(/_down$/, "");
       const sql = await readFile(join(dir, file), "utf-8");
 
       migrations.push({

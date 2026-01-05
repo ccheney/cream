@@ -15,9 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Sidebar - to be implemented in cream-87md (design system) */}
       <aside className="w-64 border-r border-cream-200 dark:border-night-700 bg-white dark:bg-night-800">
         <div className="p-4">
-          <h2 className="text-lg font-semibold text-cream-900 dark:text-cream-100">
-            Cream
-          </h2>
+          <h2 className="text-lg font-semibold text-cream-900 dark:text-cream-100">Cream</h2>
         </div>
         <nav className="mt-4 px-2 space-y-1">
           <NavLink href="/dashboard">Dashboard</NavLink>
@@ -43,9 +41,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="flex items-center gap-4">
             {/* Connection status indicator - cream-s8h9 */}
             <div className="w-2 h-2 rounded-full bg-green-500" title="Connected" />
-            <span className="text-sm text-cream-600 dark:text-cream-400">
-              PAPER
-            </span>
+            <span className="text-sm text-cream-600 dark:text-cream-400">PAPER</span>
           </div>
         </header>
 
@@ -58,13 +54,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-function NavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a
       href={href}

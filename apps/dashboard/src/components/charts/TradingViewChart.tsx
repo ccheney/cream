@@ -13,6 +13,7 @@ import {
   createChart,
   type IChartApi,
   type ISeriesApi,
+  type LineWidth,
   type Time,
 } from "lightweight-charts";
 import { memo, useCallback, useEffect, useRef } from "react";
@@ -78,9 +79,7 @@ function TradingViewChartComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const priceLineRefs = useRef<Map<string, ReturnType<typeof seriesRef.current.createPriceLine>>>(
-    new Map()
-  );
+  const priceLineRefs = useRef<Map<string, any>>(new Map());
 
   // Initialize chart
   useEffect(() => {
@@ -98,7 +97,10 @@ function TradingViewChartComponent({
     chartRef.current = chart;
 
     // Add candlestick series
-    const series = chart.addCandlestickSeries(DEFAULT_CANDLESTICK_OPTIONS);
+    const series = chart.addSeries(
+      "candlestick" as any,
+      DEFAULT_CANDLESTICK_OPTIONS
+    ) as ISeriesApi<"Candlestick">;
     seriesRef.current = series;
 
     // Set data
@@ -171,10 +173,10 @@ function TradingViewChartComponent({
       color: m.color,
       shape: m.shape,
       text: m.text,
-      size: m.size,
     }));
 
-    seriesRef.current.setMarkers(formattedMarkers);
+    // Type assertion for setMarkers which exists on candlestick series
+    (seriesRef.current as any).setMarkers(formattedMarkers);
   }, [markers]);
 
   // Update price lines
@@ -194,7 +196,7 @@ function TradingViewChartComponent({
       const priceLine = seriesRef.current.createPriceLine({
         price: config.price,
         color: config.color,
-        lineWidth: config.lineWidth,
+        lineWidth: config.lineWidth as LineWidth,
         lineStyle: config.lineStyle,
         title: config.title,
         axisLabelVisible: config.axisLabelVisible,

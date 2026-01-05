@@ -406,10 +406,7 @@ export class AuditLogger {
   /**
    * Get audit trail for an entity.
    */
-  async getEntityTrail(
-    entityType: AuditEntityType,
-    entityId: string
-  ): Promise<AuditLogEntry[]> {
+  async getEntityTrail(entityType: AuditEntityType, entityId: string): Promise<AuditLogEntry[]> {
     return this.config.storage.getEntityTrail(entityType, entityId);
   }
 
@@ -441,7 +438,9 @@ export class AuditLogger {
   }> {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      if (!entry) continue;
+      if (!entry) {
+        continue;
+      }
 
       // Verify entry hash
       if (!(await this.verifyIntegrity(entry))) {
@@ -575,9 +574,7 @@ export class ImmutabilityViolationError extends Error {
     public readonly entityId: string,
     public readonly reason: string
   ) {
-    super(
-      `Cannot modify immutable ${entityType} ${entityId}: ${reason}`
-    );
+    super(`Cannot modify immutable ${entityType} ${entityId}: ${reason}`);
     this.name = "ImmutabilityViolationError";
   }
 }
@@ -699,10 +696,7 @@ export class InMemoryAuditStorage implements AuditStorage {
     return results.slice(params.offset, params.offset + params.limit);
   }
 
-  async getEntityTrail(
-    entityType: AuditEntityType,
-    entityId: string
-  ): Promise<AuditLogEntry[]> {
+  async getEntityTrail(entityType: AuditEntityType, entityId: string): Promise<AuditLogEntry[]> {
     return this.entries
       .filter((e) => e.entityType === entityType && e.entityId === entityId)
       .sort((a, b) => a.timestamp.localeCompare(b.timestamp));

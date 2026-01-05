@@ -147,7 +147,7 @@ export function useSubscribe(
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSubscribe, ...deps]);
+  }, [autoSubscribe, ...deps, subscribe, unsubscribe]);
 
   return {
     subscribedChannels: wsStore.subscribedChannels as Channel[],
@@ -250,7 +250,13 @@ export function useSymbolSubscription(
       // Don't unsubscribe on every render, only on unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbols.join(","), autoSubscribe, ...deps]);
+  }, [
+    autoSubscribe,
+    symbols,
+    wsStore.subscribeSymbols,
+    wsStore.subscribedSymbols,
+    wsStore.unsubscribeSymbols,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -260,7 +266,7 @@ export function useSymbolSubscription(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [wsStore.unsubscribeSymbols]);
 
   return {
     subscribedSymbols: wsStore.subscribedSymbols,

@@ -8,26 +8,21 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
-import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { timing } from "hono/timing";
 import { prettyJSON } from "hono/pretty-json";
-import {
-  websocketHandler,
-  createConnectionMetadata,
-  validateAuthToken,
-  startHeartbeat,
-  closeAllConnections,
-  getConnectionCount,
-} from "./websocket/handler.js";
-import {
-  systemRoutes,
-  decisionsRoutes,
-  portfolioRoutes,
-  alertsRoutes,
-} from "./routes/index.js";
+import { timing } from "hono/timing";
 import { closeDb } from "./db.js";
+import { alertsRoutes, decisionsRoutes, portfolioRoutes, systemRoutes } from "./routes/index.js";
+import {
+  closeAllConnections,
+  createConnectionMetadata,
+  getConnectionCount,
+  startHeartbeat,
+  validateAuthToken,
+  websocketHandler,
+} from "./websocket/handler.js";
 
 // ============================================
 // App Setup
@@ -173,9 +168,7 @@ app.doc("/openapi.json", {
     version: "0.1.0",
     description: "API for the Cream trading system dashboard",
   },
-  servers: [
-    { url: "http://localhost:3001", description: "Development" },
-  ],
+  servers: [{ url: "http://localhost:3001", description: "Development" }],
 });
 
 // Swagger UI redirect
@@ -248,15 +241,8 @@ if (import.meta.main) {
     websocket: websocketHandler,
   });
 
-  console.log(`Dashboard API server running at http://localhost:${port}`);
-  console.log(`  - Health: http://localhost:${port}/health`);
-  console.log(`  - OpenAPI: http://localhost:${port}/openapi.json`);
-  console.log(`  - Docs: http://localhost:${port}/docs`);
-  console.log(`  - WebSocket: ws://localhost:${port}/ws`);
-
   // Graceful shutdown
   process.on("SIGINT", () => {
-    console.log("\nShutting down...");
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();
@@ -264,7 +250,6 @@ if (import.meta.main) {
   });
 
   process.on("SIGTERM", () => {
-    console.log("\nShutting down...");
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();

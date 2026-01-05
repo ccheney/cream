@@ -21,16 +21,16 @@
 //! - `strategy.build` - Strategy construction
 //! - `feed.process` - Feed message processing
 
-use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::KeyValue;
+use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::trace::{BatchSpanProcessor, SdkTracerProvider};
 use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::trace::{BatchSpanProcessor, SdkTracerProvider};
 use std::time::Duration;
 use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 /// Configuration for OpenTelemetry tracing.
 #[derive(Debug, Clone)]
@@ -208,8 +208,8 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
 pub fn config_from_env() -> TracingConfig {
     let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4317".to_string());
-    let service_name = std::env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "execution-engine".to_string());
+    let service_name =
+        std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "execution-engine".to_string());
     let sampling_ratio = std::env::var("OTEL_TRACES_SAMPLER_ARG")
         .ok()
         .and_then(|s| s.parse().ok())

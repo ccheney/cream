@@ -20,14 +20,7 @@ export type ChartTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
 /**
  * Real-time feed filter options.
  */
-export type FeedFilter =
-  | "all"
-  | "quotes"
-  | "orders"
-  | "decisions"
-  | "agents"
-  | "alerts"
-  | "system";
+export type FeedFilter = "all" | "quotes" | "orders" | "decisions" | "agents" | "alerts" | "system";
 
 /**
  * UI store state.
@@ -240,8 +233,7 @@ export const useUIStore = create<UIStore>()(
 
 export const selectTheme = (state: UIStore) => state.theme;
 export const selectSidebarCollapsed = (state: UIStore) => state.sidebarCollapsed;
-export const selectRealTimeFeedVisible = (state: UIStore) =>
-  state.realTimeFeedVisible;
+export const selectRealTimeFeedVisible = (state: UIStore) => state.realTimeFeedVisible;
 export const selectChartTimeframe = (state: UIStore) => state.chartTimeframe;
 export const selectFeedFilters = (state: UIStore) => state.realTimeFeedFilters;
 

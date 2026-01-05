@@ -6,12 +6,8 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
-import {
-  RepositoryError,
-  parseJson,
-  toJson,
-} from "./base.js";
+import type { Row, TursoClient } from "../turso.js";
+import { parseJson, RepositoryError, toJson } from "./base.js";
 
 // ============================================
 // Types
@@ -133,10 +129,7 @@ export class AgentOutputsRepository {
    * Find agent output by ID
    */
   async findById(id: number): Promise<AgentOutput | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapAgentOutputRow(row) : null;
   }
@@ -156,10 +149,7 @@ export class AgentOutputsRepository {
   /**
    * Find agent output by decision and agent type
    */
-  async findByDecisionAndAgent(
-    decisionId: string,
-    agentType: string
-  ): Promise<AgentOutput | null> {
+  async findByDecisionAndAgent(decisionId: string, agentType: string): Promise<AgentOutput | null> {
     const row = await this.client.get<Row>(
       `SELECT * FROM ${this.table} WHERE decision_id = ? AND agent_type = ?`,
       [decisionId, agentType]
@@ -217,10 +207,9 @@ export class AgentOutputsRepository {
    * Delete outputs for a decision
    */
   async deleteByDecision(decisionId: string): Promise<number> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE decision_id = ?`,
-      [decisionId]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE decision_id = ?`, [
+      decisionId,
+    ]);
 
     return result.changes;
   }

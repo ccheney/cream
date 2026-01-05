@@ -28,10 +28,10 @@ describe("Toast Type", () => {
       duration: 4000,
       createdAt: Date.now(),
     };
-    expect(toast.id).toBe("test-1");
-    expect(toast.variant).toBe("success");
-    expect(toast.message).toBe("Test message");
-    expect(toast.duration).toBe(4000);
+    expect(toast!.id).toBe("test-1");
+    expect(toast!.variant).toBe("success");
+    expect(toast!.message).toBe("Test message");
+    expect(toast!.duration).toBe(4000);
   });
 
   it("supports optional title", () => {
@@ -43,7 +43,7 @@ describe("Toast Type", () => {
       duration: 4000,
       createdAt: Date.now(),
     };
-    expect(toast.title).toBe("Success!");
+    expect(toast!.title).toBe("Success!");
   });
 
   it("supports optional dismissing flag", () => {
@@ -55,7 +55,7 @@ describe("Toast Type", () => {
       createdAt: Date.now(),
       dismissing: true,
     };
-    expect(toast.dismissing).toBe(true);
+    expect(toast!.dismissing).toBe(true);
   });
 });
 
@@ -227,22 +227,22 @@ describe("addToast", () => {
   it("uses default duration for variant", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().addToast("success", "Test message");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.duration).toBe(4000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.duration).toBe(4000);
   });
 
   it("allows custom duration", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().addToast("success", "Test message", { duration: 2000 });
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.duration).toBe(2000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.duration).toBe(2000);
   });
 
   it("adds title when provided", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().addToast("success", "Test message", { title: "Title" });
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.title).toBe("Title");
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.title).toBe("Title");
   });
 
   it("sets createdAt timestamp", async () => {
@@ -250,9 +250,9 @@ describe("addToast", () => {
     const before = Date.now();
     module.useToastStore.getState().addToast("success", "Test message");
     const after = Date.now();
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.createdAt).toBeGreaterThanOrEqual(before);
-    expect(toast.createdAt).toBeLessThanOrEqual(after);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.createdAt).toBeGreaterThanOrEqual(before);
+    expect(toast!.createdAt).toBeLessThanOrEqual(after);
   });
 });
 
@@ -268,9 +268,9 @@ describe("Queue Management", () => {
     store.addToast("info", "Second");
     store.addToast("warning", "Third");
     const toasts = module.useToastStore.getState().toasts;
-    expect(toasts[0].message).toBe("First");
-    expect(toasts[1].message).toBe("Second");
-    expect(toasts[2].message).toBe("Third");
+    expect(toasts[0]!.message).toBe("First");
+    expect(toasts[1]!.message).toBe("Second");
+    expect(toasts[2]!.message).toBe("Third");
   });
 
   it("limits to maxVisible toasts", async () => {
@@ -283,9 +283,9 @@ describe("Queue Management", () => {
     const toasts = module.useToastStore.getState().toasts;
     expect(toasts.length).toBe(3);
     // Oldest should be removed
-    expect(toasts[0].message).toBe("Second");
-    expect(toasts[1].message).toBe("Third");
-    expect(toasts[2].message).toBe("Fourth");
+    expect(toasts[0]!.message).toBe("Second");
+    expect(toasts[1]!.message).toBe("Third");
+    expect(toasts[2]!.message).toBe("Fourth");
   });
 
   it("removes oldest when exceeding max", async () => {
@@ -298,9 +298,9 @@ describe("Queue Management", () => {
     store.addToast("success", "5");
     const toasts = module.useToastStore.getState().toasts;
     expect(toasts.length).toBe(3);
-    expect(toasts[0].message).toBe("3");
-    expect(toasts[1].message).toBe("4");
-    expect(toasts[2].message).toBe("5");
+    expect(toasts[0]!.message).toBe("3");
+    expect(toasts[1]!.message).toBe("4");
+    expect(toasts[2]!.message).toBe("5");
   });
 });
 
@@ -333,8 +333,8 @@ describe("removeToast", () => {
     module.useToastStore.getState().removeToast(id);
     const toasts = module.useToastStore.getState().toasts;
     expect(toasts.length).toBe(2);
-    expect(toasts[0].message).toBe("First");
-    expect(toasts[1].message).toBe("Third");
+    expect(toasts[0]!.message).toBe("First");
+    expect(toasts[1]!.message).toBe("Third");
   });
 });
 
@@ -347,8 +347,8 @@ describe("startDismiss", () => {
     const module = await import("./toast-store.js");
     const id = module.useToastStore.getState().addToast("success", "Test");
     module.useToastStore.getState().startDismiss(id);
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.dismissing).toBe(true);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.dismissing).toBe(true);
   });
 
   it("only affects targeted toast", async () => {
@@ -358,8 +358,8 @@ describe("startDismiss", () => {
     store.addToast("info", "Second");
     module.useToastStore.getState().startDismiss(id1);
     const toasts = module.useToastStore.getState().toasts;
-    expect(toasts[0].dismissing).toBe(true);
-    expect(toasts[1].dismissing).toBeUndefined();
+    expect(toasts[0]!.dismissing).toBe(true);
+    expect(toasts[1]!.dismissing).toBeUndefined();
   });
 });
 
@@ -414,45 +414,45 @@ describe("Convenience Methods", () => {
   it("success() creates success toast", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().success("Success message");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.variant).toBe("success");
-    expect(toast.message).toBe("Success message");
-    expect(toast.duration).toBe(4000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.variant).toBe("success");
+    expect(toast!.message).toBe("Success message");
+    expect(toast!.duration).toBe(4000);
   });
 
   it("error() creates error toast", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().error("Error message");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.variant).toBe("error");
-    expect(toast.message).toBe("Error message");
-    expect(toast.duration).toBe(8000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.variant).toBe("error");
+    expect(toast!.message).toBe("Error message");
+    expect(toast!.duration).toBe(8000);
   });
 
   it("warning() creates warning toast", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().warning("Warning message");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.variant).toBe("warning");
-    expect(toast.message).toBe("Warning message");
-    expect(toast.duration).toBe(6000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.variant).toBe("warning");
+    expect(toast!.message).toBe("Warning message");
+    expect(toast!.duration).toBe(6000);
   });
 
   it("info() creates info toast", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().info("Info message");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.variant).toBe("info");
-    expect(toast.message).toBe("Info message");
-    expect(toast.duration).toBe(4000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.variant).toBe("info");
+    expect(toast!.message).toBe("Info message");
+    expect(toast!.duration).toBe(4000);
   });
 
   it("convenience methods accept options", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().success("Message", { title: "Title", duration: 1000 });
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.title).toBe("Title");
-    expect(toast.duration).toBe(1000);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.title).toBe("Title");
+    expect(toast!.duration).toBe(1000);
   });
 });
 
@@ -524,23 +524,23 @@ describe("Edge Cases", () => {
   it("handles empty message", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().addToast("success", "");
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.message).toBe("");
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.message).toBe("");
   });
 
   it("handles zero duration (no auto-dismiss)", async () => {
     const module = await import("./toast-store.js");
     module.useToastStore.getState().addToast("success", "Test", { duration: 0 });
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.duration).toBe(0);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.duration).toBe(0);
   });
 
   it("handles very long message", async () => {
     const module = await import("./toast-store.js");
     const longMessage = "A".repeat(1000);
     module.useToastStore.getState().addToast("success", longMessage);
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.message).toBe(longMessage);
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.message).toBe(longMessage);
   });
 
   it("generates unique IDs", async () => {
@@ -565,22 +565,22 @@ describe("Integration Patterns", () => {
     const module = await import("./toast-store.js");
     // Simulate form submit success
     module.useToastStore.getState().success("Form submitted successfully");
-    expect(module.useToastStore.getState().toasts[0].variant).toBe("success");
+    expect(module.useToastStore.getState().toasts[0]!.variant).toBe("success");
   });
 
   it("works with API error pattern", async () => {
     const module = await import("./toast-store.js");
     // Simulate API error
     module.useToastStore.getState().error("Failed to fetch data", { title: "API Error" });
-    const toast = module.useToastStore.getState().toasts[0];
-    expect(toast.variant).toBe("error");
-    expect(toast.title).toBe("API Error");
+    const toast = module.useToastStore.getState().toasts[0]!;
+    expect(toast!.variant).toBe("error");
+    expect(toast!.title).toBe("API Error");
   });
 
   it("works with warning notification pattern", async () => {
     const module = await import("./toast-store.js");
     // Simulate warning
     module.useToastStore.getState().warning("Your session expires in 5 minutes");
-    expect(module.useToastStore.getState().toasts[0].variant).toBe("warning");
+    expect(module.useToastStore.getState().toasts[0]!.variant).toBe("warning");
   });
 });

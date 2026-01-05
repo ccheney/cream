@@ -359,11 +359,11 @@ describe("onError Callback", () => {
     };
     const testError = new Error("Test");
     props.onError?.(testError, { componentStack: "" });
-    expect(receivedError?.message).toBe("Test");
+    expect(receivedError!.message).toBe("Test");
   });
 
   it("receives errorInfo with componentStack", () => {
-    let receivedInfo: { componentStack: string } | null = null;
+    let receivedInfo: { componentStack?: string | null } | null = null;
     const props: ErrorBoundaryProps = {
       children: null,
       onError: (_, errorInfo) => {
@@ -371,7 +371,7 @@ describe("onError Callback", () => {
       },
     };
     props.onError?.(new Error("Test"), { componentStack: "<Stack>" });
-    expect(receivedInfo?.componentStack).toBe("<Stack>");
+    expect(receivedInfo!.componentStack).toBe("<Stack>");
   });
 });
 

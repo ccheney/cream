@@ -104,8 +104,8 @@ describe("Equity Calculations", () => {
   });
 
   it("calculates total return", () => {
-    const first = SAMPLE_EQUITY_DATA[0].value;
-    const last = SAMPLE_EQUITY_DATA[SAMPLE_EQUITY_DATA.length - 1].value;
+    const first = SAMPLE_EQUITY_DATA[0]?.value ?? 0;
+    const last = SAMPLE_EQUITY_DATA[SAMPLE_EQUITY_DATA.length - 1]?.value ?? 0;
     const totalReturn = ((last - first) / first) * 100;
 
     expect(totalReturn).toBeCloseTo(8.5, 1);

@@ -7,7 +7,7 @@
 import type { OHLCVData, PriceLineConfig, TradeMarker } from "@/lib/chart-config";
 import type { AllocationDataPoint } from "../AllocationChart";
 import type { EquityDataPoint } from "../EquityCurve";
-import type { ReturnDataPoint } from "../ReturnsChart";
+import type { ReturnsDataPoint } from "../ReturnsChart";
 
 // ============================================
 // OHLCV Candlestick Data
@@ -33,7 +33,7 @@ export function generateOHLCVData(days: number, startPrice = 100): OHLCVData[] {
     const volume = Math.floor(Math.random() * 1000000) + 100000;
 
     data.push({
-      time: date.toISOString().split("T")[0],
+      time: date.toISOString().split("T")[0]!,
       open: Number(open.toFixed(2)),
       high: Number(high.toFixed(2)),
       low: Number(low.toFixed(2)),
@@ -92,8 +92,22 @@ export const emptyMarkers: TradeMarker[] = [];
 
 /** Sample price lines */
 export const samplePriceLines: PriceLineConfig[] = [
-  { price: 95, color: "#ef4444", lineWidth: 2, lineStyle: 2, title: "Stop Loss" },
-  { price: 110, color: "#22c55e", lineWidth: 2, lineStyle: 2, title: "Take Profit" },
+  {
+    price: 95,
+    color: "#ef4444",
+    lineWidth: 2,
+    lineStyle: 2,
+    title: "Stop Loss",
+    axisLabelVisible: true,
+  },
+  {
+    price: 110,
+    color: "#22c55e",
+    lineWidth: 2,
+    lineStyle: 2,
+    title: "Take Profit",
+    axisLabelVisible: true,
+  },
 ];
 
 /** Empty price lines */
@@ -123,7 +137,7 @@ export function generateEquityData(days: number, startEquity = 100000): EquityDa
     const drawdown = ((peak - equity) / peak) * 100;
 
     data.push({
-      time: date.toISOString().split("T")[0],
+      time: date.toISOString().split("T")[0]!,
       value: Math.round(equity * 100) / 100,
       drawdown: Math.round(drawdown * 100) / 100,
     });
@@ -187,7 +201,7 @@ export const twoSliceData: AllocationDataPoint[] = [
 // ============================================
 
 /** Sample monthly returns */
-export const sampleReturnsData: ReturnDataPoint[] = [
+export const sampleReturnsData: ReturnsDataPoint[] = [
   { period: "Jan", value: 3.2 },
   { period: "Feb", value: -1.5 },
   { period: "Mar", value: 2.8 },
@@ -197,10 +211,10 @@ export const sampleReturnsData: ReturnDataPoint[] = [
 ];
 
 /** Empty returns data */
-export const emptyReturnsData: ReturnDataPoint[] = [];
+export const emptyReturnsData: ReturnsDataPoint[] = [];
 
 /** All positive returns */
-export const allPositiveReturns: ReturnDataPoint[] = [
+export const allPositiveReturns: ReturnsDataPoint[] = [
   { period: "Q1", value: 5.2 },
   { period: "Q2", value: 3.8 },
   { period: "Q3", value: 7.1 },
@@ -208,7 +222,7 @@ export const allPositiveReturns: ReturnDataPoint[] = [
 ];
 
 /** All negative returns */
-export const allNegativeReturns: ReturnDataPoint[] = [
+export const allNegativeReturns: ReturnsDataPoint[] = [
   { period: "Q1", value: -2.5 },
   { period: "Q2", value: -4.1 },
   { period: "Q3", value: -1.8 },

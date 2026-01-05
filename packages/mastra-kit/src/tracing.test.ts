@@ -90,9 +90,9 @@ describe("trace", () => {
 
     const traces = getAllTraces();
     expect(traces).toHaveLength(1);
-    expect(traces[0].attributes["test.key"]).toBe("test-value");
-    expect(traces[0].attributes.run_id).toBe("run-1");
-    expect(traces[0].attributes.cycle_id).toBe("cycle-1");
+    expect(traces[0]?.attributes["test.key"]).toBe("test-value");
+    expect(traces[0]?.attributes.run_id).toBe("run-1");
+    expect(traces[0]?.attributes.cycle_id).toBe("cycle-1");
   });
 
   it("captures errors in trace", async () => {
@@ -109,8 +109,8 @@ describe("trace", () => {
 
     const traces = getAllTraces();
     expect(traces).toHaveLength(1);
-    expect(traces[0].status).toBe("ERROR");
-    expect(traces[0].error?.message).toBe("Test error");
+    expect(traces[0]?.status).toBe("ERROR");
+    expect(traces[0]?.error?.message).toBe("Test error");
   });
 
   it("records timing information", async () => {
@@ -123,9 +123,9 @@ describe("trace", () => {
     );
 
     const traces = getAllTraces();
-    expect(traces[0].durationMs).toBeGreaterThanOrEqual(10);
-    expect(traces[0].startTime).toBeDefined();
-    expect(traces[0].endTime).toBeDefined();
+    expect(traces[0]?.durationMs).toBeGreaterThanOrEqual(10);
+    expect(traces[0]?.startTime).toBeDefined();
+    expect(traces[0]?.endTime).toBeDefined();
   });
 });
 
@@ -153,9 +153,9 @@ describe("runAgentWithTracing", () => {
     await runAgentWithTracing(agent, input, metadata);
 
     const traces = getAllTraces();
-    expect(traces[0].attributes["agent.name"]).toBe("trader");
-    expect(traces[0].attributes["agent.version"]).toBe("1.0.0");
-    expect(traces[0].attributes["input.snapshot_id"]).toBe("snap-123");
+    expect(traces[0]?.attributes["agent.name"]).toBe("trader");
+    expect(traces[0]?.attributes["agent.version"]).toBe("1.0.0");
+    expect(traces[0]?.attributes["input.snapshot_id"]).toBe("snap-123");
   });
 
   it("captures output metadata in trace", async () => {
@@ -166,9 +166,9 @@ describe("runAgentWithTracing", () => {
     await runAgentWithTracing(agent, input, metadata);
 
     const traces = getAllTraces();
-    expect(traces[0].attributes["output.decision_count"]).toBe(1);
-    expect(traces[0].attributes["output.verdict"]).toBe("APPROVE");
-    expect(traces[0].attributes["output.confidence"]).toBe(0.85);
+    expect(traces[0]?.attributes["output.decision_count"]).toBe(1);
+    expect(traces[0]?.attributes["output.verdict"]).toBe("APPROVE");
+    expect(traces[0]?.attributes["output.confidence"]).toBe(0.85);
   });
 
   it("respects sampling rate", async () => {
@@ -213,8 +213,8 @@ describe("runAgentWithTracing", () => {
     }
 
     const traces = getAllTraces();
-    expect(traces[0].status).toBe("ERROR");
-    expect(traces[0].error?.message).toBe("Agent failed");
+    expect(traces[0]?.status).toBe("ERROR");
+    expect(traces[0]?.error?.message).toBe("Agent failed");
   });
 
   it("records timing duration", async () => {
@@ -226,7 +226,7 @@ describe("runAgentWithTracing", () => {
 
     const traces = getAllTraces();
     // Allow small timing variance in CI (10ms tolerance)
-    expect(traces[0].attributes["timing.duration_ms"]).toBeGreaterThanOrEqual(10);
+    expect(traces[0]?.attributes["timing.duration_ms"]).toBeGreaterThanOrEqual(10);
   });
 });
 
@@ -256,9 +256,9 @@ describe("runCycleWithTracing", () => {
     await runCycleWithTracing(async () => ({}), metadata);
 
     const traces = getAllTraces();
-    expect(traces[0].attributes["cycle.id"]).toBe("cycle-123");
-    expect(traces[0].attributes["cycle.run_id"]).toBe("run-1");
-    expect(traces[0].attributes["cycle.environment"]).toBe("PAPER");
+    expect(traces[0]?.attributes["cycle.id"]).toBe("cycle-123");
+    expect(traces[0]?.attributes["cycle.run_id"]).toBe("run-1");
+    expect(traces[0]?.attributes["cycle.environment"]).toBe("PAPER");
   });
 });
 
@@ -310,16 +310,16 @@ describe("Trace Retrieval", () => {
 
     const errorTraces = getErrorTraces();
     expect(errorTraces).toHaveLength(1);
-    expect(errorTraces[0].status).toBe("ERROR");
+    expect(errorTraces[0]?.status).toBe("ERROR");
   });
 
   it("getTraceById returns all spans for trace", async () => {
     const traces = getAllTraces();
-    const firstTraceId = traces[0].traceId;
+    const firstTraceId = traces[0]?.traceId ?? "";
 
     const traceSpans = getTraceById(firstTraceId);
     expect(traceSpans.length).toBeGreaterThan(0);
-    expect(traceSpans[0].traceId).toBe(firstTraceId);
+    expect(traceSpans[0]?.traceId).toBe(firstTraceId);
   });
 });
 
@@ -349,15 +349,15 @@ describe("Dataset Export", () => {
     const examples = exportTracesToDataset(traceIds, "test-dataset");
 
     expect(examples).toHaveLength(2);
-    expect(examples[0].id).toContain("test-dataset");
-    expect(examples[0].metadata.agentName).toBe("trader");
+    expect(examples[0]?.id).toContain("test-dataset");
+    expect(examples[0]?.metadata.agentName).toBe("trader");
   });
 
   it("createGoldenDataset creates dataset from successful traces", () => {
     const examples = createGoldenDataset("trader", 10);
 
     expect(examples.length).toBeGreaterThan(0);
-    expect(examples[0].metadata.agentName).toBe("trader");
+    expect(examples[0]?.metadata.agentName).toBe("trader");
   });
 });
 
@@ -378,9 +378,9 @@ describe("Error Tracing", () => {
 
     const traces = getAllTraces();
     expect(traces).toHaveLength(1);
-    expect(traces[0].status).toBe("ERROR");
-    expect(traces[0].error?.message).toBe("Test error");
-    expect(traces[0].attributes["agent.name"]).toBe("trader");
+    expect(traces[0]?.status).toBe("ERROR");
+    expect(traces[0]?.error?.message).toBe("Test error");
+    expect(traces[0]?.attributes["agent.name"]).toBe("trader");
   });
 });
 
@@ -402,8 +402,8 @@ describe("createSpan", () => {
     span.end();
 
     const traces = getAllTraces();
-    expect(traces[0].attributes.key1).toBe("value1");
-    expect(traces[0].attributes.key2).toBe(42);
+    expect(traces[0]?.attributes.key1).toBe("value1");
+    expect(traces[0]?.attributes.key2).toBe(42);
   });
 
   it("records error", () => {
@@ -412,8 +412,8 @@ describe("createSpan", () => {
     span.end();
 
     const traces = getAllTraces();
-    expect(traces[0].status).toBe("ERROR");
-    expect(traces[0].error?.message).toBe("Span error");
+    expect(traces[0]?.status).toBe("ERROR");
+    expect(traces[0]?.error?.message).toBe("Span error");
   });
 });
 

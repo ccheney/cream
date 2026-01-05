@@ -159,9 +159,9 @@ describe("Connection Lifecycle", () => {
     handleOpen(ws as unknown as WebSocketWithMetadata);
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("system_status");
-    expect(message.data.status).toBe("healthy");
+    expect(message.data.health).toBe("healthy");
   });
 
   it("handleClose removes connection", () => {
@@ -192,7 +192,7 @@ describe("handleMessage", () => {
     expect(ws.data.channels.has("alerts")).toBe(true);
 
     // Check confirmation sent
-    const lastMessage = JSON.parse(ws.sentMessages[ws.sentMessages.length - 1]);
+    const lastMessage = JSON.parse(ws.sentMessages[ws.sentMessages.length - 1]!);
     expect(lastMessage.type).toBe("subscribed");
   });
 
@@ -233,7 +233,7 @@ describe("handleMessage", () => {
     handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "ping" }));
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("pong");
     expect(message.timestamp).toBeDefined();
   });
@@ -246,7 +246,7 @@ describe("handleMessage", () => {
     handleMessage(ws as unknown as WebSocketWithMetadata, "not json");
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("error");
     expect(message.message).toContain("Invalid JSON");
   });
@@ -259,7 +259,7 @@ describe("handleMessage", () => {
     handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "invalid_type" }));
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("error");
   });
 
@@ -311,14 +311,13 @@ describe("Broadcasting", () => {
     const sent = broadcast("orders", {
       type: "order",
       data: {
-        id: "order-1",
+        id: "00000000-0000-0000-0000-000000000001",
         symbol: "AAPL",
-        side: "BUY",
+        side: "buy",
+        orderType: "market",
         status: "filled",
         quantity: 100,
-        filledQuantity: 100,
-        price: 150,
-        averagePrice: 150,
+        filledQty: 100,
         timestamp: new Date().toISOString(),
       },
     });
@@ -372,10 +371,11 @@ describe("Broadcasting", () => {
     const sent = broadcastAll({
       type: "system_status",
       data: {
-        status: "healthy",
-        version: "0.1.0",
-        uptime: 100,
-        connections: 2,
+        health: "healthy",
+        uptimeSeconds: 100,
+        activeConnections: 2,
+        services: {},
+        environment: "PAPER",
         timestamp: new Date().toISOString(),
       },
     });
@@ -400,7 +400,7 @@ describe("sendMessage", () => {
     });
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("pong");
   });
 });
@@ -412,7 +412,7 @@ describe("sendError", () => {
     sendError(ws as unknown as WebSocketWithMetadata, "Test error");
 
     expect(ws.sentMessages).toHaveLength(1);
-    const message = JSON.parse(ws.sentMessages[0]);
+    const message = JSON.parse(ws.sentMessages[0]!);
     expect(message.type).toBe("error");
     expect(message.message).toBe("Test error");
   });

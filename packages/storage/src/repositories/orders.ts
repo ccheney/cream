@@ -6,15 +6,15 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { TursoClient, Row } from "../turso.js";
+import type { Row, TursoClient } from "../turso.js";
 import {
-  RepositoryError,
-  query,
-  paginate,
-  parseJson,
-  toJson,
   type PaginatedResult,
   type PaginationOptions,
+  paginate,
+  parseJson,
+  query,
+  RepositoryError,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -189,10 +189,7 @@ export class OrdersRepository {
    * Find order by ID
    */
   async findById(id: string): Promise<Order | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapOrderRow(row) : null;
   }
@@ -259,11 +256,11 @@ export class OrdersRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0];
+    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0],
+      sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),
       pagination
@@ -364,23 +361,13 @@ export class OrdersRepository {
   /**
    * Update fill information
    */
-  async updateFill(
-    id: string,
-    filledQty: number,
-    avgFillPrice: number
-  ): Promise<Order> {
+  async updateFill(id: string, filledQty: number, avgFillPrice: number): Promise<Order> {
     const order = await this.findByIdOrThrow(id);
     const now = new Date().toISOString();
 
-    const status: OrderStatus =
-      filledQty >= order.quantity ? "filled" : "partially_filled";
+    const status: OrderStatus = filledQty >= order.quantity ? "filled" : "partially_filled";
 
-    const fields = [
-      "filled_qty = ?",
-      "avg_fill_price = ?",
-      "status = ?",
-      "updated_at = ?",
-    ];
+    const fields = ["filled_qty = ?", "avg_fill_price = ?", "status = ?", "updated_at = ?"];
     const args = [filledQty, avgFillPrice, status, now];
 
     if (status === "filled") {
@@ -390,10 +377,7 @@ export class OrdersRepository {
 
     args.push(id);
 
-    await this.client.run(
-      `UPDATE ${this.table} SET ${fields.join(", ")} WHERE id = ?`,
-      args
-    );
+    await this.client.run(`UPDATE ${this.table} SET ${fields.join(", ")} WHERE id = ?`, args);
 
     return this.findByIdOrThrow(id);
   }
@@ -409,10 +393,7 @@ export class OrdersRepository {
    * Delete order
    */
   async delete(id: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE id = ?`,
-      [id]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }

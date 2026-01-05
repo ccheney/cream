@@ -68,11 +68,6 @@ interface TableSchema {
   primaryKey?: string;
 }
 
-/**
- * Row data
- */
-type Row = Record<string, unknown>;
-
 // ============================================
 // Mock Turso Client
 // ============================================
@@ -152,9 +147,6 @@ export class MockTursoClient {
    * Begin a transaction
    */
   async transaction(): Promise<Transaction> {
-    this.inTransaction = true;
-    this.transactionBuffer = [];
-
     // Save current state for rollback
     const savedState = new Map<string, Row[]>();
     for (const [name, rows] of this.tables.entries()) {
@@ -171,17 +163,14 @@ export class MockTursoClient {
         return self.execute(sql, args ?? []);
       },
       async commit(): Promise<void> {
-        self.inTransaction = false;
-        self.transactionBuffer = [];
+        // Transaction committed, no-op for mock
       },
       async rollback(): Promise<void> {
-        self.inTransaction = false;
-        self.transactionBuffer = [];
         // Restore saved state
         self.tables = savedState;
       },
       async close(): Promise<void> {
-        self.inTransaction = false;
+        // Transaction closed, no-op for mock
       },
     };
   }
@@ -196,7 +185,7 @@ export class MockTursoClient {
   private executeCreateTable(sql: string): ResultSet {
     // Parse table name: CREATE TABLE [IF NOT EXISTS] name (...)
     const match = sql.match(/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["']?(\w+)["']?\s*\(/i);
-    if (!match) {
+    if (!match || !match[1]) {
       throw new Error(`Invalid CREATE TABLE: ${sql}`);
     }
 
@@ -204,12 +193,15 @@ export class MockTursoClient {
 
     // Parse columns (simplified)
     const columnsMatch = sql.match(/\(([^)]+)\)/);
-    if (columnsMatch) {
+    if (columnsMatch?.[1]) {
       const columnDefs = columnsMatch[1].split(",").map((c) => c.trim());
-      const columns = columnDefs.map((def) => {
-        const parts = def.split(/\s+/);
-        return parts[0].replace(/["']/g, "").toLowerCase();
-      });
+      const columns = columnDefs
+        .map((def) => {
+          const parts = def.split(/\s+/);
+          const firstPart = parts[0];
+          return firstPart ? firstPart.replace(/["']/g, "").toLowerCase() : "";
+        })
+        .filter(Boolean);
 
       this.schemas.set(tableName, {
         name: tableName,
@@ -231,7 +223,7 @@ export class MockTursoClient {
   private executeInsert(sql: string, args: unknown[]): ResultSet {
     // Parse: INSERT INTO table (col1, col2) VALUES (?, ?)
     const match = sql.match(/INSERT INTO\s+["']?(\w+)["']?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
-    if (!match) {
+    if (!match || !match[1] || !match[2]) {
       throw new Error(`Invalid INSERT: ${sql}`);
     }
 
@@ -247,7 +239,10 @@ export class MockTursoClient {
     // Create row
     const row: Row = {};
     for (let i = 0; i < columns.length; i++) {
-      row[columns[i]] = args[i];
+      const colName = columns[i];
+      if (colName) {
+        row[colName] = args[i];
+      }
     }
 
     table.push(row);
@@ -266,7 +261,7 @@ export class MockTursoClient {
   private executeSelect(sql: string, args: unknown[]): ResultSet {
     // Parse: SELECT col1, col2 FROM table [WHERE ...]
     const match = sql.match(/SELECT\s+(.+?)\s+FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i);
-    if (!match) {
+    if (!match || !match[1] || !match[2]) {
       return { columns: [], rows: [], rowsAffected: 0 };
     }
 
@@ -283,7 +278,8 @@ export class MockTursoClient {
     let columns: string[];
     if (columnsStr.trim() === "*") {
       const schema = this.schemas.get(tableName);
-      columns = schema?.columns ?? Object.keys(table[0] ?? {});
+      const firstRow = table[0];
+      columns = schema?.columns ?? (firstRow ? Object.keys(firstRow) : []);
     } else {
       columns = columnsStr.split(",").map((c) => c.trim().toLowerCase());
     }
@@ -310,7 +306,7 @@ export class MockTursoClient {
   private executeUpdate(sql: string, args: unknown[]): ResultSet {
     // Parse: UPDATE table SET col1 = ? [WHERE ...]
     const match = sql.match(/UPDATE\s+["']?(\w+)["']?\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i);
-    if (!match) {
+    if (!match || !match[1] || !match[2]) {
       throw new Error(`Invalid UPDATE: ${sql}`);
     }
 
@@ -330,14 +326,16 @@ export class MockTursoClient {
 
     for (const part of setParts) {
       const [col, _val] = part.split("=").map((p) => p.trim());
-      updates[col.toLowerCase()] = args[argIndex++];
+      if (col) {
+        updates[col.toLowerCase()] = args[argIndex++];
+      }
     }
 
     // Filter and update rows
     let rowsAffected = 0;
     for (let i = 0; i < table.length; i++) {
       const row = table[i];
-      if (!whereClause || this.matchesWhere(row, whereClause, args.slice(argIndex))) {
+      if (row && (!whereClause || this.matchesWhere(row, whereClause, args.slice(argIndex)))) {
         for (const [col, val] of Object.entries(updates)) {
           row[col] = val;
         }
@@ -354,7 +352,7 @@ export class MockTursoClient {
   private executeDelete(sql: string, args: unknown[]): ResultSet {
     // Parse: DELETE FROM table [WHERE ...]
     const match = sql.match(/DELETE FROM\s+["']?(\w+)["']?(?:\s+WHERE\s+(.+))?/i);
-    if (!match) {
+    if (!match || !match[1]) {
       throw new Error(`Invalid DELETE: ${sql}`);
     }
 
@@ -386,7 +384,7 @@ export class MockTursoClient {
    */
   private executeDropTable(sql: string): ResultSet {
     const match = sql.match(/DROP TABLE\s+(?:IF EXISTS\s+)?["']?(\w+)["']?/i);
-    if (!match) {
+    if (!match || !match[1]) {
       throw new Error(`Invalid DROP TABLE: ${sql}`);
     }
 
@@ -414,7 +412,7 @@ export class MockTursoClient {
   private matchesWhere(row: Row, whereClause: string, args: unknown[]): boolean {
     // Simplified WHERE parsing: col = ?
     const match = whereClause.match(/(\w+)\s*=\s*\?/);
-    if (match) {
+    if (match?.[1]) {
       const col = match[1].toLowerCase();
       return row[col] === args[0];
     }
@@ -449,7 +447,10 @@ export class MockTursoClient {
     return result.rows.map((row) => {
       const obj: Row = {};
       for (let i = 0; i < columns.length; i++) {
-        obj[columns[i]] = row[i];
+        const colName = columns[i];
+        if (colName) {
+          obj[colName] = row[i];
+        }
       }
       return obj as T;
     });
@@ -475,7 +476,10 @@ export class MockTursoClient {
   /**
    * Run a statement and return metadata (TursoClient-compatible)
    */
-  async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+  async run(
+    sql: string,
+    args: unknown[] = []
+  ): Promise<{ changes: number; lastInsertRowid: bigint }> {
     const result = await this.execute(sql, args);
     return {
       changes: result.rowsAffected,
@@ -488,7 +492,7 @@ export class MockTursoClient {
    */
   private getSchemaForQuery(sql: string): TableSchema | undefined {
     const match = sql.match(/FROM\s+["']?(\w+)["']?/i);
-    if (match) {
+    if (match?.[1]) {
       return this.schemas.get(match[1].toLowerCase());
     }
     return undefined;
@@ -500,8 +504,6 @@ export class MockTursoClient {
   reset(): void {
     this.tables.clear();
     this.schemas.clear();
-    this.inTransaction = false;
-    this.transactionBuffer = [];
   }
 
   /**

@@ -7,15 +7,9 @@
  * @see docs/plans/07-execution.md
  */
 
-import type {
-  Account,
-  Order,
-  OrderRequest,
-  Position,
-  TradingEnvironment,
-} from "./types.js";
+import type { Account, Order, OrderRequest, Position, TradingEnvironment } from "./types.js";
 import { BrokerError } from "./types.js";
-import { generateOrderId, validateLegRatios, gcd } from "./utils.js";
+import { generateOrderId, validateLegRatios } from "./utils.js";
 
 /**
  * Alpaca client configuration.
@@ -153,27 +147,17 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 
   // Validate credentials
   if (!apiKey || !apiSecret) {
-    throw new BrokerError(
-      "API key and secret are required",
-      "INVALID_CREDENTIALS"
-    );
+    throw new BrokerError("API key and secret are required", "INVALID_CREDENTIALS");
   }
 
   // Get base URL based on environment
-  const baseUrl =
-    environment === "LIVE" ? ENDPOINTS.LIVE : ENDPOINTS.PAPER;
-
   // BACKTEST uses paper endpoint but marks orders differently
-  const isBacktest = environment === "BACKTEST";
+  const baseUrl = environment === "LIVE" ? ENDPOINTS.LIVE : ENDPOINTS.PAPER;
 
   /**
    * Make an authenticated API request.
    */
-  async function request<T>(
-    method: string,
-    path: string,
-    body?: unknown
-  ): Promise<T> {
+  async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${baseUrl}${path}`;
     const headers: Record<string, string> = {
       "APCA-API-KEY-ID": apiKey,
@@ -254,10 +238,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 
     async getPosition(symbol: string): Promise<Position | null> {
       try {
-        const data = await request<AlpacaPositionResponse>(
-          "GET",
-          `/v2/positions/${symbol}`
-        );
+        const data = await request<AlpacaPositionResponse>("GET", `/v2/positions/${symbol}`);
         return mapPosition(data);
       } catch (error) {
         if (error instanceof BrokerError && error.code === "ORDER_NOT_FOUND") {
@@ -274,29 +255,26 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
       // Validate multi-leg order ratios
       if (orderRequest.legs && orderRequest.legs.length > 0) {
         if (orderRequest.legs.length > 4) {
-          throw new BrokerError(
-            "Multi-leg orders support a maximum of 4 legs",
-            "VALIDATION_ERROR"
-          );
+          throw new BrokerError("Multi-leg orders support a maximum of 4 legs", "VALIDATION_ERROR");
         }
 
         if (!validateLegRatios(orderRequest.legs)) {
-          throw new BrokerError(
-            "Leg ratios must be simplified (GCD = 1)",
-            "VALIDATION_ERROR"
-          );
+          throw new BrokerError("Leg ratios must be simplified (GCD = 1)", "VALIDATION_ERROR");
         }
       }
 
       // Build Alpaca order payload
       const payload: AlpacaOrderRequest = {
         client_order_id: orderRequest.clientOrderId,
-        symbol: orderRequest.symbol,
         qty: String(orderRequest.qty),
         side: orderRequest.side,
         type: orderRequest.type,
         time_in_force: orderRequest.timeInForce,
       };
+
+      if (orderRequest.symbol !== undefined) {
+        payload.symbol = orderRequest.symbol;
+      }
 
       if (orderRequest.limitPrice !== undefined) {
         payload.limit_price = String(orderRequest.limitPrice);
@@ -333,10 +311,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 
     async getOrder(orderId: string): Promise<Order | null> {
       try {
-        const data = await request<AlpacaOrderResponse>(
-          "GET",
-          `/v2/orders/${orderId}`
-        );
+        const data = await request<AlpacaOrderResponse>("GET", `/v2/orders/${orderId}`);
         return mapOrder(data);
       } catch (error) {
         if (error instanceof BrokerError && error.code === "ORDER_NOT_FOUND") {
@@ -347,26 +322,19 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
     },
 
     async getOrders(status: "open" | "closed" | "all" = "open"): Promise<Order[]> {
-      const data = await request<AlpacaOrderResponse[]>(
-        "GET",
-        `/v2/orders?status=${status}`
-      );
+      const data = await request<AlpacaOrderResponse[]>("GET", `/v2/orders?status=${status}`);
       return data.map(mapOrder);
     },
 
     async closePosition(symbol: string, qty?: number): Promise<Order> {
-      const path = qty !== undefined
-        ? `/v2/positions/${symbol}?qty=${qty}`
-        : `/v2/positions/${symbol}`;
+      const path =
+        qty !== undefined ? `/v2/positions/${symbol}?qty=${qty}` : `/v2/positions/${symbol}`;
       const data = await request<AlpacaOrderResponse>("DELETE", path);
       return mapOrder(data);
     },
 
     async closeAllPositions(): Promise<Order[]> {
-      const data = await request<AlpacaOrderResponse[]>(
-        "DELETE",
-        "/v2/positions"
-      );
+      const data = await request<AlpacaOrderResponse[]>("DELETE", "/v2/positions");
       return data.map(mapOrder);
     },
 
@@ -532,7 +500,7 @@ function mapPosition(data: AlpacaPositionResponse): Position {
 }
 
 function mapOrder(data: AlpacaOrderResponse): Order {
-  return {
+  const order: Order = {
     id: data.id,
     clientOrderId: data.client_order_id,
     symbol: data.symbol,
@@ -542,26 +510,34 @@ function mapOrder(data: AlpacaOrderResponse): Order {
     type: data.type as Order["type"],
     timeInForce: data.time_in_force as Order["timeInForce"],
     status: data.status as Order["status"],
-    limitPrice: data.limit_price ? parseFloat(data.limit_price) : undefined,
-    stopPrice: data.stop_price ? parseFloat(data.stop_price) : undefined,
-    filledAvgPrice: data.filled_avg_price
-      ? parseFloat(data.filled_avg_price)
-      : undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     submittedAt: data.submitted_at,
-    filledAt: data.filled_at,
-    legs: data.legs?.map((leg) => ({
+  };
+
+  if (data.limit_price) {
+    order.limitPrice = parseFloat(data.limit_price);
+  }
+  if (data.stop_price) {
+    order.stopPrice = parseFloat(data.stop_price);
+  }
+  if (data.filled_avg_price) {
+    order.filledAvgPrice = parseFloat(data.filled_avg_price);
+  }
+  if (data.filled_at) {
+    order.filledAt = data.filled_at;
+  }
+  if (data.legs) {
+    order.legs = data.legs.map((leg) => ({
       symbol: leg.symbol,
       ratio: leg.ratio,
-    })),
-  };
+    }));
+  }
+
+  return order;
 }
 
-function mapHttpStatusToErrorCode(
-  status: number,
-  message: string
-): BrokerError["code"] {
+function mapHttpStatusToErrorCode(status: number, message: string): BrokerError["code"] {
   switch (status) {
     case 401:
     case 403:
@@ -570,9 +546,7 @@ function mapHttpStatusToErrorCode(
       return "ORDER_NOT_FOUND";
     case 422:
       if (message.includes("insufficient")) {
-        return message.includes("shares")
-          ? "INSUFFICIENT_SHARES"
-          : "INSUFFICIENT_FUNDS";
+        return message.includes("shares") ? "INSUFFICIENT_SHARES" : "INSUFFICIENT_FUNDS";
       }
       return "INVALID_ORDER";
     case 429:

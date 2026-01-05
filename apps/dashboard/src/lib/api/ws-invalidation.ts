@@ -185,8 +185,6 @@ export function handleWSMessage(message: WSMessage): void {
     }
 
     default:
-      // Unknown message type - log for debugging
-      console.debug("[ws-invalidation] Unknown message type:", message.type);
   }
 }
 

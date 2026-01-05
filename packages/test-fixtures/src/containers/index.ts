@@ -19,5 +19,5 @@
  * ```
  */
 
-export { startTursoContainer, TursoContainer, type StartedTursoContainer } from "./turso";
-export { stopAllContainers, getRunningContainers } from "./manager";
+export { getRunningContainers, stopAllContainers } from "./manager";
+export { type StartedTursoContainer, startTursoContainer, TursoContainer } from "./turso";

@@ -136,6 +136,7 @@ export function ErrorPanel({
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
+    return undefined;
   }, [dismissible, handleKeyDown]);
 
   // Auto-focus on mount

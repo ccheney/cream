@@ -6,9 +6,7 @@ export default function RiskPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
-          Risk Exposure
-        </h1>
+        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Risk Exposure</h1>
       </div>
 
       {/* Risk Metrics Summary */}
@@ -46,9 +44,7 @@ export default function RiskPage() {
       {/* Risk Alerts */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-            Risk Alerts
-          </h2>
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Risk Alerts</h2>
         </div>
         <div className="p-4 text-cream-400">No active risk alerts</div>
       </div>
@@ -74,31 +70,17 @@ function RiskMetricCard({
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
-      <div
-        className={`mt-1 text-2xl font-semibold ${statusColors[status]}`}
-      >
-        {value}
-      </div>
+      <div className={`mt-1 text-2xl font-semibold ${statusColors[status]}`}>{value}</div>
     </div>
   );
 }
 
-function GreekCard({
-  letter,
-  name,
-  value,
-}: {
-  letter: string;
-  name: string;
-  value: string;
-}) {
+function GreekCard({ letter, name, value }: { letter: string; name: string; value: string }) {
   return (
     <div className="text-center">
       <div className="text-2xl font-serif text-cream-400">{letter}</div>
       <div className="text-xs text-cream-500 dark:text-cream-400">{name}</div>
-      <div className="mt-1 text-lg font-mono text-cream-900 dark:text-cream-100">
-        {value}
-      </div>
+      <div className="mt-1 text-lg font-mono text-cream-900 dark:text-cream-100">{value}</div>
     </div>
   );
 }

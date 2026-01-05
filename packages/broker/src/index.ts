@@ -43,24 +43,24 @@
 
 // Client
 export {
-  createAlpacaClient,
-  createAlpacaClientFromEnv,
   type AlpacaClient,
   type AlpacaClientConfig,
+  createAlpacaClient,
+  createAlpacaClientFromEnv,
 } from "./client.js";
 
 // Types
 export {
-  BrokerError,
   type Account,
+  BrokerError,
   type BrokerErrorCode,
+  type OptionType,
   type Order,
   type OrderLeg,
   type OrderRequest,
   type OrderSide,
   type OrderStatus,
   type OrderType,
-  type OptionType,
   type Position,
   type PositionSide,
   type TimeInForce,
@@ -69,13 +69,13 @@ export {
 
 // Utilities
 export {
-  generateOrderId,
+  buildOptionSymbol,
   gcd,
   gcdArray,
-  validateLegRatios,
-  simplifyLegRatios,
-  parseOptionSymbol,
-  buildOptionSymbol,
-  validateQuantity,
+  generateOrderId,
   isOptionSymbol,
+  parseOptionSymbol,
+  simplifyLegRatios,
+  validateLegRatios,
+  validateQuantity,
 } from "./utils.js";

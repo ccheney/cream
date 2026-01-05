@@ -24,7 +24,7 @@ describe("ALLOCATION_COLORS", () => {
   });
 
   it("has primary color first", () => {
-    expect(ALLOCATION_COLORS[0]).toBe("#D97706");
+    expect(ALLOCATION_COLORS[0]!).toBe("#D97706");
   });
 
   it("has all valid hex colors", () => {
@@ -41,19 +41,19 @@ describe("ALLOCATION_COLORS", () => {
 
 describe("getAllocationColor", () => {
   it("returns first color for index 0", () => {
-    expect(getAllocationColor(0)).toBe(ALLOCATION_COLORS[0]);
+    expect(getAllocationColor(0)).toBe(ALLOCATION_COLORS[0]!);
   });
 
   it("returns correct color for each index", () => {
     for (let i = 0; i < ALLOCATION_COLORS.length; i++) {
-      expect(getAllocationColor(i)).toBe(ALLOCATION_COLORS[i]);
+      expect(getAllocationColor(i)).toBe(ALLOCATION_COLORS[i] ?? ALLOCATION_COLORS[0]!);
     }
   });
 
   it("wraps around for indices >= 8", () => {
-    expect(getAllocationColor(8)).toBe(ALLOCATION_COLORS[0]);
-    expect(getAllocationColor(9)).toBe(ALLOCATION_COLORS[1]);
-    expect(getAllocationColor(16)).toBe(ALLOCATION_COLORS[0]);
+    expect(getAllocationColor(8)).toBe(ALLOCATION_COLORS[0]!);
+    expect(getAllocationColor(9)).toBe(ALLOCATION_COLORS[1]!);
+    expect(getAllocationColor(16)).toBe(ALLOCATION_COLORS[0]!);
   });
 
   it("returns custom color when provided", () => {
@@ -142,7 +142,7 @@ describe("Percentage Calculations", () => {
     const total = data.reduce((sum, d) => sum + d.value, 0);
     expect(total).toBe(0);
     // Percentage calculation should handle 0/0
-    const percentage = total === 0 ? 0 : (data[0].value / total) * 100;
+    const percentage = total === 0 ? 0 : ((data[0]?.value ?? 0) / total) * 100;
     expect(percentage).toBe(0);
   });
 
@@ -166,7 +166,7 @@ describe("Edge Cases", () => {
   it("handles single allocation (100%)", () => {
     const data: AllocationDataPoint[] = [{ name: "Single", value: 100 }];
     expect(data.length).toBe(1);
-    expect(data[0].value).toBe(100);
+    expect(data[0]?.value).toBe(100);
   });
 
   it("handles many small allocations", () => {

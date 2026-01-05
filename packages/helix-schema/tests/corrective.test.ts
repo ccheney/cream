@@ -4,39 +4,39 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  // Constants
-  DEFAULT_QUALITY_THRESHOLD,
-  DEFAULT_MIN_RESULTS,
-  DEFAULT_DIVERSITY_THRESHOLD,
-  DEFAULT_BROADENING_FACTOR,
-  MAX_CORRECTION_ATTEMPTS,
-  THRESHOLD_REDUCTION_STEP,
-  DEFAULT_QUALITY_THRESHOLDS,
-  // Types
-  type QualityAssessment,
-  type CorrectionAttempt,
-  type CorrectiveRetrievalResult,
-  type RetrievalFunction,
-  // Quality assessment
-  calculateAvgScore,
-  calculateDiversityScore,
-  calculateCoverageScore,
   assessRetrievalQuality,
-  shouldCorrect,
-  // Correction strategies
-  calculateBroadenedK,
-  calculateLoweredThreshold,
-  generateExpansionTerms,
-  selectCorrectionStrategy,
-  // Corrective retrieval pipeline
-  correctiveRetrieval,
-  withCorrectiveRetrieval,
   // RRF integration
   assessRRFQuality,
-  shouldCorrectRRF,
+  type CorrectionAttempt,
+  type CorrectiveRetrievalResult,
+  // Quality assessment
+  calculateAvgScore,
+  // Correction strategies
+  calculateBroadenedK,
   // Logging and metrics
   calculateCorrectionMetrics,
+  calculateCoverageScore,
+  calculateDiversityScore,
+  calculateLoweredThreshold,
+  // Corrective retrieval pipeline
+  correctiveRetrieval,
   createCorrectionLogEntry,
+  DEFAULT_BROADENING_FACTOR,
+  DEFAULT_DIVERSITY_THRESHOLD,
+  DEFAULT_MIN_RESULTS,
+  // Constants
+  DEFAULT_QUALITY_THRESHOLD,
+  DEFAULT_QUALITY_THRESHOLDS,
+  generateExpansionTerms,
+  MAX_CORRECTION_ATTEMPTS,
+  // Types
+  type QualityAssessment,
+  type RetrievalFunction,
+  selectCorrectionStrategy,
+  shouldCorrect,
+  shouldCorrectRRF,
+  THRESHOLD_REDUCTION_STEP,
+  withCorrectiveRetrieval,
 } from "../src/retrieval/corrective";
 import type { RetrievalResult, RRFResult } from "../src/retrieval/rrf";
 
@@ -44,7 +44,7 @@ import type { RetrievalResult, RRFResult } from "../src/retrieval/rrf";
 // Test Helpers
 // ============================================
 
-function createResult<T>(node: T, nodeId: string, score: number): RetrievalResult<T> {
+function _createResult<T>(node: T, nodeId: string, score: number): RetrievalResult<T> {
   return { node, nodeId, score };
 }
 
@@ -161,7 +161,7 @@ describe("calculateDiversityScore", () => {
     const highVariance = createResults([0.1, 0.3, 0.7, 0.9]);
 
     expect(calculateDiversityScore(highVariance)).toBeGreaterThan(
-      calculateDiversityScore(lowVariance),
+      calculateDiversityScore(lowVariance)
     );
   });
 });
@@ -432,26 +432,24 @@ describe("correctiveRetrieval", () => {
   });
 
   it("respects maxAttempts option", async () => {
-    const retrieveFn: RetrievalFunction<{ id: string }> = () =>
-      createResults([0.1]); // Always returns poor results
+    const retrieveFn: RetrievalFunction<{ id: string }> = () => createResults([0.1]); // Always returns poor results
 
     const result = await correctiveRetrieval(
       retrieveFn,
       { k: 10, minScore: 0 },
-      { maxAttempts: 2 },
+      { maxAttempts: 2 }
     );
 
     expect(result.attempts.length).toBe(2);
   });
 
   it("uses specified strategies in order", async () => {
-    const retrieveFn: RetrievalFunction<{ id: string }> = () =>
-      createResults([0.1]); // Always poor
+    const retrieveFn: RetrievalFunction<{ id: string }> = () => createResults([0.1]); // Always poor
 
     const result = await correctiveRetrieval(
       retrieveFn,
       { k: 10, minScore: 0 },
-      { strategies: ["lower_threshold", "broaden"], maxAttempts: 2 },
+      { strategies: ["lower_threshold", "broaden"], maxAttempts: 2 }
     );
 
     expect(result.attempts[0].strategy).toBe("lower_threshold");
@@ -472,7 +470,7 @@ describe("correctiveRetrieval", () => {
     const result = await correctiveRetrieval(
       retrieveFn,
       { k: 10, minScore: 0 },
-      { maxAttempts: 2 },
+      { maxAttempts: 2 }
     );
 
     // Should keep the better results from second attempt
@@ -480,13 +478,12 @@ describe("correctiveRetrieval", () => {
   });
 
   it("records correction time", async () => {
-    const retrieveFn: RetrievalFunction<{ id: string }> = () =>
-      createResults([0.1]);
+    const retrieveFn: RetrievalFunction<{ id: string }> = () => createResults([0.1]);
 
     const result = await correctiveRetrieval(
       retrieveFn,
       { k: 10, minScore: 0 },
-      { maxAttempts: 1 },
+      { maxAttempts: 1 }
     );
 
     expect(result.correctionTimeMs).toBeDefined();
@@ -507,8 +504,7 @@ describe("withCorrectiveRetrieval", () => {
   });
 
   it("applies options to wrapped function", async () => {
-    const baseFn: RetrievalFunction<{ id: string }> = () =>
-      createResults([0.1]);
+    const baseFn: RetrievalFunction<{ id: string }> = () => createResults([0.1]);
 
     const wrappedFn = withCorrectiveRetrieval(baseFn, { maxAttempts: 1 });
     const result = await wrappedFn({ k: 10, minScore: 0 });
@@ -540,16 +536,14 @@ describe("assessRRFQuality", () => {
 
 describe("shouldCorrectRRF", () => {
   it("returns true for low-quality RRF results", () => {
-    const results: RRFResult<{ id: string }>[] = [
-      createRRFResult({ id: "1" }, "1", 0.2),
-    ];
+    const results: RRFResult<{ id: string }>[] = [createRRFResult({ id: "1" }, "1", 0.2)];
 
     expect(shouldCorrectRRF(results)).toBe(true);
   });
 
   it("returns false for high-quality RRF results", () => {
     const results: RRFResult<{ id: string }>[] = Array.from({ length: 10 }, (_, i) =>
-      createRRFResult({ id: `${i}` }, `${i}`, 0.9 - i * 0.05),
+      createRRFResult({ id: `${i}` }, `${i}`, 0.9 - i * 0.05)
     );
 
     expect(shouldCorrectRRF(results)).toBe(false);

@@ -7,7 +7,7 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type { HelixClient, QueryResult } from "../client.js";
+import type { HelixClient } from "../client.js";
 
 /**
  * Graph traversal options.

@@ -11,8 +11,8 @@
  * @see https://github.com/tursodatabase/turso (Turso - Rust rewrite, embedded)
  */
 
-import { GenericContainer, Wait } from "testcontainers";
 import type { StartedTestContainer } from "testcontainers";
+import { GenericContainer, Wait } from "testcontainers";
 import { registerContainer } from "./manager";
 
 /** Default Turso/libsql-server Docker image */

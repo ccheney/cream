@@ -1,6 +1,7 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
   AuditEntityType,
+  type AuditLogEntry,
   AuditLogger,
   AuditOperationType,
   AuditRetentionPolicy,
@@ -8,7 +9,6 @@ import {
   ImmutabilityViolationError,
   InMemoryAuditStorage,
   requireMutable,
-  type AuditLogEntry,
 } from "./audit";
 
 describe("AuditLogger", () => {
@@ -175,10 +175,7 @@ describe("AuditLogger", () => {
       afterState: { status: "filled" },
     });
 
-    const trail = await logger.getEntityTrail(
-      AuditEntityType.ORDER,
-      "order-1"
-    );
+    const trail = await logger.getEntityTrail(AuditEntityType.ORDER, "order-1");
 
     expect(trail).toHaveLength(3);
     expect(trail[0]?.operation).toBe(AuditOperationType.INSERT);

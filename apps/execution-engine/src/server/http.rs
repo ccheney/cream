@@ -6,11 +6,11 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -90,8 +90,11 @@ async fn check_constraints(
 
     let account_equity = Decimal::from_str(&req.account_equity).map_err(|e| {
         ApiError::from_error(
-            ExecutionError::new(ErrorCode::InvalidRequest, format!("Invalid account_equity: {e}"))
-                .with_context("field", "account_equity"),
+            ExecutionError::new(
+                ErrorCode::InvalidRequest,
+                format!("Invalid account_equity: {e}"),
+            )
+            .with_context("field", "account_equity"),
         )
     })?;
 
@@ -150,9 +153,12 @@ async fn submit_orders(
 
     let environment = Environment::from_str(&req.environment).map_err(|e| {
         ApiError::from_error(
-            ExecutionError::new(ErrorCode::InvalidEnvironment, format!("Invalid environment: {e}"))
-                .with_context("field", "environment")
-                .with_context("value", &req.environment),
+            ExecutionError::new(
+                ErrorCode::InvalidEnvironment,
+                format!("Invalid environment: {e}"),
+            )
+            .with_context("field", "environment")
+            .with_context("value", &req.environment),
         )
     })?;
 
@@ -196,10 +202,7 @@ async fn get_order_state(
     State(server): State<ExecutionServer>,
     Json(req): Json<GetOrderStateRequest>,
 ) -> Json<GetOrderStateResponse> {
-    tracing::info!(
-        order_count = req.order_ids.len(),
-        "Getting order states"
-    );
+    tracing::info!(order_count = req.order_ids.len(), "Getting order states");
 
     let orders = server.gateway.get_order_states(&req.order_ids);
 
@@ -314,7 +317,12 @@ mod tests {
         let app = create_router(make_server());
 
         let response = app
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 

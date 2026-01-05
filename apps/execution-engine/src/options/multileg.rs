@@ -79,7 +79,13 @@ pub struct Greeks {
 impl Greeks {
     /// Create new Greeks with basic values.
     #[must_use]
-    pub const fn new(delta: Decimal, gamma: Decimal, theta: Decimal, vega: Decimal, rho: Decimal) -> Self {
+    pub const fn new(
+        delta: Decimal,
+        gamma: Decimal,
+        theta: Decimal,
+        vega: Decimal,
+        rho: Decimal,
+    ) -> Self {
         Self {
             delta,
             gamma,
@@ -326,7 +332,10 @@ pub fn validate_multi_leg_order(order: &MultiLegOrder) -> MultiLegValidationResu
         errors.push(format!(
             "All legs must have same underlying ({}), found mismatched: {:?}",
             order.underlying_symbol,
-            mismatched.iter().map(|l| &l.contract.underlying_symbol).collect::<Vec<_>>()
+            mismatched
+                .iter()
+                .map(|l| &l.contract.underlying_symbol)
+                .collect::<Vec<_>>()
         ));
     }
 
@@ -369,7 +378,8 @@ pub fn validate_multi_leg_order(order: &MultiLegOrder) -> MultiLegValidationResu
 /// Aggregated Greeks for the entire strategy
 #[must_use]
 pub fn aggregate_greeks(legs: &[OptionLeg]) -> Greeks {
-    legs.iter().fold(Greeks::zero(), |acc, leg| acc.add(&leg.total_greeks()))
+    legs.iter()
+        .fold(Greeks::zero(), |acc, leg| acc.add(&leg.total_greeks()))
 }
 
 /// Calculate portfolio-level Greeks from multiple positions.
@@ -459,7 +469,10 @@ pub fn assess_early_exercise_risk(
 
     // Parse expiration date
     let expiration = chrono::NaiveDate::parse_from_str(&contract.expiration, "%Y-%m-%d")
-        .map(|d| d.and_hms_opt(16, 0, 0).map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)))
+        .map(|d| {
+            d.and_hms_opt(16, 0, 0)
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc))
+        })
         .ok()
         .flatten();
 
@@ -764,10 +777,10 @@ impl Default for PositionLimits {
             max_positions_per_underlying: 10,
             max_total_contracts: 500,
             max_total_positions: 50,
-            max_delta: Decimal::new(100, 0),    // ±100 delta
-            max_gamma: Decimal::new(50, 0),     // ±50 gamma
-            max_vega: Decimal::new(5000, 0),    // ±$5000 vega
-            max_theta: Decimal::new(-500, 0),   // Max -$500/day theta
+            max_delta: Decimal::new(100, 0),  // ±100 delta
+            max_gamma: Decimal::new(50, 0),   // ±50 gamma
+            max_vega: Decimal::new(5000, 0),  // ±$5000 vega
+            max_theta: Decimal::new(-500, 0), // Max -$500/day theta
         }
     }
 }
@@ -893,7 +906,8 @@ impl PositionTracker {
         }
 
         // All checks passed
-        self.positions.insert(position.position_id.clone(), position);
+        self.positions
+            .insert(position.position_id.clone(), position);
         None
     }
 
@@ -1026,8 +1040,8 @@ mod tests {
 
         // Scale by +10 (long 10 contracts)
         let scaled = greeks.scale(Decimal::new(10, 0));
-        assert_eq!(scaled.delta, Decimal::new(5, 0));  // 5 delta
-        assert_eq!(scaled.gamma, Decimal::new(1, 1));  // 0.1 gamma
+        assert_eq!(scaled.delta, Decimal::new(5, 0)); // 5 delta
+        assert_eq!(scaled.gamma, Decimal::new(1, 1)); // 0.1 gamma
         assert_eq!(scaled.theta, Decimal::new(-50, 0)); // -50 theta
 
         // Scale by -5 (short 5 contracts)
@@ -1180,12 +1194,7 @@ mod tests {
             multiplier: 100,
         };
 
-        let alert = assess_early_exercise_risk(
-            &contract,
-            Decimal::new(4600, 0),
-            Utc::now(),
-            None,
-        );
+        let alert = assess_early_exercise_risk(&contract, Decimal::new(4600, 0), Utc::now(), None);
 
         assert_eq!(alert.risk_level, EarlyExerciseRisk::None);
     }
@@ -1455,7 +1464,7 @@ mod tests {
             current_value: Decimal::new(250, 0),
             unrealized_pnl: Decimal::new(50, 0),
             greeks: Greeks::new(
-                Decimal::new(2, 1),  // 0.2 delta
+                Decimal::new(2, 1), // 0.2 delta
                 Decimal::ZERO,
                 Decimal::new(-5, 0),
                 Decimal::new(3, 0),

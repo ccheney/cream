@@ -453,13 +453,13 @@ describe("Button Disabled State", () => {
   });
 
   it("not disabled during idle", () => {
-    const state: ButtonState = "idle";
+    const state = "idle" as ButtonState;
     const isDisabled = state === "loading" || state === "success";
     expect(isDisabled).toBe(false);
   });
 
   it("not disabled during error", () => {
-    const state: ButtonState = "error";
+    const state = "error" as ButtonState;
     const isDisabled = state === "loading" || state === "success";
     expect(isDisabled).toBe(false);
   });

@@ -6,9 +6,7 @@ export default function ChartsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
-          Charts
-        </h1>
+        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Charts</h1>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -29,9 +27,7 @@ export default function ChartsPage() {
         <div className="h-96 flex items-center justify-center text-cream-400">
           <div className="text-center">
             <p className="text-lg">Lightweight Charts placeholder</p>
-            <p className="text-sm mt-2">
-              Candlestick chart with indicators will render here
-            </p>
+            <p className="text-sm mt-2">Candlestick chart with indicators will render here</p>
           </div>
         </div>
       </div>

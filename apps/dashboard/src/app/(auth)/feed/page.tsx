@@ -12,9 +12,7 @@ export default function FeedPage() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm text-cream-500 dark:text-cream-400">
-              Live
-            </span>
+            <span className="text-sm text-cream-500 dark:text-cream-400">Live</span>
           </div>
         </div>
       </div>
@@ -32,20 +30,17 @@ export default function FeedPage() {
       {/* Event Stream */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-            Event Stream
-          </h2>
-          <button className="text-sm text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200">
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Event Stream</h2>
+          <button
+            type="button"
+            className="text-sm text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+          >
             Clear
           </button>
         </div>
         <div className="h-[600px] overflow-auto">
           <div className="p-4 space-y-2">
-            <FeedEvent
-              type="system"
-              time="--:--:--"
-              message="Waiting for events..."
-            />
+            <FeedEvent type="system" time="--:--:--" message="Waiting for events..." />
           </div>
         </div>
       </div>
@@ -56,6 +51,7 @@ export default function FeedPage() {
 function FilterChip({ label, active }: { label: string; active: boolean }) {
   return (
     <button
+      type="button"
       className={`px-3 py-1 rounded-full text-sm transition-colors ${
         active
           ? "bg-cream-900 dark:bg-cream-100 text-cream-100 dark:text-cream-900"
@@ -91,12 +87,8 @@ function FeedEvent({
 
   return (
     <div className="flex items-start gap-3 py-2 border-b border-cream-100 dark:border-night-700 last:border-0">
-      <span className="text-xs font-mono text-cream-400 w-20 flex-shrink-0">
-        {time}
-      </span>
-      <span
-        className={`text-xs font-medium uppercase w-16 flex-shrink-0 ${typeColors[type]}`}
-      >
+      <span className="text-xs font-mono text-cream-400 w-20 flex-shrink-0">{time}</span>
+      <span className={`text-xs font-medium uppercase w-16 flex-shrink-0 ${typeColors[type]}`}>
         {type}
       </span>
       {symbol && (
@@ -104,13 +96,9 @@ function FeedEvent({
           {symbol}
         </span>
       )}
-      <span className="text-sm text-cream-600 dark:text-cream-400 flex-1">
-        {message}
-      </span>
+      <span className="text-sm text-cream-600 dark:text-cream-400 flex-1">{message}</span>
       {value && (
-        <span className="text-sm font-mono text-cream-900 dark:text-cream-100">
-          {value}
-        </span>
+        <span className="text-sm font-mono text-cream-900 dark:text-cream-100">{value}</span>
       )}
     </div>
   );

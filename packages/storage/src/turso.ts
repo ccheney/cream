@@ -9,9 +9,9 @@
  * @see https://github.com/tursodatabase/turso
  */
 
-import { connect, type Database } from "@tursodatabase/database";
-import { connect as connectSync, type Database as SyncDatabase } from "@tursodatabase/sync";
-import { env, isBacktest, getEnvDatabaseSuffix } from "@cream/domain";
+import { env, getEnvDatabaseSuffix, isBacktest } from "@cream/domain";
+import { connect } from "@tursodatabase/database";
+import { connect as connectSync } from "@tursodatabase/sync";
 
 // ============================================
 // Types
@@ -57,7 +57,7 @@ export interface TursoClient {
   /** Run a statement (no return value) */
   run(sql: string, args?: unknown[]): Promise<{ changes: number; lastInsertRowid: bigint }>;
   /** Close the connection */
-  close(): void;
+  close(): void | Promise<void>;
   /** Sync with remote (only for sync mode) */
   sync?(): Promise<void>;
 }
@@ -129,41 +129,44 @@ async function createLocalClient(path: string): Promise<TursoClient> {
     async execute<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
-        return stmt.all(...args) as T[];
+        return (await stmt.all(...args)) as T[];
       }
-      return stmt.all() as T[];
+      return (await stmt.all()) as T[];
     },
 
     async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
-        return stmt.get(...args) as T | undefined;
+        return (await stmt.get(...args)) as T | undefined;
       }
-      return stmt.get() as T | undefined;
+      return (await stmt.get()) as T | undefined;
     },
 
     async batch(statements: BatchStatement[]): Promise<void> {
       for (const { sql, args } of statements) {
         const stmt = db.prepare(sql);
         if (args && args.length > 0) {
-          stmt.run(...args);
+          await stmt.run(...args);
         } else {
-          stmt.run();
+          await stmt.run();
         }
       }
     },
 
-    async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+    async run(
+      sql: string,
+      args: unknown[] = []
+    ): Promise<{ changes: number; lastInsertRowid: bigint }> {
       const stmt = db.prepare(sql);
-      const result = args.length > 0 ? stmt.run(...args) : stmt.run();
+      const result = args.length > 0 ? await stmt.run(...args) : await stmt.run();
       return {
         changes: result.changes,
         lastInsertRowid: BigInt(result.lastInsertRowid ?? 0),
       };
     },
 
-    close(): void {
-      db.close();
+    close(): Promise<void> {
+      return db.close();
     },
   };
 }
@@ -177,55 +180,61 @@ async function createSyncClient(config: {
   authToken?: string;
   syncInterval?: number;
 }): Promise<TursoClient> {
-  const db = await connectSync(config.path, {
+  const db = await connectSync({
+    path: config.path,
     url: config.syncUrl,
     authToken: config.authToken,
-    syncInterval: config.syncInterval ?? 60000, // Default: sync every minute
+    // Note: syncInterval is not part of DatabaseOpts in @tursodatabase/sync
+    // Sync must be triggered manually via db.pull() and db.push()
   });
 
   return {
     async execute<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
-        return stmt.all(...args) as T[];
+        return (await stmt.all(...args)) as T[];
       }
-      return stmt.all() as T[];
+      return (await stmt.all()) as T[];
     },
 
     async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
-        return stmt.get(...args) as T | undefined;
+        return (await stmt.get(...args)) as T | undefined;
       }
-      return stmt.get() as T | undefined;
+      return (await stmt.get()) as T | undefined;
     },
 
     async batch(statements: BatchStatement[]): Promise<void> {
       for (const { sql, args } of statements) {
         const stmt = db.prepare(sql);
         if (args && args.length > 0) {
-          stmt.run(...args);
+          await stmt.run(...args);
         } else {
-          stmt.run();
+          await stmt.run();
         }
       }
     },
 
-    async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+    async run(
+      sql: string,
+      args: unknown[] = []
+    ): Promise<{ changes: number; lastInsertRowid: bigint }> {
       const stmt = db.prepare(sql);
-      const result = args.length > 0 ? stmt.run(...args) : stmt.run();
+      const result = args.length > 0 ? await stmt.run(...args) : await stmt.run();
       return {
         changes: result.changes,
         lastInsertRowid: BigInt(result.lastInsertRowid ?? 0),
       };
     },
 
-    close(): void {
-      db.close();
+    close(): Promise<void> {
+      return db.close();
     },
 
     async sync(): Promise<void> {
-      await db.sync();
+      await db.pull();
+      await db.push();
     },
   };
 }
@@ -254,6 +263,7 @@ export async function createInMemoryClient(): Promise<TursoClient> {
     async execute<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
+        // @ts-expect-error - Bun SQLite type signature is strict but accepts unknown[]
         return stmt.all(...args) as T[];
       }
       return stmt.all() as T[];
@@ -262,6 +272,7 @@ export async function createInMemoryClient(): Promise<TursoClient> {
     async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
       const stmt = db.prepare(sql);
       if (args.length > 0) {
+        // @ts-expect-error - Bun SQLite type signature is strict but accepts unknown[]
         return stmt.get(...args) as T | undefined;
       }
       return stmt.get() as T | undefined;
@@ -271,6 +282,7 @@ export async function createInMemoryClient(): Promise<TursoClient> {
       for (const { sql, args } of statements) {
         const stmt = db.prepare(sql);
         if (args && args.length > 0) {
+          // @ts-expect-error - Bun SQLite type signature is strict but accepts unknown[]
           stmt.run(...args);
         } else {
           stmt.run();
@@ -278,8 +290,12 @@ export async function createInMemoryClient(): Promise<TursoClient> {
       }
     },
 
-    async run(sql: string, args: unknown[] = []): Promise<{ changes: number; lastInsertRowid: bigint }> {
+    async run(
+      sql: string,
+      args: unknown[] = []
+    ): Promise<{ changes: number; lastInsertRowid: bigint }> {
       const stmt = db.prepare(sql);
+      // @ts-expect-error - Bun SQLite type signature is strict but accepts unknown[]
       const result = args.length > 0 ? stmt.run(...args) : stmt.run();
       return {
         changes: result.changes,

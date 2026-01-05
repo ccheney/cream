@@ -166,7 +166,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 onMouseOver={(e) => {
                   e.currentTarget.style.backgroundColor = "#e7e5e4";
                 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.backgroundColor = "#e7e5e4";
+                }}
                 onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fafaf9";
+                }}
+                onBlur={(e) => {
                   e.currentTarget.style.backgroundColor = "#fafaf9";
                 }}
                 onMouseDown={(e) => {
@@ -186,7 +192,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 onMouseOver={(e) => {
                   e.currentTarget.style.backgroundColor = "#44403c";
                 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.backgroundColor = "#44403c";
+                }}
                 onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onBlur={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >

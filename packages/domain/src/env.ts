@@ -174,7 +174,6 @@ function parseEnv(): EnvConfig {
   const result = envSchema.safeParse(rawEnv);
 
   if (!result.success) {
-    const _formatted = result.error.format();
     throw result.error;
   }
 

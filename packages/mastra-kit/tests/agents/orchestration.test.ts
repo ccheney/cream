@@ -467,16 +467,16 @@ describe("Handoff Verification", () => {
     const final = result.plan!;
 
     // Trader → Risk handoff
-    expect(passed.id).toBe(original.id);
-    expect(passed.symbol).toBe(original.symbol);
-    expect(passed.action).toBe(original.action);
-    expect(passed.direction).toBe(original.direction);
-    expect(passed.size.quantity).toBe(original.size.quantity);
-    expect(passed.size.unit).toBe(original.size.unit);
-    expect(passed.stopLoss).toBe(original.stopLoss);
-    expect(passed.takeProfit).toBe(original.takeProfit);
-    expect(passed.confidence).toBe(original.confidence);
-    expect(passed.rationale).toBe(original.rationale);
+    expect(passed?.id).toBe(original.id);
+    expect(passed?.symbol).toBe(original.symbol);
+    expect(passed?.action).toBe(original.action);
+    expect(passed?.direction).toBe(original.direction);
+    expect(passed?.size.quantity).toBe(original.size.quantity);
+    expect(passed?.size.unit).toBe(original.size.unit);
+    expect(passed?.stopLoss).toBe(original.stopLoss);
+    expect(passed?.takeProfit).toBe(original.takeProfit);
+    expect(passed?.confidence).toBe(original.confidence);
+    expect(passed?.rationale).toBe(original.rationale);
 
     // Risk → Critic → Final handoff
     expect(final.id).toBe(original.id);

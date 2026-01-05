@@ -2,7 +2,7 @@
  * UI Store Tests
  */
 
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { useUIStore } from "./ui-store.js";
 
 describe("useUIStore", () => {
@@ -52,10 +52,7 @@ describe("useUIStore", () => {
 
     test("setFeedFilters sets specific filters", () => {
       useUIStore.getState().setFeedFilters(["quotes", "orders"]);
-      expect(useUIStore.getState().realTimeFeedFilters).toEqual([
-        "quotes",
-        "orders",
-      ]);
+      expect(useUIStore.getState().realTimeFeedFilters).toEqual(["quotes", "orders"]);
     });
 
     test("toggleFeedFilter adds filter and removes 'all'", () => {
@@ -116,10 +113,7 @@ describe("useUIStore", () => {
     });
 
     test("starts with SMA indicators", () => {
-      expect(useUIStore.getState().chartShowIndicators).toEqual([
-        "SMA_20",
-        "SMA_50",
-      ]);
+      expect(useUIStore.getState().chartShowIndicators).toEqual(["SMA_20", "SMA_50"]);
     });
 
     test("toggleChartIndicator adds indicator", () => {
