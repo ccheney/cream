@@ -4,6 +4,7 @@
 //! including Prometheus metrics export and distributed tracing.
 
 mod metrics;
+mod tracing;
 
 pub use metrics::{
     init_metrics, record_circuit_breaker_failure, record_circuit_breaker_rejected,
@@ -11,4 +12,8 @@ pub use metrics::{
     record_feed_message, record_greeks_computation, record_grpc_request,
     record_order_fill, record_order_rejection, record_order_submission,
     record_quote_staleness, record_strategy_build, update_open_orders, MetricsConfig,
+};
+
+pub use tracing::{
+    config_from_env, init_tracing, span_attrs, TracingConfig, TracingError, TracingGuard,
 };
