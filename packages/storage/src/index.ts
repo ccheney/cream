@@ -35,3 +35,6 @@ export {
   rollbackMigrations,
   runMigrations,
 } from "./migrations.js";
+
+// Repositories
+export * from "./repositories/index.js";
