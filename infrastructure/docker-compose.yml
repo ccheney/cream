@@ -5,6 +5,9 @@
 # Services:
 # - turso: SQLite-compatible database (libsql-server)
 # - helix: Graph + Vector database (HelixDB)
+# - prometheus: Metrics collection and alerting
+# - otel-collector: OpenTelemetry trace/metrics collection
+# - alertmanager: Alert routing and management
 #
 # Usage:
 #   docker compose up -d        # Start all services
@@ -84,6 +87,81 @@ services:
   #     - cream-network
   #   restart: unless-stopped
 
+  # Prometheus - Metrics Collection and Alerting
+  # https://prometheus.io/
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    container_name: cream-prometheus
+    ports:
+      - "9090:9090"     # Prometheus web UI and API
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"            # Enable /-/reload endpoint
+      - "--storage.tsdb.retention.time=15d" # 15-day retention
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
+  # Alertmanager - Alert Routing and Management
+  # https://prometheus.io/docs/alerting/latest/alertmanager/
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: cream-alertmanager
+    ports:
+      - "9093:9093"     # Alertmanager web UI and API
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
+  # OpenTelemetry Collector - Trace and Metrics Collection
+  # https://opentelemetry.io/docs/collector/
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.122.0
+    container_name: cream-otel-collector
+    ports:
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+      - "8888:8888"     # Prometheus metrics (collector metrics)
+      - "8889:8889"     # Prometheus exporter (application metrics)
+    volumes:
+      - ./otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
 networks:
   cream-network:
     driver: bridge
@@ -94,3 +172,7 @@ volumes:
     name: cream-turso-data
   helix_data:
     name: cream-helix-data
+  prometheus_data:
+    name: cream-prometheus-data
+  alertmanager_data:
+    name: cream-alertmanager-data

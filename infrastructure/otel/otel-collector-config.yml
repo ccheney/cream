@@ -1,0 +1,137 @@
+# OpenTelemetry Collector Configuration - Cream Trading System
+# =============================================================
+# Receives, processes, and exports traces and metrics.
+#
+# Endpoints:
+# - 4317: OTLP gRPC receiver (traces, metrics)
+# - 4318: OTLP HTTP receiver (traces, metrics)
+# - 8888: Prometheus metrics (collector metrics)
+# - 8889: Prometheus exporter (application metrics)
+# - 13133: Health check
+#
+# Reference: docs/plans/09-rust-core.md
+
+receivers:
+  # OTLP gRPC receiver for traces and metrics
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+  # Prometheus scraping (optional, for pulling metrics)
+  # prometheus:
+  #   config:
+  #     scrape_configs:
+  #       - job_name: 'execution-engine'
+  #         scrape_interval: 15s
+  #         static_configs:
+  #           - targets: ['execution-engine:9090']
+
+processors:
+  # Batch processor for efficient export
+  batch:
+    send_batch_size: 512
+    timeout: 5s
+    send_batch_max_size: 1024
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Resource processor to add environment labels
+  resource:
+    attributes:
+      - key: environment
+        value: "${CREAM_ENV:-PAPER}"
+        action: upsert
+      - key: service.namespace
+        value: "cream"
+        action: upsert
+
+  # Attributes processor for trace enrichment
+  attributes:
+    actions:
+      - key: deployment.environment
+        value: "${CREAM_ENV:-PAPER}"
+        action: upsert
+
+  # Filter processor to drop noisy traces (optional)
+  # filter:
+  #   traces:
+  #     span:
+  #       - 'attributes["http.target"] == "/health"'
+
+exporters:
+  # Debug exporter (for development)
+  debug:
+    verbosity: normal
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+  # Prometheus exporter (application metrics for Prometheus to scrape)
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "cream"
+    const_labels:
+      environment: "${CREAM_ENV:-PAPER}"
+    enable_open_metrics: true
+
+  # OTLP exporter (for Jaeger, Tempo, or other OTLP backends)
+  # Uncomment for production tracing backend
+  # otlp:
+  #   endpoint: "jaeger:4317"
+  #   tls:
+  #     insecure: true
+
+  # Jaeger exporter (if using Jaeger directly)
+  # jaeger:
+  #   endpoint: "jaeger:14250"
+  #   tls:
+  #     insecure: true
+
+extensions:
+  # Health check endpoint
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+  # Performance profiler (pprof)
+  pprof:
+    endpoint: "0.0.0.0:1777"
+
+  # zPages for debugging
+  zpages:
+    endpoint: "0.0.0.0:55679"
+
+service:
+  extensions: [health_check, pprof, zpages]
+
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [debug]
+      # exporters: [debug, otlp]  # Uncomment for production
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug, prometheus]
+
+    # Logs pipeline (if needed)
+    # logs:
+    #   receivers: [otlp]
+    #   processors: [memory_limiter, batch]
+    #   exporters: [debug]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: "0.0.0.0:8888"
+      level: detailed
