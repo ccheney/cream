@@ -22,6 +22,18 @@ __all__ = [
     # Evaluator (no external dependencies)
     "RuleBasedScorer",
     "ScoringResult",
+    # Findings (dataclasses)
+    "ResearchFinding",
+    "PerformanceMetrics",
+    "StrategyCondition",
+    "ParameterScanConfig",
+    "ScanResult",
+    # Vectorbt runner
+    "VectorbtRunner",
+    "StrategyBase",
+    "RSIMeanReversionStrategy",
+    "SMACrossoverStrategy",
+    "BollingerBandStrategy",
 ]
 
 
@@ -46,5 +58,51 @@ def __getattr__(name: str):
         from research.evaluator.rule_scorer import RuleBasedScorer, ScoringResult
 
         return {"RuleBasedScorer": RuleBasedScorer, "ScoringResult": ScoringResult}[name]
+
+    if name in (
+        "ResearchFinding",
+        "PerformanceMetrics",
+        "StrategyCondition",
+        "ParameterScanConfig",
+        "ScanResult",
+    ):
+        from research.findings import (
+            ParameterScanConfig,
+            PerformanceMetrics,
+            ResearchFinding,
+            ScanResult,
+            StrategyCondition,
+        )
+
+        return {
+            "ResearchFinding": ResearchFinding,
+            "PerformanceMetrics": PerformanceMetrics,
+            "StrategyCondition": StrategyCondition,
+            "ParameterScanConfig": ParameterScanConfig,
+            "ScanResult": ScanResult,
+        }[name]
+
+    if name in (
+        "VectorbtRunner",
+        "StrategyBase",
+        "RSIMeanReversionStrategy",
+        "SMACrossoverStrategy",
+        "BollingerBandStrategy",
+    ):
+        from research.vectorbt_runner import (
+            BollingerBandStrategy,
+            RSIMeanReversionStrategy,
+            SMACrossoverStrategy,
+            StrategyBase,
+            VectorbtRunner,
+        )
+
+        return {
+            "VectorbtRunner": VectorbtRunner,
+            "StrategyBase": StrategyBase,
+            "RSIMeanReversionStrategy": RSIMeanReversionStrategy,
+            "SMACrossoverStrategy": SMACrossoverStrategy,
+            "BollingerBandStrategy": BollingerBandStrategy,
+        }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
