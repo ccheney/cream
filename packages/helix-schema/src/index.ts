@@ -519,3 +519,33 @@ export {
   // High-level wrapper
   QueryWrapper,
 } from "./query";
+
+// ============================================
+// Compliance and Audit Trail
+// ============================================
+
+export {
+  // Schemas
+  AuditLogEntrySchema,
+  type AuditLogEntry,
+  AuditTrailQuerySchema,
+  type AuditTrailQuery,
+  VersionHistoryEntrySchema,
+  type VersionHistoryEntry,
+  // Enums
+  AuditOperationType,
+  AuditEntityType,
+  // Audit Logger
+  AuditLogger,
+  type AuditLoggerConfig,
+  type AuditStorage,
+  // Immutability
+  checkImmutability,
+  type ImmutabilityCheckResult,
+  requireMutable,
+  ImmutabilityViolationError,
+  // Retention
+  AuditRetentionPolicy,
+  // Storage implementations
+  InMemoryAuditStorage,
+} from "./compliance";
