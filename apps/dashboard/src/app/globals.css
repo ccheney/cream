@@ -44,22 +44,6 @@
 }
 
 /* ============================================
- * Legacy aliases for backwards compatibility
- * (tokens use --border-default, legacy code uses --border)
- * ============================================ */
-
-:root {
-  --border: var(--border-default);
-  --text-headline: var(--text-heading);
-}
-
-[data-theme="dark"],
-.dark {
-  --border: var(--border-default);
-  --text-headline: var(--text-heading);
-}
-
-/* ============================================
  * Base Styles
  * ============================================ */
 
@@ -95,7 +79,7 @@ body {
   font-family: var(--font-ui);
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--text-headline);
+  color: var(--text-heading);
 }
 
 .body {
@@ -110,7 +94,7 @@ body {
   font-weight: 500;
   letter-spacing: 0;
   font-feature-settings: 'tnum' 1;
-  color: var(--text-headline);
+  color: var(--text-heading);
 }
 
 .label {
@@ -171,7 +155,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-default);
   border-radius: var(--radius-full);
 }
 
@@ -182,7 +166,7 @@ body {
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--border-default) transparent;
 }
 
 /* ============================================
