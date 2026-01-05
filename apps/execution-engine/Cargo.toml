@@ -54,6 +54,9 @@ rust_decimal = { version = "1.39", features = ["serde", "serde-with-str"] }
 # UUID for order IDs
 uuid = { version = "1.16", features = ["v4"] }
 
+# Random number generation (for jitter in backoff)
+rand = "0.9"
+
 # Configuration
 config = "0.14"
 

@@ -33,6 +33,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 
+pub mod broker;
 pub mod error;
 pub mod execution;
 pub mod models;
