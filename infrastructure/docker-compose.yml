@@ -8,6 +8,9 @@
 # - prometheus: Metrics collection and alerting
 # - otel-collector: OpenTelemetry trace/metrics collection
 # - alertmanager: Alert routing and management
+# - redis: In-memory cache for rate limiting
+# - dashboard: React/Next.js frontend (port 3000)
+# - dashboard-api: Hono/Bun API server (port 3001)
 #
 # Usage:
 #   docker compose up -d        # Start all services
@@ -162,6 +165,93 @@ services:
       - cream-network
     restart: unless-stopped
 
+  # Redis - In-memory cache for rate limiting and session storage
+  # https://redis.io/
+  redis:
+    image: redis:7-alpine
+    container_name: cream-redis
+    ports:
+      - "6379:6379"     # Redis default port
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
+  # Dashboard - React/Next.js Frontend
+  # Trading dashboard UI for monitoring and control
+  dashboard:
+    build:
+      context: ../apps/dashboard
+      dockerfile: Dockerfile
+    container_name: cream-dashboard
+    ports:
+      - "3000:3000"     # Next.js default port
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://dashboard-api:3001
+      - NEXT_PUBLIC_WS_URL=ws://dashboard-api:3001/ws
+    depends_on:
+      dashboard-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
+  # Dashboard API - Hono/Bun API Server
+  # REST API and WebSocket server for dashboard
+  dashboard-api:
+    build:
+      context: ../apps/dashboard-api
+      dockerfile: Dockerfile
+    container_name: cream-dashboard-api
+    ports:
+      - "3001:3001"     # API port
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - CREAM_ENV=${CREAM_ENV:-PAPER}
+      - CREAM_BROKER=ALPACA
+      - TURSO_DATABASE_URL=http://turso:8080
+      - HELIX_URL=http://helix:6969
+      - RUST_GRPC_URL=execution-engine:50051
+      - MASTRA_API_URL=http://api:4111
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-development-refresh-secret}
+      # Pass through API keys from host
+      - ALPACA_KEY=${ALPACA_KEY:-}
+      - ALPACA_SECRET=${ALPACA_SECRET:-}
+      - POLYGON_KEY=${POLYGON_KEY:-}
+      - FMP_KEY=${FMP_KEY:-}
+    depends_on:
+      turso:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
 networks:
   cream-network:
     driver: bridge
@@ -176,3 +266,5 @@ volumes:
     name: cream-prometheus-data
   alertmanager_data:
     name: cream-alertmanager-data
+  redis_data:
+    name: cream-redis-data
