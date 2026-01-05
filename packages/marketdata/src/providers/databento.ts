@@ -257,8 +257,8 @@ export class DatabentoClient {
   private eventHandlers: EventHandler[] = [];
   private activeSubscriptions: Map<string, SubscriptionConfig> = new Map();
   private reconnectAttempts = 0;
-  private reconnectTimer: Timer | null = null;
-  private heartbeatTimer: Timer | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private sessionId: string | null = null;
 
   constructor(config: DatabentoClientConfig) {
