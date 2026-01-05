@@ -42,6 +42,7 @@ pub mod feed;
 pub mod models;
 pub mod observability;
 pub mod options;
+pub mod pricing;
 pub mod resilience;
 pub mod risk;
 pub mod safety;
@@ -65,6 +66,10 @@ pub use options::{
     OptionStyle, OptionType, PositionLimits, PositionTracker, aggregate_greeks,
     assess_early_exercise_risk, calculate_assignment_risk, calculate_portfolio_greeks,
     validate_leg_ratios, validate_multi_leg_order,
+};
+pub use pricing::{
+    IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy,
+    StrategyBuilder, StrategyBuilderConfig, StrategyError, StrategyLeg, StrategyType,
 };
 pub use risk::ConstraintValidator;
 pub use safety::{

@@ -89,6 +89,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 # Turso Database (Rust rewrite of SQLite)
 turso = "0.4.0-pre.19"
 async-trait = "0.1.89"
+libm = "0.2.15"
 
 [dev-dependencies]
 # Testing

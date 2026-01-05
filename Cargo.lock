@@ -1162,6 +1162,7 @@ dependencies = [
  "config",
  "criterion",
  "futures",
+ "libm",
  "metrics",
  "metrics-exporter-prometheus",
  "mockall",
