@@ -40,7 +40,7 @@ export {
   HelixError,
   type HelixErrorCode,
   type QueryResult,
-} from "./client.js";
+} from "./client";
 // Export/Import
 export {
   type ExportOptions,
@@ -51,7 +51,7 @@ export {
   type ImportResult,
   importData,
   importFromJson,
-} from "./queries/export.js";
+} from "./queries/export";
 
 // Graph traversal
 export {
@@ -68,7 +68,7 @@ export {
   type TraversalOptions,
   type TraversalResponse,
   traverse,
-} from "./queries/graph.js";
+} from "./queries/graph";
 // Vector search
 export {
   searchSimilarDecisions,
@@ -79,7 +79,25 @@ export {
   type VectorSearchResponse,
   type VectorSearchResult,
   vectorSearch,
-} from "./queries/vector.js";
+} from "./queries/vector";
+
+// Mutations
+export {
+  batchCreateEdges,
+  batchCreateLifecycleEvents,
+  batchUpsertExternalEvents,
+  batchUpsertTradeDecisions,
+  type BatchMutationResult,
+  createEdge,
+  createHasEventEdge,
+  createInfluencedDecisionEdge,
+  createLifecycleEvent,
+  type EdgeInput,
+  type MutationResult,
+  type NodeWithEmbedding,
+  upsertExternalEvent,
+  upsertTradeDecision,
+} from "./queries/mutations";
 
 /**
  * Package version.

@@ -25,6 +25,8 @@
       "dependencies": {
         "@cream/config": "workspace:*",
         "@cream/domain": "workspace:*",
+        "@cream/helix": "workspace:*",
+        "@cream/helix-schema": "workspace:*",
         "@mastra/core": "^0.24.9",
         "hono": "^4.11.3",
       },
@@ -132,6 +134,7 @@
       "dependencies": {
         "@cream/config": "workspace:*",
         "@cream/domain": "workspace:*",
+        "@cream/helix-schema": "workspace:*",
         "helix-ts": "^1.0.8",
       },
       "devDependencies": {

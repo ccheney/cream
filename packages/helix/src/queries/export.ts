@@ -7,8 +7,8 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type { HelixClient } from "../client.js";
-import type { GraphEdge, GraphNode } from "./graph.js";
+import type { HelixClient } from "../client";
+import type { GraphEdge, GraphNode } from "./graph";
 
 /**
  * Export format for HelixDB data.

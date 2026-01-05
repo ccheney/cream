@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "HelixDB integration for Cream trading system",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist",
     "test": "CREAM_ENV=BACKTEST bun test",
@@ -15,6 +18,7 @@
   "dependencies": {
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
+    "@cream/helix-schema": "workspace:*",
     "helix-ts": "^1.0.8"
   },
   "devDependencies": {
