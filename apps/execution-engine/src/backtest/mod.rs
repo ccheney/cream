@@ -42,6 +42,7 @@
 mod commission;
 mod config;
 mod fill_engine;
+mod metrics;
 mod multi_leg;
 mod replay;
 mod slippage;
@@ -78,6 +79,10 @@ pub use slippage::{apply_slippage, apply_stop_target_slippage};
 pub use triggers::{
     PositionDirection, TriggerResult, TriggerType, evaluate_stop, evaluate_target,
     evaluate_triggers, is_stop_triggered, is_target_triggered,
+};
+pub use metrics::{
+    DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary,
+    TradeRecord, format_decimal, format_pct, format_ratio,
 };
 
 use crate::models::{
