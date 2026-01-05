@@ -322,5 +322,39 @@ export {
   isConstraintViolation,
   isInsufficientFunds,
 } from "./errors";
+// Retention policies and storage tier management
+export {
+  // Schemas
+  StorageTier,
+  RetentionEnvironment,
+  RetentionNodeType,
+  RetentionPeriodSchema,
+  type RetentionPeriod,
+  RetentionPolicySchema,
+  type RetentionPolicy,
+  // Storage tier specs
+  type StorageTierCharacteristics,
+  STORAGE_TIER_SPECS,
+  // Duration constants
+  PERMANENT,
+  DURATIONS,
+  // Policy collections
+  LIVE_RETENTION_POLICIES,
+  PAPER_RETENTION_POLICIES,
+  BACKTEST_RETENTION_POLICIES,
+  ALL_RETENTION_POLICIES,
+  // Lookup functions
+  getRetentionPolicy,
+  getPoliciesForEnvironment,
+  getCompliancePolicies,
+  // Transition logic
+  type NodeAgeInfo,
+  type TierTransitionResult,
+  getTransitionDecision,
+  getTargetTier,
+  // Compliance helpers
+  isSECCompliant,
+  validateCompliancePolicies,
+} from "./retention";
 // WebSocket schemas
 export * from "./websocket/index.js";
