@@ -11,6 +11,7 @@
 //! - Options Greeks validation (delta, gamma, vega, theta)
 //! - Buying power / margin checks
 //! - Conflicting order detection
+//! - Position sizing calculations (SHARES, CONTRACTS, DOLLARS, PCT_EQUITY)
 //!
 //! # Example
 //!
@@ -28,8 +29,12 @@
 //! ```
 
 mod constraints;
+pub mod sizing;
 
 pub use constraints::{
     BuyingPowerInfo, ConstraintValidator, ExtendedConstraintContext, GreeksSnapshot,
     SizingSanityWarning, check_sizing_sanity,
+};
+pub use sizing::{
+    PositionSizer, PositionSizerConfig, SizingError, SizingInput, SizingResult, SizingUnit,
 };

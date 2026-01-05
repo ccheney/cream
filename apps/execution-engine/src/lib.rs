@@ -71,7 +71,10 @@ pub use pricing::{
     IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy,
     StrategyBuilder, StrategyBuilderConfig, StrategyError, StrategyLeg, StrategyType,
 };
-pub use risk::ConstraintValidator;
+pub use risk::{
+    ConstraintValidator, PositionSizer, PositionSizerConfig, SizingError, SizingInput,
+    SizingResult, SizingUnit,
+};
 pub use safety::{
     DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent, MassCancelResult,
     SafetyError,
