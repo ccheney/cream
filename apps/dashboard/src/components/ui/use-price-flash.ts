@@ -70,10 +70,7 @@ export function usePriceFlash(
   previousPrice: number | undefined,
   options: UsePriceFlashOptions = {}
 ): UsePriceFlashReturn {
-  const {
-    debounceMs = DEFAULT_DEBOUNCE_MS,
-    flashDurationMs = DEFAULT_FLASH_DURATION_MS,
-  } = options;
+  const { debounceMs = DEFAULT_DEBOUNCE_MS, flashDurationMs = DEFAULT_FLASH_DURATION_MS } = options;
 
   const [flash, setFlash] = useState<FlashState>({
     direction: null,
@@ -128,8 +125,7 @@ export function usePriceFlash(
     }
 
     // Determine direction
-    const direction: FlashDirection =
-      currentPrice > prevPriceRef.current ? "up" : "down";
+    const direction: FlashDirection = currentPrice > prevPriceRef.current ? "up" : "down";
 
     // Trigger flash
     triggerFlash(direction);

@@ -19,13 +19,7 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
 // Types
 // ============================================
 
-export type StatusDotStatus =
-  | "active"
-  | "processing"
-  | "idle"
-  | "error"
-  | "paused"
-  | "streaming";
+export type StatusDotStatus = "active" | "processing" | "idle" | "error" | "paused" | "streaming";
 
 export type StatusDotSize = "xs" | "sm" | "md" | "lg";
 
@@ -110,10 +104,7 @@ const sizeConfig: Record<StatusDotSize, { dot: string; container: string }> = {
  * ```
  */
 export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
-  (
-    { status, size = "sm", glow = false, label, className, ...props },
-    ref
-  ) => {
+  ({ status, size = "sm", glow = false, label, className, ...props }, ref) => {
     const config = statusConfig[status];
     const sizeStyles = sizeConfig[size];
 
@@ -169,7 +160,9 @@ StatusDot.displayName = "StatusDot";
  * Checks prefers-reduced-motion preference.
  */
 export function usePrefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") {
+    return false;
+  }
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 

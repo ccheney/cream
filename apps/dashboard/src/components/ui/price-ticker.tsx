@@ -209,9 +209,7 @@ export const PriceTicker = memo(function PriceTicker({
     >
       {/* Symbol */}
       {showSymbol && (
-        <span className={`${styles.symbol} text-gray-500 dark:text-gray-400`}>
-          {symbol}
-        </span>
+        <span className={`${styles.symbol} text-gray-500 dark:text-gray-400`}>{symbol}</span>
       )}
 
       {/* Price with flash */}
@@ -234,9 +232,7 @@ export const PriceTicker = memo(function PriceTicker({
       {displayDelta !== undefined && (
         <span
           className={`${styles.delta} ${
-            isPositive
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
+            isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
           }`}
           aria-label={`Change: ${isPositive ? "up" : "down"} ${Math.abs(displayDelta).toFixed(2)}`}
         >

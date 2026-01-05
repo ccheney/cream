@@ -2,18 +2,18 @@
  * Event Feed Store Tests
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  useEventFeedStore,
+  type EventSeverity,
+  type EventType,
+  type FeedEvent,
   selectEventCount,
-  selectNewEventCount,
+  selectEventsBySymbol,
+  selectEventsByType,
   selectHasNewEvents,
   selectLatestEvent,
-  selectEventsByType,
-  selectEventsBySymbol,
-  type FeedEvent,
-  type EventType,
-  type EventSeverity,
+  selectNewEventCount,
+  useEventFeedStore,
 } from "./event-feed-store";
 
 // ============================================
@@ -151,10 +151,7 @@ describe("addEvents", () => {
 
   it("generates unique IDs for all events", () => {
     const store = useEventFeedStore.getState();
-    store.addEvents([
-      createMockEvent({ title: "Event 1" }),
-      createMockEvent({ title: "Event 2" }),
-    ]);
+    store.addEvents([createMockEvent({ title: "Event 1" }), createMockEvent({ title: "Event 2" })]);
 
     const events = useEventFeedStore.getState().events;
     const ids = events.map((e) => e.id);
@@ -285,10 +282,7 @@ describe("type filter", () => {
 
   it("setTypeFilter updates filter", () => {
     useEventFeedStore.getState().setTypeFilter(["trade_executed", "order_filled"]);
-    expect(useEventFeedStore.getState().typeFilter).toEqual([
-      "trade_executed",
-      "order_filled",
-    ]);
+    expect(useEventFeedStore.getState().typeFilter).toEqual(["trade_executed", "order_filled"]);
   });
 
   it("getFilteredEvents filters by type", () => {
@@ -321,10 +315,7 @@ describe("severity filter", () => {
 
   it("setSeverityFilter updates filter", () => {
     useEventFeedStore.getState().setSeverityFilter(["error", "warning"]);
-    expect(useEventFeedStore.getState().severityFilter).toEqual([
-      "error",
-      "warning",
-    ]);
+    expect(useEventFeedStore.getState().severityFilter).toEqual(["error", "warning"]);
   });
 
   it("getFilteredEvents filters by severity", () => {

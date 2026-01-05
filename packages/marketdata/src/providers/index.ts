@@ -4,6 +4,23 @@
  * API clients for market data providers.
  */
 
+// Alpha Vantage
+export {
+  ALPHA_VANTAGE_RATE_LIMITS,
+  AlphaVantageClient,
+  type AlphaVantageClientConfig,
+  createAlphaVantageClientFromEnv,
+  type EconomicDataPoint,
+  EconomicDataPointSchema,
+  type EconomicIndicatorResponse,
+  EconomicIndicatorResponseSchema,
+  type EconomicInterval,
+  type FederalFundsRateResponse,
+  FederalFundsRateResponseSchema,
+  type TreasuryMaturity,
+  type TreasuryYieldResponse,
+  TreasuryYieldResponseSchema,
+} from "./alphavantage";
 // FMP (Financial Modeling Prep)
 export {
   createFmpClientFromEnv,
@@ -23,7 +40,6 @@ export {
   type StockNews,
   StockNewsSchema,
 } from "./fmp";
-
 // Polygon.io / Massive.com
 export {
   type AggregateBar,
@@ -44,21 +60,3 @@ export {
   TickersSnapshotResponseSchema,
   type Timespan,
 } from "./polygon";
-
-// Alpha Vantage
-export {
-  ALPHA_VANTAGE_RATE_LIMITS,
-  AlphaVantageClient,
-  type AlphaVantageClientConfig,
-  createAlphaVantageClientFromEnv,
-  type EconomicDataPoint,
-  EconomicDataPointSchema,
-  type EconomicIndicatorResponse,
-  EconomicIndicatorResponseSchema,
-  type EconomicInterval,
-  type FederalFundsRateResponse,
-  FederalFundsRateResponseSchema,
-  type TreasuryMaturity,
-  type TreasuryYieldResponse,
-  TreasuryYieldResponseSchema,
-} from "./alphavantage";

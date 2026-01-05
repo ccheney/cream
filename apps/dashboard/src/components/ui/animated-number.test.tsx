@@ -65,8 +65,6 @@ function formatNumber(
         maximumFractionDigits: 0,
       }).format(Math.round(value));
       break;
-
-    case "decimal":
     default:
       formatted = new Intl.NumberFormat("en-US", {
         style: "decimal",

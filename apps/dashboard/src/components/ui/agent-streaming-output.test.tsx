@@ -4,9 +4,9 @@
  * Tests for agent streaming output utilities, hooks, and type definitions.
  */
 
-import { describe, it, expect } from "bun:test";
-import type { StreamingStatus } from "./use-streaming-text.js";
+import { describe, expect, it } from "bun:test";
 import type { AgentStreamingOutputProps } from "./agent-streaming-output.js";
+import type { StreamingStatus } from "./use-streaming-text.js";
 
 // ============================================
 // Type Tests

@@ -21,9 +21,9 @@
  */
 
 import {
-  type Candle,
   type ATRParams,
   type ATRResult,
+  type Candle,
   type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
@@ -59,10 +59,7 @@ export function calculateTrueRange(candle: Candle, prevClose: number): number {
  * @param params - ATR parameters
  * @returns Array of ATR results
  */
-export function calculateATR(
-  candles: Candle[],
-  params: ATRParams = ATR_DEFAULTS
-): ATRResult[] {
+export function calculateATR(candles: Candle[], params: ATRParams = ATR_DEFAULTS): ATRResult[] {
   const { period } = params;
   const required = period + 1; // Need period + 1 for first ATR value
 
@@ -137,7 +134,7 @@ export function calculateATRPositionSize(
   riskPercent: number,
   atr: number,
   atrMultiplier: number,
-  price: number
+  _price: number
 ): number {
   const riskAmount = equity * riskPercent;
   const stopDistance = atr * atrMultiplier;

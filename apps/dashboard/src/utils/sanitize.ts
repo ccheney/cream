@@ -145,11 +145,7 @@ if (typeof window !== "undefined") {
 /**
  * Sanitize HTML using DOMPurify or fallback.
  */
-function purifyHtml(
-  html: string,
-  allowedTags: string[],
-  allowedAttrs: string[] = []
-): string {
+function purifyHtml(html: string, allowedTags: string[], allowedAttrs: string[] = []): string {
   // Use DOMPurify if available
   if (purify) {
     return purify.sanitize(html, {
@@ -175,7 +171,9 @@ function purifyHtml(
  * @returns Plain text with no HTML
  */
 export function sanitizeStreamingText(text: string): string {
-  if (!text) return "";
+  if (!text) {
+    return "";
+  }
   return purifyHtml(text, []);
 }
 
@@ -187,7 +185,9 @@ export function sanitizeStreamingText(text: string): string {
  * @returns Sanitized HTML
  */
 export function sanitizeHtml(html: string, options: SanitizeOptions = {}): string {
-  if (!html) return "";
+  if (!html) {
+    return "";
+  }
 
   const allowedTags: string[] = [];
   const allowedAttrs: string[] = [];
@@ -223,11 +223,10 @@ export function sanitizeHtml(html: string, options: SanitizeOptions = {}): strin
  * @param maxLength - Maximum allowed length
  * @returns Sanitized plain text
  */
-export function sanitizeUserInput(
-  input: string,
-  maxLength: number = DEFAULT_MAX_LENGTH
-): string {
-  if (!input) return "";
+export function sanitizeUserInput(input: string, maxLength: number = DEFAULT_MAX_LENGTH): string {
+  if (!input) {
+    return "";
+  }
 
   // Strip all HTML
   let sanitized = purifyHtml(input, []);
@@ -311,7 +310,9 @@ export function validateWsMessage(payload: string): InputValidation {
  * @returns Whether the URL is allowed
  */
 export function isAllowedWsOrigin(url: string): boolean {
-  if (!url) return false;
+  if (!url) {
+    return false;
+  }
 
   try {
     const parsed = new URL(url);
@@ -345,17 +346,16 @@ export function isAllowedWsOrigin(url: string): boolean {
  * @returns Whether the URL is allowed for SSE
  */
 export function isAllowedSseOrigin(url: string): boolean {
-  if (!url) return false;
+  if (!url) {
+    return false;
+  }
 
   try {
     const parsed = new URL(url);
 
     // Only HTTPS for production
     if (parsed.protocol === "https:") {
-      return (
-        parsed.hostname === "cream.app" ||
-        parsed.hostname.endsWith(".cream.app")
-      );
+      return parsed.hostname === "cream.app" || parsed.hostname.endsWith(".cream.app");
     }
 
     // Allow HTTP for localhost development
@@ -444,7 +444,9 @@ export const sseRateLimiter = createRateLimiter(50);
  * @returns HTML-escaped text
  */
 export function escapeHtml(text: string): string {
-  if (!text) return "";
+  if (!text) {
+    return "";
+  }
 
   return text
     .replace(/&/g, "&amp;")
@@ -461,7 +463,9 @@ export function escapeHtml(text: string): string {
  * @returns Regex-safe text
  */
 export function escapeRegex(text: string): string {
-  if (!text) return "";
+  if (!text) {
+    return "";
+  }
 
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

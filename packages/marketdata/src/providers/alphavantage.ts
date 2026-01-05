@@ -10,11 +10,7 @@
  */
 
 import { z } from "zod";
-import {
-  RestClient,
-  createRestClient,
-  type RateLimitConfig,
-} from "../client";
+import { createRestClient, type RateLimitConfig, type RestClient } from "../client";
 
 // ============================================
 // API Configuration
@@ -93,13 +89,7 @@ export interface AlphaVantageClientConfig {
 /**
  * Treasury maturity.
  */
-export type TreasuryMaturity =
-  | "3month"
-  | "2year"
-  | "5year"
-  | "7year"
-  | "10year"
-  | "30year";
+export type TreasuryMaturity = "3month" | "2year" | "5year" | "7year" | "10year" | "30year";
 
 /**
  * Economic indicator interval.
@@ -169,9 +159,7 @@ export class AlphaVantageClient {
   /**
    * Get Consumer Price Index (CPI) data.
    */
-  async getCPI(
-    interval: "monthly" | "semiannual" = "monthly"
-  ): Promise<EconomicIndicatorResponse> {
+  async getCPI(interval: "monthly" | "semiannual" = "monthly"): Promise<EconomicIndicatorResponse> {
     return this.client.get(
       "/query",
       {
@@ -261,7 +249,9 @@ export class AlphaVantageClient {
    */
   static getLatestValue(response: EconomicIndicatorResponse): number | null {
     const latest = response.data[0];
-    if (!latest || latest.value === null) return null;
+    if (!latest || latest.value === null) {
+      return null;
+    }
     return latest.value;
   }
 }
@@ -279,8 +269,7 @@ export function createAlphaVantageClientFromEnv(): AlphaVantageClient {
     throw new Error("ALPHAVANTAGE_KEY environment variable is required");
   }
 
-  const tier =
-    (process.env.ALPHAVANTAGE_TIER as AlphaVantageClientConfig["tier"]) ?? "free";
+  const tier = (process.env.ALPHAVANTAGE_TIER as AlphaVantageClientConfig["tier"]) ?? "free";
 
   return new AlphaVantageClient({ apiKey, tier });
 }

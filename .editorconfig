@@ -1,0 +1,44 @@
+# EditorConfig - https://editorconfig.org
+# Ensures consistent coding styles across editors and IDEs
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# TypeScript / JavaScript
+[*.{ts,tsx,js,jsx,json}]
+indent_size = 2
+
+# Rust
+[*.rs]
+indent_size = 4
+
+# Python
+[*.py]
+indent_size = 4
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefile (requires tabs)
+[Makefile]
+indent_style = tab
+
+# Proto files
+[*.proto]
+indent_size = 2
+
+# YAML
+[*.{yml,yaml}]
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+indent_size = 2

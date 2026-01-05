@@ -6,7 +6,7 @@
  * @see docs/plans/ui/31-realtime-patterns.md lines 22-27
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 // ============================================
 // Price Formatting Tests
@@ -62,7 +62,7 @@ describe("formatPrice", () => {
   });
 
   it("formats very large prices", () => {
-    expect(formatPrice(12345678.90)).toBe("12,345,678.90");
+    expect(formatPrice(12345678.9)).toBe("12,345,678.90");
   });
 });
 
@@ -111,9 +111,9 @@ const OPACITY_VALUES: Record<StaleLevel, number> = {
 
 function calculateStaleState(
   elapsedMs: number,
-  staleThresholdMs: number = 5000,
-  veryStaleThresholdMs: number = 10000,
-  extremelyStaleThresholdMs: number = 30000
+  staleThresholdMs = 5000,
+  veryStaleThresholdMs = 10000,
+  extremelyStaleThresholdMs = 30000
 ): StaleState {
   const secondsSinceUpdate = Math.floor(elapsedMs / 1000);
 
@@ -141,7 +141,7 @@ function calculateStaleState(
     return {
       level: "stale",
       isStale: true,
-      opacity: OPACITY_VALUES["stale"],
+      opacity: OPACITY_VALUES.stale,
       showIndicator: false,
       secondsSinceUpdate,
     };
@@ -150,7 +150,7 @@ function calculateStaleState(
   return {
     level: "fresh",
     isStale: false,
-    opacity: OPACITY_VALUES["fresh"],
+    opacity: OPACITY_VALUES.fresh,
     showIndicator: false,
     secondsSinceUpdate,
   };
@@ -217,11 +217,11 @@ function determineFlashDirection(
 
 describe("determineFlashDirection", () => {
   it("returns up for price increase", () => {
-    expect(determineFlashDirection(187.52, 187.20)).toBe("up");
+    expect(determineFlashDirection(187.52, 187.2)).toBe("up");
   });
 
   it("returns down for price decrease", () => {
-    expect(determineFlashDirection(185.00, 187.52)).toBe("down");
+    expect(determineFlashDirection(185.0, 187.52)).toBe("down");
   });
 
   it("returns null for no change", () => {
@@ -233,8 +233,8 @@ describe("determineFlashDirection", () => {
   });
 
   it("handles small price changes", () => {
-    expect(determineFlashDirection(187.521, 187.520)).toBe("up");
-    expect(determineFlashDirection(187.519, 187.520)).toBe("down");
+    expect(determineFlashDirection(187.521, 187.52)).toBe("up");
+    expect(determineFlashDirection(187.519, 187.52)).toBe("down");
   });
 });
 
@@ -278,7 +278,7 @@ describe("useStaleData exports", () => {
 describe("flash debounce logic", () => {
   it("blocks rapid flashes within debounce period", () => {
     const debounceMs = 500;
-    let lastFlashTime = 0;
+    const lastFlashTime = 0;
     const currentTime = 300; // 300ms since last flash
 
     const shouldFlash = currentTime - lastFlashTime >= debounceMs;
@@ -287,7 +287,7 @@ describe("flash debounce logic", () => {
 
   it("allows flash after debounce period", () => {
     const debounceMs = 500;
-    let lastFlashTime = 0;
+    const lastFlashTime = 0;
     const currentTime = 600; // 600ms since last flash
 
     const shouldFlash = currentTime - lastFlashTime >= debounceMs;
@@ -296,7 +296,7 @@ describe("flash debounce logic", () => {
 
   it("allows flash at exactly debounce period", () => {
     const debounceMs = 500;
-    let lastFlashTime = 0;
+    const lastFlashTime = 0;
     const currentTime = 500; // exactly 500ms
 
     const shouldFlash = currentTime - lastFlashTime >= debounceMs;
@@ -311,20 +311,20 @@ describe("flash debounce logic", () => {
 describe("delta calculation", () => {
   it("calculates absolute delta correctly", () => {
     const price = 187.52;
-    const previousPrice = 187.20;
+    const previousPrice = 187.2;
     const delta = price - previousPrice;
     expect(delta).toBeCloseTo(0.32, 2);
   });
 
   it("calculates percent delta correctly", () => {
     const price = 187.52;
-    const previousPrice = 187.20;
+    const previousPrice = 187.2;
     const percentDelta = ((price - previousPrice) / previousPrice) * 100;
     expect(percentDelta).toBeCloseTo(0.171, 2);
   });
 
   it("handles negative delta", () => {
-    const price = 185.00;
+    const price = 185.0;
     const previousPrice = 187.52;
     const delta = price - previousPrice;
     expect(delta).toBeCloseTo(-2.52, 2);
@@ -334,9 +334,8 @@ describe("delta calculation", () => {
     const price = 10;
     const previousPrice = 0;
     // Should not divide by zero
-    const percentDelta = previousPrice !== 0
-      ? ((price - previousPrice) / previousPrice) * 100
-      : undefined;
+    const percentDelta =
+      previousPrice !== 0 ? ((price - previousPrice) / previousPrice) * 100 : undefined;
     expect(percentDelta).toBeUndefined();
   });
 });

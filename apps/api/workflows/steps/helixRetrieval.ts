@@ -14,21 +14,15 @@
  */
 
 import {
-  type HelixClient,
   createHelixClientFromEnv,
-  vectorSearch,
-  traverse,
-  getNodesByType,
-  type VectorSearchResult,
   type GraphNode,
+  getNodesByType,
+  type HelixClient,
+  type VectorSearchResult,
+  vectorSearch,
 } from "@cream/helix";
-import {
-  fuseWithRRF,
-  type RetrievalResult,
-  type RRFResult,
-  DEFAULT_RRF_K,
-} from "@cream/helix-schema";
 import type { TradeDecision } from "@cream/helix-schema";
+import { DEFAULT_RRF_K, fuseWithRRF, type RRFResult } from "@cream/helix-schema";
 
 // ============================================
 // Types
@@ -184,18 +178,12 @@ export async function executeHelixRetrieval(
     const sourceCounts = calculateSourceCounts(fusedResults);
 
     // Convert to decision summaries
-    const decisions = fusedResults.map((r) =>
-      createDecisionSummary(r.node as TradeDecision, r)
-    );
+    const decisions = fusedResults.map((r) => createDecisionSummary(r.node as TradeDecision, r));
 
     const totalMs = performance.now() - startTime;
 
     // Check for empty results
-    const emptyReason = getEmptyReason(
-      decisions.length,
-      vectorResults.length,
-      graphResults.length
-    );
+    const emptyReason = getEmptyReason(decisions.length, vectorResults.length, graphResults.length);
 
     return {
       success: true,
@@ -280,11 +268,7 @@ async function performGraphTraversal(
 
   // Strategy 1: Same instrument
   if (instrumentId) {
-    const instrumentResults = await findDecisionsByInstrument(
-      client,
-      instrumentId,
-      limit
-    );
+    const instrumentResults = await findDecisionsByInstrument(client, instrumentId, limit);
     for (const decision of instrumentResults) {
       results.set(decision.decision_id, {
         node: decision,
@@ -295,11 +279,7 @@ async function performGraphTraversal(
 
   // Strategy 2: Same underlying
   if (underlyingSymbol) {
-    const underlyingResults = await findDecisionsByUnderlying(
-      client,
-      underlyingSymbol,
-      limit
-    );
+    const underlyingResults = await findDecisionsByUnderlying(client, underlyingSymbol, limit);
     for (const decision of underlyingResults) {
       const existing = results.get(decision.decision_id);
       if (existing) {
@@ -419,9 +399,11 @@ function fuseResults(
 /**
  * Calculate how many results came from each source.
  */
-function calculateSourceCounts(
-  results: RRFResult<TradeDecision>[]
-): { vectorOnly: number; graphOnly: number; both: number } {
+function calculateSourceCounts(results: RRFResult<TradeDecision>[]): {
+  vectorOnly: number;
+  graphOnly: number;
+  both: number;
+} {
   let vectorOnly = 0;
   let graphOnly = 0;
   let both = 0;
@@ -450,7 +432,7 @@ function createDecisionSummary(
   const maxLen = DEFAULT_RETRIEVAL_CONFIG.maxRationaleSummaryLength;
   let rationaleSummary = decision.rationale_text ?? "";
   if (rationaleSummary.length > maxLen) {
-    rationaleSummary = rationaleSummary.substring(0, maxLen - 3) + "...";
+    rationaleSummary = `${rationaleSummary.substring(0, maxLen - 3)}...`;
   }
 
   // Normalize RRF score to 0-1 (max is 2 * 1/(60+1) ≈ 0.0328)
@@ -467,8 +449,7 @@ function createDecisionSummary(
     outcome: decision.realized_outcome,
     createdAt: decision.created_at,
     relevanceScore,
-    multiSourceMatch:
-      rrfResult.sources.includes("vector") && rrfResult.sources.includes("graph"),
+    multiSourceMatch: rrfResult.sources.includes("vector") && rrfResult.sources.includes("graph"),
   };
 }
 

@@ -15,8 +15,8 @@
  * @see docs/plans/11-configuration.md
  */
 
-import type { RuleBasedConfig, RegimeLabel } from "@cream/config";
-import { calculateSMA, calculateATR, type Candle } from "@cream/indicators";
+import type { RegimeLabel, RuleBasedConfig } from "@cream/config";
+import { type Candle, calculateATR, calculateSMA } from "@cream/indicators";
 
 // ============================================
 // Types
@@ -204,8 +204,12 @@ function applyRules(
  * Calculate percentile rank of a value in a sorted array.
  */
 function calculatePercentile(values: number[], target: number): number {
-  if (values.length === 0) return 50; // Default to middle
-  if (values.length === 1) return 50; // Single element, no comparison possible
+  if (values.length === 0) {
+    return 50; // Default to middle
+  }
+  if (values.length === 1) {
+    return 50; // Single element, no comparison possible
+  }
 
   const sorted = [...values].sort((a, b) => a - b);
   const index = sorted.filter((v) => v < target).length;
@@ -216,7 +220,9 @@ function calculatePercentile(values: number[], target: number): number {
  * Calculate confidence score based on how far the value is from threshold.
  */
 function calculateConfidence(value: number, threshold: number, extreme: number): number {
-  if (extreme === threshold) return 1;
+  if (extreme === threshold) {
+    return 1;
+  }
   const distance = Math.abs(value - threshold);
   const maxDistance = Math.abs(extreme - threshold);
   return Math.min(distance / maxDistance, 1);

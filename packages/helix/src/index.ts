@@ -69,6 +69,23 @@ export {
   type TraversalResponse,
   traverse,
 } from "./queries/graph";
+// Mutations
+export {
+  type BatchMutationResult,
+  batchCreateEdges,
+  batchCreateLifecycleEvents,
+  batchUpsertExternalEvents,
+  batchUpsertTradeDecisions,
+  createEdge,
+  createHasEventEdge,
+  createInfluencedDecisionEdge,
+  createLifecycleEvent,
+  type EdgeInput,
+  type MutationResult,
+  type NodeWithEmbedding,
+  upsertExternalEvent,
+  upsertTradeDecision,
+} from "./queries/mutations";
 // Vector search
 export {
   searchSimilarDecisions,
@@ -80,24 +97,6 @@ export {
   type VectorSearchResult,
   vectorSearch,
 } from "./queries/vector";
-
-// Mutations
-export {
-  batchCreateEdges,
-  batchCreateLifecycleEvents,
-  batchUpsertExternalEvents,
-  batchUpsertTradeDecisions,
-  type BatchMutationResult,
-  createEdge,
-  createHasEventEdge,
-  createInfluencedDecisionEdge,
-  createLifecycleEvent,
-  type EdgeInput,
-  type MutationResult,
-  type NodeWithEmbedding,
-  upsertExternalEvent,
-  upsertTradeDecision,
-} from "./queries/mutations";
 
 /**
  * Package version.

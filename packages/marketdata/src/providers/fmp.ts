@@ -11,12 +11,7 @@
  */
 
 import { z } from "zod";
-import {
-  RestClient,
-  createRestClient,
-  type ClientConfig,
-  type RateLimitConfig,
-} from "../client";
+import { createRestClient, type RateLimitConfig, type RestClient } from "../client";
 
 // ============================================
 // API Configuration
@@ -193,11 +188,7 @@ export class FmpClient {
   /**
    * Get SEC filings for a company.
    */
-  async getSecFilings(
-    symbol: string,
-    type?: string,
-    limit = 100
-  ): Promise<SecFiling[]> {
+  async getSecFilings(symbol: string, type?: string, limit = 100): Promise<SecFiling[]> {
     return this.client.get(
       `/${FMP_VERSION}/sec_filings/${symbol}`,
       { type, limit, apikey: this.apiKey },
@@ -208,10 +199,7 @@ export class FmpClient {
   /**
    * Get analyst ratings/sentiment for a company.
    */
-  async getSentimentRatings(
-    symbol: string,
-    limit = 100
-  ): Promise<SentimentRating[]> {
+  async getSentimentRatings(symbol: string, limit = 100): Promise<SentimentRating[]> {
     return this.client.get(
       `/${FMP_VERSION}/historical-rating/${symbol}`,
       { limit, apikey: this.apiKey },
@@ -222,10 +210,7 @@ export class FmpClient {
   /**
    * Get stock news for symbols.
    */
-  async getStockNews(
-    symbols: string[],
-    limit = 50
-  ): Promise<StockNews[]> {
+  async getStockNews(symbols: string[], limit = 50): Promise<StockNews[]> {
     return this.client.get(
       `/${FMP_VERSION}/stock_news`,
       { tickers: symbols.join(","), limit, apikey: this.apiKey },
@@ -299,8 +284,7 @@ export function createFmpClientFromEnv(): FmpClient {
     throw new Error("FMP_KEY environment variable is required");
   }
 
-  const tier =
-    (process.env.FMP_TIER as FmpClientConfig["tier"]) ?? "starter";
+  const tier = (process.env.FMP_TIER as FmpClientConfig["tier"]) ?? "starter";
 
   return new FmpClient({ apiKey, tier });
 }

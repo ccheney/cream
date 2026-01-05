@@ -108,8 +108,6 @@ function formatNumber(
         maximumFractionDigits: 0,
       }).format(Math.round(value));
       break;
-
-    case "decimal":
     default:
       formatted = new Intl.NumberFormat("en-US", {
         style: "decimal",
@@ -199,17 +197,21 @@ export const AnimatedNumber = memo(function AnimatedNumber({
 
   // Determine if we should animate this change
   const shouldAnimate = useMemo(() => {
-    if (!animate || prefersReducedMotion) return false;
+    if (!animate || prefersReducedMotion) {
+      return false;
+    }
 
     const previousValue = previousValueRef.current;
-    if (previousValue === 0) return value !== 0;
+    if (previousValue === 0) {
+      return value !== 0;
+    }
 
     const percentChange = Math.abs((value - previousValue) / previousValue);
     return percentChange >= animationThreshold;
   }, [value, animate, prefersReducedMotion, animationThreshold]);
 
   // Update display value with debouncing
-  useEffect((): void | (() => void) => {
+  useEffect((): undefined | (() => void) => {
     const now = Date.now();
     const timeSinceLastAnimation = now - lastAnimationRef.current;
 

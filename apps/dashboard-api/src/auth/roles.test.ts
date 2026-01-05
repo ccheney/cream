@@ -3,11 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  hasMinimumRole,
-  hasExactRole,
-  hasOneOfRoles,
-} from "./roles.js";
+import { hasExactRole, hasMinimumRole, hasOneOfRoles } from "./roles.js";
 
 describe("hasMinimumRole", () => {
   it("viewer has minimum viewer", () => {

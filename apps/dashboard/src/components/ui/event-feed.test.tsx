@@ -5,17 +5,14 @@
  * Component rendering is tested via Storybook/integration tests.
  */
 
-import { describe, it, expect } from "bun:test";
-import type { FeedEvent, EventType } from "./event-feed.js";
+import { describe, expect, it } from "bun:test";
+import type { EventType, FeedEvent } from "./event-feed.js";
 
 // ============================================
 // Test Utilities
 // ============================================
 
-function createTestEvent(
-  overrides: Partial<FeedEvent> = {},
-  index = 0
-): FeedEvent {
+function createTestEvent(overrides: Partial<FeedEvent> = {}, index = 0): FeedEvent {
   return {
     id: `event-${index}`,
     type: "QUOTE" as EventType,
@@ -98,12 +95,8 @@ describe("createManyEvents", () => {
     const events = createManyEvents(3);
     const [event0, event1, event2] = events;
     // First event is most recent (index 0)
-    expect(event0?.timestamp.getTime()).toBeGreaterThan(
-      event1?.timestamp.getTime() ?? 0
-    );
-    expect(event1?.timestamp.getTime()).toBeGreaterThan(
-      event2?.timestamp.getTime() ?? 0
-    );
+    expect(event0?.timestamp.getTime()).toBeGreaterThan(event1?.timestamp.getTime() ?? 0);
+    expect(event1?.timestamp.getTime()).toBeGreaterThan(event2?.timestamp.getTime() ?? 0);
   });
 
   it("handles zero events", () => {
@@ -121,10 +114,7 @@ describe("createManyEvents", () => {
 // Event Type Config Tests
 // ============================================
 
-const EVENT_TYPE_CONFIG: Record<
-  EventType,
-  { color: string; icon: string; label: string }
-> = {
+const EVENT_TYPE_CONFIG: Record<EventType, { color: string; icon: string; label: string }> = {
   QUOTE: {
     color: "var(--chart-blue, #3b82f6)",
     icon: "●",
@@ -182,15 +172,25 @@ describe("EVENT_TYPE_CONFIG", () => {
 // ============================================
 
 function formatRelativeTime(seconds: number): string {
-  if (seconds < 0) return "just now";
-  if (seconds < 5) return "just now";
-  if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+  if (seconds < 0) {
+    return "just now";
+  }
+  if (seconds < 5) {
+    return "just now";
+  }
+  if (seconds < 60) {
+    return `${Math.floor(seconds)}s ago`;
+  }
 
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
 
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
@@ -246,7 +246,7 @@ function simulateScrollBehavior(
   initialState: AutoScrollState,
   actions: Array<{ type: "scroll_up" | "scroll_to_bottom" | "new_items"; count?: number }>
 ): AutoScrollState {
-  let state = { ...initialState };
+  const state = { ...initialState };
 
   for (const action of actions) {
     switch (action.type) {
@@ -311,9 +311,7 @@ describe("Auto-scroll behavior simulation", () => {
   });
 
   it("does not increment new items when auto-scrolling", () => {
-    const state = simulateScrollBehavior(initialState, [
-      { type: "new_items", count: 10 },
-    ]);
+    const state = simulateScrollBehavior(initialState, [{ type: "new_items", count: 10 }]);
     expect(state.newItemCount).toBe(0);
   });
 });
@@ -326,8 +324,7 @@ describe("Virtualization logic", () => {
   it("limits events to maxEvents", () => {
     const events = createManyEvents(100);
     const maxEvents = 50;
-    const displayEvents =
-      events.length > maxEvents ? events.slice(-maxEvents) : events;
+    const displayEvents = events.length > maxEvents ? events.slice(-maxEvents) : events;
     expect(displayEvents).toHaveLength(50);
   });
 
@@ -344,8 +341,7 @@ describe("Virtualization logic", () => {
   it("does not limit when under maxEvents", () => {
     const events = createManyEvents(30);
     const maxEvents = 50;
-    const displayEvents =
-      events.length > maxEvents ? events.slice(-maxEvents) : events;
+    const displayEvents = events.length > maxEvents ? events.slice(-maxEvents) : events;
     expect(displayEvents).toHaveLength(30);
   });
 
@@ -393,9 +389,7 @@ describe("Event filtering", () => {
       createTestEvent({ type: "QUOTE", symbol: "NVDA" }),
     ];
 
-    const aaplQuotes = events.filter(
-      (e) => e.type === "QUOTE" && e.symbol === "AAPL"
-    );
+    const aaplQuotes = events.filter((e) => e.type === "QUOTE" && e.symbol === "AAPL");
     expect(aaplQuotes).toHaveLength(1);
   });
 });

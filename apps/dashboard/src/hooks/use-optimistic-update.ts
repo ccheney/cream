@@ -7,14 +7,14 @@
  * @see docs/plans/ui/31-realtime-patterns.md lines 120-129
  */
 
-import { useCallback, useRef } from "react";
 import {
-  useMutation,
-  useQueryClient,
+  type QueryClient,
   type QueryKey,
   type UseMutationOptions,
-  type QueryClient,
+  useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
+import { useCallback, useRef } from "react";
 import { useAlert } from "@/stores/alert-store";
 
 // ============================================
@@ -246,10 +246,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
     onMutate: async (newItem) => {
       await queryClient.cancelQueries({ queryKey: options.queryKey });
       const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
-      queryClient.setQueryData<TItem[]>(options.queryKey, (old) => [
-        ...(old || []),
-        newItem,
-      ]);
+      queryClient.setQueryData<TItem[]>(options.queryKey, (old) => [...(old || []), newItem]);
       return { previousData };
     },
     onError: (error, _variables, context) => {
@@ -288,9 +285,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
       await queryClient.cancelQueries({ queryKey: options.queryKey });
       const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
       queryClient.setQueryData<TItem[]>(options.queryKey, (old) =>
-        (old || []).map((item) =>
-          item.id === updates.id ? { ...item, ...updates } : item
-        )
+        (old || []).map((item) => (item.id === updates.id ? { ...item, ...updates } : item))
       );
       return { previousData };
     },
@@ -310,10 +305,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
     isAdding: addMutation.isPending,
     isRemoving: removeMutation.isPending,
     isUpdating: updateMutation.isPending,
-    isPending:
-      addMutation.isPending ||
-      removeMutation.isPending ||
-      updateMutation.isPending,
+    isPending: addMutation.isPending || removeMutation.isPending || updateMutation.isPending,
   };
 }
 

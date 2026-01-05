@@ -4,13 +4,13 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  generateTOTPSecret,
-  verifyTOTPCode,
-  getCurrentTOTPCode,
   generateBackupCodes,
+  generateOTPAuthURI,
+  generateTOTPSecret,
+  getCurrentTOTPCode,
   hashBackupCode,
   verifyBackupCode,
-  generateOTPAuthURI,
+  verifyTOTPCode,
 } from "./mfa.js";
 
 describe("generateTOTPSecret", () => {

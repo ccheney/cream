@@ -4,9 +4,9 @@
  * Tests for alert notification store functionality.
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
+import type { Alert, AlertAction, AlertSettings, AlertSeverity } from "./alert-store";
 import { useAlertStore } from "./alert-store";
-import type { Alert, AlertSeverity, AlertSettings, AlertAction } from "./alert-store";
 
 // ============================================
 // Test Helpers

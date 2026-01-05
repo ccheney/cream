@@ -476,7 +476,7 @@ export function getRetryDelay(code: ErrorCode, attempt: number): number {
 
   if (recovery === "retry_backoff") {
     // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
-    const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+    const delay = Math.min(1000 * 2 ** attempt, 30000);
     // Add jitter (0-20%)
     const jitter = delay * Math.random() * 0.2;
     return Math.floor(delay + jitter);

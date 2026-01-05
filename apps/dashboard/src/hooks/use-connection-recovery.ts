@@ -140,14 +140,11 @@ const DEFAULT_HEARTBEAT: Required<HeartbeatConfig> = {
 /**
  * Calculate backoff delay with jitter.
  */
-export function calculateBackoffDelay(
-  attempt: number,
-  config: Required<BackoffConfig>
-): number {
+export function calculateBackoffDelay(attempt: number, config: Required<BackoffConfig>): number {
   const { initialDelayMs, maxDelayMs, multiplier, jitterFactor } = config;
 
   // Exponential backoff: initialDelay * multiplier^attempt
-  const exponentialDelay = initialDelayMs * Math.pow(multiplier, attempt);
+  const exponentialDelay = initialDelayMs * multiplier ** attempt;
   const delay = Math.min(exponentialDelay, maxDelayMs);
 
   // Add jitter: ±jitterFactor
@@ -159,8 +156,12 @@ export function calculateBackoffDelay(
  * Classify HTTP status code into error type.
  */
 export function classifyHttpError(statusCode: number): ConnectionErrorType {
-  if (statusCode === 401) return "unauthorized";
-  if (statusCode === 403) return "forbidden";
+  if (statusCode === 401) {
+    return "unauthorized";
+  }
+  if (statusCode === 403) {
+    return "forbidden";
+  }
   if (statusCode >= 500 && statusCode < 600) {
     return statusCode === 503 ? "service_unavailable" : "server_error";
   }
@@ -170,10 +171,7 @@ export function classifyHttpError(statusCode: number): ConnectionErrorType {
 /**
  * Create a ConnectionError from various error types.
  */
-export function createConnectionError(
-  error: unknown,
-  statusCode?: number
-): ConnectionError {
+export function createConnectionError(error: unknown, statusCode?: number): ConnectionError {
   // Network errors
   if (error instanceof TypeError && error.message.includes("fetch")) {
     return {
@@ -318,14 +316,20 @@ export function useConnectionRecovery(
 
   // Check if should retry
   const shouldRetry = useCallback(() => {
-    if (!error) return false;
-    if (!error.retryable) return false;
-    if (retryAttempt >= backoff.maxRetries) return false;
+    if (!error) {
+      return false;
+    }
+    if (!error.retryable) {
+      return false;
+    }
+    if (retryAttempt >= backoff.maxRetries) {
+      return false;
+    }
     return true;
   }, [error, retryAttempt, backoff.maxRetries]);
 
   // Schedule retry
-  const scheduleRetry = useCallback(
+  const _scheduleRetry = useCallback(
     (retryFn: () => void) => {
       if (!shouldRetry()) {
         if (retryAttempt >= backoff.maxRetries) {
@@ -413,10 +417,7 @@ export function useConnectionRecovery(
       if (!connectionError.retryable) {
         if (showToasts) {
           if (connectionError.type === "unauthorized") {
-            alert.critical(
-              "Session Expired",
-              "Please log in again to continue."
-            );
+            alert.critical("Session Expired", "Please log in again to continue.");
           } else {
             alert.warning("Connection Error", getErrorMessage(connectionError));
           }
@@ -569,9 +570,7 @@ export function useConnectionStatusInfo(
   }
 
   const retryText =
-    retryCountdown !== null
-      ? `Retrying in ${Math.ceil(retryCountdown / 1000)}s...`
-      : null;
+    retryCountdown !== null ? `Retrying in ${Math.ceil(retryCountdown / 1000)}s...` : null;
 
   return { text, color, isConnecting, retryText };
 }

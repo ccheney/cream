@@ -2,18 +2,18 @@
  * WebSocket Compression Tests
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  getCompressionConfig,
-  getBunCompressionOptions,
-  recordCompressionStats,
-  getCompressionMetrics,
-  resetCompressionMetrics,
-  getBandwidthSavings,
-  shouldCompress,
-  estimateCompressedSize,
   type CompressionConfig,
   type CompressionMetrics,
+  estimateCompressedSize,
+  getBandwidthSavings,
+  getBunCompressionOptions,
+  getCompressionConfig,
+  getCompressionMetrics,
+  recordCompressionStats,
+  resetCompressionMetrics,
+  shouldCompress,
 } from "./compression";
 
 // ============================================
@@ -283,8 +283,8 @@ describe("getBandwidthSavings", () => {
 // ============================================
 
 describe("shouldCompress", () => {
-  const originalEnv = process.env.NODE_ENV;
-  const originalWsCompression = process.env.WS_COMPRESSION_ENABLED;
+  const _originalEnv = process.env.NODE_ENV;
+  const _originalWsCompression = process.env.WS_COMPRESSION_ENABLED;
 
   beforeEach(() => {
     process.env.NODE_ENV = "production"; // Ensure compression enabled

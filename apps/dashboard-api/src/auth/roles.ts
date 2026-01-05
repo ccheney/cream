@@ -115,11 +115,10 @@ export function getSession(c: Context<{ Variables: AuthVariables }>) {
 /**
  * Check if the current user can perform an action.
  */
-export function canPerform(
-  c: Context<{ Variables: AuthVariables }>,
-  requiredRole: Role
-): boolean {
+export function canPerform(c: Context<{ Variables: AuthVariables }>, requiredRole: Role): boolean {
   const session = c.get("session");
-  if (!session) return false;
+  if (!session) {
+    return false;
+  }
   return hasMinimumRole(session.role, requiredRole);
 }

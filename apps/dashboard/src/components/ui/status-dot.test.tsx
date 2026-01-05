@@ -2,10 +2,10 @@
  * StatusDot Component Tests
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { createElement } from "react";
+import type { StatusDotSize, StatusDotStatus } from "./status-dot";
 import { StatusDot, usePrefersReducedMotion } from "./status-dot";
-import type { StatusDotStatus, StatusDotSize } from "./status-dot";
 
 // ============================================
 // Helper to render and get element

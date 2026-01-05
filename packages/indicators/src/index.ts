@@ -23,30 +23,24 @@
  * @see docs/plans/11-configuration.md for indicator specifications
  */
 
-// Types
-export * from "./types";
-
 // Momentum Indicators
 export * from "./momentum/index";
-
-// Trend Indicators
-export * from "./trend/index";
-
-// Volatility Indicators
-export * from "./volatility/index";
-
-// Volume Indicators
-export * from "./volume/index";
-
-// Normalization Transforms
-export * from "./transforms/index";
-
 // Indicator Pipeline
 export {
+  calculateHistoricalIndicators,
   calculateIndicators,
   calculateMultiTimeframeIndicators,
-  calculateHistoricalIndicators,
-  getRequiredWarmupPeriod,
   DEFAULT_PIPELINE_CONFIG,
+  getRequiredWarmupPeriod,
   type IndicatorPipelineConfig,
 } from "./pipeline";
+// Normalization Transforms
+export * from "./transforms/index";
+// Trend Indicators
+export * from "./trend/index";
+// Types
+export * from "./types";
+// Volatility Indicators
+export * from "./volatility/index";
+// Volume Indicators
+export * from "./volume/index";

@@ -24,9 +24,9 @@
  */
 
 import {
-  type Candle,
   type BollingerBandsParams,
   type BollingerBandsResult,
+  type Candle,
   type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
@@ -43,7 +43,7 @@ export const BOLLINGER_DEFAULTS: BollingerBandsParams = {
  * Calculate standard deviation of an array of numbers.
  */
 function calculateStdDev(values: number[], mean: number): number {
-  const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
+  const squaredDiffs = values.map((v) => (v - mean) ** 2);
   const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
   return Math.sqrt(variance);
 }
@@ -112,22 +112,14 @@ export function bollingerRequiredPeriods(
 /**
  * Check if price is touching or above upper band.
  */
-export function isTouchingUpperBand(
-  price: number,
-  upperBand: number,
-  tolerance = 0
-): boolean {
+export function isTouchingUpperBand(price: number, upperBand: number, tolerance = 0): boolean {
   return price >= upperBand - tolerance;
 }
 
 /**
  * Check if price is touching or below lower band.
  */
-export function isTouchingLowerBand(
-  price: number,
-  lowerBand: number,
-  tolerance = 0
-): boolean {
+export function isTouchingLowerBand(price: number, lowerBand: number, tolerance = 0): boolean {
   return price <= lowerBand + tolerance;
 }
 
@@ -137,10 +129,7 @@ export function isTouchingLowerBand(
  * @param bandwidth - Current bandwidth
  * @param threshold - Bandwidth threshold for squeeze (default: 4%)
  */
-export function isBollingerSqueeze(
-  bandwidth: number,
-  threshold = 4.0
-): boolean {
+export function isBollingerSqueeze(bandwidth: number, threshold = 4.0): boolean {
   return bandwidth < threshold;
 }
 
@@ -150,10 +139,7 @@ export function isBollingerSqueeze(
  * @param bandwidth - Current bandwidth
  * @param threshold - Bandwidth threshold for expansion (default: 10%)
  */
-export function isBollingerExpansion(
-  bandwidth: number,
-  threshold = 10.0
-): boolean {
+export function isBollingerExpansion(bandwidth: number, threshold = 10.0): boolean {
   return bandwidth > threshold;
 }
 
@@ -163,23 +149,23 @@ export function isBollingerExpansion(
  * @param percentB - Current %B value
  * @returns 'overbought' | 'oversold' | 'neutral'
  */
-export function getBollingerSignal(
-  percentB: number
-): "overbought" | "oversold" | "neutral" {
-  if (percentB > 1) return "overbought";
-  if (percentB < 0) return "oversold";
+export function getBollingerSignal(percentB: number): "overbought" | "oversold" | "neutral" {
+  if (percentB > 1) {
+    return "overbought";
+  }
+  if (percentB < 0) {
+    return "oversold";
+  }
   return "neutral";
 }
 
 /**
  * Bollinger Bands Calculator implementation.
  */
-export const bollingerCalculator: IndicatorCalculator<
-  BollingerBandsParams,
-  BollingerBandsResult
-> = {
-  calculate: calculateBollingerBands,
-  requiredPeriods: bollingerRequiredPeriods,
-};
+export const bollingerCalculator: IndicatorCalculator<BollingerBandsParams, BollingerBandsResult> =
+  {
+    calculate: calculateBollingerBands,
+    requiredPeriods: bollingerRequiredPeriods,
+  };
 
 export default bollingerCalculator;

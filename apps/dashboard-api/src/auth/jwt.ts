@@ -7,12 +7,7 @@
  */
 
 import { sign, verify } from "hono/jwt";
-import type {
-  AccessTokenPayload,
-  JWTConfig,
-  RefreshTokenPayload,
-  Role,
-} from "./types.js";
+import type { AccessTokenPayload, JWTConfig, RefreshTokenPayload, Role } from "./types.js";
 import { DEFAULT_JWT_CONFIG } from "./types.js";
 
 // ============================================
@@ -141,7 +136,9 @@ export async function verifyRefreshToken(
  * Extract token from Authorization header.
  */
 export function extractBearerToken(authHeader: string | null): string | null {
-  if (!authHeader) return null;
+  if (!authHeader) {
+    return null;
+  }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {

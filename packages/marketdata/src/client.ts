@@ -11,7 +11,7 @@
  * @see docs/plans/02-data-layer.md
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 
 // ============================================
 // Types
@@ -168,8 +168,7 @@ export class RateLimiter {
  */
 export class RestClient {
   private rateLimiter?: RateLimiter;
-  private config: Required<Pick<ClientConfig, "baseUrl" | "timeoutMs">> &
-    ClientConfig;
+  private config: Required<Pick<ClientConfig, "baseUrl" | "timeoutMs">> & ClientConfig;
 
   constructor(config: ClientConfig) {
     this.config = {
@@ -185,11 +184,7 @@ export class RestClient {
   /**
    * Make an HTTP request with rate limiting and retry.
    */
-  async request<T>(
-    path: string,
-    options: RequestOptions = {},
-    schema?: z.ZodType<T>
-  ): Promise<T> {
+  async request<T>(path: string, options: RequestOptions = {}, schema?: z.ZodType<T>): Promise<T> {
     const url = this.buildUrl(path, options.params);
     const headers = this.buildHeaders(options.headers);
     const timeout = options.timeoutMs ?? this.config.timeoutMs;
@@ -228,8 +223,7 @@ export class RestClient {
 
         // Exponential backoff
         const delay = Math.min(
-          retryConfig.initialDelayMs *
-            Math.pow(retryConfig.backoffMultiplier, attempt),
+          retryConfig.initialDelayMs * retryConfig.backoffMultiplier ** attempt,
           retryConfig.maxDelayMs
         );
 
@@ -254,11 +248,7 @@ export class RestClient {
   /**
    * Make a POST request.
    */
-  async post<T>(
-    path: string,
-    body?: unknown,
-    schema?: z.ZodType<T>
-  ): Promise<T> {
+  async post<T>(path: string, body?: unknown, schema?: z.ZodType<T>): Promise<T> {
     return this.request(path, { method: "POST", body }, schema);
   }
 
@@ -323,9 +313,7 @@ export class RestClient {
   /**
    * Build request headers.
    */
-  private buildHeaders(
-    additional?: Record<string, string>
-  ): Record<string, string> {
+  private buildHeaders(additional?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -334,7 +322,7 @@ export class RestClient {
     };
 
     if (this.config.apiKey) {
-      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+      headers.Authorization = `Bearer ${this.config.apiKey}`;
     }
 
     return headers;

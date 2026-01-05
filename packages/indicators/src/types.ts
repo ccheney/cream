@@ -239,11 +239,7 @@ export class IndicatorError extends Error {
 /**
  * Check if we have enough candles for calculation.
  */
-export function validateCandleCount(
-  indicator: string,
-  candles: Candle[],
-  required: number
-): void {
+export function validateCandleCount(indicator: string, candles: Candle[], required: number): void {
   if (candles.length < required) {
     throw new IndicatorError(
       indicator,

@@ -25,9 +25,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
+    "@typescript/native-preview": "7.0.0-dev.20260104.1",
     "testcontainers": "11.11.0",
-    "turbo": "^2.7.2",
-    "@typescript/native-preview": "7.0.0-dev.20260104.1"
+    "turbo": "^2.7.2"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

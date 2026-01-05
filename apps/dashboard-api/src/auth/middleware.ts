@@ -7,15 +7,10 @@
  */
 
 import type { Context, MiddlewareHandler } from "hono";
-import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import { extractBearerToken, verifyAccessToken } from "./jwt.js";
-import type {
-  AuthVariables,
-  CookieConfig,
-  JWTConfig,
-  UserSession,
-} from "./types.js";
+import type { AuthVariables, CookieConfig, JWTConfig, UserSession } from "./types.js";
 import { DEFAULT_COOKIE_CONFIG, DEFAULT_JWT_CONFIG } from "./types.js";
 
 // ============================================
@@ -56,10 +51,7 @@ export function setAuthCookies(
 /**
  * Clear authentication cookies.
  */
-export function clearAuthCookies(
-  c: Context,
-  config: CookieConfig = DEFAULT_COOKIE_CONFIG
-): void {
+export function clearAuthCookies(c: Context, config: CookieConfig = DEFAULT_COOKIE_CONFIG): void {
   deleteCookie(c, config.accessTokenName, {
     path: config.path,
     domain: config.domain,
@@ -147,8 +139,7 @@ export function authMiddleware(
       }
 
       // Token verification failed
-      const message =
-        error instanceof Error ? error.message : "Invalid token";
+      const message = error instanceof Error ? error.message : "Invalid token";
       throw new HTTPException(401, { message });
     }
   };
@@ -218,9 +209,10 @@ export function liveProtection(
 
     // Check IP whitelist
     if (options.ipWhitelist && options.ipWhitelist.length > 0) {
-      const clientIP = c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ??
-                       c.req.header("X-Real-IP") ??
-                       "unknown";
+      const clientIP =
+        c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ??
+        c.req.header("X-Real-IP") ??
+        "unknown";
 
       if (!options.ipWhitelist.includes(clientIP)) {
         throw new HTTPException(403, {
@@ -250,7 +242,7 @@ export function liveProtection(
 
     // Audit logging
     if (options.auditLog) {
-      const auditEntry = {
+      const _auditEntry = {
         timestamp: new Date().toISOString(),
         userId: session.userId,
         email: session.email,
@@ -258,9 +250,6 @@ export function liveProtection(
         ip: c.req.header("X-Forwarded-For") ?? c.req.header("X-Real-IP") ?? "unknown",
         userAgent: c.req.header("User-Agent"),
       };
-
-      // Log to console (in production, send to audit service)
-      console.log("[LIVE_AUDIT]", JSON.stringify(auditEntry));
     }
 
     await next();

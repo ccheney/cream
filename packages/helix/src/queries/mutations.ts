@@ -7,14 +7,14 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type { HelixClient } from "../client";
 import type {
+  ExternalEvent,
+  HasEventEdge,
+  InfluencedDecisionEdge,
   TradeDecision,
   TradeLifecycleEvent,
-  ExternalEvent,
-  InfluencedDecisionEdge,
-  HasEventEdge,
 } from "@cream/helix-schema";
+import type { HelixClient } from "../client";
 
 // ============================================
 // Types
@@ -158,10 +158,7 @@ export async function upsertExternalEvent(
 /**
  * Create an edge between two nodes.
  */
-export async function createEdge(
-  client: HelixClient,
-  edge: EdgeInput
-): Promise<MutationResult> {
+export async function createEdge(client: HelixClient, edge: EdgeInput): Promise<MutationResult> {
   try {
     await client.query("createEdge", {
       source_id: edge.sourceId,
@@ -231,9 +228,7 @@ export async function batchUpsertTradeDecisions(
 ): Promise<BatchMutationResult> {
   const startTime = performance.now();
   const results = await Promise.allSettled(
-    decisions.map((d) =>
-      upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion)
-    )
+    decisions.map((d) => upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion))
   );
 
   return processBatchResults(results, startTime);
@@ -247,9 +242,7 @@ export async function batchCreateLifecycleEvents(
   events: TradeLifecycleEvent[]
 ): Promise<BatchMutationResult> {
   const startTime = performance.now();
-  const results = await Promise.allSettled(
-    events.map((e) => createLifecycleEvent(client, e))
-  );
+  const results = await Promise.allSettled(events.map((e) => createLifecycleEvent(client, e)));
 
   return processBatchResults(results, startTime);
 }
@@ -263,9 +256,7 @@ export async function batchUpsertExternalEvents(
 ): Promise<BatchMutationResult> {
   const startTime = performance.now();
   const results = await Promise.allSettled(
-    events.map((e) =>
-      upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion)
-    )
+    events.map((e) => upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion))
   );
 
   return processBatchResults(results, startTime);
@@ -279,9 +270,7 @@ export async function batchCreateEdges(
   edges: EdgeInput[]
 ): Promise<BatchMutationResult> {
   const startTime = performance.now();
-  const results = await Promise.allSettled(
-    edges.map((e) => createEdge(client, e))
-  );
+  const results = await Promise.allSettled(edges.map((e) => createEdge(client, e)));
 
   return processBatchResults(results, startTime);
 }

@@ -93,10 +93,7 @@ export interface PreferencesActions {
   /** Reset all preferences to defaults */
   resetToDefaults: () => void;
   /** Toggle a specific boolean preference */
-  togglePreference: (
-    category: "sound" | "notifications" | "display" | "feed",
-    key: string
-  ) => void;
+  togglePreference: (category: "sound" | "notifications" | "display" | "feed", key: string) => void;
   /** Get computed theme (resolves 'system') */
   getComputedTheme: () => "light" | "dark";
   /** Check if animations should be enabled */
@@ -156,7 +153,9 @@ const initialState: PreferencesState = {
  * Check if system prefers reduced motion.
  */
 function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") {
+    return false;
+  }
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
@@ -164,10 +163,10 @@ function prefersReducedMotion(): boolean {
  * Check system color scheme preference.
  */
 function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  if (typeof window === "undefined") {
+    return "light";
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -215,7 +214,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
           togglePreference: (category, key) => {
             set((state) => {
               const categoryState = state[category] as unknown as Record<string, unknown>;
-              if (typeof categoryState[key] !== "boolean") return state;
+              if (typeof categoryState[key] !== "boolean") {
+                return state;
+              }
 
               return {
                 [category]: {
@@ -238,9 +239,13 @@ export const usePreferencesStore = create<PreferencesStore>()(
           shouldAnimate: () => {
             const state = get();
             // User disabled animations
-            if (!state.display.animationsEnabled) return false;
+            if (!state.display.animationsEnabled) {
+              return false;
+            }
             // System prefers reduced motion
-            if (prefersReducedMotion()) return false;
+            if (prefersReducedMotion()) {
+              return false;
+            }
             return true;
           },
         }),
@@ -272,20 +277,17 @@ export const usePreferencesStore = create<PreferencesStore>()(
 /**
  * Select sound enabled state.
  */
-export const selectSoundEnabled = (state: PreferencesStore) =>
-  state.sound.enabled;
+export const selectSoundEnabled = (state: PreferencesStore) => state.sound.enabled;
 
 /**
  * Select sound volume.
  */
-export const selectSoundVolume = (state: PreferencesStore) =>
-  state.sound.volume;
+export const selectSoundVolume = (state: PreferencesStore) => state.sound.volume;
 
 /**
  * Select notifications enabled state.
  */
-export const selectNotificationsEnabled = (state: PreferencesStore) =>
-  state.notifications.enabled;
+export const selectNotificationsEnabled = (state: PreferencesStore) => state.notifications.enabled;
 
 /**
  * Select theme mode.
@@ -295,32 +297,27 @@ export const selectTheme = (state: PreferencesStore) => state.display.theme;
 /**
  * Select compact mode.
  */
-export const selectCompactMode = (state: PreferencesStore) =>
-  state.display.compactMode;
+export const selectCompactMode = (state: PreferencesStore) => state.display.compactMode;
 
 /**
  * Select privacy mode (show values).
  */
-export const selectShowValues = (state: PreferencesStore) =>
-  state.display.showValues;
+export const selectShowValues = (state: PreferencesStore) => state.display.showValues;
 
 /**
  * Select auto-scroll enabled.
  */
-export const selectAutoScroll = (state: PreferencesStore) =>
-  state.feed.autoScroll;
+export const selectAutoScroll = (state: PreferencesStore) => state.feed.autoScroll;
 
 /**
  * Select date format.
  */
-export const selectDateFormat = (state: PreferencesStore) =>
-  state.display.dateFormat;
+export const selectDateFormat = (state: PreferencesStore) => state.display.dateFormat;
 
 /**
  * Select number format.
  */
-export const selectNumberFormat = (state: PreferencesStore) =>
-  state.display.numberFormat;
+export const selectNumberFormat = (state: PreferencesStore) => state.display.numberFormat;
 
 // ============================================
 // Hooks for Theme Management
@@ -331,17 +328,16 @@ export const selectNumberFormat = (state: PreferencesStore) =>
  * Call this in a useEffect in your app root.
  */
 export function applyTheme(theme: "light" | "dark"): void {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined") {
+    return;
+  }
 
   document.documentElement.setAttribute("data-theme", theme);
 
   // Also update meta theme-color for mobile
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
-    metaThemeColor.setAttribute(
-      "content",
-      theme === "dark" ? "#0c0a09" : "#f5f5f4"
-    );
+    metaThemeColor.setAttribute("content", theme === "dark" ? "#0c0a09" : "#f5f5f4");
   }
 }
 

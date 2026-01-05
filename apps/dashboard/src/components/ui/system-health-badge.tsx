@@ -8,7 +8,7 @@
  */
 
 import { forwardRef, type HTMLAttributes } from "react";
-import { StatusDot, type StatusDotStatus, type StatusDotSize } from "./status-dot";
+import { StatusDot, type StatusDotSize, type StatusDotStatus } from "./status-dot";
 
 // Simple className merger utility
 function cn(...classes: (string | boolean | undefined | null)[]): string {
@@ -147,19 +147,9 @@ export const SystemHealthBadge = forwardRef<HTMLDivElement, SystemHealthBadgePro
         )}
         {...props}
       >
-        <StatusDot
-          status={dotStatus}
-          size={dotSize}
-          glow={glow}
-          aria-hidden="true"
-        />
+        <StatusDot status={dotStatus} size={dotSize} glow={glow} aria-hidden="true" />
         {showLabel && (
-          <span
-            className={cn(
-              "font-medium tracking-tight",
-              textColorClasses[status]
-            )}
-          >
+          <span className={cn("font-medium tracking-tight", textColorClasses[status])}>
             {displayLabel}
           </span>
         )}
@@ -178,15 +168,7 @@ SystemHealthBadge.displayName = "SystemHealthBadge";
  * LiveBadge - Quick preset for live trading status.
  */
 export function LiveBadge({ className, ...props }: Omit<SystemHealthBadgeProps, "status">) {
-  return (
-    <SystemHealthBadge
-      status="live"
-      variant="pill"
-      glow
-      className={className}
-      {...props}
-    />
-  );
+  return <SystemHealthBadge status="live" variant="pill" glow className={className} {...props} />;
 }
 
 /**
@@ -210,14 +192,7 @@ export function ConnectionBadge({
  * StreamingBadge - Quick preset for data streaming status.
  */
 export function StreamingBadge({ className, ...props }: Omit<SystemHealthBadgeProps, "status">) {
-  return (
-    <SystemHealthBadge
-      status="streaming"
-      glow
-      className={className}
-      {...props}
-    />
-  );
+  return <SystemHealthBadge status="streaming" glow className={className} {...props} />;
 }
 
 // ============================================

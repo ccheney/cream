@@ -22,9 +22,9 @@
 
 import {
   type Candle,
+  type IndicatorCalculator,
   type MAParams,
   type MAResult,
-  type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
 
@@ -53,10 +53,7 @@ export const SMA_DEFAULTS: MAParams = {
  * @param params - SMA parameters
  * @returns Array of SMA results
  */
-export function calculateSMA(
-  candles: Candle[],
-  params: MAParams = SMA_DEFAULTS
-): MAResult[] {
+export function calculateSMA(candles: Candle[], params: MAParams = SMA_DEFAULTS): MAResult[] {
   const { period } = params;
 
   validateCandleCount("SMA", candles, period);

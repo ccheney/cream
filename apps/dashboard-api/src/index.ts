@@ -13,9 +13,15 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
+import { liveProtection, requireAuth } from "./auth/index.js";
 import { closeDb } from "./db.js";
-import { alertsRoutes, authRoutes, decisionsRoutes, portfolioRoutes, systemRoutes } from "./routes/index.js";
-import { requireAuth, liveProtection, type AuthVariables } from "./auth/index.js";
+import {
+  alertsRoutes,
+  authRoutes,
+  decisionsRoutes,
+  portfolioRoutes,
+  systemRoutes,
+} from "./routes/index.js";
 import {
   closeAllConnections,
   createConnectionMetadata,

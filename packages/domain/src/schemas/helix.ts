@@ -9,12 +9,12 @@
 
 import { z } from "zod";
 import {
-  UuidSchema,
+  AgentTypeEnum,
+  ConfidenceSchema,
   DatetimeSchema,
   EquityTickerSchema,
-  ConfidenceSchema,
-  AgentTypeEnum,
   MarketRegime,
+  UuidSchema,
 } from "./turso.js";
 
 // ============================================
@@ -257,7 +257,9 @@ export const TransitionsEdgeSchema = z.object({
   toState: ThesisState,
   timestamp: DatetimeSchema,
   reason: z.string().max(1000).optional(),
-  triggeredBy: z.enum(["price_action", "time_decay", "invalidation", "target_hit", "stop_hit", "manual"]).optional(),
+  triggeredBy: z
+    .enum(["price_action", "time_decay", "invalidation", "target_hit", "stop_hit", "manual"])
+    .optional(),
 });
 export type TransitionsEdge = z.infer<typeof TransitionsEdgeSchema>;
 

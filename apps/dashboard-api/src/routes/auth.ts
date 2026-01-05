@@ -7,22 +7,22 @@
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { HTTPException } from "hono/http-exception";
 import { getCookie } from "hono/cookie";
+import { HTTPException } from "hono/http-exception";
 import {
-  generateTokenPair,
-  verifyRefreshToken,
-  setAuthCookies,
-  clearAuthCookies,
-  requireAuth,
-  generateTOTPSecret,
-  verifyTOTPCode,
-  generateBackupCodes,
-  hashBackupCode,
-  generateOTPAuthURI,
-  DEFAULT_COOKIE_CONFIG,
   type AuthVariables,
+  clearAuthCookies,
+  DEFAULT_COOKIE_CONFIG,
+  generateBackupCodes,
+  generateOTPAuthURI,
+  generateTOTPSecret,
+  generateTokenPair,
+  hashBackupCode,
   type Role,
+  requireAuth,
+  setAuthCookies,
+  verifyRefreshToken,
+  verifyTOTPCode,
 } from "../auth/index.js";
 
 // ============================================
@@ -169,11 +169,7 @@ app.openapi(loginRoute, async (c) => {
   }
 
   // Generate tokens
-  const { accessToken, refreshToken } = await generateTokenPair(
-    user.id,
-    user.email,
-    user.role
-  );
+  const { accessToken, refreshToken } = await generateTokenPair(user.id, user.email, user.role);
 
   // Set httpOnly cookies
   setAuthCookies(c, accessToken, refreshToken);
@@ -277,7 +273,7 @@ app.openapi(refreshRoute, async (c) => {
 });
 
 // GET /session - Get current session
-const sessionRoute = createRoute({
+const _sessionRoute = createRoute({
   method: "get",
   path: "/session",
   responses: {
@@ -294,28 +290,32 @@ const sessionRoute = createRoute({
 });
 
 // Use optional auth for session check
-app.get("/session", async (c, next) => {
-  // Manually check auth without throwing
-  const { authMiddleware } = await import("../auth/middleware.js");
-  const optionalAuth = authMiddleware({ optional: true });
-  return optionalAuth(c, next);
-}, (c) => {
-  const session = c.get("session");
+app.get(
+  "/session",
+  async (c, next) => {
+    // Manually check auth without throwing
+    const { authMiddleware } = await import("../auth/middleware.js");
+    const optionalAuth = authMiddleware({ optional: true });
+    return optionalAuth(c, next);
+  },
+  (c) => {
+    const session = c.get("session");
 
-  if (!session) {
-    return c.json({ authenticated: false });
+    if (!session) {
+      return c.json({ authenticated: false });
+    }
+
+    return c.json({
+      authenticated: true,
+      user: {
+        id: session.userId,
+        email: session.email,
+        role: session.role,
+        mfaVerified: session.mfaVerified,
+      },
+    });
   }
-
-  return c.json({
-    authenticated: true,
-    user: {
-      id: session.userId,
-      email: session.email,
-      role: session.role,
-      mfaVerified: session.mfaVerified,
-    },
-  });
-});
+);
 
 // POST /mfa/setup - Set up MFA
 const mfaSetupRoute = createRoute({

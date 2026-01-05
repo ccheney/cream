@@ -35,7 +35,11 @@ export const TickerSymbolSchema = z
 /**
  * Simple equity ticker (1-5 uppercase letters).
  */
-export const EquityTickerSchema = z.string().min(1).max(5).regex(/^[A-Z]+$/);
+export const EquityTickerSchema = z
+  .string()
+  .min(1)
+  .max(5)
+  .regex(/^[A-Z]+$/);
 
 /**
  * Money amount (positive number with up to 2 decimal places).

@@ -19,9 +19,9 @@
 
 import {
   type Candle,
+  type IndicatorCalculator,
   type VolumeSMAParams,
   type VolumeSMAResult,
-  type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
 
@@ -72,8 +72,7 @@ export function calculateVolumeSMA(
   results.push({
     timestamp: candles[period - 1].timestamp,
     volumeSma: firstVolumeSma,
-    volumeRatio:
-      firstVolumeSma === 0 ? 1 : candles[period - 1].volume / firstVolumeSma,
+    volumeRatio: firstVolumeSma === 0 ? 1 : candles[period - 1].volume / firstVolumeSma,
   });
 
   // Calculate remaining values using sliding window
@@ -95,29 +94,21 @@ export function calculateVolumeSMA(
 /**
  * Get the minimum number of candles required for Volume SMA calculation.
  */
-export function volumeSmaRequiredPeriods(
-  params: VolumeSMAParams = VOLUME_SMA_DEFAULTS
-): number {
+export function volumeSmaRequiredPeriods(params: VolumeSMAParams = VOLUME_SMA_DEFAULTS): number {
   return params.period;
 }
 
 /**
  * Check if volume is above average.
  */
-export function isHighVolume(
-  volumeRatio: number,
-  threshold = VOLUME_THRESHOLDS.HIGH
-): boolean {
+export function isHighVolume(volumeRatio: number, threshold = VOLUME_THRESHOLDS.HIGH): boolean {
   return volumeRatio >= threshold;
 }
 
 /**
  * Check if volume is below average.
  */
-export function isLowVolume(
-  volumeRatio: number,
-  threshold = VOLUME_THRESHOLDS.LOW
-): boolean {
+export function isLowVolume(volumeRatio: number, threshold = VOLUME_THRESHOLDS.LOW): boolean {
   return volumeRatio <= threshold;
 }
 
@@ -140,10 +131,18 @@ export function isVeryHighVolume(
 export function getVolumeSignal(
   volumeRatio: number
 ): "very_high" | "high" | "normal" | "low" | "very_low" {
-  if (volumeRatio >= VOLUME_THRESHOLDS.VERY_HIGH) return "very_high";
-  if (volumeRatio >= VOLUME_THRESHOLDS.HIGH) return "high";
-  if (volumeRatio <= VOLUME_THRESHOLDS.VERY_LOW) return "very_low";
-  if (volumeRatio <= VOLUME_THRESHOLDS.LOW) return "low";
+  if (volumeRatio >= VOLUME_THRESHOLDS.VERY_HIGH) {
+    return "very_high";
+  }
+  if (volumeRatio >= VOLUME_THRESHOLDS.HIGH) {
+    return "high";
+  }
+  if (volumeRatio <= VOLUME_THRESHOLDS.VERY_LOW) {
+    return "very_low";
+  }
+  if (volumeRatio <= VOLUME_THRESHOLDS.LOW) {
+    return "low";
+  }
   return "normal";
 }
 
@@ -155,7 +154,7 @@ export function getVolumeSignal(
  * @returns true if volume confirms the price move
  */
 export function isVolumeConfirmed(
-  priceChange: number,
+  _priceChange: number,
   volumeRatio: number,
   threshold = VOLUME_THRESHOLDS.HIGH
 ): boolean {
@@ -183,10 +182,7 @@ export function isVolumeDivergence(
 /**
  * Volume SMA Calculator implementation.
  */
-export const volumeSmaCalculator: IndicatorCalculator<
-  VolumeSMAParams,
-  VolumeSMAResult
-> = {
+export const volumeSmaCalculator: IndicatorCalculator<VolumeSMAParams, VolumeSMAResult> = {
   calculate: calculateVolumeSMA,
   requiredPeriods: volumeSmaRequiredPeriods,
 };

@@ -2,18 +2,18 @@
  * Sanitization Utilities Tests
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-  sanitizeStreamingText,
-  sanitizeHtml,
-  sanitizeUserInput,
-  validateNote,
-  validateWsMessage,
-  isAllowedWsOrigin,
-  isAllowedSseOrigin,
   createRateLimiter,
   escapeHtml,
   escapeRegex,
+  isAllowedSseOrigin,
+  isAllowedWsOrigin,
+  sanitizeHtml,
+  sanitizeStreamingText,
+  sanitizeUserInput,
+  validateNote,
+  validateWsMessage,
 } from "./sanitize";
 
 // ============================================
@@ -98,16 +98,12 @@ describe("sanitizeHtml", () => {
 
   it("allows formatting tags when enabled", () => {
     const html = "<b>Bold</b> and <i>italic</i>";
-    expect(sanitizeHtml(html, { allowFormatting: true })).toBe(
-      "<b>Bold</b> and <i>italic</i>"
-    );
+    expect(sanitizeHtml(html, { allowFormatting: true })).toBe("<b>Bold</b> and <i>italic</i>");
   });
 
   it("allows code tags when enabled", () => {
     const html = "<code>const x = 1;</code>";
-    expect(sanitizeHtml(html, { allowCode: true })).toBe(
-      "<code>const x = 1;</code>"
-    );
+    expect(sanitizeHtml(html, { allowCode: true })).toBe("<code>const x = 1;</code>");
   });
 
   it("allows links when enabled", () => {
@@ -125,9 +121,7 @@ describe("sanitizeHtml", () => {
 
   it("enforces max length", () => {
     const html = "<b>Hello World</b>";
-    expect(sanitizeHtml(html, { allowFormatting: true, maxLength: 10 })).toBe(
-      "<b>Hello W"
-    );
+    expect(sanitizeHtml(html, { allowFormatting: true, maxLength: 10 })).toBe("<b>Hello W");
   });
 
   it("strips script even when formatting allowed", () => {
@@ -401,9 +395,7 @@ describe("escapeHtml", () => {
   });
 
   it("handles multiple special characters", () => {
-    expect(escapeHtml('<a href="test">')).toBe(
-      "&lt;a href=&quot;test&quot;&gt;"
-    );
+    expect(escapeHtml('<a href="test">')).toBe("&lt;a href=&quot;test&quot;&gt;");
   });
 });
 

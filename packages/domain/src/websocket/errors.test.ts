@@ -4,31 +4,31 @@
  * @see errors.ts
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-  ErrorCode,
-  ERROR_CODE_DESCRIPTIONS,
-  ErrorSeverity,
-  ERROR_SEVERITY,
-  RecoveryAction,
-  ERROR_RECOVERY,
-  ErrorDetailsSchema,
-  EnhancedErrorMessageSchema,
-  createErrorDetails,
-  createErrorMessage,
   authError,
   channelError,
-  messageError,
-  rateLimitError,
-  limitError,
-  internalError,
   connectionError,
-  isRetryable,
-  requiresAuthRefresh,
-  isCritical,
-  getRetryDelay,
-  type ErrorDetails,
+  createErrorDetails,
+  createErrorMessage,
   type EnhancedErrorMessage,
+  EnhancedErrorMessageSchema,
+  ERROR_CODE_DESCRIPTIONS,
+  ERROR_RECOVERY,
+  ERROR_SEVERITY,
+  ErrorCode,
+  type ErrorDetails,
+  ErrorDetailsSchema,
+  ErrorSeverity,
+  getRetryDelay,
+  internalError,
+  isCritical,
+  isRetryable,
+  limitError,
+  messageError,
+  RecoveryAction,
+  rateLimitError,
+  requiresAuthRefresh,
 } from "./errors.js";
 
 // ============================================

@@ -79,10 +79,7 @@ export interface VolatilityScaleResult {
  * @param period - Rolling window period
  * @returns Rolling volatility values
  */
-export function calculateRollingVolatility(
-  returns: number[],
-  period: number
-): number[] {
+export function calculateRollingVolatility(returns: number[], period: number): number[] {
   const results: number[] = [];
 
   for (let i = period - 1; i < returns.length; i++) {
@@ -134,12 +131,7 @@ export function calculateVolatilityScale(
   timestamps: number[],
   params: VolatilityScaleParams = VOLATILITY_SCALE_DEFAULTS
 ): VolatilityScaleResult[] {
-  const {
-    volatilityPeriod,
-    targetVolatility,
-    minVolatility = 0.01,
-    maxScaleFactor = 3.0,
-  } = params;
+  const { volatilityPeriod, targetVolatility, minVolatility = 0.01, maxScaleFactor = 3.0 } = params;
 
   const results: VolatilityScaleResult[] = [];
 
@@ -157,7 +149,9 @@ export function calculateVolatilityScale(
   for (let i = 0; i < volatilities.length; i++) {
     const valueIndex = offset + i;
 
-    if (valueIndex >= values.length) break;
+    if (valueIndex >= values.length) {
+      break;
+    }
 
     const volatility = volatilities[i];
     const scaleFactor = calculateScaleFactor(
@@ -229,10 +223,18 @@ export function getVolatilityRegime(
 ): "very_low" | "low" | "normal" | "high" | "very_high" {
   const ratio = currentVolatility / targetVolatility;
 
-  if (ratio < 0.5) return "very_low";
-  if (ratio < 0.8) return "low";
-  if (ratio > 2.0) return "very_high";
-  if (ratio > 1.25) return "high";
+  if (ratio < 0.5) {
+    return "very_low";
+  }
+  if (ratio < 0.8) {
+    return "low";
+  }
+  if (ratio > 2.0) {
+    return "very_high";
+  }
+  if (ratio > 1.25) {
+    return "high";
+  }
   return "normal";
 }
 
@@ -251,7 +253,9 @@ export function calculatePositionMultiplier(
   minMultiplier = 0.25,
   maxMultiplier = 2.0
 ): number {
-  if (currentVolatility <= 0) return 1.0;
+  if (currentVolatility <= 0) {
+    return 1.0;
+  }
 
   const multiplier = targetVolatility / currentVolatility;
   return Math.max(minMultiplier, Math.min(maxMultiplier, multiplier));
@@ -264,10 +268,7 @@ export function calculatePositionMultiplier(
  * @param suffix - Suffix for output name (default: "volscale")
  * @returns Output name
  */
-export function generateVolatilityScaleOutputName(
-  inputName: string,
-  suffix = "volscale"
-): string {
+export function generateVolatilityScaleOutputName(inputName: string, suffix = "volscale"): string {
   return `${inputName}_${suffix}`;
 }
 

@@ -24,9 +24,9 @@
 
 import {
   type Candle,
+  type IndicatorCalculator,
   type MAParams,
   type MAResult,
-  type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
 
@@ -63,10 +63,7 @@ export function calculateMultiplier(period: number): number {
  * @param params - EMA parameters
  * @returns Array of EMA results
  */
-export function calculateEMA(
-  candles: Candle[],
-  params: MAParams = EMA_DEFAULTS
-): MAResult[] {
+export function calculateEMA(candles: Candle[], params: MAParams = EMA_DEFAULTS): MAResult[] {
   const { period } = params;
 
   validateCandleCount("EMA", candles, period);

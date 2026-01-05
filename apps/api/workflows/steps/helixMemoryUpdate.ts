@@ -8,21 +8,17 @@
  */
 
 import {
-  type HelixClient,
-  createHelixClientFromEnv,
-  batchUpsertTradeDecisions,
+  type BatchMutationResult,
+  batchCreateEdges,
   batchCreateLifecycleEvents,
   batchUpsertExternalEvents,
-  batchCreateEdges,
-  type NodeWithEmbedding,
+  batchUpsertTradeDecisions,
+  createHelixClientFromEnv,
   type EdgeInput,
-  type BatchMutationResult,
+  type HelixClient,
+  type NodeWithEmbedding,
 } from "@cream/helix";
-import type {
-  TradeDecision,
-  TradeLifecycleEvent,
-  ExternalEvent,
-} from "@cream/helix-schema";
+import type { ExternalEvent, TradeDecision, TradeLifecycleEvent } from "@cream/helix-schema";
 
 // ============================================
 // Types
@@ -128,14 +124,8 @@ export async function executeHelixMemoryUpdate(
 
   try {
     // Phase 1: Upsert trade decisions
-    const decisionsWithEmbeddings = prepareDecisions(
-      input.decisions,
-      input.embeddingModelVersion
-    );
-    const decisionsResult = await batchUpsertTradeDecisions(
-      helixClient,
-      decisionsWithEmbeddings
-    );
+    const decisionsWithEmbeddings = prepareDecisions(input.decisions, input.embeddingModelVersion);
+    const decisionsResult = await batchUpsertTradeDecisions(helixClient, decisionsWithEmbeddings);
 
     if (decisionsResult.failed.length > 0) {
       errors.push(
@@ -144,10 +134,7 @@ export async function executeHelixMemoryUpdate(
     }
 
     // Phase 2: Create lifecycle events
-    const lifecycleResult = await batchCreateLifecycleEvents(
-      helixClient,
-      input.lifecycleEvents
-    );
+    const lifecycleResult = await batchCreateLifecycleEvents(helixClient, input.lifecycleEvents);
 
     if (lifecycleResult.failed.length > 0) {
       errors.push(
@@ -160,10 +147,7 @@ export async function executeHelixMemoryUpdate(
       input.externalEvents,
       input.embeddingModelVersion
     );
-    const externalEventsResult = await batchUpsertExternalEvents(
-      helixClient,
-      eventsWithEmbeddings
-    );
+    const externalEventsResult = await batchUpsertExternalEvents(helixClient, eventsWithEmbeddings);
 
     if (externalEventsResult.failed.length > 0) {
       errors.push(
@@ -288,9 +272,7 @@ function buildEdges(input: MemoryUpdateInput): EdgeInput[] {
 /**
  * Format errors from failed mutations for logging.
  */
-function formatErrors(
-  failed: { id: string; error?: string }[]
-): string {
+function formatErrors(failed: { id: string; error?: string }[]): string {
   return failed
     .slice(0, 3) // Limit to first 3 errors
     .map((f) => `${f.id}: ${f.error ?? "Unknown error"}`)

@@ -154,8 +154,7 @@ export function recordCompressionStats(
 
   // Calculate average ratio
   if (metrics.totalBytesUncompressed > 0) {
-    metrics.averageCompressionRatio =
-      metrics.totalBytesCompressed / metrics.totalBytesUncompressed;
+    metrics.averageCompressionRatio = metrics.totalBytesCompressed / metrics.totalBytesUncompressed;
   }
 }
 
@@ -229,14 +228,7 @@ export function estimateCompressedSize(originalSize: number): number {
 export function logCompressionConfig(): void {
   const config = getCompressionConfig();
 
-  console.log("[WebSocket Compression]");
-  console.log(`  Enabled: ${config.enabled}`);
-
   if (config.enabled) {
-    console.log(`  Threshold: ${config.threshold} bytes`);
-    console.log(`  Level: ${config.level}`);
-    console.log(`  Server No Context Takeover: ${config.serverNoContextTakeover}`);
-    console.log(`  Client No Context Takeover: ${config.clientNoContextTakeover}`);
   }
 }
 
@@ -244,28 +236,21 @@ export function logCompressionConfig(): void {
  * Log compression metrics summary.
  */
 export function logCompressionMetrics(): void {
-  const m = getCompressionMetrics();
-  const savings = getBandwidthSavings();
-
-  console.log("[WebSocket Compression Metrics]");
-  console.log(`  Total Messages: ${m.totalMessages}`);
-  console.log(`  Compressed: ${m.compressedMessages}`);
-  console.log(`  Skipped: ${m.skippedMessages}`);
-  console.log(`  Uncompressed Bytes: ${formatBytes(m.totalBytesUncompressed)}`);
-  console.log(`  Compressed Bytes: ${formatBytes(m.totalBytesCompressed)}`);
-  console.log(`  Compression Ratio: ${(m.averageCompressionRatio * 100).toFixed(1)}%`);
-  console.log(`  Bandwidth Savings: ${savings.toFixed(1)}%`);
+  const _m = getCompressionMetrics();
+  const _savings = getBandwidthSavings();
 }
 
 /**
  * Format bytes for display.
  */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
+function _formatBytes(bytes: number): string {
+  if (bytes === 0) {
+    return "0 B";
+  }
 
   const units = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const size = bytes / Math.pow(1024, i);
+  const size = bytes / 1024 ** i;
 
   return `${size.toFixed(2)} ${units[i]}`;
 }

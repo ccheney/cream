@@ -4,48 +4,45 @@
  * @see turso.ts, helix.ts, validation.ts
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import {
-  // Turso schemas
-  UuidSchema,
-  DatetimeSchema,
-  TickerSymbolSchema,
-  EquityTickerSchema,
-  DecisionInsertSchema,
-  OrderInsertSchema,
   AlertInsertSchema,
   CandleInsertSchema,
-  PositionInsertSchema,
+  CitationNodeSchema,
+  CitesEdgeSchema,
+  coerceBool,
+  coerceInt,
+  containsSqlInjection,
+  createTypeGuard,
+  DatetimeSchema,
+  DecisionInsertSchema,
   // HelixDB schemas
   EMBEDDING_DIMENSION,
   EmbeddingSchema,
-  MemoryNodeSchema,
-  CitationNodeSchema,
-  ThesisNodeSchema,
-  ThesisState,
-  CitesEdgeSchema,
-  SupportsEdgeSchema,
-  InvalidatesEdgeSchema,
-  TransitionsEdgeSchema,
-  VectorSearchQuerySchema,
-  validateEmbedding,
-  validateThesisTransition,
+  EquityTickerSchema,
   // Validation utilities
   formatValidationError,
   formatZodIssue,
   getErrorMessages,
-  safeParse,
+  InvalidatesEdgeSchema,
+  MemoryNodeSchema,
+  OrderInsertSchema,
   parseWithDefaults,
-  containsSqlInjection,
+  SupportsEdgeSchema,
+  safeParse,
   safeString,
   sanitizeString,
+  ThesisNodeSchema,
+  TickerSymbolSchema,
+  TransitionsEdgeSchema,
+  // Turso schemas
+  UuidSchema,
+  VectorSearchQuerySchema,
+  validateBatch,
   validated,
   validatedSafe,
-  validateBatch,
-  createTypeGuard,
-  coerceInt,
-  coerceBool,
+  validateThesisTransition,
 } from "./index.js";
 
 // ============================================
@@ -169,12 +166,12 @@ describe("Turso Schemas", () => {
     });
 
     it("rejects confidence out of range", () => {
-      expect(
-        DecisionInsertSchema.safeParse({ ...validDecision, confidence: 1.5 }).success
-      ).toBe(false);
-      expect(
-        DecisionInsertSchema.safeParse({ ...validDecision, confidence: -0.5 }).success
-      ).toBe(false);
+      expect(DecisionInsertSchema.safeParse({ ...validDecision, confidence: 1.5 }).success).toBe(
+        false
+      );
+      expect(DecisionInsertSchema.safeParse({ ...validDecision, confidence: -0.5 }).success).toBe(
+        false
+      );
     });
   });
 

@@ -9,8 +9,8 @@
 
 "use client";
 
-import { useWSStore, useConnectionStatus } from "@/stores/websocket";
 import type { ConnectionState } from "@/hooks/use-connection-recovery";
+import { useConnectionStatus, useWSStore } from "@/stores/websocket";
 
 // ============================================
 // Types
@@ -147,8 +147,7 @@ export function ConnectionStatus({
   };
 
   const status = getStatusInfo();
-  const countdownSeconds =
-    retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
+  const countdownSeconds = retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
 
   // Compact mode: just the dot with tooltip
   if (compact) {
@@ -179,9 +178,7 @@ export function ConnectionStatus({
 
       {/* Retry Countdown */}
       {countdownSeconds !== null && countdownSeconds > 0 && (
-        <span className="text-xs text-text-muted">
-          (retrying in {countdownSeconds}s)
-        </span>
+        <span className="text-xs text-text-muted">(retrying in {countdownSeconds}s)</span>
       )}
 
       {/* Retry Button */}
@@ -240,8 +237,7 @@ export function ConnectionBanner({
     return null;
   }
 
-  const countdownSeconds =
-    retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
+  const countdownSeconds = retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
 
   const isReconnecting = state === "reconnecting";
   const bgColor = isReconnecting ? "bg-neutral/20" : "bg-loss/20";
@@ -319,11 +315,7 @@ export function ConnectionBanner({
               strokeWidth={2}
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         )}

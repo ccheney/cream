@@ -4,14 +4,14 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  extractBearerToken,
   generateAccessToken,
   generateRefreshToken,
   generateTokenPair,
+  getTimeUntilExpiry,
+  isTokenExpired,
   verifyAccessToken,
   verifyRefreshToken,
-  extractBearerToken,
-  isTokenExpired,
-  getTimeUntilExpiry,
 } from "./jwt.js";
 import type { JWTConfig } from "./types.js";
 
@@ -24,12 +24,7 @@ const testConfig: JWTConfig = {
 
 describe("generateAccessToken", () => {
   it("generates a valid access token", async () => {
-    const token = await generateAccessToken(
-      "user-123",
-      "test@example.com",
-      "viewer",
-      testConfig
-    );
+    const token = await generateAccessToken("user-123", "test@example.com", "viewer", testConfig);
 
     expect(token).toBeDefined();
     expect(typeof token).toBe("string");
@@ -37,12 +32,7 @@ describe("generateAccessToken", () => {
   });
 
   it("includes correct payload claims", async () => {
-    const token = await generateAccessToken(
-      "user-123",
-      "test@example.com",
-      "admin",
-      testConfig
-    );
+    const token = await generateAccessToken("user-123", "test@example.com", "admin", testConfig);
 
     const payload = await verifyAccessToken(token, testConfig);
 
@@ -116,12 +106,7 @@ describe("generateTokenPair", () => {
 
 describe("verifyAccessToken", () => {
   it("verifies valid access token", async () => {
-    const token = await generateAccessToken(
-      "user-123",
-      "test@example.com",
-      "viewer",
-      testConfig
-    );
+    const token = await generateAccessToken("user-123", "test@example.com", "viewer", testConfig);
 
     const payload = await verifyAccessToken(token, testConfig);
 
@@ -130,12 +115,7 @@ describe("verifyAccessToken", () => {
   });
 
   it("rejects token with wrong secret", async () => {
-    const token = await generateAccessToken(
-      "user-123",
-      "test@example.com",
-      "viewer",
-      testConfig
-    );
+    const token = await generateAccessToken("user-123", "test@example.com", "viewer", testConfig);
 
     const wrongConfig = { ...testConfig, secret: "wrong-secret" };
 
@@ -145,9 +125,7 @@ describe("verifyAccessToken", () => {
   it("rejects refresh token as access token", async () => {
     const token = await generateRefreshToken("user-123", undefined, testConfig);
 
-    await expect(verifyAccessToken(token, testConfig)).rejects.toThrow(
-      "Invalid token type"
-    );
+    await expect(verifyAccessToken(token, testConfig)).rejects.toThrow("Invalid token type");
   });
 });
 
@@ -163,16 +141,9 @@ describe("verifyRefreshToken", () => {
   });
 
   it("rejects access token as refresh token", async () => {
-    const token = await generateAccessToken(
-      "user-123",
-      "test@example.com",
-      "viewer",
-      testConfig
-    );
+    const token = await generateAccessToken("user-123", "test@example.com", "viewer", testConfig);
 
-    await expect(verifyRefreshToken(token, testConfig)).rejects.toThrow(
-      "Invalid token type"
-    );
+    await expect(verifyRefreshToken(token, testConfig)).rejects.toThrow("Invalid token type");
   });
 });
 

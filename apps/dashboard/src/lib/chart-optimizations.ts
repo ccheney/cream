@@ -117,11 +117,15 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
     let maxAreaPoint = bucketStart;
 
     const pointA = data[a];
-    if (!pointA) continue;
+    if (!pointA) {
+      continue;
+    }
 
     for (let j = bucketStart; j < bucketEnd; j++) {
       const pointJ = data[j];
-      if (!pointJ) continue;
+      if (!pointJ) {
+        continue;
+      }
       // Calculate triangle area using cross product
       const area = Math.abs(
         (pointA.x - avgX) * (pointJ.y - pointA.y) - (pointA.x - pointJ.x) * (avgY - pointA.y)

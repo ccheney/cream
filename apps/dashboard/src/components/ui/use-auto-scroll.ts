@@ -42,9 +42,7 @@ export interface UseAutoScrollReturn {
 // Hook Implementation
 // ============================================
 
-export function useAutoScroll(
-  options: UseAutoScrollOptions = {}
-): UseAutoScrollReturn {
+export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScrollReturn {
   const { threshold = 50, debounceMs = 100 } = options;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -61,7 +59,9 @@ export function useAutoScroll(
    */
   const checkIsAtBottom = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return true;
+    if (!container) {
+      return true;
+    }
 
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
@@ -73,7 +73,9 @@ export function useAutoScroll(
    */
   const scrollToBottom = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     container.scrollTo({
       top: container.scrollHeight,

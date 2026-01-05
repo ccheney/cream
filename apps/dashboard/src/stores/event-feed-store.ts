@@ -125,7 +125,9 @@ export const useEventFeedStore = create<EventFeedStore>()(
       ...initialState,
 
       addEvent: (event) => {
-        if (get().isPaused) return;
+        if (get().isPaused) {
+          return;
+        }
 
         const newEvent: FeedEvent = {
           ...event,
@@ -149,7 +151,9 @@ export const useEventFeedStore = create<EventFeedStore>()(
       },
 
       addEvents: (events) => {
-        if (get().isPaused) return;
+        if (get().isPaused) {
+          return;
+        }
 
         const now = new Date();
         const newEvents: FeedEvent[] = events.map((event, index) => ({
@@ -168,9 +172,7 @@ export const useEventFeedStore = create<EventFeedStore>()(
 
           return {
             events: trimmedEvents,
-            newEventCount: state.isAtBottom
-              ? 0
-              : state.newEventCount + newEvents.length,
+            newEventCount: state.isAtBottom ? 0 : state.newEventCount + newEvents.length,
           };
         });
       },
@@ -221,9 +223,7 @@ export const useEventFeedStore = create<EventFeedStore>()(
 
         // Filter by severity
         if (state.severityFilter.length > 0) {
-          filtered = filtered.filter((e) =>
-            state.severityFilter.includes(e.severity)
-          );
+          filtered = filtered.filter((e) => state.severityFilter.includes(e.severity));
         }
 
         return filtered;
@@ -245,14 +245,12 @@ export const selectEventCount = (state: EventFeedStore) => state.events.length;
 /**
  * Select new event count (unread).
  */
-export const selectNewEventCount = (state: EventFeedStore) =>
-  state.newEventCount;
+export const selectNewEventCount = (state: EventFeedStore) => state.newEventCount;
 
 /**
  * Select whether there are new events.
  */
-export const selectHasNewEvents = (state: EventFeedStore) =>
-  state.newEventCount > 0;
+export const selectHasNewEvents = (state: EventFeedStore) => state.newEventCount > 0;
 
 /**
  * Select most recent event.
@@ -263,23 +261,20 @@ export const selectLatestEvent = (state: EventFeedStore) =>
 /**
  * Select events by type.
  */
-export const selectEventsByType =
-  (type: EventType) => (state: EventFeedStore) =>
-    state.events.filter((e) => e.type === type);
+export const selectEventsByType = (type: EventType) => (state: EventFeedStore) =>
+  state.events.filter((e) => e.type === type);
 
 /**
  * Select events by symbol.
  */
-export const selectEventsBySymbol =
-  (symbol: string) => (state: EventFeedStore) =>
-    state.events.filter((e) => e.symbol === symbol);
+export const selectEventsBySymbol = (symbol: string) => (state: EventFeedStore) =>
+  state.events.filter((e) => e.symbol === symbol);
 
 /**
  * Select events since a timestamp.
  */
-export const selectEventsSince =
-  (since: Date) => (state: EventFeedStore) =>
-    state.events.filter((e) => e.timestamp > since);
+export const selectEventsSince = (since: Date) => (state: EventFeedStore) =>
+  state.events.filter((e) => e.timestamp > since);
 
 // ============================================
 // Subscription Helpers
@@ -289,9 +284,7 @@ export const selectEventsSince =
  * Subscribe to new events only.
  * Returns unsubscribe function.
  */
-export function subscribeToNewEvents(
-  callback: (event: FeedEvent) => void
-): () => void {
+export function subscribeToNewEvents(callback: (event: FeedEvent) => void): () => void {
   let lastEventId: string | null = null;
 
   return useEventFeedStore.subscribe(
@@ -303,7 +296,9 @@ export function subscribeToNewEvents(
       }
 
       const latestEvent = events[events.length - 1];
-      if (!latestEvent) return;
+      if (!latestEvent) {
+        return;
+      }
 
       if (latestEvent.id !== lastEventId) {
         lastEventId = latestEvent.id;
@@ -332,7 +327,9 @@ export function subscribeToEventType(
       }
 
       const latestEvent = typeEvents[typeEvents.length - 1];
-      if (!latestEvent) return;
+      if (!latestEvent) {
+        return;
+      }
 
       if (latestEvent.id !== lastEventId) {
         lastEventId = latestEvent.id;

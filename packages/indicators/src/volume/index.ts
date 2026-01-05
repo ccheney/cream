@@ -6,14 +6,14 @@
 
 export {
   calculateVolumeSMA,
-  volumeSmaRequiredPeriods,
-  volumeSmaCalculator,
+  getVolumeSignal,
   isHighVolume,
   isLowVolume,
   isVeryHighVolume,
-  getVolumeSignal,
   isVolumeConfirmed,
   isVolumeDivergence,
   VOLUME_SMA_DEFAULTS,
   VOLUME_THRESHOLDS,
+  volumeSmaCalculator,
+  volumeSmaRequiredPeriods,
 } from "./volumeSma";

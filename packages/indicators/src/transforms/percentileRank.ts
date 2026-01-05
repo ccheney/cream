@@ -70,12 +70,16 @@ export interface PercentileRankResult {
  * @returns Percentile rank (0-100)
  */
 export function calculatePercentileOfValue(value: number, sample: number[]): number {
-  if (sample.length === 0) return 50; // Default to middle
+  if (sample.length === 0) {
+    return 50; // Default to middle
+  }
 
   // Count values less than or equal to current value
   let count = 0;
   for (const v of sample) {
-    if (v <= value) count++;
+    if (v <= value) {
+      count++;
+    }
   }
 
   // Calculate percentile (excluding current value from denominator for rolling calculation)
@@ -165,10 +169,18 @@ export function percentileRankRequiredPeriods(
  * @returns Quintile (0=bottom 20%, 4=top 20%)
  */
 export function getQuintile(percentile: number): 0 | 1 | 2 | 3 | 4 {
-  if (percentile < 20) return 0;
-  if (percentile < 40) return 1;
-  if (percentile < 60) return 2;
-  if (percentile < 80) return 3;
+  if (percentile < 20) {
+    return 0;
+  }
+  if (percentile < 40) {
+    return 1;
+  }
+  if (percentile < 60) {
+    return 2;
+  }
+  if (percentile < 80) {
+    return 3;
+  }
   return 4;
 }
 
@@ -181,10 +193,18 @@ export function getQuintile(percentile: number): 0 | 1 | 2 | 3 | 4 {
 export function getPercentileSignal(
   percentile: number
 ): "extreme_low" | "low" | "neutral" | "high" | "extreme_high" {
-  if (percentile <= 10) return "extreme_low";
-  if (percentile <= 25) return "low";
-  if (percentile >= 90) return "extreme_high";
-  if (percentile >= 75) return "high";
+  if (percentile <= 10) {
+    return "extreme_low";
+  }
+  if (percentile <= 25) {
+    return "low";
+  }
+  if (percentile >= 90) {
+    return "extreme_high";
+  }
+  if (percentile >= 75) {
+    return "high";
+  }
   return "neutral";
 }
 
@@ -210,10 +230,18 @@ export function isExtreme(percentile: number, threshold = 10): boolean {
 export function getRegimeSignal(
   percentile: number
 ): "very_low" | "low" | "normal" | "high" | "very_high" {
-  if (percentile <= 10) return "very_low";
-  if (percentile <= 30) return "low";
-  if (percentile >= 90) return "very_high";
-  if (percentile >= 70) return "high";
+  if (percentile <= 10) {
+    return "very_low";
+  }
+  if (percentile <= 30) {
+    return "low";
+  }
+  if (percentile >= 90) {
+    return "very_high";
+  }
+  if (percentile >= 70) {
+    return "high";
+  }
   return "normal";
 }
 
@@ -224,10 +252,7 @@ export function getRegimeSignal(
  * @param suffix - Suffix for output name (default: "pct")
  * @returns Output name
  */
-export function generatePercentileOutputName(
-  inputName: string,
-  suffix = "pct"
-): string {
+export function generatePercentileOutputName(inputName: string, suffix = "pct"): string {
   return `${inputName}_${suffix}`;
 }
 

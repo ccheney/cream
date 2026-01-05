@@ -2,18 +2,18 @@
  * HelixDB Retrieval Workflow Step Tests (GraphRAG)
  */
 
-import { describe, test, expect, mock, beforeEach } from "bun:test";
-import {
-  executeHelixRetrieval,
-  retrieveSimilarDecisions,
-  retrieveRegimeDecisions,
-  retrieveVectorOnly,
-  type RetrievalInput,
-  DEFAULT_RETRIEVAL_CONFIG,
-  PERFORMANCE_TARGETS,
-} from "../workflows/steps/helixRetrieval";
+import { describe, expect, mock, test } from "bun:test";
 import type { HelixClient } from "@cream/helix";
 import type { TradeDecision } from "@cream/helix-schema";
+import {
+  DEFAULT_RETRIEVAL_CONFIG,
+  executeHelixRetrieval,
+  PERFORMANCE_TARGETS,
+  type RetrievalInput,
+  retrieveRegimeDecisions,
+  retrieveSimilarDecisions,
+  retrieveVectorOnly,
+} from "../workflows/steps/helixRetrieval";
 
 // ============================================
 // Test Fixtures
@@ -39,10 +39,7 @@ function createMockClient(
   };
 }
 
-function createTestDecision(
-  id: string,
-  overrides: Partial<TradeDecision> = {}
-): TradeDecision {
+function createTestDecision(id: string, overrides: Partial<TradeDecision> = {}): TradeDecision {
   return {
     decision_id: id,
     cycle_id: "cycle-001",
@@ -71,8 +68,18 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
   describe("executeHelixRetrieval", () => {
     test("successfully retrieves and fuses results", async () => {
       const vectorResults = [
-        { id: "dec-001", type: "TradeDecision", properties: createTestDecision("dec-001"), similarity: 0.95 },
-        { id: "dec-002", type: "TradeDecision", properties: createTestDecision("dec-002"), similarity: 0.85 },
+        {
+          id: "dec-001",
+          type: "TradeDecision",
+          properties: createTestDecision("dec-001"),
+          similarity: 0.95,
+        },
+        {
+          id: "dec-002",
+          type: "TradeDecision",
+          properties: createTestDecision("dec-002"),
+          similarity: 0.85,
+        },
       ];
 
       const graphResults = [
@@ -80,13 +87,17 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
         createTestDecision("dec-003"), // New
       ];
 
-      const client = createMockClient(async (name, params) => {
+      const client = createMockClient(async (name, _params) => {
         if (name === "vectorSearch") {
           return { data: vectorResults, executionTimeMs: 1.5 };
         }
         if (name === "getNodesByType") {
           return {
-            data: graphResults.map(d => ({ id: d.decision_id, type: "TradeDecision", properties: d })),
+            data: graphResults.map((d) => ({
+              id: d.decision_id,
+              type: "TradeDecision",
+              properties: d,
+            })),
             executionTimeMs: 0.5,
           };
         }
@@ -130,7 +141,12 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
 
     test("handles empty graph results gracefully", async () => {
       const vectorResults = [
-        { id: "dec-001", type: "TradeDecision", properties: createTestDecision("dec-001"), similarity: 0.9 },
+        {
+          id: "dec-001",
+          type: "TradeDecision",
+          properties: createTestDecision("dec-001"),
+          similarity: 0.9,
+        },
       ];
 
       const client = createMockClient(async (name) => {
@@ -158,11 +174,11 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
       const client = createMockClient(async (name) => {
         // Simulate realistic latencies
         if (name === "vectorSearch") {
-          await new Promise(r => setTimeout(r, 2));
+          await new Promise((r) => setTimeout(r, 2));
           return { data: [], executionTimeMs: 2 };
         }
         if (name === "getNodesByType") {
-          await new Promise(r => setTimeout(r, 1));
+          await new Promise((r) => setTimeout(r, 1));
           return { data: [], executionTimeMs: 0.5 };
         }
         return { data: [], executionTimeMs: 0 };
@@ -273,8 +289,8 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
       expect(result.sourceCounts.both).toBeGreaterThanOrEqual(1);
 
       // The decision that appears in both should have higher relevance
-      const bothMatch = result.decisions.find(d => d.multiSourceMatch);
-      const vectorOnlyMatch = result.decisions.find(d => !d.multiSourceMatch);
+      const bothMatch = result.decisions.find((d) => d.multiSourceMatch);
+      const vectorOnlyMatch = result.decisions.find((d) => !d.multiSourceMatch);
 
       if (bothMatch && vectorOnlyMatch) {
         expect(bothMatch.relevanceScore).toBeGreaterThan(vectorOnlyMatch.relevanceScore);
@@ -418,20 +434,15 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
     });
 
     test("retrieveVectorOnly skips graph traversal", async () => {
-      let graphCalled = false;
+      let _graphCalled = false;
       const client = createMockClient(async (name) => {
         if (name === "getNodesByType") {
-          graphCalled = true;
+          _graphCalled = true;
         }
         return { data: [], executionTimeMs: 1 };
       });
 
-      const result = await retrieveVectorOnly(
-        createQueryEmbedding(),
-        10,
-        0.5,
-        client
-      );
+      const result = await retrieveVectorOnly(createQueryEmbedding(), 10, 0.5, client);
 
       expect(result.success).toBe(true);
       // Graph traversal is still called but with no filters

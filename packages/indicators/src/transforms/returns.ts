@@ -19,7 +19,7 @@
  *   - Magnitude indicates strength of move
  */
 
-import { validateCandleCount, type Candle } from "../types";
+import type { Candle } from "../types";
 
 // ============================================
 // Parameters
@@ -77,7 +77,9 @@ export interface MultiPeriodReturnResult {
  * Calculate simple return between two prices.
  */
 export function simpleReturn(currentPrice: number, previousPrice: number): number {
-  if (previousPrice === 0) return 0;
+  if (previousPrice === 0) {
+    return 0;
+  }
   return (currentPrice - previousPrice) / previousPrice;
 }
 
@@ -85,7 +87,9 @@ export function simpleReturn(currentPrice: number, previousPrice: number): numbe
  * Calculate log return between two prices.
  */
 export function logReturn(currentPrice: number, previousPrice: number): number {
-  if (previousPrice <= 0 || currentPrice <= 0) return 0;
+  if (previousPrice <= 0 || currentPrice <= 0) {
+    return 0;
+  }
   return Math.log(currentPrice / previousPrice);
 }
 
@@ -211,9 +215,7 @@ export function generateReturnOutputNames(
   const names = new Map<number, string>();
 
   for (const period of periods) {
-    const name = timeframe
-      ? `${prefix}_${period}_${timeframe}`
-      : `${prefix}_${period}`;
+    const name = timeframe ? `${prefix}_${period}_${timeframe}` : `${prefix}_${period}`;
     names.set(period, name);
   }
 

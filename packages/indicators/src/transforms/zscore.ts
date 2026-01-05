@@ -69,7 +69,9 @@ export interface ZScoreResult {
  * Calculate mean of an array.
  */
 export function calculateMean(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
@@ -81,10 +83,12 @@ export function calculateMean(values: number[]): number {
  * @returns Standard deviation
  */
 export function calculateStdDev(values: number[], mean?: number): number {
-  if (values.length < 2) return 0;
+  if (values.length < 2) {
+    return 0;
+  }
 
   const m = mean ?? calculateMean(values);
-  const squaredDiffs = values.map((v) => Math.pow(v - m, 2));
+  const squaredDiffs = values.map((v) => (v - m) ** 2);
   const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
 
   return Math.sqrt(variance);
@@ -195,10 +199,18 @@ export function getZScoreSignal(
   zscore: number,
   threshold = 2.0
 ): "extremely_high" | "high" | "neutral" | "low" | "extremely_low" {
-  if (zscore >= threshold * 1.5) return "extremely_high";
-  if (zscore >= threshold) return "high";
-  if (zscore <= -threshold * 1.5) return "extremely_low";
-  if (zscore <= -threshold) return "low";
+  if (zscore >= threshold * 1.5) {
+    return "extremely_high";
+  }
+  if (zscore >= threshold) {
+    return "high";
+  }
+  if (zscore <= -threshold * 1.5) {
+    return "extremely_low";
+  }
+  if (zscore <= -threshold) {
+    return "low";
+  }
   return "neutral";
 }
 
@@ -209,12 +221,13 @@ export function getZScoreSignal(
  * @param entryThreshold - Z-score threshold to enter (default: 2.0)
  * @returns Direction to trade for mean reversion (or null)
  */
-export function meanReversionSignal(
-  zscore: number,
-  entryThreshold = 2.0
-): "long" | "short" | null {
-  if (zscore <= -entryThreshold) return "long"; // Price far below mean, expect reversion up
-  if (zscore >= entryThreshold) return "short"; // Price far above mean, expect reversion down
+export function meanReversionSignal(zscore: number, entryThreshold = 2.0): "long" | "short" | null {
+  if (zscore <= -entryThreshold) {
+    return "long"; // Price far below mean, expect reversion up
+  }
+  if (zscore >= entryThreshold) {
+    return "short"; // Price far above mean, expect reversion down
+  }
   return null;
 }
 
@@ -225,10 +238,7 @@ export function meanReversionSignal(
  * @param suffix - Suffix for output name (default: "zscore")
  * @returns Output name
  */
-export function generateZScoreOutputName(
-  inputName: string,
-  suffix = "zscore"
-): string {
+export function generateZScoreOutputName(inputName: string, suffix = "zscore"): string {
   return `${inputName}_${suffix}`;
 }
 

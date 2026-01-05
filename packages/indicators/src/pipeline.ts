@@ -5,19 +5,13 @@
  * Produces named output in format: {indicator}_{param}_{timeframe}
  */
 
-import type {
-  Candle,
-  Timeframe,
-  NamedIndicatorOutput,
-  IndicatorSnapshot,
-} from "./types";
-
 import { calculateRSI, RSI_DEFAULTS } from "./momentum/rsi";
 import { calculateStochastic, STOCHASTIC_DEFAULTS } from "./momentum/stochastic";
-import { calculateSMA, SMA_PERIODS } from "./trend/sma";
 import { calculateEMA, EMA_PERIODS } from "./trend/ema";
-import { calculateATR, ATR_DEFAULTS } from "./volatility/atr";
-import { calculateBollingerBands, BOLLINGER_DEFAULTS } from "./volatility/bollinger";
+import { calculateSMA, SMA_PERIODS } from "./trend/sma";
+import type { Candle, IndicatorSnapshot, NamedIndicatorOutput, Timeframe } from "./types";
+import { ATR_DEFAULTS, calculateATR } from "./volatility/atr";
+import { BOLLINGER_DEFAULTS, calculateBollingerBands } from "./volatility/bollinger";
 import { calculateVolumeSMA, VOLUME_SMA_DEFAULTS } from "./volume/volumeSma";
 
 // ============================================
@@ -144,11 +138,7 @@ export function calculateIndicators(
 
   // SMA
   if (config.sma?.enabled) {
-    const periods = config.sma.periods ?? [
-      SMA_PERIODS.SHORT,
-      SMA_PERIODS.MEDIUM,
-      SMA_PERIODS.LONG,
-    ];
+    const periods = config.sma.periods ?? [SMA_PERIODS.SHORT, SMA_PERIODS.MEDIUM, SMA_PERIODS.LONG];
     for (const period of periods) {
       try {
         const results = calculateSMA(candles, { period });
@@ -325,11 +315,7 @@ export function getRequiredWarmupPeriod(
   }
 
   if (config.sma?.enabled) {
-    const periods = config.sma.periods ?? [
-      SMA_PERIODS.SHORT,
-      SMA_PERIODS.MEDIUM,
-      SMA_PERIODS.LONG,
-    ];
+    const periods = config.sma.periods ?? [SMA_PERIODS.SHORT, SMA_PERIODS.MEDIUM, SMA_PERIODS.LONG];
     maxPeriod = Math.max(maxPeriod, ...periods);
   }
 

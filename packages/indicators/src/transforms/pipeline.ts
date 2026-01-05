@@ -5,28 +5,24 @@
  * Produces named outputs following configurable naming conventions.
  */
 
-import type { Candle, Timeframe, NamedIndicatorOutput } from "../types";
-import {
-  calculateReturnsFromCandles,
-  type ReturnsParams,
-  RETURNS_DEFAULTS,
-} from "./returns";
-import {
-  calculateZScore,
-  type ZScoreParams,
-  ZSCORE_DEFAULTS,
-} from "./zscore";
+import type { Candle, NamedIndicatorOutput, Timeframe } from "../types";
 import {
   calculatePercentileRank,
-  type PercentileRankParams,
   PERCENTILE_RANK_DEFAULTS,
+  type PercentileRankParams,
 } from "./percentileRank";
 import {
+  calculateReturnsFromCandles,
+  RETURNS_DEFAULTS,
+  type ReturnsParams,
+  simpleReturn,
+} from "./returns";
+import {
   calculateVolatilityScale,
-  type VolatilityScaleParams,
   VOLATILITY_SCALE_DEFAULTS,
+  type VolatilityScaleParams,
 } from "./volatilityScale";
-import { simpleReturn } from "./returns";
+import { calculateZScore, ZSCORE_DEFAULTS, type ZScoreParams } from "./zscore";
 
 // ============================================
 // Configuration Types
@@ -170,7 +166,8 @@ export function applyTransforms(
   // Calculate percentile ranks
   if (config.percentileRank?.enabled) {
     const lookback = config.percentileRank.params?.lookback ?? PERCENTILE_RANK_DEFAULTS.lookback;
-    const minSamples = config.percentileRank.params?.minSamples ?? PERCENTILE_RANK_DEFAULTS.minSamples;
+    const minSamples =
+      config.percentileRank.params?.minSamples ?? PERCENTILE_RANK_DEFAULTS.minSamples;
 
     try {
       const results = calculatePercentileRank(closes, timestamps, { lookback, minSamples });
@@ -186,10 +183,14 @@ export function applyTransforms(
 
   // Calculate volatility-scaled values
   if (config.volatilityScale?.enabled) {
-    const volPeriod = config.volatilityScale.params?.volatilityPeriod ?? VOLATILITY_SCALE_DEFAULTS.volatilityPeriod;
-    const targetVol = config.volatilityScale.params?.targetVolatility ?? VOLATILITY_SCALE_DEFAULTS.targetVolatility;
-    const minVol = config.volatilityScale.params?.minVolatility ?? VOLATILITY_SCALE_DEFAULTS.minVolatility;
-    const maxScale = config.volatilityScale.params?.maxScaleFactor ?? VOLATILITY_SCALE_DEFAULTS.maxScaleFactor;
+    const volPeriod =
+      config.volatilityScale.params?.volatilityPeriod ?? VOLATILITY_SCALE_DEFAULTS.volatilityPeriod;
+    const targetVol =
+      config.volatilityScale.params?.targetVolatility ?? VOLATILITY_SCALE_DEFAULTS.targetVolatility;
+    const minVol =
+      config.volatilityScale.params?.minVolatility ?? VOLATILITY_SCALE_DEFAULTS.minVolatility;
+    const maxScale =
+      config.volatilityScale.params?.maxScaleFactor ?? VOLATILITY_SCALE_DEFAULTS.maxScaleFactor;
 
     // Calculate returns for volatility
     const returns: number[] = [];
@@ -239,7 +240,7 @@ export function applyTransforms(
 export function applyTransformsToIndicators(
   indicatorValues: Map<string, number[]>,
   timestamps: number[],
-  timeframe: Timeframe,
+  _timeframe: Timeframe,
   config: TransformPipelineConfig = DEFAULT_TRANSFORM_CONFIG
 ): NamedIndicatorOutput {
   const output: NamedIndicatorOutput = {};
@@ -271,7 +272,8 @@ export function applyTransformsToIndicators(
   // Apply percentile ranks to specified indicators
   if (config.percentileRank?.enabled && config.percentileRank.applyTo) {
     const lookback = config.percentileRank.params?.lookback ?? PERCENTILE_RANK_DEFAULTS.lookback;
-    const minSamples = config.percentileRank.params?.minSamples ?? PERCENTILE_RANK_DEFAULTS.minSamples;
+    const minSamples =
+      config.percentileRank.params?.minSamples ?? PERCENTILE_RANK_DEFAULTS.minSamples;
 
     for (const indicatorName of config.percentileRank.applyTo) {
       for (const [key, values] of indicatorValues) {
@@ -308,10 +310,7 @@ export function getTransformWarmupPeriod(
   }
 
   if (config.zscore?.enabled) {
-    maxPeriod = Math.max(
-      maxPeriod,
-      config.zscore.params?.lookback ?? ZSCORE_DEFAULTS.lookback
-    );
+    maxPeriod = Math.max(maxPeriod, config.zscore.params?.lookback ?? ZSCORE_DEFAULTS.lookback);
   }
 
   if (config.percentileRank?.enabled) {

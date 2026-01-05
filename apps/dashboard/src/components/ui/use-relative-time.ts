@@ -39,15 +39,25 @@ export interface RelativeTimeResult {
  * Format seconds into a relative time string.
  */
 function formatRelativeTime(seconds: number): string {
-  if (seconds < 0) return "just now";
-  if (seconds < 5) return "just now";
-  if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+  if (seconds < 0) {
+    return "just now";
+  }
+  if (seconds < 5) {
+    return "just now";
+  }
+  if (seconds < 60) {
+    return `${Math.floor(seconds)}s ago`;
+  }
 
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
 
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
@@ -73,11 +83,7 @@ export function useRelativeTime(
   timestamp: Date | number | undefined,
   options: UseRelativeTimeOptions = {}
 ): RelativeTimeResult {
-  const {
-    recentIntervalMs = 1000,
-    olderIntervalMs = 30000,
-    recentThresholdSec = 60,
-  } = options;
+  const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
 
   const [result, setResult] = useState<RelativeTimeResult>(() => {
     if (!timestamp) {
@@ -92,7 +98,9 @@ export function useRelativeTime(
   });
 
   useEffect(() => {
-    if (!timestamp) return;
+    if (!timestamp) {
+      return;
+    }
 
     const updateTime = () => {
       const seconds = getSecondsAgo(timestamp);
@@ -108,8 +116,7 @@ export function useRelativeTime(
 
     // Determine update interval based on how recent the timestamp is
     const seconds = getSecondsAgo(timestamp);
-    const intervalMs =
-      seconds < recentThresholdSec ? recentIntervalMs : olderIntervalMs;
+    const intervalMs = seconds < recentThresholdSec ? recentIntervalMs : olderIntervalMs;
 
     const interval = setInterval(updateTime, intervalMs);
 
@@ -126,11 +133,7 @@ export function useRelativeTimeBatch(
   timestamps: Array<Date | number>,
   options: UseRelativeTimeOptions = {}
 ): RelativeTimeResult[] {
-  const {
-    recentIntervalMs = 1000,
-    olderIntervalMs = 30000,
-    recentThresholdSec = 60,
-  } = options;
+  const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
 
   const [results, setResults] = useState<RelativeTimeResult[]>(() =>
     timestamps.map((ts) => {
@@ -164,7 +167,7 @@ export function useRelativeTimeBatch(
     const interval = setInterval(updateTimes, recentIntervalMs);
 
     return () => clearInterval(interval);
-  }, [timestamps, recentIntervalMs, olderIntervalMs, recentThresholdSec]);
+  }, [timestamps, recentIntervalMs, recentThresholdSec]);
 
   return results;
 }

@@ -8,8 +8,8 @@
 export {
   DEFAULT_BATCH_SIZE,
   DEFAULT_EMBEDDING_MODEL,
-  executeHelixMemoryUpdate,
   type ExternalEventInput,
+  executeHelixMemoryUpdate,
   type InfluenceEdgeInput,
   type MemoryUpdateInput,
   type MemoryUpdateResult,
@@ -21,8 +21,8 @@ export {
 
 // HelixDB Retrieval (GraphRAG)
 export {
-  type DecisionSummary,
   DEFAULT_RETRIEVAL_CONFIG,
+  type DecisionSummary,
   executeHelixRetrieval,
   PERFORMANCE_TARGETS,
   type RetrievalInput,

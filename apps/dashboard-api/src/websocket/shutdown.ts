@@ -233,7 +233,9 @@ export function createShutdownManager(
     message: string,
     metadata?: Record<string, unknown>
   ): void => {
-    if (!deps.onLog) return;
+    if (!deps.onLog) {
+      return;
+    }
 
     const entry: ShutdownLogEntry = {
       timestamp: new Date().toISOString(),
@@ -341,9 +343,13 @@ export function createShutdownManager(
       await sleep(checkInterval);
     }
 
-    log("shutdown.timeout", `Drain timeout reached with ${deps.getConnections().size} connections`, {
-      remainingConnections: deps.getConnections().size,
-    });
+    log(
+      "shutdown.timeout",
+      `Drain timeout reached with ${deps.getConnections().size} connections`,
+      {
+        remainingConnections: deps.getConnections().size,
+      }
+    );
   };
 
   /**
@@ -540,7 +546,9 @@ export function createShutdownManager(
   };
 
   const registerSignalHandlers = (): void => {
-    if (signalHandlerRegistered) return;
+    if (signalHandlerRegistered) {
+      return;
+    }
 
     process.on("SIGTERM", handleSigterm);
     process.on("SIGINT", handleSigint);
@@ -551,7 +559,9 @@ export function createShutdownManager(
   };
 
   const unregisterSignalHandlers = (): void => {
-    if (!signalHandlerRegistered) return;
+    if (!signalHandlerRegistered) {
+      return;
+    }
 
     process.off("SIGTERM", handleSigterm);
     process.off("SIGINT", handleSigint);

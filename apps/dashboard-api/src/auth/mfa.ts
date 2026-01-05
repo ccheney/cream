@@ -34,7 +34,9 @@ function base32ToBytes(base32: string): Uint8Array {
   const bits: number[] = [];
   for (const char of cleanedInput) {
     const val = alphabet.indexOf(char);
-    if (val === -1) continue;
+    if (val === -1) {
+      continue;
+    }
     for (let i = 4; i >= 0; i--) {
       bits.push((val >> i) & 1);
     }
@@ -113,7 +115,7 @@ async function generateTOTPCode(secret: string, counter: number): Promise<string
     (hmac[offset + 3]! & 0xff);
 
   // Generate OTP
-  const otp = binary % Math.pow(10, TOTP_CONFIG.digits);
+  const otp = binary % 10 ** TOTP_CONFIG.digits;
   return otp.toString().padStart(TOTP_CONFIG.digits, "0");
 }
 
@@ -153,7 +155,7 @@ export async function getCurrentTOTPCode(secret: string): Promise<string> {
 /**
  * Generate backup codes for account recovery.
  */
-export function generateBackupCodes(count: number = 10): string[] {
+export function generateBackupCodes(count = 10): string[] {
   const codes: string[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -210,7 +212,7 @@ export async function verifyBackupCode(
 export function generateOTPAuthURI(
   secret: string,
   email: string,
-  issuer: string = "Cream Trading"
+  issuer = "Cream Trading"
 ): string {
   const encodedIssuer = encodeURIComponent(issuer);
   const encodedEmail = encodeURIComponent(email);

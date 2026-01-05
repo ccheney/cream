@@ -4,7 +4,7 @@
  * Tests for surface component types and elevation utilities.
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { ElevationLevel, SurfaceVariant } from "./surface";
 
 // ============================================
@@ -20,12 +20,7 @@ describe("ElevationLevel type", () => {
 
 describe("SurfaceVariant type", () => {
   it("has all expected variants", () => {
-    const variants: SurfaceVariant[] = [
-      "default",
-      "interactive",
-      "translucent",
-      "inset",
-    ];
+    const variants: SurfaceVariant[] = ["default", "interactive", "translucent", "inset"];
     expect(variants).toHaveLength(4);
   });
 });

@@ -4,82 +4,55 @@
  * Comprehensive tests for all technical indicator calculations.
  */
 
-import { describe, expect, it, beforeAll } from "bun:test";
-import type { Candle, Timeframe } from "../src/types";
-import { IndicatorError, validateCandleCount } from "../src/types";
-
+import { beforeAll, describe, expect, it } from "bun:test";
 // Momentum
 import {
   calculateRSI,
-  rsiRequiredPeriods,
   isOverbought,
   isOversold,
   RSI_DEFAULTS,
+  rsiRequiredPeriods,
 } from "../src/momentum/rsi";
 import {
   calculateStochastic,
-  stochasticRequiredPeriods,
-  isStochasticOverbought,
-  isStochasticOversold,
-  isBullishCrossover,
   isBearishCrossover,
-  STOCHASTIC_DEFAULTS,
+  isBullishCrossover,
+  stochasticRequiredPeriods,
 } from "../src/momentum/stochastic";
-
-// Trend
-import {
-  calculateSMA,
-  smaRequiredPeriods,
-  calculateMultipleSMAs,
-  isGoldenCross,
-  isDeathCross,
-  SMA_DEFAULTS,
-} from "../src/trend/sma";
-import {
-  calculateEMA,
-  emaRequiredPeriods,
-  calculateMultipleEMAs,
-  calculateMultiplier,
-  calculateMACD,
-  EMA_DEFAULTS,
-} from "../src/trend/ema";
-
-// Volatility
-import {
-  calculateATR,
-  atrRequiredPeriods,
-  calculateTrueRange,
-  calculateATRStop,
-  calculateATRPositionSize,
-  ATR_DEFAULTS,
-} from "../src/volatility/atr";
-import {
-  calculateBollingerBands,
-  bollingerRequiredPeriods,
-  isTouchingUpperBand,
-  isTouchingLowerBand,
-  isBollingerSqueeze,
-  getBollingerSignal,
-  BOLLINGER_DEFAULTS,
-} from "../src/volatility/bollinger";
-
-// Volume
-import {
-  calculateVolumeSMA,
-  volumeSmaRequiredPeriods,
-  isHighVolume,
-  isLowVolume,
-  getVolumeSignal,
-  VOLUME_SMA_DEFAULTS,
-} from "../src/volume/volumeSma";
-
 // Pipeline
 import {
   calculateIndicators,
   calculateMultiTimeframeIndicators,
-  getRequiredWarmupPeriod,
   DEFAULT_PIPELINE_CONFIG,
+  getRequiredWarmupPeriod,
 } from "../src/pipeline";
+import { calculateEMA, calculateMACD, calculateMultiplier } from "../src/trend/ema";
+
+// Trend
+import { calculateMultipleSMAs, calculateSMA, isDeathCross, isGoldenCross } from "../src/trend/sma";
+import type { Candle, Timeframe } from "../src/types";
+import { IndicatorError, validateCandleCount } from "../src/types";
+// Volatility
+import {
+  calculateATR,
+  calculateATRPositionSize,
+  calculateATRStop,
+  calculateTrueRange,
+} from "../src/volatility/atr";
+import {
+  calculateBollingerBands,
+  getBollingerSignal,
+  isBollingerSqueeze,
+  isTouchingLowerBand,
+  isTouchingUpperBand,
+} from "../src/volatility/bollinger";
+// Volume
+import {
+  calculateVolumeSMA,
+  getVolumeSignal,
+  isHighVolume,
+  isLowVolume,
+} from "../src/volume/volumeSma";
 
 // ============================================
 // Test Data Generation
@@ -152,7 +125,7 @@ function generateUptrend(count: number, startPrice = 100): Candle[] {
 /**
  * Generate downtrend candle data.
  */
-function generateDowntrend(count: number, startPrice = 100): Candle[] {
+function _generateDowntrend(count: number, startPrice = 100): Candle[] {
   const candles: Candle[] = [];
   let price = startPrice;
   const baseVolume = 1000000;
@@ -580,8 +553,7 @@ describe("Bollinger Bands", () => {
     it("should calculate bandwidth correctly", () => {
       const results = calculateBollingerBands(candles);
       for (const result of results) {
-        const expectedBandwidth =
-          ((result.upper - result.lower) / result.middle) * 100;
+        const expectedBandwidth = ((result.upper - result.lower) / result.middle) * 100;
         expect(result.bandwidth).toBeCloseTo(expectedBandwidth, 5);
       }
     });
@@ -696,19 +668,19 @@ describe("Indicator Pipeline", () => {
 
     it("should use correct naming convention", () => {
       const snapshot = calculateIndicators(candles, "1h");
-      expect(snapshot!.values["rsi_14_1h"]).toBeDefined();
-      expect(snapshot!.values["sma_20_1h"]).toBeDefined();
-      expect(snapshot!.values["ema_9_1h"]).toBeDefined();
-      expect(snapshot!.values["atr_14_1h"]).toBeDefined();
+      expect(snapshot!.values.rsi_14_1h).toBeDefined();
+      expect(snapshot!.values.sma_20_1h).toBeDefined();
+      expect(snapshot!.values.ema_9_1h).toBeDefined();
+      expect(snapshot!.values.atr_14_1h).toBeDefined();
     });
 
     it("should calculate Bollinger Band components", () => {
       const snapshot = calculateIndicators(candles, "1h");
-      expect(snapshot!.values["bb_upper_20_1h"]).toBeDefined();
-      expect(snapshot!.values["bb_middle_20_1h"]).toBeDefined();
-      expect(snapshot!.values["bb_lower_20_1h"]).toBeDefined();
-      expect(snapshot!.values["bb_bandwidth_20_1h"]).toBeDefined();
-      expect(snapshot!.values["bb_percentb_20_1h"]).toBeDefined();
+      expect(snapshot!.values.bb_upper_20_1h).toBeDefined();
+      expect(snapshot!.values.bb_middle_20_1h).toBeDefined();
+      expect(snapshot!.values.bb_lower_20_1h).toBeDefined();
+      expect(snapshot!.values.bb_bandwidth_20_1h).toBeDefined();
+      expect(snapshot!.values.bb_percentb_20_1h).toBeDefined();
     });
 
     it("should respect config options", () => {
@@ -722,8 +694,8 @@ describe("Indicator Pipeline", () => {
         stochastic: { enabled: false },
       });
 
-      expect(snapshot!.values["rsi_14_1h"]).toBeDefined();
-      expect(snapshot!.values["sma_20_1h"]).toBeUndefined();
+      expect(snapshot!.values.rsi_14_1h).toBeDefined();
+      expect(snapshot!.values.sma_20_1h).toBeUndefined();
     });
 
     it("should return null for empty candles", () => {
@@ -740,8 +712,8 @@ describe("Indicator Pipeline", () => {
 
       const snapshot = calculateMultiTimeframeIndicators(candlesByTimeframe);
       expect(snapshot).not.toBeNull();
-      expect(snapshot!.values["rsi_14_1h"]).toBeDefined();
-      expect(snapshot!.values["rsi_14_4h"]).toBeDefined();
+      expect(snapshot!.values.rsi_14_1h).toBeDefined();
+      expect(snapshot!.values.rsi_14_4h).toBeDefined();
     });
   });
 

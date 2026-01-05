@@ -8,7 +8,7 @@
  * @see docs/plans/ui/20-design-philosophy.md lines 88-89
  */
 
-import type { ReactNode, HTMLAttributes, ElementType } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
 // ============================================
 // Types
@@ -203,40 +203,49 @@ function formatDataValue(
 ): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
 
-  if (isNaN(num)) return String(value);
+  if (Number.isNaN(num)) {
+    return String(value);
+  }
 
   const sign = showSign && num > 0 ? "+" : "";
 
   switch (format) {
     case "price":
-      return sign + num.toLocaleString("en-US", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      });
+      return (
+        sign +
+        num.toLocaleString("en-US", {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      );
 
     case "currency":
-      return sign + num.toLocaleString("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      });
+      return (
+        sign +
+        num.toLocaleString("en-US", {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      );
 
     case "percentage":
-      return sign + num.toFixed(decimals) + "%";
+      return `${sign + num.toFixed(decimals)}%`;
 
     case "shares":
       return num.toLocaleString("en-US", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       });
-
-    case "number":
     default:
-      return sign + num.toLocaleString("en-US", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      });
+      return (
+        sign +
+        num.toLocaleString("en-US", {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      );
   }
 }
 
@@ -272,10 +281,14 @@ export function DataValue({
 
   // Determine color
   let finalColor: TextColor = color || "heading";
-  if (colorBySign && !color && !isNaN(num)) {
-    if (num > 0) finalColor = "profit";
-    else if (num < 0) finalColor = "loss";
-    else finalColor = "muted";
+  if (colorBySign && !color && !Number.isNaN(num)) {
+    if (num > 0) {
+      finalColor = "profit";
+    } else if (num < 0) {
+      finalColor = "loss";
+    } else {
+      finalColor = "muted";
+    }
   }
 
   return (
@@ -332,9 +345,10 @@ export function Code({
       className={`
         font-mono
         ${textSizeClasses[size]}
-        ${inline
-          ? "px-1.5 py-0.5 bg-bg-muted rounded text-text-heading"
-          : "p-4 bg-bg-muted rounded-lg overflow-x-auto text-text-primary"
+        ${
+          inline
+            ? "px-1.5 py-0.5 bg-bg-muted rounded text-text-heading"
+            : "p-4 bg-bg-muted rounded-lg overflow-x-auto text-text-primary"
         }
         ${className}
       `.trim()}
@@ -366,12 +380,7 @@ export interface LabelProps extends HTMLAttributes<HTMLSpanElement> {
  * <Label size="sm">LAST UPDATED</Label>
  * ```
  */
-export function Label({
-  size = "xs",
-  className = "",
-  children,
-  ...props
-}: LabelProps) {
+export function Label({ size = "xs", className = "", children, ...props }: LabelProps) {
   return (
     <span
       className={`
@@ -406,11 +415,7 @@ export interface ProseProps extends HTMLAttributes<HTMLDivElement> {
  * </Prose>
  * ```
  */
-export function Prose({
-  className = "",
-  children,
-  ...props
-}: ProseProps) {
+export function Prose({ className = "", children, ...props }: ProseProps) {
   return (
     <div
       className={`

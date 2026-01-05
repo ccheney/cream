@@ -106,34 +106,34 @@ export {
 // ============================================
 
 export {
-  // Error codes
-  ErrorCode,
-  ERROR_CODE_DESCRIPTIONS,
-  // Severity
-  ErrorSeverity,
-  ERROR_SEVERITY,
-  // Recovery actions
-  RecoveryAction,
-  ERROR_RECOVERY,
-  // Schemas
-  type ErrorDetails,
-  ErrorDetailsSchema,
-  type EnhancedErrorMessage,
-  EnhancedErrorMessageSchema,
-  // Factory functions
-  createErrorDetails,
-  createErrorMessage,
   // Convenience creators
   authError,
   channelError,
-  messageError,
-  rateLimitError,
-  limitError,
-  internalError,
   connectionError,
+  // Factory functions
+  createErrorDetails,
+  createErrorMessage,
+  type EnhancedErrorMessage,
+  EnhancedErrorMessageSchema,
+  ERROR_CODE_DESCRIPTIONS,
+  ERROR_RECOVERY,
+  ERROR_SEVERITY,
+  // Error codes
+  ErrorCode,
+  // Schemas
+  type ErrorDetails,
+  ErrorDetailsSchema,
+  // Severity
+  ErrorSeverity,
+  getRetryDelay,
+  internalError,
+  isCritical,
   // Classification
   isRetryable,
+  limitError,
+  messageError,
+  // Recovery actions
+  RecoveryAction,
+  rateLimitError,
   requiresAuthRefresh,
-  isCritical,
-  getRetryDelay,
 } from "./errors.js";

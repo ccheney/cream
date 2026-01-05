@@ -7,7 +7,7 @@
  * @see docs/plans/ui/20-design-philosophy.md lines 91-92
  */
 
-import type { ReactNode, HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 // ============================================
 // Types
@@ -146,11 +146,7 @@ export interface PanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function PanelHeader({
-  className = "",
-  children,
-  ...props
-}: PanelHeaderProps) {
+export function PanelHeader({ className = "", children, ...props }: PanelHeaderProps) {
   return (
     <div
       className={`
@@ -172,12 +168,7 @@ export interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function PanelBody({
-  padding = "md",
-  className = "",
-  children,
-  ...props
-}: PanelBodyProps) {
+export function PanelBody({ padding = "md", className = "", children, ...props }: PanelBodyProps) {
   return (
     <div
       className={`
@@ -196,11 +187,7 @@ export interface PanelFooterProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function PanelFooter({
-  className = "",
-  children,
-  ...props
-}: PanelFooterProps) {
+export function PanelFooter({ className = "", children, ...props }: PanelFooterProps) {
   return (
     <div
       className={`
@@ -244,7 +231,9 @@ export function Backdrop({
   className = "",
   ...props
 }: BackdropProps) {
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <div
@@ -295,7 +284,9 @@ export function Overlay({
   children,
   ...props
 }: OverlayProps) {
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   const positionClasses =
     type === "drawer"
@@ -307,12 +298,7 @@ export function Overlay({
         }[position]
       : "inset-0 flex items-center justify-center";
 
-  const zClass =
-    type === "modal"
-      ? "z-modal"
-      : type === "drawer"
-        ? "z-drawer"
-        : "z-popover";
+  const zClass = type === "modal" ? "z-modal" : type === "drawer" ? "z-drawer" : "z-popover";
 
   return (
     <div
@@ -349,16 +335,9 @@ export interface FloatingSurfaceProps extends HTMLAttributes<HTMLDivElement> {
  * </FloatingSurface>
  * ```
  */
-export function FloatingSurface({
-  className = "",
-  children,
-  ...props
-}: FloatingSurfaceProps) {
+export function FloatingSurface({ className = "", children, ...props }: FloatingSurfaceProps) {
   return (
-    <div
-      className={`surface-floating ${className}`.trim()}
-      {...props}
-    >
+    <div className={`surface-floating ${className}`.trim()} {...props}>
       {children}
     </div>
   );
@@ -382,18 +361,12 @@ export interface DividerProps extends HTMLAttributes<HTMLHRElement> {
  * <Divider orientation="vertical" />
  * ```
  */
-export function Divider({
-  orientation = "horizontal",
-  className = "",
-  ...props
-}: DividerProps) {
+export function Divider({ orientation = "horizontal", className = "", ...props }: DividerProps) {
   return (
     <hr
       className={`
         border-0 bg-border-default
-        ${orientation === "horizontal"
-          ? "h-px w-full"
-          : "w-px h-full"}
+        ${orientation === "horizontal" ? "h-px w-full" : "w-px h-full"}
         ${className}
       `.trim()}
       {...props}

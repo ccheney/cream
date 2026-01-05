@@ -14,8 +14,7 @@ export default defineConfig({
   testDir: "./tests/visual",
 
   // Screenshot comparison configuration
-  snapshotPathTemplate:
-    "{testDir}/__screenshots__/{testFilePath}/{projectName}/{arg}{ext}",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{projectName}/{arg}{ext}",
 
   // Parallel execution
   fullyParallel: true,

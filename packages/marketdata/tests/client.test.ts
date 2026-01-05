@@ -2,16 +2,16 @@
  * Base REST Client Tests
  */
 
-import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { z } from "zod";
 import {
-  RestClient,
-  RateLimiter,
+  type ApiError,
   createRestClient,
   DEFAULT_RATE_LIMIT,
   DEFAULT_RETRY,
-  type ApiError,
+  RateLimiter,
+  RestClient,
 } from "../src/client";
-import { z } from "zod";
 
 // ============================================
 // Tests
@@ -111,9 +111,7 @@ describe("RestClient", () => {
 
     expect(mockFetch).toHaveBeenCalled();
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect((options.headers as Record<string, string>)["Authorization"]).toBe(
-      "Bearer test-key"
-    );
+    expect((options.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
   });
 
   test("validates response with Zod schema", async () => {
@@ -143,9 +141,7 @@ describe("RestClient", () => {
     mockFetch = mock(() => {
       attempts++;
       if (attempts < 3) {
-        return Promise.resolve(
-          new Response("Server Error", { status: 500 })
-        );
+        return Promise.resolve(new Response("Server Error", { status: 500 }));
       }
       return Promise.resolve(
         new Response(JSON.stringify({ success: true }), {
@@ -176,9 +172,7 @@ describe("RestClient", () => {
     let attempts = 0;
     mockFetch = mock(() => {
       attempts++;
-      return Promise.resolve(
-        new Response("Bad Request", { status: 400 })
-      );
+      return Promise.resolve(new Response("Bad Request", { status: 400 }));
     });
     globalThis.fetch = mockFetch;
 
@@ -208,9 +202,7 @@ describe("RestClient", () => {
     mockFetch = mock(() => {
       attempts++;
       if (attempts < 2) {
-        return Promise.resolve(
-          new Response("Rate Limited", { status: 429 })
-        );
+        return Promise.resolve(new Response("Rate Limited", { status: 429 }));
       }
       return Promise.resolve(
         new Response(JSON.stringify({ success: true }), {
@@ -252,10 +244,7 @@ describe("RestClient", () => {
     mockFetch = mock((_url: string, options?: RequestInit) => {
       return new Promise((resolve, reject) => {
         const timeoutId = setTimeout(
-          () =>
-            resolve(
-              new Response(JSON.stringify({ success: true }), { status: 200 })
-            ),
+          () => resolve(new Response(JSON.stringify({ success: true }), { status: 200 })),
           1000
         );
 

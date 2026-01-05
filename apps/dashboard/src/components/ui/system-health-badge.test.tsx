@@ -2,16 +2,15 @@
  * SystemHealthBadge Component Tests
  */
 
-import { describe, it, expect } from "bun:test";
-import { createElement, type ReactElement } from "react";
-import {
-  SystemHealthBadge,
-  LiveBadge,
-  ConnectionBadge,
-  StreamingBadge,
-  type SystemHealthBadgeProps,
-} from "./system-health-badge";
+import { describe, expect, it } from "bun:test";
+import { createElement } from "react";
 import type { SystemHealthStatus } from "./system-health-badge";
+import {
+  ConnectionBadge,
+  LiveBadge,
+  StreamingBadge,
+  SystemHealthBadge,
+} from "./system-health-badge";
 
 // ============================================
 // Helper Types
@@ -47,107 +46,153 @@ describe("SystemHealthBadge", () => {
     });
 
     it("creates element for connected status", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("connected");
     });
 
     it("creates element for connecting status", () => {
-      const element = createElement(SystemHealthBadge, { status: "connecting" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connecting",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("connecting");
     });
 
     it("creates element for disconnected status", () => {
-      const element = createElement(SystemHealthBadge, { status: "disconnected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "disconnected",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("disconnected");
     });
 
     it("creates element for degraded status", () => {
-      const element = createElement(SystemHealthBadge, { status: "degraded" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "degraded",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("degraded");
     });
 
     it("creates element for paused status", () => {
-      const element = createElement(SystemHealthBadge, { status: "paused" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "paused",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("paused");
     });
 
     it("creates element for live status", () => {
-      const element = createElement(SystemHealthBadge, { status: "live" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "live",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("live");
     });
 
     it("creates element for streaming status", () => {
-      const element = createElement(SystemHealthBadge, { status: "streaming" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "streaming",
+      }) as unknown as TestElement;
       expect(element.props.status).toBe("streaming");
     });
   });
 
   describe("labels", () => {
     it("shows label by default", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+      }) as unknown as TestElement;
       expect(element.props.showLabel).toBeUndefined(); // Default is true in component
     });
 
     it("hides label when showLabel is false", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", showLabel: false }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        showLabel: false,
+      }) as unknown as TestElement;
       expect(element.props.showLabel).toBe(false);
     });
 
     it("accepts custom label", () => {
-      const element = createElement(SystemHealthBadge, { status: "disconnected", label: "API Offline" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "disconnected",
+        label: "API Offline",
+      }) as unknown as TestElement;
       expect(element.props.label).toBe("API Offline");
     });
   });
 
   describe("size variants", () => {
     it("uses md size by default", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+      }) as unknown as TestElement;
       expect(element.props.size).toBeUndefined(); // Default is md in component
     });
 
     it("accepts sm size", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", size: "sm" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        size: "sm",
+      }) as unknown as TestElement;
       expect(element.props.size).toBe("sm");
     });
 
     it("accepts lg size", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", size: "lg" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        size: "lg",
+      }) as unknown as TestElement;
       expect(element.props.size).toBe("lg");
     });
   });
 
   describe("variant styles", () => {
     it("uses default variant by default", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+      }) as unknown as TestElement;
       expect(element.props.variant).toBeUndefined();
     });
 
     it("accepts pill variant", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", variant: "pill" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        variant: "pill",
+      }) as unknown as TestElement;
       expect(element.props.variant).toBe("pill");
     });
 
     it("accepts minimal variant", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", variant: "minimal" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        variant: "minimal",
+      }) as unknown as TestElement;
       expect(element.props.variant).toBe("minimal");
     });
   });
 
   describe("glow effect", () => {
     it("does not show glow by default", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+      }) as unknown as TestElement;
       expect(element.props.glow).toBeUndefined();
     });
 
     it("accepts glow prop", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", glow: true }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        glow: true,
+      }) as unknown as TestElement;
       expect(element.props.glow).toBe(true);
     });
   });
 
   describe("custom className", () => {
     it("accepts custom className", () => {
-      const element = createElement(SystemHealthBadge, { status: "connected", className: "my-custom-class" }) as unknown as TestElement;
+      const element = createElement(SystemHealthBadge, {
+        status: "connected",
+        className: "my-custom-class",
+      }) as unknown as TestElement;
       expect(element.props.className).toBe("my-custom-class");
     });
   });
@@ -192,7 +237,10 @@ describe("ConnectionBadge", () => {
   });
 
   it("accepts custom className", () => {
-    const element = ConnectionBadge({ connected: true, className: "my-class" }) as unknown as TestElement;
+    const element = ConnectionBadge({
+      connected: true,
+      className: "my-class",
+    }) as unknown as TestElement;
     expect(element.props.className).toContain("my-class");
   });
 });

@@ -4,18 +4,18 @@
  * Tests for exponential backoff, error classification, and recovery utilities.
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import type {
+  BackoffConfig,
+  ConnectionError,
+  ConnectionErrorType,
+  ConnectionState,
+} from "./use-connection-recovery";
 import {
   calculateBackoffDelay,
   classifyHttpError,
   createConnectionError,
   getErrorMessage,
-} from "./use-connection-recovery";
-import type {
-  ConnectionState,
-  ConnectionErrorType,
-  ConnectionError,
-  BackoffConfig,
 } from "./use-connection-recovery";
 
 // ============================================
@@ -86,7 +86,7 @@ describe("calculateBackoffDelay", () => {
     maxDelayMs: 30000,
     multiplier: 2,
     jitterFactor: 0,
-  maxRetries: 10,
+    maxRetries: 10,
   };
 
   it("returns initial delay for attempt 0", () => {
@@ -116,9 +116,7 @@ describe("calculateBackoffDelay", () => {
     const configWithJitter = { ...defaultConfig, jitterFactor: 0.2 };
 
     // Run multiple times to verify jitter variance
-    const delays = Array.from({ length: 100 }, () =>
-      calculateBackoffDelay(0, configWithJitter)
-    );
+    const delays = Array.from({ length: 100 }, () => calculateBackoffDelay(0, configWithJitter));
 
     const min = Math.min(...delays);
     const max = Math.max(...delays);
@@ -376,9 +374,7 @@ describe("backoff sequence", () => {
       maxRetries: 10,
     };
 
-    const sequence = [0, 1, 2, 3, 4, 5].map((attempt) =>
-      calculateBackoffDelay(attempt, config)
-    );
+    const sequence = [0, 1, 2, 3, 4, 5].map((attempt) => calculateBackoffDelay(attempt, config));
 
     expect(sequence).toEqual([1000, 2000, 4000, 8000, 16000, 30000]);
   });
@@ -392,9 +388,7 @@ describe("backoff sequence", () => {
       maxRetries: 10,
     };
 
-    const sequence = [0, 1, 2, 3, 4, 5, 6].map((attempt) =>
-      calculateBackoffDelay(attempt, config)
-    );
+    const sequence = [0, 1, 2, 3, 4, 5, 6].map((attempt) => calculateBackoffDelay(attempt, config));
 
     expect(sequence).toEqual([1000, 2000, 4000, 8000, 10000, 10000, 10000]);
   });
@@ -405,7 +399,7 @@ describe("backoff sequence", () => {
 // ============================================
 
 describe("retryable errors", () => {
-  const retryableTypes: ConnectionErrorType[] = [
+  const _retryableTypes: ConnectionErrorType[] = [
     "network",
     "timeout",
     "server_error",
@@ -413,10 +407,7 @@ describe("retryable errors", () => {
     "unknown",
   ];
 
-  const nonRetryableTypes: ConnectionErrorType[] = [
-    "unauthorized",
-    "forbidden",
-  ];
+  const _nonRetryableTypes: ConnectionErrorType[] = ["unauthorized", "forbidden"];
 
   it("network errors are retryable", () => {
     const error = createConnectionError(new TypeError("Failed to fetch"));

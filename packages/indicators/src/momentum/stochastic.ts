@@ -22,9 +22,9 @@
 
 import {
   type Candle,
+  type IndicatorCalculator,
   type StochasticParams,
   type StochasticResult,
-  type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
 
@@ -66,8 +66,12 @@ function calculateFastK(candles: Candle[], kPeriod: number): number[] {
     let lowestLow = Infinity;
 
     for (const candle of window) {
-      if (candle.high > highestHigh) highestHigh = candle.high;
-      if (candle.low < lowestLow) lowestLow = candle.low;
+      if (candle.high > highestHigh) {
+        highestHigh = candle.high;
+      }
+      if (candle.low < lowestLow) {
+        lowestLow = candle.low;
+      }
     }
 
     // Calculate %K
@@ -151,9 +155,7 @@ export function calculateStochastic(
 /**
  * Get the minimum number of candles required for Stochastic calculation.
  */
-export function stochasticRequiredPeriods(
-  params: StochasticParams = STOCHASTIC_DEFAULTS
-): number {
+export function stochasticRequiredPeriods(params: StochasticParams = STOCHASTIC_DEFAULTS): number {
   const { kPeriod, dPeriod, slow } = params;
 
   if (slow) {
@@ -170,20 +172,14 @@ export function stochasticRequiredPeriods(
 /**
  * Check if Stochastic indicates overbought condition.
  */
-export function isStochasticOverbought(
-  k: number,
-  threshold = STOCHASTIC_OVERBOUGHT
-): boolean {
+export function isStochasticOverbought(k: number, threshold = STOCHASTIC_OVERBOUGHT): boolean {
   return k >= threshold;
 }
 
 /**
  * Check if Stochastic indicates oversold condition.
  */
-export function isStochasticOversold(
-  k: number,
-  threshold = STOCHASTIC_OVERSOLD
-): boolean {
+export function isStochasticOversold(k: number, threshold = STOCHASTIC_OVERSOLD): boolean {
   return k <= threshold;
 }
 
@@ -214,10 +210,7 @@ export function isBearishCrossover(
 /**
  * Stochastic Calculator implementation.
  */
-export const stochasticCalculator: IndicatorCalculator<
-  StochasticParams,
-  StochasticResult
-> = {
+export const stochasticCalculator: IndicatorCalculator<StochasticParams, StochasticResult> = {
   calculate: calculateStochastic,
   requiredPeriods: stochasticRequiredPeriods,
 };

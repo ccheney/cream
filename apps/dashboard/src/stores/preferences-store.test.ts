@@ -2,21 +2,21 @@
  * User Preferences Store Tests
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  usePreferencesStore,
-  selectSoundEnabled,
-  selectSoundVolume,
-  selectNotificationsEnabled,
-  selectTheme,
-  selectCompactMode,
-  selectShowValues,
-  selectAutoScroll,
-  selectDateFormat,
-  selectNumberFormat,
-  type ThemeMode,
   type DateFormat,
   type NumberFormat,
+  selectAutoScroll,
+  selectCompactMode,
+  selectDateFormat,
+  selectNotificationsEnabled,
+  selectNumberFormat,
+  selectShowValues,
+  selectSoundEnabled,
+  selectSoundVolume,
+  selectTheme,
+  type ThemeMode,
+  usePreferencesStore,
 } from "./preferences-store";
 
 // ============================================

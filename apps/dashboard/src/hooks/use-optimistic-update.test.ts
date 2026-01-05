@@ -4,8 +4,8 @@
  * Tests for optimistic update patterns with rollback.
  */
 
-import { describe, it, expect } from "bun:test";
-import type { QueryKey, QueryClient } from "@tanstack/react-query";
+import { describe, expect, it } from "bun:test";
+import type { QueryKey } from "@tanstack/react-query";
 
 // ============================================
 // Type Tests
@@ -130,10 +130,7 @@ describe("optimistic update logic", () => {
   it("applies optimistic update to current data", () => {
     const current = { count: 5 };
     const variables = { increment: 3 };
-    const optimisticUpdate = (
-      curr: typeof current | undefined,
-      vars: typeof variables
-    ) => ({
+    const optimisticUpdate = (curr: typeof current | undefined, vars: typeof variables) => ({
       count: (curr?.count ?? 0) + vars.increment,
     });
 
@@ -143,10 +140,7 @@ describe("optimistic update logic", () => {
 
   it("handles undefined current data", () => {
     const variables = { name: "test" };
-    const optimisticUpdate = (
-      curr: { name: string } | undefined,
-      vars: typeof variables
-    ) => ({
+    const optimisticUpdate = (curr: { name: string } | undefined, vars: typeof variables) => ({
       name: vars.name,
       createdAt: curr?.name ? "existing" : "new",
     });
@@ -159,10 +153,7 @@ describe("optimistic update logic", () => {
   it("preserves existing properties not in update", () => {
     const current = { id: "1", name: "old", metadata: { key: "value" } };
     const variables = { name: "new" };
-    const optimisticUpdate = (
-      curr: typeof current | undefined,
-      vars: typeof variables
-    ) => ({
+    const optimisticUpdate = (curr: typeof current | undefined, vars: typeof variables) => ({
       ...curr!,
       name: vars.name,
     });
@@ -240,9 +231,7 @@ describe("list optimistic update logic", () => {
     ];
     const update = { id: "2", name: "updated" };
 
-    const result = list.map((item) =>
-      item.id === update.id ? { ...item, ...update } : item
-    );
+    const result = list.map((item) => (item.id === update.id ? { ...item, ...update } : item));
 
     expect(result[1]?.name).toBe("updated");
     expect(result[0]?.name).toBe("a"); // Unchanged
@@ -304,7 +293,9 @@ describe("debounce logic", () => {
     const delay = 100;
 
     const debouncedFn = () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       timeoutId = setTimeout(() => {
         callCount++;
       }, delay);
@@ -417,10 +408,7 @@ describe("acknowledge alert pattern", () => {
     };
 
     // Optimistic update
-    const optimisticUpdate = (
-      current: typeof alert | undefined,
-      acknowledged: boolean
-    ) => ({
+    const optimisticUpdate = (current: typeof alert | undefined, acknowledged: boolean) => ({
       ...current!,
       acknowledged,
     });
@@ -439,10 +427,7 @@ describe("modify stop-loss pattern", () => {
       stopLoss: 150.0,
     };
 
-    const optimisticUpdate = (
-      current: typeof position | undefined,
-      newStopLoss: number
-    ) => ({
+    const optimisticUpdate = (current: typeof position | undefined, newStopLoss: number) => ({
       ...current!,
       stopLoss: newStopLoss,
     });

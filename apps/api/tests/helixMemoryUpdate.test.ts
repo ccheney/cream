@@ -2,17 +2,17 @@
  * HelixDB Memory Update Workflow Step Tests
  */
 
-import { describe, test, expect, mock, beforeEach } from "bun:test";
-import {
-  executeHelixMemoryUpdate,
-  updateDecisionMemory,
-  recordLifecycleEvents,
-  updateExternalEvents,
-  type MemoryUpdateInput,
-  DEFAULT_EMBEDDING_MODEL,
-} from "../workflows/steps/helixMemoryUpdate";
+import { describe, expect, mock, test } from "bun:test";
 import type { HelixClient } from "@cream/helix";
-import type { TradeDecision, TradeLifecycleEvent, ExternalEvent } from "@cream/helix-schema";
+import type { ExternalEvent, TradeDecision, TradeLifecycleEvent } from "@cream/helix-schema";
+import {
+  DEFAULT_EMBEDDING_MODEL,
+  executeHelixMemoryUpdate,
+  type MemoryUpdateInput,
+  recordLifecycleEvents,
+  updateDecisionMemory,
+  updateExternalEvents,
+} from "../workflows/steps/helixMemoryUpdate";
 
 // ============================================
 // Test Fixtures
@@ -87,9 +87,7 @@ describe("HelixDB Memory Update", () => {
           { decision: createTestDecision("dec-001"), embedding: new Array(1536).fill(0.1) },
           { decision: createTestDecision("dec-002"), embedding: new Array(1536).fill(0.2) },
         ],
-        lifecycleEvents: [
-          createTestLifecycleEvent("evt-001", "dec-001"),
-        ],
+        lifecycleEvents: [createTestLifecycleEvent("evt-001", "dec-001")],
         externalEvents: [
           { event: createTestExternalEvent("ext-001"), embedding: new Array(1536).fill(0.3) },
         ],
@@ -184,7 +182,9 @@ describe("HelixDB Memory Update", () => {
     test("uses default embedding model when not specified", async () => {
       const queryParams: Record<string, unknown>[] = [];
       const client = createMockClient(async (_name, params) => {
-        if (params) queryParams.push(params);
+        if (params) {
+          queryParams.push(params);
+        }
         return {};
       });
 
@@ -416,9 +416,9 @@ describe("HelixDB Memory Update", () => {
     });
 
     test("edge failures are reported as warnings", async () => {
-      let queryCount = 0;
+      let _queryCount = 0;
       const client = createMockClient(async (name) => {
-        queryCount++;
+        _queryCount++;
         if (name === "createEdge") {
           throw new Error("Edge creation failed");
         }

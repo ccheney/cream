@@ -2,16 +2,15 @@
  * Rule-Based Regime Classifier Tests
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import type { Candle } from "@cream/indicators";
 import {
   classifyRegime,
   createRuleBasedClassifier,
   getRequiredCandleCount,
   hasEnoughData,
-  DEFAULT_RULE_BASED_CONFIG,
   type RegimeInput,
 } from "../src/ruleBasedClassifier";
-import type { Candle } from "@cream/indicators";
 
 // ============================================
 // Test Fixtures
@@ -86,10 +85,7 @@ function createRangeBoundCandles(
   return candles;
 }
 
-function createHighVolatilityCandles(
-  startPrice: number,
-  count: number
-): Candle[] {
+function createHighVolatilityCandles(startPrice: number, count: number): Candle[] {
   const candles: Candle[] = [];
   let price = startPrice;
 
@@ -111,10 +107,7 @@ function createHighVolatilityCandles(
   return candles;
 }
 
-function createLowVolatilityCandles(
-  price: number,
-  count: number
-): Candle[] {
+function createLowVolatilityCandles(price: number, count: number): Candle[] {
   const candles: Candle[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -168,7 +161,9 @@ describe("Rule-Based Regime Classifier", () => {
     test("classifies range-bound correctly with converged MAs and low vol", () => {
       const candles = createLowVolatilityCandles(100, 60);
       // Add historical ATR showing current is low
-      const historicalAtr = Array(100).fill(0).map(() => Math.random() * 5 + 2);
+      const historicalAtr = Array(100)
+        .fill(0)
+        .map(() => Math.random() * 5 + 2);
       const input: RegimeInput = { candles, historicalAtr };
 
       const result = classifyRegime(input);
@@ -185,7 +180,7 @@ describe("Rule-Based Regime Classifier", () => {
       const candles = [...normalCandles, ...highVolCandles];
 
       // Historical ATR from normal period
-      const historicalAtr = normalCandles.map((c) => (c.high - c.low));
+      const historicalAtr = normalCandles.map((c) => c.high - c.low);
       const input: RegimeInput = { candles, historicalAtr };
 
       const result = classifyRegime(input);
@@ -205,7 +200,7 @@ describe("Rule-Based Regime Classifier", () => {
       const candles = [...normalCandles, ...lowVolCandles];
 
       // Historical ATR from normal period
-      const historicalAtr = normalCandles.map((c) => (c.high - c.low));
+      const historicalAtr = normalCandles.map((c) => c.high - c.low);
       const input: RegimeInput = { candles, historicalAtr };
 
       const result = classifyRegime(input);
@@ -386,9 +381,7 @@ describe("Rule-Based Regime Classifier", () => {
     test("handles flat price series", () => {
       const flatCandles: Candle[] = [];
       for (let i = 0; i < 60; i++) {
-        flatCandles.push(
-          createCandle(100, 100.5, 99.5, 1000000, Date.now() + i * 3600000)
-        );
+        flatCandles.push(createCandle(100, 100.5, 99.5, 1000000, Date.now() + i * 3600000));
       }
 
       const result = classifyRegime({ candles: flatCandles });

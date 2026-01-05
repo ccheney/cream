@@ -95,7 +95,9 @@ const BlinkingCursor = memo(function BlinkingCursor({ visible }: BlinkingCursorP
 
   // Use CSS animation for reduced motion, JS interval for normal
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      return;
+    }
 
     // Check for reduced motion preference
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -113,7 +115,9 @@ const BlinkingCursor = memo(function BlinkingCursor({ visible }: BlinkingCursorP
     return () => clearInterval(interval);
   }, [visible]);
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <span
@@ -163,9 +167,7 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
     <div
       className={`rounded-lg border overflow-hidden ${className}`}
       style={{
-        borderColor: hasError
-          ? "var(--loss, #ef4444)"
-          : "var(--border-default, #d6d3d1)",
+        borderColor: hasError ? "var(--loss, #ef4444)" : "var(--border-default, #d6d3d1)",
         backgroundColor: "var(--bg-card, #ffffff)",
       }}
       data-testid={testId}
@@ -178,10 +180,7 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
           backgroundColor: "var(--bg-elevated, #fafaf9)",
         }}
       >
-        <span
-          className="text-sm font-medium"
-          style={{ color: "var(--text-heading, #1c1917)" }}
-        >
+        <span className="text-sm font-medium" style={{ color: "var(--text-heading, #1c1917)" }}>
           {agentName}
         </span>
         <StatusBadge status={status} />
@@ -215,10 +214,7 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
 
         {/* Empty state for idle */}
         {status === "idle" && !streamingText && (
-          <span
-            className="text-sm italic"
-            style={{ color: "var(--text-muted, #78716c)" }}
-          >
+          <span className="text-sm italic" style={{ color: "var(--text-muted, #78716c)" }}>
             Waiting for input...
           </span>
         )}

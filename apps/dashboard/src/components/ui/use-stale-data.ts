@@ -135,7 +135,7 @@ export function useStaleData(
       return {
         level: "stale",
         isStale: true,
-        opacity: OPACITY_VALUES["stale"],
+        opacity: OPACITY_VALUES.stale,
         showIndicator: false,
         secondsSinceUpdate,
       };
@@ -144,7 +144,7 @@ export function useStaleData(
     return {
       level: "fresh",
       isStale: false,
-      opacity: OPACITY_VALUES["fresh"],
+      opacity: OPACITY_VALUES.fresh,
       showIndicator: false,
       secondsSinceUpdate,
     };
@@ -188,7 +188,7 @@ export function useStaleData(
         clearInterval(intervalRef.current);
       }
     };
-  }, [lastUpdate, staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs, updateIntervalMs]);
+  }, [lastUpdate, updateIntervalMs, calculateStaleState]);
 
   return { stale, markUpdated };
 }

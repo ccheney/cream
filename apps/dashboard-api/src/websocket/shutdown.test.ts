@@ -4,21 +4,20 @@
  * @see shutdown.ts
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
-import {
-  createShutdownManager,
-  shouldRejectConnection,
-  createHealthCheckHandler,
-  DEFAULT_SHUTDOWN_CONFIG,
-  WS_CLOSE_CODES,
-  type ShutdownManager,
-  type ShutdownDependencies,
-  type ShutdownLogEntry,
-  type ShutdownPhase,
-  type ShutdownConfig,
-} from "./shutdown.js";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { ServerWebSocket } from "bun";
 import type { ConnectionMetadata } from "./handler.js";
+import {
+  createHealthCheckHandler,
+  createShutdownManager,
+  DEFAULT_SHUTDOWN_CONFIG,
+  type ShutdownConfig,
+  type ShutdownDependencies,
+  type ShutdownLogEntry,
+  type ShutdownManager,
+  shouldRejectConnection,
+  WS_CLOSE_CODES,
+} from "./shutdown.js";
 
 // ============================================
 // Test Utilities
@@ -258,9 +257,7 @@ describe("Shutdown Phases", () => {
   it("progresses through all phases", async () => {
     await manager.initiateShutdown("manual");
 
-    const phases = deps.logs
-      .filter((l) => l.event === "shutdown.phase_change")
-      .map((l) => l.phase);
+    const phases = deps.logs.filter((l) => l.event === "shutdown.phase_change").map((l) => l.phase);
 
     expect(phases).toContain("reject_connections");
     expect(phases).toContain("warn_clients");

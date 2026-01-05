@@ -4,57 +4,49 @@
  * Comprehensive tests for feature engineering transforms.
  */
 
-import { describe, expect, it, beforeAll } from "bun:test";
-import type { Candle, Timeframe } from "../src/types";
-
-// Returns
-import {
-  calculateReturns,
-  calculateMultiPeriodReturns,
-  calculateReturnsFromCandles,
-  simpleReturn,
-  logReturn,
-  RETURNS_DEFAULTS,
-} from "../src/transforms/returns";
-
-// Z-Score
-import {
-  calculateZScore,
-  calculateMultipleZScores,
-  isSignificant,
-  getZScoreSignal,
-  meanReversionSignal,
-  calculateMean,
-  calculateStdDev,
-  ZSCORE_DEFAULTS,
-} from "../src/transforms/zscore";
-
+import { beforeAll, describe, expect, it } from "bun:test";
 // Percentile Rank
 import {
-  calculatePercentileRank,
   calculatePercentileOfValue,
-  getQuintile,
+  calculatePercentileRank,
   getPercentileSignal,
+  getQuintile,
   isExtreme,
-  PERCENTILE_RANK_DEFAULTS,
 } from "../src/transforms/percentileRank";
-
-// Volatility Scale
-import {
-  calculateVolatilityScale,
-  calculateRollingVolatility,
-  calculateScaleFactor,
-  getVolatilityRegime,
-  calculatePositionMultiplier,
-  VOLATILITY_SCALE_DEFAULTS,
-} from "../src/transforms/volatilityScale";
-
 // Pipeline
 import {
   applyTransforms,
-  getTransformWarmupPeriod,
   DEFAULT_TRANSFORM_CONFIG,
+  getTransformWarmupPeriod,
 } from "../src/transforms/pipeline";
+// Returns
+import {
+  calculateMultiPeriodReturns,
+  calculateReturns,
+  calculateReturnsFromCandles,
+  logReturn,
+  RETURNS_DEFAULTS,
+  simpleReturn,
+} from "../src/transforms/returns";
+// Volatility Scale
+import {
+  calculatePositionMultiplier,
+  calculateRollingVolatility,
+  calculateScaleFactor,
+  calculateVolatilityScale,
+  getVolatilityRegime,
+  VOLATILITY_SCALE_DEFAULTS,
+} from "../src/transforms/volatilityScale";
+// Z-Score
+import {
+  calculateMean,
+  calculateStdDev,
+  calculateZScore,
+  getZScoreSignal,
+  isSignificant,
+  meanReversionSignal,
+} from "../src/transforms/zscore";
+import type { Candle } from "../src/types";
 
 // ============================================
 // Test Data Generation
@@ -349,9 +341,9 @@ describe("Percentile Rank Transform", () => {
 describe("Volatility Scale Transform", () => {
   describe("calculateRollingVolatility", () => {
     it("should calculate rolling volatility", () => {
-      const returns = generateValues(50).slice(1).map((v, i, arr) =>
-        i === 0 ? 0 : (v - generateValues(50)[i]) / generateValues(50)[i]
-      );
+      const _returns = generateValues(50)
+        .slice(1)
+        .map((v, i, _arr) => (i === 0 ? 0 : (v - generateValues(50)[i]) / generateValues(50)[i]));
 
       // Generate actual returns
       const prices = generateValues(50);
@@ -375,10 +367,10 @@ describe("Volatility Scale Transform", () => {
       expect(calculateScaleFactor(0.15, 0.15)).toBeCloseTo(1, 5);
 
       // If current vol < target vol, scale factor > 1
-      expect(calculateScaleFactor(0.10, 0.15)).toBeCloseTo(1.5, 5);
+      expect(calculateScaleFactor(0.1, 0.15)).toBeCloseTo(1.5, 5);
 
       // If current vol > target vol, scale factor < 1
-      expect(calculateScaleFactor(0.30, 0.15)).toBeCloseTo(0.5, 5);
+      expect(calculateScaleFactor(0.3, 0.15)).toBeCloseTo(0.5, 5);
     });
 
     it("should apply min volatility floor", () => {
@@ -426,10 +418,10 @@ describe("Volatility Scale Transform", () => {
   describe("Volatility regime", () => {
     it("should detect correct regime", () => {
       expect(getVolatilityRegime(0.05, 0.15)).toBe("very_low");
-      expect(getVolatilityRegime(0.10, 0.15)).toBe("low");
+      expect(getVolatilityRegime(0.1, 0.15)).toBe("low");
       expect(getVolatilityRegime(0.15, 0.15)).toBe("normal");
       expect(getVolatilityRegime(0.25, 0.15)).toBe("high");
-      expect(getVolatilityRegime(0.40, 0.15)).toBe("very_high");
+      expect(getVolatilityRegime(0.4, 0.15)).toBe("very_high");
     });
 
     it("should calculate position multiplier", () => {
@@ -440,7 +432,7 @@ describe("Volatility Scale Transform", () => {
       expect(calculatePositionMultiplier(0.075, 0.15)).toBeCloseTo(2, 5);
 
       // Higher volatility = lower multiplier (down to min)
-      expect(calculatePositionMultiplier(0.30, 0.15)).toBeCloseTo(0.5, 5);
+      expect(calculatePositionMultiplier(0.3, 0.15)).toBeCloseTo(0.5, 5);
     });
   });
 });
@@ -469,9 +461,9 @@ describe("Transform Pipeline", () => {
         returns: { enabled: true, params: { periods: [1, 5, 20] } },
       });
 
-      expect(snapshot!.values["return_1_1h"]).toBeDefined();
-      expect(snapshot!.values["return_5_1h"]).toBeDefined();
-      expect(snapshot!.values["return_20_1h"]).toBeDefined();
+      expect(snapshot!.values.return_1_1h).toBeDefined();
+      expect(snapshot!.values.return_5_1h).toBeDefined();
+      expect(snapshot!.values.return_20_1h).toBeDefined();
     });
 
     it("should calculate z-scores", () => {
@@ -479,7 +471,7 @@ describe("Transform Pipeline", () => {
         zscore: { enabled: true, params: { lookback: 20 }, applyTo: ["close"] },
       });
 
-      expect(snapshot!.values["close_zscore_1h"]).toBeDefined();
+      expect(snapshot!.values.close_zscore_1h).toBeDefined();
     });
 
     it("should handle empty candles", () => {
@@ -522,7 +514,10 @@ describe("Z-Score vs Percentile Rank", () => {
     const timestamps = generateTimestamps(100);
 
     const zscores = calculateZScore(values, timestamps, { lookback: 50, minSamples: 10 });
-    const percentiles = calculatePercentileRank(values, timestamps, { lookback: 50, minSamples: 10 });
+    const percentiles = calculatePercentileRank(values, timestamps, {
+      lookback: 50,
+      minSamples: 10,
+    });
 
     expect(zscores.length).toBeGreaterThan(0);
     expect(percentiles.length).toBeGreaterThan(0);
@@ -536,14 +531,18 @@ describe("Z-Score vs Percentile Rank", () => {
     const timestamps = generateTimestamps(100);
 
     const zscores = calculateZScore(values, timestamps, { lookback: 50, minSamples: 10 });
-    const percentiles = calculatePercentileRank(values, timestamps, { lookback: 50, minSamples: 10 });
+    const percentiles = calculatePercentileRank(values, timestamps, {
+      lookback: 50,
+      minSamples: 10,
+    });
 
     // Z-score at outlier should be very high
     const outlierZscore = zscores.find((r) => r.timestamp === timestamps[50])?.zscore ?? 0;
     expect(Math.abs(outlierZscore)).toBeGreaterThan(3);
 
     // Percentile at outlier should be capped at 100
-    const outlierPercentile = percentiles.find((r) => r.timestamp === timestamps[50])?.percentile ?? 0;
+    const outlierPercentile =
+      percentiles.find((r) => r.timestamp === timestamps[50])?.percentile ?? 0;
     expect(outlierPercentile).toBeLessThanOrEqual(100);
   });
 });

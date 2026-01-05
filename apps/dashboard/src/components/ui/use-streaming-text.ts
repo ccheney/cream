@@ -66,9 +66,7 @@ export function useStreamingText(
       setText((prev) => {
         const newText = prev + pendingTextRef.current;
         pendingTextRef.current = "";
-        return newText.length > maxLength
-          ? newText.slice(-maxLength)
-          : newText;
+        return newText.length > maxLength ? newText.slice(-maxLength) : newText;
       });
     }
   }, [maxLength]);
@@ -77,7 +75,9 @@ export function useStreamingText(
    * Connect to the SSE endpoint.
    */
   const start = useCallback(() => {
-    if (!url || eventSourceRef.current) return;
+    if (!url || eventSourceRef.current) {
+      return;
+    }
 
     setStatus("processing");
     setError(null);
@@ -210,12 +210,15 @@ export function useManualStreaming(): UseManualStreamingReturn {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<StreamingStatus>("idle");
 
-  const append = useCallback((chunk: string) => {
-    setText((prev) => prev + chunk);
-    if (status === "idle") {
-      setStatus("processing");
-    }
-  }, [status]);
+  const append = useCallback(
+    (chunk: string) => {
+      setText((prev) => prev + chunk);
+      if (status === "idle") {
+        setStatus("processing");
+      }
+    },
+    [status]
+  );
 
   const reset = useCallback(() => {
     setText("");

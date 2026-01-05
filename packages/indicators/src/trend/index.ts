@@ -5,23 +5,22 @@
  */
 
 export {
-  calculateSMA,
-  smaRequiredPeriods,
-  smaCalculator,
-  calculateMultipleSMAs,
-  isGoldenCross,
-  isDeathCross,
-  SMA_DEFAULTS,
-  SMA_PERIODS,
-} from "./sma";
-
-export {
   calculateEMA,
-  emaRequiredPeriods,
-  emaCalculator,
-  calculateMultipleEMAs,
   calculateMACD,
+  calculateMultipleEMAs,
   calculateMultiplier,
   EMA_DEFAULTS,
   EMA_PERIODS,
+  emaCalculator,
+  emaRequiredPeriods,
 } from "./ema";
+export {
+  calculateMultipleSMAs,
+  calculateSMA,
+  isDeathCross,
+  isGoldenCross,
+  SMA_DEFAULTS,
+  SMA_PERIODS,
+  smaCalculator,
+  smaRequiredPeriods,
+} from "./sma";

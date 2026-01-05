@@ -9,8 +9,8 @@
 
 "use client";
 
-import { memo, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useAutoScroll } from "./use-auto-scroll.js";
 import { useRelativeTime } from "./use-relative-time.js";
 
@@ -56,10 +56,7 @@ export interface EventFeedProps {
 
 const EVENT_ITEM_HEIGHT = 48; // Fixed height for virtualization
 
-const EVENT_TYPE_CONFIG: Record<
-  EventType,
-  { color: string; icon: string; label: string }
-> = {
+const EVENT_TYPE_CONFIG: Record<EventType, { color: string; icon: string; label: string }> = {
   QUOTE: {
     color: "var(--chart-blue, #3b82f6)",
     icon: "●",
@@ -169,11 +166,10 @@ interface NewEventsButtonProps {
   onClick: () => void;
 }
 
-const NewEventsButton = memo(function NewEventsButton({
-  count,
-  onClick,
-}: NewEventsButtonProps) {
-  if (count === 0) return null;
+const NewEventsButton = memo(function NewEventsButton({ count, onClick }: NewEventsButtonProps) {
+  if (count === 0) {
+    return null;
+  }
 
   return (
     <button
@@ -239,18 +235,11 @@ export const EventFeed = memo(function EventFeed({
   "data-testid": testId,
 }: EventFeedProps) {
   // Limit events for memory management
-  const displayEvents =
-    events.length > maxEvents ? events.slice(-maxEvents) : events;
+  const displayEvents = events.length > maxEvents ? events.slice(-maxEvents) : events;
 
   // Auto-scroll behavior
-  const {
-    containerRef,
-    isAutoScrolling,
-    newItemCount,
-    scrollToBottom,
-    onNewItems,
-    onScroll,
-  } = useAutoScroll({ threshold: 50 });
+  const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =
+    useAutoScroll({ threshold: 50 });
 
   // Track previous event count for detecting new events
   const prevCountRef = useRef(displayEvents.length);
@@ -280,10 +269,9 @@ export const EventFeed = memo(function EventFeed({
         behavior: "auto",
       });
     }
-  }, [isAutoScrolling, displayEvents.length, virtualizer]);
+  }, [isAutoScrolling, displayEvents.length, virtualizer, containerRef.current]);
 
-  const containerHeight =
-    typeof height === "number" ? `${height}px` : height;
+  const containerHeight = typeof height === "number" ? `${height}px` : height;
 
   if (displayEvents.length === 0) {
     return (
@@ -324,7 +312,9 @@ export const EventFeed = memo(function EventFeed({
         >
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const event = displayEvents[virtualItem.index];
-            if (!event) return null;
+            if (!event) {
+              return null;
+            }
             return (
               <div
                 key={event.id}

@@ -18,9 +18,9 @@
 
 import {
   type Candle,
+  type IndicatorCalculator,
   type RSIParams,
   type RSIResult,
-  type IndicatorCalculator,
   validateCandleCount,
 } from "../types";
 
@@ -46,10 +46,7 @@ export const RSI_OVERSOLD = 30;
  * @param params - RSI parameters
  * @returns Array of RSI results
  */
-export function calculateRSI(
-  candles: Candle[],
-  params: RSIParams = RSI_DEFAULTS
-): RSIResult[] {
+export function calculateRSI(candles: Candle[], params: RSIParams = RSI_DEFAULTS): RSIResult[] {
   const { period } = params;
   const required = period + 1; // Need period + 1 for first RSI value
 

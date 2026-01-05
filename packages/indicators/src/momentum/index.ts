@@ -6,24 +6,24 @@
 
 export {
   calculateRSI,
-  rsiRequiredPeriods,
-  rsiCalculator,
   isOverbought,
   isOversold,
   RSI_DEFAULTS,
   RSI_OVERBOUGHT,
   RSI_OVERSOLD,
+  rsiCalculator,
+  rsiRequiredPeriods,
 } from "./rsi";
 
 export {
   calculateStochastic,
-  stochasticRequiredPeriods,
-  stochasticCalculator,
+  isBearishCrossover,
+  isBullishCrossover,
   isStochasticOverbought,
   isStochasticOversold,
-  isBullishCrossover,
-  isBearishCrossover,
   STOCHASTIC_DEFAULTS,
   STOCHASTIC_OVERBOUGHT,
   STOCHASTIC_OVERSOLD,
+  stochasticCalculator,
+  stochasticRequiredPeriods,
 } from "./stochastic";

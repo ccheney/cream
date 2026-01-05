@@ -343,7 +343,7 @@ export function coerceInt(defaultValue?: number) {
         return defaultValue ?? 0;
       }
       const num = Number(val);
-      return Number.isNaN(num) ? defaultValue ?? 0 : Math.floor(num);
+      return Number.isNaN(num) ? (defaultValue ?? 0) : Math.floor(num);
     })
     .pipe(z.number().int());
 }
@@ -376,7 +376,9 @@ export function coerceDate() {
   return z
     .unknown()
     .transform((val) => {
-      if (val instanceof Date) return val;
+      if (val instanceof Date) {
+        return val;
+      }
       if (typeof val === "string" || typeof val === "number") {
         return new Date(val);
       }

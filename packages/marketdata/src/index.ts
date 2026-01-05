@@ -29,12 +29,12 @@
 
 // Base client
 export {
+  type ApiError,
+  type ClientConfig,
   createRestClient,
   DEFAULT_RATE_LIMIT,
   DEFAULT_RETRY,
   DEFAULT_TIMEOUT_MS,
-  type ApiError,
-  type ClientConfig,
   type RateLimitConfig,
   RateLimiter,
   type RequestOptions,

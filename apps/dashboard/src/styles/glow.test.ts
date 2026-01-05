@@ -4,7 +4,7 @@
  * Tests for glow CSS variable definitions and class names.
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 // ============================================
 // Glow Color Variables Tests
@@ -22,29 +22,17 @@ describe("Glow color variables", () => {
   });
 
   it("defines success glow variables", () => {
-    const successVars = [
-      "--glow-success-color",
-      "--glow-success-alpha",
-      "--glow-success-size",
-    ];
+    const successVars = ["--glow-success-color", "--glow-success-alpha", "--glow-success-size"];
     expect(successVars).toHaveLength(3);
   });
 
   it("defines critical glow variables", () => {
-    const criticalVars = [
-      "--glow-critical-color",
-      "--glow-critical-alpha",
-      "--glow-critical-size",
-    ];
+    const criticalVars = ["--glow-critical-color", "--glow-critical-alpha", "--glow-critical-size"];
     expect(criticalVars).toHaveLength(3);
   });
 
   it("defines neutral glow variables", () => {
-    const neutralVars = [
-      "--glow-neutral-color",
-      "--glow-neutral-alpha",
-      "--glow-neutral-size",
-    ];
+    const neutralVars = ["--glow-neutral-color", "--glow-neutral-alpha", "--glow-neutral-size"];
     expect(neutralVars).toHaveLength(3);
   });
 });
@@ -55,34 +43,21 @@ describe("Glow color variables", () => {
 
 describe("Static glow classes", () => {
   it("defines static glow classes", () => {
-    const staticClasses = [
-      "glow-primary",
-      "glow-success",
-      "glow-critical",
-      "glow-neutral",
-    ];
+    const staticClasses = ["glow-primary", "glow-success", "glow-critical", "glow-neutral"];
     expect(staticClasses).toHaveLength(4);
   });
 });
 
 describe("Hover glow classes", () => {
   it("defines hover glow classes", () => {
-    const hoverClasses = [
-      "hover:glow-primary",
-      "hover:glow-success",
-      "hover:glow-critical",
-    ];
+    const hoverClasses = ["hover:glow-primary", "hover:glow-success", "hover:glow-critical"];
     expect(hoverClasses).toHaveLength(3);
   });
 });
 
 describe("Focus glow classes", () => {
   it("defines focus glow classes for accessibility", () => {
-    const focusClasses = [
-      "focus:glow-primary",
-      "focus:glow-success",
-      "focus:glow-critical",
-    ];
+    const focusClasses = ["focus:glow-primary", "focus:glow-success", "focus:glow-critical"];
     expect(focusClasses).toHaveLength(3);
   });
 });
@@ -100,33 +75,21 @@ describe("Animated glow classes", () => {
 
 describe("Ring glow classes", () => {
   it("defines ring glow classes for active states", () => {
-    const ringClasses = [
-      "ring-glow-primary",
-      "ring-glow-success",
-      "ring-glow-critical",
-    ];
+    const ringClasses = ["ring-glow-primary", "ring-glow-success", "ring-glow-critical"];
     expect(ringClasses).toHaveLength(3);
   });
 });
 
 describe("Inset glow classes", () => {
   it("defines inset glow classes for containers", () => {
-    const insetClasses = [
-      "inset-glow-primary",
-      "inset-glow-success",
-      "inset-glow-critical",
-    ];
+    const insetClasses = ["inset-glow-primary", "inset-glow-success", "inset-glow-critical"];
     expect(insetClasses).toHaveLength(3);
   });
 });
 
 describe("Text glow classes", () => {
   it("defines text glow classes", () => {
-    const textClasses = [
-      "text-glow-primary",
-      "text-glow-success",
-      "text-glow-critical",
-    ];
+    const textClasses = ["text-glow-primary", "text-glow-success", "text-glow-critical"];
     expect(textClasses).toHaveLength(3);
   });
 });

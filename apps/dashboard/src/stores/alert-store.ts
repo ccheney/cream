@@ -106,13 +106,21 @@ const EXIT_ANIMATION_DURATION = 200;
 // Audio Utilities
 // ============================================
 
-const audioContext = typeof window !== "undefined" ? new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)() : null;
+const audioContext =
+  typeof window !== "undefined"
+    ? new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )()
+    : null;
 
 /**
  * Play a simple beep sound using Web Audio API.
  */
 function playBeep(frequency: number, duration: number, volume: number): void {
-  if (!audioContext) return;
+  if (!audioContext) {
+    return;
+  }
 
   try {
     const oscillator = audioContext.createOscillator();
@@ -164,9 +172,13 @@ function playAlertSound(severity: AlertSeverity): void {
  * Request push notification permission.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
+  if (!("Notification" in window)) {
+    return false;
+  }
 
-  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "granted") {
+    return true;
+  }
 
   const permission = await Notification.requestPermission();
   return permission === "granted";
@@ -176,7 +188,9 @@ export async function requestNotificationPermission(): Promise<boolean> {
  * Send browser push notification.
  */
 function sendPushNotification(alert: Alert): void {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    return;
+  }
 
   try {
     new Notification(alert.title, {
@@ -241,8 +255,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
     });
 
     // Play sound if enabled
-    const soundEnabled =
-      alert.severity === "warning" ? settings.soundWarning : settings.soundInfo;
+    const soundEnabled = alert.severity === "warning" ? settings.soundWarning : settings.soundInfo;
     if (alert.playSound !== false && soundEnabled) {
       playAlertSound(alert.severity);
     }
@@ -254,15 +267,11 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
 
     // Schedule auto-dismiss
     const duration =
-      alert.severity === "warning"
-        ? settings.warningDuration
-        : settings.infoDuration;
+      alert.severity === "warning" ? settings.warningDuration : settings.infoDuration;
 
     setTimeout(() => {
       set((state) => ({
-        alerts: state.alerts.map((a) =>
-          a.id === id ? { ...a, dismissing: true } : a
-        ),
+        alerts: state.alerts.map((a) => (a.id === id ? { ...a, dismissing: true } : a)),
       }));
     }, duration);
 
@@ -322,7 +331,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
       action,
     }),
 
-  info: (title, message, action) =>
+  info: (title, message, _action) =>
     get().addAlert({
       severity: "info",
       title,

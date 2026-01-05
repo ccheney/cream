@@ -13,11 +13,7 @@
  */
 
 import { z } from "zod";
-import {
-  RestClient,
-  createRestClient,
-  type RateLimitConfig,
-} from "../client";
+import { createRestClient, type RateLimitConfig, type RestClient } from "../client";
 
 // ============================================
 // API Configuration
@@ -100,26 +96,32 @@ export type OptionChainResponse = z.infer<typeof OptionChainResponseSchema>;
  */
 export const SnapshotSchema = z.object({
   ticker: z.string(),
-  day: z.object({
-    o: z.number(),
-    h: z.number(),
-    l: z.number(),
-    c: z.number(),
-    v: z.number(),
-    vw: z.number().optional(),
-  }).optional(),
-  lastTrade: z.object({
-    p: z.number(),
-    s: z.number(),
-    t: z.number(),
-  }).optional(),
-  lastQuote: z.object({
-    P: z.number(), // ask
-    S: z.number(), // ask size
-    p: z.number(), // bid
-    s: z.number(), // bid size
-    t: z.number(),
-  }).optional(),
+  day: z
+    .object({
+      o: z.number(),
+      h: z.number(),
+      l: z.number(),
+      c: z.number(),
+      v: z.number(),
+      vw: z.number().optional(),
+    })
+    .optional(),
+  lastTrade: z
+    .object({
+      p: z.number(),
+      s: z.number(),
+      t: z.number(),
+    })
+    .optional(),
+  lastQuote: z
+    .object({
+      P: z.number(), // ask
+      S: z.number(), // ask size
+      p: z.number(), // bid
+      s: z.number(), // bid size
+      t: z.number(),
+    })
+    .optional(),
   todaysChange: z.number().optional(),
   todaysChangePerc: z.number().optional(),
   updated: z.number().optional(),
@@ -155,15 +157,7 @@ export interface PolygonClientConfig {
 /**
  * Timespan for aggregates.
  */
-export type Timespan =
-  | "second"
-  | "minute"
-  | "hour"
-  | "day"
-  | "week"
-  | "month"
-  | "quarter"
-  | "year";
+export type Timespan = "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 
 /**
  * Polygon.io API client.
@@ -174,9 +168,7 @@ export class PolygonClient {
 
   constructor(config: PolygonClientConfig) {
     const rateLimit = POLYGON_RATE_LIMITS[config.tier ?? "starter"];
-    const baseUrl = config.useMassive
-      ? "https://api.massive.com"
-      : POLYGON_BASE_URL;
+    const baseUrl = config.useMassive ? "https://api.massive.com" : POLYGON_BASE_URL;
 
     this.client = createRestClient({
       baseUrl,
@@ -222,10 +214,7 @@ export class PolygonClient {
   /**
    * Get previous day's aggregates.
    */
-  async getPreviousClose(
-    ticker: string,
-    adjusted = true
-  ): Promise<AggregatesResponse> {
+  async getPreviousClose(ticker: string, adjusted = true): Promise<AggregatesResponse> {
     return this.client.get(
       `/v2/aggs/ticker/${ticker}/prev`,
       { adjusted, apiKey: this.apiKey },
@@ -262,9 +251,7 @@ export class PolygonClient {
   /**
    * Get snapshot for all tickers.
    */
-  async getAllTickersSnapshot(
-    tickers?: string[]
-  ): Promise<TickersSnapshotResponse> {
+  async getAllTickersSnapshot(tickers?: string[]): Promise<TickersSnapshotResponse> {
     const params: Record<string, string | number | boolean | undefined> = {
       apiKey: this.apiKey,
     };
@@ -325,8 +312,7 @@ export function createPolygonClientFromEnv(): PolygonClient {
     throw new Error("POLYGON_KEY environment variable is required");
   }
 
-  const tier =
-    (process.env.POLYGON_TIER as PolygonClientConfig["tier"]) ?? "starter";
+  const tier = (process.env.POLYGON_TIER as PolygonClientConfig["tier"]) ?? "starter";
 
   return new PolygonClient({ apiKey, tier });
 }

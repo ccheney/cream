@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useAlertStore, selectCriticalBanner } from "@/stores/alert-store";
+import { selectCriticalBanner, useAlertStore } from "@/stores/alert-store";
 
 // ============================================
 // Alert Banner Component
@@ -19,7 +19,9 @@ export function AlertBanner() {
   const criticalBanner = useAlertStore(selectCriticalBanner);
   const acknowledge = useAlertStore((state) => state.acknowledgeCritical);
 
-  if (!criticalBanner) return null;
+  if (!criticalBanner) {
+    return null;
+  }
 
   const isAcknowledged = criticalBanner.acknowledged;
 
@@ -62,9 +64,7 @@ export function AlertBanner() {
               <p className="font-semibold text-white text-sm sm:text-base">
                 {criticalBanner.title}
               </p>
-              <p className="text-white/90 text-xs sm:text-sm truncate">
-                {criticalBanner.message}
-              </p>
+              <p className="text-white/90 text-xs sm:text-sm truncate">{criticalBanner.message}</p>
             </div>
           </div>
 
