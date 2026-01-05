@@ -1,0 +1,195 @@
+/**
+ * Typography Design Tokens
+ *
+ * Font families, type scale, weights, and letter spacing.
+ *
+ * @see docs/plans/ui/22-typography.md
+ */
+
+/* ============================================
+   Font Families
+   ============================================ */
+
+:root {
+  /* Display & UI: Satoshi with fallbacks */
+  --font-ui: 'Satoshi', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Data & Monospace: Geist Mono with fallbacks */
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+}
+
+/* ============================================
+   Type Scale
+   Modular scale with ratio ~1.2 (minor third)
+   ============================================ */
+
+:root {
+  /* Font Sizes */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+
+  /* Line Heights */
+  --leading-xs: 1.4;
+  --leading-sm: 1.45;
+  --leading-base: 1.5;
+  --leading-lg: 1.45;
+  --leading-xl: 1.35;
+  --leading-2xl: 1.3;
+  --leading-3xl: 1.25;
+  --leading-4xl: 1.2;
+
+  /* Default line heights for tight/normal/relaxed */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+}
+
+/* ============================================
+   Font Weights
+   ============================================ */
+
+:root {
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+}
+
+/* ============================================
+   Letter Spacing
+   ============================================ */
+
+:root {
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* Specific uses */
+  --tracking-headline: -0.02em;  /* Slight tightening for headlines */
+  --tracking-label: 0.04em;      /* Expansion for uppercase labels */
+}
+
+/* ============================================
+   Font Feature Settings
+   ============================================ */
+
+:root {
+  /* Tabular numbers for aligned data */
+  --font-tabular: 'tnum' 1;
+
+  /* Oldstyle figures for body text */
+  --font-oldstyle: 'onum' 1;
+
+  /* All features for monospace numbers */
+  --font-mono-features: 'tnum' 1, 'zero' 1;
+}
+
+/* ============================================
+   Typography Utility Classes
+   ============================================ */
+
+/* These can be used directly in components */
+
+.text-xs {
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.text-base {
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+}
+
+.text-xl {
+  font-size: var(--text-xl);
+  line-height: var(--leading-xl);
+}
+
+.text-2xl {
+  font-size: var(--text-2xl);
+  line-height: var(--leading-2xl);
+}
+
+.text-3xl {
+  font-size: var(--text-3xl);
+  line-height: var(--leading-3xl);
+}
+
+.text-4xl {
+  font-size: var(--text-4xl);
+  line-height: var(--leading-4xl);
+}
+
+/* ============================================
+   Semantic Typography Classes
+   ============================================ */
+
+.headline {
+  font-family: var(--font-ui);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-headline);
+  color: var(--text-heading);
+}
+
+.body {
+  font-family: var(--font-ui);
+  font-weight: var(--font-normal);
+  letter-spacing: var(--tracking-normal);
+  color: var(--text-primary);
+}
+
+.data-value {
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+  letter-spacing: var(--tracking-normal);
+  font-feature-settings: var(--font-tabular);
+  color: var(--text-heading);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.reasoning {
+  font-family: var(--font-ui);
+  font-weight: var(--font-normal);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* ============================================
+   Monospace Numbers
+   ============================================ */
+
+.tabular-nums {
+  font-feature-settings: var(--font-tabular);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}

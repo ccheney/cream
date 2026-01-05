@@ -1,0 +1,198 @@
+/**
+ * Color Design Tokens
+ *
+ * Cream design system color palette with semantic colors,
+ * agent colors, chart colors, and interactive states.
+ *
+ * @see docs/plans/ui/21-color-system.md
+ */
+
+/* ============================================
+   Light Mode Foundation
+   ============================================ */
+
+:root {
+  /* Cream — The signature background */
+  --cream-50: #FFFDF9;   /* Page background */
+  --cream-100: #FBF8F3;  /* Card background */
+  --cream-200: #F5F1EA;  /* Elevated surfaces */
+  --cream-300: #EBE5DA;  /* Borders, dividers */
+
+  /* Stone — Warm grays for hierarchy */
+  --stone-400: #A8A198;  /* Muted text, placeholders */
+  --stone-500: #7A746B;  /* Secondary text */
+  --stone-600: #5C564E;  /* Primary text */
+  --stone-700: #3D3832;  /* Headlines */
+  --stone-900: #1C1917;  /* Emphatic text */
+
+  /* Background aliases (light mode) */
+  --bg-page: var(--cream-50);
+  --bg-card: var(--cream-100);
+  --bg-elevated: var(--cream-200);
+  --border-default: var(--cream-300);
+
+  /* Text aliases (light mode) */
+  --text-muted: var(--stone-400);
+  --text-secondary: var(--stone-500);
+  --text-primary: var(--stone-600);
+  --text-heading: var(--stone-700);
+  --text-emphatic: var(--stone-900);
+}
+
+/* ============================================
+   Dark Mode Foundation
+   ============================================ */
+
+:root[data-theme="dark"] {
+  /* Deep Warm Charcoal — Not pure black */
+  --night-950: #0C0A09;  /* Page background */
+  --night-900: #141211;  /* Card background */
+  --night-800: #1F1C1A;  /* Elevated surfaces */
+  --night-700: #2D2926;  /* Borders, dividers */
+
+  /* Warm Light Scale */
+  --night-400: #78716C;  /* Muted text */
+  --night-300: #A8A29E;  /* Secondary text */
+  --night-200: #D6D3D1;  /* Primary text */
+  --night-100: #F5F5F4;  /* Headlines */
+  --night-50: #FAFAF9;   /* Emphatic text */
+
+  /* Background aliases (dark mode) */
+  --bg-page: var(--night-950);
+  --bg-card: var(--night-900);
+  --bg-elevated: var(--night-800);
+  --border-default: var(--night-700);
+
+  /* Text aliases (dark mode) */
+  --text-muted: var(--night-400);
+  --text-secondary: var(--night-300);
+  --text-primary: var(--night-200);
+  --text-heading: var(--night-100);
+  --text-emphatic: var(--night-50);
+}
+
+/* ============================================
+   Semantic Colors — Trading States
+   ============================================ */
+
+:root {
+  /* Profit — Warm green, not neon */
+  --profit: #22C55E;
+  --profit-muted: #166534;
+  --profit-bg: rgba(34, 197, 94, 0.1);
+
+  /* Loss — Warm red, not aggressive */
+  --loss: #EF4444;
+  --loss-muted: #991B1B;
+  --loss-bg: rgba(239, 68, 68, 0.1);
+
+  /* Neutral/Flat — Amber/Gold */
+  --neutral: #F59E0B;
+  --neutral-muted: #92400E;
+  --neutral-bg: rgba(245, 158, 11, 0.1);
+}
+
+/* ============================================
+   System States
+   ============================================ */
+
+:root {
+  /* Active/Running — The Cream Glow (warm amber) */
+  --active: #F5A623;
+  --active-glow: rgba(245, 166, 35, 0.4);
+
+  /* Success — Execution confirmed */
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.1);
+
+  /* Warning — Attention needed */
+  --warning: #FBBF24;
+  --warning-bg: rgba(251, 191, 36, 0.1);
+
+  /* Critical — Immediate action */
+  --critical: #DC2626;
+  --critical-bg: rgba(220, 38, 38, 0.1);
+  --critical-glow: rgba(220, 38, 38, 0.3);
+
+  /* Info — Contextual information */
+  --info: #6366F1;
+  --info-bg: rgba(99, 102, 241, 0.1);
+}
+
+/* ============================================
+   Agent Colors
+   ============================================ */
+
+:root {
+  --agent-technical: #8B5CF6;    /* Violet — Charts, patterns */
+  --agent-sentiment: #EC4899;    /* Pink — Emotion, news */
+  --agent-fundamentals: #14B8A6; /* Teal — Value, macro */
+  --agent-bullish: #22C55E;      /* Green — Long bias */
+  --agent-bearish: #EF4444;      /* Red — Short bias */
+  --agent-trader: #F59E0B;       /* Amber — Synthesis */
+  --agent-risk: #F97316;         /* Orange — Constraints */
+  --agent-critic: #6366F1;       /* Indigo — Validation */
+}
+
+/* ============================================
+   Interactive States
+   ============================================ */
+
+:root {
+  /* Primary Action — Warm amber-gold */
+  --primary: #D97706;
+  --primary-hover: #B45309;
+  --primary-active: #92400E;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary Action — Stone */
+  --secondary: #78716C;
+  --secondary-hover: #57534E;
+  --secondary-active: #44403C;
+  --secondary-foreground: #FFFFFF;
+
+  /* Destructive — For dangerous actions */
+  --destructive: #DC2626;
+  --destructive-hover: #B91C1C;
+  --destructive-foreground: #FFFFFF;
+
+  /* Ghost — Subtle interactions */
+  --ghost-hover: rgba(0, 0, 0, 0.04);
+  --ghost-active: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="dark"] {
+  /* Ghost — Subtle interactions (dark mode) */
+  --ghost-hover: rgba(255, 255, 255, 0.04);
+  --ghost-active: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   Chart Colors
+   ============================================ */
+
+:root {
+  --chart-1: #D97706;  /* Primary amber */
+  --chart-2: #6366F1;  /* Indigo */
+  --chart-3: #14B8A6;  /* Teal */
+  --chart-4: #EC4899;  /* Pink */
+  --chart-5: #8B5CF6;  /* Violet */
+  --chart-6: #F97316;  /* Orange */
+  --chart-7: #22D3EE;  /* Cyan */
+  --chart-8: #84CC16;  /* Lime */
+}
+
+/* ============================================
+   Focus & Selection
+   ============================================ */
+
+:root {
+  --focus-ring: #D97706;
+  --focus-ring-offset: 2px;
+  --selection-bg: rgba(217, 119, 6, 0.2);
+}
+
+:root[data-theme="dark"] {
+  --focus-ring: #F59E0B;
+  --selection-bg: rgba(245, 158, 11, 0.2);
+}

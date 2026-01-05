@@ -1,0 +1,19 @@
+/**
+ * Design Tokens Index
+ *
+ * Aggregates all design token files.
+ *
+ * Import this file to get all Cream design tokens.
+ *
+ * @example
+ * ```css
+ * @import './tokens/index.css';
+ * ```
+ */
+
+@import './colors.css';
+@import './typography.css';
+@import './spacing.css';
+@import './radius.css';
+@import './shadows.css';
+@import './transitions.css';

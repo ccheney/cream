@@ -1,0 +1,41 @@
+/**
+ * Border Radius Design Tokens
+ *
+ * Gentle curves for the Cream design system.
+ *
+ * @see docs/plans/ui/23-layout.md
+ */
+
+/* ============================================
+   Border Radius Scale
+   ============================================ */
+
+:root {
+  --radius-none: 0;
+  --radius-sm: 4px;      /* Buttons, badges */
+  --radius-md: 8px;      /* Cards, inputs */
+  --radius-lg: 12px;     /* Modals, larger containers */
+  --radius-xl: 16px;     /* Hero elements */
+  --radius-2xl: 24px;    /* Large feature cards */
+  --radius-full: 9999px; /* Pills, avatars, dots */
+}
+
+/* ============================================
+   Semantic Radius Aliases
+   ============================================ */
+
+:root {
+  /* Components */
+  --radius-button: var(--radius-sm);
+  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-md);
+  --radius-modal: var(--radius-lg);
+  --radius-popover: var(--radius-lg);
+  --radius-tooltip: var(--radius-sm);
+
+  /* Special elements */
+  --radius-badge: var(--radius-sm);
+  --radius-tag: var(--radius-full);
+  --radius-avatar: var(--radius-full);
+  --radius-indicator: var(--radius-full);
+}
