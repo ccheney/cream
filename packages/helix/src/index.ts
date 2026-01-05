@@ -105,6 +105,19 @@ export {
   vectorSearch,
 } from "./queries/vector";
 
+// Trade Memory Retrieval (GraphRAG)
+export {
+  calculateTradeStatistics,
+  formatTradeMemorySummary,
+  generateSituationBrief,
+  type MarketSnapshot,
+  retrieveTradeMemories,
+  type TradeMemory,
+  type TradeMemoryRetrievalOptions,
+  type TradeMemoryRetrievalResult,
+  type TradeStatistics,
+} from "./queries/retrieval";
+
 /**
  * Package version.
  */
