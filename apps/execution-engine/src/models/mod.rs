@@ -17,6 +17,7 @@ pub use decision::{
 };
 pub use environment::Environment;
 pub use order::{
-    ExecutionAck, ExecutionError, OrderLegState, OrderSide, OrderState, OrderStatus, OrderType,
-    SubmitOrdersRequest, TimeInForce,
+    ExecutionAck, ExecutionError, ExecutionFill, OrderLegState, OrderPurpose, OrderSide,
+    OrderState, OrderStatus, OrderType, PartialFillState, PartialFillTimeoutAction,
+    PartialFillTimeoutConfig, SubmitOrdersRequest, TimeInForce,
 };
