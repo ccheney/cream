@@ -14,7 +14,7 @@ description = "Research and backtesting utilities for Cream trading system"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
-requires-python = ">=3.15"
+requires-python = ">=3.14"
 
 dependencies = [
     # Data manipulation
@@ -79,6 +79,7 @@ omit = [
     "*/__pycache__/*",
     "**/__init__.py",
     "**/conftest.py",
+    "**/flight_client.py",  # Requires optional deps (polars, pyarrow)
 ]
 
 # ============================================
@@ -129,7 +130,7 @@ known-first-party = ["research"]
 # MyPy Configuration
 # ============================================
 [tool.mypy]
-python_version = "3.15"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
