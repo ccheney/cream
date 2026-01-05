@@ -336,3 +336,40 @@ E::HAS_EVENT {
     source: TradeDecision,
     target: TradeLifecycleEvent,
 }
+
+// Links companies to other companies they depend on (supply chain, etc.)
+E::DEPENDS_ON {
+    // Source: Company, Target: Company
+    source: Company,
+    target: Company,
+
+    // Relationship type: SUPPLIER, CUSTOMER, PARTNER
+    relationship_type: String,
+
+    // Strength of dependency [0.0, 1.0]
+    strength: F64,
+}
+
+// Links companies to macro entities that affect them
+E::AFFECTED_BY {
+    // Source: Company, Target: MacroEntity
+    source: Company,
+    target: MacroEntity,
+
+    // Sensitivity to this macro factor [0.0, 1.0] where 1.0 = highly sensitive
+    sensitivity: F64,
+}
+
+// Links companies to documents that mention them
+E::MENTIONED_IN {
+    // Source: Company, Target: FilingChunk | TranscriptChunk | NewsItem
+    // Note: Target can be any document type
+    source: Company,
+    target: String, // Document ID (chunk_id or item_id)
+
+    // Document type: FILING, TRANSCRIPT, NEWS
+    document_type: String,
+
+    // Mention type: PRIMARY (main subject), SECONDARY (notable mention), PEER_COMPARISON (comparison context)
+    mention_type: String,
+}

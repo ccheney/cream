@@ -57,6 +57,26 @@ export type MacroFrequency = "MONTHLY" | "QUARTERLY" | "WEEKLY" | "IRREGULAR";
  */
 export type RelationshipType = "SECTOR_PEER" | "SUPPLY_CHAIN" | "COMPETITOR" | "CUSTOMER";
 
+/**
+ * Company dependency relationship type (for DEPENDS_ON edge)
+ */
+export type DependencyType = "SUPPLIER" | "CUSTOMER" | "PARTNER";
+
+/**
+ * Influence type for decision edges
+ */
+export type InfluenceType = "NEWS" | "SENTIMENT" | "FUNDAMENTAL" | "MACRO";
+
+/**
+ * Mention type for document references
+ */
+export type MentionType = "PRIMARY" | "SECONDARY" | "PEER_COMPARISON";
+
+/**
+ * Document type for MENTIONED_IN edge
+ */
+export type DocumentType = "FILING" | "TRANSCRIPT" | "NEWS";
+
 // ============================================
 // Trading Memory Nodes
 // ============================================
@@ -239,6 +259,35 @@ export interface RelatedToEdge {
 export interface HasEventEdge {
   source_id: string; // TradeDecision.decision_id
   target_id: string; // TradeLifecycleEvent.event_id
+}
+
+/**
+ * DEPENDS_ON edge - company supply chain and partnership dependencies
+ */
+export interface DependsOnEdge {
+  source_id: string; // Company.symbol (the company that depends)
+  target_id: string; // Company.symbol (the company it depends on)
+  relationship_type: DependencyType;
+  strength: number; // [0.0, 1.0]
+}
+
+/**
+ * AFFECTED_BY edge - company sensitivity to macro factors
+ */
+export interface AffectedByEdge {
+  source_id: string; // Company.symbol
+  target_id: string; // MacroEntity.entity_id
+  sensitivity: number; // [0.0, 1.0] where 1.0 = highly sensitive
+}
+
+/**
+ * MENTIONED_IN edge - company mentions in documents
+ */
+export interface MentionedInEdge {
+  source_id: string; // Company.symbol
+  target_id: string; // Document ID (chunk_id or item_id)
+  document_type: DocumentType;
+  mention_type: MentionType;
 }
 
 // ============================================
