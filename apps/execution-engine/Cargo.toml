@@ -57,6 +57,10 @@ uuid = { version = "1.16", features = ["v4"] }
 # Random number generation (for jitter in backoff)
 rand = "0.9"
 
+# Metrics (Prometheus)
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.17", features = ["http-listener"] }
+
 # Configuration
 config = "0.14"
 
