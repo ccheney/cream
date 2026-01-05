@@ -15,7 +15,9 @@ use axum::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use tonic::Code;
 
+use crate::error::{ErrorCode, ExecutionError};
 use crate::execution::ExecutionGateway;
 use crate::models::{DecisionPlan, Environment};
 
@@ -86,8 +88,12 @@ async fn check_constraints(
         "Checking constraints"
     );
 
-    let account_equity = Decimal::from_str(&req.account_equity)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid account_equity: {e}")))?;
+    let account_equity = Decimal::from_str(&req.account_equity).map_err(|e| {
+        ApiError::from_error(
+            ExecutionError::new(ErrorCode::InvalidRequest, format!("Invalid account_equity: {e}"))
+                .with_context("field", "account_equity"),
+        )
+    })?;
 
     let check_request = crate::models::ConstraintCheckRequest {
         request_id: req.request_id,
@@ -142,8 +148,13 @@ async fn submit_orders(
         "Submitting orders"
     );
 
-    let environment = Environment::from_str(&req.environment)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid environment: {e}")))?;
+    let environment = Environment::from_str(&req.environment).map_err(|e| {
+        ApiError::from_error(
+            ExecutionError::new(ErrorCode::InvalidEnvironment, format!("Invalid environment: {e}"))
+                .with_context("field", "environment")
+                .with_context("value", &req.environment),
+        )
+    })?;
 
     let submit_request = crate::models::SubmitOrdersRequest {
         cycle_id: req.cycle_id,
@@ -155,7 +166,7 @@ async fn submit_orders(
         .gateway
         .submit_orders(submit_request)
         .await
-        .map_err(|e| ApiError::Internal(e.to_string()))?;
+        .map_err(|e| ApiError::from_error(ExecutionError::broker_error(e.to_string())))?;
 
     Ok(Json(SubmitOrdersResponse {
         cycle_id: result.cycle_id,
@@ -195,27 +206,54 @@ async fn get_order_state(
     Json(GetOrderStateResponse { orders })
 }
 
-/// API error type.
+/// API error type with rich error details.
 #[derive(Debug)]
-pub enum ApiError {
-    /// Bad request (400).
-    BadRequest(String),
-    /// Internal server error (500).
-    Internal(String),
+pub struct ApiError(ExecutionError);
+
+impl ApiError {
+    /// Create from an execution error.
+    #[must_use]
+    pub fn from_error(error: ExecutionError) -> Self {
+        Self(error)
+    }
+
+    /// Create a bad request error.
+    #[must_use]
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self(ExecutionError::invalid_request(message))
+    }
+
+    /// Create an internal error.
+    #[must_use]
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self(ExecutionError::internal(message))
+    }
+}
+
+impl From<ExecutionError> for ApiError {
+    fn from(error: ExecutionError) -> Self {
+        Self(error)
+    }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        let (status, message) = match self {
-            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+        let http_response = self.0.to_http_response();
+        let grpc_code = self.0.code().grpc_code();
+
+        // Map gRPC codes to HTTP status codes
+        let status = match grpc_code {
+            Code::InvalidArgument | Code::OutOfRange => StatusCode::BAD_REQUEST,
+            Code::NotFound => StatusCode::NOT_FOUND,
+            Code::AlreadyExists => StatusCode::CONFLICT,
+            Code::PermissionDenied => StatusCode::FORBIDDEN,
+            Code::ResourceExhausted => StatusCode::TOO_MANY_REQUESTS,
+            Code::FailedPrecondition | Code::Aborted => StatusCode::PRECONDITION_FAILED,
+            Code::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        let body = serde_json::json!({
-            "error": message
-        });
-
-        (status, Json(body)).into_response()
+        (status, Json(http_response)).into_response()
     }
 }
 

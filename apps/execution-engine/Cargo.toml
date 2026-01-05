@@ -26,6 +26,7 @@ tokio = { version = "1.49", features = ["full"] }
 
 # gRPC
 tonic = "0.14"
+tonic-types = "0.14"
 prost = "0.14"
 
 # HTTP server (using Axum for JSON API until buf generate is available)

@@ -33,12 +33,14 @@
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 
+pub mod error;
 pub mod execution;
 pub mod models;
 pub mod risk;
 pub mod server;
 
 // Re-export commonly used types
+pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
