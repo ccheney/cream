@@ -30,5 +30,6 @@
 mod constraints;
 
 pub use constraints::{
-    BuyingPowerInfo, ConstraintValidator, ExtendedConstraintContext, GreeksSnapshot,
+    check_sizing_sanity, BuyingPowerInfo, ConstraintValidator, ExtendedConstraintContext,
+    GreeksSnapshot, SizingSanityWarning,
 };

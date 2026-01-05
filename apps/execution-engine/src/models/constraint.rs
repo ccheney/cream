@@ -74,6 +74,22 @@ impl Default for OptionsLimits {
     }
 }
 
+/// Position sizing sanity check limits.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SizingLimits {
+    /// Multiplier for flagging unusually large positions.
+    /// Positions > multiplier * typical_size trigger warnings.
+    pub sanity_threshold_multiplier: Decimal,
+}
+
+impl Default for SizingLimits {
+    fn default() -> Self {
+        Self {
+            sanity_threshold_multiplier: Decimal::new(30, 1), // 3.0
+        }
+    }
+}
+
 /// Complete exposure limits configuration.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ExposureLimits {
@@ -83,6 +99,8 @@ pub struct ExposureLimits {
     pub portfolio: PortfolioLimits,
     /// Options limits.
     pub options: OptionsLimits,
+    /// Sizing sanity limits.
+    pub sizing: SizingLimits,
 }
 
 /// Constraint violation severity.

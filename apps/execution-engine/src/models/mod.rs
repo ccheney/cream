@@ -10,7 +10,7 @@ mod order;
 
 pub use constraint::{
     ConstraintCheckRequest, ConstraintCheckResponse, ConstraintViolation, ExposureLimits,
-    OptionsLimits, PerInstrumentLimits, PortfolioLimits, ViolationSeverity,
+    OptionsLimits, PerInstrumentLimits, PortfolioLimits, SizingLimits, ViolationSeverity,
 };
 pub use decision::{
     Action, Decision, DecisionPlan, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon,
