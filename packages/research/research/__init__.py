@@ -34,6 +34,13 @@ __all__ = [
     "RSIMeanReversionStrategy",
     "SMACrossoverStrategy",
     "BollingerBandStrategy",
+    # NautilusTrader runner
+    "NautilusRunner",
+    "NautilusConfig",
+    "FillModelConfig",
+    "CommissionConfig",
+    "BacktestResult",
+    "quick_backtest",
 ]
 
 
@@ -103,6 +110,32 @@ def __getattr__(name: str):
             "RSIMeanReversionStrategy": RSIMeanReversionStrategy,
             "SMACrossoverStrategy": SMACrossoverStrategy,
             "BollingerBandStrategy": BollingerBandStrategy,
+        }[name]
+
+    if name in (
+        "NautilusRunner",
+        "NautilusConfig",
+        "FillModelConfig",
+        "CommissionConfig",
+        "BacktestResult",
+        "quick_backtest",
+    ):
+        from research.nautilus_runner import (
+            BacktestResult,
+            CommissionConfig,
+            FillModelConfig,
+            NautilusConfig,
+            NautilusRunner,
+            quick_backtest,
+        )
+
+        return {
+            "NautilusRunner": NautilusRunner,
+            "NautilusConfig": NautilusConfig,
+            "FillModelConfig": FillModelConfig,
+            "CommissionConfig": CommissionConfig,
+            "BacktestResult": BacktestResult,
+            "quick_backtest": quick_backtest,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
