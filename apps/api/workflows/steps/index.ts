@@ -18,3 +18,16 @@ export {
   updateDecisionMemory,
   updateExternalEvents,
 } from "./helixMemoryUpdate";
+
+// HelixDB Retrieval (GraphRAG)
+export {
+  type DecisionSummary,
+  DEFAULT_RETRIEVAL_CONFIG,
+  executeHelixRetrieval,
+  PERFORMANCE_TARGETS,
+  type RetrievalInput,
+  type RetrievalResult,
+  retrieveRegimeDecisions,
+  retrieveSimilarDecisions,
+  retrieveVectorOnly,
+} from "./helixRetrieval";
