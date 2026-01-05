@@ -1,18 +1,191 @@
 /**
  * Tailwind CSS Configuration
  *
- * Extends Tailwind with custom animation keyframes, timing, and easing.
+ * Cream Design System with warm neutral palette, semantic colors,
+ * custom typography, and animation system.
  *
+ * @see docs/plans/ui/20-design-philosophy.md
+ * @see docs/plans/ui/21-color-system.md
+ * @see docs/plans/ui/22-typography.md
  * @see docs/plans/ui/25-motion.md
- * @see docs/plans/ui/28-states.md
  */
 
 import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}", "./app/**/*.{js,ts,jsx,tsx,mdx}"],
+  darkMode: ["class", '[data-theme="dark"]'],
   theme: {
     extend: {
+      // ============================================
+      // Font Families
+      // ============================================
+      fontFamily: {
+        ui: [
+          "Satoshi",
+          "SF Pro Display",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "sans-serif",
+        ],
+        mono: [
+          "Geist Mono",
+          "JetBrains Mono",
+          "SF Mono",
+          "Consolas",
+          "monospace",
+        ],
+      },
+
+      // ============================================
+      // Font Sizes (Custom Scale)
+      // ============================================
+      fontSize: {
+        xs: ["11px", { lineHeight: "1.4", fontWeight: "400" }],
+        sm: ["13px", { lineHeight: "1.45", fontWeight: "400" }],
+        base: ["15px", { lineHeight: "1.5", fontWeight: "400" }],
+        lg: ["17px", { lineHeight: "1.45", fontWeight: "500" }],
+        xl: ["20px", { lineHeight: "1.35", fontWeight: "600" }],
+        "2xl": ["24px", { lineHeight: "1.3", fontWeight: "600" }],
+        "3xl": ["30px", { lineHeight: "1.25", fontWeight: "700" }],
+        "4xl": ["36px", { lineHeight: "1.2", fontWeight: "700" }],
+      },
+
+      // ============================================
+      // Colors
+      // ============================================
+      colors: {
+        // Base Palette: Cream (Light Mode)
+        cream: {
+          50: "#FFFDF9",
+          100: "#FBF8F3",
+          200: "#F5F1EA",
+          300: "#EBE5DA",
+        },
+        // Base Palette: Stone (Warm Grays)
+        stone: {
+          400: "#A8A198",
+          500: "#7A746B",
+          600: "#5C564E",
+          700: "#3D3832",
+          900: "#1C1917",
+        },
+        // Base Palette: Night (Dark Mode)
+        night: {
+          50: "#FAFAF9",
+          100: "#F5F5F4",
+          200: "#D6D3D1",
+          300: "#A8A29E",
+          400: "#78716C",
+          700: "#2D2926",
+          800: "#1F1C1A",
+          900: "#141211",
+          950: "#0C0A09",
+        },
+        // Semantic: Trading States
+        profit: {
+          DEFAULT: "#22C55E",
+          muted: "#166534",
+          bg: "rgba(34, 197, 94, 0.1)",
+        },
+        loss: {
+          DEFAULT: "#EF4444",
+          muted: "#991B1B",
+          bg: "rgba(239, 68, 68, 0.1)",
+        },
+        neutral: {
+          DEFAULT: "#F59E0B",
+          muted: "#92400E",
+          bg: "rgba(245, 158, 11, 0.1)",
+        },
+        // Semantic: System States
+        active: {
+          DEFAULT: "#F5A623",
+          glow: "rgba(245, 166, 35, 0.4)",
+        },
+        success: {
+          DEFAULT: "#10B981",
+          bg: "rgba(16, 185, 129, 0.1)",
+        },
+        warning: {
+          DEFAULT: "#FBBF24",
+          bg: "rgba(251, 191, 36, 0.1)",
+        },
+        critical: {
+          DEFAULT: "#DC2626",
+          bg: "rgba(220, 38, 38, 0.1)",
+          glow: "rgba(220, 38, 38, 0.3)",
+        },
+        info: {
+          DEFAULT: "#6366F1",
+          bg: "rgba(99, 102, 241, 0.1)",
+        },
+        // Agent Colors
+        agent: {
+          technical: "#8B5CF6",
+          sentiment: "#EC4899",
+          fundamentals: "#14B8A6",
+          bullish: "#22C55E",
+          bearish: "#EF4444",
+          trader: "#F59E0B",
+          risk: "#F97316",
+          critic: "#6366F1",
+        },
+        // Interactive States
+        primary: {
+          DEFAULT: "#D97706",
+          hover: "#B45309",
+          active: "#92400E",
+        },
+        secondary: {
+          DEFAULT: "#78716C",
+          hover: "#57534E",
+          active: "#44403C",
+        },
+        destructive: {
+          DEFAULT: "#DC2626",
+          hover: "#B91C1C",
+        },
+        // Chart Colors
+        chart: {
+          1: "#D97706",
+          2: "#6366F1",
+          3: "#14B8A6",
+          4: "#EC4899",
+          5: "#8B5CF6",
+          6: "#F97316",
+          7: "#22D3EE",
+          8: "#84CC16",
+        },
+      },
+
+      // ============================================
+      // Border Radius
+      // ============================================
+      borderRadius: {
+        sm: "0.25rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+      },
+
+      // ============================================
+      // Box Shadows
+      // ============================================
+      boxShadow: {
+        sm: "0 1px 2px rgba(0, 0, 0, 0.05)",
+        md: "0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05)",
+        lg: "0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)",
+        xl: "0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)",
+        // Dark mode shadows
+        "dark-sm": "0 1px 2px rgba(0, 0, 0, 0.3)",
+        "dark-md": "0 4px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3)",
+        "dark-lg":
+          "0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4)",
+        "dark-xl":
+          "0 20px 25px rgba(0, 0, 0, 0.5), 0 10px 10px rgba(0, 0, 0, 0.4)",
+      },
+
       // ============================================
       // Duration Tokens
       // ============================================
