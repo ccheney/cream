@@ -511,7 +511,7 @@ pub struct OrderPlan {
     pub execution_tactic: ::core::option::Option<::prost::alloc::string::String>,
     /// Additional execution parameters
     #[prost(message, optional, tag="6")]
-    pub execution_params: ::core::option::Option<super::super::google::protobuf::Struct>,
+    pub execution_params: ::core::option::Option<::prost_types::Struct>,
 }
 // ============================================
 // References
@@ -577,7 +577,7 @@ pub struct DecisionPlan {
     pub cycle_id: ::prost::alloc::string::String,
     /// Timestamp when the decision was made
     #[prost(message, optional, tag="2")]
-    pub as_of_timestamp: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of_timestamp: ::core::option::Option<::prost_types::Timestamp>,
     /// Trading environment
     #[prost(enumeration="Environment", tag="3")]
     pub environment: i32,
@@ -667,7 +667,7 @@ pub struct CheckConstraintsResponse {
     pub checks: ::prost::alloc::vec::Vec<ConstraintCheck>,
     /// Timestamp of validation
     #[prost(message, optional, tag="3")]
-    pub validated_at: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub validated_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Rejection reason (if not approved)
     #[prost(string, optional, tag="4")]
     pub rejection_reason: ::core::option::Option<::prost::alloc::string::String>,
@@ -699,7 +699,7 @@ pub struct AccountState {
     pub is_pdt_restricted: bool,
     /// Timestamp of state snapshot
     #[prost(message, optional, tag="7")]
-    pub as_of: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of: ::core::option::Option<::prost_types::Timestamp>,
 }
 // ============================================
 // Positions
@@ -772,7 +772,7 @@ pub struct SubmitOrderResponse {
     pub status: i32,
     /// Submission timestamp
     #[prost(message, optional, tag="4")]
-    pub submitted_at: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub submitted_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Error message if rejected
     #[prost(string, optional, tag="5")]
     pub error_message: ::core::option::Option<::prost::alloc::string::String>,
@@ -800,7 +800,7 @@ pub struct ExecutionAck {
     pub remaining_quantity: i32,
     /// Last update timestamp
     #[prost(message, optional, tag="7")]
-    pub updated_at: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub updated_at: ::core::option::Option<::prost_types::Timestamp>,
     /// Commission charged
     #[prost(double, tag="8")]
     pub commission: f64,
@@ -854,7 +854,7 @@ pub struct GetPositionsResponse {
     pub positions: ::prost::alloc::vec::Vec<Position>,
     /// Timestamp of snapshot
     #[prost(message, optional, tag="2")]
-    pub as_of: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of: ::core::option::Option<::prost_types::Timestamp>,
 }
 // ============================================
 // Constraint Check
@@ -1005,7 +1005,7 @@ pub struct Quote {
     pub volume: i64,
     /// Quote timestamp
     #[prost(message, optional, tag="9")]
-    pub timestamp: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
 }
 // ============================================
 // OHLCV Bar
@@ -1019,7 +1019,7 @@ pub struct Bar {
     pub symbol: ::prost::alloc::string::String,
     /// Bar open time
     #[prost(message, optional, tag="2")]
-    pub timestamp: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
     /// Bar timeframe in minutes (1, 5, 15, 60, 240, 1440)
     #[prost(int32, tag="3")]
     pub timeframe_minutes: i32,
@@ -1078,7 +1078,7 @@ pub struct SymbolSnapshot {
     pub open: f64,
     /// Snapshot timestamp
     #[prost(message, optional, tag="9")]
-    pub as_of: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of: ::core::option::Option<::prost_types::Timestamp>,
 }
 /// Full market snapshot for multiple symbols
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1088,7 +1088,7 @@ pub struct MarketSnapshot {
     pub environment: i32,
     /// Snapshot timestamp
     #[prost(message, optional, tag="2")]
-    pub as_of: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of: ::core::option::Option<::prost_types::Timestamp>,
     /// Market status (overall)
     #[prost(enumeration="MarketStatus", tag="3")]
     pub market_status: i32,
@@ -1148,7 +1148,7 @@ pub struct OptionChain {
     pub options: ::prost::alloc::vec::Vec<OptionQuote>,
     /// Chain timestamp
     #[prost(message, optional, tag="4")]
-    pub as_of: ::core::option::Option<super::super::google::protobuf::Timestamp>,
+    pub as_of: ::core::option::Option<::prost_types::Timestamp>,
 }
 // ============================================
 // Streaming Service
@@ -1232,5 +1232,5 @@ pub struct GetOptionChainResponse {
     #[prost(message, optional, tag="1")]
     pub chain: ::core::option::Option<OptionChain>,
 }
-include!("cream.v1.serde.rs");
+include!("cream.v1.tonic.rs");
 // @@protoc_insertion_point(module)

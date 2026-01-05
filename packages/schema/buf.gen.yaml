@@ -37,11 +37,10 @@ plugins:
     out: ../schema-gen/python
 
   # Rust - Prost for message types
+  # Note: Not compiling well-known types - we use prost-types crate instead
   - remote: buf.build/community/neoeinstein-prost
     out: ../schema-gen/rust
-    opt:
-      - compile_well_known_types
 
-  # Rust - Prost serde for JSON serialization
-  - remote: buf.build/community/neoeinstein-prost-serde
+  # Rust - Tonic for gRPC service stubs
+  - remote: buf.build/community/neoeinstein-tonic
     out: ../schema-gen/rust
