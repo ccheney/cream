@@ -245,6 +245,20 @@
         "@typescript/native-preview": "7.0.0-dev.20260104.1",
       },
     },
+    "packages/recovery": {
+      "name": "@cream/recovery",
+      "version": "0.0.1",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/domain": "workspace:*",
+        "@cream/storage": "workspace:*",
+      },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
     "packages/regime": {
       "name": "@cream/regime",
       "version": "0.1.0",
@@ -581,6 +595,8 @@
     "@cream/metrics": ["@cream/metrics@workspace:packages/metrics"],
 
     "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
+
+    "@cream/recovery": ["@cream/recovery@workspace:packages/recovery"],
 
     "@cream/regime": ["@cream/regime@workspace:packages/regime"],
 
