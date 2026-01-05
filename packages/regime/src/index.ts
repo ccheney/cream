@@ -2,22 +2,26 @@
  * Market Regime Classification Package
  *
  * Provides regime classification for the Cream trading system.
- * Supports rule-based, HMM, and hybrid approaches.
+ * Supports rule-based, GMM, and hybrid approaches.
  *
  * @example
  * ```ts
- * import { classifyRegime, createRuleBasedClassifier } from "@cream/regime";
+ * import { classifyRegime, createRuleBasedClassifier, trainGMM, classifyWithGMM } from "@cream/regime";
  *
- * // Simple classification
+ * // Rule-based classification (simple, interpretable)
  * const result = classifyRegime({ candles }, config);
  * console.log(result.regime, result.confidence);
  *
- * // Create reusable classifier
- * const classifier = createRuleBasedClassifier(config);
- * const result = classifier({ candles });
+ * // GMM-based classification (data-driven)
+ * const model = trainGMM(trainingCandles);
+ * const classification = classifyWithGMM(model, testCandles);
+ *
+ * // Track regime transitions
+ * const detector = new RegimeTransitionDetector();
+ * const transition = detector.update("AAPL", "BULL_TREND", timestamp, 0.8);
  * ```
  *
- * @see docs/plans/11-configuration.md
+ * @see docs/plans/02-data-layer.md
  */
 
 // Rule-based classifier
@@ -30,6 +34,46 @@ export {
   type RegimeClassification,
   type RegimeInput,
 } from "./ruleBasedClassifier";
+
+// Feature extraction
+export {
+  calculateMean,
+  calculateStd,
+  calculateZScore,
+  DEFAULT_FEATURE_CONFIG,
+  extractFeatures,
+  extractSingleFeature,
+  getMinimumCandleCount,
+  normalizeFeatures,
+  normalizeFeatureVector,
+  type FeatureExtractionConfig,
+  type RegimeFeatures,
+} from "./features";
+
+// GMM classifier
+export {
+  classifySeriesWithGMM,
+  classifyWithGMM,
+  DEFAULT_GMM_CONFIG,
+  deserializeGMMModel,
+  serializeGMMModel,
+  trainGMM,
+  type GMMClassification,
+  type GMMCluster,
+  type GMMConfig,
+  type GMMModel,
+} from "./gmmClassifier";
+
+// Transition detection
+export {
+  analyzeTransitions,
+  calculateTransitionMatrix,
+  DEFAULT_TRANSITION_CONFIG,
+  RegimeTransitionDetector,
+  type RegimeState,
+  type RegimeTransition,
+  type TransitionDetectorConfig,
+} from "./transitions";
 
 /**
  * Package version.
