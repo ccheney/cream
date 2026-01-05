@@ -304,4 +304,30 @@ export class PortfolioSnapshotsRepository {
 
     return result.changes;
   }
+
+  /**
+   * Find snapshot by date
+   */
+  async findByDate(environment: string, date: string): Promise<PortfolioSnapshot | null> {
+    const row = await this.client.get<Row>(
+      `SELECT * FROM ${this.table}
+       WHERE environment = ? AND DATE(timestamp) = DATE(?)
+       ORDER BY timestamp DESC LIMIT 1`,
+      [environment, date]
+    );
+
+    return row ? mapSnapshotRow(row) : null;
+  }
+
+  /**
+   * Get first snapshot
+   */
+  async getFirst(environment: string): Promise<PortfolioSnapshot | null> {
+    const row = await this.client.get<Row>(
+      `SELECT * FROM ${this.table} WHERE environment = ? ORDER BY timestamp ASC LIMIT 1`,
+      [environment]
+    );
+
+    return row ? mapSnapshotRow(row) : null;
+  }
 }

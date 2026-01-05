@@ -21,6 +21,13 @@ import {
   closeAllConnections,
   getConnectionCount,
 } from "./websocket/handler.js";
+import {
+  systemRoutes,
+  decisionsRoutes,
+  portfolioRoutes,
+  alertsRoutes,
+} from "./routes/index.js";
+import { closeDb } from "./db.js";
 
 // ============================================
 // App Setup
@@ -93,70 +100,17 @@ app.openapi(healthRoute, (c) => {
 });
 
 // ============================================
-// System Routes
+// API Routes
 // ============================================
 
-const systemStatusRoute = createRoute({
-  method: "get",
-  path: "/api/system/status",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
-            status: z.enum(["running", "paused", "stopped"]),
-            lastCycleId: z.string().nullable(),
-            lastCycleTime: z.string().nullable(),
-            uptime: z.number(),
-          }),
-        },
-      },
-      description: "System status",
-    },
-  },
-  tags: ["System"],
-});
-
-app.openapi(systemStatusRoute, (c) => {
-  return c.json({
-    environment: (process.env.CREAM_ENV ?? "PAPER") as "BACKTEST" | "PAPER" | "LIVE",
-    status: "running" as const,
-    lastCycleId: null,
-    lastCycleTime: null,
-    uptime: process.uptime(),
-  });
-});
+app.route("/api/system", systemRoutes);
+app.route("/api/decisions", decisionsRoutes);
+app.route("/api/portfolio", portfolioRoutes);
+app.route("/api/alerts", alertsRoutes);
 
 // ============================================
-// Placeholder API Routes
+// Placeholder Routes (to be implemented)
 // ============================================
-
-// Decisions
-app.get("/api/decisions", (c) => {
-  return c.json({ decisions: [], total: 0 });
-});
-
-app.get("/api/decisions/:id", (c) => {
-  const id = c.req.param("id");
-  return c.json({ id, message: "Decision not found" }, 404);
-});
-
-// Portfolio
-app.get("/api/portfolio", (c) => {
-  return c.json({
-    nav: 0,
-    cash: 0,
-    equity: 0,
-    grossExposure: 0,
-    netExposure: 0,
-    positions: [],
-  });
-});
-
-app.get("/api/portfolio/positions", (c) => {
-  return c.json({ positions: [] });
-});
 
 // Agents
 app.get("/api/agents", (c) => {
@@ -196,11 +150,6 @@ app.get("/api/risk", (c) => {
     var95: 0,
     maxDrawdown: 0,
   });
-});
-
-// Alerts
-app.get("/api/alerts", (c) => {
-  return c.json({ alerts: [] });
 });
 
 // Backtest
@@ -309,6 +258,7 @@ if (import.meta.main) {
   process.on("SIGINT", () => {
     console.log("\nShutting down...");
     closeAllConnections("Server shutting down");
+    closeDb();
     server.stop();
     process.exit(0);
   });
@@ -316,6 +266,7 @@ if (import.meta.main) {
   process.on("SIGTERM", () => {
     console.log("\nShutting down...");
     closeAllConnections("Server shutting down");
+    closeDb();
     server.stop();
     process.exit(0);
   });
