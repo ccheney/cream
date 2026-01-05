@@ -1,8 +1,16 @@
 /**
  * Market Snapshot Builder Workflow Step Tests
+ *
+ * Note: These tests run in BACKTEST mode with mock data to avoid
+ * requiring real API keys in CI.
  */
 
-import { describe, expect, mock, test } from "bun:test";
+// Set environment BEFORE imports so cached env is correct
+process.env.CREAM_ENV = "BACKTEST";
+const savedPolygonKey = process.env.POLYGON_KEY;
+process.env.POLYGON_KEY = ""; // Empty string to use mock data
+
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import type { MarketSnapshot } from "@cream/domain";
 import {
   buildHistoricalSnapshot,
@@ -13,6 +21,13 @@ import {
   PERFORMANCE_TARGETS,
   type SnapshotBuilderInput,
 } from "../workflows/steps/marketSnapshotBuilder";
+
+// Restore POLYGON_KEY after imports (for other tests in the same process)
+afterAll(() => {
+  if (savedPolygonKey !== undefined) {
+    process.env.POLYGON_KEY = savedPolygonKey;
+  }
+});
 
 // ============================================
 // Test Fixtures

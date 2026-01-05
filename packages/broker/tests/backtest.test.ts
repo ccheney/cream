@@ -489,11 +489,23 @@ describe("createBrokerClient factory", () => {
   });
 
   test("throws error for PAPER/LIVE without credentials", () => {
-    expect(() =>
-      createBrokerClient({
-        environment: "PAPER",
-      })
-    ).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
+    // Save and clear env vars for this test
+    const savedKey = process.env.ALPACA_KEY;
+    const savedSecret = process.env.ALPACA_SECRET;
+    delete process.env.ALPACA_KEY;
+    delete process.env.ALPACA_SECRET;
+
+    try {
+      expect(() =>
+        createBrokerClient({
+          environment: "PAPER",
+        })
+      ).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
+    } finally {
+      // Restore env vars
+      if (savedKey) process.env.ALPACA_KEY = savedKey;
+      if (savedSecret) process.env.ALPACA_SECRET = savedSecret;
+    }
   });
 
   test("throws error for unknown environment", () => {

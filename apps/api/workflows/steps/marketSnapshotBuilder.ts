@@ -251,7 +251,13 @@ async function fetchMarketData(
 
   try {
     // In BACKTEST mode without API keys, use mock data
-    if (env.CREAM_ENV === "BACKTEST" && !env.POLYGON_KEY) {
+    // Note: We read process.env directly here (not cached env) to support test isolation
+    // Use 'in' operator to check if env var was explicitly set (even to empty string)
+    const creamEnv =
+      "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
+    const polygonKey =
+      "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
+    if (creamEnv === "BACKTEST" && !polygonKey) {
       warnings.push("BACKTEST mode without POLYGON_KEY: using mock market data");
 
       // Generate mock snapshots for testing
