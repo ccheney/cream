@@ -207,6 +207,19 @@
         "@typescript/native-preview": "7.0.0-dev.20260104.1",
       },
     },
+    "packages/regime": {
+      "name": "@cream/regime",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/indicators": "workspace:*",
+      },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
     "packages/schema": {
       "name": "@cream/schema",
       "version": "0.0.1",
@@ -524,6 +537,8 @@
     "@cream/metrics": ["@cream/metrics@workspace:packages/metrics"],
 
     "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
+
+    "@cream/regime": ["@cream/regime@workspace:packages/regime"],
 
     "@cream/schema": ["@cream/schema@workspace:packages/schema"],
 
