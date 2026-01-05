@@ -410,12 +410,116 @@ pub enum CancelOrderError {
 mod tests {
     use super::*;
     use crate::models::{
-        Action, Decision, DecisionPlan, Direction, Environment, Size, SizeUnit, StrategyFamily,
-        TimeHorizon,
+        Action, Decision, DecisionPlan, Direction, Environment, ExecutionError, OrderSide,
+        OrderStatus, OrderType, Size, SizeUnit, StrategyFamily, TimeHorizon, TimeInForce,
     };
     use rust_decimal::Decimal;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
-    fn make_gateway() -> ExecutionGateway<AlpacaAdapter> {
+    /// Mock broker adapter for testing.
+    ///
+    /// This mock returns simulated responses without making actual API calls.
+    #[derive(Debug, Default)]
+    struct MockBrokerAdapter {
+        order_counter: AtomicU64,
+    }
+
+    impl MockBrokerAdapter {
+        fn new() -> Self {
+            Self {
+                order_counter: AtomicU64::new(1),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl BrokerAdapter for MockBrokerAdapter {
+        async fn submit_orders(
+            &self,
+            request: &SubmitOrdersRequest,
+        ) -> Result<ExecutionAck, BrokerError> {
+            let mut orders = Vec::new();
+
+            for decision in &request.plan.decisions {
+                let order_id = self.order_counter.fetch_add(1, Ordering::SeqCst);
+                let now = chrono::Utc::now().to_rfc3339();
+                orders.push(OrderState {
+                    order_id: format!("order-{}", order_id),
+                    broker_order_id: format!("broker-{}", order_id),
+                    is_multi_leg: false,
+                    instrument_id: decision.instrument_id.clone(),
+                    status: OrderStatus::Accepted,
+                    side: if decision.action == Action::Buy {
+                        OrderSide::Buy
+                    } else {
+                        OrderSide::Sell
+                    },
+                    order_type: OrderType::Limit,
+                    time_in_force: TimeInForce::Day,
+                    requested_quantity: decision.size.quantity,
+                    filled_quantity: Decimal::ZERO,
+                    avg_fill_price: Decimal::ZERO,
+                    limit_price: decision.limit_price,
+                    stop_price: None,
+                    submitted_at: now.clone(),
+                    last_update_at: now,
+                    status_message: String::new(),
+                    legs: Vec::new(),
+                });
+            }
+
+            Ok(ExecutionAck {
+                cycle_id: request.cycle_id.clone(),
+                environment: request.environment,
+                ack_time: chrono::Utc::now().to_rfc3339(),
+                orders,
+                errors: Vec::new(),
+            })
+        }
+
+        async fn get_order_status(&self, broker_order_id: &str) -> Result<OrderState, BrokerError> {
+            let now = chrono::Utc::now().to_rfc3339();
+            Ok(OrderState {
+                order_id: format!("order-{}", broker_order_id),
+                broker_order_id: broker_order_id.to_string(),
+                is_multi_leg: false,
+                instrument_id: "AAPL".to_string(),
+                status: OrderStatus::Accepted,
+                side: OrderSide::Buy,
+                order_type: OrderType::Limit,
+                time_in_force: TimeInForce::Day,
+                requested_quantity: Decimal::new(100, 0),
+                filled_quantity: Decimal::ZERO,
+                avg_fill_price: Decimal::ZERO,
+                limit_price: Some(Decimal::new(150, 0)),
+                stop_price: None,
+                submitted_at: now.clone(),
+                last_update_at: now,
+                status_message: String::new(),
+                legs: Vec::new(),
+            })
+        }
+
+        async fn cancel_order(&self, _broker_order_id: &str) -> Result<(), BrokerError> {
+            Ok(())
+        }
+
+        fn broker_name(&self) -> &str {
+            "mock"
+        }
+    }
+
+    fn make_gateway() -> ExecutionGateway<MockBrokerAdapter> {
+        let mock = MockBrokerAdapter::new();
+        let state_manager = OrderStateManager::new();
+        let validator = ConstraintValidator::with_defaults();
+
+        ExecutionGateway::new(mock, state_manager, validator)
+    }
+
+    // Keep the old function for integration tests that need real Alpaca
+    #[allow(dead_code)]
+    fn make_alpaca_gateway() -> ExecutionGateway<AlpacaAdapter> {
         let alpaca =
             AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper).unwrap();
         let state_manager = OrderStateManager::new();

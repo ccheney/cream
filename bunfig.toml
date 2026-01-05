@@ -30,6 +30,10 @@ coverageThreshold = { line = 70, branch = 65, function = 70 }
 # - lcov: For Codecov integration
 coverageReporter = ["text", "lcov"]
 
+# Exclude Playwright visual regression tests (run separately via playwright test)
+# Note: *.spec.ts files in visual/ and e2e/ directories use Playwright, not bun:test
+exclude = ["**/tests/visual/**", "**/tests/e2e/**", "**/visual/*.spec.ts", "**/e2e/*.spec.ts"]
+
 # Patterns to exclude from coverage
 coverageIgnorePatterns = [
   "**/*.test.ts",

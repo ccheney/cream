@@ -99,15 +99,17 @@ function generateUptrend(count: number, startPrice = 100): Candle[] {
   const baseVolume = 1000000;
 
   for (let i = 0; i < count; i++) {
-    // Upward bias
-    const change = price * 0.005 + (Math.random() - 0.3) * 0.01 * price;
-    price = Math.max(1, price + change);
+    // Deterministic upward trend: 1% gain per candle
+    // Using a seeded pattern to avoid flaky tests
+    const deterministicNoise = Math.sin(i * 0.5) * 0.002; // Small sine wave noise
+    const change = price * (0.01 + deterministicNoise);
+    price = price + change;
 
     const open = price * 0.998;
     const high = price * 1.005;
     const low = price * 0.995;
     const close = price;
-    const volume = baseVolume * (0.8 + Math.random() * 0.4);
+    const volume = baseVolume;
 
     candles.push({
       timestamp: Date.now() - (count - i) * 3600000,

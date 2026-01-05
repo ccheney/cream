@@ -442,24 +442,11 @@ async function resolveUniverseSymbols(): Promise<string[]> {
     const defaultUniverseConfig: UniverseConfig = {
       sources: [
         {
-          type: "STATIC",
+          type: "static",
           enabled: true,
-          symbols: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"],
+          tickers: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"],
         },
       ],
-      filters: {
-        liquidity: {
-          enabled: true,
-          minDollarVolume: 1000000,
-          minAvgVolume: 100000,
-          lookbackDays: 20,
-        },
-      },
-      limits: {
-        maxSymbols: 100,
-        maxPerSector: 20,
-      },
-      compose: "UNION",
     };
 
     const symbols = await resolveUniverseSymbolsFromConfig(defaultUniverseConfig);
