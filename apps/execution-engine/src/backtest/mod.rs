@@ -43,6 +43,7 @@ mod commission;
 mod config;
 mod fill_engine;
 mod multi_leg;
+mod replay;
 mod slippage;
 mod triggers;
 
@@ -67,6 +68,11 @@ pub use multi_leg::{
     LegFillResult, MultiLegFillResult, OrderLeg, calculate_total_contracts,
     create_bull_call_spread, create_iron_condor, create_straddle, simulate_multi_leg_order,
     validate_balanced_ratios,
+};
+pub use replay::{
+    CandleDataSource, CandleEvent, DataSourceType, InMemoryDataSource, MissingDataPolicy,
+    ReplayConfig, ReplayEngine, ReplayEngineBuilder, ReplayError, ReplayProgress,
+    SynchronizedReplay,
 };
 pub use slippage::{apply_slippage, apply_stop_target_slippage};
 pub use triggers::{
