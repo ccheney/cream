@@ -489,3 +489,165 @@ describe("GetPositionsResponseSchema", () => {
     expect(result.success).toBe(true);
   });
 });
+
+// ============================================
+// Action Semantics and Broker Order Mapping Tests
+// ============================================
+
+import { ActionMappingError, deriveActionFromPositions, mapActionToBrokerOrder } from "./execution";
+
+describe("mapActionToBrokerOrder", () => {
+  describe("BUY action", () => {
+    test("maps flat to long position", () => {
+      const result = mapActionToBrokerOrder("BUY", 0, 100);
+      expect(result).not.toBeNull();
+      expect(result?.side).toBe("BUY");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("throws if not flat", () => {
+      expect(() => mapActionToBrokerOrder("BUY", 50, 150)).toThrow(ActionMappingError);
+    });
+
+    test("throws if target not positive", () => {
+      expect(() => mapActionToBrokerOrder("BUY", 0, 0)).toThrow(ActionMappingError);
+      expect(() => mapActionToBrokerOrder("BUY", 0, -100)).toThrow(ActionMappingError);
+    });
+  });
+
+  describe("SELL action", () => {
+    test("maps flat to short position", () => {
+      const result = mapActionToBrokerOrder("SELL", 0, -100);
+      expect(result).not.toBeNull();
+      expect(result?.side).toBe("SELL");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("throws if not flat", () => {
+      expect(() => mapActionToBrokerOrder("SELL", -50, -150)).toThrow(ActionMappingError);
+    });
+
+    test("throws if target not negative", () => {
+      expect(() => mapActionToBrokerOrder("SELL", 0, 0)).toThrow(ActionMappingError);
+      expect(() => mapActionToBrokerOrder("SELL", 0, 100)).toThrow(ActionMappingError);
+    });
+  });
+
+  describe("INCREASE action", () => {
+    test("increases long position with broker BUY", () => {
+      const result = mapActionToBrokerOrder("INCREASE", 100, 200);
+      expect(result?.side).toBe("BUY");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("increases short position with broker SELL", () => {
+      const result = mapActionToBrokerOrder("INCREASE", -100, -200);
+      expect(result?.side).toBe("SELL");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("throws if flat", () => {
+      expect(() => mapActionToBrokerOrder("INCREASE", 0, 100)).toThrow(ActionMappingError);
+    });
+
+    test("throws if reducing instead of increasing", () => {
+      expect(() => mapActionToBrokerOrder("INCREASE", 100, 50)).toThrow(ActionMappingError);
+      expect(() => mapActionToBrokerOrder("INCREASE", -100, -50)).toThrow(ActionMappingError);
+    });
+  });
+
+  describe("REDUCE action", () => {
+    test("reduces long position with broker SELL", () => {
+      const result = mapActionToBrokerOrder("REDUCE", 100, 50);
+      expect(result?.side).toBe("SELL");
+      expect(result?.quantity).toBe(50);
+    });
+
+    test("reduces short position with broker BUY", () => {
+      const result = mapActionToBrokerOrder("REDUCE", -100, -50);
+      expect(result?.side).toBe("BUY");
+      expect(result?.quantity).toBe(50);
+    });
+
+    test("closes long position to flat", () => {
+      const result = mapActionToBrokerOrder("REDUCE", 100, 0);
+      expect(result?.side).toBe("SELL");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("covers short position to flat", () => {
+      const result = mapActionToBrokerOrder("REDUCE", -100, 0);
+      expect(result?.side).toBe("BUY");
+      expect(result?.quantity).toBe(100);
+    });
+
+    test("throws if flat", () => {
+      expect(() => mapActionToBrokerOrder("REDUCE", 0, 0)).toThrow(ActionMappingError);
+    });
+
+    test("throws if increasing instead of reducing", () => {
+      expect(() => mapActionToBrokerOrder("REDUCE", 100, 150)).toThrow(ActionMappingError);
+      expect(() => mapActionToBrokerOrder("REDUCE", -100, -150)).toThrow(ActionMappingError);
+    });
+
+    test("throws if crossing zero", () => {
+      expect(() => mapActionToBrokerOrder("REDUCE", 100, -50)).toThrow(ActionMappingError);
+      expect(() => mapActionToBrokerOrder("REDUCE", -100, 50)).toThrow(ActionMappingError);
+    });
+  });
+
+  describe("HOLD and NO_TRADE", () => {
+    test("HOLD returns null (no order)", () => {
+      expect(mapActionToBrokerOrder("HOLD", 100, 100)).toBeNull();
+    });
+
+    test("NO_TRADE returns null (no order)", () => {
+      expect(mapActionToBrokerOrder("NO_TRADE", 0, 0)).toBeNull();
+    });
+  });
+});
+
+describe("deriveActionFromPositions", () => {
+  test("NO_TRADE when flat and staying flat", () => {
+    expect(deriveActionFromPositions(0, 0)).toBe("NO_TRADE");
+  });
+
+  test("HOLD when holding position", () => {
+    expect(deriveActionFromPositions(100, 100)).toBe("HOLD");
+    expect(deriveActionFromPositions(-100, -100)).toBe("HOLD");
+  });
+
+  test("BUY when going flat to long", () => {
+    expect(deriveActionFromPositions(0, 100)).toBe("BUY");
+  });
+
+  test("SELL when going flat to short", () => {
+    expect(deriveActionFromPositions(0, -100)).toBe("SELL");
+  });
+
+  test("INCREASE when adding to long", () => {
+    expect(deriveActionFromPositions(100, 200)).toBe("INCREASE");
+  });
+
+  test("INCREASE when adding to short", () => {
+    expect(deriveActionFromPositions(-100, -200)).toBe("INCREASE");
+  });
+
+  test("REDUCE when reducing long", () => {
+    expect(deriveActionFromPositions(100, 50)).toBe("REDUCE");
+    expect(deriveActionFromPositions(100, 0)).toBe("REDUCE");
+  });
+
+  test("REDUCE when covering short", () => {
+    expect(deriveActionFromPositions(-100, -50)).toBe("REDUCE");
+    expect(deriveActionFromPositions(-100, 0)).toBe("REDUCE");
+  });
+
+  test("throws when flipping from long to short", () => {
+    expect(() => deriveActionFromPositions(100, -100)).toThrow(ActionMappingError);
+  });
+
+  test("throws when flipping from short to long", () => {
+    expect(() => deriveActionFromPositions(-100, 100)).toThrow(ActionMappingError);
+  });
+});
