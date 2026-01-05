@@ -76,6 +76,22 @@ export {
   type ScoringWeights,
 } from "./optionChain";
 
+// Candle ingestion
+export {
+  aggregateCandles,
+  CandleIngestionService,
+  CandleSchema,
+  checkStaleness,
+  TimeframeSchema,
+  type Candle,
+  type CandleStorage,
+  type GapInfo,
+  type IngestionOptions,
+  type IngestionResult,
+  type StalenessResult,
+  type Timeframe,
+} from "./ingestion";
+
 /**
  * Package version.
  */
