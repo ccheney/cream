@@ -329,9 +329,11 @@ QUERY GetTradeWithEvents(decision_id: String) =>
 
 
 // Get decisions influenced by an external event
-QUERY GetInfluencedDecisions(event_id: String) =>
+// Filters by minimum influence score (default threshold: 0.6)
+QUERY GetInfluencedDecisions(event_id: String, min_confidence: F64?) =>
     event <- N<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
     influenced <- event::Out<INFLUENCED_DECISION>
+        ::WHERE(_::EDGE::{influence_score} >= (min_confidence OR 0.6))
     RETURN influenced::{
         decision: _,
         influence_score: _::EDGE::{influence_score},
@@ -376,6 +378,49 @@ QUERY GetRelatedCompanies(symbol: String, max_depth: I64) =>
     RETURN related::{
         company: _,
         relationship_type: _::EDGE::{relationship_type}
+    }
+
+
+// Get company dependency chain (supply chain, customers, partners)
+// Traverses DEPENDS_ON edges with strength filtering
+// max_depth defaults to 2 (optimal for trading context)
+// min_strength defaults to 0.3 to filter weak dependencies
+QUERY GetCompanyDependencyChain(
+    symbol: String,
+    max_depth: I64?,
+    min_strength: F64?
+) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
+    dependencies <- company::Out<DEPENDS_ON>{1..(max_depth OR 2)}
+        ::WHERE(_::EDGE::{strength} >= (min_strength OR 0.3))
+    RETURN dependencies::{
+        company: _,
+        relationship_type: _::EDGE::{relationship_type},
+        strength: _::EDGE::{strength},
+        depth: _::DEPTH
+    }
+
+
+// Get companies that depend on a given company (reverse dependency lookup)
+QUERY GetDependentCompanies(symbol: String, min_strength: F64?) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
+    dependents <- company::In<DEPENDS_ON>
+        ::WHERE(_::EDGE::{strength} >= (min_strength OR 0.3))
+    RETURN dependents::{
+        company: _,
+        relationship_type: _::EDGE::{relationship_type},
+        strength: _::EDGE::{strength}
+    }
+
+
+// Get companies affected by a macro entity
+QUERY GetCompaniesAffectedByMacro(entity_id: String, min_sensitivity: F64?) =>
+    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
+    affected <- entity::In<AFFECTED_BY>
+        ::WHERE(_::EDGE::{sensitivity} >= (min_sensitivity OR 0.5))
+    RETURN affected::{
+        company: _,
+        sensitivity: _::EDGE::{sensitivity}
     }
 
 
@@ -454,6 +499,51 @@ QUERY CreateRelatedToEdge(
     target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
     edge <- AddE<RELATED_TO>::From(source)::To(target)::{
         relationship_type: relationship_type
+    }
+    RETURN edge
+
+
+// Link company to another company it depends on (supply chain)
+QUERY CreateDependsOnEdge(
+    source_symbol: String,
+    target_symbol: String,
+    relationship_type: String,
+    strength: F64
+) =>
+    source <- N<Company>::WHERE(_::{symbol}::EQ(source_symbol))
+    target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
+    edge <- AddE<DEPENDS_ON>::From(source)::To(target)::{
+        relationship_type: relationship_type,
+        strength: strength
+    }
+    RETURN edge
+
+
+// Link company to macro entity it's affected by
+QUERY CreateAffectedByEdge(
+    company_symbol: String,
+    entity_id: String,
+    sensitivity: F64
+) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
+    edge <- AddE<AFFECTED_BY>::From(company)::To(entity)::{
+        sensitivity: sensitivity
+    }
+    RETURN edge
+
+
+// Link company to document with mention metadata
+QUERY CreateMentionedInEdge(
+    company_symbol: String,
+    document_id: String,
+    document_type: String,
+    mention_type: String
+) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<MENTIONED_IN>::From(company)::To(document_id)::{
+        document_type: document_type,
+        mention_type: mention_type
     }
     RETURN edge
 
