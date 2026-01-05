@@ -428,12 +428,12 @@ describe("Tailwind Configuration", () => {
   describe("Colors", () => {
     it("defines profit color", () => {
       expect(tailwindConfig).toContain("profit:");
-      expect(tailwindConfig).toContain("#22c55e");
+      expect(tailwindConfig).toContain("#22C55E");
     });
 
     it("defines loss color", () => {
       expect(tailwindConfig).toContain("loss:");
-      expect(tailwindConfig).toContain("#ef4444");
+      expect(tailwindConfig).toContain("#EF4444");
     });
   });
 });
