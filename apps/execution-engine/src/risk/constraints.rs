@@ -156,6 +156,52 @@ impl ConstraintValidator {
         Self::new(ExposureLimits::default())
     }
 
+    /// Create a validator from configuration.
+    #[must_use]
+    pub fn from_config(config: &crate::config::Config) -> Self {
+        use crate::models::{OptionsLimits, PerInstrumentLimits, PortfolioLimits, SizingLimits};
+
+        let constraints = &config.constraints;
+
+        let per_instrument = PerInstrumentLimits {
+            max_units: constraints.per_instrument.max_units,
+            max_notional: Decimal::try_from(constraints.per_instrument.max_notional)
+                .unwrap_or_else(|_| Decimal::new(50000, 0)),
+            max_pct_equity: Decimal::try_from(constraints.per_instrument.max_equity_pct)
+                .unwrap_or_else(|_| Decimal::new(10, 2)),
+        };
+
+        let portfolio = PortfolioLimits {
+            max_gross_notional: Decimal::try_from(constraints.portfolio.max_gross_notional)
+                .unwrap_or_else(|_| Decimal::new(500000, 0)),
+            max_net_notional: Decimal::try_from(constraints.portfolio.max_net_notional)
+                .unwrap_or_else(|_| Decimal::new(250000, 0)),
+            max_pct_equity_gross: Decimal::try_from(constraints.portfolio.max_leverage)
+                .unwrap_or_else(|_| Decimal::new(200, 2)),
+            max_pct_equity_net: Decimal::ONE,
+        };
+
+        let options = OptionsLimits {
+            max_delta_notional: Decimal::try_from(constraints.options.max_portfolio_delta)
+                .unwrap_or_else(|_| Decimal::new(500, 0)),
+            max_gamma: Decimal::try_from(constraints.options.max_portfolio_gamma)
+                .unwrap_or_else(|_| Decimal::new(50, 0)),
+            max_vega: Decimal::try_from(constraints.options.max_portfolio_vega)
+                .unwrap_or_else(|_| Decimal::new(1000, 0)),
+            max_theta: Decimal::try_from(constraints.options.max_portfolio_theta)
+                .unwrap_or_else(|_| Decimal::new(-500, 0)),
+        };
+
+        let limits = ExposureLimits {
+            per_instrument,
+            portfolio,
+            options,
+            sizing: SizingLimits::default(),
+        };
+
+        Self::new(limits)
+    }
+
     /// Validate a decision plan against constraints.
     ///
     /// Returns a response indicating whether validation passed and any violations.
