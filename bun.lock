@@ -116,6 +116,19 @@
         "testcontainers": "^10.13.0",
       },
     },
+    "packages/helix-schema": {
+      "name": "@cream/helix-schema",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cream/config": "workspace:*",
+        "@cream/domain": "workspace:*",
+        "@google/genai": "1.34.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
     "packages/mastra-kit": {
       "name": "@cream/mastra-kit",
       "version": "0.1.0",
@@ -437,6 +450,8 @@
 
     "@cream/helix": ["@cream/helix@workspace:packages/helix"],
 
+    "@cream/helix-schema": ["@cream/helix-schema@workspace:packages/helix-schema"],
+
     "@cream/mastra-kit": ["@cream/mastra-kit@workspace:packages/mastra-kit"],
 
     "@cream/metrics": ["@cream/metrics@workspace:packages/metrics"],
@@ -522,6 +537,8 @@
     "@fal-ai/client": ["@fal-ai/client@1.8.1", "", { "dependencies": { "@msgpack/msgpack": "^3.0.0-beta2", "eventsource-parser": "^1.1.2", "robot3": "^0.4.1" } }, "sha512-IO05V0VaiIA4pIi4q5thM0suC0bUCzxX40qM15XcMuvefYk+qWECKHnxjeGCSEkvKkZ/uCF8RNqvYwjZ4wJxXQ=="],
 
     "@fastify/busboy": ["@fastify/busboy@2.1.1", "", {}, "sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA=="],
+
+    "@google/genai": ["@google/genai@1.34.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.24.0" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-vu53UMPvjmb7PGzlYu6Tzxso8Dfhn+a7eQFaS2uNemVtDZKwzSpJ5+ikqBbXplF7RGB1STcVDqCkPvquiwb2sw=="],
 
     "@googleapis/sheets": ["@googleapis/sheets@13.0.1", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-XTYObncN5Rqexc0uITZIN9OWTEyE/ZR2S6c7wAniqHe2oGXW9gcHR9f9hQwPMHFUTHjH7Jkj8SLdt0O0u37y2A=="],
 

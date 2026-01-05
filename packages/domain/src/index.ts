@@ -268,5 +268,25 @@ export {
   requiresRejectionOnFailure,
   schemaToDescription,
 } from "./llm-parsing";
+// Clock synchronization and timestamp validation
+export {
+  alignToDailyCandle,
+  alignToHourlyCandle,
+  calculateDatabentoLatency,
+  checkClockSkew,
+  type ClockCheckResult,
+  type ClockSkewThresholds,
+  type DatabentoTimestamps,
+  DEFAULT_CLOCK_THRESHOLDS,
+  getClockMonitorState,
+  isHourlyAligned,
+  periodicClockCheck,
+  resetClockMonitorState,
+  selectDatabentoTimestamp,
+  type TimestampValidationResult,
+  validateCandleSequence,
+  validateTimestamp,
+  validateTimestampConsistency,
+} from "./clock";
 // WebSocket schemas
 export * from "./websocket/index.js";
