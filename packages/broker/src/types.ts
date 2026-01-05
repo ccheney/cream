@@ -225,7 +225,7 @@ export class BrokerError extends Error {
     public readonly code: BrokerErrorCode,
     public readonly symbol?: string,
     public readonly orderId?: string,
-    public readonly cause?: Error
+    public override readonly cause?: Error
   ) {
     super(message);
     this.name = "BrokerError";

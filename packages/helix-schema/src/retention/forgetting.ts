@@ -556,9 +556,9 @@ export function createTradeCohortSummary(
 
   // Calculate average holding days
   const holdingDays = decisions
-    .filter((d) => d.closedAt)
+    .filter((d): d is typeof d & { closedAt: Date } => d.closedAt !== undefined)
     .map((d) => {
-      const diff = d.closedAt?.getTime() - d.createdAt.getTime();
+      const diff = d.closedAt.getTime() - d.createdAt.getTime();
       return diff / (1000 * 60 * 60 * 24);
     });
   const avgHoldingDays =

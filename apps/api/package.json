@@ -20,6 +20,7 @@
     "hono": "^4.11.3"
   },
   "devDependencies": {
+    "@cream/tsconfig": "workspace:*",
     "@types/bun": "latest",
     "testcontainers": "^11.11.0",
     "@typescript/native-preview": "7.0.0-dev.20260104.1"

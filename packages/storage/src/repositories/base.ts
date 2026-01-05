@@ -32,7 +32,7 @@ export class RepositoryError extends Error {
     message: string,
     public readonly code: RepositoryErrorCode,
     public readonly table?: string,
-    public readonly cause?: Error
+    public override readonly cause?: Error
   ) {
     super(message);
     this.name = "RepositoryError";

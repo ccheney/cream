@@ -158,7 +158,8 @@ export async function runMigrations(
     }
   }
 
-  const newVersion = applied.length > 0 ? applied[applied.length - 1]?.version : currentVersion;
+  const lastApplied = applied[applied.length - 1];
+  const newVersion = applied.length > 0 && lastApplied ? lastApplied.version : currentVersion;
 
   logger(`Applied ${applied.length} migration(s). Current version: ${newVersion}`);
 
@@ -353,7 +354,7 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
       }
 
       const version = parseInt(match[1]!, 10);
-      const name = match[2]?.replace(/_down$/, "");
+      const name = match[2]?.replace(/_down$/, "") ?? "";
       const sql = await readFile(join(dir, file), "utf-8");
 
       migrations.push({
@@ -417,7 +418,7 @@ export class MigrationError extends Error {
   constructor(
     message: string,
     public readonly migration: Migration,
-    public readonly cause: unknown
+    public override readonly cause: unknown
   ) {
     super(message);
     this.name = "MigrationError";
