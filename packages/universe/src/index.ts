@@ -20,6 +20,7 @@ export {
 } from "./fmp-client.js";
 // Universe Resolver
 export {
+  type DiversificationConfig,
   resolveUniverse,
   resolveUniverseSymbols,
   type UniverseResolutionResult,

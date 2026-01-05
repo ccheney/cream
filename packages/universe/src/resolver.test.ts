@@ -370,3 +370,78 @@ describe("metadata merging", () => {
     expect(result.instruments[0].source).toBe("source1,source2");
   });
 });
+
+// ============================================
+// Diversification Tests
+// ============================================
+
+describe("diversification", () => {
+  it("should limit instruments per sector", async () => {
+    // Create instruments with sectors
+    const config = {
+      compose_mode: "union" as const,
+      sources: [
+        {
+          type: "static" as const,
+          name: "tech",
+          enabled: true,
+          tickers: ["AAPL", "MSFT", "GOOG", "META", "NVDA"],
+        },
+      ],
+      max_instruments: 500,
+      diversification: {
+        maxPerSector: 2,
+      },
+    };
+
+    // Note: Static sources don't have sector data, so this just tests the logic path
+    const result = await resolveUniverse(config);
+
+    // With static sources (no sector data), all go to "Unknown" sector
+    // maxPerSector: 2 means only 2 should remain
+    expect(result.instruments.length).toBeLessThanOrEqual(2);
+  });
+
+  it("should warn when min sectors not represented", async () => {
+    const config = {
+      compose_mode: "union" as const,
+      sources: [
+        {
+          type: "static" as const,
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL"],
+        },
+      ],
+      max_instruments: 500,
+      diversification: {
+        minSectorsRepresented: 5, // Impossible with 1 stock
+      },
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Should have warning about sector representation
+    expect(result.warnings.some((w) => w.includes("sectors represented"))).toBe(true);
+  });
+
+  it("should pass without diversification config", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    expect(result.instruments).toHaveLength(2);
+    expect(result.warnings.filter((w) => w.includes("Diversification"))).toHaveLength(0);
+  });
+});

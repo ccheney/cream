@@ -322,19 +322,93 @@ async function applyFilters(
 // ============================================
 
 /**
+ * Diversification configuration (optional extension to UniverseConfig)
+ */
+export interface DiversificationConfig {
+  /** Maximum instruments per sector */
+  maxPerSector?: number;
+  /** Maximum instruments per industry */
+  maxPerIndustry?: number;
+  /** Minimum sectors that must be represented */
+  minSectorsRepresented?: number;
+}
+
+/**
  * Apply diversification rules
- *
- * Note: The diversification schema from the spec includes max_per_sector,
- * max_per_industry, and min_sectors_represented. These are not yet in the
- * Zod schema, so we skip diversification if not configured.
  */
 function applyDiversification(
   instruments: ResolvedInstrument[],
-  _config: UniverseConfig
+  config: UniverseConfig
 ): { instruments: ResolvedInstrument[]; warnings: string[] } {
-  // Diversification rules not yet in schema - return as-is
-  // TODO: Add diversification schema to @cream/config and implement here
-  return { instruments, warnings: [] };
+  const warnings: string[] = [];
+  let filtered = [...instruments];
+
+  // Check for diversification config (may be in config.diversification or extended UniverseConfig)
+  const diversify = (config as UniverseConfig & { diversification?: DiversificationConfig })
+    .diversification;
+
+  if (!diversify) {
+    return { instruments: filtered, warnings };
+  }
+
+  // Apply max per sector
+  if (diversify.maxPerSector && diversify.maxPerSector > 0) {
+    const sectorCounts = new Map<string, number>();
+    const diversified: ResolvedInstrument[] = [];
+
+    for (const instrument of filtered) {
+      const sector = instrument.sector ?? "Unknown";
+      const count = sectorCounts.get(sector) ?? 0;
+
+      if (count < diversify.maxPerSector) {
+        diversified.push(instrument);
+        sectorCounts.set(sector, count + 1);
+      }
+    }
+
+    const removed = filtered.length - diversified.length;
+    if (removed > 0) {
+      warnings.push(`Diversification: removed ${removed} instruments exceeding sector limits`);
+    }
+    filtered = diversified;
+  }
+
+  // Apply max per industry
+  if (diversify.maxPerIndustry && diversify.maxPerIndustry > 0) {
+    const industryCounts = new Map<string, number>();
+    const diversified: ResolvedInstrument[] = [];
+
+    for (const instrument of filtered) {
+      const industry = instrument.industry ?? "Unknown";
+      const count = industryCounts.get(industry) ?? 0;
+
+      if (count < diversify.maxPerIndustry) {
+        diversified.push(instrument);
+        industryCounts.set(industry, count + 1);
+      }
+    }
+
+    const removed = filtered.length - diversified.length;
+    if (removed > 0) {
+      warnings.push(`Diversification: removed ${removed} instruments exceeding industry limits`);
+    }
+    filtered = diversified;
+  }
+
+  // Check min sectors represented
+  if (diversify.minSectorsRepresented && diversify.minSectorsRepresented > 0) {
+    const sectorsPresent = new Set(
+      filtered.filter((i) => i.sector).map((i) => i.sector!)
+    );
+    if (sectorsPresent.size < diversify.minSectorsRepresented) {
+      warnings.push(
+        `Warning: only ${sectorsPresent.size} sectors represented, ` +
+          `below minimum of ${diversify.minSectorsRepresented}`
+      );
+    }
+  }
+
+  return { instruments: filtered, warnings };
 }
 
 // ============================================
