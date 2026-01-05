@@ -43,6 +43,7 @@ pub mod observability;
 pub mod options;
 pub mod resilience;
 pub mod risk;
+pub mod safety;
 pub mod server;
 
 // Re-export commonly used types
@@ -60,4 +61,8 @@ pub use options::{
     validate_leg_ratios, validate_multi_leg_order,
 };
 pub use risk::ConstraintValidator;
+pub use safety::{
+    DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent, MassCancelResult,
+    SafetyError,
+};
 pub use server::ExecutionServer;

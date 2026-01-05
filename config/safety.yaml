@@ -1,0 +1,89 @@
+# Safety Configuration for Cream Trading System
+# =============================================
+#
+# CRITICAL: These settings affect order cancellation behavior during
+# broker disconnections. Review carefully before deploying to LIVE.
+#
+# Reference: docs/plans/13-operations.md (Safety Configuration Reference)
+
+# ============================================
+# Mass Cancel on Disconnect
+# ============================================
+# Automatically cancel all open orders when broker connection is lost.
+# This is a critical safety mechanism to prevent unmanaged positions.
+
+mass_cancel:
+  # Enable mass cancel on disconnect.
+  # MUST be true for LIVE environment.
+  # Default: true
+  enabled: true
+
+  # Grace period before triggering mass cancel (seconds).
+  # Allows transient network issues to recover before cancelling orders.
+  # Recommended: 30 seconds
+  # Maximum recommended: 60 seconds
+  # Default: 30
+  grace_period_seconds: 30
+
+  # GTC (Good Till Cancelled) order handling policy.
+  # Options:
+  #   - "include": Include GTC orders in mass cancel (recommended)
+  #   - "exclude": Exclude GTC orders, only cancel DAY orders
+  # Default: "include"
+  gtc_policy: "include"
+
+# ============================================
+# Heartbeat Monitoring
+# ============================================
+# Monitor broker connection health via heartbeat messages.
+
+heartbeat:
+  # Heartbeat interval in milliseconds.
+  # Default: 30000 (30 seconds)
+  interval_ms: 30000
+
+  # Heartbeat timeout in seconds.
+  # If no heartbeat response within this time, connection is considered lost.
+  # Default: 10
+  timeout_seconds: 10
+
+# ============================================
+# Environment-Specific Overrides
+# ============================================
+# These settings are automatically applied based on CREAM_ENV.
+
+environments:
+  # LIVE: Strict safety settings
+  live:
+    mass_cancel:
+      enabled: true  # REQUIRED - cannot be disabled
+      grace_period_seconds: 30
+      gtc_policy: "include"
+
+  # PAPER: Relaxed settings for testing
+  paper:
+    mass_cancel:
+      enabled: true  # Recommended
+      grace_period_seconds: 60
+      gtc_policy: "include"
+
+  # BACKTEST: Disabled (no broker connection)
+  backtest:
+    mass_cancel:
+      enabled: false
+      grace_period_seconds: 0
+      gtc_policy: "include"
+
+# ============================================
+# Emergency Procedures
+# ============================================
+# Manual override settings for emergency situations.
+
+emergency:
+  # Log file for emergency actions.
+  # Default: /var/log/cream/emergency_log.txt
+  log_file: "/var/log/cream/emergency_log.txt"
+
+  # Enable manual mass cancel API endpoint.
+  # Default: true
+  manual_cancel_enabled: true
