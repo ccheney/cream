@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@cream/domain": "workspace:*",
-    "@cream/config": "workspace:*"
+    "@cream/config": "workspace:*",
+    "helix-ts": "^1.0.8"
   },
   "devDependencies": {
     "@types/bun": "latest",
