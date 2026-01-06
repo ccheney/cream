@@ -49,7 +49,7 @@ impl Default for MonteCarloConfig {
             method: RandomizationMethod::ShuffleTrades,
             confidence_level: Decimal::new(95, 2), // 0.95
             seed: None,
-            initial_equity: Decimal::new(100000, 0),
+            initial_equity: Decimal::new(100_000, 0),
         }
     }
 }
@@ -468,10 +468,10 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
     let max = sorted[n - 1];
 
     // Percentiles
-    let percentile_5 = sorted[(n as f64 * 0.05) as usize];
-    let percentile_25 = sorted[(n as f64 * 0.25) as usize];
-    let percentile_75 = sorted[((n as f64 * 0.75) as usize).min(n - 1)];
-    let percentile_95 = sorted[((n as f64 * 0.95) as usize).min(n - 1)];
+    let pctl_05 = sorted[(n as f64 * 0.05) as usize];
+    let pctl_25 = sorted[(n as f64 * 0.25) as usize];
+    let pctl_75 = sorted[((n as f64 * 0.75) as usize).min(n - 1)];
+    let pctl_95 = sorted[((n as f64 * 0.95) as usize).min(n - 1)];
 
     DistributionStats {
         mean,
@@ -479,10 +479,10 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
         std_dev,
         min,
         max,
-        percentile_5,
-        percentile_25,
-        percentile_75,
-        percentile_95,
+        percentile_5: pctl_05,
+        percentile_25: pctl_25,
+        percentile_75: pctl_75,
+        percentile_95: pctl_95,
     }
 }
 

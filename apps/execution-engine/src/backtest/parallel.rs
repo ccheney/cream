@@ -44,7 +44,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use rayon::prelude::*;
 use rust_decimal::Decimal;
@@ -54,7 +54,7 @@ use tracing::{Level, debug, info, span, warn};
 
 use super::config::BacktestConfig;
 use super::metrics::PerformanceSummary;
-use super::walkforward::{WalkForwardConfig, WalkForwardResult, WalkForwardWindow};
+use super::walkforward::{WalkForwardConfig, WalkForwardWindow};
 
 // ============================================
 // Error Types

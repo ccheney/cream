@@ -196,10 +196,10 @@ async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {
+        () = ctrl_c => {
             tracing::info!("Received Ctrl+C, initiating shutdown");
         }
-        _ = terminate => {
+        () = terminate => {
             tracing::info!("Received SIGTERM, initiating shutdown");
         }
     }
