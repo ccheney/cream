@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { Logo } from "@/components/ui/logo";
+import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
@@ -45,6 +46,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="flex h-screen bg-cream-50 dark:bg-night-900">
+      {/* Skip to content link for keyboard accessibility */}
+      <SkipLink />
+
       {/* Sidebar */}
       <aside className="w-64 border-r border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 flex flex-col">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
@@ -85,7 +89,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Page content with Suspense boundary */}
         <Suspense fallback={<LoadingFallback />}>
-          <div className="flex-1 p-6 overflow-auto">{children}</div>
+          <div id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
+            {children}
+          </div>
         </Suspense>
       </main>
     </div>
