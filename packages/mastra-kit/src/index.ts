@@ -25,6 +25,7 @@ export * from "./chaos.js";
 export * from "./consensus.js";
 export * from "./escalation.js";
 export * from "./loadtest.js";
+export * from "./planScoring.js";
 export * from "./prompts/index.js";
 export * from "./tools/index.js";
 export * from "./types.js";
