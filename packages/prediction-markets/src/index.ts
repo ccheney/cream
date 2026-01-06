@@ -139,3 +139,14 @@ export {
   transformToExternalEvent,
   transformToExternalEvents,
 } from "./transformers";
+
+// ============================================
+// Cache Exports
+// ============================================
+
+export {
+  type CacheStats,
+  createMarketCache,
+  MarketCache,
+  type MarketCacheConfig,
+} from "./cache";

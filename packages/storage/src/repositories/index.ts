@@ -122,6 +122,23 @@ export {
   type PositionStatus,
   PositionsRepository,
 } from "./positions.js";
+// Prediction markets (migration 006)
+export {
+  type ArbitrageAlert,
+  type ComputedSignal,
+  type CreateArbitrageInput,
+  type CreateSignalInput,
+  type CreateSnapshotInput,
+  type MarketSnapshot,
+  type MarketSnapshotData,
+  PredictionMarketsRepository,
+  type PredictionMarketType as StoragePredictionMarketType,
+  type PredictionPlatform as StoragePredictionPlatform,
+  type SignalFilters,
+  type SignalInputs,
+  type SignalType,
+  type SnapshotFilters,
+} from "./prediction-markets.js";
 export {
   MARKET_SYMBOL,
   type RegimeLabel,

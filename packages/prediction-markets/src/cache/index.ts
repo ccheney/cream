@@ -1,10 +1,12 @@
 /**
- * Prediction Market Cache
+ * Prediction Markets Cache Module
  *
- * In-memory caching with optional Turso persistence
- * for prediction market data.
+ * In-memory caching for prediction market data with TTL support.
  */
 
-export const CACHE_VERSION = "0.0.1";
-
-// Placeholder for cache implementation
+export {
+  type CacheStats,
+  createMarketCache,
+  MarketCache,
+  type MarketCacheConfig,
+} from "./market-cache";
