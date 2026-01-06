@@ -236,6 +236,7 @@ services:
       - ALPACA_KEY=${ALPACA_KEY:-}
       - ALPACA_SECRET=${ALPACA_SECRET:-}
       - POLYGON_KEY=${POLYGON_KEY:-}
+      - POLYGON_TIER=${POLYGON_TIER:-starter}
       - FMP_KEY=${FMP_KEY:-}
       - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
     depends_on:

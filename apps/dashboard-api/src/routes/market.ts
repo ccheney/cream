@@ -59,7 +59,7 @@ function getPolygonClient(): PolygonClient {
 
   try {
     const tier =
-      (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "free";
+      (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "starter";
     polygonClient = new PolygonClient({ apiKey, tier });
     console.log(`[market] Polygon client initialized (tier: ${tier})`);
     return polygonClient;
