@@ -43,6 +43,7 @@ mod commission;
 mod config;
 mod data_gaps;
 mod fill_engine;
+mod logging;
 mod metrics;
 mod monte_carlo;
 mod multi_leg;
@@ -71,6 +72,16 @@ pub use data_gaps::{
 pub use fill_engine::{
     Candle, FillResult, simulate_limit_order, simulate_market_order, simulate_order,
     simulate_stop_limit_order, simulate_stop_order,
+};
+pub use logging::{
+    BacktestEvent, BacktestLogger, CommissionCalculatedEvent, DataGapDetectedEvent,
+    OrderFilledEvent, OrderRejectedEvent, OrderSubmittedEvent, PerformanceSummaryEvent,
+    SimulationEndEvent, SimulationStartEvent, SlippageAppliedEvent, TriggerActivatedEvent,
+    calculate_slippage_bps, create_data_gap_event, create_order_submitted_event,
+    create_simulation_start_event, is_adverse_slippage, log_commission_calculated,
+    log_data_gap_detected, log_order_filled, log_order_rejected, log_order_submitted,
+    log_performance_summary, log_simulation_end, log_simulation_start, log_slippage_applied,
+    log_trigger_activated,
 };
 pub use metrics::{
     DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary, TradeRecord,
