@@ -6,6 +6,7 @@ import { describe, expect, it } from "bun:test";
 import type { ExtractionResult } from "../src/index.js";
 import {
   aggregateSentimentScores,
+  applyEventTypeBoost,
   classifyImportance,
   classifySentimentScore,
   classifySurprise,
@@ -134,6 +135,52 @@ describe("Importance Scoring", () => {
     expect(classifyImportance(0.5)).toBe("medium");
     expect(classifyImportance(0.25)).toBe("low");
     expect(classifyImportance(0.1)).toBe("minimal");
+  });
+
+  it("should give full score for future events", () => {
+    const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day in future
+    const score = computeRecencyScore(futureDate, 24);
+    expect(score).toBe(1.0);
+  });
+
+  it("should match entity by name when ticker matches target symbol", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "neutral",
+      confidence: 0.8,
+      entities: [{ name: "MSFT", type: "company" }], // Entity name is the symbol
+      dataPoints: [],
+      eventType: "other",
+      importance: 3,
+      summary: "Test",
+      keyInsights: [],
+    };
+    const score = computeEntityRelevance(extraction, ["AAPL", "MSFT"]);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it("should apply event type boost for earnings", () => {
+    const boosted = applyEventTypeBoost(0.5, "earnings");
+    expect(boosted).toBe(0.6); // 0.5 + 0.1 boost
+  });
+
+  it("should apply event type boost for guidance", () => {
+    const boosted = applyEventTypeBoost(0.5, "guidance");
+    expect(boosted).toBe(0.65); // 0.5 + 0.15 boost
+  });
+
+  it("should apply event type boost for merger_acquisition", () => {
+    const boosted = applyEventTypeBoost(0.5, "merger_acquisition");
+    expect(boosted).toBe(0.7); // 0.5 + 0.2 boost
+  });
+
+  it("should apply no boost for unknown event type", () => {
+    const boosted = applyEventTypeBoost(0.5, "unknown_type");
+    expect(boosted).toBe(0.5); // No boost
+  });
+
+  it("should cap boosted score at 1", () => {
+    const boosted = applyEventTypeBoost(0.95, "merger_acquisition");
+    expect(boosted).toBe(1); // Capped at 1
   });
 });
 
