@@ -25,3 +25,10 @@ export {
   useOptimisticMutation,
   useSimpleMutation,
 } from "./useOptimisticMutation";
+export {
+  SLIDE_UP_KEYFRAMES,
+  type StaggeredAnimationStyle,
+  type UseStaggeredAnimationOptions,
+  type UseStaggeredAnimationReturn,
+  useStaggeredAnimation,
+} from "./useStaggeredAnimation";
