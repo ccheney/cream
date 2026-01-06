@@ -44,6 +44,7 @@ mod config;
 mod data_gaps;
 mod fill_engine;
 mod logging;
+mod look_ahead;
 mod metrics;
 mod monte_carlo;
 mod multi_leg;
@@ -82,6 +83,12 @@ pub use logging::{
     log_data_gap_detected, log_order_filled, log_order_rejected, log_order_submitted,
     log_performance_summary, log_simulation_end, log_simulation_start, log_slippage_applied,
     log_trigger_activated,
+};
+pub use look_ahead::{
+    DataAccessRecord, EarningsRelease, EarningsReleaseTiming, FundamentalDataAvailability,
+    LookAheadChecker, LookAheadConfig, LookAheadError, LookAheadSummary, ValidationResult,
+    check_earnings_availability, check_fundamental_availability, validate_data_timestamp,
+    validate_universe_constituents,
 };
 pub use metrics::{
     DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary, TradeRecord,
