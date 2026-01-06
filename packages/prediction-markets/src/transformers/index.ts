@@ -1,10 +1,17 @@
 /**
  * Prediction Market Transformers
  *
- * Transforms prediction market data into ExternalEvent schema
- * for integration with the Cream trading system.
+ * Transforms prediction market data into Cream's ExternalEvent schema format
+ * for integration with the external context pipeline.
+ *
+ * @see docs/plans/18-prediction-markets.md - Phase 4 External Context Integration
  */
 
-export const TRANSFORMERS_VERSION = "0.0.1";
-
-// Placeholder for transformer implementation
+export {
+  INSTRUMENT_MAPPING,
+  type InstrumentMappingConfig,
+  mapToRelatedInstruments,
+  transformScoresToNumeric,
+  transformToExternalEvent,
+  transformToExternalEvents,
+} from "./transformers";

@@ -65,3 +65,77 @@ export {
   type PredictionMarketProvider,
   RateLimitError,
 } from "./types";
+
+// ============================================
+// Provider Exports
+// ============================================
+
+export {
+  createKalshiClient,
+  createKalshiClientFromEnv,
+  KALSHI_RATE_LIMITS,
+  KalshiClient,
+  type KalshiClientOptions,
+  type KalshiEvent,
+  KalshiEventSchema,
+  type KalshiMarket,
+  KalshiMarketSchema,
+  MARKET_TYPE_TO_SERIES,
+} from "./providers/kalshi";
+
+export {
+  type ClobOrderbook,
+  ClobOrderbookSchema,
+  type ClobPrice,
+  ClobPriceSchema,
+  createPolymarketClient,
+  createPolymarketClientFromEnv,
+  DEFAULT_SEARCH_QUERIES,
+  POLYMARKET_CLOB_URL,
+  POLYMARKET_GAMMA_URL,
+  POLYMARKET_RATE_LIMITS,
+  PolymarketClient,
+  type PolymarketClientOptions,
+  type PolymarketEvent,
+  PolymarketEventSchema,
+  type PolymarketMarket,
+  PolymarketMarketSchema,
+} from "./providers/polymarket";
+
+// ============================================
+// Aggregator Exports
+// ============================================
+
+export {
+  AGGREGATOR_VERSION,
+  type ArbitrageAlert,
+  ArbitrageDetector,
+  type ArbitrageDetectorConfig,
+  type ArbitrageSummary,
+  createUnifiedClient,
+  DEFAULT_ARBITRAGE_CONFIG,
+  DEFAULT_MATCHER_CONFIG,
+  DEFAULT_UNIFIED_CONFIG,
+  type EconomicDataMarket,
+  type FedRateMarket,
+  type MacroRiskSignals,
+  MarketMatcher,
+  type MarketMatcherConfig,
+  type MatchedMarket,
+  type UnifiedClientConfig,
+  type UnifiedMarketData,
+  UnifiedPredictionMarketClient,
+} from "./aggregator";
+
+// ============================================
+// Transformer Exports
+// ============================================
+
+export {
+  INSTRUMENT_MAPPING,
+  type InstrumentMappingConfig,
+  mapToRelatedInstruments,
+  transformScoresToNumeric,
+  transformToExternalEvent,
+  transformToExternalEvents,
+} from "./transformers";

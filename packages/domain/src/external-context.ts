@@ -29,6 +29,7 @@ export const EventType = z.enum([
   "ANALYST_RATING",
   "CONFERENCE",
   "GUIDANCE",
+  "PREDICTION_MARKET",
   "OTHER",
 ]);
 export type EventType = z.infer<typeof EventType>;
