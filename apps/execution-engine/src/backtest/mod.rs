@@ -50,6 +50,7 @@ mod metrics;
 mod monte_carlo;
 mod multi_leg;
 mod replay;
+mod security;
 mod slippage;
 mod triggers;
 mod walkforward;
@@ -113,6 +114,11 @@ pub use replay::{
     CandleDataSource, CandleEvent, DataSourceType, InMemoryDataSource, MissingDataPolicy,
     ReplayConfig, ReplayEngine, ReplayEngineBuilder, ReplayError, ReplayProgress,
     SynchronizedReplay,
+};
+pub use security::{
+    AuditEvent, AuditEventType, AuditLogger, AuditOutcome, ConfigSecurityScan, DataAccessControl,
+    PathSecurityError, SecurityError, SecurityWarning, check_path_patterns,
+    scan_config_for_secrets, validate_safe_path,
 };
 pub use slippage::{apply_slippage, apply_stop_target_slippage};
 pub use triggers::{
