@@ -15,9 +15,10 @@ pub use gateway::{
     BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
 };
 pub use reconciliation::{
-    BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot, BrokerStateSnapshot,
-    CriticalDiscrepancyAction, Discrepancy, DiscrepancySeverity, DiscrepancyType, OrphanResolution,
-    OrphanType, OrphanedOrder, ReconciliationConfig, ReconciliationManager, ReconciliationReport,
+    fetch_broker_state, BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot,
+    BrokerStateSnapshot, CriticalDiscrepancyAction, Discrepancy, DiscrepancySeverity,
+    DiscrepancyType, LocalPositionSnapshot, OrphanResolution, OrphanType, OrphanedOrder,
+    ReconciliationConfig, ReconciliationError, ReconciliationManager, ReconciliationReport,
 };
 pub use state::{OrderStateManager, TimeoutResult};
 pub use stops::{

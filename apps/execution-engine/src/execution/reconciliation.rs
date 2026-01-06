@@ -14,6 +14,7 @@ use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
 
+use super::alpaca::AlpacaAdapter;
 use super::state::OrderStateManager;
 use crate::models::{OrderState, OrderStatus};
 
@@ -180,6 +181,18 @@ pub enum OrphanResolution {
     MarkFailed,
     /// Ignore (order is within protection window).
     Ignore,
+}
+
+impl std::fmt::Display for OrphanResolution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cancel => write!(f, "CANCEL"),
+            Self::Adopt => write!(f, "ADOPT"),
+            Self::SyncFromBroker => write!(f, "SYNC_FROM_BROKER"),
+            Self::MarkFailed => write!(f, "MARK_FAILED"),
+            Self::Ignore => write!(f, "IGNORE"),
+        }
+    }
 }
 
 // ============================================================================
@@ -612,6 +625,329 @@ impl ReconciliationManager {
             None => true,
         }
     }
+
+    /// Execute resolution for an orphaned order.
+    ///
+    /// Returns `Ok(true)` if resolution was executed, `Ok(false)` if ignored.
+    pub async fn execute_resolution(
+        &self,
+        orphan: &OrphanedOrder,
+        broker: &AlpacaAdapter,
+    ) -> Result<bool, ReconciliationError> {
+        let resolution = self.determine_resolution(orphan);
+
+        match resolution {
+            OrphanResolution::Ignore => {
+                debug!(
+                    order_id = %orphan.order_id,
+                    orphan_type = %orphan.orphan_type,
+                    "Ignoring orphan (within protection window)"
+                );
+                Ok(false)
+            }
+            OrphanResolution::Cancel => {
+                info!(
+                    order_id = %orphan.order_id,
+                    broker_order_id = ?orphan.broker_order_id,
+                    "Canceling orphaned order at broker"
+                );
+                if let Some(broker_id) = &orphan.broker_order_id {
+                    broker
+                        .cancel_order(broker_id)
+                        .await
+                        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+                }
+                Ok(true)
+            }
+            OrphanResolution::Adopt => {
+                info!(
+                    order_id = %orphan.order_id,
+                    broker_order_id = ?orphan.broker_order_id,
+                    "Adopting broker order into local state"
+                );
+                if let Some(broker_id) = &orphan.broker_order_id {
+                    // Fetch current order state from broker
+                    let order_state = broker
+                        .get_order_status(broker_id)
+                        .await
+                        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+                    // Insert into local state manager
+                    self.order_state.insert(order_state);
+                }
+                Ok(true)
+            }
+            OrphanResolution::SyncFromBroker => {
+                info!(
+                    order_id = %orphan.order_id,
+                    broker_order_id = ?orphan.broker_order_id,
+                    local_status = ?orphan.local_status,
+                    broker_status = ?orphan.broker_status,
+                    "Syncing local state from broker"
+                );
+                if let Some(broker_id) = &orphan.broker_order_id {
+                    // Fetch current state from broker and update local
+                    let order_state = broker
+                        .get_order_status(broker_id)
+                        .await
+                        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+                    self.order_state.update(order_state);
+                }
+                Ok(true)
+            }
+            OrphanResolution::MarkFailed => {
+                info!(
+                    order_id = %orphan.order_id,
+                    "Marking order as failed (missing in broker)"
+                );
+                // Update local order status to Rejected
+                if let Some(order) = self.order_state.get(&orphan.order_id) {
+                    let mut updated = order.clone();
+                    updated.status = OrderStatus::Rejected;
+                    updated.status_message =
+                        "Order not found at broker during reconciliation".to_string();
+                    updated.last_update_at = chrono::Utc::now().to_rfc3339();
+                    self.order_state.update(updated);
+                }
+                Ok(true)
+            }
+        }
+    }
+
+    /// Reconcile with resolution execution.
+    ///
+    /// This is the main entry point that both detects discrepancies AND executes
+    /// resolutions when auto_resolve_orphans is enabled.
+    pub async fn reconcile_with_execution(
+        &self,
+        broker_state: BrokerStateSnapshot,
+        broker: &AlpacaAdapter,
+    ) -> ReconciliationReport {
+        // First run standard reconciliation to detect issues
+        let mut report = self.reconcile(broker_state).await;
+
+        // Execute resolutions if auto-resolve is enabled
+        if self.config.auto_resolve_orphans {
+            let mut resolved_count = 0;
+            for orphan in &report.orphaned_orders {
+                match self.execute_resolution(orphan, broker).await {
+                    Ok(true) => resolved_count += 1,
+                    Ok(false) => {} // Ignored
+                    Err(e) => {
+                        error!(
+                            order_id = %orphan.order_id,
+                            error = %e,
+                            "Failed to execute resolution"
+                        );
+                    }
+                }
+            }
+            report.auto_resolved = resolved_count;
+        }
+
+        report
+    }
+
+    /// Compare positions and generate discrepancies.
+    ///
+    /// Compares broker positions against local position tracking.
+    pub fn compare_positions(
+        &self,
+        broker_positions: &[BrokerPositionSnapshot],
+        local_positions: &HashMap<String, LocalPositionSnapshot>,
+    ) -> Vec<Discrepancy> {
+        let now = chrono::Utc::now();
+        let mut discrepancies = Vec::new();
+
+        // Check broker positions against local
+        for broker_pos in broker_positions {
+            match local_positions.get(&broker_pos.symbol) {
+                None => {
+                    // Broker has position we don't know about
+                    discrepancies.push(Discrepancy {
+                        discrepancy_type: DiscrepancyType::Position,
+                        identifier: broker_pos.symbol.clone(),
+                        local_state: "NO_POSITION".to_string(),
+                        broker_state: format!(
+                            "{} {} @ {}",
+                            broker_pos.qty, broker_pos.side, broker_pos.avg_entry_price
+                        ),
+                        severity: DiscrepancySeverity::Warning,
+                        auto_resolvable: false,
+                        suggested_action: "Investigate: broker has position not tracked locally"
+                            .to_string(),
+                        detected_at: now.to_rfc3339(),
+                    });
+                }
+                Some(local_pos) => {
+                    // Check quantity variance
+                    let qty_diff = (broker_pos.qty - local_pos.qty).abs();
+                    if qty_diff > self.config.position_qty_tolerance {
+                        let severity = if qty_diff > local_pos.qty.abs() / Decimal::new(2, 0) {
+                            DiscrepancySeverity::Critical
+                        } else {
+                            DiscrepancySeverity::Warning
+                        };
+
+                        discrepancies.push(Discrepancy {
+                            discrepancy_type: DiscrepancyType::Position,
+                            identifier: broker_pos.symbol.clone(),
+                            local_state: format!("qty={}", local_pos.qty),
+                            broker_state: format!("qty={}", broker_pos.qty),
+                            severity,
+                            auto_resolvable: false,
+                            suggested_action: "Sync position quantity from broker".to_string(),
+                            detected_at: now.to_rfc3339(),
+                        });
+                    }
+
+                    // Check price variance (if we have local avg price)
+                    if local_pos.avg_entry_price > Decimal::ZERO
+                        && broker_pos.avg_entry_price > Decimal::ZERO
+                    {
+                        let price_diff =
+                            (broker_pos.avg_entry_price - local_pos.avg_entry_price).abs();
+                        let price_pct = price_diff / broker_pos.avg_entry_price;
+
+                        if price_pct > self.config.position_price_tolerance_pct {
+                            discrepancies.push(Discrepancy {
+                                discrepancy_type: DiscrepancyType::Position,
+                                identifier: broker_pos.symbol.clone(),
+                                local_state: format!("avg_price={}", local_pos.avg_entry_price),
+                                broker_state: format!("avg_price={}", broker_pos.avg_entry_price),
+                                severity: DiscrepancySeverity::Info,
+                                auto_resolvable: false,
+                                suggested_action: "Update local avg price from broker".to_string(),
+                                detected_at: now.to_rfc3339(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for local positions not in broker
+        for (symbol, local_pos) in local_positions {
+            let in_broker = broker_positions.iter().any(|p| &p.symbol == symbol);
+            if !in_broker && local_pos.qty != Decimal::ZERO {
+                discrepancies.push(Discrepancy {
+                    discrepancy_type: DiscrepancyType::Position,
+                    identifier: symbol.clone(),
+                    local_state: format!("qty={}", local_pos.qty),
+                    broker_state: "NO_POSITION".to_string(),
+                    severity: DiscrepancySeverity::Warning,
+                    auto_resolvable: false,
+                    suggested_action: "Clear local position tracking (closed at broker)".to_string(),
+                    detected_at: now.to_rfc3339(),
+                });
+            }
+        }
+
+        discrepancies
+    }
+}
+
+// ============================================================================
+// Local Position Tracking
+// ============================================================================
+
+/// Local position snapshot for comparison.
+#[derive(Debug, Clone)]
+pub struct LocalPositionSnapshot {
+    /// Symbol.
+    pub symbol: String,
+    /// Quantity (signed).
+    pub qty: Decimal,
+    /// Average entry price.
+    pub avg_entry_price: Decimal,
+}
+
+// ============================================================================
+// Reconciliation Error
+// ============================================================================
+
+/// Errors from reconciliation operations.
+#[derive(Debug, thiserror::Error)]
+pub enum ReconciliationError {
+    /// Broker API error.
+    #[error("Broker error: {0}")]
+    BrokerError(String),
+
+    /// Invalid state for operation.
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+}
+
+// ============================================================================
+// Broker State Fetcher
+// ============================================================================
+
+/// Fetch complete broker state for reconciliation.
+///
+/// This function queries the Alpaca broker for all orders, positions, and account
+/// information, then packages it into a `BrokerStateSnapshot` for reconciliation.
+pub async fn fetch_broker_state(broker: &AlpacaAdapter) -> Result<BrokerStateSnapshot, ReconciliationError> {
+    let now = chrono::Utc::now();
+
+    // Fetch orders (both open and closed recent)
+    let order_states = broker
+        .get_orders(None) // Get all orders
+        .await
+        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+
+    let orders: Vec<BrokerOrderSnapshot> = order_states
+        .iter()
+        .map(|o| BrokerOrderSnapshot {
+            order_id: o.broker_order_id.clone(),
+            client_order_id: Some(o.order_id.clone()),
+            symbol: o.instrument_id.clone(),
+            status: format!("{:?}", o.status).to_lowercase(),
+            side: format!("{:?}", o.side).to_lowercase(),
+            qty: o.requested_quantity,
+            filled_qty: o.filled_quantity,
+            created_at: o.submitted_at.clone(),
+        })
+        .collect();
+
+    // Fetch positions
+    let alpaca_positions = broker
+        .get_positions()
+        .await
+        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+
+    let positions: Vec<BrokerPositionSnapshot> = alpaca_positions
+        .iter()
+        .map(|p| BrokerPositionSnapshot {
+            symbol: p.symbol.clone(),
+            qty: p.qty,
+            side: if p.qty >= Decimal::ZERO {
+                "long".to_string()
+            } else {
+                "short".to_string()
+            },
+            avg_entry_price: p.avg_entry_price,
+            market_value: p.market_value,
+            unrealized_pl: p.unrealized_pl,
+        })
+        .collect();
+
+    // Fetch account
+    let account_info = broker
+        .get_account()
+        .await
+        .map_err(|e| ReconciliationError::BrokerError(e.to_string()))?;
+
+    let account = BrokerAccountSnapshot {
+        equity: account_info.equity,
+        cash: account_info.cash,
+        buying_power: account_info.buying_power,
+    };
+
+    Ok(BrokerStateSnapshot {
+        orders,
+        positions,
+        account,
+        fetched_at: now.to_rfc3339(),
+    })
 }
 
 // ============================================================================
@@ -865,5 +1201,124 @@ mod tests {
         // Resume trading
         manager.resume_trading().await;
         assert!(!manager.is_trading_halted().await);
+    }
+
+    // ============================================================================
+    // Position Reconciliation Tests
+    // ============================================================================
+
+    #[test]
+    fn test_compare_positions_no_discrepancies() {
+        let config = make_config();
+        let state = Arc::new(OrderStateManager::new());
+        let manager = ReconciliationManager::new(config, state);
+
+        let broker_positions = vec![BrokerPositionSnapshot {
+            symbol: "AAPL".to_string(),
+            qty: Decimal::new(100, 0),
+            side: "long".to_string(),
+            avg_entry_price: Decimal::new(15000, 2),
+            market_value: Decimal::new(15500, 0),
+            unrealized_pl: Decimal::new(500, 0),
+        }];
+
+        let mut local_positions = HashMap::new();
+        local_positions.insert(
+            "AAPL".to_string(),
+            LocalPositionSnapshot {
+                symbol: "AAPL".to_string(),
+                qty: Decimal::new(100, 0),
+                avg_entry_price: Decimal::new(15000, 2),
+            },
+        );
+
+        let discrepancies = manager.compare_positions(&broker_positions, &local_positions);
+        assert!(discrepancies.is_empty());
+    }
+
+    #[test]
+    fn test_compare_positions_quantity_mismatch() {
+        let config = make_config();
+        let state = Arc::new(OrderStateManager::new());
+        let manager = ReconciliationManager::new(config, state);
+
+        let broker_positions = vec![BrokerPositionSnapshot {
+            symbol: "AAPL".to_string(),
+            qty: Decimal::new(100, 0),
+            side: "long".to_string(),
+            avg_entry_price: Decimal::new(15000, 2),
+            market_value: Decimal::new(15500, 0),
+            unrealized_pl: Decimal::new(500, 0),
+        }];
+
+        let mut local_positions = HashMap::new();
+        local_positions.insert(
+            "AAPL".to_string(),
+            LocalPositionSnapshot {
+                symbol: "AAPL".to_string(),
+                qty: Decimal::new(50, 0), // Mismatch: local has 50, broker has 100
+                avg_entry_price: Decimal::new(15000, 2),
+            },
+        );
+
+        let discrepancies = manager.compare_positions(&broker_positions, &local_positions);
+        assert_eq!(discrepancies.len(), 1);
+        assert_eq!(discrepancies[0].discrepancy_type, DiscrepancyType::Position);
+        assert!(discrepancies[0].local_state.contains("qty=50"));
+        assert!(discrepancies[0].broker_state.contains("qty=100"));
+    }
+
+    #[test]
+    fn test_compare_positions_broker_has_unknown() {
+        let config = make_config();
+        let state = Arc::new(OrderStateManager::new());
+        let manager = ReconciliationManager::new(config, state);
+
+        let broker_positions = vec![BrokerPositionSnapshot {
+            symbol: "AAPL".to_string(),
+            qty: Decimal::new(100, 0),
+            side: "long".to_string(),
+            avg_entry_price: Decimal::new(15000, 2),
+            market_value: Decimal::new(15500, 0),
+            unrealized_pl: Decimal::new(500, 0),
+        }];
+
+        let local_positions = HashMap::new(); // Empty - no local tracking
+
+        let discrepancies = manager.compare_positions(&broker_positions, &local_positions);
+        assert_eq!(discrepancies.len(), 1);
+        assert_eq!(discrepancies[0].local_state, "NO_POSITION");
+    }
+
+    #[test]
+    fn test_compare_positions_local_has_unknown() {
+        let config = make_config();
+        let state = Arc::new(OrderStateManager::new());
+        let manager = ReconciliationManager::new(config, state);
+
+        let broker_positions = vec![]; // No positions at broker
+
+        let mut local_positions = HashMap::new();
+        local_positions.insert(
+            "AAPL".to_string(),
+            LocalPositionSnapshot {
+                symbol: "AAPL".to_string(),
+                qty: Decimal::new(100, 0),
+                avg_entry_price: Decimal::new(15000, 2),
+            },
+        );
+
+        let discrepancies = manager.compare_positions(&broker_positions, &local_positions);
+        assert_eq!(discrepancies.len(), 1);
+        assert_eq!(discrepancies[0].broker_state, "NO_POSITION");
+    }
+
+    #[test]
+    fn test_orphan_resolution_display() {
+        assert_eq!(format!("{}", OrphanResolution::Cancel), "CANCEL");
+        assert_eq!(format!("{}", OrphanResolution::Adopt), "ADOPT");
+        assert_eq!(format!("{}", OrphanResolution::SyncFromBroker), "SYNC_FROM_BROKER");
+        assert_eq!(format!("{}", OrphanResolution::MarkFailed), "MARK_FAILED");
+        assert_eq!(format!("{}", OrphanResolution::Ignore), "IGNORE");
     }
 }
