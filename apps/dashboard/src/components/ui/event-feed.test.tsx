@@ -2,7 +2,6 @@
  * EventFeed Component Tests
  *
  * Tests for event feed utilities, hooks, and type definitions.
- * Component rendering is tested via Storybook/integration tests.
  */
 
 import { describe, expect, it } from "bun:test";
