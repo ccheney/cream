@@ -1,14 +1,15 @@
 /**
- * Next.js Middleware
+ * Next.js Proxy
  *
  * Handles authentication redirects:
  * - Unauthenticated users → /login
  * - Authenticated users on /login → /dashboard
  *
- * Note: This middleware uses cookie presence as a hint.
+ * Note: This proxy uses cookie presence as a hint.
  * Full authentication validation happens server-side.
  *
  * @see docs/plans/ui/09-security.md
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  */
 
 import type { NextRequest } from "next/server";
@@ -20,15 +21,15 @@ const PUBLIC_ROUTES = ["/login", "/api"];
 // Cookie name for access token (set by dashboard-api)
 const AUTH_COOKIE_NAME = "cream_access_token";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for public routes and API calls
+  // Skip proxy for public routes and API calls
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
-  // Skip middleware for static files
+  // Skip proxy for static files
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")) {
     return NextResponse.next();
   }
