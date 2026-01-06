@@ -68,16 +68,15 @@ describe("GrpcError", () => {
     });
 
     it("should map various Connect codes", () => {
-      const testCases: Array<{ connectCode: string; expected: GrpcErrorCode }> =
-        [
-          { connectCode: "invalid_argument", expected: "INVALID_ARGUMENT" },
-          { connectCode: "deadline_exceeded", expected: "DEADLINE_EXCEEDED" },
-          { connectCode: "not_found", expected: "NOT_FOUND" },
-          { connectCode: "permission_denied", expected: "PERMISSION_DENIED" },
-          { connectCode: "resource_exhausted", expected: "RESOURCE_EXHAUSTED" },
-          { connectCode: "internal", expected: "INTERNAL" },
-          { connectCode: "unauthenticated", expected: "UNAUTHENTICATED" },
-        ];
+      const testCases: Array<{ connectCode: string; expected: GrpcErrorCode }> = [
+        { connectCode: "invalid_argument", expected: "INVALID_ARGUMENT" },
+        { connectCode: "deadline_exceeded", expected: "DEADLINE_EXCEEDED" },
+        { connectCode: "not_found", expected: "NOT_FOUND" },
+        { connectCode: "permission_denied", expected: "PERMISSION_DENIED" },
+        { connectCode: "resource_exhausted", expected: "RESOURCE_EXHAUSTED" },
+        { connectCode: "internal", expected: "INTERNAL" },
+        { connectCode: "unauthenticated", expected: "UNAUTHENTICATED" },
+      ];
 
       for (const { connectCode, expected } of testCases) {
         const error = GrpcError.fromConnectError({
@@ -195,7 +194,7 @@ describe("RetryBackoff", () => {
     });
 
     it("should apply jitter within expected range", () => {
-      const backoff = new RetryBackoff({
+      const _backoff = new RetryBackoff({
         baseDelayMs: 100,
         jitterFactor: 0.2, // ±20%
       });

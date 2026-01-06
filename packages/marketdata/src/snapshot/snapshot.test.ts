@@ -2,35 +2,29 @@
  * Feature Snapshot Builder Tests
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { Candle } from "@cream/indicators";
 import type { ResolvedInstrument } from "@cream/universe";
 
 import {
   buildSnapshot,
   buildSnapshots,
+  type CandleDataSource,
   compactSnapshot,
   createMockCandleSource,
   createMockEventSource,
   createMockUniverseSource,
   getSnapshotSummary,
   serializeSnapshot,
-  type CandleDataSource,
-  type ExternalEventSummary,
 } from "./builder";
-import {
-  DEFAULT_CACHE_CONFIG,
-  getGlobalCache,
-  resetGlobalCache,
-  SnapshotCache,
-} from "./cache";
+import { getGlobalCache, resetGlobalCache, SnapshotCache } from "./cache";
 import {
   classifyMarketCap,
-  DEFAULT_SNAPSHOT_CONFIG,
+  type ExternalEventSummary,
+  type FeatureSnapshot,
   FeatureSnapshotSchema,
   isValidFeatureSnapshot,
   parseFeatureSnapshot,
-  type FeatureSnapshot,
   type Timeframe,
 } from "./schema";
 
@@ -514,7 +508,7 @@ describe("buildSnapshot", () => {
 
     // Check events
     expect(snapshot.recentEvents.length).toBe(2);
-    expect(snapshot.recentEvents[0].eventType).toBe("EARNINGS");
+    expect(snapshot.recentEvents[0]?.eventType).toBe("EARNINGS");
   });
 
   it("should use cache on subsequent calls", async () => {
@@ -690,12 +684,12 @@ describe("Serialization", () => {
     });
 
     // Add some null values
-    snapshot.indicators["null_indicator"] = null;
+    snapshot.indicators.null_indicator = null;
 
     const compacted = compactSnapshot(snapshot);
 
     expect(compacted.symbol).toBe("AAPL");
-    expect((compacted.indicators as Record<string, number>)["null_indicator"]).toBeUndefined();
+    expect((compacted.indicators as Record<string, number>).null_indicator).toBeUndefined();
   });
 
   it("should round numbers to specified precision", async () => {
@@ -708,7 +702,8 @@ describe("Serialization", () => {
 
     // Price should be rounded to 2 decimal places
     const priceStr = String(compacted.price);
-    const decimalPlaces = priceStr.includes(".") ? priceStr.split(".")[1].length : 0;
+    const parts = priceStr.split(".");
+    const decimalPlaces = priceStr.includes(".") && parts[1] ? parts[1].length : 0;
     expect(decimalPlaces).toBeLessThanOrEqual(2);
   });
 

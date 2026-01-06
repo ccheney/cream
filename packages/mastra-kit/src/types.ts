@@ -67,12 +67,7 @@ export interface KeyLevels {
   pivot: number;
 }
 
-export type SetupClassification =
-  | "BREAKOUT"
-  | "PULLBACK"
-  | "REVERSAL"
-  | "RANGE_BOUND"
-  | "NO_SETUP";
+export type SetupClassification = "BREAKOUT" | "PULLBACK" | "REVERSAL" | "RANGE_BOUND" | "NO_SETUP";
 
 export interface TechnicalAnalysisOutput {
   instrument_id: string;
@@ -199,13 +194,7 @@ export type StrategyFamily =
 
 export type TimeHorizon = "INTRADAY" | "SWING" | "POSITION";
 
-export type ThesisState =
-  | "WATCHING"
-  | "ENTERED"
-  | "ADDING"
-  | "MANAGING"
-  | "EXITING"
-  | "CLOSED";
+export type ThesisState = "WATCHING" | "ENTERED" | "ADDING" | "MANAGING" | "EXITING" | "CLOSED";
 
 export interface TradeSize {
   value: number;

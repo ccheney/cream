@@ -8,17 +8,15 @@ import pytest
 from numpy.typing import NDArray
 
 from research.evaluator.calibration import (
+    CalibratedProbabilityEstimator,
     CalibrationConfig,
     CalibrationDriftDetector,
     CalibrationMethod,
-    CalibrationMetrics,
-    CalibratedProbabilityEstimator,
     DriftConfig,
     DriftMetrics,
     ProbabilityCalibrator,
     compute_ece,
 )
-
 
 # ============================================
 # Fixtures
@@ -600,7 +598,7 @@ class TestIntegration:
             pred = np.clip(true_prob + noise, 0.01, 0.99)
             outcome = int(np.random.random() < true_prob)
 
-            drift = estimator.update(pred, outcome)
+            estimator.update(pred, outcome)
 
         # Should have metrics
         metrics = estimator.get_metrics()

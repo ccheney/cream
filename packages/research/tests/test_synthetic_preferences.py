@@ -17,7 +17,6 @@ from research.evaluator.synthetic_preferences import (
     generate_random_contexts,
 )
 
-
 # ============================================
 # Fixtures
 # ============================================
@@ -543,8 +542,7 @@ class TestFeatureVectors:
     def test_prepare_training_batch(self, generator, sample_context):
         """Test preparing batch for training."""
         pairs = [
-            generator.generate_preference_pair(sample_context, n_candidates=4)
-            for _ in range(5)
+            generator.generate_preference_pair(sample_context, n_candidates=4) for _ in range(5)
         ]
 
         chosen, rejected, margins = generator.prepare_training_batch(pairs)
@@ -719,12 +717,8 @@ class TestCounterfactualOutcomes:
             hit_stop=True,
         )
 
-        winning_score = generator._outcome_based_score(
-            sample_plan, winning_outcome, sample_context
-        )
-        losing_score = generator._outcome_based_score(
-            sample_plan, losing_outcome, sample_context
-        )
+        winning_score = generator._outcome_based_score(sample_plan, winning_outcome, sample_context)
+        losing_score = generator._outcome_based_score(sample_plan, losing_outcome, sample_context)
 
         assert winning_score > losing_score
 
@@ -760,7 +754,7 @@ class TestHelperFunctions:
         ctx1 = generate_random_contexts(["SPY"], 5, random_seed=42)
         ctx2 = generate_random_contexts(["SPY"], 5, random_seed=42)
 
-        for c1, c2 in zip(ctx1, ctx2):
+        for c1, c2 in zip(ctx1, ctx2, strict=False):
             assert c1.current_price == c2.current_price
             assert c1.vix == c2.vix
             assert c1.rsi == c2.rsi

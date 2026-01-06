@@ -3,24 +3,24 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  computeSentimentScore,
-  computeSentimentFromExtraction,
-  aggregateSentimentScores,
-  classifySentimentScore,
-  computeSentimentMomentum,
-  computeImportanceScore,
-  getSourceCredibility,
-  computeRecencyScore,
-  computeEntityRelevance,
-  classifyImportance,
-  computeSurpriseScore,
-  computeAggregatedSurprise,
-  classifySurprise,
-  isSurpriseSignificant,
-  getSurpriseDirection,
-} from "../src/index.js";
 import type { ExtractionResult } from "../src/index.js";
+import {
+  aggregateSentimentScores,
+  classifyImportance,
+  classifySentimentScore,
+  classifySurprise,
+  computeAggregatedSurprise,
+  computeEntityRelevance,
+  computeImportanceScore,
+  computeRecencyScore,
+  computeSentimentFromExtraction,
+  computeSentimentMomentum,
+  computeSentimentScore,
+  computeSurpriseScore,
+  getSourceCredibility,
+  getSurpriseDirection,
+  isSurpriseSignificant,
+} from "../src/index.js";
 
 describe("Sentiment Scoring", () => {
   it("should compute bullish sentiment score", () => {
@@ -99,13 +99,9 @@ describe("Importance Scoring", () => {
   };
 
   it("should compute importance score", () => {
-    const score = computeImportanceScore(
-      baseExtraction,
-      "news",
-      "reuters.com",
-      new Date(),
-      ["AAPL"],
-    );
+    const score = computeImportanceScore(baseExtraction, "news", "reuters.com", new Date(), [
+      "AAPL",
+    ]);
     expect(score).toBeGreaterThan(0);
     expect(score).toBeLessThanOrEqual(1);
   });

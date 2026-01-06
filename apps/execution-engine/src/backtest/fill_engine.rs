@@ -27,7 +27,13 @@ pub struct Candle {
 impl Candle {
     /// Create a new candle.
     #[must_use]
-    pub fn new(open: Decimal, high: Decimal, low: Decimal, close: Decimal, volume: Decimal) -> Self {
+    pub fn new(
+        open: Decimal,
+        high: Decimal,
+        low: Decimal,
+        close: Decimal,
+        volume: Decimal,
+    ) -> Self {
         Self {
             open,
             high,
@@ -154,7 +160,11 @@ pub fn simulate_market_order(
         return fill;
     }
 
-    FillResult::full_fill(fill_price, quantity, "Market order filled at open with slippage")
+    FillResult::full_fill(
+        fill_price,
+        quantity,
+        "Market order filled at open with slippage",
+    )
 }
 
 /// Simulate a limit order fill.
@@ -357,8 +367,16 @@ fn try_partial_fill(
 
     if hash_value < probability_threshold {
         // Calculate fill fraction
-        let min_frac = config.min_fill_fraction.to_string().parse::<f64>().unwrap_or(0.3);
-        let max_frac = config.max_fill_fraction.to_string().parse::<f64>().unwrap_or(0.9);
+        let min_frac = config
+            .min_fill_fraction
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.3);
+        let max_frac = config
+            .max_fill_fraction
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.9);
         let fill_frac = min_frac + hash_value * (max_frac - min_frac);
 
         let fill_frac_decimal = Decimal::try_from(fill_frac).unwrap_or(config.min_fill_fraction);

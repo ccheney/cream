@@ -7,11 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tool, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages.js";
-import {
-  ExtractionResultSchema,
-  type ExtractionResult,
-  type ContentSourceType,
-} from "../types.js";
+import { type ContentSourceType, type ExtractionResult, ExtractionResultSchema } from "../types.js";
 
 /**
  * Extraction client configuration
@@ -209,7 +205,7 @@ export class ExtractionClient {
   async extract(
     content: string,
     sourceType: ContentSourceType,
-    metadata?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<ExtractionResult> {
     const systemPrompt = EXTRACTION_PROMPTS[sourceType];
 
@@ -225,7 +221,8 @@ export class ExtractionClient {
     }
 
     userMessage += `Content:\n${content}\n\n`;
-    userMessage += "Analyze this content and use the submit_extraction tool to provide your structured analysis.";
+    userMessage +=
+      "Analyze this content and use the submit_extraction tool to provide your structured analysis.";
 
     // Call Claude with tool use
     const response = await this.client.messages.create({
@@ -281,7 +278,7 @@ export class ExtractionClient {
       sourceType: ContentSourceType;
       metadata?: Record<string, unknown>;
     }>,
-    concurrency: number = 3,
+    concurrency = 3
   ): Promise<Array<ExtractionResult | Error>> {
     const results: Array<ExtractionResult | Error> = [];
 
@@ -289,9 +286,7 @@ export class ExtractionClient {
     for (let i = 0; i < items.length; i += concurrency) {
       const batch = items.slice(i, i + concurrency);
       const batchPromises = batch.map((item) =>
-        this.extract(item.content, item.sourceType, item.metadata).catch(
-          (err) => err as Error,
-        ),
+        this.extract(item.content, item.sourceType, item.metadata).catch((err) => err as Error)
       );
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
@@ -336,8 +331,6 @@ export class ExtractionClient {
 /**
  * Create extraction client with environment configuration
  */
-export function createExtractionClient(
-  config?: ExtractionClientConfig,
-): ExtractionClient {
+export function createExtractionClient(config?: ExtractionClientConfig): ExtractionClient {
   return new ExtractionClient(config);
 }

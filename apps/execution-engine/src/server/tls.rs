@@ -116,8 +116,8 @@ impl TlsConfig {
         san_dns_names: &[&str],
     ) -> Result<Self, TlsError> {
         // Generate key pair
-        let key_pair = KeyPair::generate()
-            .map_err(|e| TlsError::CertificateGeneration(e.to_string()))?;
+        let key_pair =
+            KeyPair::generate().map_err(|e| TlsError::CertificateGeneration(e.to_string()))?;
 
         // Configure certificate
         let san_strings: Vec<String> = san_dns_names.iter().map(|s| (*s).to_string()).collect();
@@ -129,9 +129,7 @@ impl TlsConfig {
         params
             .distinguished_name
             .push(DnType::OrganizationName, "Cream Trading System");
-        params
-            .distinguished_name
-            .push(DnType::CountryName, "US");
+        params.distinguished_name.push(DnType::CountryName, "US");
 
         // Generate certificate
         let cert = params
@@ -336,8 +334,7 @@ mod tests {
 
     #[test]
     fn test_builder_from_pem() {
-        let config =
-            TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
+        let config = TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
 
         let config2 = TlsConfig::from_pem(&config.cert, &config.key, config.ca_cert.clone(), false);
 
@@ -347,8 +344,7 @@ mod tests {
 
     #[test]
     fn test_build_server_config() {
-        let config =
-            TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
+        let config = TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
 
         let server_config = config.build_server_config();
         assert!(server_config.is_ok());

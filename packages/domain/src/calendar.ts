@@ -80,9 +80,7 @@ export const NYSE_HOLIDAYS_2026: Holiday[] = [
 ];
 
 // Create lookup map for fast access
-const holidayMap = new Map<string, Holiday>(
-  NYSE_HOLIDAYS_2026.map((h) => [h.date, h])
-);
+const holidayMap = new Map<string, Holiday>(NYSE_HOLIDAYS_2026.map((h) => [h.date, h]));
 
 // ============================================
 // Session Definitions
@@ -190,7 +188,9 @@ export function getTradingSession(datetime: Date | string): TradingSession {
 
   // Check early close
   const closeTime = getMarketCloseTime(dateStr);
-  const closeMinutes = closeTime ? parseTimeToMinutes(closeTime) : parseTimeToMinutes(DEFAULT_CLOSE_TIME);
+  const closeMinutes = closeTime
+    ? parseTimeToMinutes(closeTime)
+    : parseTimeToMinutes(DEFAULT_CLOSE_TIME);
 
   // Determine session based on time
   const preMarketStart = parseTimeToMinutes(NYSE_SESSIONS.PRE_MARKET.start);
@@ -319,15 +319,7 @@ export function isWeeklyExpiration(date: Date | string): boolean {
  */
 export function hasDailyOptions(symbol: string): boolean {
   // Major indices with daily options
-  const dailyOptionSymbols = new Set([
-    "SPY",
-    "QQQ",
-    "IWM",
-    "SPX",
-    "NDX",
-    "RUT",
-    "XSP",
-  ]);
+  const dailyOptionSymbols = new Set(["SPY", "QQQ", "IWM", "SPX", "NDX", "RUT", "XSP"]);
 
   return dailyOptionSymbols.has(symbol.toUpperCase());
 }
@@ -426,7 +418,7 @@ export function canStartCycle(datetime: Date | string): boolean {
  * @returns Next trading day
  */
 export function getNextTradingDay(date: Date | string): Date {
-  let nextDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
+  const nextDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
 
   // Add one day
   nextDay.setUTCDate(nextDay.getUTCDate() + 1);
@@ -446,7 +438,7 @@ export function getNextTradingDay(date: Date | string): Date {
  * @returns Previous trading day
  */
 export function getPreviousTradingDay(date: Date | string): Date {
-  let prevDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
+  const prevDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
 
   // Subtract one day
   prevDay.setUTCDate(prevDay.getUTCDate() - 1);
@@ -477,7 +469,14 @@ function formatDateOnly(date: Date): string {
  * Parse HH:MM time string to minutes since midnight
  */
 function parseTimeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
+  const parts = time.split(":").map(Number);
+  const hours = parts[0];
+  const minutes = parts[1];
+
+  if (hours === undefined || minutes === undefined) {
+    throw new Error(`Invalid time format: ${time}`);
+  }
+
   return hours * 60 + minutes;
 }
 

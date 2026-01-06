@@ -4,14 +4,14 @@
  * Tests for the Databento WebSocket client with mocked WebSocket server.
  */
 
-import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import WebSocket, { WebSocketServer } from "ws";
 import {
   ConnectionState,
   DatabentoClient,
   type DatabentoEvent,
   type SubscriptionConfig,
 } from "../src/providers/databento";
-import WebSocket from "ws";
 
 // ============================================
 // Mock WebSocket Server
@@ -21,7 +21,7 @@ import WebSocket from "ws";
  * Mock WebSocket server for testing.
  */
 class MockWebSocketServer {
-  private server: WebSocket.Server | null = null;
+  private server: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
   private port = 0;
 
@@ -30,7 +30,7 @@ class MockWebSocketServer {
    */
   async start(): Promise<number> {
     return new Promise((resolve) => {
-      this.server = new WebSocket.Server({ port: 0 }, () => {
+      this.server = new WebSocketServer({ port: 0 }, () => {
         this.port = (this.server!.address() as { port: number }).port;
         resolve(this.port);
       });
@@ -70,7 +70,7 @@ class MockWebSocketServer {
     const server = this.server;
     this.server = null;
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       const timeout = setTimeout(() => {
         // Force resolve after timeout
         resolve();
@@ -145,9 +145,7 @@ class MockWebSocketServer {
           })
         );
       }
-    } catch (error) {
-      console.error("Error handling message:", error);
-    }
+    } catch (_error) {}
   }
 
   /**
@@ -221,10 +219,7 @@ function waitForEvent(
 /**
  * Collect events for a duration.
  */
-function collectEvents(
-  client: DatabentoClient,
-  durationMs: number
-): Promise<DatabentoEvent[]> {
+function collectEvents(client: DatabentoClient, durationMs: number): Promise<DatabentoEvent[]> {
   return new Promise((resolve) => {
     const events: DatabentoEvent[] = [];
 
@@ -410,7 +405,7 @@ describe("DatabentoClient", () => {
 
       const messagePromise = waitForEvent(client, "message");
 
-      server.sendQuote("MSFT", 380.50, 380.51, 1000, 1500);
+      server.sendQuote("MSFT", 380.5, 380.51, 1000, 1500);
 
       const event = await messagePromise;
       expect(event.type).toBe("message");
@@ -447,9 +442,9 @@ describe("DatabentoClient", () => {
 
       server.sendTrade("AAPL", 150.25, 100);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      server.sendTrade("MSFT", 380.50, 200);
+      server.sendTrade("MSFT", 380.5, 200);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      server.sendTrade("AAPL", 150.30, 150);
+      server.sendTrade("AAPL", 150.3, 150);
 
       const events = await eventsPromise;
       const messageEvents = events.filter((e) => e.type === "message");

@@ -17,13 +17,7 @@ import { Iso8601Schema } from "./time";
 /**
  * Outcome result of a historical trade
  */
-export const CaseResult = z.enum([
-  "win",
-  "loss",
-  "breakeven",
-  "stopped_out",
-  "expired",
-]);
+export const CaseResult = z.enum(["win", "loss", "breakeven", "stopped_out", "expired"]);
 export type CaseResult = z.infer<typeof CaseResult>;
 
 // ============================================
@@ -164,15 +158,13 @@ export function hasMemoryContext(ctx: MemoryContext): boolean {
 /**
  * Get the most similar case from memory context
  */
-export function getMostSimilarCase(
-  ctx: MemoryContext
-): RetrievedCase | undefined {
-  if (ctx.retrievedCases.length === 0) return undefined;
+export function getMostSimilarCase(ctx: MemoryContext): RetrievedCase | undefined {
+  if (ctx.retrievedCases.length === 0) {
+    return undefined;
+  }
 
   // If similarity scores are available, use them
-  const withScores = ctx.retrievedCases.filter(
-    (c) => c.similarityScore !== undefined
-  );
+  const withScores = ctx.retrievedCases.filter((c) => c.similarityScore !== undefined);
   if (withScores.length > 0) {
     return withScores.reduce((best, curr) =>
       (curr.similarityScore ?? 0) > (best.similarityScore ?? 0) ? curr : best
@@ -186,9 +178,7 @@ export function getMostSimilarCase(
 /**
  * Calculate case statistics from retrieved cases
  */
-export function calculateCaseStatistics(
-  cases: RetrievedCase[]
-): CaseStatistics {
+export function calculateCaseStatistics(cases: RetrievedCase[]): CaseStatistics {
   if (cases.length === 0) {
     return { totalCases: 0 };
   }
@@ -206,7 +196,9 @@ export function calculateCaseStatistics(
 
   // Calculate std dev
   const stdDev = (arr: number[]) => {
-    if (arr.length < 2) return 0;
+    if (arr.length < 2) {
+      return 0;
+    }
     const avg = mean(arr);
     const squaredDiffs = arr.map((v) => (v - avg) ** 2);
     return Math.sqrt(sum(squaredDiffs) / (arr.length - 1));
@@ -244,21 +236,13 @@ export function calculateCaseStatistics(
 /**
  * Filter cases by minimum similarity score
  */
-export function filterBySimilarity(
-  cases: RetrievedCase[],
-  minScore: number
-): RetrievedCase[] {
-  return cases.filter(
-    (c) => c.similarityScore !== undefined && c.similarityScore >= minScore
-  );
+export function filterBySimilarity(cases: RetrievedCase[], minScore: number): RetrievedCase[] {
+  return cases.filter((c) => c.similarityScore !== undefined && c.similarityScore >= minScore);
 }
 
 /**
  * Filter cases by result type
  */
-export function filterByResult(
-  cases: RetrievedCase[],
-  result: CaseResult
-): RetrievedCase[] {
+export function filterByResult(cases: RetrievedCase[], result: CaseResult): RetrievedCase[] {
   return cases.filter((c) => c.keyOutcomes.result === result);
 }

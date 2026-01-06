@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import type { TursoClient } from "../turso.js";
-import { RepositoryError, parseJson, toJson } from "./base.js";
+import { parseJson, RepositoryError, toJson } from "./base.js";
 
 // ============================================
 // Zod Schemas
@@ -101,7 +101,9 @@ export class CandlesRepository {
    * Bulk insert candles
    */
   async bulkUpsert(candles: CandleInsert[]): Promise<number> {
-    if (candles.length === 0) return 0;
+    if (candles.length === 0) {
+      return 0;
+    }
 
     let inserted = 0;
     // Process in batches of 100

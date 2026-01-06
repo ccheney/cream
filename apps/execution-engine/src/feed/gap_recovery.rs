@@ -269,9 +269,7 @@ impl GapRecoveryManager {
     /// Complete recovery mode.
     fn complete_recovery(&mut self) {
         if self.in_recovery {
-            let duration = self.recovery_start
-                .map(|t| t.elapsed())
-                .unwrap_or_default();
+            let duration = self.recovery_start.map(|t| t.elapsed()).unwrap_or_default();
 
             info!(
                 provider = %self.provider,

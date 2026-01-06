@@ -789,7 +789,12 @@ describe("ThesisStateRepository", () => {
   test("finds all active theses", async () => {
     await repo.create({ thesisId: "t1", instrumentId: "AAPL", environment: "PAPER" });
     await repo.create({ thesisId: "t2", instrumentId: "MSFT", environment: "PAPER" });
-    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "CLOSED", environment: "PAPER" });
+    await repo.create({
+      thesisId: "t3",
+      instrumentId: "GOOGL",
+      state: "CLOSED",
+      environment: "PAPER",
+    });
 
     const active = await repo.findActive("PAPER");
     expect(active).toHaveLength(2);
@@ -826,9 +831,9 @@ describe("ThesisStateRepository", () => {
     });
 
     // WATCHING -> MANAGING is not valid
-    await expect(
-      repo.transitionState("thesis-invalid", { toState: "MANAGING" })
-    ).rejects.toThrow("Invalid state transition");
+    await expect(repo.transitionState("thesis-invalid", { toState: "MANAGING" })).rejects.toThrow(
+      "Invalid state transition"
+    );
   });
 
   test("enters position correctly", async () => {
@@ -994,9 +999,24 @@ describe("ThesisStateRepository", () => {
 
   test("gets thesis statistics", async () => {
     // Create various theses
-    await repo.create({ thesisId: "t1", instrumentId: "AAPL", state: "WATCHING", environment: "PAPER" });
-    await repo.create({ thesisId: "t2", instrumentId: "MSFT", state: "MANAGING", environment: "PAPER" });
-    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "CLOSED", environment: "PAPER" });
+    await repo.create({
+      thesisId: "t1",
+      instrumentId: "AAPL",
+      state: "WATCHING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t2",
+      instrumentId: "MSFT",
+      state: "MANAGING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t3",
+      instrumentId: "GOOGL",
+      state: "CLOSED",
+      environment: "PAPER",
+    });
 
     const stats = await repo.getStats("PAPER");
 
@@ -1007,9 +1027,24 @@ describe("ThesisStateRepository", () => {
   });
 
   test("finds theses by states", async () => {
-    await repo.create({ thesisId: "t1", instrumentId: "AAPL", state: "WATCHING", environment: "PAPER" });
-    await repo.create({ thesisId: "t2", instrumentId: "MSFT", state: "MANAGING", environment: "PAPER" });
-    await repo.create({ thesisId: "t3", instrumentId: "GOOGL", state: "EXITING", environment: "PAPER" });
+    await repo.create({
+      thesisId: "t1",
+      instrumentId: "AAPL",
+      state: "WATCHING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t2",
+      instrumentId: "MSFT",
+      state: "MANAGING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t3",
+      instrumentId: "GOOGL",
+      state: "EXITING",
+      environment: "PAPER",
+    });
 
     const result = await repo.findByStates(["MANAGING", "EXITING"], "PAPER");
     expect(result).toHaveLength(2);

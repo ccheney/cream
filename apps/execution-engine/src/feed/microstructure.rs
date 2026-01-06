@@ -394,12 +394,7 @@ impl MicrostructureTracker {
         self.expire_old_trades(now);
 
         let (bid, ask, spread, last_update) = match &self.current_quote {
-            Some(quote) => (
-                quote.bid,
-                quote.ask,
-                quote.spread(),
-                quote.timestamp,
-            ),
+            Some(quote) => (quote.bid, quote.ask, quote.spread(), quote.timestamp),
             None => (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, now),
         };
 
@@ -480,9 +475,7 @@ impl MicrostructureManager {
     pub fn get_or_create(&mut self, symbol: &str) -> &mut MicrostructureTracker {
         self.trackers
             .entry(symbol.to_string())
-            .or_insert_with(|| {
-                MicrostructureTracker::new(symbol).with_window(self.default_window)
-            })
+            .or_insert_with(|| MicrostructureTracker::new(symbol).with_window(self.default_window))
     }
 
     /// Get a tracker if it exists.
@@ -625,9 +618,9 @@ mod tests {
     fn test_vwap_three_trades() {
         let mut tracker = MicrostructureTracker::new("AAPL");
 
-        tracker.update_trade(make_trade(10000, 50));  // $100 x 50
-        tracker.update_trade(make_trade(10200, 30));  // $102 x 30
-        tracker.update_trade(make_trade(10100, 20));  // $101 x 20
+        tracker.update_trade(make_trade(10000, 50)); // $100 x 50
+        tracker.update_trade(make_trade(10200, 30)); // $102 x 30
+        tracker.update_trade(make_trade(10100, 20)); // $101 x 20
 
         // VWAP = (100*50 + 102*30 + 101*20) / 100
         //      = (5000 + 3060 + 2020) / 100 = 10080 / 100 = 100.80
@@ -686,13 +679,29 @@ mod tests {
         let mut tracker = MicrostructureTracker::new("AAPL");
 
         let bid_levels = vec![
-            DepthLevel { price: Decimal::new(15000, 2), size: Decimal::new(500, 0), order_count: 3 },
-            DepthLevel { price: Decimal::new(14990, 2), size: Decimal::new(800, 0), order_count: 5 },
+            DepthLevel {
+                price: Decimal::new(15000, 2),
+                size: Decimal::new(500, 0),
+                order_count: 3,
+            },
+            DepthLevel {
+                price: Decimal::new(14990, 2),
+                size: Decimal::new(800, 0),
+                order_count: 5,
+            },
         ];
 
         let ask_levels = vec![
-            DepthLevel { price: Decimal::new(15010, 2), size: Decimal::new(400, 0), order_count: 2 },
-            DepthLevel { price: Decimal::new(15020, 2), size: Decimal::new(600, 0), order_count: 4 },
+            DepthLevel {
+                price: Decimal::new(15010, 2),
+                size: Decimal::new(400, 0),
+                order_count: 2,
+            },
+            DepthLevel {
+                price: Decimal::new(15020, 2),
+                size: Decimal::new(600, 0),
+                order_count: 4,
+            },
         ];
 
         tracker.update_depth(bid_levels, ask_levels);

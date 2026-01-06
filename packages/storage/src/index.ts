@@ -24,18 +24,6 @@ export {
   rollbackMigrations,
   runMigrations,
 } from "./migrations.js";
-// Repositories
-export * from "./repositories/index.js";
-// Turso client
-export {
-  type BatchStatement,
-  createInMemoryClient,
-  createTursoClient,
-  getDefaultDatabasePath,
-  type Row,
-  type TursoClient,
-  type TursoConfig,
-} from "./turso.js";
 // Connection pooling
 export {
   type ConnectionPool,
@@ -48,3 +36,15 @@ export {
   type PooledConnection,
   type PoolStats,
 } from "./pool.js";
+// Repositories
+export * from "./repositories/index.js";
+// Turso client
+export {
+  type BatchStatement,
+  createInMemoryClient,
+  createTursoClient,
+  getDefaultDatabasePath,
+  type Row,
+  type TursoClient,
+  type TursoConfig,
+} from "./turso.js";

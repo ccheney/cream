@@ -177,7 +177,11 @@ impl PartialOrd for TimestampedEvent {
 impl Ord for TimestampedEvent {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse ordering for min-heap (earliest timestamp first)
-        other.event.candle.timestamp.cmp(&self.event.candle.timestamp)
+        other
+            .event
+            .candle
+            .timestamp
+            .cmp(&self.event.candle.timestamp)
     }
 }
 
@@ -372,15 +376,16 @@ impl ReplayEngine {
 
         // Initialize progress tracking
         self.progress.events_total = Some(total_candles);
-        self.progress.start_timestamp.clone_from(&self.config.start_date);
-        self.progress.end_timestamp.clone_from(&self.config.end_date);
+        self.progress
+            .start_timestamp
+            .clone_from(&self.config.start_date);
+        self.progress
+            .end_timestamp
+            .clone_from(&self.config.end_date);
         self.start_time = std::time::Instant::now();
         self.initialized = true;
 
-        info!(
-            total_candles = total_candles,
-            "Replay engine initialized"
-        );
+        info!(total_candles = total_candles, "Replay engine initialized");
 
         Ok(())
     }
@@ -410,7 +415,9 @@ impl ReplayEngine {
 
         // Update progress
         self.progress.events_processed += 1;
-        self.progress.current_timestamp.clone_from(&event.candle.timestamp);
+        self.progress
+            .current_timestamp
+            .clone_from(&event.candle.timestamp);
         self.update_progress();
 
         // Track last candle for each instrument (for forward-fill)
@@ -426,14 +433,12 @@ impl ReplayEngine {
         self.progress.elapsed_seconds = elapsed;
 
         if elapsed > 0.0 {
-            self.progress.events_per_second =
-                self.progress.events_processed as f64 / elapsed;
+            self.progress.events_per_second = self.progress.events_processed as f64 / elapsed;
         }
 
         if let Some(total) = self.progress.events_total {
             if total > 0 {
-                self.progress.progress_pct =
-                    self.progress.events_processed as f64 / total as f64;
+                self.progress.progress_pct = self.progress.events_processed as f64 / total as f64;
 
                 // Estimate remaining time
                 let remaining = total.saturating_sub(self.progress.events_processed);
@@ -671,17 +676,23 @@ mod tests {
     fn setup_test_data_source() -> Arc<InMemoryDataSource> {
         let mut source = InMemoryDataSource::new();
 
-        source.add_candles("AAPL", vec![
-            make_candle("2024-01-01T09:00:00Z", 150),
-            make_candle("2024-01-01T10:00:00Z", 151),
-            make_candle("2024-01-01T11:00:00Z", 152),
-        ]);
+        source.add_candles(
+            "AAPL",
+            vec![
+                make_candle("2024-01-01T09:00:00Z", 150),
+                make_candle("2024-01-01T10:00:00Z", 151),
+                make_candle("2024-01-01T11:00:00Z", 152),
+            ],
+        );
 
-        source.add_candles("MSFT", vec![
-            make_candle("2024-01-01T09:00:00Z", 300),
-            make_candle("2024-01-01T10:00:00Z", 301),
-            make_candle("2024-01-01T11:00:00Z", 302),
-        ]);
+        source.add_candles(
+            "MSFT",
+            vec![
+                make_candle("2024-01-01T09:00:00Z", 300),
+                make_candle("2024-01-01T10:00:00Z", 301),
+                make_candle("2024-01-01T11:00:00Z", 302),
+            ],
+        );
 
         Arc::new(source)
     }
@@ -864,10 +875,13 @@ mod tests {
     fn test_in_memory_data_source() {
         let mut source = InMemoryDataSource::new();
 
-        source.add_candles("AAPL", vec![
-            make_candle("2024-01-01T09:00:00Z", 150),
-            make_candle("2024-01-01T10:00:00Z", 151),
-        ]);
+        source.add_candles(
+            "AAPL",
+            vec![
+                make_candle("2024-01-01T09:00:00Z", 150),
+                make_candle("2024-01-01T10:00:00Z", 151),
+            ],
+        );
 
         let candles = source
             .load_candles("AAPL", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")

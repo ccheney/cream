@@ -211,8 +211,8 @@ fn calculate_net_price(leg_fills: &[LegFillResult]) -> Decimal {
         .iter()
         .map(|fill| {
             let side_multiplier = match fill.side {
-                OrderSide::Buy => Decimal::ONE,    // Pay for buys
-                OrderSide::Sell => -Decimal::ONE,  // Receive for sells
+                OrderSide::Buy => Decimal::ONE,   // Pay for buys
+                OrderSide::Sell => -Decimal::ONE, // Receive for sells
             };
 
             fill.price * Decimal::from(fill.ratio) * side_multiplier
@@ -260,7 +260,11 @@ pub fn create_bull_call_spread(
             side: OrderSide::Buy,
             quantity,
             ratio: 1,
-            order_type: if long_limit.is_some() { OrderType::Limit } else { OrderType::Market },
+            order_type: if long_limit.is_some() {
+                OrderType::Limit
+            } else {
+                OrderType::Market
+            },
             limit_price: long_limit,
         },
         OrderLeg {
@@ -268,7 +272,11 @@ pub fn create_bull_call_spread(
             side: OrderSide::Sell,
             quantity,
             ratio: 1,
-            order_type: if short_limit.is_some() { OrderType::Limit } else { OrderType::Market },
+            order_type: if short_limit.is_some() {
+                OrderType::Limit
+            } else {
+                OrderType::Market
+            },
             limit_price: short_limit,
         },
     ]
@@ -297,11 +305,7 @@ pub fn create_iron_condor(
 ///
 /// Buy call and put at the same strike.
 #[must_use]
-pub fn create_straddle(
-    call: &str,
-    put: &str,
-    quantity: Decimal,
-) -> Vec<OrderLeg> {
+pub fn create_straddle(call: &str, put: &str, quantity: Decimal) -> Vec<OrderLeg> {
     vec![
         OrderLeg::new(call, OrderSide::Buy, quantity, 1, OrderType::Market),
         OrderLeg::new(put, OrderSide::Buy, quantity, 1, OrderType::Market),
@@ -340,8 +344,14 @@ mod tests {
         );
 
         let mut candles = HashMap::new();
-        candles.insert("AAPL240119C00150000".to_string(), make_candle(500, 550, 480, 520));
-        candles.insert("AAPL240119C00155000".to_string(), make_candle(200, 230, 180, 210));
+        candles.insert(
+            "AAPL240119C00150000".to_string(),
+            make_candle(500, 550, 480, 520),
+        );
+        candles.insert(
+            "AAPL240119C00155000".to_string(),
+            make_candle(200, 230, 180, 210),
+        );
 
         let result = simulate_multi_leg_order(&legs, &candles, &config, None);
 
@@ -366,7 +376,10 @@ mod tests {
         );
 
         let mut candles = HashMap::new();
-        candles.insert("AAPL240119C00150000".to_string(), make_candle(500, 550, 480, 520));
+        candles.insert(
+            "AAPL240119C00150000".to_string(),
+            make_candle(500, 550, 480, 520),
+        );
         // Missing short call candle
 
         let result = simulate_multi_leg_order(&legs, &candles, &config, None);
@@ -387,12 +400,24 @@ mod tests {
                 1,
                 Decimal::new(400, 2), // Limit at $4.00 (won't fill - candle low is $4.80)
             ),
-            OrderLeg::new("AAPL240119C00155000", OrderSide::Sell, Decimal::ONE, 1, OrderType::Market),
+            OrderLeg::new(
+                "AAPL240119C00155000",
+                OrderSide::Sell,
+                Decimal::ONE,
+                1,
+                OrderType::Market,
+            ),
         ];
 
         let mut candles = HashMap::new();
-        candles.insert("AAPL240119C00150000".to_string(), make_candle(500, 550, 480, 520));
-        candles.insert("AAPL240119C00155000".to_string(), make_candle(200, 230, 180, 210));
+        candles.insert(
+            "AAPL240119C00150000".to_string(),
+            make_candle(500, 550, 480, 520),
+        );
+        candles.insert(
+            "AAPL240119C00155000".to_string(),
+            make_candle(200, 230, 180, 210),
+        );
 
         let result = simulate_multi_leg_order(&legs, &candles, &config, None);
 
@@ -413,10 +438,22 @@ mod tests {
         );
 
         let mut candles = HashMap::new();
-        candles.insert("AAPL240119P00140000".to_string(), make_candle(100, 120, 90, 110));
-        candles.insert("AAPL240119P00145000".to_string(), make_candle(200, 230, 180, 210));
-        candles.insert("AAPL240119C00155000".to_string(), make_candle(250, 280, 230, 260));
-        candles.insert("AAPL240119C00160000".to_string(), make_candle(150, 170, 130, 160));
+        candles.insert(
+            "AAPL240119P00140000".to_string(),
+            make_candle(100, 120, 90, 110),
+        );
+        candles.insert(
+            "AAPL240119P00145000".to_string(),
+            make_candle(200, 230, 180, 210),
+        );
+        candles.insert(
+            "AAPL240119C00155000".to_string(),
+            make_candle(250, 280, 230, 260),
+        );
+        candles.insert(
+            "AAPL240119C00160000".to_string(),
+            make_candle(150, 170, 130, 160),
+        );
 
         let result = simulate_multi_leg_order(&legs, &candles, &config, None);
 
@@ -432,15 +469,17 @@ mod tests {
     fn test_straddle() {
         let config = default_config();
 
-        let legs = create_straddle(
-            "AAPL240119C00150000",
-            "AAPL240119P00150000",
-            Decimal::ONE,
-        );
+        let legs = create_straddle("AAPL240119C00150000", "AAPL240119P00150000", Decimal::ONE);
 
         let mut candles = HashMap::new();
-        candles.insert("AAPL240119C00150000".to_string(), make_candle(500, 550, 480, 520));
-        candles.insert("AAPL240119P00150000".to_string(), make_candle(300, 330, 280, 310));
+        candles.insert(
+            "AAPL240119C00150000".to_string(),
+            make_candle(500, 550, 480, 520),
+        );
+        candles.insert(
+            "AAPL240119P00150000".to_string(),
+            make_candle(300, 330, 280, 310),
+        );
 
         let result = simulate_multi_leg_order(&legs, &candles, &config, None);
 
@@ -456,14 +495,14 @@ mod tests {
         let leg_fills = vec![
             LegFillResult {
                 instrument_id: "CALL".to_string(),
-                price: Decimal::new(500, 2),   // $5.00
+                price: Decimal::new(500, 2), // $5.00
                 quantity: Decimal::ONE,
                 side: OrderSide::Buy,
                 ratio: 1,
             },
             LegFillResult {
                 instrument_id: "PUT".to_string(),
-                price: Decimal::new(200, 2),   // $2.00
+                price: Decimal::new(200, 2), // $2.00
                 quantity: Decimal::ONE,
                 side: OrderSide::Sell,
                 ratio: 1,

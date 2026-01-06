@@ -184,11 +184,7 @@ impl OptionsStrategy {
             }
         }
 
-        if has_greeks {
-            Some(agg)
-        } else {
-            None
-        }
+        if has_greeks { Some(agg) } else { None }
     }
 }
 
@@ -210,8 +206,8 @@ pub struct StrategyBuilderConfig {
 impl Default for StrategyBuilderConfig {
     fn default() -> Self {
         Self {
-            target_delta: Decimal::new(20, 2), // 0.20 delta
-            max_width: Decimal::new(5, 0),     // $5 wide
+            target_delta: Decimal::new(20, 2),     // 0.20 delta
+            max_width: Decimal::new(5, 0),         // $5 wide
             min_credit_ratio: Decimal::new(25, 2), // 25% of width
         }
     }
@@ -402,8 +398,10 @@ impl StrategyBuilder {
             StrategyType::BearPutSpread => (OptionType::Put, false),   // Debit
             _ => {
                 return Err(StrategyError::InvalidStrikes {
-                    message: format!("Invalid strategy type for vertical spread: {strategy_type:?}"),
-                })
+                    message: format!(
+                        "Invalid strategy type for vertical spread: {strategy_type:?}"
+                    ),
+                });
             }
         };
 
@@ -420,7 +418,11 @@ impl StrategyBuilder {
                 OptionContract {
                     contract_id: format!(
                         "{underlying}{expiration}{}{short_strike}",
-                        if option_type == OptionType::Call { "C" } else { "P" }
+                        if option_type == OptionType::Call {
+                            "C"
+                        } else {
+                            "P"
+                        }
                     ),
                     underlying_symbol: underlying.to_string(),
                     strike: short_strike,
@@ -437,7 +439,11 @@ impl StrategyBuilder {
                 OptionContract {
                     contract_id: format!(
                         "{underlying}{expiration}{}{long_strike}",
-                        if option_type == OptionType::Call { "C" } else { "P" }
+                        if option_type == OptionType::Call {
+                            "C"
+                        } else {
+                            "P"
+                        }
                     ),
                     underlying_symbol: underlying.to_string(),
                     strike: long_strike,
@@ -1046,7 +1052,7 @@ mod tests {
             .straddle(
                 "TSLA",
                 "2026-01-17",
-                Decimal::new(250, 0), // ATM strike
+                Decimal::new(250, 0),  // ATM strike
                 Decimal::new(1200, 2), // Call premium $12.00
                 Decimal::new(1100, 2), // Put premium $11.00
             )
@@ -1072,8 +1078,8 @@ mod tests {
                 "2026-01-17",
                 Decimal::new(240, 0), // OTM put strike
                 Decimal::new(260, 0), // OTM call strike
-                Decimal::new(800, 2),  // Call premium $8.00
-                Decimal::new(750, 2),  // Put premium $7.50
+                Decimal::new(800, 2), // Call premium $8.00
+                Decimal::new(750, 2), // Put premium $7.50
             )
             .unwrap();
 
@@ -1149,12 +1155,12 @@ mod tests {
         let strategy = builder
             .calendar_spread(
                 "AAPL",
-                Decimal::new(180, 0),        // Same strike for both
-                "2026-01-17",                // Near-term (sold)
-                "2026-02-21",                // Far-term (bought)
+                Decimal::new(180, 0), // Same strike for both
+                "2026-01-17",         // Near-term (sold)
+                "2026-02-21",         // Far-term (bought)
                 OptionType::Call,
-                Decimal::new(300, 2),        // Near premium $3.00 (received)
-                Decimal::new(500, 2),        // Far premium $5.00 (paid)
+                Decimal::new(300, 2), // Near premium $3.00 (received)
+                Decimal::new(500, 2), // Far premium $5.00 (paid)
             )
             .unwrap();
 
@@ -1167,7 +1173,7 @@ mod tests {
 
         // Check legs
         assert_eq!(strategy.legs[0].direction, LegDirection::Short); // Near-term sold
-        assert_eq!(strategy.legs[1].direction, LegDirection::Long);  // Far-term bought
+        assert_eq!(strategy.legs[1].direction, LegDirection::Long); // Far-term bought
     }
 
     #[test]
@@ -1177,7 +1183,7 @@ mod tests {
         let result = builder.calendar_spread(
             "AAPL",
             Decimal::new(180, 0),
-            "2026-02-21",  // Far before near - invalid!
+            "2026-02-21", // Far before near - invalid!
             "2026-01-17",
             OptionType::Call,
             Decimal::new(300, 2),
@@ -1194,13 +1200,13 @@ mod tests {
         let strategy = builder
             .diagonal_spread(
                 "SPY",
-                Decimal::new(465, 0),        // Near strike (OTM call sold)
-                Decimal::new(460, 0),        // Far strike (ATM call bought)
-                "2026-01-17",                // Near-term
-                "2026-02-21",                // Far-term
+                Decimal::new(465, 0), // Near strike (OTM call sold)
+                Decimal::new(460, 0), // Far strike (ATM call bought)
+                "2026-01-17",         // Near-term
+                "2026-02-21",         // Far-term
                 OptionType::Call,
-                Decimal::new(200, 2),        // Near premium $2.00 (received)
-                Decimal::new(600, 2),        // Far premium $6.00 (paid)
+                Decimal::new(200, 2), // Near premium $2.00 (received)
+                Decimal::new(600, 2), // Far premium $6.00 (paid)
             )
             .unwrap();
 
@@ -1220,8 +1226,8 @@ mod tests {
 
         let result = builder.diagonal_spread(
             "SPY",
-            Decimal::new(460, 0),  // Same strike
-            Decimal::new(460, 0),  // Same strike - should use calendar instead
+            Decimal::new(460, 0), // Same strike
+            Decimal::new(460, 0), // Same strike - should use calendar instead
             "2026-01-17",
             "2026-02-21",
             OptionType::Call,
@@ -1299,7 +1305,7 @@ mod tests {
                     style: OptionStyle::American,
                     multiplier: 100,
                 },
-                LegDirection::Long,  // Long wing
+                LegDirection::Long, // Long wing
                 1,
                 Decimal::new(50, 2),
             ),
@@ -1341,7 +1347,7 @@ mod tests {
                     style: OptionStyle::American,
                     multiplier: 100,
                 },
-                LegDirection::Long,  // Long wing
+                LegDirection::Long, // Long wing
                 1,
                 Decimal::new(40, 2),
             ),
@@ -1353,22 +1359,20 @@ mod tests {
     #[test]
     fn test_validate_balanced_spread_naked_short() {
         // Naked short is not balanced
-        let legs = vec![
-            StrategyLeg::new(
-                OptionContract {
-                    contract_id: "1".to_string(),
-                    underlying_symbol: "SPY".to_string(),
-                    strike: Decimal::new(450, 0),
-                    expiration: "2026-01-17".to_string(),
-                    option_type: OptionType::Put,
-                    style: OptionStyle::American,
-                    multiplier: 100,
-                },
-                LegDirection::Short, // Naked short!
-                1,
-                Decimal::new(150, 2),
-            ),
-        ];
+        let legs = vec![StrategyLeg::new(
+            OptionContract {
+                contract_id: "1".to_string(),
+                underlying_symbol: "SPY".to_string(),
+                strike: Decimal::new(450, 0),
+                expiration: "2026-01-17".to_string(),
+                option_type: OptionType::Put,
+                style: OptionStyle::American,
+                multiplier: 100,
+            },
+            LegDirection::Short, // Naked short!
+            1,
+            Decimal::new(150, 2),
+        )];
 
         assert!(!StrategyBuilder::validate_balanced_spread(&legs));
     }

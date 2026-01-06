@@ -50,9 +50,9 @@ pub mod server;
 
 // Re-export commonly used types
 pub use backtest::{
-    BacktestConfig, Candle, FillResult, MultiLegFillResult, SimOrder, SimPosition,
-    SimTrade, SimulationEngine, simulate_market_order, simulate_limit_order,
-    simulate_order, simulate_multi_leg_order,
+    BacktestConfig, Candle, FillResult, MultiLegFillResult, SimOrder, SimPosition, SimTrade,
+    SimulationEngine, simulate_limit_order, simulate_market_order, simulate_multi_leg_order,
+    simulate_order,
 };
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
@@ -68,8 +68,8 @@ pub use options::{
     validate_leg_ratios, validate_multi_leg_order,
 };
 pub use pricing::{
-    IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy,
-    StrategyBuilder, StrategyBuilderConfig, StrategyError, StrategyLeg, StrategyType,
+    IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy, StrategyBuilder,
+    StrategyBuilderConfig, StrategyError, StrategyLeg, StrategyType,
 };
 pub use risk::{
     ConstraintValidator, PositionSizer, PositionSizerConfig, SizingError, SizingInput,

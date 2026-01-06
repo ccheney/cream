@@ -130,7 +130,10 @@ export function calculateCumulativeAdjustmentFactor(splits: SplitAdjustment[]): 
  * @param candleDate - Candle date (YYYY-MM-DD or ISO string)
  * @returns Splits that occurred after the candle date
  */
-export function getApplicableSplits(splits: SplitAdjustment[], candleDate: string): SplitAdjustment[] {
+export function getApplicableSplits(
+  splits: SplitAdjustment[],
+  candleDate: string
+): SplitAdjustment[] {
   const candleDateStr = candleDate.split("T")[0]!;
   return splits.filter((split) => split.executionDate > candleDateStr);
 }

@@ -10,8 +10,6 @@ See: docs/plans/10-research.md - High-Fidelity Validation
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
-from decimal import Decimal
 from typing import Any
 
 import pandas as pd
@@ -21,11 +19,10 @@ from nautilus_trader.backtest.models import FillModel
 from nautilus_trader.config import LoggingConfig
 from nautilus_trader.model.currencies import USD
 from nautilus_trader.model.data import Bar, BarType
-from nautilus_trader.model.enums import AccountType, BarAggregation, OmsType, PriceType
+from nautilus_trader.model.enums import AccountType, OmsType
 from nautilus_trader.model.identifiers import InstrumentId, Symbol, TraderId, Venue
 from nautilus_trader.model.instruments import Equity
 from nautilus_trader.model.objects import Money, Price, Quantity
-from nautilus_trader.persistence.catalog import ParquetDataCatalog
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
 from .findings import PerformanceMetrics, ResearchFinding, StrategyCondition
@@ -249,8 +246,8 @@ class NautilusRunner:
         engine.add_data(bars)
 
         # Create and add strategy
-        from nautilus_trader.trading.strategy import Strategy
         from nautilus_trader.config import StrategyConfig
+        from nautilus_trader.trading.strategy import Strategy
 
         class SignalStrategy(Strategy):
             """Simple strategy that follows pre-computed signals."""
@@ -267,9 +264,7 @@ class NautilusRunner:
                 self._bar_count = 0
 
             def on_start(self):
-                self.subscribe_bars(
-                    BarType.from_str(f"{self.instrument_id}-1-HOUR-LAST-EXTERNAL")
-                )
+                self.subscribe_bars(BarType.from_str(f"{self.instrument_id}-1-HOUR-LAST-EXTERNAL"))
 
             def on_bar(self, bar: Bar):
                 if self._bar_count >= len(self.signals):
@@ -287,9 +282,7 @@ class NautilusRunner:
                     )
 
                 # Check for exit signal
-                elif row.get("exits", False) and self.portfolio.is_net_long(
-                    self.instrument_id
-                ):
+                elif row.get("exits", False) and self.portfolio.is_net_long(self.instrument_id):
                     self.submit_market_order(
                         instrument_id=self.instrument_id,
                         order_side="SELL",
@@ -298,7 +291,6 @@ class NautilusRunner:
 
             def submit_market_order(self, instrument_id, order_side, quantity):
                 from nautilus_trader.model.enums import OrderSide
-                from nautilus_trader.model.orders import MarketOrder
 
                 side = OrderSide.BUY if order_side == "BUY" else OrderSide.SELL
 
@@ -327,7 +319,7 @@ class NautilusRunner:
         # Get account and trading statistics
         account = engine.trader.generate_account_report(venue)
         orders_report = engine.trader.generate_order_fills_report()
-        positions_report = engine.trader.generate_positions_report()
+        engine.trader.generate_positions_report()
 
         # Calculate metrics
         metrics = self._extract_metrics(engine, account)

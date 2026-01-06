@@ -115,10 +115,10 @@ export function calculatePercentileRank(
       continue;
     }
 
-    const percentile = calculatePercentileOfValue(values[i], window);
+    const percentile = calculatePercentileOfValue(values[i]!, window);
 
     results.push({
-      timestamp: timestamps[i],
+      timestamp: timestamps[i]!,
       percentile,
       sampleCount: window.length,
     });

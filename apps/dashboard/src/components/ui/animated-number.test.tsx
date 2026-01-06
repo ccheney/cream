@@ -221,6 +221,9 @@ describe("AnimatedNumber exports", () => {
     // Type-only import check - this compiles if the type exists
     const module = await import("./animated-number");
     type TestFormat = typeof module extends { NumberFormat: infer T } ? T : never;
+    // Use the type to avoid unused warning
+    const _typeCheck: TestFormat = undefined as unknown as TestFormat;
+    void _typeCheck;
     // If we get here, the type exists
     expect(true).toBe(true);
   });

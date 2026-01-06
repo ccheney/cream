@@ -8,13 +8,8 @@
 import type { Checkpointer } from "./checkpointer.js";
 import type { CycleDetector, IncompleteCycle } from "./detector.js";
 import type { BrokerOrderFetcher, OrderReconciler } from "./reconciler.js";
-import type {
-  CyclePhase,
-  ExecutionState,
-  RecoveryAction,
-  RecoveryConfig,
-} from "./types.js";
-import { DEFAULT_RECOVERY_CONFIG, PHASE_ORDER } from "./types.js";
+import type { CyclePhase, ExecutionState, RecoveryAction, RecoveryConfig } from "./types.js";
+import { DEFAULT_RECOVERY_CONFIG } from "./types.js";
 
 /**
  * Recovery decision rules based on phase:
@@ -27,11 +22,7 @@ import { DEFAULT_RECOVERY_CONFIG, PHASE_ORDER } from "./types.js";
  *   - If partial orders: Resume with remaining
  *   - If no orders submitted: Can restart
  */
-const RESTARTABLE_PHASES: Set<CyclePhase> = new Set([
-  "data_fetch",
-  "agents",
-  "synthesis",
-]);
+const RESTARTABLE_PHASES: Set<CyclePhase> = new Set(["data_fetch", "agents", "synthesis"]);
 
 /**
  * Recovery manager handles the startup recovery process.
@@ -66,9 +57,7 @@ export class RecoveryManager {
   /**
    * Determine what action to take for an incomplete cycle.
    */
-  async determineRecoveryAction(
-    incompleteCycle: IncompleteCycle
-  ): Promise<RecoveryAction> {
+  async determineRecoveryAction(incompleteCycle: IncompleteCycle): Promise<RecoveryAction> {
     const { cycleId, lastPhase, checkpoint, ageMs } = incompleteCycle;
 
     // If the cycle is very old, just clean it up
@@ -121,9 +110,7 @@ export class RecoveryManager {
     const executionState = checkpoint.state as ExecutionState;
 
     // Check if all orders have been processed
-    const allProcessed = await this.reconciler.areAllOrdersProcessed(
-      executionState
-    );
+    const allProcessed = await this.reconciler.areAllOrdersProcessed(executionState);
 
     if (allProcessed) {
       // All orders done, just mark cycle complete
@@ -164,9 +151,7 @@ export class RecoveryManager {
           ...executionState,
           // Mark already-submitted orders
           orders: executionState.orders.map((order) => {
-            const isPending = pendingOrders.some(
-              (p) => p.clientOrderId === order.clientOrderId
-            );
+            const isPending = pendingOrders.some((p) => p.clientOrderId === order.clientOrderId);
             return isPending ? order : { ...order, status: "submitted" as const };
           }),
         },

@@ -13,8 +13,8 @@
  * @see docs/plans/02-data-layer.md
  */
 
-import { z } from "zod";
 import WebSocket from "ws";
+import { z } from "zod";
 
 // ============================================
 // API Configuration
@@ -285,8 +285,7 @@ export class DatabentoClient {
    */
   isConnected(): boolean {
     return (
-      this.state === ConnectionState.AUTHENTICATED ||
-      this.state === ConnectionState.SUBSCRIBED
+      this.state === ConnectionState.AUTHENTICATED || this.state === ConnectionState.SUBSCRIBED
     );
   }
 
@@ -311,9 +310,7 @@ export class DatabentoClient {
     for (const handler of this.eventHandlers) {
       try {
         void handler(event);
-      } catch (error) {
-        console.error("Error in event handler:", error);
-      }
+      } catch (_error) {}
     }
   }
 
@@ -419,10 +416,7 @@ export class DatabentoClient {
 
     // Remove from active subscriptions
     for (const [key, config] of this.activeSubscriptions.entries()) {
-      if (
-        config.dataset === dataset &&
-        config.symbols.some((s) => symbols.includes(s))
-      ) {
+      if (config.dataset === dataset && config.symbols.some((s) => symbols.includes(s))) {
         this.activeSubscriptions.delete(key);
       }
     }
@@ -481,7 +475,6 @@ export class DatabentoClient {
       const jsonObj = json as Record<string, unknown>;
 
       if (text.startsWith("{")) {
-
         // Handle authentication response
         if (jsonObj.message_type === "authentication_response") {
           if (jsonObj.status === "authenticated") {
@@ -490,7 +483,9 @@ export class DatabentoClient {
             this.emit({ type: "authenticated", sessionId: jsonObj.session_id as string });
             this.startHeartbeat();
           } else {
-            throw new Error(`Authentication failed: ${(jsonObj.error as string) ?? "Unknown error"}`);
+            throw new Error(
+              `Authentication failed: ${(jsonObj.error as string) ?? "Unknown error"}`
+            );
           }
           return;
         }
@@ -539,14 +534,11 @@ export class DatabentoClient {
         schema = "ohlcv-1m";
         message = OHLCVMessageSchema.parse(jsonObj);
       } else {
-        // Unknown message type, skip
-        console.warn("Unknown message type:", jsonObj);
         return;
       }
 
       this.emit({ type: "message", message, schema });
     } catch (error) {
-      console.error("Error parsing message:", error);
       this.emit({
         type: "error",
         error: error instanceof Error ? error : new Error(String(error)),
@@ -584,13 +576,12 @@ export class DatabentoClient {
    */
   private scheduleReconnect(): void {
     this.reconnectAttempts++;
-    const delay = this.config.reconnectDelayMs * Math.pow(2, this.reconnectAttempts - 1);
+    const delay = this.config.reconnectDelayMs * 2 ** (this.reconnectAttempts - 1);
 
     this.emit({ type: "reconnecting", attempt: this.reconnectAttempts });
 
     this.reconnectTimer = setTimeout(() => {
-      this.reconnect().catch((error) => {
-        console.error("Reconnection failed:", error);
+      this.reconnect().catch((_error) => {
         if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
           this.scheduleReconnect();
         } else {

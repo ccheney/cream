@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { EntityLinker, createEntityLinker } from "../src/index.js";
 import type { ExtractedEntity } from "../src/index.js";
+import { createEntityLinker, EntityLinker } from "../src/index.js";
 
 describe("EntityLinker", () => {
   const linker = createEntityLinker();
@@ -13,20 +13,26 @@ describe("EntityLinker", () => {
     it("should link Apple to AAPL", async () => {
       const result = await linker.linkEntity("Apple");
       expect(result).not.toBeNull();
-      expect(result!.ticker).toBe("AAPL");
-      expect(result!.confidence).toBeGreaterThan(0.8);
+      if (result) {
+        expect(result.ticker).toBe("AAPL");
+        expect(result.confidence).toBeGreaterThan(0.8);
+      }
     });
 
     it("should link Microsoft to MSFT", async () => {
       const result = await linker.linkEntity("Microsoft");
       expect(result).not.toBeNull();
-      expect(result!.ticker).toBe("MSFT");
+      if (result) {
+        expect(result.ticker).toBe("MSFT");
+      }
     });
 
     it("should link Tesla to TSLA", async () => {
       const result = await linker.linkEntity("Tesla");
       expect(result).not.toBeNull();
-      expect(result!.ticker).toBe("TSLA");
+      if (result) {
+        expect(result.ticker).toBe("TSLA");
+      }
     });
 
     it("should link Google/Alphabet to GOOGL", async () => {
@@ -67,8 +73,12 @@ describe("EntityLinker", () => {
 
       const links = await linker.linkEntities(entities);
       expect(links).toHaveLength(2);
-      expect(links[0].ticker).toBe("AAPL");
-      expect(links[1].ticker).toBe("MSFT");
+      const firstLink = links[0];
+      const secondLink = links[1];
+      if (firstLink && secondLink) {
+        expect(firstLink.ticker).toBe("AAPL");
+        expect(secondLink.ticker).toBe("MSFT");
+      }
     });
 
     it("should use ticker from extraction if provided", async () => {
@@ -78,8 +88,11 @@ describe("EntityLinker", () => {
 
       const links = await linker.linkEntities(entities);
       expect(links).toHaveLength(1);
-      expect(links[0].ticker).toBe("XYZ");
-      expect(links[0].method).toBe("exact");
+      const firstLink = links[0];
+      if (firstLink) {
+        expect(firstLink.ticker).toBe("XYZ");
+        expect(firstLink.method).toBe("exact");
+      }
     });
 
     it("should filter non-company entities", async () => {

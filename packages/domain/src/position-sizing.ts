@@ -87,10 +87,7 @@ export const DEFAULT_RISK_LIMITS = {
  * @param riskPercent - Percentage of account to risk (e.g., 0.02 for 2%)
  * @returns Position sizing result
  */
-export function calculateFixedFractional(
-  input: SizingInput,
-  riskPercent: number = 0.01
-): SizingResult {
+export function calculateFixedFractional(input: SizingInput, riskPercent = 0.01): SizingResult {
   validateInput(input);
 
   const { accountEquity, price, stopLoss, takeProfit, multiplier = 1 } = input;
@@ -132,9 +129,7 @@ export function calculateFixedFractional(
     dollarRisk: actualDollarRisk,
     riskPercent: actualDollarRisk / accountEquity,
     notionalValue,
-    riskRewardRatio: takeProfit
-      ? calculateRiskRewardRatio(price, stopLoss, takeProfit)
-      : undefined,
+    riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
 
@@ -156,11 +151,19 @@ export function calculateFixedFractional(
  */
 export function calculateVolatilityTargeted(
   input: VolatilitySizingInput,
-  targetRisk: number = 0.01
+  targetRisk = 0.01
 ): SizingResult {
   validateInput(input);
 
-  const { accountEquity, price, stopLoss, takeProfit, atr, atrMultiplier = 2, multiplier = 1 } = input;
+  const {
+    accountEquity,
+    price,
+    stopLoss,
+    takeProfit,
+    atr,
+    atrMultiplier = 2,
+    multiplier = 1,
+  } = input;
 
   if (atr <= 0) {
     throw new Error("ATR must be positive");
@@ -197,9 +200,7 @@ export function calculateVolatilityTargeted(
     dollarRisk: actualDollarRisk,
     riskPercent: actualDollarRisk / accountEquity,
     notionalValue,
-    riskRewardRatio: takeProfit
-      ? calculateRiskRewardRatio(price, stopLoss, takeProfit)
-      : undefined,
+    riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
 
@@ -222,7 +223,7 @@ export function calculateVolatilityTargeted(
  */
 export function calculateFractionalKelly(
   input: KellySizingInput,
-  maxRiskPercent: number = 0.02
+  maxRiskPercent = 0.02
 ): SizingResult {
   validateInput(input);
 
@@ -342,7 +343,7 @@ export function calculateAdaptiveAdjustment(conditions: MarketConditions): numbe
  */
 export function calculateLiquidityLimit(
   averageDailyVolume: number,
-  maxParticipation: number = 0.05
+  maxParticipation = 0.05
 ): number {
   if (averageDailyVolume <= 0) {
     throw new Error("averageDailyVolume must be positive");
@@ -385,7 +386,15 @@ export function calculateDeltaAdjustedSize(
 ): SizingResult {
   validateInput(input);
 
-  const { accountEquity, price, stopLoss, takeProfit, delta, underlyingPrice, multiplier = 100 } = input;
+  const {
+    accountEquity,
+    price,
+    stopLoss,
+    takeProfit,
+    delta,
+    underlyingPrice,
+    multiplier = 100,
+  } = input;
 
   if (Math.abs(delta) > 1) {
     throw new Error("delta must be between -1 and 1");
@@ -424,9 +433,7 @@ export function calculateDeltaAdjustedSize(
     dollarRisk: premiumRisk,
     riskPercent: premiumRisk / accountEquity,
     notionalValue,
-    riskRewardRatio: takeProfit
-      ? calculateRiskRewardRatio(price, stopLoss, takeProfit)
-      : undefined,
+    riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
 
@@ -455,11 +462,7 @@ function validateInput(input: SizingInput): void {
 /**
  * Calculate risk-reward ratio.
  */
-function calculateRiskRewardRatio(
-  entry: number,
-  stopLoss: number,
-  takeProfit: number
-): number {
+function calculateRiskRewardRatio(entry: number, stopLoss: number, takeProfit: number): number {
   const risk = Math.abs(entry - stopLoss);
   const reward = Math.abs(takeProfit - entry);
   return risk > 0 ? reward / risk : 0;

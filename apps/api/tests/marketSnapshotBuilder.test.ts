@@ -10,8 +10,7 @@ process.env.CREAM_ENV = "BACKTEST";
 const savedPolygonKey = process.env.POLYGON_KEY;
 process.env.POLYGON_KEY = ""; // Empty string to use mock data
 
-import { afterAll, describe, expect, mock, test } from "bun:test";
-import type { MarketSnapshot } from "@cream/domain";
+import { afterAll, describe, expect, test } from "bun:test";
 import {
   buildHistoricalSnapshot,
   buildSnapshotForSymbols,
@@ -19,7 +18,6 @@ import {
   DEFAULT_SNAPSHOT_CONFIG,
   executeMarketSnapshotBuilder,
   PERFORMANCE_TARGETS,
-  type SnapshotBuilderInput,
 } from "../workflows/steps/marketSnapshotBuilder";
 
 // Restore POLYGON_KEY after imports (for other tests in the same process)
@@ -33,7 +31,7 @@ afterAll(() => {
 // Test Fixtures
 // ============================================
 
-function createMockSnapshot(symbol: string) {
+function _createMockSnapshot(symbol: string) {
   return {
     symbol,
     lastTrade: {
@@ -65,8 +63,6 @@ describe("Market Snapshot Builder", () => {
       const result = await executeMarketSnapshotBuilder({});
 
       if (!result.success) {
-        console.log("Errors:", result.errors);
-        console.log("Warnings:", result.warnings);
       }
 
       expect(result.success).toBe(true);
@@ -138,9 +134,7 @@ describe("Market Snapshot Builder", () => {
       const result = await executeMarketSnapshotBuilder({ symbols: ["SPY"] });
 
       if (result.success && result.snapshot) {
-        expect(result.snapshot.marketStatus).toMatch(
-          /^(OPEN|CLOSED|PRE_MARKET|AFTER_HOURS)$/
-        );
+        expect(result.snapshot.marketStatus).toMatch(/^(OPEN|CLOSED|PRE_MARKET|AFTER_HOURS)$/);
       }
     });
 
@@ -297,7 +291,7 @@ describe("Market Snapshot Builder", () => {
   describe("Performance", () => {
     test("completes within performance targets for small universe", async () => {
       const startTime = performance.now();
-      const result = await executeMarketSnapshotBuilder({ symbols: ["SPY"] });
+      const _result = await executeMarketSnapshotBuilder({ symbols: ["SPY"] });
       const duration = performance.now() - startTime;
 
       // Should be reasonably fast for a single symbol

@@ -133,7 +133,10 @@ pub enum SizingError {
     /// Position is below minimum order size.
     BelowMinimum { calculated: u64, min: u64 },
     /// Insufficient cash for the position.
-    InsufficientCash { required: Decimal, available: Decimal },
+    InsufficientCash {
+        required: Decimal,
+        available: Decimal,
+    },
     /// Zero equity for percentage-based sizing.
     ZeroEquity,
 }
@@ -148,8 +151,14 @@ impl fmt::Display for SizingError {
             Self::BelowMinimum { calculated, min } => {
                 write!(f, "Calculated size {calculated} is below minimum {min}")
             }
-            Self::InsufficientCash { required, available } => {
-                write!(f, "Insufficient cash: required {required}, available {available}")
+            Self::InsufficientCash {
+                required,
+                available,
+            } => {
+                write!(
+                    f,
+                    "Insufficient cash: required {required}, available {available}"
+                )
             }
             Self::ZeroEquity => write!(f, "Cannot calculate percentage of zero equity"),
         }

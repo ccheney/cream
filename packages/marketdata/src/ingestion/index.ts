@@ -4,15 +4,15 @@
 
 export {
   aggregateCandles,
+  type Candle,
   CandleIngestionService,
   CandleSchema,
-  checkStaleness,
-  TimeframeSchema,
-  type Candle,
   type CandleStorage,
+  checkStaleness,
   type GapInfo,
   type IngestionOptions,
   type IngestionResult,
   type StalenessResult,
   type Timeframe,
+  TimeframeSchema,
 } from "./candleIngestion";

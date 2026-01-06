@@ -2,7 +2,8 @@
   "extends": "@cream/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "types": ["bun"]
   },
   "include": ["src/**/*", "tests/**/*"]
 }

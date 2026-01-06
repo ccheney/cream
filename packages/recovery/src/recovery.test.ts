@@ -11,17 +11,14 @@ process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "@cream/storage";
-import { Checkpointer, createCheckpointer } from "./checkpointer.js";
-import { CycleDetector, createCycleDetector } from "./detector.js";
+import { type Checkpointer, createCheckpointer } from "./checkpointer.js";
+import { type CycleDetector, createCycleDetector } from "./detector.js";
 import {
   createMockBrokerFetcher,
   createOrderReconciler,
-  OrderReconciler,
+  type OrderReconciler,
 } from "./reconciler.js";
-import {
-  createRecoveryManager,
-  RecoveryManager,
-} from "./recovery.js";
+import { createRecoveryManager, RecoveryManager } from "./recovery.js";
 import type {
   AgentsState,
   BrokerOrder,
@@ -140,8 +137,8 @@ describe("Checkpointer", () => {
 
       const events = await checkpointer.getCycleEvents(cycleId);
       expect(events).toHaveLength(2);
-      expect(events[0].eventType).toBe("cycle_started");
-      expect(events[1].eventType).toBe("cycle_completed");
+      expect(events[0]?.eventType).toBe("cycle_started");
+      expect(events[1]?.eventType).toBe("cycle_completed");
     });
 
     test("checks for cycle events", async () => {
@@ -269,7 +266,7 @@ describe("OrderReconciler", () => {
     side: "buy",
     quantity: 100,
     orderType: "limit",
-    limitPrice: 150.00,
+    limitPrice: 150.0,
     status: "submitted",
     submittedAt: "2026-01-05T10:00:00Z",
     ...overrides,
@@ -384,7 +381,7 @@ describe("OrderReconciler", () => {
 
     const pending = await reconciler.getPendingOrders(state);
     expect(pending).toHaveLength(1);
-    expect(pending[0].clientOrderId).toBe("order-1");
+    expect(pending[0]?.clientOrderId).toBe("order-1");
   });
 });
 

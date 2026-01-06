@@ -7,7 +7,7 @@
  * @see docs/plans/ui/20-design-philosophy.md
  */
 
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // ============================================
 // Test Helpers
@@ -16,10 +16,7 @@ import { expect, test } from "@playwright/test";
 /**
  * Navigate to a Storybook story by ID.
  */
-async function navigateToStory(
-  page: Parameters<Parameters<typeof test>[1]>[0]["page"],
-  storyId: string
-) {
+async function navigateToStory(page: Page, storyId: string) {
   await page.goto(`/iframe.html?id=${storyId}&viewMode=story`);
   // Wait for story to render
   await page.waitForLoadState("networkidle");

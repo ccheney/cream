@@ -7,10 +7,10 @@
  * @see docs/plans/14-testing.md
  */
 
-import type { Account, Order, OrderRequest, Position, OrderStatus } from "../types.js";
+import type { AlpacaClient } from "../client.js";
+import type { Account, Order, OrderRequest, OrderStatus, Position } from "../types.js";
 import { BrokerError } from "../types.js";
 import { generateOrderId } from "../utils.js";
-import type { AlpacaClient } from "../client.js";
 
 /**
  * Backtest adapter configuration.
@@ -160,7 +160,7 @@ export function createBacktestAdapter(config: BacktestAdapterConfig = {}): Alpac
       } else {
         existing.qty = newQty;
         existing.marketValue = newQty * price;
-        existing.unrealizedPl = existing.marketValue - (existing.avgEntryPrice * newQty);
+        existing.unrealizedPl = existing.marketValue - existing.avgEntryPrice * newQty;
         existing.unrealizedPlpc = existing.unrealizedPl / (existing.avgEntryPrice * newQty);
       }
     }

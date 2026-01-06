@@ -10,6 +10,27 @@
 export const PACKAGE_NAME = "@cream/config";
 export const VERSION = "0.0.1";
 
+// Feature flags runtime
+export {
+  areFlagsInitialized,
+  BUILT_IN_FLAGS,
+  type BuiltInFlagId,
+  createFlagEvaluator,
+  type Environment,
+  type FeatureFlag,
+  type FeatureFlagsConfig,
+  type FlagContext,
+  type FlagEvaluator,
+  type FlagResult,
+  getFlags,
+  initializeFlags,
+  isCBRMemoryEnabled,
+  isDebugLoggingEnabled,
+  isHITLEnabled,
+  isLiveExecutionEnabled,
+  isOptionsEnabled,
+  resetFlags,
+} from "./flags";
 // Loading utilities
 export {
   type ConfigEnvironment,
@@ -42,24 +63,3 @@ export {
   validateConfigOrThrow,
   validatePartialConfig,
 } from "./validate";
-// Feature flags runtime
-export {
-  areFlagsInitialized,
-  BUILT_IN_FLAGS,
-  type BuiltInFlagId,
-  createFlagEvaluator,
-  type Environment,
-  type FeatureFlag,
-  type FeatureFlagsConfig,
-  type FlagContext,
-  type FlagEvaluator,
-  type FlagResult,
-  getFlags,
-  initializeFlags,
-  isCBRMemoryEnabled,
-  isDebugLoggingEnabled,
-  isHITLEnabled,
-  isLiveExecutionEnabled,
-  isOptionsEnabled,
-  resetFlags,
-} from "./flags";

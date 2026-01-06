@@ -67,6 +67,11 @@ export function checkStaleness(
 ): StalenessCheckResult {
   const threshold = thresholds[timeframe] ?? DEFAULT_STALENESS_THRESHOLDS[timeframe];
 
+  // Ensure threshold is defined (should always be, but TypeScript needs the guard)
+  if (threshold === undefined) {
+    throw new Error(`No staleness threshold defined for timeframe: ${timeframe}`);
+  }
+
   if (!lastTimestamp) {
     return {
       isStale: true,

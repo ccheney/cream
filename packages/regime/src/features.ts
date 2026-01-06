@@ -77,8 +77,8 @@ export function extractFeatures(
   // Calculate log returns for entire series
   const logReturns: number[] = [];
   for (let i = 1; i < candles.length; i++) {
-    const prevClose = candles[i - 1]!.close;
-    const currClose = candles[i]!.close;
+    const prevClose = candles[i - 1]?.close ?? 0;
+    const currClose = candles[i]?.close ?? 0;
     if (prevClose > 0 && currClose > 0) {
       logReturns.push(Math.log(currClose / prevClose));
     } else {
@@ -99,9 +99,7 @@ export function extractFeatures(
     const volatility = calculateStd(recentReturns);
 
     // Volume z-score
-    const recentVolumes = candles
-      .slice(i - config.volumePeriod + 1, i + 1)
-      .map((c) => c.volume);
+    const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
     const volumeZScore = calculateZScore(candle.volume, recentVolumes);
 
     // Trend strength (returns / volatility, bounded)
@@ -112,7 +110,7 @@ export function extractFeatures(
       volatility,
       volumeZScore,
       trendStrength: Math.max(-3, Math.min(3, trendStrength)), // Bound to [-3, 3]
-      timestamp: candle.timestamp,
+      timestamp: new Date(candle.timestamp).toISOString(),
     });
   }
 
@@ -133,7 +131,9 @@ export function extractSingleFeature(
 /**
  * Get minimum required candle count for feature extraction.
  */
-export function getMinimumCandleCount(config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG): number {
+export function getMinimumCandleCount(
+  config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+): number {
   return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
 }
 
@@ -145,8 +145,12 @@ export function getMinimumCandleCount(config: FeatureExtractionConfig = DEFAULT_
  * Calculate standard deviation of an array.
  */
 export function calculateStd(values: number[]): number {
-  if (values.length === 0) return 0;
-  if (values.length === 1) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
+  if (values.length === 1) {
+    return 0;
+  }
 
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const squaredDiffs = values.map((v) => (v - mean) ** 2);
@@ -158,7 +162,9 @@ export function calculateStd(values: number[]): number {
  * Calculate mean of an array.
  */
 export function calculateMean(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
@@ -168,7 +174,9 @@ export function calculateMean(values: number[]): number {
 export function calculateZScore(value: number, sample: number[]): number {
   const mean = calculateMean(sample);
   const std = calculateStd(sample);
-  if (std < 0.0001) return 0; // Avoid division by near-zero
+  if (std < 0.0001) {
+    return 0; // Avoid division by near-zero
+  }
   return (value - mean) / std;
 }
 

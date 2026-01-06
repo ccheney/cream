@@ -153,9 +153,7 @@ class BradleyTerryRewardModel(nn.Module):
         if features.dim() != 2:
             raise ValueError(f"Expected 2D input tensor, got shape {features.shape}")
         if features.size(1) != self.input_dim:
-            raise ValueError(
-                f"Expected input_dim={self.input_dim}, got {features.size(1)}"
-            )
+            raise ValueError(f"Expected input_dim={self.input_dim}, got {features.size(1)}")
 
         return self.network(features)
 
@@ -276,8 +274,7 @@ class BradleyTerryRewardModel(nn.Module):
         """
         if features_a.shape != features_b.shape:
             raise ValueError(
-                f"Shape mismatch: features_a {features_a.shape} vs "
-                f"features_b {features_b.shape}"
+                f"Shape mismatch: features_a {features_a.shape} vs features_b {features_b.shape}"
             )
 
         # Compute rewards
@@ -445,9 +442,7 @@ def train_bradley_terry_model(
             margins_batch = margins[batch_indices] if margins is not None else None
 
             # Training step
-            loss = model.training_step(
-                chosen_batch, rejected_batch, margins_batch, optimizer
-            )
+            loss = model.training_step(chosen_batch, rejected_batch, margins_batch, optimizer)
 
             epoch_loss += loss
             num_batches += 1

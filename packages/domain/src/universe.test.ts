@@ -23,8 +23,8 @@ import {
   UniverseMetadataSchema,
   UniverseSourceSchema,
   UniverseSourceType,
-  validateUniverseConfig,
   VolatilityFilterSchema,
+  validateUniverseConfig,
 } from "./universe";
 
 // ============================================
@@ -226,7 +226,7 @@ describe("VolatilityFilterSchema", () => {
   test("accepts valid volatility filters", () => {
     const result = VolatilityFilterSchema.safeParse({
       minHistVol: 0.15,
-      maxHistVol: 0.60,
+      maxHistVol: 0.6,
       minAtrPct: 0.01,
       maxAtrPct: 0.05,
     });
@@ -256,7 +256,7 @@ describe("UniverseFiltersSchema", () => {
   test("accepts combined filters", () => {
     const result = UniverseFiltersSchema.safeParse({
       liquidity: { minDollarVolume: 10000000 },
-      volatility: { maxHistVol: 0.60 },
+      volatility: { maxHistVol: 0.6 },
     });
     expect(result.success).toBe(true);
   });

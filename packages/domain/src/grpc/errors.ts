@@ -165,7 +165,7 @@ export class RetryBackoff {
    * Get next backoff delay in milliseconds
    */
   nextDelay(): number {
-    const exponentialDelay = this.baseDelayMs * Math.pow(2, this.attempt);
+    const exponentialDelay = this.baseDelayMs * 2 ** this.attempt;
     const cappedDelay = Math.min(exponentialDelay, this.maxDelayMs);
 
     // Add jitter

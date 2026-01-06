@@ -10,10 +10,10 @@ mod state;
 pub mod stops;
 pub mod tactics;
 
-pub use alpaca::{
-    AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, RegulatoryFeeCalculator,
+pub use alpaca::{AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, RegulatoryFeeCalculator};
+pub use gateway::{
+    BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
 };
-pub use gateway::{BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError};
 pub use reconciliation::{
     BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot, BrokerStateSnapshot,
     CriticalDiscrepancyAction, Discrepancy, DiscrepancySeverity, DiscrepancyType, OrphanResolution,
@@ -28,6 +28,6 @@ pub use stops::{
 };
 pub use tactics::{
     AdaptiveConfig, AggressiveLimitConfig, IcebergConfig, MarketState, OrderPurpose,
-    PassiveLimitConfig, SliceType, TacticConfig, TacticSelector, TacticSelectionContext,
+    PassiveLimitConfig, SliceType, TacticConfig, TacticSelectionContext, TacticSelector,
     TacticType, TacticUrgency, TwapConfig, Urgency, VwapConfig,
 };

@@ -3,36 +3,36 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import type { Dividend, StockSplit } from "../providers/polygon";
 import {
-  // Split functions
-  calculateSplitRatio,
-  toSplitAdjustment,
-  adjustPrice,
-  adjustVolume,
-  calculateCumulativeAdjustmentFactor,
-  getApplicableSplits,
   adjustCandleForSplits,
   adjustCandlesForSplits,
-  unadjustPrice,
-  type SplitAdjustment,
-  // Dividend functions
-  toDividendInfo,
-  calculateDividendYield,
-  calculateAnnualizedYield,
-  getDividendsFromDate,
-  getDividendsInRange,
-  sumDividends,
-  calculateDividendAdjustedReturn,
+  adjustPrice,
   adjustPriceForDividend,
+  adjustVolume,
+  calculateAnnualizedYield,
+  calculateCumulativeAdjustmentFactor,
+  calculateDividendAdjustedReturn,
+  calculateDividendYield,
   calculateDRIPShares,
-  isSpecialDividend,
+  // Split functions
+  calculateSplitRatio,
+  type DividendInfo,
+  getApplicableSplits,
+  getDividendsFromDate,
+  getDividendsGoingExWithin,
+  getDividendsInRange,
   getRegularDividends,
   getSpecialDividends,
   getUpcomingDividends,
-  getDividendsGoingExWithin,
-  type DividendInfo,
+  isSpecialDividend,
+  type SplitAdjustment,
+  sumDividends,
+  // Dividend functions
+  toDividendInfo,
+  toSplitAdjustment,
+  unadjustPrice,
 } from "./index";
-import type { StockSplit, Dividend } from "../providers/polygon";
 
 // ============================================
 // Split Tests
@@ -118,8 +118,22 @@ describe("Stock Splits", () => {
   describe("calculateCumulativeAdjustmentFactor", () => {
     it("should multiply ratios for multiple splits", () => {
       const splits: SplitAdjustment[] = [
-        { symbol: "AAPL", executionDate: "2020-08-01", ratio: 4, splitTo: 4, splitFrom: 1, isReverse: false },
-        { symbol: "AAPL", executionDate: "2014-06-09", ratio: 7, splitTo: 7, splitFrom: 1, isReverse: false },
+        {
+          symbol: "AAPL",
+          executionDate: "2020-08-01",
+          ratio: 4,
+          splitTo: 4,
+          splitFrom: 1,
+          isReverse: false,
+        },
+        {
+          symbol: "AAPL",
+          executionDate: "2014-06-09",
+          ratio: 7,
+          splitTo: 7,
+          splitFrom: 1,
+          isReverse: false,
+        },
       ];
 
       expect(calculateCumulativeAdjustmentFactor(splits)).toBe(28);
@@ -133,8 +147,22 @@ describe("Stock Splits", () => {
   describe("getApplicableSplits", () => {
     it("should return splits after candle date", () => {
       const splits: SplitAdjustment[] = [
-        { symbol: "AAPL", executionDate: "2020-08-01", ratio: 4, splitTo: 4, splitFrom: 1, isReverse: false },
-        { symbol: "AAPL", executionDate: "2014-06-09", ratio: 7, splitTo: 7, splitFrom: 1, isReverse: false },
+        {
+          symbol: "AAPL",
+          executionDate: "2020-08-01",
+          ratio: 4,
+          splitTo: 4,
+          splitFrom: 1,
+          isReverse: false,
+        },
+        {
+          symbol: "AAPL",
+          executionDate: "2014-06-09",
+          ratio: 7,
+          splitTo: 7,
+          splitFrom: 1,
+          isReverse: false,
+        },
       ];
 
       const applicable = getApplicableSplits(splits, "2018-01-01");
@@ -145,8 +173,22 @@ describe("Stock Splits", () => {
 
     it("should return all splits for old candle", () => {
       const splits: SplitAdjustment[] = [
-        { symbol: "AAPL", executionDate: "2020-08-01", ratio: 4, splitTo: 4, splitFrom: 1, isReverse: false },
-        { symbol: "AAPL", executionDate: "2014-06-09", ratio: 7, splitTo: 7, splitFrom: 1, isReverse: false },
+        {
+          symbol: "AAPL",
+          executionDate: "2020-08-01",
+          ratio: 4,
+          splitTo: 4,
+          splitFrom: 1,
+          isReverse: false,
+        },
+        {
+          symbol: "AAPL",
+          executionDate: "2014-06-09",
+          ratio: 7,
+          splitTo: 7,
+          splitFrom: 1,
+          isReverse: false,
+        },
       ];
 
       const applicable = getApplicableSplits(splits, "2010-01-01");
@@ -167,7 +209,14 @@ describe("Stock Splits", () => {
       };
 
       const splits: SplitAdjustment[] = [
-        { symbol: "AAPL", executionDate: "2020-08-01", ratio: 4, splitTo: 4, splitFrom: 1, isReverse: false },
+        {
+          symbol: "AAPL",
+          executionDate: "2020-08-01",
+          ratio: 4,
+          splitTo: 4,
+          splitFrom: 1,
+          isReverse: false,
+        },
       ];
 
       const adjusted = adjustCandleForSplits(candle, splits);
@@ -202,12 +251,33 @@ describe("Stock Splits", () => {
   describe("adjustCandlesForSplits", () => {
     it("should adjust multiple candles correctly", () => {
       const candles = [
-        { timestamp: "2019-01-01T12:00:00Z", open: 400, high: 420, low: 390, close: 410, volume: 1000000 },
-        { timestamp: "2021-01-01T12:00:00Z", open: 100, high: 110, low: 95, close: 105, volume: 500000 },
+        {
+          timestamp: "2019-01-01T12:00:00Z",
+          open: 400,
+          high: 420,
+          low: 390,
+          close: 410,
+          volume: 1000000,
+        },
+        {
+          timestamp: "2021-01-01T12:00:00Z",
+          open: 100,
+          high: 110,
+          low: 95,
+          close: 105,
+          volume: 500000,
+        },
       ];
 
       const splits: SplitAdjustment[] = [
-        { symbol: "AAPL", executionDate: "2020-08-01", ratio: 4, splitTo: 4, splitFrom: 1, isReverse: false },
+        {
+          symbol: "AAPL",
+          executionDate: "2020-08-01",
+          ratio: 4,
+          splitTo: 4,
+          splitFrom: 1,
+          isReverse: false,
+        },
       ];
 
       const adjusted = adjustCandlesForSplits(candles, splits);
@@ -302,9 +372,39 @@ describe("Dividends", () => {
   describe("getDividendsFromDate", () => {
     it("should filter dividends after date", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-01-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-04-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-07-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-01-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-04-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-07-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       const result = getDividendsFromDate(dividends, "2024-03-01");
@@ -317,9 +417,39 @@ describe("Dividends", () => {
   describe("getDividendsInRange", () => {
     it("should filter dividends in date range", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-01-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-04-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-07-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-01-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-04-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-07-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       const result = getDividendsInRange(dividends, "2024-02-01", "2024-06-01");
@@ -332,8 +462,28 @@ describe("Dividends", () => {
   describe("sumDividends", () => {
     it("should sum cash amounts", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-01-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-04-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-01-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-04-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       expect(sumDividends(dividends)).toBe(0.48);
@@ -347,7 +497,17 @@ describe("Dividends", () => {
   describe("calculateDividendAdjustedReturn", () => {
     it("should calculate total return with dividends", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.50, currency: "USD", exDividendDate: "2024-01-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.5,
+          currency: "USD",
+          exDividendDate: "2024-01-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       const result = calculateDividendAdjustedReturn(100, 102, dividends);
@@ -368,27 +528,34 @@ describe("Dividends", () => {
 
   describe("adjustPriceForDividend", () => {
     it("should subtract dividend from price", () => {
-      expect(adjustPriceForDividend(100, 0.50)).toBe(99.50);
+      expect(adjustPriceForDividend(100, 0.5)).toBe(99.5);
     });
   });
 
   describe("calculateDRIPShares", () => {
     it("should calculate additional shares from dividend reinvestment", () => {
-      const newShares = calculateDRIPShares(100, 0.50, 100);
+      const newShares = calculateDRIPShares(100, 0.5, 100);
 
       expect(newShares).toBeCloseTo(100.5, 4);
     });
 
     it("should handle zero price", () => {
-      expect(calculateDRIPShares(0, 0.50, 100)).toBe(100);
+      expect(calculateDRIPShares(0, 0.5, 100)).toBe(100);
     });
   });
 
   describe("isSpecialDividend", () => {
     it("should detect special dividends", () => {
       const special: DividendInfo = {
-        symbol: "MSFT", cashAmount: 3.00, currency: "USD", exDividendDate: "2024-01-01",
-        recordDate: null, payDate: null, declarationDate: null, dividendType: "SC", frequency: null,
+        symbol: "MSFT",
+        cashAmount: 3.0,
+        currency: "USD",
+        exDividendDate: "2024-01-01",
+        recordDate: null,
+        payDate: null,
+        declarationDate: null,
+        dividendType: "SC",
+        frequency: null,
       };
 
       expect(isSpecialDividend(special)).toBe(true);
@@ -396,8 +563,15 @@ describe("Dividends", () => {
 
     it("should not flag regular dividends", () => {
       const regular: DividendInfo = {
-        symbol: "MSFT", cashAmount: 0.75, currency: "USD", exDividendDate: "2024-01-01",
-        recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4,
+        symbol: "MSFT",
+        cashAmount: 0.75,
+        currency: "USD",
+        exDividendDate: "2024-01-01",
+        recordDate: null,
+        payDate: null,
+        declarationDate: null,
+        dividendType: "CD",
+        frequency: 4,
       };
 
       expect(isSpecialDividend(regular)).toBe(false);
@@ -407,8 +581,28 @@ describe("Dividends", () => {
   describe("getRegularDividends", () => {
     it("should filter for CD type only", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-01-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 3.00, currency: "USD", exDividendDate: "2024-01-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "SC", frequency: null },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-01-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 3.0,
+          currency: "USD",
+          exDividendDate: "2024-01-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "SC",
+          frequency: null,
+        },
       ];
 
       const result = getRegularDividends(dividends);
@@ -421,8 +615,28 @@ describe("Dividends", () => {
   describe("getSpecialDividends", () => {
     it("should filter for SC type only", () => {
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-01-01", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 3.00, currency: "USD", exDividendDate: "2024-01-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "SC", frequency: null },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-01-01",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 3.0,
+          currency: "USD",
+          exDividendDate: "2024-01-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "SC",
+          frequency: null,
+        },
       ];
 
       const result = getSpecialDividends(dividends);
@@ -436,8 +650,28 @@ describe("Dividends", () => {
     it("should return dividends with ex-date in the future", () => {
       const today = new Date("2024-06-01");
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-05-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-07-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-05-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-07-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       const result = getUpcomingDividends(dividends, today);
@@ -451,9 +685,39 @@ describe("Dividends", () => {
     it("should return dividends going ex within N days", () => {
       const today = new Date("2024-06-01");
       const dividends: DividendInfo[] = [
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-06-05", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-06-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
-        { symbol: "AAPL", cashAmount: 0.24, currency: "USD", exDividendDate: "2024-07-15", recordDate: null, payDate: null, declarationDate: null, dividendType: "CD", frequency: 4 },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-06-05",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-06-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
+        {
+          symbol: "AAPL",
+          cashAmount: 0.24,
+          currency: "USD",
+          exDividendDate: "2024-07-15",
+          recordDate: null,
+          payDate: null,
+          declarationDate: null,
+          dividendType: "CD",
+          frequency: 4,
+        },
       ];
 
       const result = getDividendsGoingExWithin(dividends, 10, today);

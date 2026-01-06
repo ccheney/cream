@@ -121,7 +121,11 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
     return [];
   }
   if (sourceResults.length === 1) {
-    return sourceResults[0].instruments;
+    const firstResult = sourceResults[0];
+    if (!firstResult) {
+      return [];
+    }
+    return firstResult.instruments;
   }
 
   // Get symbol sets for each source
@@ -131,6 +135,9 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
 
   // Find intersection - first set is guaranteed to exist since length >= 2
   const firstSet = symbolSets[0];
+  if (!firstSet) {
+    return [];
+  }
   const intersection = new Set(
     Array.from(firstSet).filter((symbol) => symbolSets.every((set) => set.has(symbol)))
   );
@@ -397,9 +404,7 @@ function applyDiversification(
 
   // Check min sectors represented
   if (diversify.minSectorsRepresented && diversify.minSectorsRepresented > 0) {
-    const sectorsPresent = new Set(
-      filtered.filter((i) => i.sector).map((i) => i.sector!)
-    );
+    const sectorsPresent = new Set(filtered.filter((i) => i.sector).map((i) => i.sector!));
     if (sectorsPresent.size < diversify.minSectorsRepresented) {
       warnings.push(
         `Warning: only ${sectorsPresent.size} sectors represented, ` +

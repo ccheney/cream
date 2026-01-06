@@ -194,7 +194,9 @@ class PreExecutionEvaluator:
         # Blend weighted score with BT reward
         if self.bt_model is not None and features is not None:
             bt_normalized = self._normalize_bt_reward(bt_reward)
-            overall_score = (1 - self.BT_BLEND_RATIO) * weighted_score + self.BT_BLEND_RATIO * bt_normalized
+            overall_score = (
+                1 - self.BT_BLEND_RATIO
+            ) * weighted_score + self.BT_BLEND_RATIO * bt_normalized
         else:
             overall_score = weighted_score
 
@@ -256,7 +258,9 @@ class PreExecutionEvaluator:
             try:
                 position_notional = getattr(plan, "size", 100) * getattr(plan, "entry_price", 100.0)
                 account_equity = getattr(context, "account_equity", 100000.0)
-                stop_loss_pct = abs(getattr(plan, "entry_price", 100.0) - getattr(plan, "stop_loss", 97.0)) / getattr(plan, "entry_price", 100.0)
+                stop_loss_pct = abs(
+                    getattr(plan, "entry_price", 100.0) - getattr(plan, "stop_loss", 97.0)
+                ) / getattr(plan, "entry_price", 100.0)
                 conviction = getattr(plan, "conviction", 0.5)
                 vix = getattr(context, "vix", 20.0)
                 vol_regime = "high" if vix > 25 else "normal" if vix > 15 else "low"
@@ -323,20 +327,14 @@ class PreExecutionEvaluator:
             score += 15 * trend_strength
         elif is_short and trend_strength < 0:
             score += 15 * abs(trend_strength)
-        elif is_long and trend_strength < -0.3:
-            score -= 10
-        elif is_short and trend_strength > 0.3:
+        elif is_long and trend_strength < -0.3 or is_short and trend_strength > 0.3:
             score -= 10
 
         # Regime alignment
         regime = getattr(context, "regime", "UNKNOWN")
-        if regime == "BULL_TREND" and is_long:
+        if regime == "BULL_TREND" and is_long or regime == "BEAR_TREND" and is_short:
             score += 10
-        elif regime == "BEAR_TREND" and is_short:
-            score += 10
-        elif regime == "BULL_TREND" and is_short:
-            score -= 10
-        elif regime == "BEAR_TREND" and is_long:
+        elif regime == "BULL_TREND" and is_short or regime == "BEAR_TREND" and is_long:
             score -= 10
 
         return max(0, min(100, score))
@@ -566,7 +564,7 @@ class PreExecutionEvaluator:
         if memory_contexts is None:
             memory_contexts = [None] * len(plans)
 
-        for i, (plan, context) in enumerate(zip(plans, contexts)):
+        for i, (plan, context) in enumerate(zip(plans, contexts, strict=False)):
             memory = memory_contexts[i] if i < len(memory_contexts) else None
             features = features_batch[i] if features_batch is not None else None
 

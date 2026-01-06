@@ -5,7 +5,7 @@
  * Runs the OODA loop: Observe -> Orient -> Decide -> Act
  */
 
-import { mastra, tradingCycleWorkflow } from "@cream/api";
+import { tradingCycleWorkflow } from "@cream/api";
 
 // ============================================
 // Configuration
@@ -44,29 +44,17 @@ async function runTradingCycle(): Promise<void> {
   const cycleId = generateCycleId();
   const startTime = Date.now();
 
-  console.log(`\n============================================================`);
-  console.log(`[Worker] Starting trading cycle: ${cycleId}`);
-  console.log(`[Worker] Timestamp: ${new Date().toISOString()}`);
-  console.log(`[Worker] Environment: ${CONFIG.env}`);
-  console.log(`============================================================\n`);
-
   try {
     // Execute the trading cycle workflow
-    const result = await tradingCycleWorkflow.execute({
+    const _result = await tradingCycleWorkflow.execute({
       triggerData: {
         cycleId,
         instruments: CONFIG.defaultInstruments,
       },
     });
 
-    const duration = Date.now() - startTime;
-
-    console.log(`\n[Worker] Cycle ${cycleId} completed`);
-    console.log(`[Worker] Duration: ${duration}ms`);
-    console.log(`[Worker] Result: ${JSON.stringify(result, null, 2)}`);
-  } catch (error) {
-    console.error(`[Worker] Cycle ${cycleId} failed:`, error);
-  }
+    const _duration = Date.now() - startTime;
+  } catch (_error) {}
 }
 
 // ============================================
@@ -84,11 +72,8 @@ function calculateNextHourMs(): number {
 }
 
 function startScheduler(): NodeJS.Timeout {
-  console.log("[Worker] Starting hourly scheduler...");
-
   // Schedule first run at next hour boundary
   const msUntilNextHour = calculateNextHourMs();
-  console.log(`[Worker] Next cycle in ${Math.round(msUntilNextHour / 1000 / 60)} minutes`);
 
   // Initial aligned trigger
   setTimeout(() => {
@@ -107,14 +92,8 @@ function startScheduler(): NodeJS.Timeout {
 // ============================================
 
 async function main() {
-  console.log("[Worker] Cream Trading Worker starting...");
-  console.log(`[Worker] Environment: ${CONFIG.env}`);
-  console.log(`[Worker] Instruments: ${CONFIG.defaultInstruments.join(", ")}`);
-  console.log(`[Worker] Run on startup: ${CONFIG.runOnStartup}`);
-
   // Run immediately if configured
   if (CONFIG.runOnStartup) {
-    console.log("[Worker] Running initial cycle on startup...");
     await runTradingCycle();
   }
 
@@ -123,19 +102,16 @@ async function main() {
 
   // Handle shutdown
   process.on("SIGINT", () => {
-    console.log("\n[Worker] Shutting down...");
     clearInterval(schedulerInterval);
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
-    console.log("\n[Worker] Shutting down...");
     clearInterval(schedulerInterval);
     process.exit(0);
   });
 }
 
-main().catch((error) => {
-  console.error("[Worker] Fatal error:", error);
+main().catch((_error) => {
   process.exit(1);
 });

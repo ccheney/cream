@@ -3,10 +3,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import type { FeatureFlagsConfig } from "./schemas/flags.js";
 import {
-  BUILT_IN_FLAGS,
   areFlagsInitialized,
+  BUILT_IN_FLAGS,
   createFlagEvaluator,
   getFlags,
   initializeFlags,
@@ -17,6 +16,7 @@ import {
   isOptionsEnabled,
   resetFlags,
 } from "./flags.js";
+import type { FeatureFlagsConfig } from "./schemas/flags.js";
 
 // ============================================
 // Test Setup
@@ -71,9 +71,7 @@ describe("createFlagEvaluator", () => {
             id: "test_flag",
             type: "boolean",
             default_value: false,
-            environment_overrides: [
-              { environment: "PAPER", value: true },
-            ],
+            environment_overrides: [{ environment: "PAPER", value: true }],
             allow_env_override: true,
             deprecated: false,
           },
@@ -91,9 +89,7 @@ describe("createFlagEvaluator", () => {
             id: "test_flag",
             type: "boolean",
             default_value: false,
-            environment_overrides: [
-              { environment: "LIVE", value: true },
-            ],
+            environment_overrides: [{ environment: "LIVE", value: true }],
             allow_env_override: true,
             deprecated: false,
           },
@@ -118,9 +114,7 @@ describe("createFlagEvaluator", () => {
             id: "test_flag",
             type: "boolean",
             default_value: false,
-            instrument_overrides: [
-              { instruments: ["AAPL", "GOOGL"], value: true },
-            ],
+            instrument_overrides: [{ instruments: ["AAPL", "GOOGL"], value: true }],
             allow_env_override: true,
             deprecated: false,
           },
@@ -141,12 +135,8 @@ describe("createFlagEvaluator", () => {
             id: "test_flag",
             type: "boolean",
             default_value: false,
-            environment_overrides: [
-              { environment: "PAPER", value: true },
-            ],
-            instrument_overrides: [
-              { instruments: ["AAPL"], value: false },
-            ],
+            environment_overrides: [{ environment: "PAPER", value: true }],
+            instrument_overrides: [{ instruments: ["AAPL"], value: false }],
             allow_env_override: true,
             deprecated: false,
           },

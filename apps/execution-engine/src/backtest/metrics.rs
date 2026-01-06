@@ -289,7 +289,8 @@ impl PerformanceCalculator {
         };
 
         // Calculate trade statistics
-        let (gross_profit, gross_loss, winning_trades, losing_trades) = self.calculate_trade_stats();
+        let (gross_profit, gross_loss, winning_trades, losing_trades) =
+            self.calculate_trade_stats();
         let total_trades = self.trades.len() as u64;
 
         let win_rate = if total_trades > 0 {
@@ -579,7 +580,7 @@ impl PerformanceCalculator {
     #[must_use]
     pub fn to_csv(&self) -> String {
         let mut csv = String::from(
-            "trade_id,instrument_id,side,entry_time,entry_price,exit_time,exit_price,exit_reason,quantity,gross_pnl,commission,net_pnl,holding_period_hours\n"
+            "trade_id,instrument_id,side,entry_time,entry_price,exit_time,exit_price,exit_reason,quantity,gross_pnl,commission,net_pnl,holding_period_hours\n",
         );
 
         for trade in &self.trades {
@@ -642,7 +643,11 @@ fn downside_deviation(values: &[Decimal]) -> Option<Decimal> {
         return None;
     }
 
-    let negative_returns: Vec<Decimal> = values.iter().filter(|v| **v < Decimal::ZERO).copied().collect();
+    let negative_returns: Vec<Decimal> = values
+        .iter()
+        .filter(|v| **v < Decimal::ZERO)
+        .copied()
+        .collect();
 
     if negative_returns.is_empty() {
         return Some(Decimal::ZERO);
@@ -827,7 +832,8 @@ mod tests {
         let summary = calc.calculate();
 
         // Max drawdown should be ~13.6% (95000 vs 110000 peak)
-        let expected_dd = (Decimal::new(110000, 0) - Decimal::new(95000, 0)) / Decimal::new(110000, 0);
+        let expected_dd =
+            (Decimal::new(110000, 0) - Decimal::new(95000, 0)) / Decimal::new(110000, 0);
         assert_eq!(summary.max_drawdown, expected_dd);
     }
 

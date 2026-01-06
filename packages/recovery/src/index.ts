@@ -49,6 +49,25 @@
  * ```
  */
 
+// Checkpointer
+export { Checkpointer, createCheckpointer } from "./checkpointer.js";
+// Detector
+export type { IncompleteCycle } from "./detector.js";
+export { CycleDetector, createCycleDetector } from "./detector.js";
+// Reconciler
+export type { BrokerOrderFetcher } from "./reconciler.js";
+export {
+  createMockBrokerFetcher,
+  createOrderReconciler,
+  OrderReconciler,
+} from "./reconciler.js";
+// Recovery
+export type { RecoverySystem } from "./recovery.js";
+export {
+  createRecoveryManager,
+  createRecoverySystem,
+  RecoveryManager,
+} from "./recovery.js";
 // Types
 export type {
   AgentOutput,
@@ -69,32 +88,8 @@ export type {
   RecoveryConfig,
   SynthesisState,
 } from "./types.js";
-
 export {
   CYCLE_PHASES,
   DEFAULT_RECOVERY_CONFIG,
   PHASE_ORDER,
 } from "./types.js";
-
-// Checkpointer
-export { Checkpointer, createCheckpointer } from "./checkpointer.js";
-
-// Detector
-export type { IncompleteCycle } from "./detector.js";
-export { CycleDetector, createCycleDetector } from "./detector.js";
-
-// Reconciler
-export type { BrokerOrderFetcher } from "./reconciler.js";
-export {
-  createMockBrokerFetcher,
-  createOrderReconciler,
-  OrderReconciler,
-} from "./reconciler.js";
-
-// Recovery
-export type { RecoverySystem } from "./recovery.js";
-export {
-  createRecoveryManager,
-  createRecoverySystem,
-  RecoveryManager,
-} from "./recovery.js";

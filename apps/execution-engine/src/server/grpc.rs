@@ -32,12 +32,11 @@ pub mod proto {
 use proto::cream::v1::{
     AccountState, CancelOrderRequest, CancelOrderResponse, CheckConstraintsRequest,
     CheckConstraintsResponse, ConstraintCheck, ConstraintResult, ConstraintViolation,
-    GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest,
-    GetOptionChainResponse, GetOrderStateRequest, GetOrderStateResponse,
-    GetPositionsRequest, GetPositionsResponse, GetSnapshotRequest, GetSnapshotResponse,
-    Position, StreamExecutionsRequest, StreamExecutionsResponse, SubmitOrderRequest,
-    SubmitOrderResponse, SubscribeMarketDataRequest, SubscribeMarketDataResponse,
-    ViolationSeverity,
+    GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest, GetOptionChainResponse,
+    GetOrderStateRequest, GetOrderStateResponse, GetPositionsRequest, GetPositionsResponse,
+    GetSnapshotRequest, GetSnapshotResponse, Position, StreamExecutionsRequest,
+    StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse, SubscribeMarketDataRequest,
+    SubscribeMarketDataResponse, ViolationSeverity,
     execution_service_server::{ExecutionService, ExecutionServiceServer},
     market_data_service_server::{MarketDataService, MarketDataServiceServer},
 };
@@ -164,12 +163,22 @@ impl ExecutionService for ExecutionServiceImpl {
                 .map(|v| ConstraintViolation {
                     code: v.code.clone(),
                     severity: match v.severity {
-                        crate::models::ViolationSeverity::Warning => ViolationSeverity::Warning.into(),
+                        crate::models::ViolationSeverity::Warning => {
+                            ViolationSeverity::Warning.into()
+                        }
                         crate::models::ViolationSeverity::Error => ViolationSeverity::Error.into(),
                     },
                     message: v.message.clone(),
-                    instrument_id: if v.instrument_id.is_empty() { None } else { Some(v.instrument_id.clone()) },
-                    field_path: if v.field_path.is_empty() { None } else { Some(v.field_path.clone()) },
+                    instrument_id: if v.instrument_id.is_empty() {
+                        None
+                    } else {
+                        Some(v.instrument_id.clone())
+                    },
+                    field_path: if v.field_path.is_empty() {
+                        None
+                    } else {
+                        Some(v.field_path.clone())
+                    },
                     observed_value: v.observed.parse().ok(),
                     limit_value: v.limit.parse().ok(),
                     constraint_name: v.code.clone(),
@@ -334,7 +343,11 @@ impl ExecutionService for ExecutionServiceImpl {
             status: convert_order_status(order_state.status),
             side: convert_order_side(order_state.side),
             order_type: convert_order_type(order_state.order_type),
-            requested_quantity: order_state.requested_quantity.to_string().parse().unwrap_or(0),
+            requested_quantity: order_state
+                .requested_quantity
+                .to_string()
+                .parse()
+                .unwrap_or(0),
             filled_quantity: order_state.filled_quantity.to_string().parse().unwrap_or(0),
             avg_fill_price: order_state
                 .avg_fill_price

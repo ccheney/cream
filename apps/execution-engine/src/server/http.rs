@@ -18,7 +18,7 @@ use std::str::FromStr;
 use tonic::Code;
 
 use crate::error::{ErrorCode, ExecutionError};
-use crate::execution::{ExecutionGateway, AlpacaAdapter};
+use crate::execution::{AlpacaAdapter, ExecutionGateway};
 use crate::models::{DecisionPlan, Environment};
 
 /// Shared state for the HTTP server.

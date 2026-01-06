@@ -33,11 +33,10 @@ use std::sync::Arc;
 use arrow::array::{ArrayRef, Float64Array, Int64Array, RecordBatch, StringArray, UInt64Array};
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use arrow_flight::{
-    encode::FlightDataEncoderBuilder,
+    FlightInfo, IpcMessage, PollInfo, SchemaAsIpc, Ticket, encode::FlightDataEncoderBuilder,
     flight_service_server::FlightServiceServer,
-    FlightInfo, IpcMessage, PollInfo, SchemaAsIpc, Ticket,
 };
-use futures::{stream, Stream, StreamExt};
+use futures::{Stream, StreamExt, stream};
 use tokio::sync::RwLock;
 
 /// Flight service implementation for high-performance data transport.
@@ -85,7 +84,10 @@ impl CreamFlightService {
         let schema = Self::market_data_schema();
 
         let symbols: ArrayRef = Arc::new(StringArray::from(
-            snapshots.iter().map(|s| s.symbol.as_str()).collect::<Vec<_>>(),
+            snapshots
+                .iter()
+                .map(|s| s.symbol.as_str())
+                .collect::<Vec<_>>(),
         ));
         let bid_prices: ArrayRef = Arc::new(Float64Array::from(
             snapshots.iter().map(|s| s.bid_price).collect::<Vec<_>>(),
@@ -105,7 +107,14 @@ impl CreamFlightService {
 
         RecordBatch::try_new(
             schema,
-            vec![symbols, bid_prices, ask_prices, last_prices, volumes, timestamps],
+            vec![
+                symbols,
+                bid_prices,
+                ask_prices,
+                last_prices,
+                volumes,
+                timestamps,
+            ],
         )
         .map_err(|e| arrow_flight::error::FlightError::from(e))
     }
@@ -119,9 +128,7 @@ impl CreamFlightService {
             .as_any()
             .downcast_ref::<StringArray>()
             .ok_or_else(|| {
-                arrow_flight::error::FlightError::DecodeError(
-                    "Invalid symbol column".to_string(),
-                )
+                arrow_flight::error::FlightError::DecodeError("Invalid symbol column".to_string())
             })?;
 
         let bid_prices = batch
@@ -196,14 +203,9 @@ impl Default for CreamFlightService {
 
 #[tonic::async_trait]
 impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
-    type HandshakeStream = Pin<
-        Box<
-            dyn Stream<Item = Result<arrow_flight::HandshakeResponse, tonic::Status>>
-                + Send,
-        >,
-    >;
-    type ListFlightsStream =
-        Pin<Box<dyn Stream<Item = Result<FlightInfo, tonic::Status>> + Send>>;
+    type HandshakeStream =
+        Pin<Box<dyn Stream<Item = Result<arrow_flight::HandshakeResponse, tonic::Status>> + Send>>;
+    type ListFlightsStream = Pin<Box<dyn Stream<Item = Result<FlightInfo, tonic::Status>> + Send>>;
     type DoGetStream =
         Pin<Box<dyn Stream<Item = Result<arrow_flight::FlightData, tonic::Status>> + Send>>;
     type DoPutStream =
@@ -254,9 +256,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
 
                 let info = FlightInfo::new()
                     .try_with_schema(&schema)
-                    .map_err(|e| {
-                        tonic::Status::internal(format!("Failed to set schema: {e}"))
-                    })?
+                    .map_err(|e| tonic::Status::internal(format!("Failed to set schema: {e}")))?
                     .with_descriptor(descriptor);
 
                 Ok(tonic::Response::new(info))
@@ -290,10 +290,9 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
             "market_data" => {
                 let schema = Self::market_data_schema();
                 let ipc_message =
-                    IpcMessage::try_from(SchemaAsIpc::new(&schema, &Default::default()))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!("Failed to encode schema: {e}"))
-                        })?;
+                    IpcMessage::try_from(SchemaAsIpc::new(&schema, &Default::default())).map_err(
+                        |e| tonic::Status::internal(format!("Failed to encode schema: {e}")),
+                    )?;
 
                 Ok(tonic::Response::new(arrow_flight::SchemaResult {
                     schema: ipc_message.0,
@@ -355,9 +354,8 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         tracing::info!("DoPut request");
 
         // Decode the FlightData stream into RecordBatches
-        let mapped_stream = stream.map(|result| {
-            result.map_err(arrow_flight::error::FlightError::from)
-        });
+        let mapped_stream =
+            stream.map(|result| result.map_err(arrow_flight::error::FlightError::from));
         let mut decoder =
             arrow_flight::decode::FlightRecordBatchStream::new_from_flight_data(mapped_stream);
 

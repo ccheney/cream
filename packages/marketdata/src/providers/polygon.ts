@@ -321,7 +321,7 @@ export class PolygonClient {
    */
   async getTickerSnapshot(ticker: string): Promise<Snapshot | undefined> {
     const response = await this.getAllTickersSnapshot([ticker]);
-    return response.tickers?.[0];
+    return response.tickers && response.tickers.length > 0 ? response.tickers[0] : undefined;
   }
 
   /**

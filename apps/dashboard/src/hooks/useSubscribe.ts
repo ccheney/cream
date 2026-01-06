@@ -181,7 +181,8 @@ export function useSymbolSubscription(
   symbols: string[],
   options: UseSymbolSubscriptionOptions = {}
 ): UseSymbolSubscriptionReturn {
-  const { autoSubscribe = true, deps = [] } = options;
+  const { autoSubscribe = true, deps: _deps = [] } = options;
+  void _deps; // Reserved for future dependency tracking
 
   const wsStore = useWSStore();
   const symbolsRef = useRef(symbols);

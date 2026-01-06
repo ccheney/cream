@@ -42,10 +42,7 @@ describe("calculateFixedFractional", () => {
   });
 
   test("includes risk-reward ratio when takeProfit provided", () => {
-    const result = calculateFixedFractional(
-      { ...baseInput, takeProfit: 110 },
-      0.01
-    );
+    const result = calculateFixedFractional({ ...baseInput, takeProfit: 110 }, 0.01);
     // Risk = $5, Reward = $10, RR = 2:1
     expect(result.riskRewardRatio).toBe(2);
   });
@@ -62,10 +59,7 @@ describe("calculateFixedFractional", () => {
   });
 
   test("returns zero quantity when position too small", () => {
-    const result = calculateFixedFractional(
-      { accountEquity: 100, price: 100, stopLoss: 50 },
-      0.01
-    );
+    const result = calculateFixedFractional({ accountEquity: 100, price: 100, stopLoss: 50 }, 0.01);
     // Max risk = $1, risk per share = $50
     // Can't buy any shares
     expect(result.quantity).toBe(0);
@@ -73,15 +67,11 @@ describe("calculateFixedFractional", () => {
   });
 
   test("throws on invalid account equity", () => {
-    expect(() =>
-      calculateFixedFractional({ ...baseInput, accountEquity: -1000 }, 0.01)
-    ).toThrow();
+    expect(() => calculateFixedFractional({ ...baseInput, accountEquity: -1000 }, 0.01)).toThrow();
   });
 
   test("throws on stop loss equal to price", () => {
-    expect(() =>
-      calculateFixedFractional({ ...baseInput, stopLoss: 100 }, 0.01)
-    ).toThrow();
+    expect(() => calculateFixedFractional({ ...baseInput, stopLoss: 100 }, 0.01)).toThrow();
   });
 
   test("throws on invalid risk percent", () => {
@@ -117,10 +107,7 @@ describe("calculateVolatilityTargeted", () => {
   test("adjusts for ATR multiplier", () => {
     // ATR stop = 2.5 * 3 = 7.5
     // Max risk = $1000, Quantity = 1000 / 7.5 = 133
-    const result = calculateVolatilityTargeted(
-      { ...baseInput, atrMultiplier: 3 },
-      0.01
-    );
+    const result = calculateVolatilityTargeted({ ...baseInput, atrMultiplier: 3 }, 0.01);
     expect(result.quantity).toBe(133);
   });
 
@@ -131,9 +118,7 @@ describe("calculateVolatilityTargeted", () => {
   });
 
   test("throws on invalid ATR", () => {
-    expect(() =>
-      calculateVolatilityTargeted({ ...baseInput, atr: 0 }, 0.01)
-    ).toThrow();
+    expect(() => calculateVolatilityTargeted({ ...baseInput, atr: 0 }, 0.01)).toThrow();
   });
 });
 
@@ -165,38 +150,29 @@ describe("calculateFractionalKelly", () => {
     // Aggressive (0.5): 0.25 * 0.5 = 0.125, capped at 0.10
     const conservative = calculateFractionalKelly(
       { ...baseInput, winRate: 0.55, payoffRatio: 1.5, kellyFraction: 0.25 },
-      0.10 // Max allowed risk percent
+      0.1 // Max allowed risk percent
     );
     const aggressive = calculateFractionalKelly(
       { ...baseInput, winRate: 0.55, payoffRatio: 1.5, kellyFraction: 0.5 },
-      0.10
+      0.1
     );
     expect(aggressive.quantity).toBeGreaterThan(conservative.quantity);
   });
 
   test("returns zero for negative Kelly", () => {
     // Low win rate with bad payoff = negative Kelly
-    const result = calculateFractionalKelly(
-      { ...baseInput, winRate: 0.3, payoffRatio: 1 },
-      0.02
-    );
+    const result = calculateFractionalKelly({ ...baseInput, winRate: 0.3, payoffRatio: 1 }, 0.02);
     // Kelly = 0.3 - (0.7 / 1) = -0.4 (negative)
     expect(result.quantity).toBe(0);
   });
 
   test("throws on invalid win rate", () => {
-    expect(() =>
-      calculateFractionalKelly({ ...baseInput, winRate: 1.5 }, 0.02)
-    ).toThrow();
-    expect(() =>
-      calculateFractionalKelly({ ...baseInput, winRate: -0.1 }, 0.02)
-    ).toThrow();
+    expect(() => calculateFractionalKelly({ ...baseInput, winRate: 1.5 }, 0.02)).toThrow();
+    expect(() => calculateFractionalKelly({ ...baseInput, winRate: -0.1 }, 0.02)).toThrow();
   });
 
   test("throws on invalid payoff ratio", () => {
-    expect(() =>
-      calculateFractionalKelly({ ...baseInput, payoffRatio: 0 }, 0.02)
-    ).toThrow();
+    expect(() => calculateFractionalKelly({ ...baseInput, payoffRatio: 0 }, 0.02)).toThrow();
   });
 });
 
@@ -250,7 +226,7 @@ describe("calculateLiquidityLimit", () => {
   });
 
   test("uses custom participation rate", () => {
-    const limit = calculateLiquidityLimit(1000000, 0.10);
+    const limit = calculateLiquidityLimit(1000000, 0.1);
     expect(limit).toBe(100000);
   });
 
@@ -296,27 +272,17 @@ describe("calculateDeltaAdjustedSize", () => {
     // deltaPerContract = delta * 100 * 100 = delta * 10000
     // Low delta (0.2): 2000 per contract -> 50000/2000 = 25 contracts
     // High delta (0.8): 8000 per contract -> 50000/8000 = 6 contracts
-    const lowDelta = calculateDeltaAdjustedSize(
-      { ...baseInput, delta: 0.2 },
-      50000
-    );
-    const highDelta = calculateDeltaAdjustedSize(
-      { ...baseInput, delta: 0.8 },
-      50000
-    );
+    const lowDelta = calculateDeltaAdjustedSize({ ...baseInput, delta: 0.2 }, 50000);
+    const highDelta = calculateDeltaAdjustedSize({ ...baseInput, delta: 0.8 }, 50000);
     expect(lowDelta.quantity).toBeGreaterThan(highDelta.quantity);
   });
 
   test("throws on invalid delta", () => {
-    expect(() =>
-      calculateDeltaAdjustedSize({ ...baseInput, delta: 1.5 }, 10000)
-    ).toThrow();
+    expect(() => calculateDeltaAdjustedSize({ ...baseInput, delta: 1.5 }, 10000)).toThrow();
   });
 
   test("throws on invalid target exposure", () => {
-    expect(() =>
-      calculateDeltaAdjustedSize(baseInput, -1000)
-    ).toThrow();
+    expect(() => calculateDeltaAdjustedSize(baseInput, -1000)).toThrow();
   });
 });
 

@@ -211,14 +211,11 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
   /**
    * Log message with pool name prefix
    */
-  function log(message: string, level: "info" | "warn" | "error" = "info"): void {
-    const prefix = `[${name}]`;
+  function log(_message: string, level: "info" | "warn" | "error" = "info"): void {
+    const _prefix = `[${name}]`;
     if (level === "error") {
-      console.error(`${prefix} ${message}`);
     } else if (level === "warn") {
-      console.warn(`${prefix} ${message}`);
     } else {
-      console.log(`${prefix} ${message}`);
     }
   }
 
@@ -363,13 +360,17 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
    * Run periodic health check
    */
   async function runHealthCheck(): Promise<void> {
-    if (closed) return;
+    if (closed) {
+      return;
+    }
 
     // Check idle connections
     const connectionsToCheck = [...available];
     for (const connection of connectionsToCheck) {
       const pooled = connections.get(connection);
-      if (!pooled) continue;
+      if (!pooled) {
+        continue;
+      }
 
       // Check if should recycle
       if (shouldRecycle(pooled)) {
@@ -452,9 +453,7 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
         // At max capacity, wait for a connection
         return new Promise<T>((resolve, reject) => {
           const timer = setTimeout(() => {
-            const index = pending.findIndex(
-              (p) => p.resolve === resolve && p.reject === reject
-            );
+            const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
             if (index >= 0) {
               pending.splice(index, 1);
             }
@@ -524,7 +523,9 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
     },
 
     async close(): Promise<void> {
-      if (closed) return;
+      if (closed) {
+        return;
+      }
 
       closed = true;
       log("Closing pool...");
@@ -542,9 +543,7 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
       pending.length = 0;
 
       // Destroy all connections
-      const destroyPromises = [...connections.keys()].map((conn) =>
-        destroyConnection(conn)
-      );
+      const destroyPromises = [...connections.keys()].map((conn) => destroyConnection(conn));
       await Promise.all(destroyPromises);
 
       log("Pool closed");
@@ -577,7 +576,12 @@ export async function createTursoPool(
     execute: (sql: string, args?: unknown[]) => Promise<unknown[]>;
     close: () => void | Promise<void>;
   }>,
-  poolConfig: Partial<Omit<PoolConfig<ReturnType<typeof createClient> extends Promise<infer T> ? T : never>, "create" | "destroy">> = {}
+  poolConfig: Partial<
+    Omit<
+      PoolConfig<ReturnType<typeof createClient> extends Promise<infer T> ? T : never>,
+      "create" | "destroy"
+    >
+  > = {}
 ): Promise<ConnectionPool<Awaited<ReturnType<typeof createClient>>>> {
   type ClientType = Awaited<ReturnType<typeof createClient>>;
 
@@ -679,9 +683,7 @@ export function createHttpPool(config: HttpPoolConfig = {}): HttpPool {
 
       return new Promise<T>((resolve, reject) => {
         const timer = setTimeout(() => {
-          const index = pending.findIndex(
-            (p) => p.resolve === resolve && p.reject === reject
-          );
+          const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
           if (index >= 0) {
             pending.splice(index, 1);
           }

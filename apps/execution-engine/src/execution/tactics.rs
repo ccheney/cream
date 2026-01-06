@@ -514,11 +514,7 @@ impl TacticSelector {
         let size_threshold_small = Decimal::new(1, 2); // 0.01 (1% ADV)
         let size_threshold_medium = Decimal::new(5, 2); // 0.05 (5% ADV)
 
-        match (
-            context.size_pct_adv,
-            context.urgency,
-            context.market_state,
-        ) {
+        match (context.size_pct_adv, context.urgency, context.market_state) {
             // Small orders (<1% ADV)
             (size, TacticUrgency::Low, MarketState::Normal) if size < size_threshold_small => {
                 TacticType::PassiveLimit
@@ -543,9 +539,7 @@ impl TacticSelector {
             }
 
             // Large orders (>5% ADV)
-            (size, TacticUrgency::Low, MarketState::Normal)
-                if size >= size_threshold_medium =>
-            {
+            (size, TacticUrgency::Low, MarketState::Normal) if size >= size_threshold_medium => {
                 TacticType::Vwap
             }
             (size, _, _) if size >= size_threshold_medium => TacticType::Iceberg,
@@ -626,16 +620,13 @@ mod tests {
         let total_quantity = Decimal::new(1000, 0);
         let slice_quantity = config.calculate_slice_quantity(total_quantity);
 
-        assert_eq!(
-            slice_quantity,
-            Decimal::new(1000, 0) / Decimal::from(60)
-        );
+        assert_eq!(slice_quantity, Decimal::new(1000, 0) / Decimal::from(60));
     }
 
     #[test]
     fn test_twap_schedule() {
         let config = TwapConfig {
-            duration_minutes: 1, // 1 minute for faster test
+            duration_minutes: 1,        // 1 minute for faster test
             slice_interval_seconds: 20, // 3 slices
             slice_type: SliceType::Limit,
             allow_past_end: false,

@@ -4,7 +4,7 @@
  * Converts sentiment classifications to numeric scores.
  */
 
-import type { Sentiment, ExtractionResult } from "../types.js";
+import type { ExtractionResult, Sentiment } from "../types.js";
 
 /**
  * Sentiment score configuration
@@ -37,8 +37,8 @@ const DEFAULT_CONFIG: Required<SentimentScoringConfig> = {
  */
 export function computeSentimentScore(
   sentiment: Sentiment,
-  confidence: number = 1.0,
-  config: SentimentScoringConfig = {},
+  confidence = 1.0,
+  config: SentimentScoringConfig = {}
 ): number {
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -54,6 +54,8 @@ export function computeSentimentScore(
     case "neutral":
       score = cfg.neutralBase;
       break;
+    default:
+      score = cfg.neutralBase;
   }
 
   // Apply confidence weighting if enabled
@@ -72,7 +74,7 @@ export function computeSentimentScore(
  */
 export function computeSentimentFromExtraction(
   extraction: ExtractionResult,
-  config?: SentimentScoringConfig,
+  config?: SentimentScoringConfig
 ): number {
   return computeSentimentScore(extraction.sentiment, extraction.confidence, config);
 }
@@ -83,21 +85,36 @@ export function computeSentimentFromExtraction(
 export function aggregateSentimentScores(
   scores: number[],
   method: "mean" | "median" | "weighted" = "mean",
-  weights?: number[],
+  weights?: number[]
 ): number {
-  if (scores.length === 0) return 0;
-  if (scores.length === 1) return scores[0];
+  if (scores.length === 0) {
+    return 0;
+  }
+  if (scores.length === 1) {
+    const firstScore = scores[0];
+    return firstScore !== undefined ? firstScore : 0;
+  }
 
   switch (method) {
-    case "mean":
-      return scores.reduce((sum, s) => sum + s, 0) / scores.length;
+    case "mean": {
+      const sum = scores.reduce((acc, s) => acc + s, 0);
+      return sum / scores.length;
+    }
 
     case "median": {
       const sorted = [...scores].sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 !== 0
-        ? sorted[mid]
-        : (sorted[mid - 1] + sorted[mid]) / 2;
+      if (sorted.length % 2 !== 0) {
+        const midValue = sorted[mid];
+        return midValue !== undefined ? midValue : 0;
+      } else {
+        const midValue1 = sorted[mid - 1];
+        const midValue2 = sorted[mid];
+        if (midValue1 === undefined || midValue2 === undefined) {
+          return 0;
+        }
+        return (midValue1 + midValue2) / 2;
+      }
     }
 
     case "weighted": {
@@ -106,9 +123,14 @@ export function aggregateSentimentScores(
         return scores.reduce((sum, s) => sum + s, 0) / scores.length;
       }
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-      if (totalWeight === 0) return 0;
+      if (totalWeight === 0) {
+        return 0;
+      }
       return (
-        scores.reduce((sum, s, i) => sum + s * weights[i], 0) / totalWeight
+        scores.reduce((sum, s, i) => {
+          const weight = weights[i];
+          return sum + s * (weight !== undefined ? weight : 0);
+        }, 0) / totalWeight
       );
     }
   }
@@ -118,28 +140,33 @@ export function aggregateSentimentScores(
  * Classify sentiment score into category
  */
 export function classifySentimentScore(
-  score: number,
+  score: number
 ): "strong_bullish" | "bullish" | "neutral" | "bearish" | "strong_bearish" {
-  if (score >= 0.6) return "strong_bullish";
-  if (score >= 0.2) return "bullish";
-  if (score > -0.2) return "neutral";
-  if (score > -0.6) return "bearish";
+  if (score >= 0.6) {
+    return "strong_bullish";
+  }
+  if (score >= 0.2) {
+    return "bullish";
+  }
+  if (score > -0.2) {
+    return "neutral";
+  }
+  if (score > -0.6) {
+    return "bearish";
+  }
   return "strong_bearish";
 }
 
 /**
  * Compute sentiment momentum (change over time)
  */
-export function computeSentimentMomentum(
-  recentScores: number[],
-  olderScores: number[],
-): number {
-  if (recentScores.length === 0 || olderScores.length === 0) return 0;
+export function computeSentimentMomentum(recentScores: number[], olderScores: number[]): number {
+  if (recentScores.length === 0 || olderScores.length === 0) {
+    return 0;
+  }
 
-  const recentAvg =
-    recentScores.reduce((sum, s) => sum + s, 0) / recentScores.length;
-  const olderAvg =
-    olderScores.reduce((sum, s) => sum + s, 0) / olderScores.length;
+  const recentAvg = recentScores.reduce((sum, s) => sum + s, 0) / recentScores.length;
+  const olderAvg = olderScores.reduce((sum, s) => sum + s, 0) / olderScores.length;
 
   return recentAvg - olderAvg;
 }

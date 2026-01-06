@@ -90,7 +90,9 @@ impl From<AlpacaError> for BrokerError {
             AlpacaError::EnvironmentMismatch { expected, actual } => {
                 BrokerError::EnvironmentMismatch { expected, actual }
             }
-            AlpacaError::MaxRetriesExceeded { attempts: _ } => BrokerError::Http("Max retries exceeded".to_string()),
+            AlpacaError::MaxRetriesExceeded { attempts: _ } => {
+                BrokerError::Http("Max retries exceeded".to_string())
+            }
         }
     }
 }
@@ -237,14 +239,20 @@ impl AlpacaAdapter {
             let error_body = response.text().await.unwrap_or_default();
 
             // Parse error response
-            let (error_code, error_message) = match serde_json::from_str::<AlpacaErrorResponse>(&error_body) {
-                Ok(err) => (err.code.unwrap_or_else(|| status.as_u16().to_string()), err.message),
-                Err(_) => (status.as_u16().to_string(), error_body.clone()),
-            };
+            let (error_code, error_message) =
+                match serde_json::from_str::<AlpacaErrorResponse>(&error_body) {
+                    Ok(err) => (
+                        err.code.unwrap_or_else(|| status.as_u16().to_string()),
+                        err.message,
+                    ),
+                    Err(_) => (status.as_u16().to_string(), error_body.clone()),
+                };
 
             match category {
                 ErrorCategory::RateLimited => {
-                    if let Some(delay) = RetryAfterExtractor::get_delay(retry_after.as_deref(), &mut backoff) {
+                    if let Some(delay) =
+                        RetryAfterExtractor::get_delay(retry_after.as_deref(), &mut backoff)
+                    {
                         tracing::warn!(
                             code = %error_code,
                             delay_ms = delay.as_millis(),
@@ -342,8 +350,9 @@ impl AlpacaAdapter {
     async fn submit_single_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
         let order_request = AlpacaOrderRequest::from_decision(decision);
 
-        let response: AlpacaOrderResponse =
-            self.request("POST", "/v2/orders", Some(&order_request)).await?;
+        let response: AlpacaOrderResponse = self
+            .request("POST", "/v2/orders", Some(&order_request))
+            .await?;
 
         Ok(OrderState::from_alpaca_response(&response))
     }
@@ -507,9 +516,7 @@ impl AlpacaOrderRequest {
             crate::models::SizeUnit::Shares | crate::models::SizeUnit::Contracts => {
                 (Some(decision.size.quantity.to_string()), None)
             }
-            crate::models::SizeUnit::Dollars => {
-                (None, Some(decision.size.quantity.to_string()))
-            }
+            crate::models::SizeUnit::Dollars => (None, Some(decision.size.quantity.to_string())),
             crate::models::SizeUnit::PctEquity => {
                 // For percentage, we'd need account equity to convert to dollars
                 // For now, use notional with the percentage value
@@ -731,7 +738,10 @@ impl OptionsOrderValidator {
     /// # Errors
     ///
     /// Returns an error if trying to use bracket/OCO with options.
-    pub fn validate_no_bracket_oco(is_options: bool, is_bracket_or_oco: bool) -> Result<(), AlpacaError> {
+    pub fn validate_no_bracket_oco(
+        is_options: bool,
+        is_bracket_or_oco: bool,
+    ) -> Result<(), AlpacaError> {
         if is_options && is_bracket_or_oco {
             return Err(AlpacaError::Api {
                 code: "BRACKET_NOT_SUPPORTED_FOR_OPTIONS".to_string(),
@@ -822,8 +832,7 @@ impl RegulatoryFeeCalculator {
 
         // SEC fee only applies to sells
         if is_sell {
-            breakdown.sec_fee = (notional_value * Self::SEC_FEE_RATE)
-                .round_dp(2);
+            breakdown.sec_fee = (notional_value * Self::SEC_FEE_RATE).round_dp(2);
         }
 
         // FINRA TAF applies to all trades, capped at $9.79
@@ -860,8 +869,8 @@ impl RegulatoryFeeCalculator {
         // Commission is always $0.00
         breakdown.commission = Decimal::ZERO;
 
-        breakdown.total = breakdown.sec_fee + breakdown.finra_taf
-            + breakdown.options_orf + breakdown.commission;
+        breakdown.total =
+            breakdown.sec_fee + breakdown.finra_taf + breakdown.options_orf + breakdown.commission;
         breakdown
     }
 
@@ -991,10 +1000,18 @@ mod tests {
     #[test]
     fn test_is_options_symbol() {
         // Valid options symbols (OCC format)
-        assert!(OptionsOrderValidator::is_options_symbol("AAPL240119C00150000"));
-        assert!(OptionsOrderValidator::is_options_symbol("AAPL240119P00150000"));
-        assert!(OptionsOrderValidator::is_options_symbol("SPY240119C00500000"));
-        assert!(OptionsOrderValidator::is_options_symbol("GOOGL240119P02800000"));
+        assert!(OptionsOrderValidator::is_options_symbol(
+            "AAPL240119C00150000"
+        ));
+        assert!(OptionsOrderValidator::is_options_symbol(
+            "AAPL240119P00150000"
+        ));
+        assert!(OptionsOrderValidator::is_options_symbol(
+            "SPY240119C00500000"
+        ));
+        assert!(OptionsOrderValidator::is_options_symbol(
+            "GOOGL240119P02800000"
+        ));
 
         // Invalid - too short (equities)
         assert!(!OptionsOrderValidator::is_options_symbol("AAPL"));
@@ -1002,7 +1019,9 @@ mod tests {
         assert!(!OptionsOrderValidator::is_options_symbol("GOOGL"));
 
         // Invalid - no C or P indicator
-        assert!(!OptionsOrderValidator::is_options_symbol("AAPL240119X00150000"));
+        assert!(!OptionsOrderValidator::is_options_symbol(
+            "AAPL240119X00150000"
+        ));
     }
 
     // ============================================================================
@@ -1063,10 +1082,7 @@ mod tests {
     #[test]
     fn test_options_fees() {
         // Trading 10 option contracts
-        let fees = RegulatoryFeeCalculator::calculate_options_fees(
-            true,
-            Decimal::new(10, 0),
-        );
+        let fees = RegulatoryFeeCalculator::calculate_options_fees(true, Decimal::new(10, 0));
 
         // FINRA TAF: 10 * 0.00329 = $0.0329 -> $0.03
         assert!(fees.finra_taf > Decimal::ZERO);
@@ -1088,10 +1104,7 @@ mod tests {
     fn test_options_finra_taf_cap() {
         // Trading 10,000 contracts should hit the cap
         // 10,000 * 0.00329 = $32.90, capped at $9.79
-        let fees = RegulatoryFeeCalculator::calculate_options_fees(
-            true,
-            Decimal::new(10000, 0),
-        );
+        let fees = RegulatoryFeeCalculator::calculate_options_fees(true, Decimal::new(10000, 0));
 
         assert_eq!(fees.finra_taf, Decimal::new(979, 2));
     }

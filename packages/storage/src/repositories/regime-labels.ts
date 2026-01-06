@@ -168,9 +168,7 @@ export class RegimeLabelsRepository {
   /**
    * Get regime distribution (count of symbols in each regime)
    */
-  async getRegimeDistribution(
-    timeframe: RegimeTimeframe
-  ): Promise<Map<RegimeType, number>> {
+  async getRegimeDistribution(timeframe: RegimeTimeframe): Promise<Map<RegimeType, number>> {
     const rows = await this.client.execute<{ regime: string; count: number }>(
       `SELECT r1.regime, COUNT(*) as count
        FROM regime_labels r1
@@ -196,10 +194,9 @@ export class RegimeLabelsRepository {
    * Delete regime labels older than a date
    */
   async deleteOlderThan(beforeDate: string): Promise<number> {
-    const result = await this.client.run(
-      `DELETE FROM regime_labels WHERE timestamp < ?`,
-      [beforeDate]
-    );
+    const result = await this.client.run(`DELETE FROM regime_labels WHERE timestamp < ?`, [
+      beforeDate,
+    ]);
     return result.changes;
   }
 }

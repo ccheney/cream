@@ -54,7 +54,7 @@ export type MacroIndicatorType = keyof typeof MACRO_INDICATORS;
  */
 export function parseAlphaVantageIndicator(
   response: AlphaVantageEconomicIndicator,
-  indicatorType?: MacroIndicatorType,
+  indicatorType?: MacroIndicatorType
 ): ParsedMacroRelease[] {
   const results: ParsedMacroRelease[] = [];
 
@@ -67,24 +67,28 @@ export function parseAlphaVantageIndicator(
 
   for (let i = 0; i < response.data.length; i++) {
     const item = response.data[i];
-    if (!item.date || item.value === ".") continue;
+    if (!item || !item.date || item.value === ".") {
+      continue;
+    }
 
     const value = parseFloat(item.value);
-    if (isNaN(value)) continue;
+    if (Number.isNaN(value)) {
+      continue;
+    }
 
     const date = parseDate(item.date);
-    if (!date) continue;
+    if (!date) {
+      continue;
+    }
 
     // Get previous value if available
-    const previousValue =
-      i < response.data.length - 1
-        ? parseFloat(response.data[i + 1].value)
-        : undefined;
+    const nextItem = response.data[i + 1];
+    const previousValue = nextItem ? parseFloat(nextItem.value) : undefined;
 
     results.push({
       indicator: metadata?.name ?? response.name ?? "Unknown",
       value,
-      previousValue: isNaN(previousValue ?? NaN) ? undefined : previousValue,
+      previousValue: Number.isNaN(previousValue ?? NaN) ? undefined : previousValue,
       date,
       unit: metadata?.unit ?? response.unit ?? undefined,
       source: "Alpha Vantage",
@@ -113,17 +117,19 @@ export interface FMPEconomicEvent {
 /**
  * Parse FMP economic calendar events
  */
-export function parseFMPEconomicEvents(
-  events: FMPEconomicEvent[],
-): ParsedMacroRelease[] {
+export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroRelease[] {
   const results: ParsedMacroRelease[] = [];
 
   for (const event of events) {
     // Only process events with actual values
-    if (event.actual === null || event.actual === undefined) continue;
+    if (event.actual === null || event.actual === undefined) {
+      continue;
+    }
 
     const date = parseDate(event.date);
-    if (!date) continue;
+    if (!date) {
+      continue;
+    }
 
     results.push({
       indicator: event.event,
@@ -142,9 +148,11 @@ export function parseFMPEconomicEvents(
  * Parse date string
  */
 function parseDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
+  if (!dateStr) {
+    return null;
+  }
   const date = new Date(dateStr);
-  return isNaN(date.getTime()) ? null : date;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -158,7 +166,7 @@ function parseDate(dateStr: string): Date | null {
 export function calculateMacroSurprise(
   actual: number,
   estimate?: number,
-  previous?: number,
+  previous?: number
 ): number {
   // If we have an estimate, use it for surprise calculation
   if (estimate !== undefined && estimate !== 0) {
@@ -183,9 +191,11 @@ export function calculateMacroSurprise(
  */
 export function isMacroReleaseSignificant(
   release: ParsedMacroRelease,
-  thresholdPercent: number = 0.5,
+  thresholdPercent = 0.5
 ): boolean {
-  if (release.previousValue === undefined) return true; // Assume significant if unknown
+  if (release.previousValue === undefined) {
+    return true; // Assume significant if unknown
+  }
 
   const changePercent =
     Math.abs((release.value - release.previousValue) / release.previousValue) * 100;
@@ -198,7 +208,7 @@ export function isMacroReleaseSignificant(
  */
 export function filterRecentMacroReleases(
   releases: ParsedMacroRelease[],
-  maxAgeDays: number = 7,
+  maxAgeDays = 7
 ): ParsedMacroRelease[] {
   const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
   return releases.filter((r) => r.date >= cutoff);
@@ -208,7 +218,7 @@ export function filterRecentMacroReleases(
  * Group macro releases by indicator
  */
 export function groupByIndicator(
-  releases: ParsedMacroRelease[],
+  releases: ParsedMacroRelease[]
 ): Map<string, ParsedMacroRelease[]> {
   const groups = new Map<string, ParsedMacroRelease[]>();
 
@@ -217,7 +227,7 @@ export function groupByIndicator(
     if (!groups.has(key)) {
       groups.set(key, []);
     }
-    groups.get(key)!.push(release);
+    groups.get(key)?.push(release);
   }
 
   // Sort each group by date descending

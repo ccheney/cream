@@ -111,15 +111,15 @@ export function calculateReturns(
   const results: ReturnResult[] = [];
 
   for (let i = period; i < values.length; i++) {
-    const currentPrice = values[i];
-    const previousPrice = values[i - period];
+    const currentPrice = values[i]!;
+    const previousPrice = values[i - period]!;
 
     const returnValue = useLogReturns
       ? logReturn(currentPrice, previousPrice)
       : simpleReturn(currentPrice, previousPrice);
 
     results.push({
-      timestamp: timestamps[i],
+      timestamp: timestamps[i]!,
       return: returnValue,
       period,
     });
@@ -155,8 +155,8 @@ export function calculateMultiPeriodReturns(
 
     for (const period of periods) {
       if (i >= period) {
-        const currentPrice = values[i];
-        const previousPrice = values[i - period];
+        const currentPrice = values[i]!;
+        const previousPrice = values[i - period]!;
 
         returns[period] = logReturns
           ? logReturn(currentPrice, previousPrice)
@@ -167,7 +167,7 @@ export function calculateMultiPeriodReturns(
     }
 
     results.push({
-      timestamp: timestamps[i],
+      timestamp: timestamps[i]!,
       returns,
     });
   }

@@ -144,9 +144,7 @@ describe("Enums", () => {
 
 describe("ISO8601TimestampSchema", () => {
   it("accepts valid timestamps", () => {
-    expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00Z")).toBe(
-      "2026-01-04T15:00:00Z"
-    );
+    expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00Z")).toBe("2026-01-04T15:00:00Z");
     expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00.000Z")).toBe(
       "2026-01-04T15:00:00.000Z"
     );

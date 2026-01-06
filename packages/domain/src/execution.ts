@@ -361,7 +361,7 @@ export type PortfolioState = z.infer<typeof PortfolioStateSchema>;
 // Action Semantics and Broker Order Mapping
 // ============================================
 
-import { Action } from "./decision";
+import type { Action } from "./decision";
 
 /**
  * Result of mapping a decision action to broker order side.

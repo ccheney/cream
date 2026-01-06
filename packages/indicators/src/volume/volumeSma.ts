@@ -64,28 +64,39 @@ export function calculateVolumeSMA(
   // Calculate initial sum for first window
   let sum = 0;
   for (let i = 0; i < period; i++) {
-    sum += candles[i].volume;
+    const candle = candles[i];
+    if (candle) {
+      sum += candle.volume;
+    }
   }
 
   // First Volume SMA value
   const firstVolumeSma = sum / period;
-  results.push({
-    timestamp: candles[period - 1].timestamp,
-    volumeSma: firstVolumeSma,
-    volumeRatio: firstVolumeSma === 0 ? 1 : candles[period - 1].volume / firstVolumeSma,
-  });
+  const firstCandle = candles[period - 1];
+  if (firstCandle) {
+    results.push({
+      timestamp: firstCandle.timestamp,
+      volumeSma: firstVolumeSma,
+      volumeRatio: firstVolumeSma === 0 ? 1 : firstCandle.volume / firstVolumeSma,
+    });
+  }
 
   // Calculate remaining values using sliding window
   for (let i = period; i < candles.length; i++) {
     // Remove oldest, add newest
-    sum = sum - candles[i - period].volume + candles[i].volume;
+    const oldVolume = candles[i - period]?.volume ?? 0;
+    const newVolume = candles[i]?.volume ?? 0;
+    sum = sum - oldVolume + newVolume;
     const volumeSma = sum / period;
 
-    results.push({
-      timestamp: candles[i].timestamp,
-      volumeSma,
-      volumeRatio: volumeSma === 0 ? 1 : candles[i].volume / volumeSma,
-    });
+    const currentCandle = candles[i];
+    if (currentCandle) {
+      results.push({
+        timestamp: currentCandle.timestamp,
+        volumeSma,
+        volumeRatio: volumeSma === 0 ? 1 : newVolume / volumeSma,
+      });
+    }
   }
 
   return results;

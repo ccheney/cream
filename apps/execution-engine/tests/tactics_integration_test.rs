@@ -5,8 +5,8 @@
 
 use chrono::{Duration, Utc};
 use execution_engine::execution::{
-    MarketState, OrderPurpose, PassiveLimitConfig, TacticConfig, TacticSelector,
-    TacticSelectionContext, TacticType, TacticUrgency, TwapConfig, VwapConfig,
+    MarketState, OrderPurpose, PassiveLimitConfig, TacticConfig, TacticSelectionContext,
+    TacticSelector, TacticType, TacticUrgency, TwapConfig, VwapConfig,
 };
 use rust_decimal::Decimal;
 
@@ -264,16 +264,16 @@ fn test_vwap_realistic_scenario() {
 
     // Simulate 10 intervals with varying volume
     let volumes = vec![
-        Decimal::new(1000, 0),  // Low volume period
-        Decimal::new(2000, 0),  // Increasing
-        Decimal::new(3000, 0),  // Peak
-        Decimal::new(2500, 0),  // High
-        Decimal::new(2000, 0),  // Moderate
-        Decimal::new(1500, 0),  // Declining
-        Decimal::new(1000, 0),  // Low
-        Decimal::new(1200, 0),  // Recovering
-        Decimal::new(1500, 0),  // Moderate
-        Decimal::new(800, 0),   // End of day low
+        Decimal::new(1000, 0), // Low volume period
+        Decimal::new(2000, 0), // Increasing
+        Decimal::new(3000, 0), // Peak
+        Decimal::new(2500, 0), // High
+        Decimal::new(2000, 0), // Moderate
+        Decimal::new(1500, 0), // Declining
+        Decimal::new(1000, 0), // Low
+        Decimal::new(1200, 0), // Recovering
+        Decimal::new(1500, 0), // Moderate
+        Decimal::new(800, 0),  // End of day low
     ];
 
     for volume in volumes {
@@ -356,8 +356,7 @@ fn test_serialization_roundtrip() {
     let json = serde_json::to_string(&config).expect("Failed to serialize");
 
     // Deserialize back
-    let deserialized: TacticConfig =
-        serde_json::from_str(&json).expect("Failed to deserialize");
+    let deserialized: TacticConfig = serde_json::from_str(&json).expect("Failed to deserialize");
 
     // Verify it matches
     assert_eq!(deserialized.tactic, TacticType::Twap);

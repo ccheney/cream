@@ -153,7 +153,7 @@ export function calculateVolatilityScale(
       break;
     }
 
-    const volatility = volatilities[i];
+    const volatility = volatilities[i]!;
     const scaleFactor = calculateScaleFactor(
       volatility,
       targetVolatility,
@@ -162,9 +162,9 @@ export function calculateVolatilityScale(
     );
 
     results.push({
-      timestamp: timestamps[valueIndex],
-      scaledValue: values[valueIndex] * scaleFactor,
-      originalValue: values[valueIndex],
+      timestamp: timestamps[valueIndex]!,
+      scaledValue: values[valueIndex]! * scaleFactor,
+      originalValue: values[valueIndex]!,
       scaleFactor,
       volatility,
     });

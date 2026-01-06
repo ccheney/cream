@@ -4,7 +4,7 @@
  * Computes importance score based on source credibility, recency, and relevance.
  */
 
-import type { ExtractionResult, ContentSourceType } from "../types.js";
+import type { ContentSourceType, ExtractionResult } from "../types.js";
 
 /**
  * Importance scoring configuration
@@ -64,7 +64,7 @@ export function computeImportanceScore(
   source: string,
   eventTime: Date,
   targetSymbols: string[] = [],
-  config: ImportanceScoringConfig = {},
+  config: ImportanceScoringConfig = {}
 ): number {
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -78,7 +78,7 @@ export function computeImportanceScore(
   const relevanceScore = computeEntityRelevance(extraction, targetSymbols);
 
   // 4. LLM importance score (normalized from 1-5 to 0-1)
-  const llmScore = (extraction.importance - 1) / 4;
+  const llmScore = extraction.importance !== undefined ? (extraction.importance - 1) / 4 : 0.5;
 
   // Weighted combination
   const score =
@@ -94,13 +94,13 @@ export function computeImportanceScore(
 /**
  * Get source credibility score
  */
-export function getSourceCredibility(
-  sourceType: ContentSourceType,
-  source: string,
-): number {
+export function getSourceCredibility(sourceType: ContentSourceType, source: string): number {
+  const defaultScore = SOURCE_CREDIBILITY.default ?? 0.5;
+
   // Check source type first
   if (sourceType !== "news") {
-    return SOURCE_CREDIBILITY[sourceType] ?? SOURCE_CREDIBILITY.default;
+    const score = SOURCE_CREDIBILITY[sourceType];
+    return score !== undefined ? score : defaultScore;
   }
 
   // For news, check specific source
@@ -113,16 +113,13 @@ export function getSourceCredibility(
     }
   }
 
-  return SOURCE_CREDIBILITY.default;
+  return defaultScore;
 }
 
 /**
  * Compute recency score using exponential decay
  */
-export function computeRecencyScore(
-  eventTime: Date,
-  halfLifeHours: number,
-): number {
+export function computeRecencyScore(eventTime: Date, halfLifeHours: number): number {
   const now = Date.now();
   const ageHours = (now - eventTime.getTime()) / (1000 * 60 * 60);
 
@@ -132,7 +129,7 @@ export function computeRecencyScore(
   }
 
   // Exponential decay: score = 0.5^(age/halfLife)
-  return Math.pow(0.5, ageHours / halfLifeHours);
+  return 0.5 ** (ageHours / halfLifeHours);
 }
 
 /**
@@ -140,7 +137,7 @@ export function computeRecencyScore(
  */
 export function computeEntityRelevance(
   extraction: ExtractionResult,
-  targetSymbols: string[],
+  targetSymbols: string[]
 ): number {
   if (targetSymbols.length === 0) {
     // No target symbols specified, use entity count as proxy
@@ -167,10 +164,7 @@ export function computeEntityRelevance(
 /**
  * Boost importance based on event type
  */
-export function applyEventTypeBoost(
-  baseScore: number,
-  eventType: string,
-): number {
+export function applyEventTypeBoost(baseScore: number, eventType: string): number {
   const boosts: Record<string, number> = {
     earnings: 0.1,
     guidance: 0.15,
@@ -189,11 +183,19 @@ export function applyEventTypeBoost(
  * Classify importance score
  */
 export function classifyImportance(
-  score: number,
+  score: number
 ): "critical" | "high" | "medium" | "low" | "minimal" {
-  if (score >= 0.9) return "critical";
-  if (score >= 0.7) return "high";
-  if (score >= 0.4) return "medium";
-  if (score >= 0.2) return "low";
+  if (score >= 0.9) {
+    return "critical";
+  }
+  if (score >= 0.7) {
+    return "high";
+  }
+  if (score >= 0.4) {
+    return "medium";
+  }
+  if (score >= 0.2) {
+    return "low";
+  }
   return "minimal";
 }

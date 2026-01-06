@@ -44,6 +44,10 @@ export class CycleDetector {
 
     // Get the most recent incomplete cycle
     const cycleId = incompleteCycleIds[0];
+    if (!cycleId) {
+      return null;
+    }
+
     return this.getIncompleteCycleInfo(cycleId);
   }
 
@@ -67,9 +71,7 @@ export class CycleDetector {
   /**
    * Get detailed information about an incomplete cycle.
    */
-  private async getIncompleteCycleInfo(
-    cycleId: string
-  ): Promise<IncompleteCycle | null> {
+  private async getIncompleteCycleInfo(cycleId: string): Promise<IncompleteCycle | null> {
     // Get events for this cycle
     const events = await this.checkpointer.getCycleEvents(cycleId);
     const startEvent = events.find((e) => e.eventType === "cycle_started");
@@ -99,14 +101,8 @@ export class CycleDetector {
    * Check if a specific cycle is incomplete.
    */
   async isCycleIncomplete(cycleId: string): Promise<boolean> {
-    const hasStarted = await this.checkpointer.hasCycleEvent(
-      cycleId,
-      "cycle_started"
-    );
-    const hasCompleted = await this.checkpointer.hasCycleEvent(
-      cycleId,
-      "cycle_completed"
-    );
+    const hasStarted = await this.checkpointer.hasCycleEvent(cycleId, "cycle_started");
+    const hasCompleted = await this.checkpointer.hasCycleEvent(cycleId, "cycle_completed");
 
     return hasStarted && !hasCompleted;
   }

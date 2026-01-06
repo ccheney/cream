@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Required<NewsParserConfig> = {
  */
 export function parseNewsArticles(
   articles: FMPNewsArticle[],
-  config: NewsParserConfig = {},
+  config: NewsParserConfig = {}
 ): ParsedNews[] {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const results: ParsedNews[] = [];
@@ -46,7 +46,7 @@ export function parseNewsArticles(
  */
 export function parseNewsArticle(
   article: FMPNewsArticle,
-  config: Required<NewsParserConfig>,
+  config: Required<NewsParserConfig>
 ): ParsedNews | null {
   // Validate required fields
   if (!article.title || !article.text) {
@@ -62,7 +62,7 @@ export function parseNewsArticle(
   // Truncate if needed
   let body = article.text;
   if (body.length > config.maxContentLength) {
-    body = body.slice(0, config.maxContentLength) + "...";
+    body = `${body.slice(0, config.maxContentLength)}...`;
   }
 
   // Parse published date
@@ -90,10 +90,12 @@ export function parseNewsArticle(
  * Parse date string to Date object
  */
 function parseDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
+  if (!dateStr) {
+    return null;
+  }
 
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return null;
   }
 
@@ -119,10 +121,7 @@ function cleanText(text: string): string {
 /**
  * Filter news by recency
  */
-export function filterRecentNews(
-  articles: ParsedNews[],
-  maxAgeHours: number = 24,
-): ParsedNews[] {
+export function filterRecentNews(articles: ParsedNews[], maxAgeHours = 24): ParsedNews[] {
   const cutoff = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
   return articles.filter((a) => a.publishedAt >= cutoff);
 }
@@ -130,12 +129,7 @@ export function filterRecentNews(
 /**
  * Filter news by symbols
  */
-export function filterNewsBySymbols(
-  articles: ParsedNews[],
-  symbols: string[],
-): ParsedNews[] {
+export function filterNewsBySymbols(articles: ParsedNews[], symbols: string[]): ParsedNews[] {
   const symbolSet = new Set(symbols.map((s) => s.toUpperCase()));
-  return articles.filter(
-    (a) => a.symbols?.some((s) => symbolSet.has(s)) ?? false,
-  );
+  return articles.filter((a) => a.symbols?.some((s) => symbolSet.has(s)) ?? false);
 }

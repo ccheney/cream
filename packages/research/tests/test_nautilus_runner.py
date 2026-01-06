@@ -1,7 +1,6 @@
 """Tests for NautilusRunner and configuration classes."""
 
 import uuid
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -15,7 +14,6 @@ from research.nautilus_runner import (
     NautilusConfig,
     NautilusRunner,
 )
-
 
 # ============================================
 # Fixtures
@@ -389,12 +387,8 @@ class TestNautilusRunner:
             events_processed=1000,
         )
 
-        entry_conditions = [
-            StrategyCondition(indicator="rsi_14", operator="<", value=30)
-        ]
-        exit_conditions = [
-            StrategyCondition(indicator="rsi_14", operator=">", value=70)
-        ]
+        entry_conditions = [StrategyCondition(indicator="rsi_14", operator="<", value=30)]
+        exit_conditions = [StrategyCondition(indicator="rsi_14", operator=">", value=70)]
 
         runner = NautilusRunner()
         finding = runner.to_research_finding(
@@ -440,9 +434,7 @@ class TestDataFrameConversion:
         first_bar = bars[0]
         first_row = sample_prices.iloc[0]
 
-        assert float(first_bar.close) == pytest.approx(
-            round(first_row["close"], 2), rel=0.01
-        )
+        assert float(first_bar.close) == pytest.approx(round(first_row["close"], 2), rel=0.01)
 
     def test_dataframe_to_bars_with_volume(self, sample_prices):
         """Test that volume is preserved."""

@@ -184,7 +184,11 @@ export class RestClient {
   /**
    * Make an HTTP request with rate limiting and retry.
    */
-  async request<T>(path: string, options: RequestOptions = {}, schema?: z.ZodType<T>): Promise<T> {
+  async request<T>(
+    path: string,
+    options: RequestOptions = {},
+    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
+  ): Promise<T> {
     const url = this.buildUrl(path, options.params);
     const headers = this.buildHeaders(options.headers);
     const timeout = options.timeoutMs ?? this.config.timeoutMs;
@@ -240,7 +244,7 @@ export class RestClient {
   async get<T>(
     path: string,
     params?: Record<string, string | number | boolean | undefined>,
-    schema?: z.ZodType<T>
+    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
   ): Promise<T> {
     return this.request(path, { method: "GET", params }, schema);
   }
@@ -248,7 +252,11 @@ export class RestClient {
   /**
    * Make a POST request.
    */
-  async post<T>(path: string, body?: unknown, schema?: z.ZodType<T>): Promise<T> {
+  async post<T>(
+    path: string,
+    body?: unknown,
+    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
+  ): Promise<T> {
     return this.request(path, { method: "POST", body }, schema);
   }
 

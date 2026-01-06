@@ -4,9 +4,9 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  calculateCaseStatistics,
   CaseResult,
   CaseStatisticsSchema,
+  calculateCaseStatistics,
   createEmptyMemoryContext,
   filterByResult,
   filterBySimilarity,

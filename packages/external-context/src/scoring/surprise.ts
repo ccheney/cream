@@ -4,7 +4,7 @@
  * Computes surprise score based on actual vs expected values.
  */
 
-import type { DataPoint, ExtractionResult, EventType } from "../types.js";
+import type { DataPoint, ExtractionResult } from "../types.js";
 
 /**
  * Surprise scoring configuration
@@ -44,7 +44,7 @@ export interface MetricExpectation {
 export function computeSurpriseScore(
   actual: number,
   expected: number,
-  config: SurpriseScoringConfig = {},
+  config: SurpriseScoringConfig = {}
 ): number {
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -57,10 +57,7 @@ export function computeSurpriseScore(
   const deviation = (actual - expected) / Math.abs(expected);
 
   // Cap at max deviation
-  const cappedDeviation = Math.max(
-    -cfg.maxDeviation,
-    Math.min(cfg.maxDeviation, deviation),
-  );
+  const cappedDeviation = Math.max(-cfg.maxDeviation, Math.min(cfg.maxDeviation, deviation));
 
   // Scale to [-1, 1] range
   return cappedDeviation / cfg.maxDeviation;
@@ -71,9 +68,11 @@ export function computeSurpriseScore(
  */
 export function computeAggregatedSurprise(
   dataPoints: Array<{ actual: number; expected: number; weight?: number }>,
-  config?: SurpriseScoringConfig,
+  config?: SurpriseScoringConfig
 ): number {
-  if (dataPoints.length === 0) return 0;
+  if (dataPoints.length === 0) {
+    return 0;
+  }
 
   const scores = dataPoints.map((dp) => ({
     score: computeSurpriseScore(dp.actual, dp.expected, config),
@@ -81,7 +80,9 @@ export function computeAggregatedSurprise(
   }));
 
   const totalWeight = scores.reduce((sum, s) => sum + s.weight, 0);
-  if (totalWeight === 0) return 0;
+  if (totalWeight === 0) {
+    return 0;
+  }
 
   return scores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalWeight;
 }
@@ -94,10 +95,9 @@ export function computeAggregatedSurprise(
 export function computeSurpriseFromExtraction(
   extraction: ExtractionResult,
   expectations: MetricExpectation[],
-  config?: SurpriseScoringConfig,
+  config?: SurpriseScoringConfig
 ): number {
-  const matches: Array<{ actual: number; expected: number; weight: number }> =
-    [];
+  const matches: Array<{ actual: number; expected: number; weight: number }> = [];
 
   // Match data points with expectations
   for (const dp of extraction.dataPoints) {
@@ -124,7 +124,7 @@ export function computeSurpriseFromExtraction(
  */
 function findMatchingExpectation(
   dataPoint: DataPoint,
-  expectations: MetricExpectation[],
+  expectations: MetricExpectation[]
 ): MetricExpectation | null {
   const normalizedMetric = dataPoint.metric.toLowerCase();
 
@@ -183,11 +183,7 @@ function computeEventBasedSurprise(extraction: ExtractionResult): number {
 
   // Map sentiment to direction
   const sentimentMultiplier =
-    extraction.sentiment === "bullish"
-      ? 1
-      : extraction.sentiment === "bearish"
-        ? -1
-        : 0;
+    extraction.sentiment === "bullish" ? 1 : extraction.sentiment === "bearish" ? -1 : 0;
 
   // Higher importance suggests more surprising news
   const importanceFactor = (extraction.importance - 3) / 2; // -1 to 1 range
@@ -200,22 +196,27 @@ function computeEventBasedSurprise(extraction: ExtractionResult): number {
  * Classify surprise score
  */
 export function classifySurprise(
-  score: number,
+  score: number
 ): "big_beat" | "beat" | "inline" | "miss" | "big_miss" {
-  if (score >= 0.5) return "big_beat";
-  if (score >= 0.15) return "beat";
-  if (score > -0.15) return "inline";
-  if (score > -0.5) return "miss";
+  if (score >= 0.5) {
+    return "big_beat";
+  }
+  if (score >= 0.15) {
+    return "beat";
+  }
+  if (score > -0.15) {
+    return "inline";
+  }
+  if (score > -0.5) {
+    return "miss";
+  }
   return "big_miss";
 }
 
 /**
  * Determine if surprise is significant
  */
-export function isSurpriseSignificant(
-  score: number,
-  threshold: number = 0.15,
-): boolean {
+export function isSurpriseSignificant(score: number, threshold = 0.15): boolean {
   return Math.abs(score) >= threshold;
 }
 
@@ -223,7 +224,11 @@ export function isSurpriseSignificant(
  * Get surprise direction
  */
 export function getSurpriseDirection(score: number): "positive" | "negative" | "neutral" {
-  if (score > 0.1) return "positive";
-  if (score < -0.1) return "negative";
+  if (score > 0.1) {
+    return "positive";
+  }
+  if (score < -0.1) {
+    return "negative";
+  }
   return "neutral";
 }

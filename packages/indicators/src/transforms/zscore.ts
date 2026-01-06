@@ -131,10 +131,10 @@ export function calculateZScore(
     const std = calculateStdDev(window, mean);
 
     // Avoid division by zero
-    const zscore = std === 0 ? 0 : (values[i] - mean) / std;
+    const zscore = std === 0 ? 0 : (values[i]! - mean) / std;
 
     results.push({
-      timestamp: timestamps[i],
+      timestamp: timestamps[i]!,
       zscore,
       mean,
       std,

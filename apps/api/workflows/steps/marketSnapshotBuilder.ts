@@ -20,14 +20,12 @@ import type { Position } from "@cream/broker";
 import {
   env,
   type MarketSnapshot,
-  MarketStatus,
+  type MarketStatus,
   type Regime,
   type SymbolSnapshot,
   type UniverseConfig,
 } from "@cream/domain";
-import { calculateIndicators } from "@cream/indicators";
 import { createPolygonClientFromEnv, type Snapshot } from "@cream/marketdata";
-import { classifyRegime } from "@cream/regime";
 import { resolveUniverseSymbols as resolveUniverseSymbolsFromConfig } from "@cream/universe";
 
 // ============================================
@@ -198,7 +196,7 @@ export async function executeMarketSnapshotBuilder(
       warnings,
     };
   } catch (error) {
-    const totalMs = performance.now() - startTime;
+    const _totalMs = performance.now() - startTime;
     return {
       success: false,
       metrics: createEmptyMetrics(startTime),
@@ -243,7 +241,7 @@ async function gatherSnapshotData(
  */
 async function fetchMarketData(
   symbols: string[],
-  input: SnapshotBuilderInput,
+  _input: SnapshotBuilderInput,
   errors: string[],
   warnings: string[]
 ): Promise<Map<string, Snapshot>> {
@@ -253,10 +251,8 @@ async function fetchMarketData(
     // In BACKTEST mode without API keys, use mock data
     // Note: We read process.env directly here (not cached env) to support test isolation
     // Use 'in' operator to check if env var was explicitly set (even to empty string)
-    const creamEnv =
-      "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
-    const polygonKey =
-      "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
+    const creamEnv = "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
+    const polygonKey = "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
     if (creamEnv === "BACKTEST" && !polygonKey) {
       warnings.push("BACKTEST mode without POLYGON_KEY: using mock market data");
 
@@ -285,7 +281,9 @@ async function fetchMarketData(
         if (result.status === "fulfilled") {
           snapshots.set(result.value.symbol, result.value.snapshot);
         } else {
-          errors.push(`Failed to fetch snapshot for ${result.status === "rejected" ? "symbol" : result.value.symbol}: ${result.reason}`);
+          errors.push(
+            `Failed to fetch snapshot for ${result.status === "rejected" ? "symbol" : result.value.symbol}: ${result.reason}`
+          );
         }
       }
     }
@@ -457,8 +455,7 @@ async function resolveUniverseSymbols(): Promise<string[]> {
 
     const symbols = await resolveUniverseSymbolsFromConfig(defaultUniverseConfig);
     return symbols;
-  } catch (error) {
-    console.error("Failed to resolve universe:", error);
+  } catch (_error) {
     // Fallback to default watchlist
     return ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"];
   }

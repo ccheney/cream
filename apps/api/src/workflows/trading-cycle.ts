@@ -13,8 +13,6 @@
  * @see docs/plans/05-agents.md
  */
 
-import { z } from "zod";
-
 // ============================================
 // Types
 // ============================================
@@ -135,7 +133,6 @@ export interface WorkflowResult {
 // ============================================
 
 async function fetchMarketSnapshot(instruments: string[]): Promise<MarketSnapshot> {
-  console.log("[Observe] Fetching market snapshot...");
   // STUB: Return mock market data
   return {
     instruments,
@@ -145,7 +142,6 @@ async function fetchMarketSnapshot(instruments: string[]): Promise<MarketSnapsho
 }
 
 async function loadMemoryContext(snapshot: MarketSnapshot): Promise<MemoryContext> {
-  console.log("[Orient] Loading memory context...");
   // STUB: Return mock memory context
   return {
     relevantCases: [],
@@ -154,7 +150,6 @@ async function loadMemoryContext(snapshot: MarketSnapshot): Promise<MemoryContex
 }
 
 async function runTechnicalAnalyst(instruments: string[]): Promise<TechnicalAnalysis[]> {
-  console.log("[Decide] Running Technical Analyst...");
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     setup_classification: "NO_SETUP",
@@ -168,7 +163,6 @@ async function runTechnicalAnalyst(instruments: string[]): Promise<TechnicalAnal
 }
 
 async function runNewsAnalyst(instruments: string[]): Promise<SentimentAnalysis[]> {
-  console.log("[Decide] Running News Analyst...");
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     event_impacts: [],
@@ -180,7 +174,6 @@ async function runNewsAnalyst(instruments: string[]): Promise<SentimentAnalysis[
 }
 
 async function runFundamentalsAnalyst(instruments: string[]): Promise<FundamentalsAnalysis[]> {
-  console.log("[Decide] Running Fundamentals Analyst...");
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     fundamental_drivers: ["Strong earnings growth"],
@@ -194,11 +187,12 @@ async function runFundamentalsAnalyst(instruments: string[]): Promise<Fundamenta
 }
 
 async function runBullishResearcher(instruments: string[]): Promise<Research[]> {
-  console.log("[Decide] Running Bullish Researcher...");
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     thesis: "Potential for breakout if resistance breaks.",
-    supporting_factors: [{ factor: "Strong earnings", source: "FUNDAMENTAL", strength: "MODERATE" }],
+    supporting_factors: [
+      { factor: "Strong earnings", source: "FUNDAMENTAL", strength: "MODERATE" },
+    ],
     conviction_level: 0.4,
     memory_case_ids: [],
     strongest_counterargument: "High valuation limits upside",
@@ -206,7 +200,6 @@ async function runBullishResearcher(instruments: string[]): Promise<Research[]> 
 }
 
 async function runBearishResearcher(instruments: string[]): Promise<Research[]> {
-  console.log("[Decide] Running Bearish Researcher...");
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     thesis: "Elevated valuation creates downside risk.",
@@ -220,9 +213,8 @@ async function runBearishResearcher(instruments: string[]): Promise<Research[]> 
 async function runTraderAgent(
   cycleId: string,
   bullish: Research[],
-  bearish: Research[]
+  _bearish: Research[]
 ): Promise<DecisionPlan> {
-  console.log("[Decide] Running Trader Agent...");
   return {
     cycleId,
     timestamp: new Date().toISOString(),
@@ -247,8 +239,7 @@ async function runTraderAgent(
   };
 }
 
-async function runRiskManager(plan: DecisionPlan): Promise<Approval> {
-  console.log("[Decide] Running Risk Manager...");
+async function runRiskManager(_plan: DecisionPlan): Promise<Approval> {
   return {
     verdict: "APPROVE",
     violations: [],
@@ -257,8 +248,7 @@ async function runRiskManager(plan: DecisionPlan): Promise<Approval> {
   };
 }
 
-async function runCritic(plan: DecisionPlan): Promise<Approval> {
-  console.log("[Decide] Running Critic...");
+async function runCritic(_plan: DecisionPlan): Promise<Approval> {
   return {
     verdict: "APPROVE",
     violations: [],
@@ -270,7 +260,6 @@ async function runCritic(plan: DecisionPlan): Promise<Approval> {
 async function checkConstraints(
   approved: boolean
 ): Promise<{ passed: boolean; violations: string[] }> {
-  console.log("[Act] Checking constraints via Rust gRPC...");
   if (!approved) {
     return { passed: false, violations: ["Plan not approved by agents"] };
   }
@@ -281,7 +270,6 @@ async function checkConstraints(
 async function submitOrders(
   constraintsPassed: boolean
 ): Promise<{ submitted: boolean; orderIds: string[]; errors: string[] }> {
-  console.log("[Act] Submitting orders via Rust gRPC...");
   if (!constraintsPassed) {
     return { submitted: false, orderIds: [], errors: ["Constraints not passed"] };
   }
@@ -303,11 +291,6 @@ async function submitOrders(
 export async function executeTradingCycle(input: WorkflowInput): Promise<WorkflowResult> {
   const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"] } = input;
 
-  console.log(`\n============================================================`);
-  console.log(`[Workflow] Starting trading cycle: ${cycleId}`);
-  console.log(`[Workflow] Instruments: ${instruments.join(", ")}`);
-  console.log(`============================================================\n`);
-
   // ============================================
   // Observe Phase
   // ============================================
@@ -316,12 +299,12 @@ export async function executeTradingCycle(input: WorkflowInput): Promise<Workflo
   // ============================================
   // Orient Phase
   // ============================================
-  const memoryContext = await loadMemoryContext(marketSnapshot);
+  const _memoryContext = await loadMemoryContext(marketSnapshot);
 
   // ============================================
   // Decide Phase - Analysts (Parallel)
   // ============================================
-  const [technicalAnalysis, sentimentAnalysis, fundamentalsAnalysis] = await Promise.all([
+  const [_technicalAnalysis, _sentimentAnalysis, _fundamentalsAnalysis] = await Promise.all([
     runTechnicalAnalyst(instruments),
     runNewsAnalyst(instruments),
     runFundamentalsAnalyst(instruments),
@@ -349,18 +332,12 @@ export async function executeTradingCycle(input: WorkflowInput): Promise<Workflo
   ]);
 
   const approved = riskApproval.verdict === "APPROVE" && criticApproval.verdict === "APPROVE";
-  console.log(`[Decide] Consensus: ${approved ? "APPROVED" : "REJECTED"}`);
 
   // ============================================
   // Act Phase - Constraints and Orders
   // ============================================
   const constraintCheck = await checkConstraints(approved);
   const orderSubmission = await submitOrders(constraintCheck.passed);
-
-  console.log(`\n============================================================`);
-  console.log(`[Workflow] Cycle ${cycleId} complete`);
-  console.log(`[Workflow] Orders submitted: ${orderSubmission.submitted}`);
-  console.log(`============================================================\n`);
 
   return {
     cycleId,
@@ -384,4 +361,3 @@ export const tradingCycleWorkflow = {
     return executeTradingCycle(options.triggerData);
   },
 };
-

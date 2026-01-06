@@ -130,11 +130,11 @@ export function applyTransforms(
       const results = calculateReturnsFromCandles(candles, { periods, logReturns });
 
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
 
         for (const period of periods) {
           const value = latest.returns[period];
-          if (value !== null) {
+          if (value !== null && value !== undefined) {
             output[`return_${period}_${timeframe}`] = value;
           }
         }
@@ -155,7 +155,7 @@ export function applyTransforms(
       const results = calculateZScore(closes, timestamps, { lookback, minSamples });
 
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`close_zscore_${timeframe}`] = latest.zscore;
       }
     } catch {
@@ -173,7 +173,7 @@ export function applyTransforms(
       const results = calculatePercentileRank(closes, timestamps, { lookback, minSamples });
 
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`close_pct_${timeframe}`] = latest.percentile;
       }
     } catch {
@@ -195,7 +195,7 @@ export function applyTransforms(
     // Calculate returns for volatility
     const returns: number[] = [];
     for (let i = 1; i < closes.length; i++) {
-      returns.push(simpleReturn(closes[i], closes[i - 1]));
+      returns.push(simpleReturn(closes[i]!, closes[i - 1]!));
     }
 
     try {
@@ -212,7 +212,7 @@ export function applyTransforms(
       );
 
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`close_volscale_${timeframe}`] = latest.scaledValue;
         output[`volatility_${timeframe}`] = latest.volatility;
         output[`scale_factor_${timeframe}`] = latest.scaleFactor;
@@ -220,6 +220,10 @@ export function applyTransforms(
     } catch {
       // Insufficient data
     }
+  }
+
+  if (!latestCandle) {
+    return null;
   }
 
   return {
@@ -258,7 +262,7 @@ export function applyTransformsToIndicators(
             const results = calculateZScore(values, timestamps, { lookback, minSamples });
 
             if (results.length > 0) {
-              const latest = results[results.length - 1];
+              const latest = results[results.length - 1]!;
               output[`${key}_zscore`] = latest.zscore;
             }
           } catch {
@@ -282,7 +286,7 @@ export function applyTransformsToIndicators(
             const results = calculatePercentileRank(values, timestamps, { lookback, minSamples });
 
             if (results.length > 0) {
-              const latest = results[results.length - 1];
+              const latest = results[results.length - 1]!;
               output[`${key}_pct`] = latest.percentile;
             }
           } catch {

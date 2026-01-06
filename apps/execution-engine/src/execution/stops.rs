@@ -160,8 +160,8 @@ pub struct StopTargetValidator {
 impl Default for StopTargetValidator {
     fn default() -> Self {
         Self {
-            min_stop_distance_pct: Some(Decimal::new(1, 3)),   // 0.1%
-            max_stop_distance_pct: Some(Decimal::new(20, 2)),  // 20%
+            min_stop_distance_pct: Some(Decimal::new(1, 3)), // 0.1%
+            max_stop_distance_pct: Some(Decimal::new(20, 2)), // 20%
         }
     }
 }
@@ -395,21 +395,21 @@ impl BracketOrderBuilder {
     /// # Errors
     /// Returns an error if required fields are missing.
     pub fn build(self) -> Result<BracketOrder, StopsError> {
-        let instrument_id = self.instrument_id.ok_or_else(|| {
-            StopsError::ValidationFailed("Instrument ID required".to_string())
-        })?;
+        let instrument_id = self
+            .instrument_id
+            .ok_or_else(|| StopsError::ValidationFailed("Instrument ID required".to_string()))?;
 
-        let side = self.side.ok_or_else(|| {
-            StopsError::ValidationFailed("Side required".to_string())
-        })?;
+        let side = self
+            .side
+            .ok_or_else(|| StopsError::ValidationFailed("Side required".to_string()))?;
 
-        let quantity = self.quantity.ok_or_else(|| {
-            StopsError::ValidationFailed("Quantity required".to_string())
-        })?;
+        let quantity = self
+            .quantity
+            .ok_or_else(|| StopsError::ValidationFailed("Quantity required".to_string()))?;
 
-        let stop_loss_price = self.stop_loss.ok_or_else(|| {
-            StopsError::InvalidStopLoss("Stop loss price required".to_string())
-        })?;
+        let stop_loss_price = self
+            .stop_loss
+            .ok_or_else(|| StopsError::InvalidStopLoss("Stop loss price required".to_string()))?;
 
         let take_profit_price = self.take_profit.ok_or_else(|| {
             StopsError::InvalidTakeProfit("Take profit price required".to_string())
@@ -566,7 +566,11 @@ impl BacktestStopsSimulator {
     }
 
     /// Resolve conflict when both stop and target trigger in same bar.
-    fn resolve_same_bar_conflict(&self, candle: &Candle, levels: &StopTargetLevels) -> TriggerResult {
+    fn resolve_same_bar_conflict(
+        &self,
+        candle: &Candle,
+        levels: &StopTargetLevels,
+    ) -> TriggerResult {
         match self.config.same_bar_priority {
             SameBarPriority::StopFirst => TriggerResult::StopLoss {
                 price: levels.stop_loss,
@@ -687,7 +691,8 @@ impl PriceMonitor {
 
     /// Add a position to monitor.
     pub fn add_position(&mut self, position: MonitoredPosition) {
-        self.positions.insert(position.position_id.clone(), position);
+        self.positions
+            .insert(position.position_id.clone(), position);
     }
 
     /// Remove a position from monitoring.
@@ -913,7 +918,11 @@ impl StopsEnforcer {
 
     /// Simulate stops through candles (backtest mode).
     #[must_use]
-    pub fn simulate_backtest(&self, candles: &[Candle], levels: &StopTargetLevels) -> TriggerResult {
+    pub fn simulate_backtest(
+        &self,
+        candles: &[Candle],
+        levels: &StopTargetLevels,
+    ) -> TriggerResult {
         self.backtest_simulator.simulate(candles, levels)
     }
 
@@ -946,15 +955,15 @@ mod tests {
     fn make_levels(direction: Direction) -> StopTargetLevels {
         match direction {
             Direction::Long => StopTargetLevels::new(
-                Decimal::new(95, 0),   // stop at $95
-                Decimal::new(110, 0),  // target at $110
-                Decimal::new(100, 0),  // entry at $100
+                Decimal::new(95, 0),  // stop at $95
+                Decimal::new(110, 0), // target at $110
+                Decimal::new(100, 0), // entry at $100
                 Direction::Long,
             ),
             Direction::Short => StopTargetLevels::new(
-                Decimal::new(105, 0),  // stop at $105
-                Decimal::new(90, 0),   // target at $90
-                Decimal::new(100, 0),  // entry at $100
+                Decimal::new(105, 0), // stop at $105
+                Decimal::new(90, 0),  // target at $90
+                Decimal::new(100, 0), // entry at $100
                 Direction::Short,
             ),
             Direction::Flat => StopTargetLevels::new(
@@ -1014,7 +1023,7 @@ mod tests {
     fn test_validate_long_stop_below_entry() {
         let validator = StopTargetValidator::new();
         let levels = StopTargetLevels::new(
-            Decimal::new(105, 0),  // stop above entry - invalid for long
+            Decimal::new(105, 0), // stop above entry - invalid for long
             Decimal::new(110, 0),
             Decimal::new(100, 0),
             Direction::Long,
@@ -1029,7 +1038,7 @@ mod tests {
     fn test_validate_short_stop_above_entry() {
         let validator = StopTargetValidator::new();
         let levels = StopTargetLevels::new(
-            Decimal::new(95, 0),  // stop below entry - invalid for short
+            Decimal::new(95, 0), // stop below entry - invalid for short
             Decimal::new(90, 0),
             Decimal::new(100, 0),
             Direction::Short,
@@ -1074,9 +1083,7 @@ mod tests {
 
     #[test]
     fn test_bracket_order_missing_fields() {
-        let result = BracketOrderBuilder::new()
-            .instrument("AAPL")
-            .build();
+        let result = BracketOrderBuilder::new().instrument("AAPL").build();
         assert!(result.is_err());
     }
 
@@ -1112,7 +1119,7 @@ mod tests {
     fn test_backtest_long_stop_trigger() {
         let simulator = BacktestStopsSimulator::new();
         let levels = make_levels(Direction::Long);
-        let candle = make_candle(100, 102, 94, 96);  // low hits stop at 95
+        let candle = make_candle(100, 102, 94, 96); // low hits stop at 95
 
         let result = simulator.check_trigger(&candle, &levels);
         assert!(matches!(result, TriggerResult::StopLoss { .. }));
@@ -1122,7 +1129,7 @@ mod tests {
     fn test_backtest_long_target_trigger() {
         let simulator = BacktestStopsSimulator::new();
         let levels = make_levels(Direction::Long);
-        let candle = make_candle(100, 112, 99, 111);  // high hits target at 110
+        let candle = make_candle(100, 112, 99, 111); // high hits target at 110
 
         let result = simulator.check_trigger(&candle, &levels);
         assert!(matches!(result, TriggerResult::TakeProfit { .. }));
@@ -1132,7 +1139,7 @@ mod tests {
     fn test_backtest_short_stop_trigger() {
         let simulator = BacktestStopsSimulator::new();
         let levels = make_levels(Direction::Short);
-        let candle = make_candle(100, 106, 98, 103);  // high hits stop at 105
+        let candle = make_candle(100, 106, 98, 103); // high hits stop at 105
 
         let result = simulator.check_trigger(&candle, &levels);
         assert!(matches!(result, TriggerResult::StopLoss { .. }));
@@ -1142,7 +1149,7 @@ mod tests {
     fn test_backtest_short_target_trigger() {
         let simulator = BacktestStopsSimulator::new();
         let levels = make_levels(Direction::Short);
-        let candle = make_candle(100, 101, 88, 89);  // low hits target at 90
+        let candle = make_candle(100, 101, 88, 89); // low hits target at 90
 
         let result = simulator.check_trigger(&candle, &levels);
         assert!(matches!(result, TriggerResult::TakeProfit { .. }));
@@ -1183,9 +1190,9 @@ mod tests {
         let simulator = BacktestStopsSimulator::new();
         let levels = make_levels(Direction::Long);
         let candles = vec![
-            make_candle(100, 102, 98, 101),  // no trigger
-            make_candle(101, 103, 99, 102),  // no trigger
-            make_candle(102, 105, 94, 95),   // stop triggered
+            make_candle(100, 102, 98, 101), // no trigger
+            make_candle(101, 103, 99, 102), // no trigger
+            make_candle(102, 105, 94, 95),  // stop triggered
         ];
 
         let result = simulator.simulate(&candles, &levels);

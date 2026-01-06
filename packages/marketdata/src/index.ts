@@ -56,189 +56,176 @@ export {
   RestClient,
   type RetryConfig,
 } from "./client";
-
-// Provider clients
-export * from "./providers";
-
+// Corporate actions
+export {
+  type AdjustedCandle,
+  adjustCandleForSplits,
+  adjustCandlesForSplits,
+  adjustPrice,
+  adjustPriceForDividend,
+  adjustVolume,
+  type CandleWithTimestamp,
+  calculateAnnualizedYield,
+  calculateCumulativeAdjustmentFactor,
+  calculateDividendAdjustedReturn,
+  calculateDividendYield,
+  calculateDRIPShares,
+  calculateSplitRatio,
+  type DividendAdjustedReturn,
+  // Dividend adjustments
+  type DividendInfo,
+  getApplicableSplits,
+  getDividendsFromDate,
+  getDividendsGoingExWithin,
+  getDividendsInRange,
+  getRegularDividends,
+  getSpecialDividends,
+  getUpcomingDividends,
+  isSpecialDividend,
+  // Split adjustments
+  type SplitAdjustment,
+  sumDividends,
+  toDividendInfo,
+  toSplitAdjustment,
+  unadjustPrice,
+} from "./corporate-actions";
+// Candle ingestion
+export {
+  aggregateCandles,
+  type Candle,
+  CandleIngestionService,
+  CandleSchema,
+  type CandleStorage,
+  checkStaleness,
+  type GapInfo,
+  type IngestionOptions,
+  type IngestionResult,
+  type StalenessResult,
+  type Timeframe,
+  TimeframeSchema,
+} from "./ingestion";
 // Option chain scanning
 export {
   buildOptionTicker,
   calculateDte,
   DEFAULT_FILTERS,
   type GreeksProvider,
+  OptionChainScanner,
   type OptionFilterCriteria,
   type OptionGreeks,
   type OptionType,
   type OptionWithMarketData,
-  OptionChainScanner,
   OptionWithMarketDataSchema,
   parseOptionTicker,
   type ScoringWeights,
 } from "./optionChain";
-
-// Candle ingestion
-export {
-  aggregateCandles,
-  CandleIngestionService,
-  CandleSchema,
-  checkStaleness,
-  TimeframeSchema,
-  type Candle,
-  type CandleStorage,
-  type GapInfo,
-  type IngestionOptions,
-  type IngestionResult,
-  type StalenessResult,
-  type Timeframe,
-} from "./ingestion";
-
-// Data quality validation
-export {
-  // Staleness detection
-  checkStaleness as checkDataStaleness,
-  checkMultipleStaleness,
-  getStaleSymbols,
-  isFresh,
-  DEFAULT_STALENESS_THRESHOLDS,
-  type StalenessThresholds,
-  type StalenessCheckResult,
-
-  // Gap detection
-  detectGaps,
-  fillGaps,
-  interpolateCandle,
-  shouldInterpolate,
-  getExtendedGaps,
-  getExpectedIntervalMs,
-  type GapDetectionResult,
-  type InterpolatedCandle,
-
-  // Anomaly detection
-  detectVolumeAnomalies,
-  detectPriceSpikes,
-  detectFlashCrashes,
-  detectAllAnomalies,
-  filterAnomalousCandles,
-  DEFAULT_ANOMALY_CONFIG,
-  type Anomaly,
-  type AnomalyType,
-  type AnomalyDetectionConfig,
-  type AnomalyDetectionResult,
-
-  // Trading calendar
-  isWeekend,
-  isHoliday,
-  isEarlyClose,
-  isTradingDay,
-  isMarketOpen,
-  getNextTradingDay,
-  getPreviousTradingDay,
-  getTradingDaysBetween,
-  isExpectedGap,
-  DEFAULT_US_CALENDAR,
-  US_MARKET_HOURS,
-  US_EXTENDED_HOURS,
-  US_MARKET_HOLIDAYS_2024_2026,
-  US_EARLY_CLOSES_2024_2026,
-  type MarketHours,
-  type MarketCalendarConfig,
-
-  // Combined validation
-  validateCandleData,
-  isValidCandleData,
-  getQualityScore,
-  DEFAULT_VALIDATION_CONFIG,
-  type ValidationConfig,
-  type ValidationIssue,
-  type ValidationResult,
-} from "./validation";
-
-// Corporate actions
-export {
-  // Split adjustments
-  type SplitAdjustment,
-  type AdjustedCandle,
-  type CandleWithTimestamp,
-  calculateSplitRatio,
-  toSplitAdjustment,
-  adjustPrice,
-  adjustVolume,
-  calculateCumulativeAdjustmentFactor,
-  getApplicableSplits,
-  adjustCandleForSplits,
-  adjustCandlesForSplits,
-  unadjustPrice,
-
-  // Dividend adjustments
-  type DividendInfo,
-  type DividendAdjustedReturn,
-  toDividendInfo,
-  calculateDividendYield,
-  calculateAnnualizedYield,
-  getDividendsFromDate,
-  getDividendsInRange,
-  sumDividends,
-  calculateDividendAdjustedReturn,
-  adjustPriceForDividend,
-  calculateDRIPShares,
-  isSpecialDividend,
-  getRegularDividends,
-  getSpecialDividends,
-  getUpcomingDividends,
-  getDividendsGoingExWithin,
-} from "./corporate-actions";
-
+// Provider clients
+export * from "./providers";
 // Feature snapshot builder
 export {
+  type BuildSnapshotOptions,
   // Builder
   buildSnapshot,
   buildSnapshots,
+  type CandleDataSource,
+  type CandlesByTimeframe,
+  // Schema
+  CandlesByTimeframeSchema,
+  classifyMarketCap,
   compactSnapshot,
   createMockCandleSource,
   createMockEventSource,
   createMockUniverseSource,
-  getSnapshotSummary,
-  serializeSnapshot,
-  type BuildSnapshotOptions,
-  type CandleDataSource,
-  type ExternalEventSource,
-  type SnapshotDataSources,
-  type UniverseMetadataSource,
-
   // Cache
   DEFAULT_CACHE_CONFIG,
-  getGlobalCache,
-  resetGlobalCache,
-  SnapshotCache,
-  type SnapshotCacheConfig,
-
-  // Schema
-  CandlesByTimeframeSchema,
-  classifyMarketCap,
   DEFAULT_SNAPSHOT_CONFIG,
+  type ExternalEventSource,
+  type ExternalEventSummary,
   ExternalEventSummarySchema,
   ExternalEventTypeSchema,
+  type FeatureSnapshot,
   FeatureSnapshotSchema,
+  getGlobalCache,
+  getSnapshotSummary,
+  type IndicatorValues,
   IndicatorValuesSchema,
   isValidFeatureSnapshot,
+  type MarketCapBucket,
   MarketCapBucketSchema,
+  type NormalizedValues,
   NormalizedValuesSchema,
   parseFeatureSnapshot,
-  RegimeClassificationSchema,
-  RegimeLabelSchema,
-  SnapshotBuilderConfigSchema,
-  UniverseMetadataSchema,
-  type CandlesByTimeframe,
-  type ExternalEventSummary,
-  type FeatureSnapshot,
-  type IndicatorValues,
-  type MarketCapBucket,
-  type NormalizedValues,
   type RegimeClassification,
+  RegimeClassificationSchema,
   type RegimeLabel,
+  RegimeLabelSchema,
+  resetGlobalCache,
   type SnapshotBuilderConfig,
+  SnapshotBuilderConfigSchema,
+  SnapshotCache,
+  type SnapshotCacheConfig,
+  type SnapshotDataSources,
+  serializeSnapshot,
   type UniverseMetadata,
+  UniverseMetadataSchema,
+  type UniverseMetadataSource,
 } from "./snapshot";
+// Data quality validation
+export {
+  type Anomaly,
+  type AnomalyDetectionConfig,
+  type AnomalyDetectionResult,
+  type AnomalyType,
+  checkMultipleStaleness,
+  // Staleness detection
+  checkStaleness as checkDataStaleness,
+  DEFAULT_ANOMALY_CONFIG,
+  DEFAULT_STALENESS_THRESHOLDS,
+  DEFAULT_US_CALENDAR,
+  DEFAULT_VALIDATION_CONFIG,
+  detectAllAnomalies,
+  detectFlashCrashes,
+  // Gap detection
+  detectGaps,
+  detectPriceSpikes,
+  // Anomaly detection
+  detectVolumeAnomalies,
+  fillGaps,
+  filterAnomalousCandles,
+  type GapDetectionResult,
+  getExpectedIntervalMs,
+  getExtendedGaps,
+  getNextTradingDay,
+  getPreviousTradingDay,
+  getQualityScore,
+  getStaleSymbols,
+  getTradingDaysBetween,
+  type InterpolatedCandle,
+  interpolateCandle,
+  isEarlyClose,
+  isExpectedGap,
+  isFresh,
+  isHoliday,
+  isMarketOpen,
+  isTradingDay,
+  isValidCandleData,
+  // Trading calendar
+  isWeekend,
+  type MarketCalendarConfig,
+  type MarketHours,
+  type StalenessCheckResult,
+  type StalenessThresholds,
+  shouldInterpolate,
+  US_EARLY_CLOSES_2024_2026,
+  US_EXTENDED_HOURS,
+  US_MARKET_HOLIDAYS_2024_2026,
+  US_MARKET_HOURS,
+  type ValidationConfig,
+  type ValidationIssue,
+  type ValidationResult,
+  // Combined validation
+  validateCandleData,
+} from "./validation";
 
 /**
  * Package version.

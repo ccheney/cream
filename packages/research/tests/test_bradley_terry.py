@@ -40,9 +40,7 @@ class TestBradleyTerryRewardModel:
 
     def test_initialization_custom(self) -> None:
         """Test model initialization with custom parameters."""
-        model = BradleyTerryRewardModel(
-            input_dim=64, hidden_dims=[128, 64, 32], dropout=0.2
-        )
+        model = BradleyTerryRewardModel(input_dim=64, hidden_dims=[128, 64, 32], dropout=0.2)
 
         assert model.input_dim == 64
         assert model.hidden_dims == [128, 64, 32]
@@ -221,13 +219,9 @@ class TestBradleyTerryRewardModel:
 
         # Create clear synthetic preference data
         # Good plans: high values in first half of features
-        good_plans = torch.cat(
-            [torch.randn(50, 16) + 2.0, torch.randn(50, 16)], dim=1
-        )
+        good_plans = torch.cat([torch.randn(50, 16) + 2.0, torch.randn(50, 16)], dim=1)
         # Bad plans: low values in first half of features
-        bad_plans = torch.cat(
-            [torch.randn(50, 16) - 2.0, torch.randn(50, 16)], dim=1
-        )
+        bad_plans = torch.cat([torch.randn(50, 16) - 2.0, torch.randn(50, 16)], dim=1)
 
         # Train model
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -461,9 +455,7 @@ class TestBradleyTerryIntegration:
 
         with torch.no_grad():
             rewards = loaded_model.predict_reward(test_features)
-            prefs = loaded_model.predict_preference(
-                test_features[:3], test_features[2:]
-            )
+            prefs = loaded_model.predict_preference(test_features[:3], test_features[2:])
 
         assert rewards.shape == (5,)
         assert prefs.shape == (3,)

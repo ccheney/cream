@@ -388,7 +388,15 @@ export type TypedSplitEvent = z.infer<typeof TypedSplitEventSchema>;
  * Generic typed event (for other types without specific payload)
  */
 export const TypedGenericEventSchema = TypedEventBaseSchema.extend({
-  eventType: z.enum(["GUIDANCE", "SEC_FILING", "CONFERENCE", "PRODUCT_LAUNCH", "EXECUTIVE_CHANGE", "LEGAL", "OTHER"]),
+  eventType: z.enum([
+    "GUIDANCE",
+    "SEC_FILING",
+    "CONFERENCE",
+    "PRODUCT_LAUNCH",
+    "EXECUTIVE_CHANGE",
+    "LEGAL",
+    "OTHER",
+  ]),
   payload: z.record(z.string(), z.unknown()).optional(),
 });
 export type TypedGenericEvent = z.infer<typeof TypedGenericEventSchema>;
@@ -459,7 +467,7 @@ export function createEarningsEvent(
   eventId: string,
   eventTime: string,
   payload: EarningsEventPayload,
-  options: Partial<TypedEarningsEvent> = {},
+  options: Partial<TypedEarningsEvent> = {}
 ): TypedEarningsEvent {
   return {
     eventId,
@@ -478,7 +486,7 @@ export function createMacroEvent(
   eventId: string,
   eventTime: string,
   payload: MacroEventPayload,
-  options: Partial<TypedMacroEvent> = {},
+  options: Partial<TypedMacroEvent> = {}
 ): TypedMacroEvent {
   return {
     eventId,
@@ -498,7 +506,7 @@ export function createNewsEvent(
   eventTime: string,
   payload: NewsEventPayload,
   relatedInstrumentIds: string[],
-  options: Partial<TypedNewsEvent> = {},
+  options: Partial<TypedNewsEvent> = {}
 ): TypedNewsEvent {
   return {
     eventId,

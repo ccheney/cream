@@ -225,10 +225,7 @@ impl MonteCarloSimulator {
         let returns: Vec<Decimal> = iterations.iter().map(|r| r.total_return).collect();
         let return_distribution = calculate_distribution_stats(&returns);
 
-        let sharpes: Vec<Decimal> = iterations
-            .iter()
-            .filter_map(|r| r.sharpe_ratio)
-            .collect();
+        let sharpes: Vec<Decimal> = iterations.iter().filter_map(|r| r.sharpe_ratio).collect();
         let sharpe_distribution = if sharpes.len() > 10 {
             Some(calculate_distribution_stats(&sharpes))
         } else {
@@ -302,7 +299,11 @@ impl MonteCarloSimulator {
     }
 
     /// Calculate metrics for a set of trades.
-    fn calculate_iteration_metrics(&self, trades: &[TradeRecord], iteration: u32) -> IterationResult {
+    fn calculate_iteration_metrics(
+        &self,
+        trades: &[TradeRecord],
+        iteration: u32,
+    ) -> IterationResult {
         let mut calc = PerformanceCalculator::new(self.config.initial_equity);
 
         // Build equity curve from trades
@@ -345,8 +346,7 @@ impl MonteCarloSimulator {
         // Percentile rank (100 = best, 0 = worst)
         let percentile_rank = if total > 0 {
             Decimal::ONE_HUNDRED
-                - (Decimal::from(simulations_better) / Decimal::from(total)
-                    * Decimal::ONE_HUNDRED)
+                - (Decimal::from(simulations_better) / Decimal::from(total) * Decimal::ONE_HUNDRED)
         } else {
             Decimal::new(50, 0)
         };
@@ -414,8 +414,7 @@ impl MonteCarloSimulator {
 
         // Probability of negative returns
         let negative_count = returns.iter().filter(|r| **r < Decimal::ZERO).count();
-        let prob_negative =
-            Decimal::from(negative_count as u64) / Decimal::from(n as u64);
+        let prob_negative = Decimal::from(negative_count as u64) / Decimal::from(n as u64);
 
         // Expected shortfall as percentage of initial equity
         let expected_shortfall_pct = if cvar < Decimal::ZERO {
@@ -572,8 +571,8 @@ impl MonteCarloBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::metrics::ExitReason;
+    use super::*;
 
     fn make_trade(id: &str, net_pnl: i64) -> TradeRecord {
         TradeRecord {

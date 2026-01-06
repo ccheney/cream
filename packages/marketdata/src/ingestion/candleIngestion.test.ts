@@ -2,16 +2,16 @@
  * Candle Ingestion Service Tests
  */
 
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type { AggregatesResponse, PolygonClient } from "../providers/polygon";
 import {
-  CandleIngestionService,
   aggregateCandles,
-  checkStaleness,
   type Candle,
+  CandleIngestionService,
   type CandleStorage,
+  checkStaleness,
   type Timeframe,
 } from "./candleIngestion";
-import type { PolygonClient, AggregatesResponse } from "../providers/polygon";
 
 // ============================================
 // Mock Data
@@ -55,8 +55,12 @@ function createMockStorage(): CandleStorage & { candles: Candle[] } {
     }),
     getLastCandle: mock(async (symbol: string, timeframe: Timeframe) => {
       const matching = candles.filter((c) => c.symbol === symbol && c.timeframe === timeframe);
-      if (matching.length === 0) return null;
-      return matching.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]!;
+      if (matching.length === 0) {
+        return null;
+      }
+      return matching.sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )[0]!;
     }),
   };
 }

@@ -34,17 +34,27 @@ export * from "./calendar";
 export * from "./gaps";
 export * from "./staleness";
 
+import type { Timeframe } from "../ingestion/candleIngestion";
 // Import for combined validation
 import {
-  detectAllAnomalies,
   type Anomaly,
   type AnomalyDetectionConfig,
   DEFAULT_ANOMALY_CONFIG,
+  detectAllAnomalies,
 } from "./anomalies";
 import { DEFAULT_US_CALENDAR, isExpectedGap, type MarketCalendarConfig } from "./calendar";
-import { detectGaps, fillGaps, type Candle, type GapDetectionResult, type InterpolatedCandle } from "./gaps";
-import { checkStaleness, DEFAULT_STALENESS_THRESHOLDS, type StalenessThresholds } from "./staleness";
-import type { Timeframe } from "../ingestion/candleIngestion";
+import {
+  type Candle,
+  detectGaps,
+  fillGaps,
+  type GapDetectionResult,
+  type InterpolatedCandle,
+} from "./gaps";
+import {
+  checkStaleness,
+  DEFAULT_STALENESS_THRESHOLDS,
+  type StalenessThresholds,
+} from "./staleness";
 
 // ============================================
 // Combined Validation Types
@@ -169,7 +179,7 @@ export function validateCandleData(
   }
 
   // Staleness check
-  let stalenessResult;
+  let stalenessResult: { isStale: boolean; staleMinutes: number; threshold: number } | undefined;
   if (config.checkStaleness !== false) {
     const staleness = checkStaleness(
       lastCandle.timestamp,
@@ -196,7 +206,7 @@ export function validateCandleData(
   }
 
   // Gap detection
-  let gapResult;
+  let gapResult: GapDetectionResult | undefined;
   let processedCandles: (Candle | InterpolatedCandle)[] = candles;
 
   if (config.checkGaps !== false) {
@@ -210,7 +220,9 @@ export function validateCandleData(
         unexpectedGaps = gapResult.gaps.filter((gap) => {
           return !isExpectedGap(
             gap.previousTimestamp,
-            new Date(new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60000).toISOString(),
+            new Date(
+              new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60000
+            ).toISOString(),
             config.calendarConfig ?? DEFAULT_US_CALENDAR
           );
         });
@@ -237,7 +249,7 @@ export function validateCandleData(
   }
 
   // Anomaly detection
-  let anomalyResult;
+  let anomalyResult: { count: number; items: Anomaly[] } | undefined;
   if (config.checkAnomalies !== false) {
     const anomalies = detectAllAnomalies(candles, config.anomalyConfig ?? DEFAULT_ANOMALY_CONFIG);
 
@@ -284,14 +296,20 @@ export function validateCandleData(
 /**
  * Quick validation check (returns boolean only).
  */
-export function isValidCandleData(candles: Candle[], config: ValidationConfig = DEFAULT_VALIDATION_CONFIG): boolean {
+export function isValidCandleData(
+  candles: Candle[],
+  config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+): boolean {
   return validateCandleData(candles, config).isValid;
 }
 
 /**
  * Get quality score for candle data (0-100).
  */
-export function getQualityScore(candles: Candle[], config: ValidationConfig = DEFAULT_VALIDATION_CONFIG): number {
+export function getQualityScore(
+  candles: Candle[],
+  config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+): number {
   return validateCandleData(candles, config).qualityScore;
 }
 

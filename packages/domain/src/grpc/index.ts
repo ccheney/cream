@@ -22,25 +22,6 @@
  * ```
  */
 
-// Types
-export {
-  DEFAULT_GRPC_CONFIG,
-  GrpcErrorCode,
-  isRetryableErrorCode,
-  type GrpcCallMetadata,
-  type GrpcCallResult,
-  type GrpcClientConfig,
-} from "./types.js";
-
-// Errors
-export { GrpcError, RetryBackoff, sleep } from "./errors.js";
-
-// Clients
-export {
-  ExecutionServiceClient,
-  createExecutionClient,
-} from "./execution.js";
-
 // Re-export generated types for convenience
 export type {
   AccountState,
@@ -58,9 +39,24 @@ export type {
   SubmitOrderRequest,
   SubmitOrderResponse,
 } from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
-
 export {
   ConstraintResult,
   OrderSide,
   OrderStatus,
 } from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
+// Errors
+export { GrpcError, RetryBackoff, sleep } from "./errors.js";
+// Clients
+export {
+  createExecutionClient,
+  ExecutionServiceClient,
+} from "./execution.js";
+// Types
+export {
+  DEFAULT_GRPC_CONFIG,
+  type GrpcCallMetadata,
+  type GrpcCallResult,
+  type GrpcClientConfig,
+  GrpcErrorCode,
+  isRetryableErrorCode,
+} from "./types.js";

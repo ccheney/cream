@@ -200,6 +200,7 @@ function createMockClient(): HelixClient {
 // ============================================
 
 describe("HelixDB Integration", () => {
+  // biome-ignore lint/style/useConst: Intentionally let for future reassignment when container code is enabled
   let container: StartedTestContainer | null = null;
   let client: HelixClient;
 
@@ -217,17 +218,19 @@ describe("HelixDB Integration", () => {
     //   `http://localhost:${container.getMappedPort(8000)}`
     // );
 
-    // Dummy assignment to avoid type narrowing to never (remove when container code is uncommented)
-    container = container;
+    // Reference container to avoid type narrowing to never (remove when container code is uncommented)
+    void container;
 
     // Use mock client for now
     client = createMockClient();
   });
 
   afterAll(async () => {
-    if (container !== null) {
-      await container.stop();
-    }
+    // TODO: Uncomment when container-based tests are enabled
+    // if (container !== null) {
+    //   await container.stop();
+    // }
+    void container; // Placeholder until container is used
   });
 
   afterEach(async () => {

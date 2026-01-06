@@ -11,12 +11,7 @@
  * @see docs/plans/05-agents.md
  */
 
-import {
-  AGENT_MODELS,
-  AGENT_TYPES,
-  type AgentConfig,
-  type AgentType,
-} from "../types.js";
+import { AGENT_MODELS, AGENT_TYPES, type AgentConfig, type AgentType } from "../types.js";
 
 // ============================================
 // Agent Configurations
@@ -103,13 +98,7 @@ export const TRADER_CONFIG: AgentConfig = {
     "Disciplined about position sizing",
     "Clear rationale for every decision",
   ],
-  tools: [
-    "get_quotes",
-    "get_portfolio_state",
-    "option_chain",
-    "get_greeks",
-    "helix_query",
-  ],
+  tools: ["get_quotes", "get_portfolio_state", "option_chain", "get_greeks", "helix_query"],
 };
 
 export const RISK_MANAGER_CONFIG: AgentConfig = {
@@ -195,11 +184,7 @@ export function getResearchAgents(): AgentConfig[] {
  * Get decision agents (run sequentially, final phase)
  */
 export function getDecisionAgents(): AgentConfig[] {
-  return [
-    AGENT_CONFIGS.trader,
-    AGENT_CONFIGS.risk_manager,
-    AGENT_CONFIGS.critic,
-  ];
+  return [AGENT_CONFIGS.trader, AGENT_CONFIGS.risk_manager, AGENT_CONFIGS.critic];
 }
 
 /**

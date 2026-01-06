@@ -53,9 +53,9 @@ export {
   type IGraphDatabase,
   type ImportOptions,
   type ImportResult,
+  type IncrementalExport,
   importData,
   importFromJson,
-  type IncrementalExport,
   mergeExports,
   validateExport,
 } from "./queries/export";
@@ -93,18 +93,6 @@ export {
   upsertExternalEvent,
   upsertTradeDecision,
 } from "./queries/mutations";
-// Vector search
-export {
-  searchSimilarDecisions,
-  searchSimilarFilings,
-  searchSimilarNews,
-  searchSimilarTranscripts,
-  type VectorSearchOptions,
-  type VectorSearchResponse,
-  type VectorSearchResult,
-  vectorSearch,
-} from "./queries/vector";
-
 // Trade Memory Retrieval (GraphRAG)
 export {
   calculateTradeStatistics,
@@ -117,6 +105,17 @@ export {
   type TradeMemoryRetrievalResult,
   type TradeStatistics,
 } from "./queries/retrieval";
+// Vector search
+export {
+  searchSimilarDecisions,
+  searchSimilarFilings,
+  searchSimilarNews,
+  searchSimilarTranscripts,
+  type VectorSearchOptions,
+  type VectorSearchResponse,
+  type VectorSearchResult,
+  vectorSearch,
+} from "./queries/vector";
 
 /**
  * Package version.

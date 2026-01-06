@@ -57,7 +57,11 @@ export function calculateRSI(candles: Candle[], params: RSIParams = RSI_DEFAULTS
   // Calculate price changes
   const changes: number[] = [];
   for (let i = 1; i < candles.length; i++) {
-    changes.push(candles[i].close - candles[i - 1].close);
+    const curr = candles[i];
+    const prev = candles[i - 1];
+    if (curr && prev) {
+      changes.push(curr.close - prev.close);
+    }
   }
 
   // Separate gains and losses
@@ -72,24 +76,30 @@ export function calculateRSI(candles: Candle[], params: RSIParams = RSI_DEFAULTS
   const firstRS = avgLoss === 0 ? 100 : avgGain / avgLoss;
   const firstRSI = avgLoss === 0 ? 100 : 100 - 100 / (1 + firstRS);
 
-  results.push({
-    timestamp: candles[period].timestamp,
-    rsi: firstRSI,
-  });
+  const firstCandle = candles[period];
+  if (firstCandle) {
+    results.push({
+      timestamp: firstCandle.timestamp,
+      rsi: firstRSI,
+    });
+  }
 
   // Calculate subsequent RSI values using Wilder's smoothing
   for (let i = period; i < changes.length; i++) {
     // Wilder's smoothing: (prev * (period - 1) + current) / period
-    avgGain = (avgGain * (period - 1) + gains[i]) / period;
-    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+    avgGain = (avgGain * (period - 1) + (gains[i] ?? 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (losses[i] ?? 0)) / period;
 
     const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
     const rsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + rs);
 
-    results.push({
-      timestamp: candles[i + 1].timestamp,
-      rsi,
-    });
+    const nextCandle = candles[i + 1];
+    if (nextCandle) {
+      results.push({
+        timestamp: nextCandle.timestamp,
+        rsi,
+      });
+    }
   }
 
   return results;

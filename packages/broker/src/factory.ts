@@ -14,9 +14,9 @@
  * ```
  */
 
+import { type BacktestAdapterConfig, createBacktestAdapter } from "./adapters/backtest.js";
 import type { AlpacaClient } from "./client.js";
 import { createAlpacaClient } from "./client.js";
-import { createBacktestAdapter, type BacktestAdapterConfig } from "./adapters/backtest.js";
 import type { TradingEnvironment } from "./types.js";
 import { BrokerError } from "./types.js";
 

@@ -248,11 +248,10 @@ jobs:
         run: bun install
 
       - name: Run Biome lint
-        run: bunx biome check . || echo "Lint issues found"
+        run: bunx biome check .
 
-      # Type check disabled until workspace resolution is fixed
-      # - name: Type check
-      #   run: bun run typecheck
+      - name: Type check
+        run: bun run typecheck
 
   # ============================================
   # Status Gate (for required checks)

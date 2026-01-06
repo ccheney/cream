@@ -31,7 +31,6 @@ export {
   retrieveSimilarDecisions,
   retrieveVectorOnly,
 } from "./helixRetrieval";
-
 // Market Snapshot Builder
 export {
   buildHistoricalSnapshot,
@@ -39,7 +38,7 @@ export {
   buildSnapshotForUniverse,
   DEFAULT_SNAPSHOT_CONFIG,
   executeMarketSnapshotBuilder,
+  PERFORMANCE_TARGETS as SNAPSHOT_PERFORMANCE_TARGETS,
   type SnapshotBuilderInput,
   type SnapshotBuilderResult,
 } from "./marketSnapshotBuilder";
-export { PERFORMANCE_TARGETS as SNAPSHOT_PERFORMANCE_TARGETS } from "./marketSnapshotBuilder";

@@ -110,7 +110,7 @@ export function calculateIndicators(
     try {
       const results = calculateRSI(candles, { period });
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`rsi_${period}_${timeframe}`] = latest.rsi;
       }
     } catch {
@@ -126,7 +126,7 @@ export function calculateIndicators(
     try {
       const results = calculateStochastic(candles, { kPeriod, dPeriod, slow });
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`stochastic_k_${kPeriod}_${timeframe}`] = latest.k;
         output[`stochastic_d_${dPeriod}_${timeframe}`] = latest.d;
       }
@@ -143,7 +143,7 @@ export function calculateIndicators(
       try {
         const results = calculateSMA(candles, { period });
         if (results.length > 0) {
-          const latest = results[results.length - 1];
+          const latest = results[results.length - 1]!;
           output[`sma_${period}_${timeframe}`] = latest.ma;
         }
       } catch {
@@ -159,7 +159,7 @@ export function calculateIndicators(
       try {
         const results = calculateEMA(candles, { period });
         if (results.length > 0) {
-          const latest = results[results.length - 1];
+          const latest = results[results.length - 1]!;
           output[`ema_${period}_${timeframe}`] = latest.ma;
         }
       } catch {
@@ -174,7 +174,7 @@ export function calculateIndicators(
     try {
       const results = calculateATR(candles, { period });
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`atr_${period}_${timeframe}`] = latest.atr;
       }
     } catch {
@@ -189,7 +189,7 @@ export function calculateIndicators(
     try {
       const results = calculateBollingerBands(candles, { period, stdDev });
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`bb_upper_${period}_${timeframe}`] = latest.upper;
         output[`bb_middle_${period}_${timeframe}`] = latest.middle;
         output[`bb_lower_${period}_${timeframe}`] = latest.lower;
@@ -211,7 +211,7 @@ export function calculateIndicators(
     try {
       const results = calculateVolumeSMA(candles, { period });
       if (results.length > 0) {
-        const latest = results[results.length - 1];
+        const latest = results[results.length - 1]!;
         output[`volume_sma_${period}_${timeframe}`] = latest.volumeSma;
         output[`volume_ratio_${period}_${timeframe}`] = latest.volumeRatio;
       }
@@ -219,6 +219,10 @@ export function calculateIndicators(
       output[`volume_sma_${period}_${timeframe}`] = null;
       output[`volume_ratio_${period}_${timeframe}`] = null;
     }
+  }
+
+  if (!latestCandle) {
+    return null;
   }
 
   return {

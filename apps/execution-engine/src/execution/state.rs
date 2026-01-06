@@ -143,12 +143,7 @@ impl OrderStateManager {
     /// Initialize partial fill tracking for an order.
     ///
     /// Call this when an order is first accepted by the broker.
-    pub fn init_partial_fill(
-        &self,
-        order_id: String,
-        order_qty: Decimal,
-        purpose: OrderPurpose,
-    ) {
+    pub fn init_partial_fill(&self, order_id: String, order_qty: Decimal, purpose: OrderPurpose) {
         let state = PartialFillState::new(order_id.clone(), order_qty, purpose);
         if let Ok(mut fills) = self.partial_fills.write() {
             fills.insert(order_id, state);
@@ -206,11 +201,7 @@ impl OrderStateManager {
             Err(_) => return vec![],
         };
 
-        fills
-            .values()
-            .filter(|s| s.is_partial())
-            .cloned()
-            .collect()
+        fills.values().filter(|s| s.is_partial()).cloned().collect()
     }
 
     /// Check for timed-out partial fills and return actions to take.
@@ -452,7 +443,11 @@ mod tests {
 
         // Order 1: partial fill
         manager.insert(make_order("ord-1", "b-1", OrderStatus::Accepted));
-        manager.init_partial_fill("ord-1".to_string(), Decimal::new(100, 0), OrderPurpose::Entry);
+        manager.init_partial_fill(
+            "ord-1".to_string(),
+            Decimal::new(100, 0),
+            OrderPurpose::Entry,
+        );
         manager.apply_fill("ord-1", make_fill("f1", 50, 15000));
 
         // Order 2: complete fill
@@ -462,7 +457,11 @@ mod tests {
 
         // Order 3: no fill
         manager.insert(make_order("ord-3", "b-3", OrderStatus::Accepted));
-        manager.init_partial_fill("ord-3".to_string(), Decimal::new(100, 0), OrderPurpose::StopLoss);
+        manager.init_partial_fill(
+            "ord-3".to_string(),
+            Decimal::new(100, 0),
+            OrderPurpose::StopLoss,
+        );
 
         let partial = manager.get_partially_filled_orders();
         assert_eq!(partial.len(), 1);
@@ -474,11 +473,19 @@ mod tests {
         let manager = OrderStateManager::new();
 
         manager.insert(make_order("ord-1", "b-1", OrderStatus::Accepted));
-        manager.init_partial_fill("ord-1".to_string(), Decimal::new(100, 0), OrderPurpose::Entry);
+        manager.init_partial_fill(
+            "ord-1".to_string(),
+            Decimal::new(100, 0),
+            OrderPurpose::Entry,
+        );
         manager.apply_fill("ord-1", make_fill("f1", 50, 15000));
 
         manager.insert(make_order("ord-2", "b-2", OrderStatus::Accepted));
-        manager.init_partial_fill("ord-2".to_string(), Decimal::new(100, 0), OrderPurpose::Exit);
+        manager.init_partial_fill(
+            "ord-2".to_string(),
+            Decimal::new(100, 0),
+            OrderPurpose::Exit,
+        );
         manager.apply_fill("ord-2", make_fill("f2", 30, 15000));
 
         assert_eq!(manager.partial_fill_count(), 2);
@@ -488,7 +495,11 @@ mod tests {
     fn test_remove_partial_fill() {
         let manager = OrderStateManager::new();
         manager.insert(make_order("ord-1", "b-1", OrderStatus::Accepted));
-        manager.init_partial_fill("ord-1".to_string(), Decimal::new(100, 0), OrderPurpose::Entry);
+        manager.init_partial_fill(
+            "ord-1".to_string(),
+            Decimal::new(100, 0),
+            OrderPurpose::Entry,
+        );
 
         assert!(manager.get_partial_fill_state("ord-1").is_some());
 

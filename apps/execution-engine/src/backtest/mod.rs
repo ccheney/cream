@@ -56,7 +56,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-pub use commission::{calculate_commission, calculate_multi_leg_commission, InstrumentType};
+pub use commission::{InstrumentType, calculate_commission, calculate_multi_leg_commission};
 pub use config::{
     BacktestConfig, CommissionConfig, CommissionModel, FillModelConfig, FixedBpsConfig,
     LimitOrderConfig, PartialFillConfig, PerUnitCommissionConfig, RegulatoryFeesConfig,
@@ -66,6 +66,14 @@ pub use config::{
 pub use fill_engine::{
     Candle, FillResult, simulate_limit_order, simulate_market_order, simulate_order,
     simulate_stop_limit_order, simulate_stop_order,
+};
+pub use metrics::{
+    DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary, TradeRecord,
+    format_decimal, format_pct, format_ratio,
+};
+pub use monte_carlo::{
+    DistributionStats, IterationResult, LuckVsSkillAnalysis, MonteCarloBuilder, MonteCarloConfig,
+    MonteCarloResult, MonteCarloSimulator, RandomizationMethod, VaRAnalysis,
 };
 pub use multi_leg::{
     LegFillResult, MultiLegFillResult, OrderLeg, calculate_total_contracts,
@@ -82,17 +90,9 @@ pub use triggers::{
     PositionDirection, TriggerResult, TriggerType, evaluate_stop, evaluate_target,
     evaluate_triggers, is_stop_triggered, is_target_triggered,
 };
-pub use metrics::{
-    DrawdownPoint, EquityPoint, ExitReason, PerformanceCalculator, PerformanceSummary,
-    TradeRecord, format_decimal, format_pct, format_ratio,
-};
 pub use walkforward::{
     AggregatedMetrics, OverfittingAnalysis, ParameterStability, WalkForwardBuilder,
     WalkForwardConfig, WalkForwardEngine, WalkForwardResult, WalkForwardWindow, WindowMode,
-};
-pub use monte_carlo::{
-    DistributionStats, IterationResult, LuckVsSkillAnalysis, MonteCarloBuilder,
-    MonteCarloConfig, MonteCarloResult, MonteCarloSimulator, RandomizationMethod, VaRAnalysis,
 };
 
 use crate::models::{
@@ -229,7 +229,10 @@ impl SimOrder {
     pub fn is_terminal(&self) -> bool {
         matches!(
             self.state,
-            SimOrderState::Filled | SimOrderState::Rejected | SimOrderState::Cancelled | SimOrderState::Expired
+            SimOrderState::Filled
+                | SimOrderState::Rejected
+                | SimOrderState::Cancelled
+                | SimOrderState::Expired
         )
     }
 
@@ -535,10 +538,7 @@ impl SimulationEngine {
         }
 
         let avg_volume = self.avg_volumes.get(&order.instrument_id).copied();
-        let is_entry = matches!(
-            order.purpose,
-            OrderPurpose::Entry | OrderPurpose::ScaleIn
-        );
+        let is_entry = matches!(order.purpose, OrderPurpose::Entry | OrderPurpose::ScaleIn);
 
         let fill_result = simulate_order(
             order.order_type,
@@ -971,8 +971,17 @@ mod tests {
     #[test]
     fn test_sim_order_state_conversion() {
         assert_eq!(OrderStatus::from(SimOrderState::New), OrderStatus::New);
-        assert_eq!(OrderStatus::from(SimOrderState::Pending), OrderStatus::Accepted);
-        assert_eq!(OrderStatus::from(SimOrderState::Filled), OrderStatus::Filled);
-        assert_eq!(OrderStatus::from(SimOrderState::Rejected), OrderStatus::Rejected);
+        assert_eq!(
+            OrderStatus::from(SimOrderState::Pending),
+            OrderStatus::Accepted
+        );
+        assert_eq!(
+            OrderStatus::from(SimOrderState::Filled),
+            OrderStatus::Filled
+        );
+        assert_eq!(
+            OrderStatus::from(SimOrderState::Rejected),
+            OrderStatus::Rejected
+        );
     }
 }

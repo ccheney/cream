@@ -36,23 +36,13 @@ export type EventType = z.infer<typeof EventType>;
 /**
  * Type of influence on trading decision
  */
-export const InfluenceType = z.enum([
-  "NEWS",
-  "SENTIMENT",
-  "FUNDAMENTAL",
-  "MACRO",
-]);
+export const InfluenceType = z.enum(["NEWS", "SENTIMENT", "FUNDAMENTAL", "MACRO"]);
 export type InfluenceType = z.infer<typeof InfluenceType>;
 
 /**
  * Sentiment direction
  */
-export const SentimentDirection = z.enum([
-  "BULLISH",
-  "BEARISH",
-  "NEUTRAL",
-  "MIXED",
-]);
+export const SentimentDirection = z.enum(["BULLISH", "BEARISH", "NEUTRAL", "MIXED"]);
 export type SentimentDirection = z.infer<typeof SentimentDirection>;
 
 // ============================================

@@ -31,7 +31,7 @@ from enum import Enum
 from typing import Any
 
 import numpy as np
-from numpy.random import Generator, PCG64
+from numpy.random import PCG64, Generator
 
 
 class Action(Enum):
@@ -199,9 +199,15 @@ class TradingPlan:
         )
 
         # Entry/exit price features relative to current price
-        price_entry_ratio = self.entry_price / context.current_price if context.current_price > 0 else 1.0
-        price_stop_ratio = self.stop_loss / context.current_price if context.current_price > 0 else 1.0
-        price_target_ratio = self.take_profit / context.current_price if context.current_price > 0 else 1.0
+        price_entry_ratio = (
+            self.entry_price / context.current_price if context.current_price > 0 else 1.0
+        )
+        price_stop_ratio = (
+            self.stop_loss / context.current_price if context.current_price > 0 else 1.0
+        )
+        price_target_ratio = (
+            self.take_profit / context.current_price if context.current_price > 0 else 1.0
+        )
 
         features.extend(
             [
@@ -809,7 +815,9 @@ class SyntheticPreferenceGenerator:
 
         # Adjust based on entry timing
         if perturbation.entry_price != original_plan.entry_price:
-            entry_diff_pct = (perturbation.entry_price - original_plan.entry_price) / original_plan.entry_price
+            entry_diff_pct = (
+                perturbation.entry_price - original_plan.entry_price
+            ) / original_plan.entry_price
 
             if original_plan.direction == Direction.LONG:
                 # Earlier entry (lower price) would be better for long
@@ -842,7 +850,10 @@ class SyntheticPreferenceGenerator:
         if perturbation.take_profit != original_plan.take_profit:
             if actual_outcome.hit_target:
                 # Would have hit earlier/later target?
-                target_diff_pct = abs(perturbation.take_profit - original_plan.take_profit) / original_plan.entry_price
+                target_diff_pct = (
+                    abs(perturbation.take_profit - original_plan.take_profit)
+                    / original_plan.entry_price
+                )
                 if original_plan.direction == Direction.LONG:
                     if perturbation.take_profit < original_plan.take_profit:
                         # Tighter target - would have exited with less profit
@@ -866,7 +877,8 @@ class SyntheticPreferenceGenerator:
             fill_rate=min(1.0, actual_outcome.fill_rate * (1 + self._rng.uniform(-0.05, 0.05))),
             hit_stop=actual_outcome.hit_stop and self._rng.random() > 0.3,
             hit_target=actual_outcome.hit_target and self._rng.random() > 0.3,
-            hold_duration_hours=actual_outcome.hold_duration_hours * (1 + self._rng.uniform(-0.2, 0.2)),
+            hold_duration_hours=actual_outcome.hold_duration_hours
+            * (1 + self._rng.uniform(-0.2, 0.2)),
         )
 
     def _outcome_based_score(

@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { type PolygonClient, type OptionContract } from "./providers/polygon";
+import type { PolygonClient } from "./providers/polygon";
 
 // ============================================
 // Types
@@ -102,10 +102,10 @@ export const DEFAULT_FILTERS: Record<string, OptionFilterCriteria> = {
     minDte: 30,
     maxDte: 60,
     minDelta: 0.15,
-    maxDelta: 0.30,
+    maxDelta: 0.3,
     minVolume: 100,
     minOpenInterest: 500,
-    maxSpreadPct: 0.10,
+    maxSpreadPct: 0.1,
     minIvPercentile: 50,
   },
 
@@ -113,8 +113,8 @@ export const DEFAULT_FILTERS: Record<string, OptionFilterCriteria> = {
   debitSpread: {
     minDte: 21,
     maxDte: 45,
-    minDelta: 0.30,
-    maxDelta: 0.50,
+    minDelta: 0.3,
+    maxDelta: 0.5,
     minVolume: 50,
     minOpenInterest: 200,
     maxSpreadPct: 0.08,
@@ -126,7 +126,7 @@ export const DEFAULT_FILTERS: Record<string, OptionFilterCriteria> = {
     minDte: 14,
     maxDte: 45,
     minDelta: 0.25,
-    maxDelta: 0.40,
+    maxDelta: 0.4,
     optionType: "call",
     minVolume: 100,
     minOpenInterest: 300,
@@ -137,12 +137,12 @@ export const DEFAULT_FILTERS: Record<string, OptionFilterCriteria> = {
   cashSecuredPut: {
     minDte: 21,
     maxDte: 45,
-    minDelta: 0.20,
+    minDelta: 0.2,
     maxDelta: 0.35,
     optionType: "put",
     minVolume: 100,
     minOpenInterest: 500,
-    maxSpreadPct: 0.10,
+    maxSpreadPct: 0.1,
     minIvPercentile: 40,
   },
 
@@ -150,8 +150,8 @@ export const DEFAULT_FILTERS: Record<string, OptionFilterCriteria> = {
   longOption: {
     minDte: 30,
     maxDte: 90,
-    minDelta: 0.40,
-    maxDelta: 0.60,
+    minDelta: 0.4,
+    maxDelta: 0.6,
     minVolume: 200,
     minOpenInterest: 1000,
     maxSpreadPct: 0.05,
@@ -176,11 +176,11 @@ export interface ScoringWeights {
 }
 
 const DEFAULT_WEIGHTS: ScoringWeights = {
-  liquidity: 0.30,
+  liquidity: 0.3,
   spread: 0.25,
-  delta: 0.20,
+  delta: 0.2,
   iv: 0.15,
-  dte: 0.10,
+  dte: 0.1,
 };
 
 /**
@@ -271,6 +271,9 @@ export class OptionChainScanner {
     greeksProvider?: GreeksProvider
   ): Promise<OptionWithMarketData[]> {
     const filter = DEFAULT_FILTERS[strategy];
+    if (!filter) {
+      throw new Error(`No default filter defined for strategy: ${strategy}`);
+    }
     const candidates = await this.scan(underlying, filter, greeksProvider);
     return candidates.slice(0, topN);
   }
@@ -291,7 +294,9 @@ export class OptionChainScanner {
    */
   private getCached(underlying: string): OptionWithMarketData[] | undefined {
     const entry = this.cache.get(underlying);
-    if (!entry) return undefined;
+    if (!entry) {
+      return undefined;
+    }
 
     // Check TTL
     if (Date.now() - entry.timestamp > this.cacheTtlMs) {
@@ -307,7 +312,9 @@ export class OptionChainScanner {
    */
   async shouldInvalidateCache(underlying: string): Promise<boolean> {
     const entry = this.cache.get(underlying);
-    if (!entry) return false;
+    if (!entry) {
+      return false;
+    }
 
     const currentPrice = await this.getUnderlyingPrice(underlying);
     const priceDiff = Math.abs(currentPrice - entry.underlyingPrice) / entry.underlyingPrice;
@@ -386,15 +393,9 @@ export class OptionChainScanner {
         option.iv = g.iv;
         option.bid = g.bid;
         option.ask = g.ask;
-        option.mid = g.bid !== undefined && g.ask !== undefined
-          ? (g.bid + g.ask) / 2
-          : undefined;
-        option.spread = g.bid !== undefined && g.ask !== undefined
-          ? g.ask - g.bid
-          : undefined;
-        option.spreadPct = option.mid && option.spread
-          ? option.spread / option.mid
-          : undefined;
+        option.mid = g.bid !== undefined && g.ask !== undefined ? (g.bid + g.ask) / 2 : undefined;
+        option.spread = g.bid !== undefined && g.ask !== undefined ? g.ask - g.bid : undefined;
+        option.spreadPct = option.mid && option.spread ? option.spread / option.mid : undefined;
         option.lastPrice = g.lastPrice;
         option.volume = g.volume;
         option.openInterest = g.openInterest;
@@ -431,8 +432,12 @@ export class OptionChainScanner {
    */
   private passesFilter(option: OptionWithMarketData, filter: OptionFilterCriteria): boolean {
     // DTE filter
-    if (filter.minDte !== undefined && option.dte < filter.minDte) return false;
-    if (filter.maxDte !== undefined && option.dte > filter.maxDte) return false;
+    if (filter.minDte !== undefined && option.dte < filter.minDte) {
+      return false;
+    }
+    if (filter.maxDte !== undefined && option.dte > filter.maxDte) {
+      return false;
+    }
 
     // Option type filter
     if (filter.optionType && filter.optionType !== "both" && option.type !== filter.optionType) {
@@ -442,13 +447,19 @@ export class OptionChainScanner {
     // Delta filter (absolute value)
     if (option.delta !== undefined) {
       const absDelta = Math.abs(option.delta);
-      if (filter.minDelta !== undefined && absDelta < filter.minDelta) return false;
-      if (filter.maxDelta !== undefined && absDelta > filter.maxDelta) return false;
+      if (filter.minDelta !== undefined && absDelta < filter.minDelta) {
+        return false;
+      }
+      if (filter.maxDelta !== undefined && absDelta > filter.maxDelta) {
+        return false;
+      }
     }
 
     // Volume filter
     if (filter.minVolume !== undefined) {
-      if (option.volume === undefined || option.volume < filter.minVolume) return false;
+      if (option.volume === undefined || option.volume < filter.minVolume) {
+        return false;
+      }
     }
 
     // Open interest filter
@@ -460,12 +471,16 @@ export class OptionChainScanner {
 
     // Spread percentage filter
     if (filter.maxSpreadPct !== undefined && option.spreadPct !== undefined) {
-      if (option.spreadPct > filter.maxSpreadPct) return false;
+      if (option.spreadPct > filter.maxSpreadPct) {
+        return false;
+      }
     }
 
     // Absolute spread filter
     if (filter.maxSpreadAbs !== undefined && option.spread !== undefined) {
-      if (option.spread > filter.maxSpreadAbs) return false;
+      if (option.spread > filter.maxSpreadAbs) {
+        return false;
+      }
     }
 
     // IV percentile filter (requires external IV ranking)
@@ -522,7 +537,11 @@ export class OptionChainScanner {
     }
 
     // Delta component (closer to target range center is better)
-    if (option.delta !== undefined && filter.minDelta !== undefined && filter.maxDelta !== undefined) {
+    if (
+      option.delta !== undefined &&
+      filter.minDelta !== undefined &&
+      filter.maxDelta !== undefined
+    ) {
       const targetDelta = (filter.minDelta + filter.maxDelta) / 2;
       const deltaDistance = Math.abs(Math.abs(option.delta) - targetDelta);
       const deltaRange = filter.maxDelta - filter.minDelta;
@@ -598,17 +617,28 @@ export function calculateDte(expirationDate: string): number {
  * - Type: C (call) or P (put)
  * - Strike: 00150000 (price * 1000)
  */
-export function parseOptionTicker(ticker: string): {
-  underlying: string;
-  expiration: string;
-  type: OptionType;
-  strike: number;
-} | undefined {
+export function parseOptionTicker(ticker: string):
+  | {
+      underlying: string;
+      expiration: string;
+      type: OptionType;
+      strike: number;
+    }
+  | undefined {
   // Match OCC format
   const match = ticker.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
-  if (!match) return undefined;
+  if (!match) {
+    return undefined;
+  }
 
-  const [, underlying, expStr, typeChar, strikeStr] = match;
+  const underlying = match[1];
+  const expStr = match[2];
+  const typeChar = match[3];
+  const strikeStr = match[4];
+
+  if (!underlying || !expStr || !typeChar || !strikeStr) {
+    return undefined;
+  }
 
   const year = 2000 + Number.parseInt(expStr.slice(0, 2), 10);
   const month = expStr.slice(2, 4);

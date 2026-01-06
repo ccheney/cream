@@ -67,6 +67,24 @@ export {
   VolatilityScaleParamsSchema,
   ZScoreParamsSchema,
 } from "./features";
+// Feature flags configuration
+export {
+  BUILT_IN_FLAGS,
+  type BuiltInFlagId,
+  DEFAULT_FLAGS,
+  type EnvironmentOverride,
+  EnvironmentOverrideSchema,
+  type FeatureFlag,
+  FeatureFlagSchema,
+  type FeatureFlagsConfig,
+  FeatureFlagsConfigSchema,
+  FlagVariantType,
+  getDefaultFlagsConfig,
+  type InstrumentOverride,
+  InstrumentOverrideSchema,
+  mergeFlagsWithDefaults,
+  validateUniqueFlags,
+} from "./flags";
 // Indicators configuration
 export {
   type ATRIndicatorConfig,
@@ -161,21 +179,3 @@ export {
   UniverseSourceSchema,
   UniverseSourceType,
 } from "./universe";
-// Feature flags configuration
-export {
-  BUILT_IN_FLAGS,
-  type BuiltInFlagId,
-  DEFAULT_FLAGS,
-  type EnvironmentOverride,
-  EnvironmentOverrideSchema,
-  type FeatureFlag,
-  FeatureFlagSchema,
-  type FeatureFlagsConfig,
-  FeatureFlagsConfigSchema,
-  FlagVariantType,
-  type InstrumentOverride,
-  InstrumentOverrideSchema,
-  getDefaultFlagsConfig,
-  mergeFlagsWithDefaults,
-  validateUniqueFlags,
-} from "./flags";

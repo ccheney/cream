@@ -80,8 +80,10 @@ export const DEFAULT_TRANSITION_CONFIG: TransitionDetectorConfig = {
  */
 export class RegimeTransitionDetector {
   private states: Map<string, RegimeState> = new Map();
-  private pendingTransitions: Map<string, { regime: RegimeLabel; count: number; confidence: number }> =
-    new Map();
+  private pendingTransitions: Map<
+    string,
+    { regime: RegimeLabel; count: number; confidence: number }
+  > = new Map();
   private config: TransitionDetectorConfig;
 
   constructor(config: TransitionDetectorConfig = DEFAULT_TRANSITION_CONFIG) {

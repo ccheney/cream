@@ -4,28 +4,27 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  EarningsEventPayloadSchema,
-  MacroEventPayloadSchema,
-  NewsEventPayloadSchema,
-  SentimentEventPayloadSchema,
-  MergerAcquisitionPayloadSchema,
   AnalystRatingPayloadSchema,
-  RegulatoryPayloadSchema,
-  DividendPayloadSchema,
-  SplitPayloadSchema,
-  TypedEarningsEventSchema,
-  TypedMacroEventSchema,
-  TypedNewsEventSchema,
-  TypedExternalEventSchema,
-  EventQueryRequestSchema,
-  ExternalEventListSchema,
   createEarningsEvent,
   createMacroEvent,
   createNewsEvent,
+  DividendPayloadSchema,
+  EarningsEventPayloadSchema,
+  EventQueryRequestSchema,
+  ExternalEventListSchema,
+  getEventSurpriseScore,
   isEarningsEvent,
   isMacroEvent,
-  isNewsEvent,
-  getEventSurpriseScore,
+  MacroEventPayloadSchema,
+  MergerAcquisitionPayloadSchema,
+  NewsEventPayloadSchema,
+  RegulatoryPayloadSchema,
+  SentimentEventPayloadSchema,
+  SplitPayloadSchema,
+  TypedEarningsEventSchema,
+  TypedExternalEventSchema,
+  TypedMacroEventSchema,
+  TypedNewsEventSchema,
 } from "./events";
 
 describe("Event Payload Schemas", () => {
@@ -36,7 +35,7 @@ describe("Event Payload Schemas", () => {
         quarter: "Q1",
         year: 2026,
         epsActual: 2.18,
-        epsExpected: 2.10,
+        epsExpected: 2.1,
         epsSurprisePct: 3.81,
         revenueActual: 120000000000,
         revenueExpected: 118000000000,
@@ -337,7 +336,7 @@ describe("Helper Functions", () => {
       const event = createEarningsEvent(
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
-        { symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
+        { symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false }
       );
       expect(event.eventType).toBe("EARNINGS");
       expect(event.relatedInstrumentIds).toEqual(["AAPL"]);
@@ -349,7 +348,7 @@ describe("Helper Functions", () => {
       const event = createMacroEvent(
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
-        { indicatorName: "CPI", value: 3.2, unit: "", country: "US" },
+        { indicatorName: "CPI", value: 3.2, unit: "", country: "US" }
       );
       expect(event.eventType).toBe("MACRO");
       expect(event.relatedInstrumentIds).toEqual([]);
@@ -362,7 +361,7 @@ describe("Helper Functions", () => {
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
         { headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
-        ["AAPL"],
+        ["AAPL"]
       );
       expect(event.eventType).toBe("NEWS");
       expect(event.headline).toBe("Test");
@@ -373,13 +372,13 @@ describe("Helper Functions", () => {
     const earningsEvent = createEarningsEvent(
       "550e8400-e29b-41d4-a716-446655440000",
       "2026-01-05T10:00:00Z",
-      { symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
+      { symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false }
     );
 
     const macroEvent = createMacroEvent(
       "550e8400-e29b-41d4-a716-446655440000",
       "2026-01-05T10:00:00Z",
-      { indicatorName: "CPI", value: 3.2, unit: "", country: "US" },
+      { indicatorName: "CPI", value: 3.2, unit: "", country: "US" }
     );
 
     it("isEarningsEvent should work", () => {
@@ -399,7 +398,7 @@ describe("Helper Functions", () => {
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
         { symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
-        { surpriseScore: 0.5 },
+        { surpriseScore: 0.5 }
       );
       expect(getEventSurpriseScore(event)).toBe(0.5);
     });
@@ -408,7 +407,13 @@ describe("Helper Functions", () => {
       const event = createEarningsEvent(
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
-        { symbol: "AAPL", quarter: "Q1", year: 2026, epsSurprisePct: 25, transcriptAvailable: false },
+        {
+          symbol: "AAPL",
+          quarter: "Q1",
+          year: 2026,
+          epsSurprisePct: 25,
+          transcriptAvailable: false,
+        }
       );
       expect(getEventSurpriseScore(event)).toBe(0.5); // 25/50 = 0.5
     });
@@ -417,7 +422,13 @@ describe("Helper Functions", () => {
       const event = createEarningsEvent(
         "550e8400-e29b-41d4-a716-446655440000",
         "2026-01-05T10:00:00Z",
-        { symbol: "AAPL", quarter: "Q1", year: 2026, epsSurprisePct: 100, transcriptAvailable: false },
+        {
+          symbol: "AAPL",
+          quarter: "Q1",
+          year: 2026,
+          epsSurprisePct: 100,
+          transcriptAvailable: false,
+        }
       );
       expect(getEventSurpriseScore(event)).toBe(1); // Capped at 1
     });

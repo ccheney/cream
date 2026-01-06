@@ -18,10 +18,10 @@
  * 11. persistMemory - Store decision + outcome in HelixDB
  */
 
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import { loadStateStep, LoadStateOutputSchema } from "../steps/loadState";
+import { LoadStateOutputSchema, loadStateStep } from "../steps/loadState";
 
 // ============================================
 // Step Schemas
@@ -100,8 +100,6 @@ const buildSnapshotStep = createStep({
   outputSchema: SnapshotOutputSchema,
   retries: 3,
   execute: async ({ inputData }) => {
-    console.log("[build-snapshot] Building snapshots for universe");
-
     // TODO: Implement actual snapshot building using @cream/marketdata
     return {
       snapshots: {},
@@ -118,8 +116,6 @@ const retrieveMemoryStep = createStep({
   outputSchema: MemoryOutputSchema,
   retries: 2,
   execute: async ({ inputData }) => {
-    console.log("[retrieve-memory] Fetching memories from HelixDB");
-
     // TODO: Implement HelixDB retrieval using @cream/helix
     return {
       similarTrades: [],
@@ -136,8 +132,6 @@ const gatherExternalContextStep = createStep({
   outputSchema: ExternalContextSchema,
   retries: 2,
   execute: async ({ inputData }) => {
-    console.log("[gather-external-context] Fetching external context");
-
     // TODO: Implement FMP/Alpha Vantage integration
     return {
       news: [],
@@ -154,8 +148,6 @@ const runAnalystsStep = createStep({
   outputSchema: AnalystOutputSchema,
   retries: 2,
   execute: async ({ inputData }) => {
-    console.log("[run-analysts] Running analyst agents");
-
     // TODO: Implement Mastra agent calls
     return {
       technical: { signals: [] },
@@ -172,8 +164,6 @@ const runDebateStep = createStep({
   outputSchema: DebateOutputSchema,
   retries: 2,
   execute: async ({ inputData }) => {
-    console.log("[run-debate] Running debate agents");
-
     // TODO: Implement debate agent calls
     return {
       bullishCase: {},
@@ -190,8 +180,6 @@ const synthesizePlanStep = createStep({
   outputSchema: DecisionPlanSchema,
   retries: 2,
   execute: async ({ inputData }) => {
-    console.log("[synthesize-plan] Synthesizing decision plan");
-
     // TODO: Implement trader agent synthesis
     return {
       cycleId: crypto.randomUUID(),
@@ -208,8 +196,6 @@ const validateRiskStep = createStep({
   outputSchema: ValidationResultSchema,
   retries: 1,
   execute: async ({ inputData }) => {
-    console.log("[validate-risk] Validating risk constraints");
-
     // TODO: Implement risk validation via Rust execution engine
     return {
       approved: true,
@@ -225,8 +211,6 @@ const criticReviewStep = createStep({
   outputSchema: ValidationResultSchema,
   retries: 1,
   execute: async ({ inputData }) => {
-    console.log("[critic-review] Critic reviewing plan");
-
     // TODO: Implement critic agent review
     return inputData;
   },
@@ -239,10 +223,7 @@ const executeOrdersStep = createStep({
   outputSchema: ExecutionResultSchema,
   retries: 1,
   execute: async ({ inputData }) => {
-    console.log("[execute-orders] Executing orders");
-
     if (!inputData.approved) {
-      console.log("[execute-orders] Plan not approved, skipping execution");
       return {
         ordersSubmitted: 0,
         ordersRejected: 0,
@@ -269,8 +250,6 @@ const persistMemoryStep = createStep({
   }),
   retries: 3,
   execute: async ({ inputData }) => {
-    console.log("[persist-memory] Persisting to HelixDB");
-
     // TODO: Implement HelixDB persistence
     return {
       persisted: true,

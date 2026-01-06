@@ -5,35 +5,32 @@
  * Raw Feed → Parse → Extract → Score → Link → Store
  */
 
-import { randomUUID } from "crypto";
-import type {
-  ContentSourceType,
-  ExtractedEvent,
-  ExtractionResult,
-  ContentScores,
-  ParsedNews,
-  ParsedTranscript,
-  ParsedMacroRelease,
-  FMPNewsArticle,
-  FMPTranscript,
-} from "./types.js";
-import { parseNewsArticles, parseTranscript } from "./parsers/index.js";
-import type {
-  AlphaVantageEconomicIndicator,
-  FMPEconomicEvent,
-} from "./parsers/macroParser.js";
+import { randomUUID } from "node:crypto";
+import { ExtractionClient, type ExtractionClientConfig } from "./extraction/index.js";
+import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
 import {
   parseAlphaVantageIndicator,
   parseFMPEconomicEvents,
+  parseNewsArticles,
+  parseTranscript,
 } from "./parsers/index.js";
-import { ExtractionClient, type ExtractionClientConfig } from "./extraction/index.js";
+import type { AlphaVantageEconomicIndicator, FMPEconomicEvent } from "./parsers/macroParser.js";
 import {
-  computeSentimentFromExtraction,
   computeImportanceScore,
+  computeSentimentFromExtraction,
   computeSurpriseFromExtraction,
   type MetricExpectation,
 } from "./scoring/index.js";
-import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
+import type {
+  ContentScores,
+  ContentSourceType,
+  ExtractedEvent,
+  ExtractionResult,
+  FMPNewsArticle,
+  FMPTranscript,
+  ParsedMacroRelease,
+  ParsedTranscript,
+} from "./types.js";
 
 /**
  * Pipeline configuration
@@ -94,7 +91,7 @@ export class ExtractionPipeline {
         source: p.source,
         symbols: p.symbols,
       })),
-      startTime,
+      startTime
     );
   }
 
@@ -115,7 +112,7 @@ export class ExtractionPipeline {
         source: "FMP",
         symbols: [p.symbol],
       })),
-      startTime,
+      startTime
     );
   }
 
@@ -123,7 +120,7 @@ export class ExtractionPipeline {
    * Process macro releases through the pipeline
    */
   async processMacroReleases(
-    releases: AlphaVantageEconomicIndicator | FMPEconomicEvent[],
+    releases: AlphaVantageEconomicIndicator | FMPEconomicEvent[]
   ): Promise<PipelineResult> {
     const startTime = Date.now();
     let parsed: ParsedMacroRelease[];
@@ -142,7 +139,7 @@ export class ExtractionPipeline {
         source: p.source,
         symbols: undefined,
       })),
-      startTime,
+      startTime
     );
   }
 
@@ -153,8 +150,8 @@ export class ExtractionPipeline {
     content: string,
     sourceType: ContentSourceType,
     eventTime: Date = new Date(),
-    source: string = "unknown",
-    symbols?: string[],
+    source = "unknown",
+    symbols?: string[]
   ): Promise<ExtractedEvent | null> {
     try {
       // Stage 1: Extract using Claude
@@ -167,10 +164,7 @@ export class ExtractionPipeline {
 
       // Stage 3: Link entities
       const links = await this.entityLinker.linkEntities(extraction.entities);
-      const relatedInstrumentIds = [
-        ...EntityLinker.getTickers(links),
-        ...(symbols ?? []),
-      ];
+      const relatedInstrumentIds = [...EntityLinker.getTickers(links), ...(symbols ?? [])];
 
       // Stage 4: Create event
       return {
@@ -184,8 +178,7 @@ export class ExtractionPipeline {
         originalContent: content,
         processedAt: new Date(),
       };
-    } catch (error) {
-      console.error("Pipeline processing error:", error);
+    } catch (_error) {
       return null;
     }
   }
@@ -201,7 +194,7 @@ export class ExtractionPipeline {
       source: string;
       symbols?: string[];
     }>,
-    startTime: number,
+    startTime: number
   ): Promise<PipelineResult> {
     const events: ExtractedEvent[] = [];
     const errors: Array<{ content: string; error: string }> = [];
@@ -213,7 +206,7 @@ export class ExtractionPipeline {
           item.sourceType,
           item.eventTime,
           item.source,
-          item.symbols,
+          item.symbols
         );
         if (event) {
           events.push(event);
@@ -248,7 +241,7 @@ export class ExtractionPipeline {
     extraction: ExtractionResult,
     sourceType: ContentSourceType,
     source: string,
-    eventTime: Date,
+    eventTime: Date
   ): ContentScores {
     const sentimentScore = computeSentimentFromExtraction(extraction);
     const importanceScore = computeImportanceScore(
@@ -256,12 +249,9 @@ export class ExtractionPipeline {
       sourceType,
       source,
       eventTime,
-      this.config.targetSymbols ?? [],
+      this.config.targetSymbols ?? []
     );
-    const surpriseScore = computeSurpriseFromExtraction(
-      extraction,
-      this.config.expectations ?? [],
-    );
+    const surpriseScore = computeSurpriseFromExtraction(extraction, this.config.expectations ?? []);
 
     return {
       sentimentScore,

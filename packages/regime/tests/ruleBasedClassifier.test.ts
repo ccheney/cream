@@ -338,12 +338,16 @@ describe("Rule-Based Regime Classifier", () => {
       const weakCandles = createTrendingCandles(100, "up", 60);
       // Make it weaker by reducing the price change
       for (let i = 30; i < 60; i++) {
+        const candle = weakCandles[i];
+        if (!candle) {
+          continue;
+        }
         weakCandles[i] = createCandle(
-          weakCandles[i].close * 0.99,
+          candle.close * 0.99,
           undefined,
           undefined,
           1000000,
-          weakCandles[i].timestamp
+          candle.timestamp
         );
       }
       const weakResult = classifyRegime({ candles: weakCandles });
@@ -396,10 +400,14 @@ describe("Rule-Based Regime Classifier", () => {
       const crashCandles = createTrendingCandles(100, "down", 20);
       // Make the crash more extreme
       for (let i = 0; i < crashCandles.length; i++) {
+        const candle = crashCandles[i];
+        if (!candle) {
+          continue;
+        }
         crashCandles[i] = createCandle(
-          crashCandles[i].close * 0.8,
-          crashCandles[i].high * 0.85,
-          crashCandles[i].low * 0.75,
+          candle.close * 0.8,
+          candle.high * 0.85,
+          candle.low * 0.75,
           3000000,
           Date.now() + (40 + i) * 3600000
         );

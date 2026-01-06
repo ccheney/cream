@@ -5,7 +5,7 @@
  */
 
 export {
-  EntityLinker,
   createEntityLinker,
+  EntityLinker,
   type EntityLinkerConfig,
 } from "./entityLinker.js";

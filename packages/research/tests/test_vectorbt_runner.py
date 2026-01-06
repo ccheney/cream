@@ -22,9 +22,7 @@ from research.vectorbt_runner import (
     StrategyBase,
     VectorbtRunner,
     create_price_dataframe,
-    extract_metrics,
 )
-
 
 # ============================================
 # Fixtures
@@ -65,7 +63,7 @@ def trending_prices() -> pd.DataFrame:
     n = 500
 
     # Upward trend with noise
-    trend = np.linspace(0, 0.5, n)  # 50% total growth
+    np.linspace(0, 0.5, n)  # 50% total growth
     noise = np.random.normal(0, 0.01, n)
     returns = 0.001 + noise  # Small positive drift
     close = 100 * np.cumprod(1 + returns)
@@ -218,12 +216,8 @@ class TestResearchFinding:
             finding_id=str(uuid.uuid4()),
             setup_name="RSI_Test",
             description="RSI mean reversion strategy",
-            entry_conditions=[
-                StrategyCondition(indicator="rsi_14", operator="<", value=30)
-            ],
-            exit_conditions=[
-                StrategyCondition(indicator="rsi_14", operator=">", value=70)
-            ],
+            entry_conditions=[StrategyCondition(indicator="rsi_14", operator="<", value=30)],
+            exit_conditions=[StrategyCondition(indicator="rsi_14", operator=">", value=70)],
             parameters={"rsi_period": 14, "entry_threshold": 30},
             metrics=metrics,
         )
@@ -267,9 +261,7 @@ class TestResearchFinding:
             finding_id="test-123",
             setup_name="RSI_Test",
             description="Test strategy",
-            entry_conditions=[
-                StrategyCondition(indicator="rsi_14", operator="<", value=30)
-            ],
+            entry_conditions=[StrategyCondition(indicator="rsi_14", operator="<", value=30)],
             exit_conditions=[],
             parameters={"rsi_period": 14},
             metrics=metrics,

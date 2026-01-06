@@ -237,6 +237,7 @@ export const AnimatedNumber = memo(function AnimatedNumber({
     // Update display value
     setDisplayValue(value);
     previousValueRef.current = value;
+    return undefined;
   }, [value, shouldAnimate]);
 
   // Format the display value

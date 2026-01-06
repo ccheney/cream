@@ -216,7 +216,7 @@ def implied_volatility_bisection(
         )
 
     # Bisection iteration
-    for iteration in range(config.max_iterations):
+    for _iteration in range(config.max_iterations):
         sigma_mid = (sigma_low + sigma_high) / 2.0
         price_mid = price_func(S, K, T, r, sigma_mid, q)
 
@@ -365,4 +365,4 @@ def compute_implied_volatility(
         errors.append(f"Bisection: {e}")
 
     # All methods failed
-    raise ImpliedVolatilityError(f"All IV methods failed:\n" + "\n".join(errors))
+    raise ImpliedVolatilityError("All IV methods failed:\n" + "\n".join(errors))

@@ -49,9 +49,9 @@ impl Default for ReconciliationConfig {
         Self {
             on_startup: true,
             on_reconnect: true,
-            periodic_interval_secs: 300, // 5 minutes
+            periodic_interval_secs: 300,  // 5 minutes
             protection_window_secs: 1800, // 30 minutes
-            max_order_age_secs: 86400, // 24 hours
+            max_order_age_secs: 86400,    // 24 hours
             position_qty_tolerance: Decimal::ZERO,
             position_price_tolerance_pct: Decimal::new(1, 2), // 1%
             on_critical_discrepancy: CriticalDiscrepancyAction::Halt,
@@ -319,8 +319,11 @@ impl ReconciliationManager {
             .map(|o| (o.broker_order_id.as_str(), o))
             .collect();
 
-        let broker_order_ids: HashSet<&str> =
-            broker_state.orders.iter().map(|o| o.order_id.as_str()).collect();
+        let broker_order_ids: HashSet<&str> = broker_state
+            .orders
+            .iter()
+            .map(|o| o.order_id.as_str())
+            .collect();
 
         // Phase 1: Compare orders
         let orders_compared = local_orders.len() + broker_state.orders.len();
@@ -570,17 +573,13 @@ impl ReconciliationManager {
         match local {
             OrderStatus::New => broker_lower == "pending_new" || broker_lower == "new",
             OrderStatus::Accepted => {
-                broker_lower == "accepted"
-                    || broker_lower == "new"
-                    || broker_lower == "pending_new"
+                broker_lower == "accepted" || broker_lower == "new" || broker_lower == "pending_new"
             }
             OrderStatus::PartiallyFilled => {
                 broker_lower == "partially_filled" || broker_lower == "partially filled"
             }
             OrderStatus::Filled => broker_lower == "filled",
-            OrderStatus::Canceled => {
-                broker_lower == "canceled" || broker_lower == "cancelled"
-            }
+            OrderStatus::Canceled => broker_lower == "canceled" || broker_lower == "cancelled",
             OrderStatus::Rejected => broker_lower == "rejected",
             OrderStatus::Expired => broker_lower == "expired",
         }
@@ -591,9 +590,7 @@ impl ReconciliationManager {
         let now = chrono::Utc::now();
         if let Ok(created) = chrono::DateTime::parse_from_rfc3339(created_at) {
             let created_utc = created.with_timezone(&chrono::Utc);
-            now.signed_duration_since(created_utc)
-                .num_seconds()
-                .max(0) as u64
+            now.signed_duration_since(created_utc).num_seconds().max(0) as u64
         } else {
             0
         }
@@ -601,10 +598,7 @@ impl ReconciliationManager {
 
     /// Get time since last reconciliation.
     pub async fn time_since_last_reconciliation(&self) -> Option<Duration> {
-        self.last_reconciliation
-            .read()
-            .await
-            .map(|t| t.elapsed())
+        self.last_reconciliation.read().await.map(|t| t.elapsed())
     }
 
     /// Check if periodic reconciliation is due.
@@ -614,9 +608,7 @@ impl ReconciliationManager {
         }
 
         match *self.last_reconciliation.read().await {
-            Some(last) => {
-                last.elapsed() >= Duration::from_secs(self.config.periodic_interval_secs)
-            }
+            Some(last) => last.elapsed() >= Duration::from_secs(self.config.periodic_interval_secs),
             None => true,
         }
     }
@@ -638,7 +630,12 @@ mod tests {
         }
     }
 
-    fn make_broker_order(id: &str, symbol: &str, status: &str, age_mins: i64) -> BrokerOrderSnapshot {
+    fn make_broker_order(
+        id: &str,
+        symbol: &str,
+        status: &str,
+        age_mins: i64,
+    ) -> BrokerOrderSnapshot {
         let created = chrono::Utc::now() - chrono::Duration::minutes(age_mins);
         BrokerOrderSnapshot {
             order_id: id.to_string(),
@@ -692,7 +689,10 @@ mod tests {
         let report = manager.reconcile(broker_state).await;
 
         assert_eq!(report.orphaned_orders.len(), 1);
-        assert_eq!(report.orphaned_orders[0].orphan_type, OrphanType::UnknownInBroker);
+        assert_eq!(
+            report.orphaned_orders[0].orphan_type,
+            OrphanType::UnknownInBroker
+        );
     }
 
     #[tokio::test]
@@ -748,7 +748,10 @@ mod tests {
         let report = manager.reconcile(broker_state).await;
 
         assert_eq!(report.orphaned_orders.len(), 1);
-        assert_eq!(report.orphaned_orders[0].orphan_type, OrphanType::StateMismatch);
+        assert_eq!(
+            report.orphaned_orders[0].orphan_type,
+            OrphanType::StateMismatch
+        );
         assert!(!report.passed); // Critical due to filled mismatch
     }
 

@@ -17,7 +17,6 @@ import {
   MacroIndicatorsSchema,
   NewsContextSchema,
   NewsItemSchema,
-  NumericScoresSchema,
   SentimentContextSchema,
   SentimentDirection,
   SocialSentimentSchema,
@@ -91,7 +90,7 @@ describe("ExternalEventSchema", () => {
     eventId: "evt-001",
     eventType: "EARNINGS" as const,
     eventTime: "2026-01-05T16:00:00Z",
-    payload: { eps: 1.25, estimate: 1.20 },
+    payload: { eps: 1.25, estimate: 1.2 },
     relatedInstrumentIds: ["AAPL"],
     source: "FMP",
     headline: "Apple Q4 Earnings Beat Estimates",
@@ -246,7 +245,7 @@ describe("EarningsDataSchema", () => {
       epsSurprise: 4.2,
       nextEarningsDate: "2026-02-01",
       daysToEarnings: 27,
-      epsEstimate: 1.30,
+      epsEstimate: 1.3,
     });
     expect(result.success).toBe(true);
   });
@@ -313,7 +312,7 @@ describe("MacroIndicatorsSchema", () => {
     const result = MacroIndicatorsSchema.safeParse({
       vix: 18.5,
       treasury10y: 4.25,
-      treasury2y: 4.80,
+      treasury2y: 4.8,
       fedFundsRate: 5.25,
       dxy: 103.5,
       crudeOil: 72.5,
@@ -423,9 +422,7 @@ describe("hasExternalContext", () => {
   test("returns true if extractedEvents present", () => {
     const ctx = {
       numericScores: {},
-      extractedEvents: [
-        { eventId: "1", eventType: "NEWS" as const, payload: {} },
-      ],
+      extractedEvents: [{ eventId: "1", eventType: "NEWS" as const, payload: {} }],
     };
     expect(hasExternalContext(ctx)).toBe(true);
   });

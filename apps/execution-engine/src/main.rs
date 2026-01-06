@@ -61,8 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Initialize tracing first (so we can log everything else)
-    let tracing_config = TracingConfig::default()
-        .service_name("execution-engine");
+    let tracing_config = TracingConfig::default().service_name("execution-engine");
     let _tracing_guard = match init_tracing(&tracing_config) {
         Ok(guard) => guard,
         Err(e) => {
@@ -92,7 +91,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
 
     // Parse environment from config
-    let cream_env = config.environment.mode.parse::<Environment>()
+    let cream_env = config
+        .environment
+        .mode
+        .parse::<Environment>()
         .map_err(|e| format!("Invalid environment mode: {e}"))?;
 
     // Create Alpaca adapter
@@ -108,11 +110,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = create_router(execution_server);
 
     // Build server address
-    let addr: SocketAddr = format!(
-        "{}:{}",
-        config.server.bind_address,
-        config.server.grpc_port
-    ).parse()?;
+    let addr: SocketAddr =
+        format!("{}:{}", config.server.bind_address, config.server.grpc_port).parse()?;
 
     tracing::info!(%addr, "HTTP server starting");
     tracing::info!("Endpoints:");
@@ -123,8 +122,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start server with graceful shutdown
     let listener = TcpListener::bind(addr).await?;
-    let server = axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(shutdown_tx.clone()));
+    let server =
+        axum::serve(listener, app).with_graceful_shutdown(shutdown_signal(shutdown_tx.clone()));
 
     // Spawn server task
     let server_handle = tokio::spawn(async move {
@@ -208,5 +207,8 @@ async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
     // Notify all listeners about shutdown
     let _ = shutdown_tx.send(());
 
-    tracing::info!(timeout_secs = SHUTDOWN_TIMEOUT.as_secs(), "Graceful shutdown started");
+    tracing::info!(
+        timeout_secs = SHUTDOWN_TIMEOUT.as_secs(),
+        "Graceful shutdown started"
+    );
 }

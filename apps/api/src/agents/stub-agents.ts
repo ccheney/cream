@@ -9,11 +9,7 @@
  * Real agents will be integrated in Phase 8.
  */
 
-import {
-  AGENT_CONFIGS,
-  AGENT_PROMPTS,
-  type AgentType,
-} from "@cream/mastra-kit";
+import { AGENT_CONFIGS, AGENT_PROMPTS, type AgentType } from "@cream/mastra-kit";
 
 // ============================================
 // Stub Agent Configuration
@@ -86,4 +82,3 @@ export const agents = {
 };
 
 export type AgentRegistry = typeof agents;
-

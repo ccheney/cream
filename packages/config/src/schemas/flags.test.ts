@@ -10,8 +10,8 @@ import {
   FeatureFlagSchema,
   FeatureFlagsConfigSchema,
   FlagVariantType,
-  InstrumentOverrideSchema,
   getDefaultFlagsConfig,
+  InstrumentOverrideSchema,
   mergeFlagsWithDefaults,
   validateUniqueFlags,
 } from "./flags.js";
@@ -265,9 +265,7 @@ describe("FeatureFlagSchema", () => {
         id: "test_flag",
         type: "boolean",
         default_value: false,
-        instrument_overrides: [
-          { instruments: ["AAPL", "GOOGL"], value: true },
-        ],
+        instrument_overrides: [{ instruments: ["AAPL", "GOOGL"], value: true }],
       });
       expect(flag.instrument_overrides).toHaveLength(1);
     });
@@ -396,9 +394,7 @@ describe("Utility Functions", () => {
       ];
       const merged = mergeFlagsWithDefaults(userFlags);
 
-      const optionsFlag = merged.find(
-        (f) => f.id === "enable_options_trading"
-      );
+      const optionsFlag = merged.find((f) => f.id === "enable_options_trading");
       expect(optionsFlag?.default_value).toBe(true);
     });
 
@@ -423,16 +419,40 @@ describe("Utility Functions", () => {
   describe("validateUniqueFlags", () => {
     test("returns true for unique flags", () => {
       const flags = [
-        { id: "flag_a", type: "boolean" as const, default_value: true, allow_env_override: true, deprecated: false },
-        { id: "flag_b", type: "boolean" as const, default_value: false, allow_env_override: true, deprecated: false },
+        {
+          id: "flag_a",
+          type: "boolean" as const,
+          default_value: true,
+          allow_env_override: true,
+          deprecated: false,
+        },
+        {
+          id: "flag_b",
+          type: "boolean" as const,
+          default_value: false,
+          allow_env_override: true,
+          deprecated: false,
+        },
       ];
       expect(validateUniqueFlags(flags)).toBe(true);
     });
 
     test("returns false for duplicate flags", () => {
       const flags = [
-        { id: "flag_a", type: "boolean" as const, default_value: true, allow_env_override: true, deprecated: false },
-        { id: "flag_a", type: "boolean" as const, default_value: false, allow_env_override: true, deprecated: false },
+        {
+          id: "flag_a",
+          type: "boolean" as const,
+          default_value: true,
+          allow_env_override: true,
+          deprecated: false,
+        },
+        {
+          id: "flag_a",
+          type: "boolean" as const,
+          default_value: false,
+          allow_env_override: true,
+          deprecated: false,
+        },
       ];
       expect(validateUniqueFlags(flags)).toBe(false);
     });
@@ -471,9 +491,7 @@ describe("Real-World Configurations", () => {
           description: "Enable high-volatility strategy for select instruments",
           type: "boolean",
           default_value: false,
-          instrument_overrides: [
-            { instruments: ["TSLA", "NVDA", "AMD"], value: true },
-          ],
+          instrument_overrides: [{ instruments: ["TSLA", "NVDA", "AMD"], value: true }],
         },
       ],
     });

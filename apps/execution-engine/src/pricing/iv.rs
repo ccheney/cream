@@ -22,7 +22,9 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum IvError {
     /// Convergence failed after max iterations.
-    #[error("IV solver failed to converge after {iterations} iterations (last error: {last_error:.6})")]
+    #[error(
+        "IV solver failed to converge after {iterations} iterations (last error: {last_error:.6})"
+    )]
     ConvergenceFailed {
         /// Number of iterations attempted.
         iterations: u32,
@@ -479,7 +481,9 @@ mod tests {
         let true_iv = 0.25;
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Call).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Call)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -497,7 +501,9 @@ mod tests {
         let true_iv = 0.30;
 
         let market_price = bs_put(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Put).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Put)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -515,7 +521,9 @@ mod tests {
         let true_iv = 0.35;
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Call).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Call)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -533,7 +541,9 @@ mod tests {
         let true_iv = 0.28;
 
         let market_price = bs_put(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Put).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Put)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -593,7 +603,9 @@ mod tests {
         let true_iv = 1.50; // 150% IV
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Call).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Call)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.02));
     }
@@ -611,7 +623,9 @@ mod tests {
         let true_iv = 0.08; // 8% IV
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver.solve(market_price, s, k, t, r, q, OptionKind::Call).unwrap();
+        let computed_iv = solver
+            .solve(market_price, s, k, t, r, q, OptionKind::Call)
+            .unwrap();
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }

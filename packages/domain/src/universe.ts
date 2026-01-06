@@ -17,25 +17,13 @@ import { Iso8601Schema } from "./time";
 /**
  * Type of universe source
  */
-export const UniverseSourceType = z.enum([
-  "static",
-  "index",
-  "etf_holdings",
-  "screener",
-]);
+export const UniverseSourceType = z.enum(["static", "index", "etf_holdings", "screener"]);
 export type UniverseSourceType = z.infer<typeof UniverseSourceType>;
 
 /**
  * Index type for index-based universe sources
  */
-export const IndexType = z.enum([
-  "SP500",
-  "NASDAQ100",
-  "DOW30",
-  "RUSSELL2000",
-  "SP400",
-  "SP600",
-]);
+export const IndexType = z.enum(["SP500", "NASDAQ100", "DOW30", "RUSSELL2000", "SP400", "SP600"]);
 export type IndexType = z.infer<typeof IndexType>;
 
 /**
@@ -293,8 +281,12 @@ export function validateUniverseConfig(config: unknown): UniverseConfig {
  */
 export function isReasonableAttrition(stats: FilterStats): boolean {
   // Should have some candidates at each stage
-  if (stats.beforeFilters === 0) return false;
-  if (stats.final === 0) return false;
+  if (stats.beforeFilters === 0) {
+    return false;
+  }
+  if (stats.final === 0) {
+    return false;
+  }
 
   // Attrition should not be extreme (>90% loss at any stage)
   const liquidity = stats.afterLiquidity / stats.beforeFilters;

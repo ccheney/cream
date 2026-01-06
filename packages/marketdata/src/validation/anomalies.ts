@@ -69,12 +69,16 @@ export interface AnomalyDetectionResult {
 // ============================================
 
 function calculateMean(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 function calculateStdDev(values: number[], mean?: number): number {
-  if (values.length < 2) return 0;
+  if (values.length < 2) {
+    return 0;
+  }
   const m = mean ?? calculateMean(values);
   const squaredDiffs = values.map((v) => (v - m) ** 2);
   const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
@@ -82,7 +86,9 @@ function calculateStdDev(values: number[], mean?: number): number {
 }
 
 function zScore(value: number, mean: number, std: number): number {
-  if (std === 0) return 0;
+  if (std === 0) {
+    return 0;
+  }
   return (value - mean) / std;
 }
 
@@ -312,12 +318,13 @@ export function detectAllAnomalies(
   allAnomalies.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   return {
-    symbol: candles[0]!.symbol,
+    symbol: candles[0]?.symbol ?? "",
     anomalies: allAnomalies,
     hasAnomalies: allAnomalies.length > 0,
     volumeAnomalies: volumeAnomalies.length,
     priceAnomalies: priceAnomalies.length,
-    flashCrashes: flashAnomalies.filter((a) => a.type === "flash_crash" || a.type === "flash_rally").length,
+    flashCrashes: flashAnomalies.filter((a) => a.type === "flash_crash" || a.type === "flash_rally")
+      .length,
   };
 }
 

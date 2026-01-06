@@ -47,11 +47,26 @@ export {
   toJson,
   withTransaction,
 } from "./base.js";
+// Market data repositories (migration 003)
+export {
+  type Candle,
+  type CandleInsert,
+  CandlesRepository,
+  type Timeframe,
+  TimeframeSchema,
+} from "./candles.js";
 export {
   type ConfigVersion,
   ConfigVersionsRepository,
   type CreateConfigVersionInput,
 } from "./config-versions.js";
+export {
+  type ActionType,
+  ActionTypeSchema,
+  type CorporateAction,
+  type CorporateActionInsert,
+  CorporateActionsRepository,
+} from "./corporate-actions.js";
 // Repositories
 export {
   type CreateDecisionInput,
@@ -62,6 +77,11 @@ export {
   type DecisionStatus,
   DecisionsRepository,
 } from "./decisions.js";
+export {
+  type Feature,
+  type FeatureInsert,
+  FeaturesRepository,
+} from "./features.js";
 export {
   type CreateOrderInput,
   type Order as OrderEntity,
@@ -86,27 +106,6 @@ export {
   type PositionStatus,
   PositionsRepository,
 } from "./positions.js";
-
-// Market data repositories (migration 003)
-export {
-  type Candle,
-  type CandleInsert,
-  CandlesRepository,
-  type Timeframe,
-  TimeframeSchema,
-} from "./candles.js";
-export {
-  type ActionType,
-  ActionTypeSchema,
-  type CorporateAction,
-  type CorporateActionInsert,
-  CorporateActionsRepository,
-} from "./corporate-actions.js";
-export {
-  type Feature,
-  type FeatureInsert,
-  FeaturesRepository,
-} from "./features.js";
 export {
   MARKET_SYMBOL,
   type RegimeLabel,
@@ -117,14 +116,6 @@ export {
   type RegimeType,
   RegimeTypeSchema,
 } from "./regime-labels.js";
-export {
-  type SourceType,
-  SourceTypeSchema,
-  type UniverseCache,
-  type UniverseCacheInsert,
-  UniverseCacheRepository,
-} from "./universe-cache.js";
-
 // Thesis state management (migration 004)
 export {
   type CloseReason,
@@ -138,3 +129,10 @@ export {
   type ThesisStateHistoryEntry,
   ThesisStateRepository,
 } from "./thesis-state.js";
+export {
+  type SourceType,
+  SourceTypeSchema,
+  type UniverseCache,
+  type UniverseCacheInsert,
+  UniverseCacheRepository,
+} from "./universe-cache.js";

@@ -184,7 +184,8 @@ export function isMarketOpen(
   const totalMinutes = hour * 60 + minute;
 
   // Get applicable hours
-  const hours = includeExtended && config.extendedHours ? config.extendedHours : config.regularHours;
+  const hours =
+    includeExtended && config.extendedHours ? config.extendedHours : config.regularHours;
 
   const openMinutes = hours.open.hour * 60 + hours.open.minute;
   let closeMinutes = hours.close.hour * 60 + hours.close.minute;
@@ -240,7 +241,11 @@ export function getPreviousTradingDay(date: Date, config = DEFAULT_US_CALENDAR):
 /**
  * Calculate trading days between two dates (exclusive of start, inclusive of end).
  */
-export function getTradingDaysBetween(start: Date, end: Date, config = DEFAULT_US_CALENDAR): number {
+export function getTradingDaysBetween(
+  start: Date,
+  end: Date,
+  config = DEFAULT_US_CALENDAR
+): number {
   let count = 0;
   const current = new Date(start);
   current.setDate(current.getDate() + 1);
@@ -263,7 +268,11 @@ export function getTradingDaysBetween(start: Date, end: Date, config = DEFAULT_U
  * @param config - Calendar configuration
  * @returns true if gap is expected due to non-trading period
  */
-export function isExpectedGap(timestamp1: string, timestamp2: string, config = DEFAULT_US_CALENDAR): boolean {
+export function isExpectedGap(
+  timestamp1: string,
+  timestamp2: string,
+  config = DEFAULT_US_CALENDAR
+): boolean {
   const date1 = new Date(timestamp1);
   const date2 = new Date(timestamp2);
 
@@ -286,8 +295,12 @@ export function isExpectedGap(timestamp1: string, timestamp2: string, config = D
   }
 
   // Same day - check if gap crosses market close
-  const etTime1 = new Date(date1.toLocaleString("en-US", { timeZone: config.regularHours.timezone }));
-  const etTime2 = new Date(date2.toLocaleString("en-US", { timeZone: config.regularHours.timezone }));
+  const etTime1 = new Date(
+    date1.toLocaleString("en-US", { timeZone: config.regularHours.timezone })
+  );
+  const etTime2 = new Date(
+    date2.toLocaleString("en-US", { timeZone: config.regularHours.timezone })
+  );
 
   const closeMinutes = config.regularHours.close.hour * 60 + config.regularHours.close.minute;
   const openMinutes = config.regularHours.open.hour * 60 + config.regularHours.open.minute;

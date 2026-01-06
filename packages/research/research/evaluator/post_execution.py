@@ -242,9 +242,7 @@ class PostExecutionEvaluator:
         attribution = self._attribute_returns(outcome, market_data)
 
         # Compute overall outcome score
-        outcome_score_value = self._compute_outcome_score(
-            outcome, execution_quality, attribution
-        )
+        outcome_score_value = self._compute_outcome_score(outcome, execution_quality, attribution)
 
         # Generate execution details
         execution_details = self._compute_execution_details(outcome, market_data)
@@ -289,10 +287,7 @@ class PostExecutionEvaluator:
         fill_score = outcome.fill_rate * 100.0
 
         # Weighted combination
-        return (
-            slippage_score * self.SLIPPAGE_WEIGHT
-            + fill_score * self.FILL_WEIGHT
-        )
+        return slippage_score * self.SLIPPAGE_WEIGHT + fill_score * self.FILL_WEIGHT
 
     def _attribute_returns(
         self,
@@ -314,19 +309,25 @@ class PostExecutionEvaluator:
         market_contribution = market_data.benchmark_return_during_trade * outcome.beta_exposure
 
         # Sector contribution: excess sector return over benchmark
-        sector_excess = market_data.sector_return_during_trade - market_data.benchmark_return_during_trade
+        sector_excess = (
+            market_data.sector_return_during_trade - market_data.benchmark_return_during_trade
+        )
         sector_contribution = sector_excess * outcome.beta_exposure
 
         # Timing contribution: entry/exit timing vs VWAP
         if market_data.entry_vwap > 0 and market_data.entry_price > 0:
             # Positive means we got worse price (for long)
-            entry_timing_pct = (market_data.entry_price - market_data.entry_vwap) / market_data.entry_vwap
+            entry_timing_pct = (
+                market_data.entry_price - market_data.entry_vwap
+            ) / market_data.entry_vwap
         else:
             entry_timing_pct = 0.0
 
         if market_data.exit_vwap > 0 and market_data.exit_price > 0:
             # Positive means we got better price (for long exit)
-            exit_timing_pct = (market_data.exit_price - market_data.exit_vwap) / market_data.exit_vwap
+            exit_timing_pct = (
+                market_data.exit_price - market_data.exit_vwap
+            ) / market_data.exit_vwap
         else:
             exit_timing_pct = 0.0
 
@@ -428,11 +429,13 @@ class PostExecutionEvaluator:
             "fill_rate": outcome.fill_rate,
             "entry_vs_vwap_pct": (
                 (market_data.entry_price - market_data.entry_vwap) / market_data.entry_vwap
-                if market_data.entry_vwap > 0 else 0.0
+                if market_data.entry_vwap > 0
+                else 0.0
             ),
             "exit_vs_vwap_pct": (
                 (market_data.exit_price - market_data.exit_vwap) / market_data.exit_vwap
-                if market_data.exit_vwap > 0 else 0.0
+                if market_data.exit_vwap > 0
+                else 0.0
             ),
             "benchmark_return": market_data.benchmark_return_during_trade,
             "beta_exposure": outcome.beta_exposure,
@@ -464,17 +467,23 @@ class PostExecutionEvaluator:
 
         # Slippage notes
         if outcome.total_slippage_bps > self.expected_slippage_bps * 2:
-            notes.append(f"High slippage ({outcome.total_slippage_bps:.1f} bps vs {self.expected_slippage_bps:.1f} expected)")
+            notes.append(
+                f"High slippage ({outcome.total_slippage_bps:.1f} bps vs {self.expected_slippage_bps:.1f} expected)"
+            )
 
         # Attribution notes
         if attribution.alpha_contribution > 0.02:
             notes.append(f"Positive alpha contribution ({attribution.alpha_contribution:.2%})")
         elif attribution.alpha_contribution < -0.02:
-            notes.append(f"Negative alpha ({attribution.alpha_contribution:.2%}) - review selection")
+            notes.append(
+                f"Negative alpha ({attribution.alpha_contribution:.2%}) - review selection"
+            )
 
         if abs(attribution.timing_contribution) > 0.01:
             direction = "positive" if attribution.timing_contribution > 0 else "negative"
-            notes.append(f"Significant {direction} timing contribution ({attribution.timing_contribution:.2%})")
+            notes.append(
+                f"Significant {direction} timing contribution ({attribution.timing_contribution:.2%})"
+            )
 
         # Risk management notes
         if outcome.hit_target:
@@ -490,7 +499,9 @@ class PostExecutionEvaluator:
             if pre_score > 70 and outcome.realized_return < 0:
                 notes.append("High pre-score but negative outcome - review scoring model")
             elif pre_score < 30 and outcome.realized_return > 0.03:
-                notes.append("Low pre-score but positive outcome - potential model improvement opportunity")
+                notes.append(
+                    "Low pre-score but positive outcome - potential model improvement opportunity"
+                )
 
         return notes
 
@@ -513,7 +524,7 @@ class PostExecutionEvaluator:
         """
         return [
             self.evaluate(plan_score, outcome, market_data)
-            for plan_score, outcome, market_data in zip(plan_scores, outcomes, market_data_list)
+            for plan_score, outcome, market_data in zip(plan_scores, outcomes, market_data_list, strict=False)
         ]
 
     def compute_aggregate_metrics(
@@ -553,5 +564,7 @@ class PostExecutionEvaluator:
             "avg_alpha": float(np.mean(alphas)),
             "total_timing": float(np.sum(timings)),
             "avg_timing": float(np.mean(timings)),
-            "sharpe_ratio": float(np.mean(returns) / np.std(returns)) if np.std(returns) > 0 else 0.0,
+            "sharpe_ratio": float(np.mean(returns) / np.std(returns))
+            if np.std(returns) > 0
+            else 0.0,
         }

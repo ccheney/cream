@@ -18,8 +18,8 @@
 //! - Grace period allows transient network issues to recover
 //! - GTC orders should be included in mass cancel (recommended)
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -240,9 +240,7 @@ impl DisconnectHandler {
         let handler = Self {
             config,
             connected: AtomicBool::new(true),
-            last_heartbeat_ms: AtomicU64::new(
-                chrono::Utc::now().timestamp_millis() as u64,
-            ),
+            last_heartbeat_ms: AtomicU64::new(chrono::Utc::now().timestamp_millis() as u64),
             grace_period_active: AtomicBool::new(false),
             event_tx,
             shutdown: AtomicBool::new(false),
@@ -268,9 +266,11 @@ impl DisconnectHandler {
         // If we were in grace period, cancel it
         if was_disconnected && self.grace_period_active.load(Ordering::SeqCst) {
             self.grace_period_active.store(false, Ordering::SeqCst);
-            let _ = self.event_tx.try_send(MassCancelEvent::GracePeriodCancelled {
-                reconnected_at: Instant::now(),
-            });
+            let _ = self
+                .event_tx
+                .try_send(MassCancelEvent::GracePeriodCancelled {
+                    reconnected_at: Instant::now(),
+                });
             tracing::info!("Connection restored, grace period cancelled");
         }
     }
@@ -323,13 +323,14 @@ impl DisconnectHandler {
 
     /// Check if mass cancel should be triggered.
     pub fn should_trigger_mass_cancel(&self) -> bool {
-        !self.connected.load(Ordering::SeqCst)
-            && self.grace_period_active.load(Ordering::SeqCst)
+        !self.connected.load(Ordering::SeqCst) && self.grace_period_active.load(Ordering::SeqCst)
     }
 
     /// Trigger manual mass cancel.
     pub fn trigger_manual_mass_cancel(&self) {
-        let _ = self.event_tx.try_send(MassCancelEvent::ManualMassCancelTriggered);
+        let _ = self
+            .event_tx
+            .try_send(MassCancelEvent::ManualMassCancelTriggered);
         tracing::warn!("Manual mass cancel triggered");
     }
 
@@ -362,11 +363,9 @@ pub fn filter_orders_for_cancel(
     orders
         .iter()
         .filter(|(_, _, status)| status.is_active())
-        .filter(|(_, tif, _)| {
-            match gtc_policy {
-                GtcOrderPolicy::Include => true,
-                GtcOrderPolicy::Exclude => *tif != TimeInForce::Gtc,
-            }
+        .filter(|(_, tif, _)| match gtc_policy {
+            GtcOrderPolicy::Include => true,
+            GtcOrderPolicy::Exclude => *tif != TimeInForce::Gtc,
         })
         .map(|(id, _, _)| id.clone())
         .collect()
@@ -422,7 +421,11 @@ mod tests {
             ("O1".to_string(), TimeInForce::Day, OrderStatus::Accepted),
             ("O2".to_string(), TimeInForce::Gtc, OrderStatus::Accepted),
             ("O3".to_string(), TimeInForce::Day, OrderStatus::Filled), // Terminal
-            ("O4".to_string(), TimeInForce::Ioc, OrderStatus::PartiallyFilled),
+            (
+                "O4".to_string(),
+                TimeInForce::Ioc,
+                OrderStatus::PartiallyFilled,
+            ),
         ];
 
         let result = filter_orders_for_cancel(&orders, GtcOrderPolicy::Include);
@@ -438,7 +441,11 @@ mod tests {
             ("O1".to_string(), TimeInForce::Day, OrderStatus::Accepted),
             ("O2".to_string(), TimeInForce::Gtc, OrderStatus::Accepted),
             ("O3".to_string(), TimeInForce::Day, OrderStatus::Filled), // Terminal
-            ("O4".to_string(), TimeInForce::Ioc, OrderStatus::PartiallyFilled),
+            (
+                "O4".to_string(),
+                TimeInForce::Ioc,
+                OrderStatus::PartiallyFilled,
+            ),
         ];
 
         let result = filter_orders_for_cancel(&orders, GtcOrderPolicy::Exclude);

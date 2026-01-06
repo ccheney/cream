@@ -85,16 +85,19 @@ export function calculateBollingerBands(
 
     // Calculate %B (position within bands)
     const range = upper - lower;
-    const percentB = range === 0 ? 0.5 : (candles[i].close - lower) / range;
+    const currentCandle = candles[i];
+    const percentB = range === 0 || !currentCandle ? 0.5 : (currentCandle.close - lower) / range;
 
-    results.push({
-      timestamp: candles[i].timestamp,
-      upper,
-      middle,
-      lower,
-      bandwidth,
-      percentB,
-    });
+    if (currentCandle) {
+      results.push({
+        timestamp: currentCandle.timestamp,
+        upper,
+        middle,
+        lower,
+        bandwidth,
+        percentB,
+      });
+    }
   }
 
   return results;

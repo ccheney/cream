@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-import torch
 
 from research.evaluator.bradley_terry import BradleyTerryRewardModel
 from research.evaluator.calibration import ProbabilityCalibrator
@@ -26,7 +25,6 @@ from research.evaluator.synthetic_preferences import (
     SizeUnit,
     TradingPlan,
 )
-
 
 # ============================================
 # Fixtures
@@ -477,7 +475,9 @@ class TestPostExecutionEvaluator:
             MarketContext(symbol="TEST", current_price=100.0),
         )
 
-        outcome_score = post_evaluator.evaluate(plan_score, low_slippage_outcome, sample_market_data)
+        outcome_score = post_evaluator.evaluate(
+            plan_score, low_slippage_outcome, sample_market_data
+        )
 
         # Low slippage should result in high execution quality
         assert outcome_score.execution_quality >= 80.0
@@ -508,7 +508,9 @@ class TestPostExecutionEvaluator:
             MarketContext(symbol="TEST", current_price=100.0),
         )
 
-        outcome_score = post_evaluator.evaluate(plan_score, high_slippage_outcome, sample_market_data)
+        outcome_score = post_evaluator.evaluate(
+            plan_score, high_slippage_outcome, sample_market_data
+        )
 
         # High slippage should result in lower execution quality
         assert outcome_score.execution_quality < 70.0
@@ -684,8 +686,7 @@ class TestPostExecutionEvaluator:
         ]
 
         outcome_scores = [
-            post_evaluator.evaluate(plan_score, outcome, sample_market_data)
-            for outcome in outcomes
+            post_evaluator.evaluate(plan_score, outcome, sample_market_data) for outcome in outcomes
         ]
 
         metrics = post_evaluator.compute_aggregate_metrics(outcome_scores)
@@ -719,7 +720,9 @@ class TestIntegration:
         assert outcome_score.plan_score == plan_score
         assert outcome_score.decision_id == sample_outcome.decision_id
 
-    def test_to_dict_serialization(self, sample_plan, sample_context, sample_outcome, sample_market_data):
+    def test_to_dict_serialization(
+        self, sample_plan, sample_context, sample_outcome, sample_market_data
+    ):
         """Test that all results can be serialized to dict."""
         pre_evaluator = PreExecutionEvaluator(rule_scorer=RuleBasedScorer())
         plan_score = pre_evaluator.evaluate(sample_plan, sample_context)

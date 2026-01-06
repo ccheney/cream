@@ -7,18 +7,21 @@
  * @see docs/plans/02-data-layer.md - Feature Computation
  */
 
-import type { IndicatorPipelineConfig, IndicatorSnapshot, Candle as IndicatorCandle } from "@cream/indicators";
-import { calculateIndicators, DEFAULT_PIPELINE_CONFIG, calculateMultiTimeframeIndicators } from "@cream/indicators";
-import { applyTransforms, DEFAULT_TRANSFORM_CONFIG } from "@cream/indicators";
-import type { RegimeClassification as RegimeResult } from "@cream/regime";
+import type { Candle as IndicatorCandle, IndicatorPipelineConfig } from "@cream/indicators";
+import {
+  applyTransforms,
+  calculateMultiTimeframeIndicators,
+  DEFAULT_PIPELINE_CONFIG,
+  DEFAULT_TRANSFORM_CONFIG,
+} from "@cream/indicators";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG } from "@cream/regime";
 import type { ResolvedInstrument } from "@cream/universe";
 
-import { getGlobalCache, SnapshotCache } from "./cache";
+import { getGlobalCache, type SnapshotCache } from "./cache";
 import {
+  type CandlesByTimeframe,
   classifyMarketCap,
   DEFAULT_SNAPSHOT_CONFIG,
-  type CandlesByTimeframe,
   type ExternalEventSummary,
   type FeatureSnapshot,
   type IndicatorValues,
@@ -187,7 +190,9 @@ export async function buildSnapshot(
   const latestCandle = primaryCandles[primaryCandles.length - 1];
 
   if (!latestCandle) {
-    throw new Error(`No candle data available for ${symbol} at ${new Date(timestamp).toISOString()}`);
+    throw new Error(
+      `No candle data available for ${symbol} at ${new Date(timestamp).toISOString()}`
+    );
   }
 
   // Calculate indicators for all timeframes
@@ -207,13 +212,7 @@ export async function buildSnapshot(
 
   // Classify regime using primary timeframe candles
   const regimeInput = { candles: primaryCandles };
-  const regimeResult = classifyRegime(regimeInput, DEFAULT_RULE_BASED_CONFIG);
-  const regime: RegimeClassification = {
-    regime: regimeResult.regime,
-    confidence: regimeResult.confidence,
-    features: regimeResult.features,
-    secondaryRegime: regimeResult.secondaryRegime,
-  };
+  const regime: RegimeClassification = classifyRegime(regimeInput, DEFAULT_RULE_BASED_CONFIG);
 
   // Fetch external events (if source provided and enabled)
   let recentEvents: ExternalEventSummary[] = [];
@@ -294,8 +293,9 @@ export async function buildSnapshots(
 
   for (let i = 0; i < symbols.length; i++) {
     const result = results[i];
-    if (result && result.status === "fulfilled") {
-      snapshots.set(symbols[i], result.value);
+    const symbol = symbols[i];
+    if (result && result.status === "fulfilled" && symbol) {
+      snapshots.set(symbol, result.value);
     }
   }
 
@@ -320,10 +320,14 @@ export function createMockCandleSource(
       _before?: number
     ): Promise<IndicatorCandle[]> {
       const symbolCandles = candlesBySymbol.get(symbol);
-      if (!symbolCandles) return [];
+      if (!symbolCandles) {
+        return [];
+      }
 
       const tfCandles = symbolCandles.get(timeframe);
-      if (!tfCandles) return [];
+      if (!tfCandles) {
+        return [];
+      }
 
       return tfCandles.slice(-limit);
     },
@@ -382,12 +386,11 @@ export function serializeSnapshot(snapshot: FeatureSnapshot, precision = 4): str
  * Create a compact version of the snapshot.
  * Removes null values and rounds numbers.
  */
-export function compactSnapshot(
-  snapshot: FeatureSnapshot,
-  precision = 4
-): Record<string, unknown> {
+export function compactSnapshot(snapshot: FeatureSnapshot, precision = 4): Record<string, unknown> {
   const round = (n: number | null): number | null => {
-    if (n === null || n === undefined) return null;
+    if (n === null || n === undefined) {
+      return null;
+    }
     return Number(n.toFixed(precision));
   };
 

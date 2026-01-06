@@ -23,111 +23,107 @@
  * ```
  */
 
+// Extraction
+export {
+  createExtractionClient,
+  ExtractionClient,
+  type ExtractionClientConfig,
+} from "./extraction/index.js";
+// Linking
+export {
+  createEntityLinker,
+  EntityLinker,
+  type EntityLinkerConfig,
+} from "./linking/index.js";
+
+// Parsers
+export {
+  type AlphaVantageEconomicIndicator,
+  calculateMacroSurprise,
+  extractTranscriptSections,
+  type FMPEconomicEvent,
+  filterNewsBySymbols,
+  filterRecentMacroReleases,
+  filterRecentNews,
+  getExecutiveComments,
+  groupByIndicator,
+  isMacroReleaseSignificant,
+  MACRO_INDICATORS,
+  type MacroIndicatorType,
+  type NewsParserConfig,
+  parseAlphaVantageIndicator,
+  parseFMPEconomicEvents,
+  parseNewsArticle,
+  parseNewsArticles,
+  parseTranscript,
+  type TranscriptParserConfig,
+} from "./parsers/index.js";
+// Pipeline
+export {
+  createExtractionPipeline,
+  ExtractionPipeline,
+  type PipelineConfig,
+  type PipelineResult,
+} from "./pipeline.js";
+
+// Scoring
+export {
+  aggregateSentimentScores,
+  applyEventTypeBoost,
+  classifyImportance,
+  classifySentimentScore,
+  classifySurprise,
+  computeAggregatedSurprise,
+  computeEntityRelevance,
+  computeImportanceScore,
+  computeRecencyScore,
+  computeSentimentFromExtraction,
+  computeSentimentMomentum,
+  computeSentimentScore,
+  computeSurpriseFromExtraction,
+  computeSurpriseScore,
+  getSourceCredibility,
+  getSurpriseDirection,
+  type ImportanceScoringConfig,
+  isSurpriseSignificant,
+  type MetricExpectation,
+  type SentimentScoringConfig,
+  type SurpriseScoringConfig,
+} from "./scoring/index.js";
 // Types
 export type {
+  // Scoring types
+  ContentScores,
+  // Pipeline types
+  ContentSourceType,
+  DataPoint,
+  // Linking types
+  EntityLink,
+  EntityType,
+  EventType,
+  ExtractedEntity,
+  ExtractedEvent,
+  ExtractionResult,
+  FMPCompanySearch,
+  // FMP types
+  FMPNewsArticle,
+  FMPTranscript,
+  ParsedMacroRelease,
   // Parser types
   ParsedNews,
   ParsedPressRelease,
   ParsedTranscript,
-  ParsedMacroRelease,
-  TranscriptSpeaker,
+  PipelineInput,
   // Extraction types
   Sentiment,
-  EntityType,
-  ExtractedEntity,
-  DataPoint,
-  EventType,
-  ExtractionResult,
-  // Scoring types
-  ContentScores,
-  // Linking types
-  EntityLink,
-  // Pipeline types
-  ContentSourceType,
-  PipelineInput,
-  ExtractedEvent,
-  // FMP types
-  FMPNewsArticle,
-  FMPTranscript,
-  FMPCompanySearch,
+  TranscriptSpeaker,
 } from "./types.js";
-
 // Zod schemas
 export {
-  SentimentSchema,
-  EntityTypeSchema,
-  ExtractedEntitySchema,
   DataPointSchema,
+  EntityTypeSchema,
   EventTypeSchema,
+  ExtractedEntitySchema,
   ExtractionResultSchema,
+  SentimentSchema,
 } from "./types.js";
-
-// Parsers
-export {
-  parseNewsArticles,
-  parseNewsArticle,
-  filterRecentNews,
-  filterNewsBySymbols,
-  parseTranscript,
-  extractTranscriptSections,
-  getExecutiveComments,
-  parseAlphaVantageIndicator,
-  parseFMPEconomicEvents,
-  calculateMacroSurprise,
-  isMacroReleaseSignificant,
-  filterRecentMacroReleases,
-  groupByIndicator,
-  MACRO_INDICATORS,
-  type NewsParserConfig,
-  type TranscriptParserConfig,
-  type MacroIndicatorType,
-  type AlphaVantageEconomicIndicator,
-  type FMPEconomicEvent,
-} from "./parsers/index.js";
-
-// Extraction
-export {
-  ExtractionClient,
-  createExtractionClient,
-  type ExtractionClientConfig,
-} from "./extraction/index.js";
-
-// Scoring
-export {
-  computeSentimentScore,
-  computeSentimentFromExtraction,
-  aggregateSentimentScores,
-  classifySentimentScore,
-  computeSentimentMomentum,
-  computeImportanceScore,
-  getSourceCredibility,
-  computeRecencyScore,
-  computeEntityRelevance,
-  applyEventTypeBoost,
-  classifyImportance,
-  computeSurpriseScore,
-  computeAggregatedSurprise,
-  computeSurpriseFromExtraction,
-  classifySurprise,
-  isSurpriseSignificant,
-  getSurpriseDirection,
-  type SentimentScoringConfig,
-  type ImportanceScoringConfig,
-  type SurpriseScoringConfig,
-  type MetricExpectation,
-} from "./scoring/index.js";
-
-// Linking
-export {
-  EntityLinker,
-  createEntityLinker,
-  type EntityLinkerConfig,
-} from "./linking/index.js";
-
-// Pipeline
-export {
-  ExtractionPipeline,
-  createExtractionPipeline,
-  type PipelineConfig,
-  type PipelineResult,
-} from "./pipeline.js";

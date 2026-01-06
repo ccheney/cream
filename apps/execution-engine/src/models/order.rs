@@ -259,8 +259,7 @@ impl PartialFillState {
         // VWAP calculation: new_avg = (old_avg * old_cum + fill_price * fill_qty) / new_cum
         let new_cum_qty = self.cum_qty + fill.quantity;
         if new_cum_qty > Decimal::ZERO {
-            self.avg_px =
-                (self.avg_px * self.cum_qty + fill.price * fill.quantity) / new_cum_qty;
+            self.avg_px = (self.avg_px * self.cum_qty + fill.price * fill.quantity) / new_cum_qty;
         }
 
         // Update FIX protocol fields
@@ -355,10 +354,10 @@ pub struct PartialFillTimeoutConfig {
 impl Default for PartialFillTimeoutConfig {
     fn default() -> Self {
         Self {
-            entry_timeout_seconds: 300,        // 5 minutes
-            exit_timeout_seconds: 60,          // 1 minute
-            stop_loss_timeout_seconds: 10,     // 10 seconds (urgent)
-            take_profit_timeout_seconds: 120,  // 2 minutes
+            entry_timeout_seconds: 300,       // 5 minutes
+            exit_timeout_seconds: 60,         // 1 minute
+            stop_loss_timeout_seconds: 10,    // 10 seconds (urgent)
+            take_profit_timeout_seconds: 120, // 2 minutes
             on_entry_timeout: PartialFillTimeoutAction::KeepPartial,
             on_exit_timeout: PartialFillTimeoutAction::ResubmitMarket,
             on_stop_loss_timeout: PartialFillTimeoutAction::AggressiveResubmit,
@@ -629,9 +628,18 @@ mod tests {
         assert_eq!(config.exit_timeout_seconds, 60);
         assert_eq!(config.stop_loss_timeout_seconds, 10);
         assert_eq!(config.take_profit_timeout_seconds, 120);
-        assert_eq!(config.on_entry_timeout, PartialFillTimeoutAction::KeepPartial);
-        assert_eq!(config.on_exit_timeout, PartialFillTimeoutAction::ResubmitMarket);
-        assert_eq!(config.on_stop_loss_timeout, PartialFillTimeoutAction::AggressiveResubmit);
+        assert_eq!(
+            config.on_entry_timeout,
+            PartialFillTimeoutAction::KeepPartial
+        );
+        assert_eq!(
+            config.on_exit_timeout,
+            PartialFillTimeoutAction::ResubmitMarket
+        );
+        assert_eq!(
+            config.on_stop_loss_timeout,
+            PartialFillTimeoutAction::AggressiveResubmit
+        );
     }
 
     #[test]

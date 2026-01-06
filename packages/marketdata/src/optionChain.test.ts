@@ -9,7 +9,6 @@ import {
   DEFAULT_FILTERS,
   OptionChainScanner,
   type OptionFilterCriteria,
-  type OptionWithMarketData,
   parseOptionTicker,
 } from "./optionChain";
 import type { PolygonClient } from "./providers/polygon";
@@ -163,6 +162,10 @@ describe("calculateDte", () => {
     future.setDate(future.getDate() + 30);
     const expiration = future.toISOString().split("T")[0];
 
+    if (!expiration) {
+      throw new Error("Failed to get expiration date");
+    }
+
     const dte = calculateDte(expiration);
     expect(dte).toBeGreaterThanOrEqual(29);
     expect(dte).toBeLessThanOrEqual(31);
@@ -170,6 +173,9 @@ describe("calculateDte", () => {
 
   it("returns 0 for today", () => {
     const today = new Date().toISOString().split("T")[0];
+    if (!today) {
+      throw new Error("Failed to get today's date");
+    }
     const dte = calculateDte(today);
     expect(dte).toBeLessThanOrEqual(1);
   });
@@ -182,23 +188,23 @@ describe("calculateDte", () => {
 describe("DEFAULT_FILTERS", () => {
   it("has creditSpread filter", () => {
     expect(DEFAULT_FILTERS.creditSpread).toBeDefined();
-    expect(DEFAULT_FILTERS.creditSpread.minDte).toBe(30);
-    expect(DEFAULT_FILTERS.creditSpread.maxDte).toBe(60);
+    expect(DEFAULT_FILTERS.creditSpread?.minDte).toBe(30);
+    expect(DEFAULT_FILTERS.creditSpread?.maxDte).toBe(60);
   });
 
   it("has debitSpread filter", () => {
     expect(DEFAULT_FILTERS.debitSpread).toBeDefined();
-    expect(DEFAULT_FILTERS.debitSpread.minDelta).toBe(0.30);
+    expect(DEFAULT_FILTERS.debitSpread?.minDelta).toBe(0.3);
   });
 
   it("has coveredCall filter with call type", () => {
     expect(DEFAULT_FILTERS.coveredCall).toBeDefined();
-    expect(DEFAULT_FILTERS.coveredCall.optionType).toBe("call");
+    expect(DEFAULT_FILTERS.coveredCall?.optionType).toBe("call");
   });
 
   it("has cashSecuredPut filter with put type", () => {
     expect(DEFAULT_FILTERS.cashSecuredPut).toBeDefined();
-    expect(DEFAULT_FILTERS.cashSecuredPut.optionType).toBe("put");
+    expect(DEFAULT_FILTERS.cashSecuredPut?.optionType).toBe("put");
   });
 });
 
@@ -214,7 +220,7 @@ describe("OptionChainScanner", () => {
 
       const results = await scanner.scan("AAPL", {});
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].underlying).toBe("AAPL");
+      expect(results[0]?.underlying).toBe("AAPL");
     });
 
     it("filters by DTE", async () => {
@@ -330,7 +336,7 @@ describe("scoring", () => {
           delta: 0.25,
           volume: 500,
           openInterest: 2000,
-          bid: 1.50,
+          bid: 1.5,
           ask: 1.55,
         });
       }
@@ -353,10 +359,10 @@ describe("scoring", () => {
       const map = new Map();
       for (const [i, ticker] of tickers.entries()) {
         map.set(ticker, {
-          delta: 0.20 + i * 0.05,
+          delta: 0.2 + i * 0.05,
           volume: 100 + i * 100,
           openInterest: 500 + i * 500,
-          bid: 1.50,
+          bid: 1.5,
           ask: 1.55,
         });
       }
@@ -367,9 +373,9 @@ describe("scoring", () => {
 
     // Verify sorted by score (descending)
     for (let i = 1; i < results.length; i++) {
-      expect(results[i - 1].overallScore).toBeGreaterThanOrEqual(
-        results[i].overallScore ?? 0
-      );
+      const prev = results[i - 1];
+      const curr = results[i];
+      expect(prev?.overallScore).toBeGreaterThanOrEqual(curr?.overallScore ?? 0);
     }
   });
 });

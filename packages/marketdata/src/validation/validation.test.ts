@@ -2,41 +2,24 @@
  * Data Quality Validation Tests
  */
 
-import { describe, expect, it, beforeAll } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import type { Timeframe } from "../ingestion/candleIngestion";
 import {
-  checkStaleness,
-  DEFAULT_STALENESS_THRESHOLDS,
-  getStaleSymbols,
-  isFresh,
-} from "./staleness";
-import {
-  detectGaps,
-  fillGaps,
-  interpolateCandle,
-  type Candle,
-} from "./gaps";
-import {
-  detectVolumeAnomalies,
-  detectPriceSpikes,
-  detectFlashCrashes,
   detectAllAnomalies,
-  DEFAULT_ANOMALY_CONFIG,
+  detectFlashCrashes,
+  detectPriceSpikes,
+  detectVolumeAnomalies,
 } from "./anomalies";
 import {
-  isWeekend,
+  getNextTradingDay,
+  getTradingDaysBetween,
   isHoliday,
   isTradingDay,
-  isMarketOpen,
-  getNextTradingDay,
-  getPreviousTradingDay,
-  getTradingDaysBetween,
+  isWeekend,
 } from "./calendar";
-import {
-  validateCandleData,
-  isValidCandleData,
-  getQualityScore,
-} from "./index";
-import type { Timeframe } from "../ingestion/candleIngestion";
+import { type Candle, detectGaps, fillGaps, interpolateCandle } from "./gaps";
+import { getQualityScore, isValidCandleData, validateCandleData } from "./index";
+import { checkStaleness, getStaleSymbols, isFresh } from "./staleness";
 
 // ============================================
 // Test Data

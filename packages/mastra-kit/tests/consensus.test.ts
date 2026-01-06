@@ -2,7 +2,7 @@
  * Tests for ConsensusGate
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
   ConsensusGate,
   createApprovedCriticOutput,
@@ -11,17 +11,13 @@ import {
   runConsensusLoop,
   wouldPassConsensus,
 } from "../src/consensus.js";
-import type {
-  CriticOutput,
-  DecisionPlan,
-  RiskManagerOutput,
-} from "../src/types.js";
+import type { CriticOutput, DecisionPlan, RiskManagerOutput } from "../src/types.js";
 
 // ============================================
 // Test Fixtures
 // ============================================
 
-function createTestPlan(cycleId: string = "test-cycle"): DecisionPlan {
+function createTestPlan(cycleId = "test-cycle"): DecisionPlan {
   return {
     cycleId,
     timestamp: new Date().toISOString(),
@@ -297,30 +293,21 @@ describe("Helper Functions", () => {
 
   describe("wouldPassConsensus", () => {
     it("should return true when both approve", () => {
-      expect(
-        wouldPassConsensus(
-          createApprovedRiskOutput(),
-          createApprovedCriticOutput()
-        )
-      ).toBe(true);
+      expect(wouldPassConsensus(createApprovedRiskOutput(), createApprovedCriticOutput())).toBe(
+        true
+      );
     });
 
     it("should return false when risk rejects", () => {
-      expect(
-        wouldPassConsensus(
-          createRejectingRiskOutput(),
-          createApprovedCriticOutput()
-        )
-      ).toBe(false);
+      expect(wouldPassConsensus(createRejectingRiskOutput(), createApprovedCriticOutput())).toBe(
+        false
+      );
     });
 
     it("should return false when critic rejects", () => {
-      expect(
-        wouldPassConsensus(
-          createApprovedRiskOutput(),
-          createRejectingCriticOutput()
-        )
-      ).toBe(false);
+      expect(wouldPassConsensus(createApprovedRiskOutput(), createRejectingCriticOutput())).toBe(
+        false
+      );
     });
   });
 });

@@ -16,13 +16,11 @@
 import type { RegimeLabel } from "@cream/config";
 import type { Candle } from "@cream/indicators";
 import {
+  DEFAULT_FEATURE_CONFIG,
   extractFeatures,
+  type FeatureExtractionConfig,
   normalizeFeatures,
   normalizeFeatureVector,
-  calculateMean,
-  calculateStd,
-  DEFAULT_FEATURE_CONFIG,
-  type FeatureExtractionConfig,
   type RegimeFeatures,
 } from "./features";
 
@@ -126,7 +124,9 @@ export function trainGMM(candles: Candle[], config: GMMConfig = DEFAULT_GMM_CONF
   // Extract and normalize features
   const features = extractFeatures(candles, config.featureConfig);
   if (features.length < config.k * 10) {
-    throw new Error(`Insufficient data: need at least ${config.k * 10} samples, got ${features.length}`);
+    throw new Error(
+      `Insufficient data: need at least ${config.k * 10} samples, got ${features.length}`
+    );
   }
 
   const { normalized, means, stds } = normalizeFeatures(features);
@@ -182,7 +182,8 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
 
   // Pick first center randomly
   const firstIdx = Math.floor(rng() * n);
-  const centers: number[][] = [data[firstIdx]!.slice()];
+  const firstCenter = data[firstIdx]?.slice() ?? new Array(d).fill(0);
+  const centers: number[][] = [firstCenter];
 
   // Pick remaining centers with probability proportional to distance squared
   for (let c = 1; c < k; c++) {
@@ -202,7 +203,7 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
         break;
       }
     }
-    centers.push(data[nextIdx]!.slice());
+    centers.push(data[nextIdx]?.slice() ?? new Array(d).fill(0));
   }
 
   // Create clusters from centers
@@ -249,7 +250,11 @@ function computeResponsibilities(data: number[][], clusters: GMMCluster[]): numb
 /**
  * Update cluster parameters (M-step).
  */
-function updateClusters(data: number[][], responsibilities: number[][], clusters: GMMCluster[]): void {
+function updateClusters(
+  data: number[][],
+  responsibilities: number[][],
+  clusters: GMMCluster[]
+): void {
   const n = data.length;
   const k = clusters.length;
   const d = data[0]?.length ?? 4;
@@ -260,7 +265,7 @@ function updateClusters(data: number[][], responsibilities: number[][], clusters
     // Compute N_k (soft count)
     let nk = 0;
     for (let i = 0; i < n; i++) {
-      nk += responsibilities[i]![c]!;
+      nk += responsibilities[i]?.[c] ?? 0;
     }
 
     if (nk < 1e-10) {
@@ -273,9 +278,9 @@ function updateClusters(data: number[][], responsibilities: number[][], clusters
     // Update mean
     const newMean = new Array(d).fill(0);
     for (let i = 0; i < n; i++) {
-      const r = responsibilities[i]![c]!;
+      const r = responsibilities[i]?.[c] ?? 0;
       for (let j = 0; j < d; j++) {
-        newMean[j] += r * data[i]![j]!;
+        newMean[j] += r * (data[i]?.[j] ?? 0);
       }
     }
     for (let j = 0; j < d; j++) {
@@ -286,13 +291,13 @@ function updateClusters(data: number[][], responsibilities: number[][], clusters
     // Update variance (diagonal covariance)
     const newVariance = new Array(d).fill(0);
     for (let i = 0; i < n; i++) {
-      const r = responsibilities[i]![c]!;
+      const r = responsibilities[i]?.[c] ?? 0;
       for (let j = 0; j < d; j++) {
-        newVariance[j] += r * (data[i]![j]! - newMean[j]!) ** 2;
+        newVariance[j] += r * ((data[i]?.[j] ?? 0) - (newMean[j] ?? 0)) ** 2;
       }
     }
     for (let j = 0; j < d; j++) {
-      newVariance[j] = Math.max(newVariance[j]! / nk, 1e-6); // Floor to avoid singularity
+      newVariance[j] = Math.max((newVariance[j] ?? 0) / nk, 1e-6); // Floor to avoid singularity
     }
     cluster.variance = newVariance;
   }
@@ -443,13 +448,16 @@ export function classifySeriesWithGMM(
       }
     }
 
-    results.push({
-      regime: model.clusters[maxIdx]!.regime,
-      confidence: maxProb,
-      clusterProbabilities: normalizedProbs,
-      features: feature,
-      timestamp: feature.timestamp,
-    });
+    const cluster = model.clusters[maxIdx];
+    if (cluster) {
+      results.push({
+        regime: cluster.regime,
+        confidence: maxProb,
+        clusterProbabilities: normalizedProbs,
+        features: feature,
+        timestamp: feature.timestamp,
+      });
+    }
   }
 
   return results;
@@ -486,7 +494,7 @@ function gaussianPdf(x: number[], mean: number[], variance: number[]): number {
 
   for (let i = 0; i < d; i++) {
     logProb -= 0.5 * Math.log(variance[i]!);
-    logProb -= 0.5 * ((x[i]! - mean[i]!) ** 2) / variance[i]!;
+    logProb -= (0.5 * (x[i]! - mean[i]!) ** 2) / variance[i]!;
   }
 
   return Math.exp(logProb);

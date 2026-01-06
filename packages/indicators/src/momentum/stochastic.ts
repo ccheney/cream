@@ -76,7 +76,9 @@ function calculateFastK(candles: Candle[], kPeriod: number): number[] {
 
     // Calculate %K
     const range = highestHigh - lowestLow;
-    const k = range === 0 ? 50 : ((candles[i].close - lowestLow) / range) * 100;
+    const currentCandle = candles[i];
+    const k =
+      range === 0 || !currentCandle ? 50 : ((currentCandle.close - lowestLow) / range) * 100;
 
     kValues.push(k);
   }
@@ -117,7 +119,7 @@ export function calculateStochastic(
 
     // Slow %D = SMA of Slow %K
     for (let i = dPeriod - 1; i < slowK.length; i++) {
-      const k = slowK[i];
+      const k = slowK[i] ?? 0;
       const d = sma(slowK.slice(0, i + 1), dPeriod);
 
       // Calculate timestamp index in original candles
@@ -126,26 +128,32 @@ export function calculateStochastic(
       // slowD starts at index (dPeriod - 1) of slowK
       const candleIndex = kPeriod - 1 + (dPeriod - 1) + (dPeriod - 1) + (i - (dPeriod - 1));
 
-      results.push({
-        timestamp: candles[candleIndex].timestamp,
-        k,
-        d,
-      });
+      const candle = candles[candleIndex];
+      if (candle) {
+        results.push({
+          timestamp: candle.timestamp,
+          k,
+          d,
+        });
+      }
     }
   } else {
     // Fast Stochastic: Use raw %K and SMA of %K for %D
     for (let i = dPeriod - 1; i < fastK.length; i++) {
-      const k = fastK[i];
+      const k = fastK[i] ?? 0;
       const d = sma(fastK.slice(0, i + 1), dPeriod);
 
       // Calculate timestamp index
       const candleIndex = kPeriod - 1 + i;
 
-      results.push({
-        timestamp: candles[candleIndex].timestamp,
-        k,
-        d,
-      });
+      const candle = candles[candleIndex];
+      if (candle) {
+        results.push({
+          timestamp: candle.timestamp,
+          k,
+          d,
+        });
+      }
     }
   }
 

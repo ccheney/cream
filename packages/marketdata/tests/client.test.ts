@@ -12,6 +12,13 @@ import {
   RateLimiter,
   RestClient,
 } from "../src/client";
+import {
+  createJsonResponse,
+  createMockFetch,
+  getMockCallOptions,
+  getMockCallUrl,
+  type MockFetch,
+} from "./helpers";
 
 // ============================================
 // Tests
@@ -67,17 +74,10 @@ describe("RateLimiter", () => {
 describe("RestClient", () => {
   // Mock fetch for testing
   const originalFetch = globalThis.fetch;
-  let mockFetch: ReturnType<typeof mock>;
+  let mockFetch: MockFetch;
 
   beforeEach(() => {
-    mockFetch = mock(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
-    );
+    mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse({ success: true })));
     globalThis.fetch = mockFetch;
   });
 
@@ -96,7 +96,7 @@ describe("RestClient", () => {
     await client.get("/test", { foo: "bar", num: 42 });
 
     expect(mockFetch).toHaveBeenCalled();
-    const [url] = mockFetch.mock.calls[0] as [string];
+    const url = getMockCallUrl(mockFetch);
     expect(url).toContain("foo=bar");
     expect(url).toContain("num=42");
   });
@@ -110,8 +110,10 @@ describe("RestClient", () => {
     await client.get("/test");
 
     expect(mockFetch).toHaveBeenCalled();
-    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect((options.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
+    const options = getMockCallOptions(mockFetch);
+    expect((options?.headers as Record<string, string> | undefined)?.Authorization).toBe(
+      "Bearer test-key"
+    );
   });
 
   test("validates response with Zod schema", async () => {
@@ -138,17 +140,12 @@ describe("RestClient", () => {
 
   test("retries on server error", async () => {
     let attempts = 0;
-    mockFetch = mock(() => {
+    mockFetch = createMockFetch(() => {
       attempts++;
       if (attempts < 3) {
         return Promise.resolve(new Response("Server Error", { status: 500 }));
       }
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      );
+      return Promise.resolve(createJsonResponse({ success: true }));
     });
     globalThis.fetch = mockFetch;
 
@@ -170,7 +167,7 @@ describe("RestClient", () => {
 
   test("does not retry on 4xx errors", async () => {
     let attempts = 0;
-    mockFetch = mock(() => {
+    mockFetch = createMockFetch(() => {
       attempts++;
       return Promise.resolve(new Response("Bad Request", { status: 400 }));
     });
@@ -199,17 +196,12 @@ describe("RestClient", () => {
 
   test("retries on rate limit (429)", async () => {
     let attempts = 0;
-    mockFetch = mock(() => {
+    mockFetch = createMockFetch(() => {
       attempts++;
       if (attempts < 2) {
         return Promise.resolve(new Response("Rate Limited", { status: 429 }));
       }
-      return Promise.resolve(
-        new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      );
+      return Promise.resolve(createJsonResponse({ success: true }));
     });
     globalThis.fetch = mockFetch;
 
@@ -235,18 +227,16 @@ describe("RestClient", () => {
     await client.post("/test", { data: "value" });
 
     expect(mockFetch).toHaveBeenCalled();
-    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(options.method).toBe("POST");
-    expect(options.body).toBe(JSON.stringify({ data: "value" }));
+    const options = getMockCallOptions(mockFetch);
+    expect(options?.method).toBe("POST");
+    expect(options?.body).toBe(JSON.stringify({ data: "value" }));
   });
 
   test("handles timeout", async () => {
-    mockFetch = mock((_url: string, options?: RequestInit) => {
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(
-          () => resolve(new Response(JSON.stringify({ success: true }), { status: 200 })),
-          1000
-        );
+    // Special case: need to use base mock for timeout test since it uses arguments
+    const timeoutMockFn = mock((_url: string, options?: RequestInit) => {
+      return new Promise<Response>((resolve, reject) => {
+        const timeoutId = setTimeout(() => resolve(createJsonResponse({ success: true })), 1000);
 
         // Respect abort signal
         options?.signal?.addEventListener("abort", () => {
@@ -257,7 +247,10 @@ describe("RestClient", () => {
         });
       });
     });
-    globalThis.fetch = mockFetch;
+    // Add preconnect property
+    const typedMock = timeoutMockFn as unknown as typeof fetch;
+    (typedMock as typeof fetch & { preconnect: () => void }).preconnect = () => {};
+    globalThis.fetch = typedMock;
 
     const client = createRestClient({
       baseUrl: "https://api.example.com",
@@ -281,7 +274,7 @@ describe("RestClient", () => {
     await client.get("/test", { foo: "bar", missing: undefined });
 
     expect(mockFetch).toHaveBeenCalled();
-    const [url] = mockFetch.mock.calls[0] as [string];
+    const url = getMockCallUrl(mockFetch);
     expect(url).toContain("foo=bar");
     expect(url).not.toContain("missing");
   });

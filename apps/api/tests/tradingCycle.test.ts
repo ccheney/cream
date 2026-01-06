@@ -2,13 +2,13 @@
  * Trading Cycle Workflow Tests
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 import {
-  loadStateStep,
   LoadStateOutputSchema,
-  PositionSchema,
+  loadStateStep,
   OrderSchema,
+  PositionSchema,
   ThesisStateSchema,
 } from "../src/steps/loadState";
 

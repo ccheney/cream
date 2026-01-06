@@ -12,11 +12,11 @@
  */
 
 import {
+  type CandleRow,
   DEFAULT_FLIGHT_CONFIG,
+  type FlightClientConfig,
   FlightError,
   FlightPaths,
-  type CandleRow,
-  type FlightClientConfig,
   type FlightResult,
   type OptionContractRow,
   type PortfolioHistoryRow,
@@ -32,8 +32,8 @@ import {
  * real Flight RPC calls to the Rust execution engine.
  */
 export class ArrowFlightClient {
-  private readonly config: Required<Omit<FlightClientConfig, "tlsCertPath">> & { tlsCertPath?: string };
   private connected = false;
+  private config: FlightClientConfig;
 
   constructor(config: FlightClientConfig) {
     this.config = {

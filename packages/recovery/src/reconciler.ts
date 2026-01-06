@@ -101,17 +101,11 @@ export class OrderReconciler {
         });
 
         // Check for discrepancies
-        const discrepancies = this.findOrderDiscrepancies(
-          checkpointOrder,
-          brokerOrder
-        );
+        const discrepancies = this.findOrderDiscrepancies(checkpointOrder, brokerOrder);
         result.discrepancies.push(...discrepancies);
       } else {
         // Order in checkpoint but not found at broker
-        if (
-          checkpointOrder.status === "submitted" ||
-          checkpointOrder.status === "pending"
-        ) {
+        if (checkpointOrder.status === "submitted" || checkpointOrder.status === "pending") {
           result.missingFromBroker.push(checkpointOrder);
           result.discrepancies.push(
             `Order ${checkpointOrder.clientOrderId} (${checkpointOrder.symbol} ${checkpointOrder.side}) was ${checkpointOrder.status} but not found at broker`
@@ -121,9 +115,7 @@ export class OrderReconciler {
     }
 
     // Find orphaned orders (in broker but not in checkpoint)
-    const checkpointClientIds = new Set(
-      checkpointOrders.map((o) => o.clientOrderId)
-    );
+    const checkpointClientIds = new Set(checkpointOrders.map((o) => o.clientOrderId));
     const checkpointBrokerIds = new Set(
       checkpointOrders.map((o) => o.brokerOrderId).filter(Boolean)
     );
@@ -132,8 +124,7 @@ export class OrderReconciler {
       if (!matchedBrokerIds.has(brokerOrder.orderId)) {
         // This broker order wasn't matched to any checkpoint order
         const isKnownByClientId =
-          brokerOrder.clientOrderId &&
-          checkpointClientIds.has(brokerOrder.clientOrderId);
+          brokerOrder.clientOrderId && checkpointClientIds.has(brokerOrder.clientOrderId);
         const isKnownByOrderId = checkpointBrokerIds.has(brokerOrder.orderId);
 
         if (!isKnownByClientId && !isKnownByOrderId) {
@@ -151,10 +142,7 @@ export class OrderReconciler {
   /**
    * Find discrepancies between a checkpoint order and broker order.
    */
-  private findOrderDiscrepancies(
-    checkpoint: OrderCheckpoint,
-    broker: BrokerOrder
-  ): string[] {
+  private findOrderDiscrepancies(checkpoint: OrderCheckpoint, broker: BrokerOrder): string[] {
     const discrepancies: string[] = [];
 
     // Check symbol
@@ -191,9 +179,7 @@ export class OrderReconciler {
   /**
    * Determine if all orders in the execution state have been processed.
    */
-  async areAllOrdersProcessed(
-    executionState: ExecutionState
-  ): Promise<boolean> {
+  async areAllOrdersProcessed(executionState: ExecutionState): Promise<boolean> {
     const result = await this.reconcile(executionState);
 
     // All orders are processed if:
@@ -216,9 +202,7 @@ export class OrderReconciler {
   /**
    * Get orders that still need processing.
    */
-  async getPendingOrders(
-    executionState: ExecutionState
-  ): Promise<OrderCheckpoint[]> {
+  async getPendingOrders(executionState: ExecutionState): Promise<OrderCheckpoint[]> {
     const pending: OrderCheckpoint[] = [];
 
     for (const order of executionState.orders) {
@@ -226,9 +210,7 @@ export class OrderReconciler {
         pending.push(order);
       } else if (order.status === "submitted") {
         // Check with broker
-        const brokerOrder = await this.brokerFetcher.fetchOrderByClientId(
-          order.clientOrderId
-        );
+        const brokerOrder = await this.brokerFetcher.fetchOrderByClientId(order.clientOrderId);
 
         if (!brokerOrder) {
           // Order was supposedly submitted but not found at broker
@@ -260,9 +242,7 @@ export function createOrderReconciler(
 /**
  * Create a mock broker fetcher for testing.
  */
-export function createMockBrokerFetcher(
-  orders: BrokerOrder[] = []
-): BrokerOrderFetcher {
+export function createMockBrokerFetcher(orders: BrokerOrder[] = []): BrokerOrderFetcher {
   return {
     async fetchRecentOrders(_lookbackMs: number): Promise<BrokerOrder[]> {
       return orders;

@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { createExtractionPipeline, ExtractionPipeline } from "../src/index.js";
 import type { FMPNewsArticle } from "../src/index.js";
+import { createExtractionPipeline, ExtractionPipeline } from "../src/index.js";
 
 describe("ExtractionPipeline", () => {
   describe("Dry Run Mode", () => {
@@ -16,7 +16,7 @@ describe("ExtractionPipeline", () => {
         "news",
         new Date(),
         "reuters.com",
-        ["AAPL"],
+        ["AAPL"]
       );
 
       expect(event).not.toBeNull();
@@ -53,7 +53,7 @@ describe("ExtractionPipeline", () => {
         "news",
         new Date(),
         "test",
-        ["TSLA"],
+        ["TSLA"]
       );
 
       expect(event!.relatedInstrumentIds).toContain("TSLA");
@@ -61,10 +61,7 @@ describe("ExtractionPipeline", () => {
 
     it("should include processing timestamp", async () => {
       const before = new Date();
-      const event = await pipeline.processContent(
-        "Test content for pipeline processing.",
-        "news",
-      );
+      const event = await pipeline.processContent("Test content for pipeline processing.", "news");
       const after = new Date();
 
       expect(event!.processedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
@@ -147,17 +144,14 @@ describe("ExtractionPipeline", () => {
     const pipeline = createExtractionPipeline({ dryRun: true });
 
     it("should handle news source type", async () => {
-      const event = await pipeline.processContent(
-        "Breaking news about tech stocks.",
-        "news",
-      );
+      const event = await pipeline.processContent("Breaking news about tech stocks.", "news");
       expect(event!.sourceType).toBe("news");
     });
 
     it("should handle transcript source type", async () => {
       const event = await pipeline.processContent(
         "CEO: We are pleased with our quarterly results.",
-        "transcript",
+        "transcript"
       );
       expect(event!.sourceType).toBe("transcript");
     });
@@ -165,7 +159,7 @@ describe("ExtractionPipeline", () => {
     it("should handle macro source type", async () => {
       const event = await pipeline.processContent(
         "Federal Reserve raised interest rates by 25 basis points.",
-        "macro",
+        "macro"
       );
       expect(event!.sourceType).toBe("macro");
     });
@@ -173,7 +167,7 @@ describe("ExtractionPipeline", () => {
     it("should handle press_release source type", async () => {
       const event = await pipeline.processContent(
         "FOR IMMEDIATE RELEASE: Company announces quarterly dividend.",
-        "press_release",
+        "press_release"
       );
       expect(event!.sourceType).toBe("press_release");
     });

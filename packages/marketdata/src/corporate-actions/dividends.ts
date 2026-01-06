@@ -85,7 +85,9 @@ export function toDividendInfo(dividend: Dividend): DividendInfo {
  * @returns Dividend yield as decimal (e.g., 0.02 for 2%)
  */
 export function calculateDividendYield(dividend: number, price: number): number {
-  if (price === 0) return 0;
+  if (price === 0) {
+    return 0;
+  }
   return dividend / price;
 }
 
@@ -102,7 +104,9 @@ export function calculateAnnualizedYield(
   frequency: number,
   price: number
 ): number {
-  if (price === 0 || frequency === 0) return 0;
+  if (price === 0 || frequency === 0) {
+    return 0;
+  }
   const annualDividend = dividendPerPeriod * frequency;
   return annualDividend / price;
 }
@@ -212,7 +216,9 @@ export function adjustPriceForDividend(price: number, dividend: number): number 
  * @returns New share count after reinvestment
  */
 export function calculateDRIPShares(price: number, dividend: number, shares: number): number {
-  if (price === 0) return shares;
+  if (price === 0) {
+    return shares;
+  }
   const dividendAmount = dividend * shares;
   const additionalShares = dividendAmount / price;
   return shares + additionalShares;

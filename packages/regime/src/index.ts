@@ -24,6 +24,33 @@
  * @see docs/plans/02-data-layer.md
  */
 
+// Feature extraction
+export {
+  calculateMean,
+  calculateStd,
+  calculateZScore,
+  DEFAULT_FEATURE_CONFIG,
+  extractFeatures,
+  extractSingleFeature,
+  type FeatureExtractionConfig,
+  getMinimumCandleCount,
+  normalizeFeatures,
+  normalizeFeatureVector,
+  type RegimeFeatures,
+} from "./features";
+// GMM classifier
+export {
+  classifySeriesWithGMM,
+  classifyWithGMM,
+  DEFAULT_GMM_CONFIG,
+  deserializeGMMModel,
+  type GMMClassification,
+  type GMMCluster,
+  type GMMConfig,
+  type GMMModel,
+  serializeGMMModel,
+  trainGMM,
+} from "./gmmClassifier";
 // Rule-based classifier
 export {
   classifyRegime,
@@ -35,43 +62,14 @@ export {
   type RegimeInput,
 } from "./ruleBasedClassifier";
 
-// Feature extraction
-export {
-  calculateMean,
-  calculateStd,
-  calculateZScore,
-  DEFAULT_FEATURE_CONFIG,
-  extractFeatures,
-  extractSingleFeature,
-  getMinimumCandleCount,
-  normalizeFeatures,
-  normalizeFeatureVector,
-  type FeatureExtractionConfig,
-  type RegimeFeatures,
-} from "./features";
-
-// GMM classifier
-export {
-  classifySeriesWithGMM,
-  classifyWithGMM,
-  DEFAULT_GMM_CONFIG,
-  deserializeGMMModel,
-  serializeGMMModel,
-  trainGMM,
-  type GMMClassification,
-  type GMMCluster,
-  type GMMConfig,
-  type GMMModel,
-} from "./gmmClassifier";
-
 // Transition detection
 export {
   analyzeTransitions,
   calculateTransitionMatrix,
   DEFAULT_TRANSITION_CONFIG,
-  RegimeTransitionDetector,
   type RegimeState,
   type RegimeTransition,
+  RegimeTransitionDetector,
   type TransitionDetectorConfig,
 } from "./transitions";
 

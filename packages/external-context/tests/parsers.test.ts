@@ -3,20 +3,19 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import type { FMPNewsArticle, FMPTranscript } from "../src/index.js";
 import {
-  parseNewsArticles,
-  parseNewsArticle,
-  filterRecentNews,
-  filterNewsBySymbols,
-  parseTranscript,
+  calculateMacroSurprise,
   extractTranscriptSections,
+  filterNewsBySymbols,
+  filterRecentNews,
+  groupByIndicator,
+  isMacroReleaseSignificant,
   parseAlphaVantageIndicator,
   parseFMPEconomicEvents,
-  calculateMacroSurprise,
-  isMacroReleaseSignificant,
-  groupByIndicator,
+  parseNewsArticles,
+  parseTranscript,
 } from "../src/index.js";
-import type { FMPNewsArticle, FMPTranscript } from "../src/index.js";
 
 describe("News Parser", () => {
   it("should parse valid news article", () => {
@@ -31,9 +30,12 @@ describe("News Parser", () => {
 
     const results = parseNewsArticles([article]);
     expect(results).toHaveLength(1);
-    expect(results[0].headline).toBe("Apple Reports Record Q1 Earnings");
-    expect(results[0].symbols).toEqual(["AAPL"]);
-    expect(results[0].source).toBe("reuters.com");
+    const firstResult = results[0];
+    if (firstResult) {
+      expect(firstResult.headline).toBe("Apple Reports Record Q1 Earnings");
+      expect(firstResult.symbols).toEqual(["AAPL"]);
+      expect(firstResult.source).toBe("reuters.com");
+    }
   });
 
   it("should filter articles below minimum length", () => {
@@ -70,7 +72,10 @@ describe("News Parser", () => {
 
     const filtered = filterRecentNews(articles, 24);
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].headline).toBe("Recent");
+    const firstFiltered = filtered[0];
+    if (firstFiltered) {
+      expect(firstFiltered.headline).toBe("Recent");
+    }
   });
 
   it("should filter news by symbols", () => {
@@ -93,7 +98,10 @@ describe("News Parser", () => {
 
     const filtered = filterNewsBySymbols(articles, ["AAPL"]);
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].headline).toBe("Apple News");
+    const firstFiltered = filtered[0];
+    if (firstFiltered) {
+      expect(firstFiltered.headline).toBe("Apple News");
+    }
   });
 });
 
@@ -104,15 +112,18 @@ describe("Transcript Parser", () => {
       quarter: 1,
       year: 2026,
       date: "2026-01-05",
-      content: "John Smith -- CEO: Welcome to our Q1 earnings call.\nJane Doe -- CFO: We are pleased to report strong results.",
+      content:
+        "John Smith -- CEO: Welcome to our Q1 earnings call.\nJane Doe -- CFO: We are pleased to report strong results.",
     };
 
     const result = parseTranscript(transcript);
     expect(result).not.toBeNull();
-    expect(result!.symbol).toBe("AAPL");
-    expect(result!.quarter).toBe("Q1");
-    expect(result!.year).toBe(2026);
-    expect(result!.speakers.length).toBeGreaterThan(0);
+    if (result) {
+      expect(result.symbol).toBe("AAPL");
+      expect(result.quarter).toBe("Q1");
+      expect(result.year).toBe(2026);
+      expect(result.speakers.length).toBeGreaterThan(0);
+    }
   });
 
   it("should extract transcript sections", () => {
@@ -147,9 +158,12 @@ describe("Macro Parser", () => {
 
     const results = parseAlphaVantageIndicator(response);
     expect(results).toHaveLength(2);
-    expect(results[0].indicator).toBe("Real GDP");
-    expect(results[0].value).toBe(28000);
-    expect(results[0].previousValue).toBe(27500);
+    const firstResult = results[0];
+    if (firstResult) {
+      expect(firstResult.indicator).toBe("Real GDP");
+      expect(firstResult.value).toBe(28000);
+      expect(firstResult.previousValue).toBe(27500);
+    }
   });
 
   it("should parse FMP economic events", () => {
@@ -166,8 +180,11 @@ describe("Macro Parser", () => {
 
     const results = parseFMPEconomicEvents(events);
     expect(results).toHaveLength(1);
-    expect(results[0].indicator).toBe("Non-Farm Payrolls");
-    expect(results[0].value).toBe(250000);
+    const firstResult = results[0];
+    if (firstResult) {
+      expect(firstResult.indicator).toBe("Non-Farm Payrolls");
+      expect(firstResult.value).toBe(250000);
+    }
   });
 
   it("should calculate macro surprise", () => {
@@ -208,7 +225,11 @@ describe("Macro Parser", () => {
 
     const groups = groupByIndicator(releases);
     expect(groups.size).toBe(2);
-    expect(groups.get("GDP")).toHaveLength(2);
-    expect(groups.get("CPI")).toHaveLength(1);
+    const gdpGroup = groups.get("GDP");
+    const cpiGroup = groups.get("CPI");
+    if (gdpGroup && cpiGroup) {
+      expect(gdpGroup).toHaveLength(2);
+      expect(cpiGroup).toHaveLength(1);
+    }
   });
 });

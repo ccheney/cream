@@ -63,24 +63,35 @@ export function calculateSMA(candles: Candle[], params: MAParams = SMA_DEFAULTS)
   // Calculate initial sum for first window
   let sum = 0;
   for (let i = 0; i < period; i++) {
-    sum += candles[i].close;
+    const candle = candles[i];
+    if (candle) {
+      sum += candle.close;
+    }
   }
 
   // First SMA value
-  results.push({
-    timestamp: candles[period - 1].timestamp,
-    ma: sum / period,
-  });
+  const firstCandle = candles[period - 1];
+  if (firstCandle) {
+    results.push({
+      timestamp: firstCandle.timestamp,
+      ma: sum / period,
+    });
+  }
 
   // Calculate remaining SMA values using sliding window
   for (let i = period; i < candles.length; i++) {
-    // Remove oldest, add newest
-    sum = sum - candles[i - period].close + candles[i].close;
+    const oldCandle = candles[i - period];
+    const newCandle = candles[i];
 
-    results.push({
-      timestamp: candles[i].timestamp,
-      ma: sum / period,
-    });
+    if (oldCandle && newCandle) {
+      // Remove oldest, add newest
+      sum = sum - oldCandle.close + newCandle.close;
+
+      results.push({
+        timestamp: newCandle.timestamp,
+        ma: sum / period,
+      });
+    }
   }
 
   return results;

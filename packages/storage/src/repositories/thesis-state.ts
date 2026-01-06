@@ -15,9 +15,8 @@ import {
   parseJson,
   query,
   RepositoryError,
-  toJson,
-  fromBoolean,
   toBoolean,
+  toJson,
 } from "./base.js";
 
 // ============================================
@@ -32,7 +31,13 @@ export type ThesisState = "WATCHING" | "ENTERED" | "ADDING" | "MANAGING" | "EXIT
 /**
  * Close reason enum
  */
-export type CloseReason = "STOP_HIT" | "TARGET_HIT" | "INVALIDATED" | "MANUAL" | "TIME_DECAY" | "CORRELATION";
+export type CloseReason =
+  | "STOP_HIT"
+  | "TARGET_HIT"
+  | "INVALIDATED"
+  | "MANUAL"
+  | "TIME_DECAY"
+  | "CORRELATION";
 
 /**
  * Thesis entity
@@ -254,10 +259,9 @@ export class ThesisStateRepository {
    * Find thesis by ID
    */
   async findById(thesisId: string): Promise<Thesis | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE thesis_id = ?`,
-      [thesisId]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE thesis_id = ?`, [
+      thesisId,
+    ]);
 
     return row ? mapThesisRow(row) : null;
   }
@@ -365,10 +369,7 @@ export class ThesisStateRepository {
   /**
    * Transition thesis to new state
    */
-  async transitionState(
-    thesisId: string,
-    transition: StateTransitionInput
-  ): Promise<Thesis> {
+  async transitionState(thesisId: string, transition: StateTransitionInput): Promise<Thesis> {
     const thesis = await this.findByIdOrThrow(thesisId);
     const fromState = thesis.state;
     const { toState } = transition;
@@ -512,10 +513,7 @@ export class ThesisStateRepository {
    */
   async updateConviction(thesisId: string, conviction: number): Promise<Thesis> {
     if (conviction < 0 || conviction > 1) {
-      throw RepositoryError.constraintViolation(
-        this.table,
-        "Conviction must be between 0 and 1"
-      );
+      throw RepositoryError.constraintViolation(this.table, "Conviction must be between 0 and 1");
     }
 
     const now = new Date().toISOString();
@@ -531,11 +529,7 @@ export class ThesisStateRepository {
   /**
    * Update stop loss and target
    */
-  async updateLevels(
-    thesisId: string,
-    stopLoss?: number,
-    target?: number
-  ): Promise<Thesis> {
+  async updateLevels(thesisId: string, stopLoss?: number, target?: number): Promise<Thesis> {
     const now = new Date().toISOString();
     const updates: string[] = ["last_updated = ?"];
     const args: unknown[] = [now];
@@ -627,9 +621,7 @@ export class ThesisStateRepository {
     const thesis = await this.findByIdOrThrow(thesisId);
 
     const daysHeld = thesis.entryDate
-      ? Math.floor(
-          (Date.now() - new Date(thesis.entryDate).getTime()) / (1000 * 60 * 60 * 24)
-        )
+      ? Math.floor((Date.now() - new Date(thesis.entryDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
     const currentPnL =
@@ -669,10 +661,9 @@ export class ThesisStateRepository {
    * Delete thesis
    */
   async delete(thesisId: string): Promise<boolean> {
-    const result = await this.client.run(
-      `DELETE FROM ${this.table} WHERE thesis_id = ?`,
-      [thesisId]
-    );
+    const result = await this.client.run(`DELETE FROM ${this.table} WHERE thesis_id = ?`, [
+      thesisId,
+    ]);
 
     return result.changes > 0;
   }

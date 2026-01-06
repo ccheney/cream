@@ -41,6 +41,13 @@
  * @see docs/plans/07-execution.md
  */
 
+// Adapters
+export {
+  type BacktestAdapterConfig,
+  type BacktestUtils,
+  createBacktestAdapter,
+  createBacktestAdapterWithUtils,
+} from "./adapters/index.js";
 // Client
 export {
   type AlpacaClient,
@@ -48,7 +55,8 @@ export {
   createAlpacaClient,
   createAlpacaClientFromEnv,
 } from "./client.js";
-
+// Factory
+export { createBrokerClient } from "./factory.js";
 // Types
 export {
   type Account,
@@ -66,7 +74,6 @@ export {
   type TimeInForce,
   type TradingEnvironment,
 } from "./types.js";
-
 // Utilities
 export {
   buildOptionSymbol,
@@ -79,14 +86,3 @@ export {
   validateLegRatios,
   validateQuantity,
 } from "./utils.js";
-
-// Adapters
-export {
-  type BacktestAdapterConfig,
-  type BacktestUtils,
-  createBacktestAdapter,
-  createBacktestAdapterWithUtils,
-} from "./adapters/index.js";
-
-// Factory
-export { createBrokerClient } from "./factory.js";

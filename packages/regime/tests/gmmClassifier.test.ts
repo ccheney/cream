@@ -12,12 +12,10 @@ import {
   extractSingleFeature,
   getMinimumCandleCount,
   normalizeFeatures,
-  normalizeFeatureVector,
 } from "../src/features";
 import {
   classifySeriesWithGMM,
   classifyWithGMM,
-  DEFAULT_GMM_CONFIG,
   deserializeGMMModel,
   serializeGMMModel,
   trainGMM,
@@ -25,8 +23,8 @@ import {
 import {
   analyzeTransitions,
   calculateTransitionMatrix,
-  RegimeTransitionDetector,
   type RegimeTransition,
+  RegimeTransitionDetector,
 } from "../src/transitions";
 
 // ============================================
@@ -40,9 +38,7 @@ function createCandle(
   overrides: Partial<Candle> = {}
 ): Candle {
   return {
-    symbol: "TEST",
-    timeframe: "1d",
-    timestamp,
+    timestamp: new Date(timestamp).getTime(),
     open: close * 0.995,
     high: close * 1.01,
     low: close * 0.99,
@@ -108,7 +104,7 @@ function generateHighVolatilityCandles(basePrice: number, count: number): Candle
   return candles;
 }
 
-function generateLowVolatilityCandles(basePrice: number, count: number): Candle[] {
+function _generateLowVolatilityCandles(basePrice: number, count: number): Candle[] {
   const candles: Candle[] = [];
   let price = basePrice;
   const baseDate = new Date("2024-01-01");
@@ -193,7 +189,9 @@ describe("Feature Extraction", () => {
       const feature = extractSingleFeature(candles);
 
       expect(feature).not.toBeNull();
-      expect(feature!.timestamp).toBe(candles[candles.length - 1]!.timestamp);
+      const lastCandle = candles[candles.length - 1];
+      expect(lastCandle).toBeDefined();
+      expect(feature!.timestamp).toBe(new Date(lastCandle!.timestamp).toISOString());
     });
   });
 
@@ -337,7 +335,11 @@ describe("GMM Classifier", () => {
 
 describe("Regime Transition Detector", () => {
   it("detects regime transitions", () => {
-    const detector = new RegimeTransitionDetector({ minConfirmationObservations: 2, maxHistoryLength: 100, minTransitionConfidence: 0.3 });
+    const detector = new RegimeTransitionDetector({
+      minConfirmationObservations: 2,
+      maxHistoryLength: 100,
+      minTransitionConfidence: 0.3,
+    });
 
     // First observation
     let transition = detector.update("AAPL", "BULL_TREND", "2024-01-01", 0.8);
@@ -384,7 +386,11 @@ describe("Regime Transition Detector", () => {
   });
 
   it("rejects low confidence transitions", () => {
-    const detector = new RegimeTransitionDetector({ minConfirmationObservations: 2, maxHistoryLength: 100, minTransitionConfidence: 0.5 });
+    const detector = new RegimeTransitionDetector({
+      minConfirmationObservations: 2,
+      maxHistoryLength: 100,
+      minTransitionConfidence: 0.5,
+    });
 
     detector.update("AAPL", "BULL_TREND", "2024-01-01", 0.8);
 
@@ -431,9 +437,30 @@ describe("Transition Analysis", () => {
   describe("analyzeTransitions", () => {
     it("analyzes transition patterns", () => {
       const transitions: RegimeTransition[] = [
-        { fromRegime: "BULL_TREND", toRegime: "RANGE", timestamp: "2024-01-01", instrumentId: "AAPL", confidence: 0.8, previousRegimeDuration: 10 },
-        { fromRegime: "RANGE", toRegime: "BEAR_TREND", timestamp: "2024-01-02", instrumentId: "AAPL", confidence: 0.7, previousRegimeDuration: 5 },
-        { fromRegime: "BULL_TREND", toRegime: "RANGE", timestamp: "2024-01-03", instrumentId: "MSFT", confidence: 0.9, previousRegimeDuration: 15 },
+        {
+          fromRegime: "BULL_TREND",
+          toRegime: "RANGE",
+          timestamp: "2024-01-01",
+          instrumentId: "AAPL",
+          confidence: 0.8,
+          previousRegimeDuration: 10,
+        },
+        {
+          fromRegime: "RANGE",
+          toRegime: "BEAR_TREND",
+          timestamp: "2024-01-02",
+          instrumentId: "AAPL",
+          confidence: 0.7,
+          previousRegimeDuration: 5,
+        },
+        {
+          fromRegime: "BULL_TREND",
+          toRegime: "RANGE",
+          timestamp: "2024-01-03",
+          instrumentId: "MSFT",
+          confidence: 0.9,
+          previousRegimeDuration: 15,
+        },
       ];
 
       const analysis = analyzeTransitions(transitions);
@@ -447,9 +474,30 @@ describe("Transition Analysis", () => {
   describe("calculateTransitionMatrix", () => {
     it("calculates transition probability matrix", () => {
       const transitions: RegimeTransition[] = [
-        { fromRegime: "BULL_TREND", toRegime: "RANGE", timestamp: "2024-01-01", instrumentId: "AAPL", confidence: 0.8, previousRegimeDuration: 10 },
-        { fromRegime: "BULL_TREND", toRegime: "BEAR_TREND", timestamp: "2024-01-02", instrumentId: "AAPL", confidence: 0.7, previousRegimeDuration: 5 },
-        { fromRegime: "RANGE", toRegime: "BULL_TREND", timestamp: "2024-01-03", instrumentId: "AAPL", confidence: 0.9, previousRegimeDuration: 15 },
+        {
+          fromRegime: "BULL_TREND",
+          toRegime: "RANGE",
+          timestamp: "2024-01-01",
+          instrumentId: "AAPL",
+          confidence: 0.8,
+          previousRegimeDuration: 10,
+        },
+        {
+          fromRegime: "BULL_TREND",
+          toRegime: "BEAR_TREND",
+          timestamp: "2024-01-02",
+          instrumentId: "AAPL",
+          confidence: 0.7,
+          previousRegimeDuration: 5,
+        },
+        {
+          fromRegime: "RANGE",
+          toRegime: "BULL_TREND",
+          timestamp: "2024-01-03",
+          instrumentId: "AAPL",
+          confidence: 0.9,
+          previousRegimeDuration: 15,
+        },
       ];
 
       const matrix = calculateTransitionMatrix(transitions);

@@ -23,18 +23,17 @@
  * ```
  */
 
+// Client
+export { ArrowFlightClient, createFlightClient } from "./client.js";
 // Types
 export {
+  type CandleRow,
   DEFAULT_FLIGHT_CONFIG,
+  type FlightClientConfig,
   FlightError,
   FlightPaths,
-  type CandleRow,
-  type FlightClientConfig,
   type FlightResult,
   type OptionContractRow,
   type PortfolioHistoryRow,
   type TickRow,
 } from "./types.js";
-
-// Client
-export { ArrowFlightClient, createFlightClient } from "./client.js";

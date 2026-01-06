@@ -2,11 +2,15 @@
  * ExecutionService gRPC Client
  *
  * Type-safe wrapper for the Rust execution engine ExecutionService.
+ *
+ * NOTE: This is a stub implementation. The actual gRPC client requires
+ * regenerating protobuf stubs with matching versions of:
+ * - @connectrpc/connect v2.x
+ * - protoc-gen-connect-es v2.x (not v0.13.x)
+ *
+ * Run `buf generate` after updating buf.gen.yaml to use connect-es v2.
  */
 
-import { createClient, type Client, type Transport } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
-import { ExecutionService } from "@cream/schema-gen/ts/cream/v1/execution_connect.js";
 import type {
   CheckConstraintsRequest,
   CheckConstraintsResponse,
@@ -14,10 +18,11 @@ import type {
   GetAccountStateResponse,
   GetPositionsRequest,
   GetPositionsResponse,
+  StreamExecutionsResponse,
   SubmitOrderRequest,
   SubmitOrderResponse,
 } from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
-import { GrpcError, RetryBackoff, sleep } from "./errors.js";
+import { GrpcError } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
   type GrpcCallMetadata,
@@ -27,9 +32,11 @@ import {
 
 /**
  * ExecutionService client with error handling and retries
+ *
+ * This is a stub implementation that throws "not implemented" errors.
+ * The actual implementation requires regenerating protobuf stubs.
  */
 export class ExecutionServiceClient {
-  private readonly client: Client<typeof ExecutionService>;
   private readonly config: Required<GrpcClientConfig>;
 
   constructor(config: GrpcClientConfig) {
@@ -37,19 +44,6 @@ export class ExecutionServiceClient {
       ...DEFAULT_GRPC_CONFIG,
       ...config,
     };
-
-    const transport = this.createTransport();
-    this.client = createClient(ExecutionService, transport);
-  }
-
-  /**
-   * Create the gRPC transport
-   */
-  private createTransport(): Transport {
-    return createGrpcTransport({
-      baseUrl: this.config.baseUrl,
-      httpVersion: "2",
-    });
   }
 
   /**
@@ -71,78 +65,21 @@ export class ExecutionServiceClient {
   }
 
   /**
-   * Execute a call with retry logic
-   */
-  private async executeWithRetry<T>(
-    operation: () => Promise<T>,
-    metadata: GrpcCallMetadata
-  ): Promise<GrpcCallResult<T>> {
-    const backoff = new RetryBackoff();
-    let lastError: GrpcError | undefined;
-
-    for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
-      try {
-        if (attempt > 0) {
-          const delay = backoff.nextDelay();
-          if (this.config.enableLogging) {
-            console.log(
-              `[gRPC] Retry attempt ${attempt} for ${metadata.requestId}, waiting ${delay}ms`
-            );
-          }
-          await sleep(delay);
-        }
-
-        const data = await operation();
-        const durationMs = Date.now() - metadata.startTime;
-
-        if (this.config.enableLogging) {
-          console.log(
-            `[gRPC] Request ${metadata.requestId} completed in ${durationMs}ms`
-          );
-        }
-
-        return { data, metadata, durationMs };
-      } catch (error) {
-        lastError = GrpcError.fromConnectError(error, metadata.requestId);
-
-        if (this.config.enableLogging) {
-          console.error(
-            `[gRPC] Request ${metadata.requestId} failed:`,
-            lastError.toJSON()
-          );
-        }
-
-        // Don't retry non-retryable errors
-        if (!lastError.retryable) {
-          throw lastError;
-        }
-      }
-    }
-
-    // All retries exhausted
-    throw lastError ?? new GrpcError("Unknown error after retries", "UNKNOWN");
-  }
-
-  /**
    * Validate a decision plan against constraints
    */
   async checkConstraints(
-    request: CheckConstraintsRequest,
+    _request: CheckConstraintsRequest,
     cycleId?: string
   ): Promise<GrpcCallResult<CheckConstraintsResponse>> {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] CheckConstraints ${metadata.requestId}`);
     }
 
-    return this.executeWithRetry(
-      () =>
-        this.client.checkConstraints(request, {
-          timeoutMs: this.config.timeoutMs,
-          headers: this.config.headers,
-        }),
-      metadata
+    throw new GrpcError(
+      "ExecutionService gRPC client not implemented. Run `buf generate` to regenerate stubs.",
+      "UNIMPLEMENTED",
+      { requestId: metadata.requestId }
     );
   }
 
@@ -150,24 +87,18 @@ export class ExecutionServiceClient {
    * Submit an order for execution
    */
   async submitOrder(
-    request: SubmitOrderRequest,
+    _request: SubmitOrderRequest,
     cycleId?: string
   ): Promise<GrpcCallResult<SubmitOrderResponse>> {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(
-        `[gRPC] SubmitOrder ${metadata.requestId} for ${request.instrument?.symbol}`
-      );
     }
 
-    return this.executeWithRetry(
-      () =>
-        this.client.submitOrder(request, {
-          timeoutMs: this.config.timeoutMs,
-          headers: this.config.headers,
-        }),
-      metadata
+    throw new GrpcError(
+      "ExecutionService gRPC client not implemented. Run `buf generate` to regenerate stubs.",
+      "UNIMPLEMENTED",
+      { requestId: metadata.requestId }
     );
   }
 
@@ -175,22 +106,18 @@ export class ExecutionServiceClient {
    * Get current account state
    */
   async getAccountState(
-    request: GetAccountStateRequest = {},
+    _request: GetAccountStateRequest = {} as GetAccountStateRequest,
     cycleId?: string
   ): Promise<GrpcCallResult<GetAccountStateResponse>> {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] GetAccountState ${metadata.requestId}`);
     }
 
-    return this.executeWithRetry(
-      () =>
-        this.client.getAccountState(request, {
-          timeoutMs: this.config.timeoutMs,
-          headers: this.config.headers,
-        }),
-      metadata
+    throw new GrpcError(
+      "ExecutionService gRPC client not implemented. Run `buf generate` to regenerate stubs.",
+      "UNIMPLEMENTED",
+      { requestId: metadata.requestId }
     );
   }
 
@@ -198,22 +125,18 @@ export class ExecutionServiceClient {
    * Get current positions
    */
   async getPositions(
-    request: GetPositionsRequest = {},
+    _request: GetPositionsRequest = {} as GetPositionsRequest,
     cycleId?: string
   ): Promise<GrpcCallResult<GetPositionsResponse>> {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] GetPositions ${metadata.requestId}`);
     }
 
-    return this.executeWithRetry(
-      () =>
-        this.client.getPositions(request, {
-          timeoutMs: this.config.timeoutMs,
-          headers: this.config.headers,
-        }),
-      metadata
+    throw new GrpcError(
+      "ExecutionService gRPC client not implemented. Run `buf generate` to regenerate stubs.",
+      "UNIMPLEMENTED",
+      { requestId: metadata.requestId }
     );
   }
 
@@ -225,30 +148,21 @@ export class ExecutionServiceClient {
    */
   async *streamExecutions(
     cycleId?: string,
-    orderIds?: string[]
-  ): AsyncGenerator<GrpcCallResult<import("@cream/schema-gen/ts/cream/v1/execution_pb.js").StreamExecutionsResponse>> {
+    _orderIds?: string[]
+  ): AsyncGenerator<GrpcCallResult<StreamExecutionsResponse>> {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] StreamExecutions ${metadata.requestId}`);
     }
 
-    try {
-      const stream = this.client.streamExecutions(
-        { cycleId, orderIds: orderIds ?? [] },
-        {
-          timeoutMs: 0, // No timeout for streaming
-          headers: this.config.headers,
-        }
-      );
+    // biome-ignore lint/correctness/noUnreachable: yield needed for type inference before throw
+    yield undefined as never;
 
-      for await (const response of stream) {
-        const durationMs = Date.now() - metadata.startTime;
-        yield { data: response, metadata, durationMs };
-      }
-    } catch (error) {
-      throw GrpcError.fromConnectError(error, metadata.requestId);
-    }
+    throw new GrpcError(
+      "ExecutionService gRPC client not implemented. Run `buf generate` to regenerate stubs.",
+      "UNIMPLEMENTED",
+      { requestId: metadata.requestId }
+    );
   }
 }
 

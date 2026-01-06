@@ -39,11 +39,12 @@ from __future__ import annotations
 
 import logging
 import pickle
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
@@ -60,7 +61,7 @@ from research.evaluator.synthetic_preferences import (
 )
 
 if TYPE_CHECKING:
-    from torch import Tensor
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -365,9 +366,7 @@ class EvaluatorTrainingPipeline:
         self._progress_callback: Callable[[PhaseProgress], None] | None = None
         self._all_pairs: list[PreferencePair] = []
 
-    def set_progress_callback(
-        self, callback: Callable[[PhaseProgress], None]
-    ) -> None:
+    def set_progress_callback(self, callback: Callable[[PhaseProgress], None]) -> None:
         """
         Set callback for progress updates.
 
@@ -531,9 +530,7 @@ class EvaluatorTrainingPipeline:
 
         return result
 
-    def _expert_to_pairs(
-        self, annotations: list[ExpertAnnotation]
-    ) -> list[PreferencePair]:
+    def _expert_to_pairs(self, annotations: list[ExpertAnnotation]) -> list[PreferencePair]:
         """
         Convert expert annotations to preference pairs.
 
@@ -590,15 +587,12 @@ class EvaluatorTrainingPipeline:
 
         if self.config.verbose:
             logger.info(
-                f"Created {len(pairs)} expert preference pairs "
-                f"from {len(annotations)} annotations"
+                f"Created {len(pairs)} expert preference pairs from {len(annotations)} annotations"
             )
 
         return pairs
 
-    def _outcomes_to_pairs(
-        self, outcomes: list[HistoricalOutcome]
-    ) -> list[PreferencePair]:
+    def _outcomes_to_pairs(self, outcomes: list[HistoricalOutcome]) -> list[PreferencePair]:
         """
         Convert historical outcomes to preference pairs using stratified sampling.
 
@@ -615,9 +609,7 @@ class EvaluatorTrainingPipeline:
             return []
 
         # Sort by realized return
-        sorted_outcomes = sorted(
-            outcomes, key=lambda o: o.realized_return, reverse=True
-        )
+        sorted_outcomes = sorted(outcomes, key=lambda o: o.realized_return, reverse=True)
 
         n = len(sorted_outcomes)
         top_count = max(1, int(n * self.config.top_percentile))
@@ -844,8 +836,8 @@ class EvaluatorTrainingPipeline:
                     and (batch_idx + 1) % self.config.log_interval == 0
                 ):
                     logger.info(
-                        f"{phase.value} epoch {epoch+1}/{epochs} "
-                        f"batch {batch_idx+1}/{num_batches} loss={batch_loss:.4f}"
+                        f"{phase.value} epoch {epoch + 1}/{epochs} "
+                        f"batch {batch_idx + 1}/{num_batches} loss={batch_loss:.4f}"
                     )
 
             avg_epoch_loss = epoch_loss / num_batches
@@ -853,8 +845,7 @@ class EvaluatorTrainingPipeline:
 
             if self.config.verbose:
                 logger.info(
-                    f"{phase.value} epoch {epoch+1}/{epochs} "
-                    f"avg_loss={avg_epoch_loss:.4f}"
+                    f"{phase.value} epoch {epoch + 1}/{epochs} avg_loss={avg_epoch_loss:.4f}"
                 )
 
         return epoch_losses
@@ -889,9 +880,7 @@ class EvaluatorTrainingPipeline:
 
         return chosen_features, rejected_features, margins
 
-    def _calibrate_model(
-        self, validation_outcomes: list[HistoricalOutcome]
-    ) -> dict[str, float]:
+    def _calibrate_model(self, validation_outcomes: list[HistoricalOutcome]) -> dict[str, float]:
         """
         Fit probability calibrator on validation data.
 
@@ -967,9 +956,7 @@ class EvaluatorTrainingPipeline:
 
         checkpoint = {
             "model_state_dict": self.model.state_dict(),
-            "optimizer_state_dict": (
-                self._optimizer.state_dict() if self._optimizer else None
-            ),
+            "optimizer_state_dict": (self._optimizer.state_dict() if self._optimizer else None),
             "phase": phase_name,
             "timestamp": datetime.now().isoformat(),
             "config": {
@@ -1014,8 +1001,7 @@ class EvaluatorTrainingPipeline:
 
         if self.config.verbose:
             logger.info(
-                f"Loaded checkpoint from {filepath} "
-                f"(phase: {checkpoint.get('phase', 'unknown')})"
+                f"Loaded checkpoint from {filepath} (phase: {checkpoint.get('phase', 'unknown')})"
             )
 
     def train_on_pairs(
@@ -1050,9 +1036,7 @@ class EvaluatorTrainingPipeline:
             epochs,
         )
 
-    def evaluate_pairs(
-        self, pairs: list[PreferencePair]
-    ) -> dict[str, float]:
+    def evaluate_pairs(self, pairs: list[PreferencePair]) -> dict[str, float]:
         """
         Evaluate model performance on preference pairs.
 

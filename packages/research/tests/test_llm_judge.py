@@ -286,9 +286,7 @@ FEEDBACK: Excellent awareness of current market regime and upcoming earnings."""
 
                 plan = {"action": "BUY", "symbol": "AAPL"}
                 regime = {"classification": "trending_up", "volatility": "normal"}
-                external_events = [
-                    {"type": "earnings", "symbol": "AAPL", "sentiment": "positive"}
-                ]
+                external_events = [{"type": "earnings", "symbol": "AAPL", "sentiment": "positive"}]
 
                 result = await judge.score_context_relevance(plan, regime, external_events)
 
@@ -308,9 +306,7 @@ class TestErrorHandling:
             with patch("google.generativeai.GenerativeModel") as mock_model_class:
                 # Mock to always fail
                 mock_model = MagicMock()
-                mock_model.generate_content_async = AsyncMock(
-                    side_effect=Exception("API Error")
-                )
+                mock_model.generate_content_async = AsyncMock(side_effect=Exception("API Error"))
                 mock_model_class.return_value = mock_model
 
                 judge = LLMJudge(api_key="test-key")

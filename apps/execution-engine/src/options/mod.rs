@@ -40,28 +40,28 @@ pub use multileg::{
 };
 
 pub use rolling::{
+    PartialFillAction,
+    PartialFillMonitor,
+    PositionForRoll,
     // Configuration
     RollConfig,
-    // Roll triggers
-    check_roll_trigger,
-    PositionForRoll,
-    RollReason,
-    RollTriggerResult,
-    // Roll orders
-    calculate_roll_quantity,
-    round_contracts_conservative,
     RollError,
+    RollExecutionState,
     RollLeg,
     RollOrder,
     RollOrderBuilder,
     RollOrderType,
-    // Roll timing
-    check_roll_timing,
+    RollReason,
     RollTimingRecommendation,
     RollTimingResult,
+    RollTriggerResult,
+    // Roll orders
+    calculate_roll_quantity,
+    // Roll timing
+    check_roll_timing,
+    // Roll triggers
+    check_roll_trigger,
     // Partial fill monitoring
     evaluate_partial_fill,
-    PartialFillAction,
-    PartialFillMonitor,
-    RollExecutionState,
+    round_contracts_conservative,
 };

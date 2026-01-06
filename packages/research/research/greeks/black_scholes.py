@@ -21,7 +21,6 @@ References:
 from dataclasses import dataclass
 from math import exp, log, sqrt
 
-import numpy as np
 from scipy import stats
 
 

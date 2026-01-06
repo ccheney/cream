@@ -133,7 +133,12 @@ export function useRelativeTimeBatch(
   timestamps: Array<Date | number>,
   options: UseRelativeTimeOptions = {}
 ): RelativeTimeResult[] {
-  const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
+  const {
+    recentIntervalMs = 1000,
+    olderIntervalMs: _olderIntervalMs = 30000,
+    recentThresholdSec = 60,
+  } = options;
+  void _olderIntervalMs; // Reserved for future use with adaptive intervals
 
   const [results, setResults] = useState<RelativeTimeResult[]>(() =>
     timestamps.map((ts) => {

@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Required<TranscriptParserConfig> = {
  */
 export function parseTranscript(
   transcript: FMPTranscript,
-  config: TranscriptParserConfig = {},
+  config: TranscriptParserConfig = {}
 ): ParsedTranscript | null {
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -63,7 +63,7 @@ export function parseTranscript(
  */
 function parseTranscriptContent(
   content: string,
-  config: Required<TranscriptParserConfig>,
+  config: Required<TranscriptParserConfig>
 ): TranscriptSpeaker[] {
   const speakers: TranscriptSpeaker[] = [];
 
@@ -83,11 +83,13 @@ function parseTranscriptContent(
 
   for (const line of lines) {
     const trimmedLine = line.trim();
-    if (!trimmedLine) continue;
+    if (!trimmedLine) {
+      continue;
+    }
 
     // Try to match speaker pattern with role
     const speakerWithRole = trimmedLine.match(/^([A-Z][A-Za-z\s.]+)\s*--\s*([^:]+):\s*(.*)$/);
-    if (speakerWithRole) {
+    if (speakerWithRole?.[1] && speakerWithRole[2]) {
       // Save previous speaker
       if (currentSpeaker && currentSpeaker.text.length > 0) {
         speakers.push(finalizeSpeaker(currentSpeaker, config));
@@ -102,7 +104,7 @@ function parseTranscriptContent(
 
     // Try to match simple speaker pattern
     const simpleSpeaker = trimmedLine.match(/^([A-Z][A-Za-z\s.]+):\s*(.*)$/);
-    if (simpleSpeaker && simpleSpeaker[1].length < 50) {
+    if (simpleSpeaker?.[1] && simpleSpeaker[1].length < 50) {
       // Save previous speaker
       if (currentSpeaker && currentSpeaker.text.length > 0) {
         speakers.push(finalizeSpeaker(currentSpeaker, config));
@@ -139,7 +141,7 @@ function parseTranscriptContent(
  */
 function finalizeSpeaker(
   speaker: { speaker: string; role?: string; text: string[] },
-  config: Required<TranscriptParserConfig>,
+  config: Required<TranscriptParserConfig>
 ): TranscriptSpeaker {
   const text = speaker.text.join(" ").trim();
 
@@ -154,24 +156,25 @@ function finalizeSpeaker(
  * Parse date string
  */
 function parseDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
+  if (!dateStr) {
+    return null;
+  }
   const date = new Date(dateStr);
-  return isNaN(date.getTime()) ? null : date;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
  * Extract key sections from transcript (intro, Q&A, etc.)
  */
-export function extractTranscriptSections(
-  transcript: ParsedTranscript,
-): { prepared: TranscriptSpeaker[]; qa: TranscriptSpeaker[] } {
+export function extractTranscriptSections(transcript: ParsedTranscript): {
+  prepared: TranscriptSpeaker[];
+  qa: TranscriptSpeaker[];
+} {
   const speakers = transcript.speakers;
 
   // Find Q&A section start (usually marked by "Operator" or "Question")
   let qaStart = speakers.findIndex(
-    (s) =>
-      s.speaker.toLowerCase().includes("operator") &&
-      s.text.toLowerCase().includes("question"),
+    (s) => s.speaker.toLowerCase().includes("operator") && s.text.toLowerCase().includes("question")
   );
 
   if (qaStart === -1) {
@@ -179,7 +182,7 @@ export function extractTranscriptSections(
     qaStart = speakers.findIndex(
       (s) =>
         s.text.toLowerCase().includes("questions and answers") ||
-        s.text.toLowerCase().includes("q&a session"),
+        s.text.toLowerCase().includes("q&a session")
     );
   }
 
@@ -200,8 +203,6 @@ export function extractTranscriptSections(
 export function getExecutiveComments(transcript: ParsedTranscript): TranscriptSpeaker[] {
   const executiveRoles = ["ceo", "cfo", "coo", "president", "chief"];
   return transcript.speakers.filter(
-    (s) =>
-      s.role &&
-      executiveRoles.some((role) => s.role!.toLowerCase().includes(role)),
+    (s) => s.role && executiveRoles.some((role) => s.role?.toLowerCase().includes(role))
   );
 }

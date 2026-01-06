@@ -280,8 +280,8 @@ pub fn evaluate_target(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::config::*;
+    use super::*;
 
     fn make_candle(open: i64, high: i64, low: i64, close: i64) -> Candle {
         Candle {
@@ -381,7 +381,7 @@ mod tests {
 
         let result = evaluate_triggers(
             PositionDirection::Long,
-            Some(Decimal::new(9800, 2)),  // Stop at $98 (triggers - low = $97)
+            Some(Decimal::new(9800, 2)), // Stop at $98 (triggers - low = $97)
             Some(Decimal::new(10200, 2)), // Target at $102 (not triggered)
             &candle,
             &config,
@@ -398,7 +398,7 @@ mod tests {
 
         let result = evaluate_triggers(
             PositionDirection::Long,
-            Some(Decimal::new(9800, 2)),  // Stop at $98 (not triggered - low = $99)
+            Some(Decimal::new(9800, 2)), // Stop at $98 (not triggered - low = $99)
             Some(Decimal::new(10200, 2)), // Target at $102 (triggers - high = $103)
             &candle,
             &config,
@@ -426,7 +426,9 @@ mod tests {
         );
 
         match result {
-            TriggerResult::BothTriggered { selected, price, .. } => {
+            TriggerResult::BothTriggered {
+                selected, price, ..
+            } => {
                 assert_eq!(selected, TriggerType::Stop);
                 assert_eq!(price, Decimal::new(9800, 2));
             }
@@ -451,7 +453,9 @@ mod tests {
         );
 
         match result {
-            TriggerResult::BothTriggered { selected, price, .. } => {
+            TriggerResult::BothTriggered {
+                selected, price, ..
+            } => {
                 assert_eq!(selected, TriggerType::Target);
                 assert_eq!(price, Decimal::new(10200, 2));
             }

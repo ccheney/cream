@@ -23,16 +23,8 @@
  * ```
  */
 
-import type {
-  BuiltInFlagId,
-  FeatureFlag,
-  FeatureFlagsConfig,
-} from "./schemas/flags.js";
-import {
-  BUILT_IN_FLAGS,
-  DEFAULT_FLAGS,
-  mergeFlagsWithDefaults,
-} from "./schemas/flags.js";
+import type { BuiltInFlagId, FeatureFlag, FeatureFlagsConfig } from "./schemas/flags.js";
+import { BUILT_IN_FLAGS, mergeFlagsWithDefaults } from "./schemas/flags.js";
 
 // ============================================
 // Types
@@ -77,11 +69,7 @@ export interface FlagResult<T> {
   /**
    * Source of the value
    */
-  source:
-    | "default"
-    | "environment_override"
-    | "instrument_override"
-    | "env_var";
+  source: "default" | "environment_override" | "instrument_override" | "env_var";
 
   /**
    * Whether the flag is deprecated
@@ -116,10 +104,7 @@ export interface FlagEvaluator {
   /**
    * Get flag value with full metadata
    */
-  evaluate<T extends boolean | number | string>(
-    flagId: string,
-    instrument?: string
-  ): FlagResult<T>;
+  evaluate<T extends boolean | number | string>(flagId: string, instrument?: string): FlagResult<T>;
 
   /**
    * Check if a percentage flag passes for a given seed
@@ -200,9 +185,6 @@ function getEnvVarOverride(
 
   const parsed = parseEnvVarValue(envValue, flag.type);
   if (parsed === undefined) {
-    console.warn(
-      `Invalid value for env var ${envVarName}="${envValue}" (expected ${flag.type})`
-    );
     return undefined;
   }
 
@@ -270,8 +252,6 @@ export function createFlagEvaluator(
     const flag = flagMap.get(flagId);
 
     if (!flag) {
-      // Unknown flag - return false for boolean, 0 for percentage, empty for string
-      console.warn(`Unknown feature flag: ${flagId}`);
       return {
         value: false as T,
         source: "default",
@@ -330,11 +310,8 @@ export function createFlagEvaluator(
   /**
    * Log deprecation warning if flag is deprecated
    */
-  function warnIfDeprecated(result: FlagResult<unknown>, flagId: string): void {
+  function warnIfDeprecated(result: FlagResult<unknown>, _flagId: string): void {
     if (result.deprecated) {
-      console.warn(
-        `Feature flag "${flagId}" is deprecated: ${result.deprecationMessage ?? "No message provided"}`
-      );
     }
   }
 
@@ -366,14 +343,14 @@ export function createFlagEvaluator(
       return result;
     },
 
-    checkPercentage(
-      flagId: string,
-      seed: string,
-      instrument?: string
-    ): boolean {
+    checkPercentage(flagId: string, seed: string, instrument?: string): boolean {
       const percentage = this.getPercentage(flagId, instrument);
-      if (percentage === 0) return false;
-      if (percentage >= 100) return true;
+      if (percentage === 0) {
+        return false;
+      }
+      if (percentage >= 100) {
+        return true;
+      }
 
       const seedPercentage = getPercentageFromSeed(seed);
       return seedPercentage < percentage;
@@ -420,9 +397,7 @@ export function initializeFlags(
  */
 export function getFlags(): FlagEvaluator {
   if (!globalEvaluator) {
-    throw new Error(
-      "Feature flags not initialized. Call initializeFlags() first."
-    );
+    throw new Error("Feature flags not initialized. Call initializeFlags() first.");
   }
   return globalEvaluator;
 }
@@ -448,10 +423,7 @@ export function resetFlags(): void {
 /**
  * Check if a built-in flag is enabled
  */
-export function isBuiltInFlagEnabled(
-  flagId: BuiltInFlagId,
-  instrument?: string
-): boolean {
+export function isBuiltInFlagEnabled(flagId: BuiltInFlagId, instrument?: string): boolean {
   return getFlags().isEnabled(flagId, instrument);
 }
 
@@ -490,6 +462,6 @@ export function isDebugLoggingEnabled(): boolean {
   return isBuiltInFlagEnabled(BUILT_IN_FLAGS.ENABLE_DEBUG_LOGGING);
 }
 
+export type { BuiltInFlagId, FeatureFlag, FeatureFlagsConfig } from "./schemas/flags.js";
 // Re-export types and constants
 export { BUILT_IN_FLAGS } from "./schemas/flags.js";
-export type { BuiltInFlagId, FeatureFlag, FeatureFlagsConfig } from "./schemas/flags.js";

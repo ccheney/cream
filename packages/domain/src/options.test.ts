@@ -4,10 +4,6 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  OSI_LENGTH,
-  OSIError,
-  OSISymbolLenientSchema,
-  OSISymbolSchema,
   extractExpiration,
   extractStrike,
   extractSymbol,
@@ -16,6 +12,10 @@ import {
   isPut,
   isValidOSI,
   normalizeOSI,
+  OSI_LENGTH,
+  OSIError,
+  OSISymbolLenientSchema,
+  OSISymbolSchema,
   parseOSI,
   parseOSIOrThrow,
   toOSI,
@@ -113,9 +113,7 @@ describe("OSI Format Utilities", () => {
         const result = parseOSI(osi);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.contract.underlyingSymbol).toBe(
-            contract.underlyingSymbol
-          );
+          expect(result.contract.underlyingSymbol).toBe(contract.underlyingSymbol);
           expect(result.contract.expirationDate).toBe(contract.expirationDate);
           expect(result.contract.strike).toBe(contract.strike);
           expect(result.contract.right).toBe(contract.right);

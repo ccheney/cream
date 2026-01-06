@@ -33,14 +33,14 @@ export function generateOrderId(prefix: string): string {
  * @returns GCD of a and b
  */
 export function gcd(a: number, b: number): number {
-  a = Math.abs(a);
-  b = Math.abs(b);
-  while (b !== 0) {
-    const temp = b;
-    b = a % b;
-    a = temp;
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const temp = y;
+    y = x % y;
+    x = temp;
   }
-  return a;
+  return x;
 }
 
 /**

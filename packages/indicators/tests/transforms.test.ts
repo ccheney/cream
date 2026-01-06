@@ -57,7 +57,7 @@ function generateValues(count: number, start = 100, drift = 0.001, volatility = 
 
   for (let i = 1; i < count; i++) {
     const change = drift + (Math.random() - 0.5) * 2 * volatility;
-    values.push(values[i - 1] * (1 + change));
+    values.push(values[i - 1]! * (1 + change));
   }
 
   return values;
@@ -131,7 +131,7 @@ describe("Returns Transform", () => {
 
       const results = calculateReturns(values, timestamps, 1);
       expect(results.length).toBe(4);
-      expect(results[0].return).toBeCloseTo(0.05, 5);
+      expect(results[0]!.return).toBeCloseTo(0.05, 5);
     });
 
     it("should handle different periods", () => {
@@ -159,9 +159,9 @@ describe("Returns Transform", () => {
       });
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].returns[1]).toBeDefined();
-      expect(results[0].returns[5]).toBeDefined();
-      expect(results[0].returns[20]).toBeDefined();
+      expect(results[0]!.returns[1]).toBeDefined();
+      expect(results[0]!.returns[5]).toBeDefined();
+      expect(results[0]!.returns[20]).toBeDefined();
     });
   });
 
@@ -343,13 +343,13 @@ describe("Volatility Scale Transform", () => {
     it("should calculate rolling volatility", () => {
       const _returns = generateValues(50)
         .slice(1)
-        .map((v, i, _arr) => (i === 0 ? 0 : (v - generateValues(50)[i]) / generateValues(50)[i]));
+        .map((v, i, _arr) => (i === 0 ? 0 : (v - generateValues(50)[i]!) / generateValues(50)[i]!));
 
       // Generate actual returns
       const prices = generateValues(50);
       const actualReturns: number[] = [];
       for (let i = 1; i < prices.length; i++) {
-        actualReturns.push(simpleReturn(prices[i], prices[i - 1]));
+        actualReturns.push(simpleReturn(prices[i]!, prices[i - 1]!));
       }
 
       const volatilities = calculateRollingVolatility(actualReturns, 20);
@@ -396,7 +396,7 @@ describe("Volatility Scale Transform", () => {
       const prices = generateValues(50);
       const returns: number[] = [];
       for (let i = 1; i < prices.length; i++) {
-        returns.push(simpleReturn(prices[i], prices[i - 1]));
+        returns.push(simpleReturn(prices[i]!, prices[i - 1]!));
       }
       const timestamps = generateTimestamps(50);
 
@@ -526,7 +526,7 @@ describe("Z-Score vs Percentile Rank", () => {
   it("should show percentile rank is more robust to outliers", () => {
     // Create data with an outlier
     const values = generateValues(100);
-    values[50] = values[50] * 10; // Add extreme outlier
+    values[50] = values[50]! * 10; // Add extreme outlier
 
     const timestamps = generateTimestamps(100);
 

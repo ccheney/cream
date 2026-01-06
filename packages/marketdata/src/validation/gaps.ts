@@ -159,7 +159,11 @@ export function shouldInterpolate(gap: GapInfo, maxInterpolateCandles = 1): bool
  * @param timestamp - Timestamp for interpolated candle
  * @returns Interpolated candle
  */
-export function interpolateCandle(prev: Candle, next: Candle, timestamp: string): InterpolatedCandle {
+export function interpolateCandle(
+  prev: Candle,
+  next: Candle,
+  timestamp: string
+): InterpolatedCandle {
   // Linear interpolation between prev.close and next.open
   const midPrice = (prev.close + next.open) / 2;
 
@@ -188,14 +192,20 @@ export function interpolateCandle(prev: Candle, next: Candle, timestamp: string)
  * @param maxInterpolateCandles - Maximum consecutive candles to interpolate
  * @returns Array of candles with gaps filled
  */
-export function fillGaps(candles: Candle[], maxInterpolateCandles = 1): (Candle | InterpolatedCandle)[] {
+export function fillGaps(
+  candles: Candle[],
+  maxInterpolateCandles = 1
+): (Candle | InterpolatedCandle)[] {
   if (candles.length < 2) {
     return candles;
   }
 
-  const timeframe = candles[0]!.timeframe;
-  const expectedIntervalMs = getExpectedIntervalMs(timeframe);
-  const result: (Candle | InterpolatedCandle)[] = [candles[0]!];
+  const firstCandle = candles[0];
+  if (!firstCandle) {
+    return candles;
+  }
+  const expectedIntervalMs = getExpectedIntervalMs(firstCandle.timeframe);
+  const result: (Candle | InterpolatedCandle)[] = [firstCandle];
 
   for (let i = 1; i < candles.length; i++) {
     const prev = candles[i - 1]!;
@@ -209,7 +219,11 @@ export function fillGaps(candles: Candle[], maxInterpolateCandles = 1): (Candle 
     if (gapCandles > 0 && gapCandles <= maxInterpolateCandles) {
       for (let j = 1; j <= gapCandles; j++) {
         const interpolatedTime = prevTime + j * expectedIntervalMs;
-        const interpolated = interpolateCandle(prev, curr, new Date(interpolatedTime).toISOString());
+        const interpolated = interpolateCandle(
+          prev,
+          curr,
+          new Date(interpolatedTime).toISOString()
+        );
         result.push(interpolated);
       }
     }

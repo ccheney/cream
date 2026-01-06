@@ -175,7 +175,7 @@ class ResearchFinding:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ResearchFinding":
+    def from_dict(cls, data: dict[str, Any]) -> ResearchFinding:
         """Create from dictionary."""
         entry_conditions = [
             StrategyCondition(

@@ -9,10 +9,7 @@ Tests the four-phase curriculum training:
 """
 
 import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 import torch
 
@@ -36,7 +33,6 @@ from research.evaluator.training import (
     TrainingPhase,
     TrainingResult,
 )
-
 
 # ============================================
 # Fixtures

@@ -2,7 +2,7 @@
  * Backtest Adapter Tests
  */
 
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { createBacktestAdapter, createBacktestAdapterWithUtils } from "../src/adapters/backtest.js";
 import { createBrokerClient } from "../src/factory.js";
 
@@ -230,7 +230,7 @@ describe("BacktestAdapter", () => {
 
     test("gets order by client order ID", async () => {
       const clientOrderId = adapter.generateOrderId();
-      const order = await adapter.submitOrder({
+      const _order = await adapter.submitOrder({
         clientOrderId,
         symbol: "AAPL",
         qty: 10,
@@ -503,8 +503,12 @@ describe("createBrokerClient factory", () => {
       ).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
     } finally {
       // Restore env vars
-      if (savedKey) process.env.ALPACA_KEY = savedKey;
-      if (savedSecret) process.env.ALPACA_SECRET = savedSecret;
+      if (savedKey) {
+        process.env.ALPACA_KEY = savedKey;
+      }
+      if (savedSecret) {
+        process.env.ALPACA_SECRET = savedSecret;
+      }
     }
   });
 

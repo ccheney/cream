@@ -2,11 +2,11 @@
  * Tests for Connection Pool
  */
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import {
+  type ConnectionPool,
   createHttpPool,
   createPool,
-  type ConnectionPool,
   type HttpPool,
   type PoolConfig,
 } from "./pool.js";
@@ -114,9 +114,7 @@ describe("ConnectionPool", () => {
     });
 
     test("waits for connection when at max capacity", async () => {
-      pool = createPool(
-        createMockConfig({ min: 0, max: 1, acquireTimeout: 500 })
-      );
+      pool = createPool(createMockConfig({ min: 0, max: 1, acquireTimeout: 500 }));
 
       const conn1 = await pool.acquire();
       const id1 = conn1.id;
@@ -134,9 +132,7 @@ describe("ConnectionPool", () => {
     });
 
     test("times out when no connection available", async () => {
-      pool = createPool(
-        createMockConfig({ min: 0, max: 1, acquireTimeout: 100 })
-      );
+      pool = createPool(createMockConfig({ min: 0, max: 1, acquireTimeout: 100 }));
 
       const conn = await pool.acquire();
 
@@ -258,11 +254,9 @@ describe("ConnectionPool", () => {
     });
 
     test("close rejects pending requests", async () => {
-      pool = createPool(
-        createMockConfig({ min: 0, max: 1, acquireTimeout: 5000 })
-      );
+      pool = createPool(createMockConfig({ min: 0, max: 1, acquireTimeout: 5000 }));
 
-      const conn = await pool.acquire();
+      const _conn = await pool.acquire();
       const acquirePromise = pool.acquire();
 
       // Give time for the acquire to get queued

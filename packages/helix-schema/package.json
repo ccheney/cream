@@ -4,6 +4,7 @@
   "description": "HelixDB schema definitions for Cream trading system",
   "type": "module",
   "main": "dist/index.js",
+  "types": "src/index.ts",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist",
     "test": "bun test",

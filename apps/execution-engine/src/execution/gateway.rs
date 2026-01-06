@@ -189,7 +189,11 @@ pub struct ExecutionGateway<B: BrokerAdapter> {
 impl<B: BrokerAdapter> ExecutionGateway<B> {
     /// Create a new execution gateway.
     #[must_use]
-    pub fn new(broker: B, state_manager: OrderStateManager, validator: ConstraintValidator) -> Self {
+    pub fn new(
+        broker: B,
+        state_manager: OrderStateManager,
+        validator: ConstraintValidator,
+    ) -> Self {
         Self {
             broker: Arc::new(broker),
             state_manager: Arc::new(state_manager),
@@ -350,10 +354,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     /// # Errors
     ///
     /// Returns an error if the broker API call fails.
-    pub async fn refresh_order_state(
-        &self,
-        broker_order_id: &str,
-    ) -> Result<OrderState, String> {
+    pub async fn refresh_order_state(&self, broker_order_id: &str) -> Result<OrderState, String> {
         tracing::debug!(
             broker_order_id = %broker_order_id,
             "Refreshing order state from broker"
@@ -616,7 +617,10 @@ mod tests {
         // Try to cancel non-existent order
         let result = gateway.cancel_order("nonexistent-order-id").await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CancelOrderError::OrderNotFound(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            CancelOrderError::OrderNotFound(_)
+        ));
     }
 
     #[tokio::test]

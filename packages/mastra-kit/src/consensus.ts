@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: ConsensusGateConfig = {
 
 export class ConsensusGate {
   private readonly config: ConsensusGateConfig;
-  private currentIteration: number = 0;
+  private currentIteration = 0;
   private rejectionHistory: Array<{
     iteration: number;
     riskManagerVerdict: ApprovalVerdict;
@@ -71,10 +71,7 @@ export class ConsensusGate {
     const criticApproved = criticOutput.verdict === "APPROVE";
     const approved = riskApproved && criticApproved;
 
-    const rejectionReasons = this.collectRejectionReasons(
-      riskManagerOutput,
-      criticOutput
-    );
+    const rejectionReasons = this.collectRejectionReasons(riskManagerOutput, criticOutput);
 
     // Track rejection history
     if (!approved) {
@@ -86,12 +83,6 @@ export class ConsensusGate {
       });
 
       if (this.config.logRejections) {
-        console.log(
-          `[ConsensusGate] Iteration ${this.currentIteration}: REJECTED`
-        );
-        console.log(`  Risk Manager: ${riskManagerOutput.verdict}`);
-        console.log(`  Critic: ${criticOutput.verdict}`);
-        console.log(`  Reasons: ${rejectionReasons.join(", ")}`);
       }
     }
 
@@ -165,14 +156,10 @@ export class ConsensusGate {
     // Critic issues
     if (criticOutput.verdict === "REJECT") {
       for (const inconsistency of criticOutput.inconsistencies) {
-        reasons.push(
-          `[Critic] ${inconsistency.decisionId}: ${inconsistency.issue}`
-        );
+        reasons.push(`[Critic] ${inconsistency.decisionId}: ${inconsistency.issue}`);
       }
       for (const missing of criticOutput.missing_justifications) {
-        reasons.push(
-          `[Critic] ${missing.decisionId}: Missing ${missing.missing}`
-        );
+        reasons.push(`[Critic] ${missing.decisionId}: Missing ${missing.missing}`);
       }
       for (const hallucination of criticOutput.hallucination_flags) {
         reasons.push(
@@ -192,10 +179,7 @@ export class ConsensusGate {
 /**
  * Create a NO_TRADE plan when consensus cannot be reached
  */
-export function createNoTradePlan(
-  cycleId: string,
-  reason: string
-): DecisionPlan {
+export function createNoTradePlan(cycleId: string, reason: string): DecisionPlan {
   return {
     cycleId,
     timestamp: new Date().toISOString(),
@@ -207,7 +191,7 @@ export function createNoTradePlan(
 /**
  * Create an approved RiskManagerOutput
  */
-export function createApprovedRiskOutput(notes: string = ""): RiskManagerOutput {
+export function createApprovedRiskOutput(notes = ""): RiskManagerOutput {
   return {
     verdict: "APPROVE",
     violations: [],
@@ -244,10 +228,7 @@ export async function runConsensusLoop(
   getApproval: (
     plan: DecisionPlan
   ) => Promise<{ riskManager: RiskManagerOutput; critic: CriticOutput }>,
-  revisePlan: (
-    plan: DecisionPlan,
-    rejectionReasons: string[]
-  ) => Promise<DecisionPlan>
+  revisePlan: (plan: DecisionPlan, rejectionReasons: string[]) => Promise<DecisionPlan>
 ): Promise<ConsensusResult> {
   let currentPlan = initialPlan;
 
@@ -290,8 +271,5 @@ export function wouldPassConsensus(
   riskManagerOutput: RiskManagerOutput,
   criticOutput: CriticOutput
 ): boolean {
-  return (
-    riskManagerOutput.verdict === "APPROVE" &&
-    criticOutput.verdict === "APPROVE"
-  );
+  return riskManagerOutput.verdict === "APPROVE" && criticOutput.verdict === "APPROVE";
 }

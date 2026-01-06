@@ -74,25 +74,34 @@ export function calculateEMA(candles: Candle[], params: MAParams = EMA_DEFAULTS)
   // Calculate initial SMA for seeding EMA
   let sum = 0;
   for (let i = 0; i < period; i++) {
-    sum += candles[i].close;
+    const candle = candles[i];
+    if (candle) {
+      sum += candle.close;
+    }
   }
   let ema = sum / period;
 
   // First EMA value (seeded with SMA)
-  results.push({
-    timestamp: candles[period - 1].timestamp,
-    ma: ema,
-  });
+  const firstCandle = candles[period - 1];
+  if (firstCandle) {
+    results.push({
+      timestamp: firstCandle.timestamp,
+      ma: ema,
+    });
+  }
 
   // Calculate remaining EMA values
   for (let i = period; i < candles.length; i++) {
-    // EMA = (Close - Previous EMA) * Multiplier + Previous EMA
-    ema = (candles[i].close - ema) * multiplier + ema;
+    const candle = candles[i];
+    if (candle) {
+      // EMA = (Close - Previous EMA) * Multiplier + Previous EMA
+      ema = (candle.close - ema) * multiplier + ema;
 
-    results.push({
-      timestamp: candles[i].timestamp,
-      ma: ema,
-    });
+      results.push({
+        timestamp: candle.timestamp,
+        ma: ema,
+      });
+    }
   }
 
   return results;
@@ -146,10 +155,12 @@ export function calculateMACD(
 
   for (let i = 0; i < slowEMA.length; i++) {
     const fastIdx = i + offset;
-    if (fastIdx < fastEMA.length) {
+    const slowValue = slowEMA[i];
+    const fastValue = fastEMA[fastIdx];
+    if (fastIdx < fastEMA.length && slowValue && fastValue) {
       results.push({
-        timestamp: slowEMA[i].timestamp,
-        macd: fastEMA[fastIdx].ma - slowEMA[i].ma,
+        timestamp: slowValue.timestamp,
+        macd: fastValue.ma - slowValue.ma,
       });
     }
   }

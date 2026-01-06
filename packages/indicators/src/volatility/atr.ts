@@ -71,31 +71,44 @@ export function calculateATR(candles: Candle[], params: ATRParams = ATR_DEFAULTS
   const trueRanges: number[] = [];
 
   // First TR uses just High - Low (no previous close)
-  trueRanges.push(candles[0].high - candles[0].low);
+  const firstCandle = candles[0];
+  if (firstCandle) {
+    trueRanges.push(firstCandle.high - firstCandle.low);
+  }
 
   // Calculate TR for remaining candles
   for (let i = 1; i < candles.length; i++) {
-    trueRanges.push(calculateTrueRange(candles[i], candles[i - 1].close));
+    const curr = candles[i];
+    const prev = candles[i - 1];
+    if (curr && prev) {
+      trueRanges.push(calculateTrueRange(curr, prev.close));
+    }
   }
 
   // Calculate first ATR (simple average of first period TR values)
   let atr = trueRanges.slice(1, period + 1).reduce((a, b) => a + b, 0) / period;
 
   // First ATR value
-  results.push({
-    timestamp: candles[period].timestamp,
-    atr,
-  });
+  const periodCandle = candles[period];
+  if (periodCandle) {
+    results.push({
+      timestamp: periodCandle.timestamp,
+      atr,
+    });
+  }
 
   // Calculate subsequent ATR values using Wilder's smoothing
   for (let i = period + 1; i < candles.length; i++) {
     // Wilder's smoothing: ((prevATR * (period - 1)) + currentTR) / period
-    atr = (atr * (period - 1) + trueRanges[i]) / period;
+    atr = (atr * (period - 1) + (trueRanges[i] ?? 0)) / period;
 
-    results.push({
-      timestamp: candles[i].timestamp,
-      atr,
-    });
+    const candle = candles[i];
+    if (candle) {
+      results.push({
+        timestamp: candle.timestamp,
+        atr,
+      });
+    }
   }
 
   return results;

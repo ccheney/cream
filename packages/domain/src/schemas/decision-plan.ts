@@ -211,10 +211,13 @@ export const OrderPlanSchema = z
     }
 
     // Validate executionTactic is valid
-    if (data.executionTactic && !["", "PASSIVE_LIMIT", "TWAP", "VWAP"].includes(data.executionTactic)) {
+    if (
+      data.executionTactic &&
+      !["", "PASSIVE_LIMIT", "TWAP", "VWAP"].includes(data.executionTactic)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'executionTactic must be one of: PASSIVE_LIMIT, TWAP, VWAP, or empty string',
+        message: "executionTactic must be one of: PASSIVE_LIMIT, TWAP, VWAP, or empty string",
         path: ["executionTactic"],
       });
     }
@@ -272,10 +275,12 @@ export type Decision = z.infer<typeof DecisionSchema>;
 // ============================================
 
 /** ISO-8601 timestamp with UTC timezone */
-export const ISO8601TimestampSchema = z.string().regex(
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/,
-  "Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)"
-);
+export const ISO8601TimestampSchema = z
+  .string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/,
+    "Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)"
+  );
 export type ISO8601Timestamp = z.infer<typeof ISO8601TimestampSchema>;
 
 /** Complete decision plan for a trading cycle */
@@ -331,10 +336,7 @@ export type DecisionPlanValidationResult = z.infer<typeof DecisionPlanValidation
  * Validate risk-reward ratio for a decision.
  * Returns minimum 1.5:1 risk-reward ratio as per spec.
  */
-export function validateRiskReward(
-  decision: Decision,
-  entryPrice: number
-): RiskValidationResult {
+export function validateRiskReward(decision: Decision, entryPrice: number): RiskValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -347,18 +349,26 @@ export function validateRiskReward(
   if (isLong) {
     // Long position: stop < entry < profit
     if (stopLossLevel >= entryPrice) {
-      errors.push(`Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`);
+      errors.push(
+        `Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`
+      );
     }
     if (takeProfitLevel <= entryPrice) {
-      errors.push(`Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`);
+      errors.push(
+        `Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`
+      );
     }
   } else if (isShort) {
     // Short position: profit < entry < stop
     if (stopLossLevel <= entryPrice) {
-      errors.push(`Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`);
+      errors.push(
+        `Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`
+      );
     }
     if (takeProfitLevel >= entryPrice) {
-      errors.push(`Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`);
+      errors.push(
+        `Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`
+      );
     }
   }
 
@@ -388,17 +398,13 @@ export function validateRiskReward(
 /**
  * Validate an entire decision plan.
  */
-export function validateDecisionPlan(
-  plan: unknown
-): DecisionPlanValidationResult {
+export function validateDecisionPlan(plan: unknown): DecisionPlanValidationResult {
   const parseResult = DecisionPlanSchema.safeParse(plan);
 
   if (!parseResult.success) {
     return {
       success: false,
-      errors: parseResult.error.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`
-      ),
+      errors: parseResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
       warnings: [],
     };
   }
@@ -410,9 +416,7 @@ export function validateDecisionPlan(
   for (const decision of parseResult.data.decisions) {
     // Validate size consistency
     if (decision.action === "NO_TRADE" && decision.size.quantity !== 0) {
-      warnings.push(
-        `${decision.instrument.instrumentId}: NO_TRADE action should have quantity 0`
-      );
+      warnings.push(`${decision.instrument.instrumentId}: NO_TRADE action should have quantity 0`);
     }
 
     // Validate unit matches instrument type

@@ -263,12 +263,22 @@ export const DEFAULT_SNAPSHOT_CONFIG: Required<SnapshotBuilderConfig> = {
  * Classify market cap into bucket.
  */
 export function classifyMarketCap(marketCap: number | undefined): MarketCapBucket | undefined {
-  if (marketCap === undefined) return undefined;
+  if (marketCap === undefined) {
+    return undefined;
+  }
 
-  if (marketCap >= 200_000_000_000) return "MEGA"; // $200B+
-  if (marketCap >= 10_000_000_000) return "LARGE"; // $10B+
-  if (marketCap >= 2_000_000_000) return "MID"; // $2B+
-  if (marketCap >= 300_000_000) return "SMALL"; // $300M+
+  if (marketCap >= 200_000_000_000) {
+    return "MEGA"; // $200B+
+  }
+  if (marketCap >= 10_000_000_000) {
+    return "LARGE"; // $10B+
+  }
+  if (marketCap >= 2_000_000_000) {
+    return "MID"; // $2B+
+  }
+  if (marketCap >= 300_000_000) {
+    return "SMALL"; // $300M+
+  }
   return "MICRO";
 }
 

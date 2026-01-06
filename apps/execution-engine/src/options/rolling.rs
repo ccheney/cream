@@ -63,8 +63,8 @@ impl Default for RollConfig {
             profitable_dte_trigger: 21,
 
             // Profit/loss
-            profit_target_pct: Decimal::new(50, 2),     // 50%
-            loss_trigger_multiple: Decimal::new(2, 0),  // 2x
+            profit_target_pct: Decimal::new(50, 2),    // 50%
+            loss_trigger_multiple: Decimal::new(2, 0), // 2x
 
             // Timing
             preferred_roll_hour: 14, // 2 PM ET
@@ -177,8 +177,10 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
             should_roll: true,
             reason: Some(RollReason::UrgentDte),
             urgency: 9,
-            context: format!("DTE ({}) is at or below urgent threshold ({})",
-                position.dte, config.urgent_dte_trigger),
+            context: format!(
+                "DTE ({}) is at or below urgent threshold ({})",
+                position.dte, config.urgent_dte_trigger
+            ),
         };
     }
 
@@ -190,8 +192,10 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
                 should_roll: true,
                 reason: Some(RollReason::CreditDteThreshold),
                 urgency: 7,
-                context: format!("Credit position DTE ({}) at threshold ({})",
-                    position.dte, config.credit_dte_trigger),
+                context: format!(
+                    "Credit position DTE ({}) at threshold ({})",
+                    position.dte, config.credit_dte_trigger
+                ),
             };
         }
 
@@ -208,8 +212,10 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
                 should_roll: true,
                 reason: Some(RollReason::ProfitTarget),
                 urgency: 5,
-                context: format!("Profit target reached ({:.1}% of max)",
-                    profit_pct * Decimal::new(100, 0)),
+                context: format!(
+                    "Profit target reached ({:.1}% of max)",
+                    profit_pct * Decimal::new(100, 0)
+                ),
             };
         }
 
@@ -222,8 +228,7 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
                     should_roll: true,
                     reason: Some(RollReason::LossThreshold),
                     urgency: 8,
-                    context: format!("Loss threshold exceeded ({:.1}x credit)",
-                        loss_multiple),
+                    context: format!("Loss threshold exceeded ({:.1}x credit)", loss_multiple),
                 };
             }
         }
@@ -234,8 +239,10 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
                 should_roll: true,
                 reason: Some(RollReason::ProfitableEarlyRoll),
                 urgency: 4,
-                context: format!("Profitable position with DTE {} <= {}",
-                    position.dte, config.profitable_dte_trigger),
+                context: format!(
+                    "Profitable position with DTE {} <= {}",
+                    position.dte, config.profitable_dte_trigger
+                ),
             };
         }
     }
@@ -368,25 +375,35 @@ impl RollOrderBuilder {
 
     /// Build the roll order.
     pub fn build(self) -> Result<RollOrder, RollError> {
-        let position_id = self.position_id
+        let position_id = self
+            .position_id
             .ok_or_else(|| RollError::InvalidOrder("Position ID required".to_string()))?;
 
         if self.close_legs.is_empty() {
-            return Err(RollError::InvalidOrder("No close legs specified".to_string()));
+            return Err(RollError::InvalidOrder(
+                "No close legs specified".to_string(),
+            ));
         }
 
         if self.open_legs.is_empty() {
-            return Err(RollError::InvalidOrder("No open legs specified".to_string()));
+            return Err(RollError::InvalidOrder(
+                "No open legs specified".to_string(),
+            ));
         }
 
-        let reason = self.reason
+        let reason = self
+            .reason
             .ok_or_else(|| RollError::InvalidOrder("Roll reason required".to_string()))?;
 
         // Calculate net premium
-        let close_premium: Decimal = self.close_legs.iter()
+        let close_premium: Decimal = self
+            .close_legs
+            .iter()
             .filter_map(|l| l.limit_price.map(|p| p * Decimal::from(l.quantity.abs())))
             .sum();
-        let open_premium: Decimal = self.open_legs.iter()
+        let open_premium: Decimal = self
+            .open_legs
+            .iter()
             .filter_map(|l| l.limit_price.map(|p| p * Decimal::from(l.quantity.abs())))
             .sum();
         let net_premium = close_premium - open_premium;
@@ -795,8 +812,8 @@ mod tests {
     fn test_calculate_roll_quantity_same_delta() {
         let qty = calculate_roll_quantity(
             10,
-            Decimal::new(30, 2),  // 0.30 delta
-            Decimal::new(30, 2),  // 0.30 delta (same)
+            Decimal::new(30, 2), // 0.30 delta
+            Decimal::new(30, 2), // 0.30 delta (same)
             true,
         );
         assert_eq!(qty, 10);
@@ -808,8 +825,8 @@ mod tests {
         // New: 0.25 delta -> 3.0 / 0.25 = 12 contracts
         let qty = calculate_roll_quantity(
             10,
-            Decimal::new(30, 2),  // 0.30 delta
-            Decimal::new(25, 2),  // 0.25 delta
+            Decimal::new(30, 2), // 0.30 delta
+            Decimal::new(25, 2), // 0.25 delta
             true,
         );
         assert_eq!(qty, 12);
@@ -999,13 +1016,16 @@ mod tests {
         let config = RollConfig::default();
         let result = evaluate_partial_fill(
             "ord-1",
-            Decimal::ONE,           // Close complete
-            Decimal::new(50, 2),    // Open 50%
-            35,                     // Timeout
+            Decimal::ONE,        // Close complete
+            Decimal::new(50, 2), // Open 50%
+            35,                  // Timeout
             AssignmentRiskLevel::Low,
             &config,
         );
         assert_eq!(result.state, RollExecutionState::CloseComplete);
-        assert_eq!(result.recommended_action, PartialFillAction::ManualIntervention);
+        assert_eq!(
+            result.recommended_action,
+            PartialFillAction::ManualIntervention
+        );
     }
 }

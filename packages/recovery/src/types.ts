@@ -114,11 +114,7 @@ export interface ExecutionState {
 /**
  * Union of all phase-specific states.
  */
-export type PhaseState =
-  | DataFetchState
-  | AgentsState
-  | SynthesisState
-  | ExecutionState;
+export type PhaseState = DataFetchState | AgentsState | SynthesisState | ExecutionState;
 
 /**
  * A checkpoint record stored in the database.
@@ -142,6 +138,7 @@ export interface CheckpointRow {
   phase: string;
   state: string; // JSON string
   created_at: string;
+  [key: string]: unknown; // Index signature for Row compatibility
 }
 
 /**
@@ -171,6 +168,7 @@ export interface CycleEventRow {
   event_type: string;
   timestamp: string;
   metadata: string | null; // JSON string or null
+  [key: string]: unknown; // Index signature for Row compatibility
 }
 
 /**

@@ -21,14 +21,14 @@ pub mod grpc;
 mod http;
 pub mod tls;
 
-pub use arrow_flight::{build_flight_server, CreamFlightService};
+pub use arrow_flight::{CreamFlightService, build_flight_server};
 pub use grpc::{
-    build_grpc_services, run_grpc_server, run_grpc_server_with_tls, ExecutionServiceImpl,
-    MarketDataServiceImpl,
+    ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services, run_grpc_server,
+    run_grpc_server_with_tls,
 };
-pub use http::{create_router, ExecutionServer};
+pub use http::{ExecutionServer, create_router};
 pub use tls::{
-    get_tls_config, init_tls_config, is_tls_enabled, TlsConfig, TlsConfigBuilder, TlsError,
+    TlsConfig, TlsConfigBuilder, TlsError, get_tls_config, init_tls_config, is_tls_enabled,
 };
 
 // Re-export for compatibility

@@ -362,7 +362,7 @@ describe("SMA (Simple Moving Average)", () => {
         { timestamp: 3, open: 10, high: 11, low: 9, close: 30, volume: 100 },
       ];
       const results = calculateSMA(simpleCandles, { period: 3 });
-      expect(results[0].ma).toBe(20); // (10 + 20 + 30) / 3
+      expect(results[0]!.ma).toBe(20); // (10 + 20 + 30) / 3
     });
   });
 
@@ -428,9 +428,9 @@ describe("EMA (Exponential Moving Average)", () => {
       const sma = calculateSMA(uptrendCandles, { period: 20 });
 
       // In uptrend, EMA should be closer to recent prices (higher)
-      const lastEma = ema[ema.length - 1].ma;
-      const lastSma = sma[sma.length - 1].ma;
-      const lastClose = uptrendCandles[uptrendCandles.length - 1].close;
+      const lastEma = ema[ema.length - 1]!.ma;
+      const lastSma = sma[sma.length - 1]!.ma;
+      const lastClose = uptrendCandles[uptrendCandles.length - 1]!.close;
 
       expect(Math.abs(lastEma - lastClose)).toBeLessThan(Math.abs(lastSma - lastClose));
     });

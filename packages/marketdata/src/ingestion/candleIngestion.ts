@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import type { PolygonClient, AggregateBar, Timespan } from "../providers/polygon";
+import type { AggregateBar, PolygonClient, Timespan } from "../providers/polygon";
 
 // ============================================
 // Types
@@ -247,11 +247,7 @@ export class CandleIngestionService {
   /**
    * Convert Polygon bars to Candle format
    */
-  private convertToCandles(
-    symbol: string,
-    timeframe: Timeframe,
-    bars: AggregateBar[]
-  ): Candle[] {
+  private convertToCandles(symbol: string, timeframe: Timeframe, bars: AggregateBar[]): Candle[] {
     return bars.map((bar) => ({
       symbol,
       timeframe,
@@ -270,13 +266,19 @@ export class CandleIngestionService {
   /**
    * Detect gaps in candle data
    */
-  private detectGaps(candles: Candle[], expectedIntervalMinutes: number, maxGapMinutes: number): GapInfo[] {
+  private detectGaps(
+    candles: Candle[],
+    expectedIntervalMinutes: number,
+    maxGapMinutes: number
+  ): GapInfo[] {
     const gaps: GapInfo[] = [];
 
     for (let i = 1; i < candles.length; i++) {
       const prev = candles[i - 1];
       const curr = candles[i];
-      if (!prev || !curr) continue;
+      if (!prev || !curr) {
+        continue;
+      }
 
       const prevTime = new Date(prev.timestamp).getTime();
       const currTime = new Date(curr.timestamp).getTime();
@@ -355,13 +357,21 @@ function sleep(ms: number): Promise<void> {
  * Calculate derived timeframes from base candles
  */
 export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe): Candle[] {
-  if (candles.length === 0) return [];
+  if (candles.length === 0) {
+    return [];
+  }
 
+  const firstCandle = candles[0];
+  if (!firstCandle) {
+    return [];
+  }
   const targetMinutes = TIMEFRAME_MINUTES[targetTimeframe];
-  const sourceMinutes = TIMEFRAME_MINUTES[candles[0]!.timeframe];
+  const sourceMinutes = TIMEFRAME_MINUTES[firstCandle.timeframe];
 
   if (targetMinutes <= sourceMinutes) {
-    throw new Error(`Cannot aggregate to smaller timeframe: ${candles[0]!.timeframe} -> ${targetTimeframe}`);
+    throw new Error(
+      `Cannot aggregate to smaller timeframe: ${firstCandle.timeframe} -> ${targetTimeframe}`
+    );
   }
 
   const ratio = targetMinutes / sourceMinutes;
@@ -369,7 +379,9 @@ export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe):
 
   for (let i = 0; i < candles.length; i += ratio) {
     const group = candles.slice(i, i + ratio);
-    if (group.length === 0) continue;
+    if (group.length === 0) {
+      continue;
+    }
 
     const first = group[0]!;
     const last = group[group.length - 1]!;
@@ -394,7 +406,9 @@ export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe):
 
 function calculateVWAP(candles: Candle[]): number | null {
   const validCandles = candles.filter((c) => c.vwap !== null && c.volume > 0);
-  if (validCandles.length === 0) return null;
+  if (validCandles.length === 0) {
+    return null;
+  }
 
   const totalVolume = validCandles.reduce((sum, c) => sum + c.volume, 0);
   const weightedSum = validCandles.reduce((sum, c) => sum + (c.vwap ?? 0) * c.volume, 0);

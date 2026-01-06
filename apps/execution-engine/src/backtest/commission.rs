@@ -67,8 +67,8 @@ fn calculate_regulatory_fees(
         InstrumentType::Equity => {
             // TAF fee only on sells
             if side == OrderSide::Sell {
-                let taf = (quantity * config.fees.taf_fee_per_share)
-                    .min(config.fees.taf_max_per_trade);
+                let taf =
+                    (quantity * config.fees.taf_fee_per_share).min(config.fees.taf_max_per_trade);
                 fees += taf;
 
                 // SEC fee only on sells (based on notional value)
@@ -110,8 +110,8 @@ pub fn calculate_multi_leg_commission(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::config::*;
+    use super::*;
 
     fn default_config() -> CommissionConfig {
         CommissionConfig::default()
@@ -221,8 +221,8 @@ mod tests {
 
         // Bull call spread: buy 1 call, sell 1 call
         let legs = vec![
-            (OrderSide::Buy, Decimal::new(1, 0), Decimal::new(500, 2)),   // Buy @ $5.00
-            (OrderSide::Sell, Decimal::new(1, 0), Decimal::new(200, 2)),  // Sell @ $2.00
+            (OrderSide::Buy, Decimal::new(1, 0), Decimal::new(500, 2)), // Buy @ $5.00
+            (OrderSide::Sell, Decimal::new(1, 0), Decimal::new(200, 2)), // Sell @ $2.00
         ];
 
         let commission = calculate_multi_leg_commission(&config, &legs);
@@ -244,7 +244,7 @@ mod tests {
             &config,
             InstrumentType::Equity,
             OrderSide::Buy,
-            Decimal::new(1, 0),  // 1 share
+            Decimal::new(1, 0),   // 1 share
             Decimal::new(100, 2), // $1.00
         );
 

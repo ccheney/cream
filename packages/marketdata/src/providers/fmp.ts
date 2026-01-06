@@ -192,6 +192,10 @@ export const StockSplitSchema = z.object({
 });
 export type StockSplit = z.infer<typeof StockSplitSchema>;
 
+const StockSplitsResponseSchema = z
+  .object({ historical: z.array(StockSplitSchema) })
+  .transform((r) => r.historical);
+
 /**
  * Stock dividend schema.
  */
@@ -206,6 +210,10 @@ export const StockDividendSchema = z.object({
   declarationDate: z.string().nullable(),
 });
 export type StockDividend = z.infer<typeof StockDividendSchema>;
+
+const StockDividendsResponseSchema = z
+  .object({ historical: z.array(StockDividendSchema) })
+  .transform((r) => r.historical);
 
 /**
  * Symbol change schema.
@@ -366,7 +374,7 @@ export class FmpClient {
    */
   async getQuote(symbol: string): Promise<Quote | undefined> {
     const quotes = await this.getQuotes([symbol]);
-    return quotes[0];
+    return quotes.length > 0 ? quotes[0] : undefined;
   }
 
   // ============================================
@@ -413,25 +421,27 @@ export class FmpClient {
   /**
    * Screen stocks by various filters.
    */
-  async screenStocks(filters: {
-    marketCapMoreThan?: number;
-    marketCapLowerThan?: number;
-    priceMoreThan?: number;
-    priceLowerThan?: number;
-    betaMoreThan?: number;
-    betaLowerThan?: number;
-    volumeMoreThan?: number;
-    volumeLowerThan?: number;
-    dividendMoreThan?: number;
-    dividendLowerThan?: number;
-    sector?: string;
-    industry?: string;
-    country?: string;
-    exchange?: string;
-    isEtf?: boolean;
-    isActivelyTrading?: boolean;
-    limit?: number;
-  } = {}): Promise<ScreenerResult[]> {
+  async screenStocks(
+    filters: {
+      marketCapMoreThan?: number;
+      marketCapLowerThan?: number;
+      priceMoreThan?: number;
+      priceLowerThan?: number;
+      betaMoreThan?: number;
+      betaLowerThan?: number;
+      volumeMoreThan?: number;
+      volumeLowerThan?: number;
+      dividendMoreThan?: number;
+      dividendLowerThan?: number;
+      sector?: string;
+      industry?: string;
+      country?: string;
+      exchange?: string;
+      isEtf?: boolean;
+      isActivelyTrading?: boolean;
+      limit?: number;
+    } = {}
+  ): Promise<ScreenerResult[]> {
     return this.client.get(
       `/${FMP_VERSION}/stock-screener`,
       {
@@ -466,10 +476,12 @@ export class FmpClient {
    * Get earnings calendar events.
    * Supports future dates when from/to parameters are provided.
    */
-  async getEarningsCalendar(options: {
-    from?: string; // YYYY-MM-DD
-    to?: string; // YYYY-MM-DD
-  } = {}): Promise<EarningsEvent[]> {
+  async getEarningsCalendar(
+    options: {
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+    } = {}
+  ): Promise<EarningsEvent[]> {
     return this.client.get(
       `/${FMP_VERSION}/earning_calendar`,
       { from: options.from, to: options.to, apikey: this.apiKey },
@@ -499,7 +511,7 @@ export class FmpClient {
     return this.client.get(
       `/${FMP_VERSION}/historical-price-full/stock_split/${symbol}`,
       { apikey: this.apiKey },
-      z.object({ historical: z.array(StockSplitSchema) }).transform((r) => r.historical)
+      StockSplitsResponseSchema
     );
   }
 
@@ -510,7 +522,7 @@ export class FmpClient {
     return this.client.get(
       `/${FMP_VERSION}/historical-price-full/stock_dividend/${symbol}`,
       { apikey: this.apiKey },
-      z.object({ historical: z.array(StockDividendSchema) }).transform((r) => r.historical)
+      StockDividendsResponseSchema
     );
   }
 

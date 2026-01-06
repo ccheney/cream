@@ -27,8 +27,8 @@ import {
   shouldCorrect,
 } from "@cream/helix-schema";
 import type { HelixClient } from "../client";
-import { getInfluencingEvents, type GraphNode } from "./graph";
-import { vectorSearch, type VectorSearchOptions, type VectorSearchResult } from "./vector";
+import { type GraphNode, getInfluencingEvents } from "./graph";
+import { type VectorSearchOptions, type VectorSearchResult, vectorSearch } from "./vector";
 
 // ============================================
 // Types
@@ -250,7 +250,10 @@ export async function retrieveTradeMemories(
   let fusedResults: RRFResult<VectorSearchResult<TradeDecision>>[];
 
   if (graphRetrievalResults.length > 0) {
-    fusedResults = fuseWithRRF(vectorRetrievalResults, graphRetrievalResults, { k: opts.rrfK, topK: opts.topK });
+    fusedResults = fuseWithRRF(vectorRetrievalResults, graphRetrievalResults, {
+      k: opts.rrfK,
+      topK: opts.topK,
+    });
   } else {
     // Vector-only (no graph results to fuse)
     fusedResults = vectorRetrievalResults.slice(0, opts.topK).map((r, i) => ({
@@ -370,7 +373,9 @@ export function calculateTradeStatistics(memories: TradeMemory[]): TradeStatisti
           holding_hours?: number;
         };
         if (typeof outcome.pnl === "number") {
-          if (outcome.pnl > 0) wins++;
+          if (outcome.pnl > 0) {
+            wins++;
+          }
           outcomeCount++;
         }
         if (typeof outcome.return_pct === "number") {
@@ -424,7 +429,9 @@ export function formatTradeMemorySummary(result: TradeMemoryRetrievalResult): st
   // Add top 5 memories
   for (const memory of memories.slice(0, 5)) {
     const d = memory.decision;
-    lines.push(`- [${d.action}] ${d.instrument_id} (${d.regime_label}): ${d.rationale_text.slice(0, 100)}...`);
+    lines.push(
+      `- [${d.action}] ${d.instrument_id} (${d.regime_label}): ${d.rationale_text.slice(0, 100)}...`
+    );
   }
 
   return lines.join("\n");

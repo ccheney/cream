@@ -5,7 +5,7 @@
  * and local alias lookup.
  */
 
-import type { ExtractedEntity, EntityLink, FMPCompanySearch } from "../types.js";
+import type { EntityLink, ExtractedEntity, FMPCompanySearch } from "../types.js";
 
 /**
  * Entity linker configuration
@@ -61,103 +61,103 @@ const COMPANY_ALIASES: Record<string, string> = {
   "netflix inc": "NFLX",
 
   // Financial
-  "jpmorgan": "JPM",
+  jpmorgan: "JPM",
   "jp morgan": "JPM",
   "jpmorgan chase": "JPM",
   "goldman sachs": "GS",
-  "goldman": "GS",
+  goldman: "GS",
   "bank of america": "BAC",
-  "bofa": "BAC",
+  bofa: "BAC",
   "morgan stanley": "MS",
   "wells fargo": "WFC",
-  "citigroup": "C",
-  "citi": "C",
+  citigroup: "C",
+  citi: "C",
   "berkshire hathaway": "BRK.B",
-  "berkshire": "BRK.B",
+  berkshire: "BRK.B",
 
   // Healthcare
   "johnson & johnson": "JNJ",
   "j&j": "JNJ",
-  "pfizer": "PFE",
-  "unitedhealth": "UNH",
+  pfizer: "PFE",
+  unitedhealth: "UNH",
   "unitedhealth group": "UNH",
   "eli lilly": "LLY",
-  "lilly": "LLY",
-  "abbvie": "ABBV",
-  "merck": "MRK",
+  lilly: "LLY",
+  abbvie: "ABBV",
+  merck: "MRK",
   "merck & co": "MRK",
 
   // Consumer
-  "walmart": "WMT",
+  walmart: "WMT",
   "wal-mart": "WMT",
   "procter & gamble": "PG",
   "p&g": "PG",
   "coca-cola": "KO",
-  "coke": "KO",
-  "pepsi": "PEP",
-  "pepsico": "PEP",
-  "nike": "NKE",
+  coke: "KO",
+  pepsi: "PEP",
+  pepsico: "PEP",
+  nike: "NKE",
   "nike inc": "NKE",
   "mcdonald's": "MCD",
-  "mcdonalds": "MCD",
+  mcdonalds: "MCD",
 
   // Industrial
-  "boeing": "BA",
+  boeing: "BA",
   "the boeing company": "BA",
-  "caterpillar": "CAT",
+  caterpillar: "CAT",
   "3m": "MMM",
-  "honeywell": "HON",
+  honeywell: "HON",
   "general electric": "GE",
-  "ge": "GE",
+  ge: "GE",
   "lockheed martin": "LMT",
-  "lockheed": "LMT",
+  lockheed: "LMT",
 
   // Energy
-  "exxon": "XOM",
-  "exxonmobil": "XOM",
+  exxon: "XOM",
+  exxonmobil: "XOM",
   "exxon mobil": "XOM",
-  "chevron": "CVX",
-  "conocophillips": "COP",
+  chevron: "CVX",
+  conocophillips: "COP",
 
   // Telecom
   "at&t": "T",
-  "verizon": "VZ",
+  verizon: "VZ",
   "t-mobile": "TMUS",
 
   // Semiconductor
-  "intel": "INTC",
+  intel: "INTC",
   "intel corp": "INTC",
-  "amd": "AMD",
+  amd: "AMD",
   "advanced micro devices": "AMD",
-  "qualcomm": "QCOM",
-  "broadcom": "AVGO",
+  qualcomm: "QCOM",
+  broadcom: "AVGO",
   "texas instruments": "TXN",
-  "ti": "TXN",
-  "micron": "MU",
+  ti: "TXN",
+  micron: "MU",
   "micron technology": "MU",
-  "tsmc": "TSM",
+  tsmc: "TSM",
   "taiwan semiconductor": "TSM",
 
   // Software
-  "salesforce": "CRM",
-  "oracle": "ORCL",
-  "adobe": "ADBE",
-  "servicenow": "NOW",
-  "snowflake": "SNOW",
-  "palantir": "PLTR",
+  salesforce: "CRM",
+  oracle: "ORCL",
+  adobe: "ADBE",
+  servicenow: "NOW",
+  snowflake: "SNOW",
+  palantir: "PLTR",
 
   // Retail
-  "costco": "COST",
-  "target": "TGT",
+  costco: "COST",
+  target: "TGT",
   "home depot": "HD",
   "lowe's": "LOW",
-  "lowes": "LOW",
+  lowes: "LOW",
 
   // Indices (for reference)
   "s&p 500": "SPY",
   "s&p": "SPY",
   "dow jones": "DIA",
-  "nasdaq": "QQQ",
+  nasdaq: "QQQ",
   "nasdaq 100": "QQQ",
   "russell 2000": "IWM",
 };
@@ -288,10 +288,12 @@ export class EntityLinker {
         return null;
       }
 
-      const results: FMPCompanySearch[] = await response.json();
-      if (!results || results.length === 0) {
+      const data = await response.json();
+      // Ensure we have a valid array
+      if (!data || !Array.isArray(data) || data.length === 0) {
         return null;
       }
+      const results: FMPCompanySearch[] = data;
 
       // Find best match
       const bestMatch = this.findBestMatch(query, results);
@@ -313,10 +315,7 @@ export class EntityLinker {
   /**
    * Find best matching result from FMP search
    */
-  private findBestMatch(
-    query: string,
-    results: FMPCompanySearch[],
-  ): FMPCompanySearch | null {
+  private findBestMatch(query: string, results: FMPCompanySearch[]): FMPCompanySearch | null {
     const normalizedQuery = query.toLowerCase();
 
     // First, try exact name match
@@ -350,10 +349,7 @@ export class EntityLinker {
   /**
    * Compute confidence for FMP match
    */
-  private computeMatchConfidence(
-    query: string,
-    match: FMPCompanySearch,
-  ): number {
+  private computeMatchConfidence(query: string, match: FMPCompanySearch): number {
     const normalizedQuery = query.toLowerCase();
     const normalizedName = match.name.toLowerCase();
 
@@ -386,7 +382,9 @@ export class EntityLinker {
 
     let intersection = 0;
     for (const word of wordsA) {
-      if (wordsB.has(word)) intersection++;
+      if (wordsB.has(word)) {
+        intersection++;
+      }
     }
 
     const union = wordsA.size + wordsB.size - intersection;
@@ -398,7 +396,9 @@ export class EntityLinker {
    */
   private getCached(key: string): EntityLink | null | undefined {
     const entry = this.cache.get(key);
-    if (!entry) return undefined;
+    if (!entry) {
+      return undefined;
+    }
 
     if (Date.now() - entry.timestamp > this.config.cacheTtl) {
       this.cache.delete(key);

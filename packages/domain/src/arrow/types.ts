@@ -27,11 +27,12 @@ export interface FlightClientConfig {
 /**
  * Default Flight client configuration
  */
-export const DEFAULT_FLIGHT_CONFIG: Required<Omit<FlightClientConfig, "endpoint" | "tlsCertPath">> = {
-  timeoutMs: 30000,
-  useTls: false,
-  headers: {},
-};
+export const DEFAULT_FLIGHT_CONFIG: Required<Omit<FlightClientConfig, "endpoint" | "tlsCertPath">> =
+  {
+    timeoutMs: 30000,
+    useTls: false,
+    headers: {},
+  };
 
 /**
  * Flight path descriptors for available data streams

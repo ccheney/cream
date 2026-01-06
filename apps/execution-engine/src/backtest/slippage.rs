@@ -162,8 +162,8 @@ pub fn apply_stop_target_slippage(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::config::*;
+    use super::*;
 
     #[test]
     fn test_fixed_bps_buy_slippage() {
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_spread_based_buy_slippage() {
-        let bid = Decimal::new(9990, 2);  // $99.90
+        let bid = Decimal::new(9990, 2); // $99.90
         let ask = Decimal::new(10010, 2); // $100.10
         // Mid = $100.00
 
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_spread_based_sell_slippage() {
-        let bid = Decimal::new(9990, 2);  // $99.90
+        let bid = Decimal::new(9990, 2); // $99.90
         let ask = Decimal::new(10010, 2); // $100.10
         // Mid = $100.00
 
@@ -219,7 +219,8 @@ mod tests {
             spread_fraction: Decimal::new(5, 1), // 0.5
         };
 
-        let slipped = apply_spread_based_slippage(Decimal::ZERO, OrderSide::Sell, &config, bid, ask);
+        let slipped =
+            apply_spread_based_slippage(Decimal::ZERO, OrderSide::Sell, &config, bid, ask);
 
         // Sell fills at mid - 0.5 * (mid - bid) = 100 - 0.5 * 0.10 = $99.95
         assert_eq!(slipped, Decimal::new(9995, 2));
@@ -230,20 +231,15 @@ mod tests {
         let price = Decimal::new(10000, 2); // $100.00
         let config = VolumeImpactConfig {
             impact_coefficient: Decimal::new(1, 1), // 0.1
-            volume_exponent: Decimal::new(5, 1),   // 0.5
+            volume_exponent: Decimal::new(5, 1),    // 0.5
         };
 
         // Order is 1% of average volume
         let order_size = Decimal::new(100, 0);
         let avg_volume = Decimal::new(10000, 0);
 
-        let slipped = apply_volume_impact_slippage(
-            price,
-            OrderSide::Buy,
-            &config,
-            order_size,
-            avg_volume,
-        );
+        let slipped =
+            apply_volume_impact_slippage(price, OrderSide::Buy, &config, order_size, avg_volume);
 
         // Impact = 0.1 * (0.01)^0.5 = 0.1 * 0.1 = 0.01 = 1%
         // Price = 100 * 1.01 = $101.00
@@ -255,7 +251,7 @@ mod tests {
     fn test_stop_slippage() {
         let level = Decimal::new(9500, 2); // $95.00 stop
         let config = SlippedStopTargetConfig {
-            stop_slippage_bps: Decimal::new(20, 0),   // 20 bps
+            stop_slippage_bps: Decimal::new(20, 0), // 20 bps
             target_slippage_bps: Decimal::new(5, 0),
         };
 

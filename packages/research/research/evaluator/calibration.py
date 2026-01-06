@@ -10,7 +10,7 @@ See: docs/plans/10-research.md - Calibration Approach
 import logging
 import pickle
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -284,7 +284,9 @@ class ProbabilityCalibrator:
         if self._current_method == CalibrationMethod.PLATT and self._platt_model is not None:
             # Platt scaling: apply sigmoid calibration
             calibrated = self._platt_model.predict_proba(probs)[:, 1]
-        elif self._current_method == CalibrationMethod.ISOTONIC and self._isotonic_model is not None:
+        elif (
+            self._current_method == CalibrationMethod.ISOTONIC and self._isotonic_model is not None
+        ):
             # Isotonic regression: use fitted curve
             calibrated = self._isotonic_model.predict(probs.ravel())
             # Clip to [0, 1] range
@@ -317,10 +319,7 @@ class ProbabilityCalibrator:
         y_prob = np.array(self._predictions)
 
         # Calibrate predictions if fitted
-        if self._is_fitted:
-            y_prob_cal = self.calibrate(y_prob)
-        else:
-            y_prob_cal = y_prob
+        y_prob_cal = self.calibrate(y_prob) if self._is_fitted else y_prob
 
         # Compute metrics
         brier = brier_score_loss(y_true, y_prob_cal)
@@ -423,7 +422,7 @@ class ProbabilityCalibrator:
             pickle.dump(state, f)
 
     @classmethod
-    def load(cls, path: str | Path) -> "ProbabilityCalibrator":
+    def load(cls, path: str | Path) -> ProbabilityCalibrator:
         """
         Load calibrator state from file.
 
@@ -584,10 +583,12 @@ class CalibrationDriftDetector:
             reason = f"Brier {current_brier:.4f} > threshold {self.config.brier_threshold}"
         elif self._baseline_set and abs(ece_change) > self.config.relative_threshold:
             is_drifted = True
-            reason = f"ECE changed {ece_change*100:.1f}% > {self.config.relative_threshold*100:.1f}%"
+            reason = (
+                f"ECE changed {ece_change * 100:.1f}% > {self.config.relative_threshold * 100:.1f}%"
+            )
         elif self._baseline_set and abs(brier_change) > self.config.relative_threshold:
             is_drifted = True
-            reason = f"Brier changed {brier_change*100:.1f}% > {self.config.relative_threshold*100:.1f}%"
+            reason = f"Brier changed {brier_change * 100:.1f}% > {self.config.relative_threshold * 100:.1f}%"
 
         return DriftMetrics(
             is_drifted=is_drifted,

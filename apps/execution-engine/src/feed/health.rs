@@ -6,9 +6,9 @@
 //!
 //! Reference: docs/plans/09-rust-core.md (Error Handling > Feed Health Monitoring)
 
+use serde::Serialize;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
-use serde::Serialize;
 
 // ============================================================================
 // Configuration
@@ -216,10 +216,7 @@ impl FeedHealthTracker {
             return Duration::ZERO;
         }
 
-        let mut latencies: Vec<Duration> = self.latency_samples
-            .iter()
-            .map(|s| s.latency)
-            .collect();
+        let mut latencies: Vec<Duration> = self.latency_samples.iter().map(|s| s.latency).collect();
 
         latencies.sort();
 

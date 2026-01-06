@@ -112,7 +112,9 @@ export class Checkpointer {
    * Initialize the checkpointer, creating necessary tables.
    */
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initialized) {
+      return;
+    }
 
     await this.db.execute(SQL.createCheckpointsTable);
     await this.db.execute(SQL.createEventsTable);
@@ -123,20 +125,11 @@ export class Checkpointer {
   /**
    * Save a checkpoint for a cycle phase.
    */
-  async saveCheckpoint(
-    cycleId: string,
-    phase: CyclePhase,
-    state: PhaseState
-  ): Promise<void> {
+  async saveCheckpoint(cycleId: string, phase: CyclePhase, state: PhaseState): Promise<void> {
     await this.ensureInitialized();
     const now = new Date().toISOString();
 
-    await this.db.execute(SQL.saveCheckpoint, [
-      cycleId,
-      phase,
-      JSON.stringify(state),
-      now,
-    ]);
+    await this.db.execute(SQL.saveCheckpoint, [cycleId, phase, JSON.stringify(state), now]);
   }
 
   /**
@@ -145,15 +138,18 @@ export class Checkpointer {
   async loadCheckpoint(cycleId: string): Promise<Checkpoint | null> {
     await this.ensureInitialized();
 
-    const rows = await this.db.execute<CheckpointRow>(SQL.loadCheckpoint, [
-      cycleId,
-    ]);
+    const rows = await this.db.execute<CheckpointRow>(SQL.loadCheckpoint, [cycleId]);
 
     if (rows.length === 0) {
       return null;
     }
 
-    return this.rowToCheckpoint(rows[0]);
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return this.rowToCheckpoint(row);
   }
 
   /**
@@ -168,7 +164,12 @@ export class Checkpointer {
       return null;
     }
 
-    return this.rowToCheckpoint(rows[0]);
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return this.rowToCheckpoint(row);
   }
 
   /**
@@ -201,35 +202,23 @@ export class Checkpointer {
   /**
    * Mark a cycle as started.
    */
-  async markCycleStarted(
-    cycleId: string,
-    metadata?: Record<string, unknown>
-  ): Promise<void> {
+  async markCycleStarted(cycleId: string, metadata?: Record<string, unknown>): Promise<void> {
     await this.recordCycleEvent(cycleId, "cycle_started", metadata);
   }
 
   /**
    * Mark a cycle as completed.
    */
-  async markCycleCompleted(
-    cycleId: string,
-    metadata?: Record<string, unknown>
-  ): Promise<void> {
+  async markCycleCompleted(cycleId: string, metadata?: Record<string, unknown>): Promise<void> {
     await this.recordCycleEvent(cycleId, "cycle_completed", metadata);
   }
 
   /**
    * Check if a cycle has a specific event.
    */
-  async hasCycleEvent(
-    cycleId: string,
-    eventType: CycleEventType
-  ): Promise<boolean> {
+  async hasCycleEvent(cycleId: string, eventType: CycleEventType): Promise<boolean> {
     await this.ensureInitialized();
-    const rows = await this.db.execute<CycleEventRow>(SQL.getEvent, [
-      cycleId,
-      eventType,
-    ]);
+    const rows = await this.db.execute<CycleEventRow>(SQL.getEvent, [cycleId, eventType]);
     return rows.length > 0;
   }
 
@@ -238,9 +227,7 @@ export class Checkpointer {
    */
   async getCycleEvents(cycleId: string): Promise<CycleEvent[]> {
     await this.ensureInitialized();
-    const rows = await this.db.execute<CycleEventRow>(SQL.getCycleEvents, [
-      cycleId,
-    ]);
+    const rows = await this.db.execute<CycleEventRow>(SQL.getCycleEvents, [cycleId]);
     return rows.map(this.rowToEvent);
   }
 
@@ -249,9 +236,7 @@ export class Checkpointer {
    */
   async findIncompleteCycles(): Promise<string[]> {
     await this.ensureInitialized();
-    const rows = await this.db.execute<{ cycle_id: string }>(
-      SQL.getIncompleteCycles
-    );
+    const rows = await this.db.execute<{ cycle_id: string }>(SQL.getIncompleteCycles);
     return rows.map((row) => row.cycle_id);
   }
 
@@ -263,9 +248,7 @@ export class Checkpointer {
 
     const cutoff = new Date(Date.now() - this.config.maxCheckpointAge).toISOString();
 
-    const checkpointResult = await this.db.run(SQL.deleteOldCheckpoints, [
-      cutoff,
-    ]);
+    const checkpointResult = await this.db.run(SQL.deleteOldCheckpoints, [cutoff]);
     const eventResult = await this.db.run(SQL.deleteOldEvents, [cutoff]);
 
     return {
@@ -283,13 +266,8 @@ export class Checkpointer {
       try {
         const result = await this.cleanup();
         if (result.checkpointsDeleted > 0 || result.eventsDeleted > 0) {
-          console.log(
-            `[Checkpointer] Cleanup: ${result.checkpointsDeleted} checkpoints, ${result.eventsDeleted} events deleted`
-          );
         }
-      } catch (error) {
-        console.error("[Checkpointer] Cleanup error:", error);
-      }
+      } catch (_error) {}
     }, this.config.cleanupInterval);
 
     return () => clearInterval(interval);

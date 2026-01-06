@@ -5,7 +5,7 @@
  * to call CheckConstraints and SubmitOrders.
  */
 
-import { createChannel, createClient } from "nice-grpc";
+import { createChannel } from "nice-grpc";
 
 // ============================================
 // Types (will be generated from protobuf)
@@ -46,7 +46,7 @@ export interface GetOrderStateResponse {
 // ============================================
 
 // This will be replaced with generated service definition from protobuf
-const ExecutionServiceDefinition = {
+const _ExecutionServiceDefinition = {
   name: "ExecutionService",
   fullName: "cream.execution.v1.ExecutionService",
   methods: {
@@ -93,18 +93,14 @@ export interface ExecutionEngineClient {
  *
  * @param address - Server address (default: localhost:50051)
  */
-export function createExecutionEngineClient(
-  address: string = "localhost:50051"
-): ExecutionEngineClient {
-  const channel = createChannel(address);
+export function createExecutionEngineClient(address = "localhost:50051"): ExecutionEngineClient {
+  const _channel = createChannel(address);
 
   // For now, return a mock client
   // Real implementation will use: const client = createClient(ExecutionServiceDefinition, channel);
 
   return {
-    async checkConstraints(request: CheckConstraintsRequest): Promise<CheckConstraintsResponse> {
-      console.log(`[gRPC] CheckConstraints called with plan`);
-
+    async checkConstraints(_request: CheckConstraintsRequest): Promise<CheckConstraintsResponse> {
       // STUB: Return success for all plans
       // Real implementation: return await client.checkConstraints(request);
       return {
@@ -114,8 +110,6 @@ export function createExecutionEngineClient(
     },
 
     async submitOrders(request: SubmitOrdersRequest): Promise<SubmitOrdersResponse> {
-      console.log(`[gRPC] SubmitOrders called with ${request.orders.length} orders`);
-
       // STUB: Return success
       // Real implementation: return await client.submitOrders(request);
       return {
@@ -126,8 +120,6 @@ export function createExecutionEngineClient(
     },
 
     async getOrderState(request: GetOrderStateRequest): Promise<GetOrderStateResponse> {
-      console.log(`[gRPC] GetOrderState called for ${request.orderId}`);
-
       // STUB: Return filled status
       // Real implementation: return await client.getOrderState(request);
       return {
@@ -138,10 +130,7 @@ export function createExecutionEngineClient(
       };
     },
 
-    close(): void {
-      // channel.close() when using real gRPC
-      console.log("[gRPC] Client closed");
-    },
+    close(): void {},
   };
 }
 

@@ -156,9 +156,7 @@ export async function getPortfolioState(): Promise<PortfolioStateResponse> {
  *
  * @stub Returns mock data until gRPC ready
  */
-export async function getOptionChain(
-  underlying: string
-): Promise<OptionChainResponse> {
+export async function getOptionChain(underlying: string): Promise<OptionChainResponse> {
   // TODO: Replace with gRPC call to execution engine
   return {
     underlying,
@@ -246,10 +244,7 @@ export async function getEconomicCalendar(
  *
  * @stub Returns mock data until gRPC ready
  */
-export async function searchNews(
-  query: string,
-  symbols: string[] = []
-): Promise<NewsItem[]> {
+export async function searchNews(query: string, symbols: string[] = []): Promise<NewsItem[]> {
   // TODO: Replace with external API call
   void query;
   void symbols;

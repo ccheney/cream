@@ -234,9 +234,7 @@ class ArrowFlightClient:
         Returns:
             Polars DataFrame with option chain data
         """
-        table = self.get_option_chain_arrow(
-            underlying, date, min_strike, max_strike, expirations
-        )
+        table = self.get_option_chain_arrow(underlying, date, min_strike, max_strike, expirations)
         return pl.from_arrow(table)
 
     def get_option_chain_arrow(
@@ -307,14 +305,10 @@ class ArrowFlightClient:
         self._ensure_connected()
 
         try:
-            import pyarrow.flight as flight
 
             assert self._client is not None
             flights = list(self._client.list_flights())
-            return [
-                list(f.descriptor.path) if f.descriptor.path else []
-                for f in flights
-            ]
+            return [list(f.descriptor.path) if f.descriptor.path else [] for f in flights]
         except Exception as e:
             raise FlightError(str(e), "LIST_FLIGHTS_FAILED", retryable=True) from e
 
@@ -322,7 +316,6 @@ class ArrowFlightClient:
         """Execute a DoGet request."""
         import json
 
-        import pyarrow as pa
         import pyarrow.flight as flight
 
         try:

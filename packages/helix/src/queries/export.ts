@@ -338,9 +338,14 @@ export async function exportIncremental(
 
       // Count added vs modified based on created_at vs updated_at
       for (const node of typeNodes.data) {
-        const createdAt = (node as Record<string, unknown>).created_at as string | undefined;
-        if (createdAt && createdAt >= since) {
-          nodesAdded++;
+        const nodeProps = node.properties;
+        if (nodeProps && typeof nodeProps === "object" && "created_at" in nodeProps) {
+          const createdAt = nodeProps.created_at;
+          if (typeof createdAt === "string" && createdAt >= since) {
+            nodesAdded++;
+          } else {
+            nodesModified++;
+          }
         } else {
           nodesModified++;
         }
@@ -360,9 +365,14 @@ export async function exportIncremental(
 
       // Count added vs modified
       for (const edge of typeEdges.data) {
-        const createdAt = (edge as Record<string, unknown>).created_at as string | undefined;
-        if (createdAt && createdAt >= since) {
-          edgesAdded++;
+        const edgeProps = edge.properties;
+        if (edgeProps && typeof edgeProps === "object" && "created_at" in edgeProps) {
+          const createdAt = edgeProps.created_at;
+          if (typeof createdAt === "string" && createdAt >= since) {
+            edgesAdded++;
+          } else {
+            edgesModified++;
+          }
         } else {
           edgesModified++;
         }
@@ -452,7 +462,9 @@ export function validateExport(data: unknown): { valid: boolean; errors: string[
 
   // Check version compatibility
   if (typeof export_.version === "string" && !isCompatibleVersion(export_.version)) {
-    errors.push(`Incompatible version: ${export_.version} (expected major version ${EXPORT_VERSION.split(".")[0]})`);
+    errors.push(
+      `Incompatible version: ${export_.version} (expected major version ${EXPORT_VERSION.split(".")[0]})`
+    );
   }
 
   return { valid: errors.length === 0, errors };
@@ -494,12 +506,12 @@ export function mergeExports(base: HelixExport, incremental: HelixExport): Helix
       edges[edgeType] = [];
     }
 
-    const existingIds = new Set(edges[edgeType].map((e) => `${e.source}-${e.target}`));
+    const existingIds = new Set(edges[edgeType].map((e) => `${e.sourceId}-${e.targetId}`));
     for (const edge of typeEdges) {
-      const edgeId = `${edge.source}-${edge.target}`;
+      const edgeId = `${edge.sourceId}-${edge.targetId}`;
       if (existingIds.has(edgeId)) {
         // Replace existing edge
-        const index = edges[edgeType].findIndex((e) => `${e.source}-${e.target}` === edgeId);
+        const index = edges[edgeType].findIndex((e) => `${e.sourceId}-${e.targetId}` === edgeId);
         edges[edgeType][index] = edge;
       } else {
         edges[edgeType].push(edge);
@@ -538,7 +550,10 @@ export interface IGraphDatabase {
   exportAll(options?: ExportOptions): Promise<HelixExport>;
 
   /** Export incremental changes */
-  exportIncremental(since: string, options?: Omit<ExportOptions, "since">): Promise<IncrementalExport>;
+  exportIncremental(
+    since: string,
+    options?: Omit<ExportOptions, "since">
+  ): Promise<IncrementalExport>;
 
   /** Import data */
   importData(data: HelixExport, options?: ImportOptions): Promise<ImportResult>;
@@ -563,7 +578,10 @@ export class HelixGraphDatabase implements IGraphDatabase {
     return exportData(this.client, options);
   }
 
-  async exportIncremental(since: string, options?: Omit<ExportOptions, "since">): Promise<IncrementalExport> {
+  async exportIncremental(
+    since: string,
+    options?: Omit<ExportOptions, "since">
+  ): Promise<IncrementalExport> {
     return exportIncremental(this.client, since, options);
   }
 

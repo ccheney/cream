@@ -2,7 +2,7 @@
  * Tests for Arrow Flight Client
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { ArrowFlightClient, createFlightClient } from "./client.js";
 import { FlightError, FlightPaths } from "./types.js";
 
@@ -67,9 +67,7 @@ describe("ArrowFlightClient", () => {
 
   describe("getOptionChain", () => {
     it("should throw if not connected", async () => {
-      await expect(
-        client.getOptionChain("AAPL", "2026-01-17")
-      ).rejects.toThrow(FlightError);
+      await expect(client.getOptionChain("AAPL", "2026-01-17")).rejects.toThrow(FlightError);
     });
 
     it("should return empty result when connected (stubbed)", async () => {

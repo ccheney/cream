@@ -5,8 +5,8 @@
  * The full Mastra instance with real LLM agents will be added in Phase 8.
  */
 
-import { tradingCycleWorkflow } from "../workflows/trading-cycle.js";
 import { agents } from "../agents/stub-agents.js";
+import { tradingCycleWorkflow } from "../workflows/trading-cycle.js";
 
 /**
  * Simplified Mastra-like interface for Phase 4.

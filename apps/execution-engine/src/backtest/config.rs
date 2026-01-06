@@ -28,8 +28,8 @@ pub struct FixedBpsConfig {
 impl Default for FixedBpsConfig {
     fn default() -> Self {
         Self {
-            entry_bps: Decimal::new(5, 0),  // 5 bps
-            exit_bps: Decimal::new(10, 0),  // 10 bps
+            entry_bps: Decimal::new(5, 0), // 5 bps
+            exit_bps: Decimal::new(10, 0), // 10 bps
         }
     }
 }
@@ -62,8 +62,8 @@ pub struct VolumeImpactConfig {
 impl Default for VolumeImpactConfig {
     fn default() -> Self {
         Self {
-            impact_coefficient: Decimal::new(1, 1),  // 0.1
-            volume_exponent: Decimal::new(5, 1),     // 0.5 (square-root law)
+            impact_coefficient: Decimal::new(1, 1), // 0.1
+            volume_exponent: Decimal::new(5, 1),    // 0.5 (square-root law)
         }
     }
 }
@@ -149,7 +149,7 @@ pub struct PerUnitCommissionConfig {
 impl Default for PerUnitCommissionConfig {
     fn default() -> Self {
         Self {
-            equity_per_share: Decimal::ZERO,       // Commission-free
+            equity_per_share: Decimal::ZERO,          // Commission-free
             option_per_contract: Decimal::new(65, 2), // $0.65
             minimum: Decimal::ZERO,
         }
@@ -174,11 +174,11 @@ pub struct RegulatoryFeesConfig {
 impl Default for RegulatoryFeesConfig {
     fn default() -> Self {
         Self {
-            sec_fee_per_dollar: Decimal::new(278, 7),      // $0.0000278
-            taf_fee_per_share: Decimal::new(195, 6),      // $0.000195
-            taf_fee_per_contract: Decimal::new(329, 5),   // $0.00329
-            taf_max_per_trade: Decimal::new(979, 2),      // $9.79
-            orf_fee_per_contract: Decimal::new(26, 4),    // $0.0026
+            sec_fee_per_dollar: Decimal::new(278, 7),   // $0.0000278
+            taf_fee_per_share: Decimal::new(195, 6),    // $0.000195
+            taf_fee_per_contract: Decimal::new(329, 5), // $0.00329
+            taf_max_per_trade: Decimal::new(979, 2),    // $9.79
+            orf_fee_per_contract: Decimal::new(26, 4),  // $0.0026
         }
     }
 }
@@ -318,10 +318,16 @@ mod tests {
         let config = BacktestConfig::default();
 
         assert_eq!(config.fill_model.slippage.model, SlippageModel::FixedBps);
-        assert_eq!(config.fill_model.slippage.fixed_bps.entry_bps, Decimal::new(5, 0));
+        assert_eq!(
+            config.fill_model.slippage.fixed_bps.entry_bps,
+            Decimal::new(5, 0)
+        );
         assert!(!config.fill_model.partial_fills.enabled);
         assert_eq!(config.commission.model, CommissionModel::PerUnit);
-        assert_eq!(config.stop_target.same_bar_priority, SameBarPriority::StopFirst);
+        assert_eq!(
+            config.stop_target.same_bar_priority,
+            SameBarPriority::StopFirst
+        );
     }
 
     #[test]

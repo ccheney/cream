@@ -5,31 +5,30 @@
  */
 
 export {
-  computeSentimentScore,
-  computeSentimentFromExtraction,
+  applyEventTypeBoost,
+  classifyImportance,
+  computeEntityRelevance,
+  computeImportanceScore,
+  computeRecencyScore,
+  getSourceCredibility,
+  type ImportanceScoringConfig,
+} from "./importance.js";
+export {
   aggregateSentimentScores,
   classifySentimentScore,
+  computeSentimentFromExtraction,
   computeSentimentMomentum,
+  computeSentimentScore,
   type SentimentScoringConfig,
 } from "./sentiment.js";
 
 export {
-  computeImportanceScore,
-  getSourceCredibility,
-  computeRecencyScore,
-  computeEntityRelevance,
-  applyEventTypeBoost,
-  classifyImportance,
-  type ImportanceScoringConfig,
-} from "./importance.js";
-
-export {
-  computeSurpriseScore,
+  classifySurprise,
   computeAggregatedSurprise,
   computeSurpriseFromExtraction,
-  classifySurprise,
-  isSurpriseSignificant,
+  computeSurpriseScore,
   getSurpriseDirection,
-  type SurpriseScoringConfig,
+  isSurpriseSignificant,
   type MetricExpectation,
+  type SurpriseScoringConfig,
 } from "./surprise.js";

@@ -121,7 +121,9 @@ export class SnapshotCache {
     const key = this.generateKey(symbol, timestamp);
     const entry = this.cache.get(key);
 
-    if (!entry) return false;
+    if (!entry) {
+      return false;
+    }
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key);
       return false;

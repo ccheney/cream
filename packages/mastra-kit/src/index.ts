@@ -20,11 +20,11 @@ export const VERSION = "0.1.0";
 // Agent Types and Configuration
 // ============================================
 
-export * from "./types.js";
 export * from "./agents/index.js";
-export * from "./prompts/index.js";
 export * from "./consensus.js";
+export * from "./prompts/index.js";
 export * from "./tools/index.js";
+export * from "./types.js";
 
 // ============================================
 // Evaluation Framework Exports

@@ -2,7 +2,7 @@
  * FMP API Client Tests
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   ConstituentChangeSchema,
   EarningsEventSchema,
@@ -19,6 +19,7 @@ import {
   StockSplitSchema,
   SymbolChangeSchema,
 } from "../src/providers/fmp";
+import { createJsonResponse, createMockFetch, getMockCallUrl, type MockFetch } from "./helpers";
 
 // ============================================
 // Tests
@@ -27,18 +28,11 @@ import {
 describe("FmpClient", () => {
   // Mock fetch for testing
   const originalFetch = globalThis.fetch;
-  let mockFetch: ReturnType<typeof mock>;
+  let mockFetch: MockFetch;
   let client: FmpClient;
 
   beforeEach(() => {
-    mockFetch = mock(() =>
-      Promise.resolve(
-        new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
-    );
+    mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([])));
     globalThis.fetch = mockFetch;
     client = new FmpClient({ apiKey: "test-key", tier: "starter" });
   });
@@ -62,23 +56,16 @@ describe("FmpClient", () => {
         date: "2024-01-25",
         content: "Good afternoon everyone...",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockTranscript]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockTranscript])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getEarningsTranscript("AAPL", 1, 2024);
 
       expect(result).toHaveLength(1);
-      expect(result[0].symbol).toBe("AAPL");
-      expect(result[0].quarter).toBe(1);
+      expect(result[0]?.symbol).toBe("AAPL");
+      expect(result[0]?.quarter).toBe(1);
       expect(mockFetch).toHaveBeenCalled();
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/earning_call_transcript/AAPL");
       expect(url).toContain("apikey=test-key");
     });
@@ -95,21 +82,14 @@ describe("FmpClient", () => {
         acceptedDate: "2024-01-15 08:00:00",
         fillingDate: "2024-01-15",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockFiling]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockFiling])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getSecFilings("AAPL", "10-K");
 
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe("10-K");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.type).toBe("10-K");
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/sec_filings/AAPL");
       expect(url).toContain("type=10-K");
     });
@@ -124,20 +104,13 @@ describe("FmpClient", () => {
         ratingScore: 5,
         ratingRecommendation: "Strong Buy",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockRating]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockRating])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getSentimentRatings("AAPL");
 
       expect(result).toHaveLength(1);
-      expect(result[0].rating).toBe("Strong Buy");
+      expect(result[0]?.rating).toBe("Strong Buy");
     });
   });
 
@@ -151,20 +124,13 @@ describe("FmpClient", () => {
         url: "https://news.com/article",
         site: "news.com",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockNews]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockNews])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getStockNews(["AAPL", "MSFT"]);
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("tickers=AAPL%2CMSFT");
     });
   });
@@ -181,33 +147,21 @@ describe("FmpClient", () => {
         cik: "0000320193",
         founded: "1976",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockConstituent]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockConstituent])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getSP500Constituents();
 
       expect(result).toHaveLength(1);
-      expect(result[0].symbol).toBe("AAPL");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.symbol).toBe("AAPL");
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/sp500_constituent");
     });
 
     test("fetches NASDAQ 100 constituents", async () => {
-      mockFetch = mock(() =>
+      mockFetch = createMockFetch(() =>
         Promise.resolve(
-          new Response(
-            JSON.stringify([
-              { symbol: "AAPL", name: "Apple Inc", sector: "Technology" },
-            ]),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
+          createJsonResponse([{ symbol: "AAPL", name: "Apple Inc", sector: "Technology" }])
         )
       );
       globalThis.fetch = mockFetch;
@@ -215,19 +169,14 @@ describe("FmpClient", () => {
       const result = await client.getNasdaq100Constituents();
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/nasdaq_constituent");
     });
 
     test("fetches Dow Jones constituents", async () => {
-      mockFetch = mock(() =>
+      mockFetch = createMockFetch(() =>
         Promise.resolve(
-          new Response(
-            JSON.stringify([
-              { symbol: "AAPL", name: "Apple Inc", sector: "Technology" },
-            ]),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
+          createJsonResponse([{ symbol: "AAPL", name: "Apple Inc", sector: "Technology" }])
         )
       );
       globalThis.fetch = mockFetch;
@@ -235,7 +184,7 @@ describe("FmpClient", () => {
       const result = await client.getDowJonesConstituents();
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/dowjones_constituent");
     });
   });
@@ -250,40 +199,30 @@ describe("FmpClient", () => {
         symbol: "NEW",
         reason: "Market cap increase",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockChange]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockChange])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getSP500ConstituentChanges();
 
       expect(result).toHaveLength(1);
-      expect(result[0].symbol).toBe("NEW");
-      expect(result[0].removedTicker).toBe("OLD");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.symbol).toBe("NEW");
+      expect(result[0]?.removedTicker).toBe("OLD");
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical/sp500_constituent");
     });
 
     test("fetches NASDAQ 100 constituent changes", async () => {
-      mockFetch = mock(() =>
+      mockFetch = createMockFetch(() =>
         Promise.resolve(
-          new Response(
-            JSON.stringify([
-              {
-                dateAdded: "2024-01-15",
-                addedSecurity: "New Corp",
-                removedTicker: null,
-                removedSecurity: null,
-                symbol: "NEW",
-              },
-            ]),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
+          createJsonResponse([
+            {
+              dateAdded: "2024-01-15",
+              addedSecurity: "New Corp",
+              removedTicker: null,
+              removedSecurity: null,
+              symbol: "NEW",
+            },
+          ])
         )
       );
       globalThis.fetch = mockFetch;
@@ -291,25 +230,22 @@ describe("FmpClient", () => {
       const result = await client.getNasdaq100ConstituentChanges();
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical/nasdaq_constituent");
     });
 
     test("fetches Dow Jones constituent changes", async () => {
-      mockFetch = mock(() =>
+      mockFetch = createMockFetch(() =>
         Promise.resolve(
-          new Response(
-            JSON.stringify([
-              {
-                dateAdded: "2024-01-15",
-                addedSecurity: "New Corp",
-                removedTicker: null,
-                removedSecurity: null,
-                symbol: "NEW",
-              },
-            ]),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
+          createJsonResponse([
+            {
+              dateAdded: "2024-01-15",
+              addedSecurity: "New Corp",
+              removedTicker: null,
+              removedSecurity: null,
+              symbol: "NEW",
+            },
+          ])
         )
       );
       globalThis.fetch = mockFetch;
@@ -317,7 +253,7 @@ describe("FmpClient", () => {
       const result = await client.getDowJonesConstituentChanges();
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical/dowjones_constituent");
     });
   });
@@ -340,14 +276,7 @@ describe("FmpClient", () => {
         isEtf: false,
         isActivelyTrading: true,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockResult]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockResult])));
       globalThis.fetch = mockFetch;
 
       const result = await client.screenStocks({
@@ -357,28 +286,21 @@ describe("FmpClient", () => {
       });
 
       expect(result).toHaveLength(1);
-      expect(result[0].symbol).toBe("AAPL");
-      expect(result[0].marketCap).toBe(3000000000000);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.symbol).toBe("AAPL");
+      expect(result[0]?.marketCap).toBe(3000000000000);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/stock-screener");
       expect(url).toContain("marketCapMoreThan=1000000000000");
       expect(url).toContain("sector=Technology");
     });
 
     test("applies default limit", async () => {
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([])));
       globalThis.fetch = mockFetch;
 
       await client.screenStocks();
 
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("limit=1000");
     });
   });
@@ -394,14 +316,7 @@ describe("FmpClient", () => {
         revenue: 120000000000,
         revenueEstimated: 118000000000,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockEvent]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockEvent])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getEarningsCalendar({
@@ -410,9 +325,9 @@ describe("FmpClient", () => {
       });
 
       expect(result).toHaveLength(1);
-      expect(result[0].symbol).toBe("AAPL");
-      expect(result[0].eps).toBe(2.18);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.symbol).toBe("AAPL");
+      expect(result[0]?.eps).toBe(2.18);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/earning_calendar");
       expect(url).toContain("from=2024-01-20");
       expect(url).toContain("to=2024-01-30");
@@ -428,20 +343,13 @@ describe("FmpClient", () => {
         revenue: null,
         revenueEstimated: null,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockEvent]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockEvent])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getHistoricalEarnings("AAPL");
 
       expect(result).toHaveLength(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical/earning_calendar/AAPL");
     });
   });
@@ -455,22 +363,17 @@ describe("FmpClient", () => {
         numerator: 4,
         denominator: 1,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify({ historical: [mockSplit] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
+      mockFetch = createMockFetch(() =>
+        Promise.resolve(createJsonResponse({ historical: [mockSplit] }))
       );
       globalThis.fetch = mockFetch;
 
       const result = await client.getStockSplits("AAPL");
 
       expect(result).toHaveLength(1);
-      expect(result[0].numerator).toBe(4);
-      expect(result[0].denominator).toBe(1);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.numerator).toBe(4);
+      expect(result[0]?.denominator).toBe(1);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical-price-full/stock_split/AAPL");
     });
 
@@ -485,21 +388,16 @@ describe("FmpClient", () => {
         paymentDate: "2024-02-15",
         declarationDate: "2024-01-02",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify({ historical: [mockDividend] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
+      mockFetch = createMockFetch(() =>
+        Promise.resolve(createJsonResponse({ historical: [mockDividend] }))
       );
       globalThis.fetch = mockFetch;
 
       const result = await client.getStockDividends("AAPL");
 
       expect(result).toHaveLength(1);
-      expect(result[0].dividend).toBe(0.24);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.dividend).toBe(0.24);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/historical-price-full/stock_dividend/AAPL");
     });
 
@@ -510,22 +408,15 @@ describe("FmpClient", () => {
         oldSymbol: "OLD",
         newSymbol: "NEW",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockChange]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockChange])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getSymbolChanges();
 
       expect(result).toHaveLength(1);
-      expect(result[0].oldSymbol).toBe("OLD");
-      expect(result[0].newSymbol).toBe("NEW");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.oldSymbol).toBe("OLD");
+      expect(result[0]?.newSymbol).toBe("NEW");
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v4/symbol_change");
     });
   });
@@ -538,21 +429,14 @@ describe("FmpClient", () => {
         title: "Apple Reports Q1 Results",
         text: "CUPERTINO, California — Apple Inc. today announced...",
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockRelease]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockRelease])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getPressReleases("AAPL");
 
       expect(result).toHaveLength(1);
-      expect(result[0].title).toBe("Apple Reports Q1 Results");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result[0]?.title).toBe("Apple Reports Q1 Results");
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("/v3/press-releases/AAPL");
       expect(url).toContain("limit=100");
     });
@@ -584,20 +468,13 @@ describe("FmpClient", () => {
         sharesOutstanding: 15500000000,
         timestamp: 1705350000,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockQuote]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockQuote])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getQuotes(["AAPL"]);
 
       expect(result).toHaveLength(1);
-      expect(result[0].price).toBe(195.5);
+      expect(result[0]?.price).toBe(195.5);
     });
 
     test("fetches single quote", async () => {
@@ -625,14 +502,7 @@ describe("FmpClient", () => {
         sharesOutstanding: 15500000000,
         timestamp: 1705350000,
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([mockQuote]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([mockQuote])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getQuote("AAPL");
@@ -642,14 +512,7 @@ describe("FmpClient", () => {
     });
 
     test("returns undefined for missing quote", async () => {
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify([]), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse([])));
       globalThis.fetch = mockFetch;
 
       const result = await client.getQuote("INVALID");

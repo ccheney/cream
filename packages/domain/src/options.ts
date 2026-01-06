@@ -18,11 +18,7 @@
  */
 
 import { z } from "zod";
-import {
-  type OptionContract,
-  OptionContractSchema,
-  OptionTypeSchema,
-} from "./schemas/decision-plan.js";
+import { type OptionContract, OptionContractSchema } from "./schemas/decision-plan.js";
 
 // ============================================
 // Constants
@@ -83,8 +79,7 @@ export type OSIErrorCode =
  * 6. Strike dollars (5 digits)
  * 7. Strike cents (3 digits)
  */
-export const OSI_REGEX =
-  /^([A-Z]{1,6})\s*(\d{2})(\d{2})(\d{2})([CP])(\d{5})(\d{3})$/;
+export const OSI_REGEX = /^([A-Z]{1,6})\s*(\d{2})(\d{2})(\d{2})([CP])(\d{5})(\d{3})$/;
 
 /**
  * Strict OSI format (exactly 21 chars with proper padding)
@@ -104,15 +99,10 @@ export const OSI_STRICT_REGEX =
 export const OSISymbolSchema = z
   .string()
   .length(OSI_LENGTH, `OSI symbol must be exactly ${OSI_LENGTH} characters`)
-  .refine(
-    (val) => {
-      const result = parseOSI(val);
-      return result.success;
-    },
-    (val) => ({
-      message: `Invalid OSI format: ${parseOSI(val).error?.message ?? "unknown error"}`,
-    })
-  );
+  .refine((val) => {
+    const result = parseOSI(val);
+    return result.success;
+  }, "Invalid OSI symbol format");
 
 export type OSISymbol = z.infer<typeof OSISymbolSchema>;
 
@@ -123,15 +113,10 @@ export const OSISymbolLenientSchema = z
   .string()
   .min(15, "OSI symbol must be at least 15 characters")
   .max(OSI_LENGTH, `OSI symbol must be at most ${OSI_LENGTH} characters`)
-  .refine(
-    (val) => {
-      const result = parseOSI(val);
-      return result.success;
-    },
-    (val) => ({
-      message: `Invalid OSI format: ${parseOSI(val).error?.message ?? "unknown error"}`,
-    })
-  );
+  .refine((val) => {
+    const result = parseOSI(val);
+    return result.success;
+  }, "Invalid OSI symbol format");
 
 // ============================================
 // Parse Result Type
@@ -181,7 +166,7 @@ export function parseOSI(osi: string): OSIParseResult {
   if (padded.length < OSI_LENGTH) {
     // Find where the numeric part starts (expiration)
     const match = padded.match(/^([A-Z]+)(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/);
-    if (match) {
+    if (match?.[1]) {
       const symbol = match[1].padEnd(6, " ");
       padded = symbol + padded.slice(match[1].length);
     }
@@ -238,11 +223,7 @@ export function parseOSI(osi: string): OSIParseResult {
   if (typePart !== "C" && typePart !== "P") {
     return {
       success: false,
-      error: new OSIError(
-        `Invalid option type "${typePart}": must be C or P`,
-        "INVALID_TYPE",
-        osi
-      ),
+      error: new OSIError(`Invalid option type "${typePart}": must be C or P`, "INVALID_TYPE", osi),
     };
   }
 
@@ -335,7 +316,17 @@ export function toOSI(contract: OptionContract): string {
     );
   }
 
-  const [yearStr, monthStr, dayStr] = dateParts;
+  const yearStr = dateParts[0];
+  const monthStr = dateParts[1];
+  const dayStr = dateParts[2];
+
+  if (!yearStr || !monthStr || !dayStr) {
+    throw new OSIError(
+      `Invalid expiration date format "${validated.expirationDate}"`,
+      "INVALID_DATE"
+    );
+  }
+
   const fullYear = Number.parseInt(yearStr, 10);
 
   // Year: last 2 digits
@@ -404,12 +395,10 @@ export function normalizeOSI(osi: string): string {
 /**
  * Extended OptionContract schema that includes OSI symbol generation.
  */
-export const OptionContractWithOSISchema = OptionContractSchema.transform(
-  (contract) => ({
-    ...contract,
-    osiSymbol: toOSI(contract),
-  })
-);
+export const OptionContractWithOSISchema = OptionContractSchema.transform((contract) => ({
+  ...contract,
+  osiSymbol: toOSI(contract),
+}));
 
 export type OptionContractWithOSI = z.infer<typeof OptionContractWithOSISchema>;
 

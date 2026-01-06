@@ -236,6 +236,7 @@ export function Backdrop({
   }
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: Backdrop needs click handler for dismiss
     <div
       className={`
         fixed inset-0
@@ -245,7 +246,12 @@ export function Backdrop({
         ${className}
       `.trim()}
       onClick={onClose}
-      aria-hidden="true"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" || e.key === "Enter") {
+          onClose?.();
+        }
+      }}
+      role="presentation"
       {...props}
     />
   );

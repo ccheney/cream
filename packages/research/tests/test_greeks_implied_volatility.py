@@ -155,9 +155,7 @@ class TestImpliedVolatilityNewtonRaphson:
         market_price = call_price(S, K, T, r, true_sigma)
 
         config = ImpliedVolatilitySolver(max_iterations=50, tolerance=1e-8)
-        solved_sigma = implied_volatility_newton_raphson(
-            market_price, S, K, T, r, config=config
-        )
+        solved_sigma = implied_volatility_newton_raphson(market_price, S, K, T, r, config=config)
 
         assert abs(solved_sigma - true_sigma) < 1e-8
 

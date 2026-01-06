@@ -47,8 +47,8 @@ pub struct WalkForwardConfig {
 impl Default for WalkForwardConfig {
     fn default() -> Self {
         Self {
-            in_sample_days: 365,           // 12 months in-sample
-            out_of_sample_days: 90,        // 3 months out-of-sample
+            in_sample_days: 365,    // 12 months in-sample
+            out_of_sample_days: 90, // 3 months out-of-sample
             window_mode: WindowMode::Rolling,
             min_windows: 4,
             overfitting_threshold: Decimal::new(5, 1), // 0.5 = 50%
@@ -409,9 +409,7 @@ impl WalkForwardEngine {
     pub fn analyze_overfitting(&self, windows: &[WalkForwardWindow]) -> OverfittingAnalysis {
         let windows_with_both: Vec<_> = windows
             .iter()
-            .filter(|w| {
-                w.in_sample_metrics.is_some() && w.out_of_sample_metrics.is_some()
-            })
+            .filter(|w| w.in_sample_metrics.is_some() && w.out_of_sample_metrics.is_some())
             .collect();
 
         if windows_with_both.is_empty() {
@@ -482,8 +480,7 @@ impl WalkForwardEngine {
                 "{}/{} windows show >{}% Sharpe degradation",
                 overfit_count,
                 n,
-                (self.config.overfitting_threshold * Decimal::ONE_HUNDRED)
-                    .round_dp(0)
+                (self.config.overfitting_threshold * Decimal::ONE_HUNDRED).round_dp(0)
             ))
         } else {
             None
@@ -502,10 +499,7 @@ impl WalkForwardEngine {
 
     /// Analyze parameter stability across windows.
     #[must_use]
-    pub fn analyze_parameter_stability(
-        &self,
-        windows: &[WalkForwardWindow],
-    ) -> ParameterStability {
+    pub fn analyze_parameter_stability(&self, windows: &[WalkForwardWindow]) -> ParameterStability {
         if windows.is_empty() {
             return ParameterStability::default();
         }
@@ -580,10 +574,7 @@ impl WalkForwardEngine {
     /// This generates windows and analysis structure; actual backtests are run externally.
     #[must_use]
     pub fn run(&self, windows: Vec<WalkForwardWindow>) -> WalkForwardResult {
-        debug!(
-            windows = windows.len(),
-            "Running walk-forward analysis"
-        );
+        debug!(windows = windows.len(), "Running walk-forward analysis");
 
         let aggregated_oos = self.aggregate_oos_metrics(&windows);
         let overfitting_analysis = self.analyze_overfitting(&windows);
@@ -786,13 +777,8 @@ mod tests {
 
     #[test]
     fn test_walk_forward_window_creation() {
-        let window = WalkForwardWindow::new(
-            0,
-            "2020-01-01",
-            "2020-12-31",
-            "2021-01-01",
-            "2021-03-31",
-        );
+        let window =
+            WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
         assert_eq!(window.index, 0);
         assert!(window.in_sample_metrics.is_none());
@@ -801,13 +787,8 @@ mod tests {
 
     #[test]
     fn test_sharpe_degradation() {
-        let mut window = WalkForwardWindow::new(
-            0,
-            "2020-01-01",
-            "2020-12-31",
-            "2021-01-01",
-            "2021-03-31",
-        );
+        let mut window =
+            WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
         // No metrics - degradation should be None
         assert!(window.sharpe_degradation().is_none());
@@ -828,13 +809,8 @@ mod tests {
 
     #[test]
     fn test_overfitting_detection() {
-        let mut window = WalkForwardWindow::new(
-            0,
-            "2020-01-01",
-            "2020-12-31",
-            "2021-01-01",
-            "2021-03-31",
-        );
+        let mut window =
+            WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
         let mut is_metrics = PerformanceSummary::default();
         is_metrics.sharpe_ratio = Some(Decimal::new(3, 0)); // IS Sharpe = 3.0
@@ -853,13 +829,8 @@ mod tests {
     fn test_aggregate_oos_metrics() {
         let engine = WalkForwardBuilder::new().build();
 
-        let mut window1 = WalkForwardWindow::new(
-            0,
-            "2020-01-01",
-            "2020-12-31",
-            "2021-01-01",
-            "2021-03-31",
-        );
+        let mut window1 =
+            WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
         let mut oos1 = PerformanceSummary::default();
         oos1.total_return = Decimal::new(10, 2); // 10%
         oos1.sharpe_ratio = Some(Decimal::new(15, 1)); // 1.5
@@ -868,13 +839,8 @@ mod tests {
         oos1.total_trades = 50;
         window1.out_of_sample_metrics = Some(oos1);
 
-        let mut window2 = WalkForwardWindow::new(
-            1,
-            "2021-01-01",
-            "2021-12-31",
-            "2022-01-01",
-            "2022-03-31",
-        );
+        let mut window2 =
+            WalkForwardWindow::new(1, "2021-01-01", "2021-12-31", "2022-01-01", "2022-03-31");
         let mut oos2 = PerformanceSummary::default();
         oos2.total_return = Decimal::new(-5, 2); // -5%
         oos2.sharpe_ratio = Some(Decimal::new(-5, 1)); // -0.5
@@ -901,13 +867,8 @@ mod tests {
             .overfitting_threshold(Decimal::new(5, 1))
             .build();
 
-        let mut window = WalkForwardWindow::new(
-            0,
-            "2020-01-01",
-            "2020-12-31",
-            "2021-01-01",
-            "2021-03-31",
-        );
+        let mut window =
+            WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
         let mut is_metrics = PerformanceSummary::default();
         is_metrics.sharpe_ratio = Some(Decimal::new(2, 0));

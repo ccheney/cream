@@ -258,16 +258,12 @@ export class AlphaVantageClient {
     maturity: TreasuryMaturity = "10year",
     interval: EconomicInterval = "daily"
   ): Promise<TreasuryYieldResponse> {
-    return this.client.get(
-      "/query",
-      {
-        function: "TREASURY_YIELD",
-        maturity,
-        interval,
-        apikey: this.apiKey,
-      },
-      TreasuryYieldResponseSchema
-    );
+    return this.client.get<TreasuryYieldResponse>("/query", {
+      function: "TREASURY_YIELD",
+      maturity,
+      interval,
+      apikey: this.apiKey,
+    });
   }
 
   /**
@@ -276,7 +272,7 @@ export class AlphaVantageClient {
   async getFederalFundsRate(
     interval: EconomicInterval = "daily"
   ): Promise<FederalFundsRateResponse> {
-    return this.client.get(
+    return this.client.get<FederalFundsRateResponse>(
       "/query",
       {
         function: "FEDERAL_FUNDS_RATE",
@@ -291,7 +287,7 @@ export class AlphaVantageClient {
    * Get Consumer Price Index (CPI) data.
    */
   async getCPI(interval: "monthly" | "semiannual" = "monthly"): Promise<EconomicIndicatorResponse> {
-    return this.client.get(
+    return this.client.get<EconomicIndicatorResponse>(
       "/query",
       {
         function: "CPI",
@@ -393,7 +389,7 @@ export class AlphaVantageClient {
    * Get Real GDP per capita data.
    */
   async getRealGDPPerCapita(
-    interval: "quarterly" | "annual" = "quarterly"
+    _interval: "quarterly" | "annual" = "quarterly"
   ): Promise<EconomicIndicatorResponse> {
     return this.client.get(
       "/query",
@@ -436,8 +432,17 @@ export class AlphaVantageClient {
   /**
    * Get all treasury yields for yield curve analysis.
    */
-  async getYieldCurve(interval: EconomicInterval = "daily"): Promise<Map<TreasuryMaturity, TreasuryYieldResponse>> {
-    const maturities: TreasuryMaturity[] = ["3month", "2year", "5year", "7year", "10year", "30year"];
+  async getYieldCurve(
+    interval: EconomicInterval = "daily"
+  ): Promise<Map<TreasuryMaturity, TreasuryYieldResponse>> {
+    const maturities: TreasuryMaturity[] = [
+      "3month",
+      "2year",
+      "5year",
+      "7year",
+      "10year",
+      "30year",
+    ];
     const results = new Map<TreasuryMaturity, TreasuryYieldResponse>();
 
     for (const maturity of maturities) {
@@ -466,6 +471,9 @@ export class AlphaVantageClient {
    * Get latest value for an economic indicator.
    */
   static getLatestValue(response: EconomicIndicatorResponse): number | null {
+    if (response.data.length === 0) {
+      return null;
+    }
     const latest = response.data[0];
     if (!latest || latest.value === null) {
       return null;

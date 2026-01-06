@@ -2,7 +2,7 @@
  * Alpha Vantage API Client Tests
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   AlphaVantageClient,
   EconomicDataPointSchema,
@@ -11,6 +11,7 @@ import {
   INDICATOR_METADATA,
   TreasuryYieldResponseSchema,
 } from "../src/providers/alphavantage";
+import { createJsonResponse, createMockFetch, getMockCallUrl, type MockFetch } from "./helpers";
 
 // ============================================
 // Tests
@@ -19,7 +20,7 @@ import {
 describe("AlphaVantageClient", () => {
   // Mock fetch for testing
   const originalFetch = globalThis.fetch;
-  let mockFetch: ReturnType<typeof mock>;
+  let mockFetch: MockFetch;
   let client: AlphaVantageClient;
 
   const mockEconomicResponse = {
@@ -34,14 +35,7 @@ describe("AlphaVantageClient", () => {
   };
 
   beforeEach(() => {
-    mockFetch = mock(() =>
-      Promise.resolve(
-        new Response(JSON.stringify(mockEconomicResponse), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
-    );
+    mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse(mockEconomicResponse)));
     globalThis.fetch = mockFetch;
     client = new AlphaVantageClient({ apiKey: "test-key", tier: "premium" });
   });
@@ -67,22 +61,15 @@ describe("AlphaVantageClient", () => {
           { date: "2024-01-14", value: "4.20" },
         ],
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify(mockTreasuryResponse), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse(mockTreasuryResponse)));
       globalThis.fetch = mockFetch;
 
       const result = await client.getTreasuryYield("10year", "daily");
 
       expect(result.name).toBe("10-Year Treasury Yield");
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].value).toBe(4.25);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result.data[0]?.value).toBe(4.25);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=TREASURY_YIELD");
       expect(url).toContain("maturity=10year");
     });
@@ -90,7 +77,7 @@ describe("AlphaVantageClient", () => {
     test("fetches 2-year treasury yield", async () => {
       await client.getTreasuryYield("2year");
 
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("maturity=2year");
     });
   });
@@ -103,21 +90,14 @@ describe("AlphaVantageClient", () => {
         unit: "percent",
         data: [{ date: "2024-01-15", value: "5.33" }],
       };
-      mockFetch = mock(() =>
-        Promise.resolve(
-          new Response(JSON.stringify(mockFFRResponse), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          })
-        )
-      );
+      mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse(mockFFRResponse)));
       globalThis.fetch = mockFetch;
 
       const result = await client.getFederalFundsRate();
 
       expect(result.name).toBe("Federal Funds Rate");
-      expect(result.data[0].value).toBe(5.33);
-      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(result.data[0]?.value).toBe(5.33);
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=FEDERAL_FUNDS_RATE");
     });
   });
@@ -127,7 +107,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getCPI();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=CPI");
       expect(url).toContain("interval=monthly");
     });
@@ -135,7 +115,7 @@ describe("AlphaVantageClient", () => {
     test("fetches semiannual CPI", async () => {
       await client.getCPI("semiannual");
 
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("interval=semiannual");
     });
   });
@@ -145,7 +125,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getRealGDP();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=REAL_GDP");
       expect(url).toContain("interval=quarterly");
     });
@@ -153,7 +133,7 @@ describe("AlphaVantageClient", () => {
     test("fetches annual GDP", async () => {
       await client.getRealGDP("annual");
 
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("interval=annual");
     });
   });
@@ -163,7 +143,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getUnemploymentRate();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=UNEMPLOYMENT");
     });
   });
@@ -173,7 +153,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getInflation();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=INFLATION");
     });
   });
@@ -183,7 +163,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getRetailSales();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=RETAIL_SALES");
     });
   });
@@ -193,7 +173,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getNonfarmPayroll();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=NONFARM_PAYROLL");
     });
   });
@@ -203,7 +183,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getDurableGoods();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=DURABLES");
     });
   });
@@ -213,7 +193,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getRealGDPPerCapita();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=REAL_GDP_PER_CAPITA");
     });
   });
@@ -223,7 +203,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getInflationExpectation();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=INFLATION_EXPECTATION");
     });
   });
@@ -233,7 +213,7 @@ describe("AlphaVantageClient", () => {
       const result = await client.getConsumerSentiment();
 
       expect(result.name).toBe("Test Indicator");
-      const [url] = mockFetch.mock.calls[0] as [string];
+      const url = getMockCallUrl(mockFetch);
       expect(url).toContain("function=CONSUMER_SENTIMENT");
     });
   });
@@ -332,11 +312,7 @@ describe("AlphaVantageClient", () => {
         ],
       };
 
-      const change = AlphaVantageClient.getPercentChange(
-        response,
-        "2023-12-01",
-        "2024-01-01"
-      );
+      const change = AlphaVantageClient.getPercentChange(response, "2023-12-01", "2024-01-01");
       expect(change).toBe(10); // 10% increase
     });
 
@@ -348,11 +324,7 @@ describe("AlphaVantageClient", () => {
         data: [{ date: "2024-01-01", value: 100 }],
       };
 
-      const change = AlphaVantageClient.getPercentChange(
-        response,
-        "2020-01-01",
-        "2024-01-01"
-      );
+      const change = AlphaVantageClient.getPercentChange(response, "2020-01-01", "2024-01-01");
       expect(change).toBeNull();
     });
 
@@ -400,7 +372,7 @@ describe("Zod Schemas", () => {
     const parsed = EconomicIndicatorResponseSchema.parse(data);
     expect(parsed.name).toBe("Test Indicator");
     expect(parsed.data).toHaveLength(2);
-    expect(parsed.data[0].value).toBe(3.5);
+    expect(parsed.data[0]?.value).toBe(3.5);
   });
 
   test("TreasuryYieldResponseSchema validates treasury data", () => {
@@ -427,7 +399,7 @@ describe("Zod Schemas", () => {
 describe("Indicator Metadata", () => {
   test("all indicators have required fields", () => {
     for (const [key, metadata] of Object.entries(INDICATOR_METADATA)) {
-      expect(metadata.code).toBe(key);
+      expect(metadata.code).toBe(key as typeof metadata.code);
       expect(metadata.name).toBeTruthy();
       expect(metadata.description).toBeTruthy();
       expect(metadata.unit).toBeTruthy();

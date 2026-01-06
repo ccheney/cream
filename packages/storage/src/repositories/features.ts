@@ -8,8 +8,8 @@
 
 import { z } from "zod";
 import type { TursoClient } from "../turso.js";
-import { RepositoryError, parseJson, toJson } from "./base.js";
-import { TimeframeSchema, type Timeframe } from "./candles.js";
+import { parseJson, RepositoryError, toJson } from "./base.js";
+import { type Timeframe, TimeframeSchema } from "./candles.js";
 
 // ============================================
 // Zod Schemas
@@ -77,7 +77,9 @@ export class FeaturesRepository {
    * Bulk upsert features
    */
   async bulkUpsert(features: FeatureInsert[]): Promise<number> {
-    if (features.length === 0) return 0;
+    if (features.length === 0) {
+      return 0;
+    }
 
     let inserted = 0;
     for (let i = 0; i < features.length; i += 100) {
@@ -148,7 +150,9 @@ export class FeaturesRepository {
       [symbol, timeframe]
     );
 
-    if (!latest?.timestamp) return [];
+    if (!latest?.timestamp) {
+      return [];
+    }
 
     let query = `SELECT * FROM features
                  WHERE symbol = ? AND timeframe = ? AND timestamp = ?`;
@@ -181,10 +185,7 @@ export class FeaturesRepository {
    * Delete features older than a date
    */
   async deleteOlderThan(beforeDate: string): Promise<number> {
-    const result = await this.client.run(
-      `DELETE FROM features WHERE timestamp < ?`,
-      [beforeDate]
-    );
+    const result = await this.client.run(`DELETE FROM features WHERE timestamp < ?`, [beforeDate]);
     return result.changes;
   }
 }
