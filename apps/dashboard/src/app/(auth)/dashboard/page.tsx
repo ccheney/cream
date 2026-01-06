@@ -5,6 +5,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
   usePauseSystem,
   usePortfolioSummary,
@@ -107,52 +108,56 @@ export default function DashboardPage() {
       </div>
 
       {/* System Status Banner */}
-      <SystemStatusBanner status={status} isLoading={statusLoading} />
+      <QueryErrorBoundary title="Failed to load system status">
+        <SystemStatusBanner status={status} isLoading={statusLoading} />
 
-      {/* OODA Cycle Status */}
-      <div className="grid grid-cols-4 gap-4">
-        <OODAPhaseCard
-          phase="Observe"
-          status={getOODAPhaseStatus("observe", status?.lastCycleId)}
-          isLoading={statusLoading}
-        />
-        <OODAPhaseCard
-          phase="Orient"
-          status={getOODAPhaseStatus("orient", status?.lastCycleId)}
-          isLoading={statusLoading}
-        />
-        <OODAPhaseCard
-          phase="Decide"
-          status={getOODAPhaseStatus("decide", status?.lastCycleId)}
-          isLoading={statusLoading}
-        />
-        <OODAPhaseCard
-          phase="Act"
-          status={getOODAPhaseStatus("act", status?.lastCycleId)}
-          isLoading={statusLoading}
-        />
-      </div>
+        {/* OODA Cycle Status */}
+        <div className="grid grid-cols-4 gap-4 mt-6">
+          <OODAPhaseCard
+            phase="Observe"
+            status={getOODAPhaseStatus("observe", status?.lastCycleId)}
+            isLoading={statusLoading}
+          />
+          <OODAPhaseCard
+            phase="Orient"
+            status={getOODAPhaseStatus("orient", status?.lastCycleId)}
+            isLoading={statusLoading}
+          />
+          <OODAPhaseCard
+            phase="Decide"
+            status={getOODAPhaseStatus("decide", status?.lastCycleId)}
+            isLoading={statusLoading}
+          />
+          <OODAPhaseCard
+            phase="Act"
+            status={getOODAPhaseStatus("act", status?.lastCycleId)}
+            isLoading={statusLoading}
+          />
+        </div>
+      </QueryErrorBoundary>
 
       {/* Portfolio Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <MetricCard
-          label="NAV"
-          value={portfolioLoading ? "--" : formatCurrency(portfolio?.nav ?? 0)}
-          isLoading={portfolioLoading}
-        />
-        <MetricCard
-          label="Day P&L"
-          value={portfolioLoading ? "--" : formatCurrency(portfolio?.todayPnl ?? 0)}
-          subValue={portfolioLoading ? "" : formatPct(portfolio?.todayPnlPct ?? 0)}
-          valueColor={(portfolio?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
-          isLoading={portfolioLoading}
-        />
-        <MetricCard
-          label="Open Positions"
-          value={portfolioLoading ? "--" : String(portfolio?.positionCount ?? 0)}
-          isLoading={portfolioLoading}
-        />
-      </div>
+      <QueryErrorBoundary title="Failed to load portfolio">
+        <div className="grid grid-cols-3 gap-4">
+          <MetricCard
+            label="NAV"
+            value={portfolioLoading ? "--" : formatCurrency(portfolio?.nav ?? 0)}
+            isLoading={portfolioLoading}
+          />
+          <MetricCard
+            label="Day P&L"
+            value={portfolioLoading ? "--" : formatCurrency(portfolio?.todayPnl ?? 0)}
+            subValue={portfolioLoading ? "" : formatPct(portfolio?.todayPnlPct ?? 0)}
+            valueColor={(portfolio?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
+            isLoading={portfolioLoading}
+          />
+          <MetricCard
+            label="Open Positions"
+            value={portfolioLoading ? "--" : String(portfolio?.positionCount ?? 0)}
+            isLoading={portfolioLoading}
+          />
+        </div>
+      </QueryErrorBoundary>
 
       {/* Active Alerts */}
       {status?.alerts && status.alerts.length > 0 && (
@@ -183,69 +188,74 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Decisions */}
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-          Recent Decisions
-        </h2>
-        {decisionsLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-            ))}
-          </div>
-        ) : decisions?.items && decisions.items.length > 0 ? (
-          <div className="space-y-2">
-            {decisions.items.map((decision) => (
-              <div
-                key={decision.id}
-                className="flex items-center justify-between py-2 border-b border-cream-100 dark:border-night-700 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded ${
-                      decision.action === "BUY"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                        : decision.action === "SELL"
-                          ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                          : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                    }`}
-                  >
-                    {decision.action}
-                  </span>
-                  <span className="font-medium text-cream-900 dark:text-cream-100">
-                    {decision.symbol}
-                  </span>
-                  <span className="text-sm text-cream-500 dark:text-cream-400">
-                    {decision.size} {decision.sizeUnit.toLowerCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded ${
-                      decision.status === "EXECUTED"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                        : decision.status === "PENDING"
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                          : decision.status === "REJECTED"
+      <QueryErrorBoundary title="Failed to load decisions">
+        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+            Recent Decisions
+          </h2>
+          {decisionsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse"
+                />
+              ))}
+            </div>
+          ) : decisions?.items && decisions.items.length > 0 ? (
+            <div className="space-y-2">
+              {decisions.items.map((decision) => (
+                <div
+                  key={decision.id}
+                  className="flex items-center justify-between py-2 border-b border-cream-100 dark:border-night-700 last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        decision.action === "BUY"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : decision.action === "SELL"
                             ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                             : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                    }`}
-                  >
-                    {decision.status}
-                  </span>
-                  <span className="text-sm text-cream-500 dark:text-cream-400">
-                    {formatDistanceToNow(new Date(decision.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </span>
+                      }`}
+                    >
+                      {decision.action}
+                    </span>
+                    <span className="font-medium text-cream-900 dark:text-cream-100">
+                      {decision.symbol}
+                    </span>
+                    <span className="text-sm text-cream-500 dark:text-cream-400">
+                      {decision.size} {decision.sizeUnit.toLowerCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        decision.status === "EXECUTED"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : decision.status === "PENDING"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                            : decision.status === "REJECTED"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
+                      }`}
+                    >
+                      {decision.status}
+                    </span>
+                    <span className="text-sm text-cream-500 dark:text-cream-400">
+                      {formatDistanceToNow(new Date(decision.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-cream-500 dark:text-cream-400">No decisions yet</p>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-cream-500 dark:text-cream-400">No decisions yet</p>
+          )}
+        </div>
+      </QueryErrorBoundary>
     </div>
   );
 }

@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
+    "dev": "PORT=3001 bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",

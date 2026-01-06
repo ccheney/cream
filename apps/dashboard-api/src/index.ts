@@ -196,7 +196,8 @@ app.get("/docs", (c) => {
 // ============================================
 
 export type AppType = typeof app;
-export default app;
+// Note: We intentionally don't `export default app` because Bun auto-serves
+// default exports with a fetch method, conflicting with our manual Bun.serve() below.
 
 // ============================================
 // Server Startup
