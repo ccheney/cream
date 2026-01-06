@@ -490,6 +490,52 @@ describe("diffSnapshots", () => {
     expect(result.diffs.length).toBe(2);
     expect(result.diffCount).toBeGreaterThanOrEqual(2);
   });
+
+  test("detects bid price change", () => {
+    const previous = createMockMarketSnapshot(["AAPL"]);
+    const current = createMockMarketSnapshot(["AAPL"]);
+    if (current.symbols?.[0]?.quote) {
+      current.symbols[0].quote.bid = 155.0; // Changed from 150.0
+    }
+
+    const result = diffSnapshots(previous, current, { includeQuotes: true });
+
+    expect(result.diffs.some((d) => d.path.includes("quote.bid"))).toBe(true);
+  });
+
+  test("detects ask price change", () => {
+    const previous = createMockMarketSnapshot(["AAPL"]);
+    const current = createMockMarketSnapshot(["AAPL"]);
+    if (current.symbols?.[0]?.quote) {
+      current.symbols[0].quote.ask = 160.0; // Changed from 150.05
+    }
+
+    const result = diffSnapshots(previous, current, { includeQuotes: true });
+
+    expect(result.diffs.some((d) => d.path.includes("quote.ask"))).toBe(true);
+  });
+
+  test("detects bar count change when includeBars is true", () => {
+    const previous = createMockMarketSnapshot(["AAPL"]);
+    const current = createMockMarketSnapshot(["AAPL"]);
+    // Add an extra bar to current
+    if (current.symbols?.[0]?.bars) {
+      current.symbols[0].bars.push({
+        symbol: "AAPL",
+        timestamp: "2026-01-05T15:00:00Z",
+        timeframeMinutes: 60,
+        open: 152.0,
+        high: 153.0,
+        low: 151.0,
+        close: 152.5,
+        volume: 1500000,
+      });
+    }
+
+    const result = diffSnapshots(previous, current, { includeBars: true });
+
+    expect(result.diffs.some((d) => d.path.includes("bars.length"))).toBe(true);
+  });
 });
 
 describe("formatSnapshotDiff", () => {
@@ -514,6 +560,41 @@ describe("formatSnapshotDiff", () => {
     expect(formatted).toContain("Regime changed");
     expect(formatted).toContain("symbols added");
     expect(formatted).toContain("MSFT");
+  });
+
+  test("formats market status change", () => {
+    const previous = createMockMarketSnapshot(["AAPL"]);
+    const current = { ...createMockMarketSnapshot(["AAPL"]), marketStatus: "CLOSED" as const };
+
+    const result = diffSnapshots(previous, current);
+    const formatted = formatSnapshotDiff(result);
+
+    expect(formatted).toContain("Market status changed");
+  });
+
+  test("formats symbols removed", () => {
+    const previous = createMockMarketSnapshot(["AAPL", "MSFT"]);
+    const current = createMockMarketSnapshot(["AAPL"]);
+
+    const result = diffSnapshots(previous, current);
+    const formatted = formatSnapshotDiff(result);
+
+    expect(formatted).toContain("symbols removed");
+    expect(formatted).toContain("MSFT");
+  });
+
+  test("formats symbols modified", () => {
+    const previous = createMockMarketSnapshot(["AAPL"]);
+    const current = createMockMarketSnapshot(["AAPL"]);
+    if (current.symbols?.[0]) {
+      current.symbols[0].dayHigh = 200.0;
+    }
+
+    const result = diffSnapshots(previous, current);
+    const formatted = formatSnapshotDiff(result);
+
+    expect(formatted).toContain("symbols modified");
+    expect(formatted).toContain("AAPL");
   });
 });
 

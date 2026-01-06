@@ -267,6 +267,60 @@ describe("getDecisionDirection", () => {
     };
     expect(getDecisionDirection(decision)).toBe("FLAT");
   });
+
+  it("detects SHORT for NO_TRADE with negative target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "NO_TRADE" as const,
+      size: { quantity: 0, unit: "SHARES" as const, targetPositionQuantity: -50 },
+    };
+    expect(getDecisionDirection(decision)).toBe("SHORT");
+  });
+
+  it("detects FLAT for NO_TRADE with zero target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "NO_TRADE" as const,
+      size: { quantity: 0, unit: "SHARES" as const, targetPositionQuantity: 0 },
+    };
+    expect(getDecisionDirection(decision)).toBe("FLAT");
+  });
+
+  it("detects LONG for REDUCE with positive target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "REDUCE" as const,
+      size: { quantity: 50, unit: "SHARES" as const, targetPositionQuantity: 50 },
+    };
+    expect(getDecisionDirection(decision)).toBe("LONG");
+  });
+
+  it("detects SHORT for REDUCE with negative target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "REDUCE" as const,
+      size: { quantity: 50, unit: "SHARES" as const, targetPositionQuantity: -50 },
+    };
+    expect(getDecisionDirection(decision)).toBe("SHORT");
+  });
+
+  it("detects LONG for INCREASE with positive target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "INCREASE" as const,
+      size: { quantity: 50, unit: "SHARES" as const, targetPositionQuantity: 150 },
+    };
+    expect(getDecisionDirection(decision)).toBe("LONG");
+  });
+
+  it("detects SHORT for INCREASE with negative target position", () => {
+    const decision = {
+      ...baseDecision,
+      action: "INCREASE" as const,
+      size: { quantity: 50, unit: "SHARES" as const, targetPositionQuantity: -150 },
+    };
+    expect(getDecisionDirection(decision)).toBe("SHORT");
+  });
 });
 
 // ============================================
@@ -393,6 +447,34 @@ describe("validateRiskLevels", () => {
       };
       const result = validateRiskLevels(badShort, 100);
       expect(result.valid).toBe(false);
+    });
+  });
+
+  describe("FLAT positions", () => {
+    it("skips detailed validation for FLAT direction", () => {
+      const flatDecision: Decision = {
+        ...longDecision,
+        action: "REDUCE",
+        size: { quantity: 100, unit: "SHARES", targetPositionQuantity: 0 },
+      };
+      const result = validateRiskLevels(flatDecision, 100);
+      expect(result.valid).toBe(true);
+      expect(result.riskRewardRatio).toBeNull();
+    });
+  });
+
+  describe("stop distance warnings", () => {
+    it("warns when stop distance exceeds 5x profit target", () => {
+      const highStopDecision: Decision = {
+        ...longDecision,
+        riskLevels: {
+          stopLossLevel: 40, // 60 points risk
+          takeProfitLevel: 110, // 10 points reward - stop is 6x the profit target
+          denomination: "UNDERLYING_PRICE",
+        },
+      };
+      const result = validateRiskLevels(highStopDecision, 100);
+      expect(result.warnings.some((w) => w.includes("5x profit target"))).toBe(true);
     });
   });
 });
@@ -526,5 +608,19 @@ describe("validateDecisionPlan", () => {
     const result = validateDecisionPlan(lowRRPlan, entryPrices);
     expect(result.success).toBe(true); // Warnings don't cause failure
     expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it("returns schema errors for invalid plan structure", () => {
+    const invalidPlan = {
+      cycleId: "2026-01-04T15:00:00Z",
+      asOfTimestamp: "invalid-timestamp", // Invalid timestamp format
+      environment: "PAPER",
+      decisions: [],
+    };
+    const entryPrices = new Map<string, number>();
+    const result = validateDecisionPlan(invalidPlan, entryPrices);
+    expect(result.success).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors.some((e) => e.includes("asOfTimestamp"))).toBe(true);
   });
 });
