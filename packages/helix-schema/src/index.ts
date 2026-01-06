@@ -57,6 +57,28 @@ export type MacroFrequency = "MONTHLY" | "QUARTERLY" | "WEEKLY" | "IRREGULAR";
  */
 export type RelationshipType = "SECTOR_PEER" | "SUPPLY_CHAIN" | "COMPETITOR" | "CUSTOMER";
 
+// ============================================
+// Case-Based Reasoning (CBR)
+// ============================================
+
+export {
+  buildMemoryContext,
+  calculateCBRQuality,
+  type CBRMarketSnapshot,
+  type CBRQualityMetrics,
+  type CBRRetrievalOptions,
+  type CBRRetrievalResult,
+  type CaseRetentionOptions,
+  convertToRetrievedCase,
+  extractSimilarityFeatures,
+  generateCBRSituationBrief,
+  retainCase,
+  retrieveMemoryContext,
+  retrieveSimilarCases,
+  SIMILARITY_WEIGHTS,
+  type SimilarityFeatures,
+} from "./cbr";
+
 /**
  * Company dependency relationship type (for DEPENDS_ON edge)
  */
