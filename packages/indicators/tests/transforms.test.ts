@@ -7,11 +7,14 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 // Percentile Rank
 import {
+  calculateMultiplePercentileRanks,
   calculatePercentileOfValue,
   calculatePercentileRank,
   getPercentileSignal,
   getQuintile,
+  getRegimeSignal,
   isExtreme,
+  percentileRankRequiredPeriods,
 } from "../src/transforms/percentileRank";
 // Pipeline
 import {
@@ -25,8 +28,10 @@ import {
   calculateMultiPeriodReturns,
   calculateReturns,
   calculateReturnsFromCandles,
+  generateReturnOutputNames,
   logReturn,
   RETURNS_DEFAULTS,
+  returnsRequiredPeriods,
   simpleReturn,
 } from "../src/transforms/returns";
 // Volatility Scale
@@ -41,11 +46,13 @@ import {
 // Z-Score
 import {
   calculateMean,
+  calculateMultipleZScores,
   calculateStdDev,
   calculateZScore,
   getZScoreSignal,
   isSignificant,
   meanReversionSignal,
+  zscoreRequiredPeriods,
 } from "../src/transforms/zscore";
 import type { Candle } from "../src/types";
 
@@ -174,6 +181,30 @@ describe("Returns Transform", () => {
       expect(results.length).toBeGreaterThan(0);
     });
   });
+
+  describe("returnsRequiredPeriods", () => {
+    it("should return max period + 1", () => {
+      expect(returnsRequiredPeriods({ periods: [1, 5, 20], logReturns: false })).toBe(21);
+      expect(returnsRequiredPeriods()).toBe(21); // default [1, 5, 20]
+    });
+  });
+
+  describe("generateReturnOutputNames", () => {
+    it("should generate output names with timeframe", () => {
+      const names = generateReturnOutputNames([1, 5, 20], "return", "1h");
+
+      expect(names.get(1)).toBe("return_1_1h");
+      expect(names.get(5)).toBe("return_5_1h");
+      expect(names.get(20)).toBe("return_20_1h");
+    });
+
+    it("should generate output names without timeframe", () => {
+      const names = generateReturnOutputNames([1, 5], "return");
+
+      expect(names.get(1)).toBe("return_1");
+      expect(names.get(5)).toBe("return_5");
+    });
+  });
 });
 
 // ============================================
@@ -255,6 +286,36 @@ describe("Z-Score Transform", () => {
       expect(meanReversionSignal(0)).toBeNull();
     });
   });
+
+  describe("calculateMultipleZScores", () => {
+    it("should calculate z-scores for multiple inputs", () => {
+      const inputsMap = new Map<string, number[]>();
+      inputsMap.set("rsi", generateValues(100));
+      inputsMap.set("volume", generateValues(100));
+
+      const timestamps = generateTimestamps(100);
+
+      const results = calculateMultipleZScores(inputsMap, timestamps, {
+        lookback: 20,
+        minSamples: 5,
+      });
+
+      expect(results.size).toBe(2);
+      expect(results.get("rsi")).toBeDefined();
+      expect(results.get("volume")).toBeDefined();
+      expect(results.get("rsi")!.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("zscoreRequiredPeriods", () => {
+    it("should return minSamples from params", () => {
+      expect(zscoreRequiredPeriods({ lookback: 20, minSamples: 10 })).toBe(10);
+    });
+
+    it("should return default when no params provided", () => {
+      expect(zscoreRequiredPeriods()).toBe(5);
+    });
+  });
 });
 
 // ============================================
@@ -331,6 +392,44 @@ describe("Percentile Rank Transform", () => {
       expect(isExtreme(5)).toBe(true);
       expect(isExtreme(95)).toBe(true);
       expect(isExtreme(50)).toBe(false);
+    });
+
+    it("should get correct regime signal", () => {
+      expect(getRegimeSignal(5)).toBe("very_low");
+      expect(getRegimeSignal(25)).toBe("low");
+      expect(getRegimeSignal(50)).toBe("normal");
+      expect(getRegimeSignal(75)).toBe("high");
+      expect(getRegimeSignal(95)).toBe("very_high");
+    });
+  });
+
+  describe("calculateMultiplePercentileRanks", () => {
+    it("should calculate percentile ranks for multiple inputs", () => {
+      const inputsMap = new Map<string, number[]>();
+      inputsMap.set("rsi", generateValues(100));
+      inputsMap.set("volume", generateValues(100));
+
+      const timestamps = generateTimestamps(100);
+
+      const results = calculateMultiplePercentileRanks(inputsMap, timestamps, {
+        lookback: 50,
+        minSamples: 10,
+      });
+
+      expect(results.size).toBe(2);
+      expect(results.get("rsi")).toBeDefined();
+      expect(results.get("volume")).toBeDefined();
+      expect(results.get("rsi")!.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("percentileRankRequiredPeriods", () => {
+    it("should return minSamples from params", () => {
+      expect(percentileRankRequiredPeriods({ lookback: 50, minSamples: 20 })).toBe(20);
+    });
+
+    it("should return default when no params provided", () => {
+      expect(percentileRankRequiredPeriods()).toBe(10);
     });
   });
 });
