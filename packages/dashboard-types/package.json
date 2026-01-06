@@ -1,0 +1,34 @@
+{
+  "name": "@cream/dashboard-types",
+  "version": "0.0.1",
+  "description": "Shared TypeScript types for dashboard and dashboard-api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
+    },
+    "./websocket": {
+      "types": "./dist/websocket.d.ts",
+      "import": "./dist/websocket.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.0.0-beta.20"
+  },
+  "devDependencies": {
+    "@cream/tsconfig": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}

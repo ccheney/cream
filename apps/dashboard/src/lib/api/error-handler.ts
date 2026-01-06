@@ -87,7 +87,7 @@ export const STATUS_TO_ERROR_TYPE: Record<number, ApiErrorType> = {
 /**
  * Transient error types (can be retried).
  */
-export const TRANSIENT_ERROR_TYPES: Set<ApiErrorType> = new Set([
+export const TRANSIENT_ERROR_TYPES: Set<ApiErrorType> = new Set<ApiErrorType>([
   "network",
   "timeout",
   "rate_limit",

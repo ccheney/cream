@@ -16,11 +16,17 @@ import { timing } from "hono/timing";
 import { liveProtection, requireAuth } from "./auth/index.js";
 import { closeDb } from "./db.js";
 import {
+  agentsRoutes,
   alertsRoutes,
   authRoutes,
+  backtestRoutes,
+  configRoutes,
   decisionsRoutes,
+  marketRoutes,
   portfolioRoutes,
+  riskRoutes,
   systemRoutes,
+  thesesRoutes,
 } from "./routes/index.js";
 import {
   closeAllConnections,
@@ -116,69 +122,30 @@ app.use("/api/system/*", requireAuth);
 app.use("/api/decisions/*", requireAuth);
 app.use("/api/portfolio/*", requireAuth);
 app.use("/api/alerts/*", requireAuth);
+app.use("/api/agents/*", requireAuth);
+app.use("/api/config/*", requireAuth);
+app.use("/api/market/*", requireAuth);
+app.use("/api/risk/*", requireAuth);
+app.use("/api/backtests/*", requireAuth);
+app.use("/api/theses/*", requireAuth);
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
 app.use("/api/portfolio/*", liveProtection());
+app.use("/api/config/*", liveProtection());
+app.use("/api/backtests/*", liveProtection());
+app.use("/api/theses/*", liveProtection());
 
 app.route("/api/system", systemRoutes);
 app.route("/api/decisions", decisionsRoutes);
 app.route("/api/portfolio", portfolioRoutes);
 app.route("/api/alerts", alertsRoutes);
-
-// ============================================
-// Placeholder Routes (to be implemented)
-// ============================================
-
-// Agents
-app.get("/api/agents", (c) => {
-  return c.json({
-    agents: [
-      { id: "technical", name: "Technical Analyst", status: "idle" },
-      { id: "news", name: "News & Sentiment", status: "idle" },
-      { id: "fundamentals", name: "Fundamentals & Macro", status: "idle" },
-      { id: "bullish", name: "Bullish Research", status: "idle" },
-      { id: "bearish", name: "Bearish Research", status: "idle" },
-      { id: "trader", name: "Trader", status: "idle" },
-      { id: "risk", name: "Risk Manager", status: "idle" },
-      { id: "critic", name: "Critic", status: "idle" },
-    ],
-  });
-});
-
-// Config
-app.get("/api/config", (c) => {
-  return c.json({
-    environment: process.env.CREAM_ENV ?? "PAPER",
-    broker: process.env.CREAM_BROKER ?? "ALPACA",
-  });
-});
-
-// Market data
-app.get("/api/market/quote/:symbol", (c) => {
-  const symbol = c.req.param("symbol");
-  return c.json({ symbol, bid: 0, ask: 0, last: 0, volume: 0 });
-});
-
-// Risk
-app.get("/api/risk", (c) => {
-  return c.json({
-    grossExposure: 0,
-    netExposure: 0,
-    var95: 0,
-    maxDrawdown: 0,
-  });
-});
-
-// Backtest
-app.get("/api/backtests", (c) => {
-  return c.json({ backtests: [] });
-});
-
-// Theses
-app.get("/api/theses", (c) => {
-  return c.json({ theses: [] });
-});
+app.route("/api/agents", agentsRoutes);
+app.route("/api/config", configRoutes);
+app.route("/api/market", marketRoutes);
+app.route("/api/risk", riskRoutes);
+app.route("/api/backtests", backtestRoutes);
+app.route("/api/theses", thesesRoutes);
 
 // ============================================
 // OpenAPI Documentation

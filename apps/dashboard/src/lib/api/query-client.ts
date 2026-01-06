@@ -23,6 +23,8 @@ import { QueryClient, type QueryClientConfig } from "@tanstack/react-query";
 export const CACHE_TIMES = {
   /** Static config - 1 hour */
   STATIC: 1000 * 60 * 60,
+  /** Config data - 5 minutes */
+  CONFIG: 1000 * 60 * 5,
   /** Market data - 1 second */
   MARKET: 1000,
   /** Portfolio data - 5 seconds */
@@ -31,6 +33,8 @@ export const CACHE_TIMES = {
   DECISIONS: 1000 * 30,
   /** Historical data - 5 minutes */
   HISTORICAL: 1000 * 60 * 5,
+  /** Chart data - 1 minute */
+  CHART: 1000 * 60,
   /** Default - 30 seconds */
   DEFAULT: 1000 * 30,
 } as const;
@@ -41,6 +45,8 @@ export const CACHE_TIMES = {
 export const STALE_TIMES = {
   /** Static config - 30 minutes */
   STATIC: 1000 * 60 * 30,
+  /** Config data - 2 minutes */
+  CONFIG: 1000 * 60 * 2,
   /** Market data - instant (always stale) */
   MARKET: 0,
   /** Portfolio data - 2 seconds */
@@ -49,6 +55,8 @@ export const STALE_TIMES = {
   DECISIONS: 1000 * 10,
   /** Historical data - 2 minutes */
   HISTORICAL: 1000 * 60 * 2,
+  /** Chart data - 30 seconds */
+  CHART: 1000 * 30,
   /** Default - 10 seconds */
   DEFAULT: 1000 * 10,
 } as const;
@@ -78,7 +86,7 @@ export const queryKeys = {
   // Decisions
   decisions: {
     all: ["decisions"] as const,
-    list: (filters?: Record<string, unknown>) =>
+    list: (filters?: object) =>
       filters
         ? ([...queryKeys.decisions.all, filters] as const)
         : ([...queryKeys.decisions.all] as const),
@@ -89,11 +97,8 @@ export const queryKeys = {
   portfolio: {
     all: ["portfolio"] as const,
     summary: () => [...queryKeys.portfolio.all, "summary"] as const,
-    positions: {
-      all: [...(["portfolio", "positions"] as const)] as const,
-      list: () => [...queryKeys.portfolio.positions.all] as const,
-      detail: (id: string) => [...queryKeys.portfolio.positions.all, id] as const,
-    },
+    positions: () => [...queryKeys.portfolio.all, "positions"] as const,
+    position: (id: string) => [...queryKeys.portfolio.all, "positions", id] as const,
   },
 
   // Risk

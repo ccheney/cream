@@ -8,6 +8,7 @@
  */
 
 import type { Metadata, Viewport } from "next";
+import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -56,7 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="font-ui antialiased">{children}</body>
+      <body className="font-ui antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

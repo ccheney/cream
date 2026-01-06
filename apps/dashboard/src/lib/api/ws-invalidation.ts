@@ -137,7 +137,7 @@ export function handleWSMessage(message: WSMessage): void {
     case "order": {
       // Order updates affect positions and portfolio
       queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.positions.all,
+        queryKey: queryKeys.portfolio.positions(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.summary() });
       break;
@@ -173,7 +173,7 @@ export function handleWSMessage(message: WSMessage): void {
     case "position_update": {
       // Position changed (fill, close)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.positions.all,
+        queryKey: queryKeys.portfolio.positions(),
       });
       break;
     }

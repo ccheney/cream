@@ -1,50 +1,161 @@
+"use client";
+
 /**
  * Config Page - System configuration management
  */
 
+import { formatDistanceToNow } from "date-fns";
+import { useConfig, useConfigHistory, useConstraintsConfig } from "@/hooks/queries";
+
 export default function ConfigPage() {
+  const { data: config, isLoading: configLoading } = useConfig();
+  const { data: history, isLoading: historyLoading } = useConfigHistory();
+  const { data: constraints } = useConstraintsConfig();
+
+  const envColors = {
+    BACKTEST: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    PAPER: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    LIVE: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Configuration</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-            PAPER
-          </span>
+          {config && (
+            <>
+              <span
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  envColors[config.environment as keyof typeof envColors] ?? envColors.PAPER
+                }`}
+              >
+                {config.environment}
+              </span>
+              <span className="text-sm text-cream-500 dark:text-cream-400">v{config.version}</span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Config Sections */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Trading Config */}
-        <ConfigSection title="Trading">
-          <ConfigField label="Environment" value="PAPER" />
-          <ConfigField label="Broker" value="ALPACA" />
-          <ConfigField label="Max Position Size" value="--%" />
-          <ConfigField label="Daily Stop Loss" value="--%" />
-        </ConfigSection>
+      {configLoading ? (
+        <div className="grid grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-48 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : config ? (
+        <div className="grid grid-cols-2 gap-6">
+          {/* Trading Config */}
+          <ConfigSection title="Trading">
+            <ConfigField label="Environment" value={config.environment} />
+            <ConfigField
+              label="Cycle Interval"
+              value={String(config.schedule?.cycleInterval ?? "1h")}
+            />
+            <ConfigField
+              label="Market Hours Only"
+              value={String(config.schedule?.marketHoursOnly ?? true)}
+            />
+            <ConfigField
+              label="Timezone"
+              value={String(config.schedule?.timezone ?? "America/New_York")}
+            />
+          </ConfigSection>
 
-        {/* Universe Config */}
-        <ConfigSection title="Universe">
-          <ConfigField label="Source" value="S&P 500" />
-          <ConfigField label="Symbols" value="--" />
-          <ConfigField label="Min Market Cap" value="--" />
-        </ConfigSection>
+          {/* Universe Config */}
+          <ConfigSection title="Universe">
+            <ConfigField
+              label="Source"
+              value={
+                config.universe.sources[0]?.type === "index"
+                  ? (config.universe.sources[0].index ?? "SPY")
+                  : (config.universe.sources[0]?.type ?? "static")
+              }
+            />
+            <ConfigField
+              label="Optionable Only"
+              value={String(config.universe.filters.optionableOnly)}
+            />
+            <ConfigField
+              label="Min Avg Volume"
+              value={config.universe.filters.minAvgVolume.toLocaleString()}
+            />
+            <ConfigField
+              label="Min Market Cap"
+              value={`$${(config.universe.filters.minMarketCap / 1e9).toFixed(1)}B`}
+            />
+          </ConfigSection>
 
-        {/* Agent Config */}
-        <ConfigSection title="Agents">
-          <ConfigField label="Consensus" value="Risk + Critic" />
-          <ConfigField label="Max Tokens" value="--" />
-          <ConfigField label="Temperature" value="--" />
-        </ConfigSection>
+          {/* Per-Instrument Limits */}
+          <ConfigSection title="Per-Instrument Limits">
+            <ConfigField
+              label="Max Shares"
+              value={constraints?.perInstrument.maxShares.toLocaleString() ?? "--"}
+            />
+            <ConfigField
+              label="Max Contracts"
+              value={String(constraints?.perInstrument.maxContracts ?? "--")}
+            />
+            <ConfigField
+              label="Max Notional"
+              value={`$${((constraints?.perInstrument.maxNotional ?? 0) / 1000).toFixed(0)}K`}
+            />
+            <ConfigField
+              label="Max % Equity"
+              value={`${((constraints?.perInstrument.maxPctEquity ?? 0) * 100).toFixed(0)}%`}
+            />
+          </ConfigSection>
 
-        {/* Risk Config */}
-        <ConfigSection title="Risk Limits">
-          <ConfigField label="Max Leverage" value="--x" />
-          <ConfigField label="Max Drawdown" value="--%" />
-          <ConfigField label="VaR Limit (95%)" value="--%" />
-        </ConfigSection>
-      </div>
+          {/* Portfolio Limits */}
+          <ConfigSection title="Portfolio Limits">
+            <ConfigField
+              label="Max Gross Exposure"
+              value={`${((constraints?.portfolio.maxGrossExposure ?? 0) * 100).toFixed(0)}%`}
+            />
+            <ConfigField
+              label="Max Net Exposure"
+              value={`${((constraints?.portfolio.maxNetExposure ?? 0) * 100).toFixed(0)}%`}
+            />
+            <ConfigField
+              label="Max Concentration"
+              value={`${((constraints?.portfolio.maxConcentration ?? 0) * 100).toFixed(0)}%`}
+            />
+            <ConfigField
+              label="Max Drawdown"
+              value={`${((constraints?.portfolio.maxDrawdown ?? 0) * 100).toFixed(0)}%`}
+            />
+          </ConfigSection>
+
+          {/* Options Limits */}
+          <ConfigSection title="Options Greeks Limits">
+            <ConfigField label="Max Delta" value={String(constraints?.options.maxDelta ?? "--")} />
+            <ConfigField label="Max Gamma" value={String(constraints?.options.maxGamma ?? "--")} />
+            <ConfigField label="Max Vega" value={String(constraints?.options.maxVega ?? "--")} />
+            <ConfigField label="Max Theta" value={String(constraints?.options.maxTheta ?? "--")} />
+          </ConfigSection>
+
+          {/* Indicators */}
+          <ConfigSection title="Indicators">
+            <ConfigField
+              label="RSI Period"
+              value={String((config.indicators as Record<string, any>)?.rsi?.period ?? 14)}
+            />
+            <ConfigField
+              label="ATR Period"
+              value={String((config.indicators as Record<string, any>)?.atr?.period ?? 14)}
+            />
+            <ConfigField
+              label="SMA Periods"
+              value={
+                (config.indicators as Record<string, any>)?.sma?.periods?.join(", ") ??
+                "20, 50, 200"
+              }
+            />
+          </ConfigSection>
+        </div>
+      ) : null}
 
       {/* Config History */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
@@ -53,7 +164,38 @@ export default function ConfigPage() {
             Configuration History
           </h2>
         </div>
-        <div className="p-4 text-cream-400">No configuration changes</div>
+        {historyLoading ? (
+          <div className="p-4 space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : history && history.length > 0 ? (
+          <div className="divide-y divide-cream-100 dark:divide-night-700">
+            {history.map((entry) => (
+              <div key={entry.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-cream-900 dark:text-cream-100">
+                    v{entry.version}
+                  </span>
+                  <span className="ml-2 text-sm text-cream-500 dark:text-cream-400">
+                    by {entry.createdBy}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-cream-500 dark:text-cream-400">
+                    {entry.changes.join(", ")}
+                  </span>
+                  <span className="text-xs text-cream-400">
+                    {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 text-cream-400">No configuration changes</div>
+        )}
       </div>
     </div>
   );
