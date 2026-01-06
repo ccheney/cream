@@ -227,6 +227,24 @@ export {
   validateCandleData,
 } from "./validation";
 
+// Options Greeks calculation and portfolio exposure
+export {
+  calculateGreeks,
+  calculateMoneyness,
+  calculateOptionsExposure,
+  createEmptyExposure,
+  daysToYears,
+  formatExposure,
+  getMoneyStatus,
+  normalCDF,
+  normalPDF,
+  type OptionGreeks as BlackScholesGreeks,
+  type OptionPosition,
+  type OptionsExposure,
+  type OptionType as OptionsModuleOptionType,
+  type SymbolExposure,
+} from "./options";
+
 /**
  * Package version.
  */
