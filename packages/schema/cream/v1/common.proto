@@ -1,12 +1,7 @@
 // Cream Trading System - Common Types
 // Shared enums and messages used across the system
 //
-// Schema Version: 1.0.0
-// Last Updated: 2026-01-05
-//
 // NOTE: Using proto3 until Prost (Rust) supports Protobuf Editions.
-// Migration to edition 2024 planned when tooling is ready.
-// See SCHEMA_EVOLUTION.md for versioning guidelines.
 
 syntax = "proto3";
 

@@ -1,12 +1,7 @@
 // Cream Trading System - Market Snapshot Schema
 // Real-time market data structures for the trading system
 //
-// Schema Version: 1.0.0
-// Last Updated: 2026-01-05
-//
 // NOTE: Using proto3 until Prost (Rust) supports Protobuf Editions.
-// Migration to edition 2024 planned when tooling is ready.
-// See SCHEMA_EVOLUTION.md for versioning guidelines.
 
 syntax = "proto3";
 
@@ -122,12 +117,6 @@ message SymbolSnapshot {
 
 // Full market snapshot for multiple symbols
 message MarketSnapshot {
-  // Reserved fields - never reuse these numbers
-  // reserved 100;  // Example: removed deprecated_field (YYYY-MM-DD)
-
-  // Schema version for backward compatibility (semver: "1.0.0")
-  string schema_version = 6;
-
   // Trading environment
   Environment environment = 1;
 

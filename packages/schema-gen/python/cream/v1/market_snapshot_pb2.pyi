@@ -80,19 +80,17 @@ class SymbolSnapshot(_message.Message):
 
 class MarketSnapshot(_message.Message):
     __slots__ = ()
-    SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
     ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
     AS_OF_FIELD_NUMBER: _ClassVar[int]
     MARKET_STATUS_FIELD_NUMBER: _ClassVar[int]
     REGIME_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
-    schema_version: str
     environment: _common_pb2.Environment
     as_of: _timestamp_pb2.Timestamp
     market_status: _common_pb2.MarketStatus
     regime: _common_pb2.Regime
     symbols: _containers.RepeatedCompositeFieldContainer[SymbolSnapshot]
-    def __init__(self, schema_version: _Optional[str] = ..., environment: _Optional[_Union[_common_pb2.Environment, str]] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., market_status: _Optional[_Union[_common_pb2.MarketStatus, str]] = ..., regime: _Optional[_Union[_common_pb2.Regime, str]] = ..., symbols: _Optional[_Iterable[_Union[SymbolSnapshot, _Mapping]]] = ...) -> None: ...
+    def __init__(self, environment: _Optional[_Union[_common_pb2.Environment, str]] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., market_status: _Optional[_Union[_common_pb2.MarketStatus, str]] = ..., regime: _Optional[_Union[_common_pb2.Regime, str]] = ..., symbols: _Optional[_Iterable[_Union[SymbolSnapshot, _Mapping]]] = ...) -> None: ...
 
 class OptionQuote(_message.Message):
     __slots__ = ()
