@@ -258,12 +258,16 @@ export class AlphaVantageClient {
     maturity: TreasuryMaturity = "10year",
     interval: EconomicInterval = "daily"
   ): Promise<TreasuryYieldResponse> {
-    return this.client.get<TreasuryYieldResponse>("/query", {
-      function: "TREASURY_YIELD",
-      maturity,
-      interval,
-      apikey: this.apiKey,
-    });
+    return this.client.get(
+      "/query",
+      {
+        function: "TREASURY_YIELD",
+        maturity,
+        interval,
+        apikey: this.apiKey,
+      },
+      TreasuryYieldResponseSchema
+    );
   }
 
   /**
