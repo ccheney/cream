@@ -4,6 +4,7 @@
  * Portfolio Page - Position management and P&L tracking
  */
 
+import Link from "next/link";
 import { useEquityCurve, usePortfolioSummary, usePositions } from "@/hooks/queries";
 
 export default function PortfolioPage() {
@@ -97,10 +98,15 @@ export default function PortfolioPage() {
                 {positions.map((position) => (
                   <tr
                     key={position.id}
-                    className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors"
+                    className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3 font-medium text-cream-900 dark:text-cream-100">
-                      {position.symbol}
+                      <Link
+                        href={`/portfolio/positions/${position.id}`}
+                        className="hover:text-blue-600"
+                      >
+                        {position.symbol}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <span
