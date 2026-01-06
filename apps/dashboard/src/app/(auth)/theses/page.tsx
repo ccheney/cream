@@ -5,6 +5,8 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { useTheses } from "@/hooks/queries";
 
@@ -57,101 +59,110 @@ export default function ThesesPage() {
         ) : theses && theses.length > 0 ? (
           <div className="divide-y divide-cream-100 dark:divide-night-700">
             {theses.map((thesis) => (
-              <div key={thesis.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
-                      {thesis.symbol}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded ${
-                        thesis.direction === "BULLISH"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : thesis.direction === "BEARISH"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                            : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                      }`}
-                    >
-                      {thesis.direction}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded ${
-                        thesis.status === "ACTIVE"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : thesis.status === "REALIZED"
+              <div key={thesis.id} className="p-4 flex items-start gap-4">
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+                        {thesis.symbol}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          thesis.direction === "BULLISH"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : thesis.status === "INVALIDATED"
+                            : thesis.direction === "BEARISH"
                               ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                               : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                      }`}
-                    >
-                      {thesis.status}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    {thesis.pnlPct !== null && (
-                      <span
-                        className={`text-lg font-semibold ${
-                          thesis.pnlPct >= 0 ? "text-green-600" : "text-red-600"
                         }`}
                       >
-                        {formatPct(thesis.pnlPct)}
+                        {thesis.direction}
                       </span>
-                    )}
-                  </div>
-                </div>
-
-                <p className="mt-2 text-sm text-cream-700 dark:text-cream-300">{thesis.thesis}</p>
-
-                <div className="mt-3 grid grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-cream-500 dark:text-cream-400">Time Horizon</span>
-                    <div className="font-medium text-cream-900 dark:text-cream-100">
-                      {thesis.timeHorizon}
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          thesis.status === "ACTIVE"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                            : thesis.status === "REALIZED"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : thesis.status === "INVALIDATED"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
+                        }`}
+                      >
+                        {thesis.status}
+                      </span>
                     </div>
-                  </div>
-                  <div>
-                    <span className="text-cream-500 dark:text-cream-400">Confidence</span>
-                    <div className="font-medium text-cream-900 dark:text-cream-100">
-                      {(thesis.confidence * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-cream-500 dark:text-cream-400">Target</span>
-                    <div className="font-medium text-green-600">
-                      {thesis.targetPrice ? `$${thesis.targetPrice.toFixed(2)}` : "--"}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-cream-500 dark:text-cream-400">Stop</span>
-                    <div className="font-medium text-red-600">
-                      {thesis.stopPrice ? `$${thesis.stopPrice.toFixed(2)}` : "--"}
-                    </div>
-                  </div>
-                </div>
-
-                {thesis.catalysts && thesis.catalysts.length > 0 && (
-                  <div className="mt-3">
-                    <span className="text-xs text-cream-500 dark:text-cream-400">Catalysts:</span>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {thesis.catalysts.map((catalyst, i) => (
+                    <div className="text-right">
+                      {thesis.pnlPct !== null && (
                         <span
-                          key={i}
-                          className="px-2 py-0.5 text-xs bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 rounded"
+                          className={`text-lg font-semibold ${
+                            thesis.pnlPct >= 0 ? "text-green-600" : "text-red-600"
+                          }`}
                         >
-                          {catalyst}
+                          {formatPct(thesis.pnlPct)}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
-                )}
 
-                <div className="mt-3 flex items-center justify-between text-xs text-cream-400">
-                  <span>Source: {thesis.agentSource}</span>
-                  <span>
-                    Updated {formatDistanceToNow(new Date(thesis.updatedAt), { addSuffix: true })}
-                  </span>
+                  <p className="mt-2 text-sm text-cream-700 dark:text-cream-300">{thesis.thesis}</p>
+
+                  <div className="mt-3 grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-cream-500 dark:text-cream-400">Time Horizon</span>
+                      <div className="font-medium text-cream-900 dark:text-cream-100">
+                        {thesis.timeHorizon}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-cream-500 dark:text-cream-400">Confidence</span>
+                      <div className="font-medium text-cream-900 dark:text-cream-100">
+                        {(thesis.confidence * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-cream-500 dark:text-cream-400">Target</span>
+                      <div className="font-medium text-green-600">
+                        {thesis.targetPrice ? `$${thesis.targetPrice.toFixed(2)}` : "--"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-cream-500 dark:text-cream-400">Stop</span>
+                      <div className="font-medium text-red-600">
+                        {thesis.stopPrice ? `$${thesis.stopPrice.toFixed(2)}` : "--"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {thesis.catalysts && thesis.catalysts.length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-xs text-cream-500 dark:text-cream-400">Catalysts:</span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {thesis.catalysts.map((catalyst, idx) => (
+                          <span
+                            key={`${thesis.id}-catalyst-${idx}`}
+                            className="px-2 py-0.5 text-xs bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 rounded"
+                          >
+                            {catalyst}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-cream-400">
+                    <span>Source: {thesis.agentSource}</span>
+                    <span>
+                      Updated {formatDistanceToNow(new Date(thesis.updatedAt), { addSuffix: true })}
+                    </span>
+                  </div>
                 </div>
+                <Link
+                  href={`/theses/${thesis.id}`}
+                  className="p-2 rounded-md text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors self-center"
+                  title="View details"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Link>
               </div>
             ))}
           </div>
