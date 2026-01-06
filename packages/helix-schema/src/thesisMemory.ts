@@ -9,8 +9,28 @@
  * @see docs/plans/05-agents.md - Memory Integration section
  */
 
-import type { HelixClient } from "@cream/helix";
 import type { EmbeddingClient } from "./embeddings";
+
+// ============================================
+// Local Type Definitions (to avoid cyclic dependency with @cream/helix)
+// ============================================
+
+/**
+ * Query result from HelixDB.
+ * This is a local copy to avoid cyclic dependency.
+ */
+interface QueryResult<T = unknown> {
+  data: T;
+  executionTimeMs: number;
+}
+
+/**
+ * Minimal HelixDB client interface for thesis memory operations.
+ * This is a local copy to avoid cyclic dependency.
+ */
+interface HelixClient {
+  query<T = unknown>(queryName: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
+}
 
 // ============================================
 // Types

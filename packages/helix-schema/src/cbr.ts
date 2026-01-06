@@ -22,9 +22,29 @@ import type {
   RetrievedCase,
 } from "@cream/domain";
 import { calculateCaseStatistics } from "@cream/domain";
-import type { HelixClient } from "@cream/helix";
 import type { EmbeddingClient } from "./embeddings";
 import type { TradeDecision } from "./index";
+
+// ============================================
+// Local Type Definitions (to avoid cyclic dependency with @cream/helix)
+// ============================================
+
+/**
+ * Query result from HelixDB.
+ * This is a local copy to avoid cyclic dependency.
+ */
+interface QueryResult<T = unknown> {
+  data: T;
+  executionTimeMs: number;
+}
+
+/**
+ * Minimal HelixDB client interface for CBR operations.
+ * This is a local copy to avoid cyclic dependency.
+ */
+interface HelixClient {
+  query<T = unknown>(queryName: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
+}
 
 // ============================================
 // Types
