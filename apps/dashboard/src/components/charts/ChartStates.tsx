@@ -235,9 +235,23 @@ function CandlestickSkeleton({ width, height }: { width: number; height: number 
   }));
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
-      {bars.map((bar, i) => (
-        <rect key={i} x={bar.x} y={bar.y} width={12} height={bar.height} fill="#d6d3d1" rx={2} />
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading candlestick chart"
+    >
+      {bars.map((bar) => (
+        <rect
+          key={`candle-${bar.x}`}
+          x={bar.x}
+          y={bar.y}
+          width={12}
+          height={bar.height}
+          fill="#d6d3d1"
+          rx={2}
+        />
       ))}
       <Shimmer />
     </svg>
@@ -255,7 +269,13 @@ function LineSkeleton({ width, height }: { width: number; height: number }) {
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading line chart"
+    >
       <path
         d={pathD}
         fill="none"
@@ -280,7 +300,13 @@ function AreaSkeleton({ width, height }: { width: number; height: number }) {
   const pathD = `M 0 ${height} ${points.map((p) => `L ${p.x} ${p.y}`).join(" ")} L ${width} ${height} Z`;
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading area chart"
+    >
       <path d={pathD} fill="#d6d3d1" />
       <Shimmer />
     </svg>
@@ -299,10 +325,16 @@ function BarSkeleton({ width, height }: { width: number; height: number }) {
   }));
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
-      {bars.map((bar, i) => (
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading bar chart"
+    >
+      {bars.map((bar) => (
         <rect
-          key={i}
+          key={`bar-${bar.x}`}
           x={bar.x}
           y={height - bar.height - 20}
           width={barWidth}
@@ -326,7 +358,13 @@ function PieSkeleton({ width, height }: { width: number; height: number }) {
   const r = size / 2 - 20;
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading pie chart"
+    >
       <circle cx={cx} cy={cy} r={r} fill="#d6d3d1" />
       <circle cx={cx} cy={cy} r={r * 0.5} fill="#fafaf9" />
       <Shimmer />
@@ -345,7 +383,13 @@ function SparklineSkeleton({ width, height }: { width: number; height: number })
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading sparkline chart"
+    >
       <path d={pathD} fill="none" stroke="#d6d3d1" strokeWidth={2} strokeLinecap="round" />
       <Shimmer />
     </svg>
@@ -362,7 +406,13 @@ function GaugeSkeleton({ width, height }: { width: number; height: number }) {
   const r = size / 2 - 20;
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading gauge chart"
+    >
       <path
         d={describeArc(cx, cy, r, 180, 360)}
         fill="none"
@@ -385,13 +435,19 @@ function HeatmapSkeleton({ width, height }: { width: number; height: number }) {
   const cellHeight = (height - 16) / rows;
 
   return (
-    <svg width={width} height={height} style={styles.skeleton}>
+    <svg
+      width={width}
+      height={height}
+      style={styles.skeleton}
+      role="img"
+      aria-label="Loading heatmap chart"
+    >
       {Array.from({ length: rows * cols }, (_, i) => {
         const row = Math.floor(i / cols);
         const col = i % cols;
         return (
           <rect
-            key={i}
+            key={`cell-${row}-${col}`}
             x={8 + col * cellWidth + 1}
             y={8 + row * cellHeight + 1}
             width={cellWidth - 2}
@@ -448,10 +504,28 @@ export function ChartSkeleton({
   }[variant];
 
   return (
-    <div role="status" aria-label={ariaLabel} className={className} style={{ width, height }}>
+    <output
+      aria-label={ariaLabel}
+      className={className}
+      style={{ width, height, display: "block" }}
+    >
       <SkeletonComponent width={width} height={height} />
-    </div>
+    </output>
   );
+}
+
+/** Handler to set button hover state */
+function handleButtonHover(
+  e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
+) {
+  e.currentTarget.style.backgroundColor = "#1c1917";
+}
+
+/** Handler to reset button state */
+function handleButtonReset(
+  e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
+) {
+  e.currentTarget.style.backgroundColor = "#292524";
 }
 
 /**
@@ -472,10 +546,13 @@ export function ChartError({
       {showDetails && error && <div style={styles.details}>{error.message}</div>}
       {onRetry && (
         <button
+          type="button"
           style={styles.button}
           onClick={onRetry}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#1c1917")}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#292524")}
+          onMouseOver={handleButtonHover}
+          onMouseOut={handleButtonReset}
+          onFocus={handleButtonHover}
+          onBlur={handleButtonReset}
         >
           Retry
         </button>
@@ -496,21 +573,24 @@ export function ChartEmpty({
   className,
 }: ChartEmptyProps) {
   return (
-    <div role="status" className={className} style={{ ...styles.container, minHeight: height }}>
+    <output className={className} style={{ ...styles.container, minHeight: height }}>
       <div style={styles.icon}>{icon}</div>
       <div style={styles.title}>{title}</div>
       {description && <div style={styles.description}>{description}</div>}
       {action && (
         <button
+          type="button"
           style={styles.button}
           onClick={action.onClick}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#1c1917")}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#292524")}
+          onMouseOver={handleButtonHover}
+          onMouseOut={handleButtonReset}
+          onFocus={handleButtonHover}
+          onBlur={handleButtonReset}
         >
           {action.label}
         </button>
       )}
-    </div>
+    </output>
   );
 }
 
