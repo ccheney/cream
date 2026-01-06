@@ -123,10 +123,14 @@ CREATE TABLE IF NOT EXISTS positions (
   avg_entry REAL NOT NULL,
   current_price REAL,
   unrealized_pnl REAL,
+  unrealized_pnl_pct REAL,
   realized_pnl REAL DEFAULT 0,
   market_value REAL,
   cost_basis REAL,
   thesis_id TEXT, -- Reference to HelixDB thesis
+  decision_id TEXT, -- Reference to decision that created the position
+  status TEXT NOT NULL DEFAULT 'open', -- open, closed, pending
+  metadata TEXT, -- JSON for additional context
   environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   opened_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -136,6 +140,8 @@ CREATE TABLE IF NOT EXISTS positions (
 -- Indexes for positions
 CREATE INDEX IF NOT EXISTS idx_positions_symbol ON positions(symbol);
 CREATE INDEX IF NOT EXISTS idx_positions_thesis_id ON positions(thesis_id);
+CREATE INDEX IF NOT EXISTS idx_positions_decision_id ON positions(decision_id);
+CREATE INDEX IF NOT EXISTS idx_positions_status ON positions(status);
 CREATE INDEX IF NOT EXISTS idx_positions_environment ON positions(environment);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_positions_symbol_env ON positions(symbol, environment) WHERE closed_at IS NULL;
 

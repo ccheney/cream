@@ -2,6 +2,7 @@
  * Database Context
  *
  * Provides database client and repositories for API routes.
+ * Schema version: 2 - Added status, decision_id, metadata, unrealized_pnl_pct to positions
  */
 
 import {
