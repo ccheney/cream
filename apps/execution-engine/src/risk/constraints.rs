@@ -967,12 +967,11 @@ pub fn validate_per_trade_risk(
     let position_notional = match decision.size.unit {
         SizeUnit::Dollars => decision.size.quantity,
         SizeUnit::PctEquity => decision.size.quantity * account_equity,
-        SizeUnit::Shares | SizeUnit::Contracts => {
-            decision.size.quantity * entry_price
-        }
+        SizeUnit::Shares | SizeUnit::Contracts => decision.size.quantity * entry_price,
     };
 
-    let max_risk_pct = Decimal::try_from(config.max_per_trade_risk_pct).unwrap_or(Decimal::new(2, 0));
+    let max_risk_pct =
+        Decimal::try_from(config.max_per_trade_risk_pct).unwrap_or(Decimal::new(2, 0));
     let result = calculate_per_trade_risk(
         entry_price,
         decision.stop_loss_level,
@@ -1758,11 +1757,11 @@ mod tests {
         // Risk amount: $10,000 × 5% = $500
         // Risk %: $500 / $100,000 × 100 = 0.5%
         let result = calculate_per_trade_risk(
-            Decimal::new(100, 0),  // entry
-            Decimal::new(95, 0),   // stop
-            Decimal::new(10000, 0), // notional
+            Decimal::new(100, 0),    // entry
+            Decimal::new(95, 0),     // stop
+            Decimal::new(10000, 0),  // notional
             Decimal::new(100000, 0), // equity
-            Decimal::new(2, 0),    // max 2%
+            Decimal::new(2, 0),      // max 2%
         );
 
         assert!(result.within_limit);
@@ -1940,11 +1939,7 @@ mod tests {
         decision.stop_loss_level = Decimal::new(90, 0); // 10% stop
 
         // 10% risk on $50k = $5k = 5% of $100k equity (exceeds 2% limit)
-        let violation = validate_per_trade_risk(
-            &decision,
-            Decimal::new(100000, 0),
-            &config,
-        );
+        let violation = validate_per_trade_risk(&decision, Decimal::new(100000, 0), &config);
 
         assert!(violation.is_some());
         let v = violation.unwrap();
@@ -1973,11 +1968,7 @@ mod tests {
         decision.action = Action::Hold;
 
         // HOLD actions should not be validated for risk
-        let violation = validate_per_trade_risk(
-            &decision,
-            Decimal::new(100000, 0),
-            &config,
-        );
+        let violation = validate_per_trade_risk(&decision, Decimal::new(100000, 0), &config);
 
         assert!(violation.is_none());
     }

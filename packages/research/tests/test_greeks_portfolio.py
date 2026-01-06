@@ -1,6 +1,5 @@
 """Tests for portfolio Greeks."""
 
-
 from research.greeks.multi_leg import bull_call_spread, straddle
 from research.greeks.portfolio import PortfolioGreeks
 

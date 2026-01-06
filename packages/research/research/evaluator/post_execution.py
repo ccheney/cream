@@ -524,7 +524,9 @@ class PostExecutionEvaluator:
         """
         return [
             self.evaluate(plan_score, outcome, market_data)
-            for plan_score, outcome, market_data in zip(plan_scores, outcomes, market_data_list, strict=False)
+            for plan_score, outcome, market_data in zip(
+                plan_scores, outcomes, market_data_list, strict=False
+            )
         ]
 
     def compute_aggregate_metrics(

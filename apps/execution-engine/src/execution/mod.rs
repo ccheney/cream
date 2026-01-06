@@ -17,13 +17,13 @@ pub use gateway::{
     BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
 };
 pub use persistence::{
-    OrderSnapshot, PersistenceError, RecoveryState, StateSnapshot, StatePersistence,
+    OrderSnapshot, PersistenceError, RecoveryState, StatePersistence, StateSnapshot,
 };
 pub use reconciliation::{
-    fetch_broker_state, BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot,
-    BrokerStateSnapshot, CriticalDiscrepancyAction, Discrepancy, DiscrepancySeverity,
-    DiscrepancyType, LocalPositionSnapshot, OrphanResolution, OrphanType, OrphanedOrder,
-    ReconciliationConfig, ReconciliationError, ReconciliationManager, ReconciliationReport,
+    BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot, BrokerStateSnapshot,
+    CriticalDiscrepancyAction, Discrepancy, DiscrepancySeverity, DiscrepancyType,
+    LocalPositionSnapshot, OrphanResolution, OrphanType, OrphanedOrder, ReconciliationConfig,
+    ReconciliationError, ReconciliationManager, ReconciliationReport, fetch_broker_state,
 };
 pub use recovery::{PortfolioRecovery, RecoveryConfig, RecoveryError, RecoveryResult};
 pub use state::{OrderStateManager, TimeoutResult};

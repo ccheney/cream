@@ -305,7 +305,6 @@ class ArrowFlightClient:
         self._ensure_connected()
 
         try:
-
             assert self._client is not None
             flights = list(self._client.list_flights())
             return [list(f.descriptor.path) if f.descriptor.path else [] for f in flights]

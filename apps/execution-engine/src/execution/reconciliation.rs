@@ -836,7 +836,8 @@ impl ReconciliationManager {
                     broker_state: "NO_POSITION".to_string(),
                     severity: DiscrepancySeverity::Warning,
                     auto_resolvable: false,
-                    suggested_action: "Clear local position tracking (closed at broker)".to_string(),
+                    suggested_action: "Clear local position tracking (closed at broker)"
+                        .to_string(),
                     detected_at: now.to_rfc3339(),
                 });
             }
@@ -885,7 +886,9 @@ pub enum ReconciliationError {
 ///
 /// This function queries the Alpaca broker for all orders, positions, and account
 /// information, then packages it into a `BrokerStateSnapshot` for reconciliation.
-pub async fn fetch_broker_state(broker: &AlpacaAdapter) -> Result<BrokerStateSnapshot, ReconciliationError> {
+pub async fn fetch_broker_state(
+    broker: &AlpacaAdapter,
+) -> Result<BrokerStateSnapshot, ReconciliationError> {
     let now = chrono::Utc::now();
 
     // Fetch orders (both open and closed recent)
@@ -1317,7 +1320,10 @@ mod tests {
     fn test_orphan_resolution_display() {
         assert_eq!(format!("{}", OrphanResolution::Cancel), "CANCEL");
         assert_eq!(format!("{}", OrphanResolution::Adopt), "ADOPT");
-        assert_eq!(format!("{}", OrphanResolution::SyncFromBroker), "SYNC_FROM_BROKER");
+        assert_eq!(
+            format!("{}", OrphanResolution::SyncFromBroker),
+            "SYNC_FROM_BROKER"
+        );
         assert_eq!(format!("{}", OrphanResolution::MarkFailed), "MARK_FAILED");
         assert_eq!(format!("{}", OrphanResolution::Ignore), "IGNORE");
     }

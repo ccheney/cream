@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# Exit on error
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# 1. Biome: Format + Lint TypeScript/JavaScript/JSON (staged files only, with fixes)
+echo "📝 Biome: Formatting and linting staged TS/JS/JSON files..."
+bunx @biomejs/biome check --write --staged --files-ignore-unknown=true --no-errors-on-unmatched
+
+# 2. Ruff: Format Python (all Python dirs, if they exist)
+if [ -d "apps/filings-service" ] || [ -d "apps/vision-service" ] || [ -d "apps/evals" ] || [ -d "packages/research" ]; then
+  echo "🐍 Ruff: Formatting Python files..."
+  ruff format apps/filings-service apps/vision-service apps/evals packages/research 2>/dev/null || true
+
+  # 3. Ruff: Lint Python with auto-fix
+  echo "🐍 Ruff: Linting Python files..."
+  ruff check --fix apps/filings-service apps/vision-service apps/evals packages/research 2>/dev/null || true
+fi
+
+# 4. Cargo: Format Rust (if Rust files exist)
+if [ -d "apps/execution-engine" ]; then
+  echo "🦀 Cargo: Formatting Rust files..."
+  cargo fmt --all 2>/dev/null || true
+
+  # 5. Cargo: Lint Rust with auto-fix
+  # Note: clippy --fix can be slow, so we just check here
+  echo "🦀 Clippy: Checking Rust files..."
+  cargo clippy --all-targets --all-features -- -D warnings 2>/dev/null || true
+fi
+
+# Re-stage any auto-fixed files
+echo "📦 Re-staging fixed files..."
+git add -u
+
+echo "✅ Pre-commit checks complete!"

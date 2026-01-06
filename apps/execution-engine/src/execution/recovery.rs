@@ -18,8 +18,8 @@ use tracing::{debug, info, warn};
 use super::alpaca::AlpacaAdapter;
 use super::persistence::{PersistenceError, StatePersistence};
 use super::reconciliation::{
-    fetch_broker_state, BrokerStateSnapshot, LocalPositionSnapshot, ReconciliationConfig,
-    ReconciliationError, ReconciliationManager, ReconciliationReport,
+    BrokerStateSnapshot, LocalPositionSnapshot, ReconciliationConfig, ReconciliationError,
+    ReconciliationManager, ReconciliationReport, fetch_broker_state,
 };
 use super::state::OrderStateManager;
 
@@ -176,7 +176,8 @@ impl PortfolioRecovery {
             auto_resolve_orphans: config.auto_resolve_orphans,
         };
 
-        let reconciliation = ReconciliationManager::new(reconciliation_config, state_manager.clone());
+        let reconciliation =
+            ReconciliationManager::new(reconciliation_config, state_manager.clone());
 
         Self {
             config,
@@ -221,13 +222,19 @@ impl PortfolioRecovery {
         }
 
         // Step 2: Load persisted orders into state manager
-        result.orders_loaded = self.persistence.load_active_orders(&self.state_manager).await?;
+        result.orders_loaded = self
+            .persistence
+            .load_active_orders(&self.state_manager)
+            .await?;
         info!(count = result.orders_loaded, "Loaded orders from database");
 
         // Step 3: Load persisted positions
         let local_positions = self.persistence.load_positions().await?;
         result.positions_loaded = local_positions.len();
-        info!(count = result.positions_loaded, "Loaded positions from database");
+        info!(
+            count = result.positions_loaded,
+            "Loaded positions from database"
+        );
 
         // Step 4: Fetch current broker state
         let broker_state = fetch_broker_state(broker).await?;
@@ -258,26 +265,33 @@ impl PortfolioRecovery {
 
             if self.config.abort_on_critical {
                 self.persistence
-                    .update_recovery_state(None, "error", Some("Critical discrepancies during recovery"))
+                    .update_recovery_state(
+                        None,
+                        "error",
+                        Some("Critical discrepancies during recovery"),
+                    )
                     .await?;
                 return Err(RecoveryError::Aborted(
                     "Critical discrepancies detected. Manual intervention required.".to_string(),
                 ));
             } else {
-                result.warnings.push("Critical discrepancies detected but continuing".to_string());
+                result
+                    .warnings
+                    .push("Critical discrepancies detected but continuing".to_string());
             }
         }
 
         // Step 6: Sync positions from broker if configured
         if self.config.sync_positions {
-            result.positions_synced = self.sync_positions_from_broker(&broker_state, &local_positions).await?;
+            result.positions_synced = self
+                .sync_positions_from_broker(&broker_state, &local_positions)
+                .await?;
         }
 
         // Step 7: Compare positions and log discrepancies
-        let position_discrepancies = self.reconciliation.compare_positions(
-            &broker_state.positions,
-            &local_positions,
-        );
+        let position_discrepancies = self
+            .reconciliation
+            .compare_positions(&broker_state.positions, &local_positions);
 
         if !position_discrepancies.is_empty() {
             warn!(
@@ -294,11 +308,7 @@ impl PortfolioRecovery {
 
         // Step 8: Update recovery state
         self.persistence
-            .update_recovery_state(
-                recovery_state.last_cycle_id.as_deref(),
-                "healthy",
-                None,
-            )
+            .update_recovery_state(recovery_state.last_cycle_id.as_deref(), "healthy", None)
             .await?;
         self.persistence.log_reconciliation(&report).await?;
 
@@ -396,7 +406,10 @@ impl PortfolioRecovery {
     pub async fn save_snapshot(&self) -> Result<(), RecoveryError> {
         info!("Saving state snapshot for graceful shutdown");
 
-        let saved = self.persistence.save_all_orders(&self.state_manager).await?;
+        let saved = self
+            .persistence
+            .save_all_orders(&self.state_manager)
+            .await?;
         info!(orders = saved, "Orders saved to database");
 
         self.persistence
