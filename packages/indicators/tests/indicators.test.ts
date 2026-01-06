@@ -21,12 +21,19 @@ import {
 } from "../src/momentum/stochastic";
 // Pipeline
 import {
+  calculateHistoricalIndicators,
   calculateIndicators,
   calculateMultiTimeframeIndicators,
   DEFAULT_PIPELINE_CONFIG,
   getRequiredWarmupPeriod,
 } from "../src/pipeline";
-import { calculateEMA, calculateMACD, calculateMultiplier } from "../src/trend/ema";
+import {
+  calculateEMA,
+  calculateMACD,
+  calculateMultipleEMAs,
+  calculateMultiplier,
+  emaRequiredPeriods,
+} from "../src/trend/ema";
 
 // Trend
 import { calculateMultipleSMAs, calculateSMA, isDeathCross, isGoldenCross } from "../src/trend/sma";
@@ -52,6 +59,10 @@ import {
   getVolumeSignal,
   isHighVolume,
   isLowVolume,
+  isVeryHighVolume,
+  isVolumeConfirmed,
+  isVolumeDivergence,
+  volumeSmaRequiredPeriods,
 } from "../src/volume/volumeSma";
 
 // ============================================
@@ -450,6 +461,45 @@ describe("EMA (Exponential Moving Average)", () => {
       }
     });
   });
+
+  describe("emaRequiredPeriods", () => {
+    it("should return period from params", () => {
+      expect(emaRequiredPeriods({ period: 21 })).toBe(21);
+      expect(emaRequiredPeriods({ period: 9 })).toBe(9);
+    });
+
+    it("should use default period", () => {
+      expect(emaRequiredPeriods()).toBe(21);
+    });
+  });
+
+  describe("calculateMultipleEMAs", () => {
+    it("should calculate multiple EMAs", () => {
+      const results = calculateMultipleEMAs(candles, [9, 21, 50]);
+      expect(results.size).toBe(3);
+      expect(results.has(9)).toBe(true);
+      expect(results.has(21)).toBe(true);
+      expect(results.has(50)).toBe(true);
+    });
+
+    it("should skip periods with insufficient data", () => {
+      const shortCandles = generateCandles(30);
+      const results = calculateMultipleEMAs(shortCandles, [9, 21, 50, 100]);
+      expect(results.has(9)).toBe(true);
+      expect(results.has(21)).toBe(true);
+      expect(results.has(50)).toBe(false);
+      expect(results.has(100)).toBe(false);
+    });
+
+    it("should return correct EMA values for each period", () => {
+      const results = calculateMultipleEMAs(candles, [9, 21]);
+      const ema9 = results.get(9);
+      const ema21 = results.get(21);
+      expect(ema9).toBeDefined();
+      expect(ema21).toBeDefined();
+      expect(ema9!.length).toBeGreaterThan(ema21!.length); // 9 period starts earlier
+    });
+  });
 });
 
 // ============================================
@@ -640,12 +690,50 @@ describe("Volume SMA", () => {
       expect(isLowVolume(0.8)).toBe(false);
     });
 
+    it("should detect very high volume", () => {
+      expect(isVeryHighVolume(2.5)).toBe(true);
+      expect(isVeryHighVolume(1.8)).toBe(false);
+      expect(isVeryHighVolume(2.0)).toBe(true);
+    });
+
     it("should get correct volume signal", () => {
       expect(getVolumeSignal(2.5)).toBe("very_high");
       expect(getVolumeSignal(1.6)).toBe("high");
       expect(getVolumeSignal(0.8)).toBe("normal");
       expect(getVolumeSignal(0.4)).toBe("low");
       expect(getVolumeSignal(0.2)).toBe("very_low");
+    });
+  });
+
+  describe("volumeSmaRequiredPeriods", () => {
+    it("should return period from params", () => {
+      expect(volumeSmaRequiredPeriods({ period: 20 })).toBe(20);
+      expect(volumeSmaRequiredPeriods({ period: 50 })).toBe(50);
+    });
+
+    it("should use default period", () => {
+      expect(volumeSmaRequiredPeriods()).toBe(20);
+    });
+  });
+
+  describe("Volume confirmation and divergence", () => {
+    it("should detect volume confirmed moves", () => {
+      // High volume confirms the move
+      expect(isVolumeConfirmed(0.05, 2.0)).toBe(true);
+      expect(isVolumeConfirmed(-0.03, 1.8)).toBe(true);
+      // Low volume doesn't confirm
+      expect(isVolumeConfirmed(0.05, 1.0)).toBe(false);
+      expect(isVolumeConfirmed(-0.03, 0.8)).toBe(false);
+    });
+
+    it("should detect volume divergence", () => {
+      // Significant price move with low volume = divergence
+      expect(isVolumeDivergence(0.03, 0.02, 0.5)).toBe(true);
+      expect(isVolumeDivergence(-0.05, 0.02, 0.8)).toBe(true);
+      // Small price move = no divergence
+      expect(isVolumeDivergence(0.01, 0.02, 0.5)).toBe(false);
+      // Price move with high volume = no divergence
+      expect(isVolumeDivergence(0.03, 0.02, 1.5)).toBe(false);
     });
   });
 });
@@ -716,6 +804,166 @@ describe("Indicator Pipeline", () => {
       expect(snapshot).not.toBeNull();
       expect(snapshot!.values.rsi_14_1h).toBeDefined();
       expect(snapshot!.values.rsi_14_4h).toBeDefined();
+    });
+
+    it("should return null when all timeframes have empty candles", () => {
+      const candlesByTimeframe = new Map<Timeframe, Candle[]>();
+      candlesByTimeframe.set("1h", []);
+      candlesByTimeframe.set("4h", []);
+
+      const snapshot = calculateMultiTimeframeIndicators(candlesByTimeframe);
+      expect(snapshot).toBeNull();
+    });
+  });
+
+  describe("calculateHistoricalIndicators", () => {
+    it("should calculate historical indicators", () => {
+      const snapshots = calculateHistoricalIndicators(candles, "1h", DEFAULT_PIPELINE_CONFIG, 210);
+      expect(snapshots.length).toBeGreaterThan(0);
+      expect(snapshots[0]!.values).toBeDefined();
+      expect(snapshots[0]!.timestamp).toBeGreaterThan(0);
+    });
+
+    it("should respect custom start index", () => {
+      const snapshots = calculateHistoricalIndicators(candles, "1h", DEFAULT_PIPELINE_CONFIG, 220);
+      // Should have fewer snapshots when starting later
+      expect(snapshots.length).toBe(candles.length - 220);
+    });
+
+    it("should return empty array when startIndex >= candles.length", () => {
+      const snapshots = calculateHistoricalIndicators(candles, "1h", DEFAULT_PIPELINE_CONFIG, 300);
+      expect(snapshots.length).toBe(0);
+    });
+
+    it("should use custom config", () => {
+      const config = {
+        rsi: { enabled: true, period: 14 },
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      };
+      const snapshots = calculateHistoricalIndicators(candles, "1h", config, 20);
+      expect(snapshots.length).toBeGreaterThan(0);
+      expect(snapshots[0]!.values.rsi_14_1h).toBeDefined();
+      expect(snapshots[0]!.values.sma_20_1h).toBeUndefined();
+    });
+  });
+
+  describe("indicator catch blocks", () => {
+    // Test with insufficient data to trigger catch blocks
+    // when specific indicators need more data than available
+    it("should handle RSI calculation failure gracefully", () => {
+      const shortCandles = generateCandles(10);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: true, period: 14 }, // Needs 15 candles
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.rsi_14_1h).toBeNull();
+    });
+
+    it("should handle Stochastic calculation failure gracefully", () => {
+      const shortCandles = generateCandles(10);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: true, kPeriod: 14, dPeriod: 3, slow: true }, // Needs more data
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.stochastic_k_14_1h).toBeNull();
+      expect(snapshot!.values.stochastic_d_3_1h).toBeNull();
+    });
+
+    it("should handle EMA calculation failure gracefully", () => {
+      const shortCandles = generateCandles(5);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: false },
+        ema: { enabled: true, periods: [50] }, // Needs 50 candles
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.ema_50_1h).toBeNull();
+    });
+
+    it("should handle ATR calculation failure gracefully", () => {
+      const shortCandles = generateCandles(5);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: true, period: 14 }, // Needs 15 candles
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.atr_14_1h).toBeNull();
+    });
+
+    it("should handle Bollinger Bands calculation failure gracefully", () => {
+      const shortCandles = generateCandles(5);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: true, period: 20, stdDev: 2 }, // Needs 20 candles
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.bb_upper_20_1h).toBeNull();
+      expect(snapshot!.values.bb_middle_20_1h).toBeNull();
+      expect(snapshot!.values.bb_lower_20_1h).toBeNull();
+      expect(snapshot!.values.bb_bandwidth_20_1h).toBeNull();
+      expect(snapshot!.values.bb_percentb_20_1h).toBeNull();
+    });
+
+    it("should handle Volume SMA calculation failure gracefully", () => {
+      const shortCandles = generateCandles(5);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: false },
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: true, period: 20 }, // Needs 20 candles
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.volume_sma_20_1h).toBeNull();
+      expect(snapshot!.values.volume_ratio_20_1h).toBeNull();
+    });
+
+    it("should handle SMA calculation failure gracefully", () => {
+      const shortCandles = generateCandles(5);
+      const snapshot = calculateIndicators(shortCandles, "1h", {
+        rsi: { enabled: false },
+        sma: { enabled: true, periods: [50] }, // Needs 50 candles
+        ema: { enabled: false },
+        atr: { enabled: false },
+        bollinger: { enabled: false },
+        volumeSma: { enabled: false },
+        stochastic: { enabled: false },
+      });
+      expect(snapshot).not.toBeNull();
+      expect(snapshot!.values.sma_50_1h).toBeNull();
     });
   });
 

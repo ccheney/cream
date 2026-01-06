@@ -36,12 +36,14 @@ import {
 } from "../src/transforms/returns";
 // Volatility Scale
 import {
+  calculateMultipleVolatilityScales,
   calculatePositionMultiplier,
   calculateRollingVolatility,
   calculateScaleFactor,
   calculateVolatilityScale,
   getVolatilityRegime,
   VOLATILITY_SCALE_DEFAULTS,
+  volatilityScaleRequiredPeriods,
 } from "../src/transforms/volatilityScale";
 // Z-Score
 import {
@@ -533,6 +535,75 @@ describe("Volatility Scale Transform", () => {
 
       // Higher volatility = lower multiplier (down to min)
       expect(calculatePositionMultiplier(0.3, 0.15)).toBeCloseTo(0.5, 5);
+    });
+
+    it("should return 1.0 when current volatility is zero or negative", () => {
+      expect(calculatePositionMultiplier(0, 0.15)).toBe(1.0);
+      expect(calculatePositionMultiplier(-0.1, 0.15)).toBe(1.0);
+    });
+
+    it("should respect min and max multiplier bounds", () => {
+      // Very high volatility should hit min multiplier
+      expect(calculatePositionMultiplier(1.0, 0.15, 0.25, 2.0)).toBe(0.25);
+      // Very low volatility should hit max multiplier
+      expect(calculatePositionMultiplier(0.05, 0.15, 0.25, 2.0)).toBe(2.0);
+    });
+  });
+
+  describe("volatilityScaleRequiredPeriods", () => {
+    it("should return volatility period from params", () => {
+      expect(volatilityScaleRequiredPeriods({ volatilityPeriod: 20, targetVolatility: 0.15 })).toBe(
+        20
+      );
+      expect(volatilityScaleRequiredPeriods({ volatilityPeriod: 50, targetVolatility: 0.2 })).toBe(
+        50
+      );
+    });
+
+    it("should use default parameters", () => {
+      expect(volatilityScaleRequiredPeriods()).toBe(20);
+    });
+  });
+
+  describe("calculateMultipleVolatilityScales", () => {
+    it("should calculate volatility scales for multiple inputs", () => {
+      const prices = generateValues(50);
+      const returns: number[] = [];
+      for (let i = 1; i < prices.length; i++) {
+        returns.push(simpleReturn(prices[i]!, prices[i - 1]!));
+      }
+      const timestamps = generateTimestamps(50);
+
+      const inputsMap = new Map<string, number[]>();
+      inputsMap.set("rsi", generateValues(49));
+      inputsMap.set("volume", generateValues(49));
+
+      const results = calculateMultipleVolatilityScales(
+        inputsMap,
+        returns,
+        timestamps.slice(1),
+        VOLATILITY_SCALE_DEFAULTS
+      );
+
+      expect(results.size).toBe(2);
+      expect(results.has("rsi")).toBe(true);
+      expect(results.has("volume")).toBe(true);
+      expect(results.get("rsi")!.length).toBeGreaterThan(0);
+      expect(results.get("volume")!.length).toBeGreaterThan(0);
+    });
+
+    it("should return empty results when insufficient data", () => {
+      const inputsMap = new Map<string, number[]>();
+      inputsMap.set("rsi", generateValues(10));
+
+      const results = calculateMultipleVolatilityScales(
+        inputsMap,
+        generateValues(5), // Not enough returns for volatility period
+        generateTimestamps(10),
+        { volatilityPeriod: 20, targetVolatility: 0.15 }
+      );
+
+      expect(results.get("rsi")!.length).toBe(0);
     });
   });
 });
