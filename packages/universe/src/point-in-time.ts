@@ -425,7 +425,8 @@ export class PointInTimeUniverseResolver {
     }
 
     // Create a snapshot for the current date
-    const today = new Date().toISOString().split("T")[0]!;
+    const todayParts = new Date().toISOString().split("T");
+    const today = todayParts[0] ?? new Date().toISOString().slice(0, 10);
     const currentSymbols = currentConstituents.map((c) => c.symbol);
 
     await this.snapshotsRepo.save({

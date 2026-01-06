@@ -60,6 +60,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             {status?.status === "STOPPED" && (
               <button
+                type="button"
                 onClick={() => startSystem.mutate({})}
                 disabled={startSystem.isPending}
                 className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"
@@ -70,6 +71,7 @@ export default function DashboardPage() {
             {status?.status === "ACTIVE" && (
               <>
                 <button
+                  type="button"
                   onClick={() => pauseSystem.mutate()}
                   disabled={pauseSystem.isPending}
                   className="px-3 py-1.5 text-sm font-medium text-cream-700 bg-cream-100 hover:bg-cream-200 dark:text-cream-200 dark:bg-night-700 dark:hover:bg-night-600 rounded-md disabled:opacity-50"
@@ -77,6 +79,7 @@ export default function DashboardPage() {
                   Pause
                 </button>
                 <button
+                  type="button"
                   onClick={() => stopSystem.mutate({})}
                   disabled={stopSystem.isPending}
                   className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50"
@@ -88,6 +91,7 @@ export default function DashboardPage() {
             {status?.status === "PAUSED" && (
               <>
                 <button
+                  type="button"
                   onClick={() => startSystem.mutate({})}
                   disabled={startSystem.isPending}
                   className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"
@@ -95,6 +99,7 @@ export default function DashboardPage() {
                   Resume
                 </button>
                 <button
+                  type="button"
                   onClick={() => stopSystem.mutate({})}
                   disabled={stopSystem.isPending}
                   className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50"

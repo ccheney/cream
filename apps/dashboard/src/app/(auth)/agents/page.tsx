@@ -156,6 +156,7 @@ function AgentCard({
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`bg-white dark:bg-night-800 rounded-lg border p-4 text-left transition-all ${
         isSelected

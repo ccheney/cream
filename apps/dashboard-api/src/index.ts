@@ -237,7 +237,7 @@ if (import.meta.main) {
                 return [key, rest.join("=")];
               })
             );
-            token = cookies["cream_access"] ?? null;
+            token = cookies.cream_access ?? null;
           }
         }
 

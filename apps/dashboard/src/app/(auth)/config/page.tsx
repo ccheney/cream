@@ -8,6 +8,13 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useConfig, useConfigHistory, useConstraintsConfig } from "@/hooks/queries";
 
+/** Type for indicator config values */
+interface IndicatorConfig {
+  rsi?: { period?: number };
+  atr?: { period?: number };
+  sma?: { periods?: number[] };
+}
+
 export default function ConfigPage() {
   const { data: config, isLoading: configLoading } = useConfig();
   const { data: history, isLoading: historyLoading } = useConfigHistory();
@@ -141,17 +148,16 @@ export default function ConfigPage() {
           <ConfigSection title="Indicators">
             <ConfigField
               label="RSI Period"
-              value={String((config.indicators as Record<string, any>)?.rsi?.period ?? 14)}
+              value={String((config.indicators as IndicatorConfig)?.rsi?.period ?? 14)}
             />
             <ConfigField
               label="ATR Period"
-              value={String((config.indicators as Record<string, any>)?.atr?.period ?? 14)}
+              value={String((config.indicators as IndicatorConfig)?.atr?.period ?? 14)}
             />
             <ConfigField
               label="SMA Periods"
               value={
-                (config.indicators as Record<string, any>)?.sma?.periods?.join(", ") ??
-                "20, 50, 200"
+                (config.indicators as IndicatorConfig)?.sma?.periods?.join(", ") ?? "20, 50, 200"
               }
             />
           </ConfigSection>

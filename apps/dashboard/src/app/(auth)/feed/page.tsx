@@ -83,6 +83,7 @@ export default function FeedPage() {
             </span>
           </div>
           <button
+            type="button"
             onClick={() => setIsPaused(!isPaused)}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               isPaused

@@ -274,8 +274,9 @@ async function applyFilters(
   }
 
   if (filters.max_price !== undefined) {
+    const maxPrice = filters.max_price;
     const before = filtered.length;
-    filtered = filtered.filter((i) => (i.price ?? Number.POSITIVE_INFINITY) <= filters.max_price!);
+    filtered = filtered.filter((i) => (i.price ?? Number.POSITIVE_INFINITY) <= maxPrice);
     if (filtered.length < before) {
       warnings.push(`Filtered ${before - filtered.length} instruments above max price`);
     }
@@ -404,7 +405,7 @@ function applyDiversification(
 
   // Check min sectors represented
   if (diversify.minSectorsRepresented && diversify.minSectorsRepresented > 0) {
-    const sectorsPresent = new Set(filtered.filter((i) => i.sector).map((i) => i.sector!));
+    const sectorsPresent = new Set(filtered.filter((i) => i.sector).map((i) => i.sector as string));
     if (sectorsPresent.size < diversify.minSectorsRepresented) {
       warnings.push(
         `Warning: only ${sectorsPresent.size} sectors represented, ` +
@@ -507,7 +508,7 @@ export async function resolveUniverse(
   instruments = rankAndLimit(instruments, config.max_instruments);
 
   // Calculate sectors represented
-  const sectors = [...new Set(instruments.filter((i) => i.sector).map((i) => i.sector!))];
+  const sectors = [...new Set(instruments.filter((i) => i.sector).map((i) => i.sector as string))];
 
   return {
     instruments,

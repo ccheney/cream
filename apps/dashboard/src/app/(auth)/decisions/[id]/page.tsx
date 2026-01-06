@@ -42,6 +42,7 @@ export default function DecisionDetailPage() {
           The decision you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <button
+          type="button"
           onClick={() => router.push("/decisions")}
           className="mt-4 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-200 bg-red-100 dark:bg-red-900/30 rounded-md hover:bg-red-200 dark:hover:bg-red-900/50"
         >
@@ -80,6 +81,7 @@ export default function DecisionDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
+            type="button"
             onClick={() => router.back()}
             className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
           >
