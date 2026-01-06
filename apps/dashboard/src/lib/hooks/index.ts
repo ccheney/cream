@@ -11,3 +11,17 @@ export {
   type UseKeyboardShortcutsReturn,
   useKeyboardShortcuts,
 } from "./useKeyboardShortcuts";
+export {
+  BREAKPOINTS,
+  type Breakpoint,
+  type UseMediaQueryReturn,
+  useMatchMedia,
+  useMediaQuery,
+} from "./useMediaQuery";
+export {
+  type OptimisticMutationOptions,
+  type OptimisticMutationResult,
+  type SimpleMutationOptions,
+  useOptimisticMutation,
+  useSimpleMutation,
+} from "./useOptimisticMutation";
