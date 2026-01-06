@@ -20,39 +20,48 @@ export const PACKAGE_NAME = "@cream/prediction-markets";
 export const VERSION = "0.0.1";
 
 // ============================================
-// Type Exports
-// ============================================
-
-export type {
-  // Aggregator types
-  AggregatedMarketData,
-  // Core types
-  MarketOutcome,
-  MarketType,
-  // Enums
-  Platform,
-  PredictionMarketEvent,
-  // Provider interface
-  PredictionMarketProvider,
-  PredictionMarketScores,
-} from "./types";
-
-// ============================================
-// Schema Exports
+// Schema & Type Exports (from @cream/domain)
 // ============================================
 
 export {
-  // Aggregator schemas
-  AggregatedMarketDataSchema,
-  AuthenticationError,
-  // Core schemas
+  // Aggregated data
+  type AggregatedPredictionData,
+  AggregatedPredictionDataSchema,
+  // Helper functions
+  createEmptyPredictionScores,
+  getFedDirection,
+  hasHighMacroUncertainty,
+  hasHighPolicyRisk,
+  // Aliases for convenience
+  type MarketOutcome,
   MarketOutcomeSchema,
+  type MarketType,
   MarketTypeSchema,
-  // Enum schemas
+  type Platform,
   PlatformSchema,
-  // Error classes
-  PredictionMarketError,
+  // Core types
+  type PredictionMarketEvent,
   PredictionMarketEventSchema,
+  type PredictionMarketPayload,
+  PredictionMarketPayloadSchema,
+  type PredictionMarketScores,
   PredictionMarketScoresSchema,
+  PredictionMarketType,
+  type PredictionOutcome,
+  PredictionOutcomeSchema,
+  PredictionPlatform,
+  toNumericScores,
+} from "./types";
+
+// ============================================
+// Provider & Error Exports
+// ============================================
+
+export {
+  // Error classes
+  AuthenticationError,
+  PredictionMarketError,
+  // Provider interface
+  type PredictionMarketProvider,
   RateLimitError,
 } from "./types";

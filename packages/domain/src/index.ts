@@ -548,6 +548,26 @@ export {
   type SizingResult,
   type VolatilitySizingInput,
 } from "./position-sizing";
+// Prediction markets types
+export {
+  type AggregatedPredictionData,
+  AggregatedPredictionDataSchema,
+  createEmptyPredictionScores,
+  getFedDirection,
+  hasHighMacroUncertainty,
+  hasHighPolicyRisk,
+  type PredictionMarketEvent,
+  PredictionMarketEventSchema,
+  type PredictionMarketPayload,
+  PredictionMarketPayloadSchema,
+  type PredictionMarketScores,
+  PredictionMarketScoresSchema,
+  PredictionMarketType,
+  type PredictionOutcome,
+  PredictionOutcomeSchema,
+  PredictionPlatform,
+  toNumericScores,
+} from "./prediction-markets";
 // Retention policies and storage tier management
 export {
   ALL_RETENTION_POLICIES,
