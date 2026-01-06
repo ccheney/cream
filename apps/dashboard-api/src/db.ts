@@ -15,6 +15,7 @@ import {
   OrdersRepository,
   PortfolioSnapshotsRepository,
   PositionsRepository,
+  runMigrations,
   type TursoClient,
 } from "@cream/storage";
 
@@ -45,6 +46,14 @@ export async function getDbClient(): Promise<TursoClient> {
       dbClient = await createTursoClient({
         path: tursoUrl ?? "cream.db",
       });
+    }
+
+    // Run migrations on first connection
+    const result = await runMigrations(dbClient, {
+      logger: (msg) => console.log(`[DB Migration] ${msg}`),
+    });
+    if (result.applied.length > 0) {
+      console.log(`[DB] Applied ${result.applied.length} migration(s)`);
     }
   }
   return dbClient;
