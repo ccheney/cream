@@ -21,6 +21,7 @@ export const VERSION = "0.1.0";
 // ============================================
 
 export * from "./agents/index.js";
+export * from "./chaos.js";
 export * from "./consensus.js";
 export * from "./escalation.js";
 export * from "./loadtest.js";
