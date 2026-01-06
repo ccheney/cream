@@ -340,3 +340,20 @@ describe("validateStartupNoExit", () => {
 // TURSO_DATABASE_URL are not included because the `env` object from @cream/domain/env
 // is parsed at module import time and cannot be modified in tests.
 // Lines 154-160 are covered in integration tests when running with actual LIVE env.
+
+describe("validateStartup edge cases", () => {
+  it("handles startup validation errors array", async () => {
+    // Using a path that loads config but causes validation errors
+    const result = await validateStartupNoExit("test-service", configDir);
+    // The test config should have validation issues (env mismatch)
+    expect(result.errors.length).toBeGreaterThan(0);
+    // Errors should be collected properly
+    expect(Array.isArray(result.errors)).toBe(true);
+  });
+
+  it("collects warnings from startup validation", async () => {
+    const result = await validateStartupNoExit("test-service", configDir);
+    // Warnings array should be present even if empty
+    expect(Array.isArray(result.warnings)).toBe(true);
+  });
+});

@@ -72,6 +72,50 @@ describe("Sentiment Scoring", () => {
     expect(median).toBe(0.5);
   });
 
+  it("should return 0 for empty scores array", () => {
+    const result = aggregateSentimentScores([], "mean");
+    expect(result).toBe(0);
+  });
+
+  it("should return single score for array of length 1", () => {
+    const result = aggregateSentimentScores([0.75], "mean");
+    expect(result).toBe(0.75);
+  });
+
+  it("should compute median for even-length array", () => {
+    const scores = [0.2, 0.4, 0.6, 0.8];
+    const median = aggregateSentimentScores(scores, "median");
+    expect(median).toBe(0.5); // (0.4 + 0.6) / 2
+  });
+
+  it("should compute weighted aggregation with valid weights", () => {
+    const scores = [0.5, 0.8];
+    const weights = [1, 3]; // weight second score 3x more
+    const result = aggregateSentimentScores(scores, "weighted", weights);
+    // (0.5 * 1 + 0.8 * 3) / (1 + 3) = (0.5 + 2.4) / 4 = 0.725
+    expect(result).toBeCloseTo(0.725, 2);
+  });
+
+  it("should fall back to mean when weights not provided for weighted", () => {
+    const scores = [0.4, 0.6];
+    const result = aggregateSentimentScores(scores, "weighted");
+    expect(result).toBe(0.5); // mean of 0.4 and 0.6
+  });
+
+  it("should fall back to mean when weights length mismatch", () => {
+    const scores = [0.4, 0.6, 0.8];
+    const weights = [1, 2]; // Wrong length
+    const result = aggregateSentimentScores(scores, "weighted", weights);
+    expect(result).toBeCloseTo(0.6, 2); // mean
+  });
+
+  it("should return 0 when total weight is zero", () => {
+    const scores = [0.4, 0.6];
+    const weights = [0, 0];
+    const result = aggregateSentimentScores(scores, "weighted", weights);
+    expect(result).toBe(0);
+  });
+
   it("should classify sentiment scores", () => {
     expect(classifySentimentScore(0.7)).toBe("strong_bullish");
     expect(classifySentimentScore(0.3)).toBe("bullish");

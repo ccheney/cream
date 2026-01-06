@@ -496,6 +496,33 @@ describe("MockHelixDB", () => {
       expect(edgesFrom).toHaveLength(1);
       expect(edgesFrom[0]?.toId).toBe("b");
     });
+
+    it("retrieves edges to a node", async () => {
+      await helix.upsertNode("a", "Node", {});
+      await helix.upsertNode("b", "Node", {});
+      await helix.upsertNode("c", "Node", {});
+
+      await helix.createEdge("a", "c", "DEPENDS_ON");
+      await helix.createEdge("b", "c", "DEPENDS_ON");
+
+      const edgesTo = await helix.getEdgesTo("c");
+      expect(edgesTo).toHaveLength(2);
+
+      const edgesToWithType = await helix.getEdgesTo("c", "DEPENDS_ON");
+      expect(edgesToWithType).toHaveLength(2);
+    });
+
+    it("filters edges by type", async () => {
+      await helix.upsertNode("a", "Node", {});
+      await helix.upsertNode("b", "Node", {});
+
+      await helix.createEdge("a", "b", "TYPE_A");
+      await helix.createEdge("a", "b", "TYPE_B");
+
+      const typeA = await helix.getEdgesFrom("a", "TYPE_A");
+      expect(typeA).toHaveLength(1);
+      expect(typeA[0]?.type).toBe("TYPE_A");
+    });
   });
 
   describe("trade memory", () => {
@@ -548,6 +575,141 @@ describe("MockHelixDB", () => {
       // Default memories should still exist
       const memories = await helix.retrieveTradeMemory({}, 5);
       expect(memories.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("vector search", () => {
+    it("searches nodes by embedding similarity", async () => {
+      const embedding = new Array(768).fill(0.5);
+      await helix.upsertNode("vec-1", "Document", { title: "First" }, embedding);
+      await helix.upsertNode("vec-2", "Document", { title: "Second" }, embedding);
+      await helix.upsertNode("vec-3", "Other", { title: "Third" }, embedding);
+
+      const results = await helix.vectorSearch(embedding, "Document", 10);
+
+      expect(results).toHaveLength(2);
+      expect(results[0]?.item.type).toBe("Document");
+      expect(results[0]?.score).toBeGreaterThan(0);
+    });
+
+    it("returns empty for non-matching type", async () => {
+      const embedding = new Array(768).fill(0.5);
+      await helix.upsertNode("vec-1", "Document", { title: "First" }, embedding);
+
+      const results = await helix.vectorSearch(embedding, "NonExistent", 10);
+
+      expect(results).toHaveLength(0);
+    });
+  });
+
+  describe("cosine similarity (non-deterministic)", () => {
+    it("calculates similarity for non-deterministic mode", async () => {
+      const nonDetHelix = createMockHelixDB({
+        queryDelay: 0,
+        deterministic: false,
+      });
+
+      const embedding1 = new Array(768).fill(0.5);
+      const embedding2 = new Array(768).fill(0.5);
+      await nonDetHelix.upsertNode("vec-1", "Doc", { title: "Test" }, embedding1);
+
+      const results = await nonDetHelix.vectorSearch(embedding2, "Doc", 10);
+
+      expect(results).toHaveLength(1);
+      // With identical vectors, similarity should be ~1
+      expect(results[0]?.score).toBeCloseTo(1, 1);
+    });
+
+    it("handles vectors of different lengths", async () => {
+      const nonDetHelix = createMockHelixDB({
+        queryDelay: 0,
+        deterministic: false,
+      });
+
+      // Create with one embedding length
+      const embedding1 = new Array(768).fill(0.5);
+      await nonDetHelix.upsertNode("vec-1", "Doc", { title: "Test" }, embedding1);
+
+      // Search with different length (should return 0 similarity)
+      const differentLength = new Array(512).fill(0.5);
+      const results = await nonDetHelix.vectorSearch(differentLength, "Doc", 10);
+
+      expect(results).toHaveLength(1);
+      expect(results[0]?.score).toBe(0);
+    });
+
+    it("handles zero norm vectors", async () => {
+      const nonDetHelix = createMockHelixDB({
+        queryDelay: 0,
+        deterministic: false,
+      });
+
+      // Create with zero vector
+      const zeroEmbedding = new Array(768).fill(0);
+      await nonDetHelix.upsertNode("vec-1", "Doc", { title: "Test" }, zeroEmbedding);
+
+      const nonZero = new Array(768).fill(0.5);
+      const results = await nonDetHelix.vectorSearch(nonZero, "Doc", 10);
+
+      expect(results).toHaveLength(1);
+      expect(results[0]?.score).toBe(0);
+    });
+  });
+
+  describe("query", () => {
+    it("executes basic HelixQL query", async () => {
+      await helix.upsertNode("doc-1", "Document", { title: "First" });
+      await helix.upsertNode("doc-2", "Document", { title: "Second" });
+
+      const results = await helix.query("MATCH (n:Document) RETURN n");
+
+      expect(results).toHaveLength(2);
+      expect(results[0]).toHaveProperty("n");
+    });
+
+    it("returns empty for non-matching type", async () => {
+      const results = await helix.query("MATCH (n:NonExistent) RETURN n");
+      expect(results).toHaveLength(0);
+    });
+
+    it("returns empty for invalid query", async () => {
+      const results = await helix.query("INVALID QUERY");
+      expect(results).toHaveLength(0);
+    });
+  });
+
+  describe("getStats", () => {
+    it("returns correct statistics", async () => {
+      // Reset first to clear default memories
+      helix.reset();
+
+      await helix.upsertNode("a", "Node", {});
+      await helix.upsertNode("b", "Node", {});
+      await helix.createEdge("a", "b", "CONNECTS");
+
+      const stats = helix.getStats();
+
+      expect(stats.nodes).toBe(2);
+      expect(stats.edges).toBe(1);
+      expect(stats.tradeMemories).toBeGreaterThan(0); // Has default memories
+    });
+  });
+
+  describe("getAllTradeMemories", () => {
+    it("returns all trade memories", async () => {
+      const memories = await helix.getAllTradeMemories();
+      expect(memories.length).toBeGreaterThan(0);
+      expect(memories[0]?.caseId).toBeDefined();
+    });
+  });
+
+  describe("failure simulation", () => {
+    it("throws on simulated failure", async () => {
+      const failing = createMockHelixDB({
+        simulateFailure: true,
+      });
+
+      await expect(failing.getNode("test")).rejects.toThrow("MockHelixDB");
     });
   });
 });
@@ -701,6 +863,101 @@ describe("MockTursoClient", () => {
       });
 
       await expect(failing.execute("SELECT 1")).rejects.toThrow("MockTurso");
+    });
+  });
+
+  describe("TursoClient-compatible methods", () => {
+    it("executeRows returns typed row objects", async () => {
+      await turso.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+      await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [1, "Alice"]);
+      await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [2, "Bob"]);
+
+      const rows = await turso.executeRows<{ id: number; name: string }>(
+        "SELECT id, name FROM users"
+      );
+
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toEqual({ id: 1, name: "Alice" });
+      expect(rows[1]).toEqual({ id: 2, name: "Bob" });
+    });
+
+    it("get returns single row or undefined", async () => {
+      await turso.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+      await turso.execute("INSERT INTO users (id, name) VALUES (?, ?)", [1, "Alice"]);
+
+      const found = await turso.get<{ id: number; name: string }>(
+        "SELECT id, name FROM users WHERE id = ?",
+        [1]
+      );
+      expect(found).toEqual({ id: 1, name: "Alice" });
+
+      const notFound = await turso.get<{ id: number; name: string }>(
+        "SELECT id, name FROM users WHERE id = ?",
+        [999]
+      );
+      expect(notFound).toBeUndefined();
+    });
+
+    it("executeBatch runs multiple statements", async () => {
+      await turso.executeBatch([
+        { sql: "CREATE TABLE items (id INTEGER, value TEXT)" },
+        { sql: "INSERT INTO items (id, value) VALUES (?, ?)", args: [1, "first"] },
+        { sql: "INSERT INTO items (id, value) VALUES (?, ?)", args: [2, "second"] },
+      ]);
+
+      const rows = await turso.executeRows<{ id: number; value: string }>(
+        "SELECT id, value FROM items"
+      );
+      expect(rows).toHaveLength(2);
+    });
+
+    it("run returns changes and lastInsertRowid", async () => {
+      await turso.execute("CREATE TABLE counters (id INTEGER PRIMARY KEY, count INTEGER)");
+
+      const result = await turso.run("INSERT INTO counters (id, count) VALUES (?, ?)", [1, 0]);
+
+      expect(result.changes).toBe(1);
+      expect(result.lastInsertRowid).toBe(1n);
+    });
+  });
+
+  describe("table access methods", () => {
+    it("getTable returns table data", async () => {
+      await turso.execute("CREATE TABLE items (id INTEGER, name TEXT)");
+      await turso.execute("INSERT INTO items (id, name) VALUES (?, ?)", [1, "Apple"]);
+
+      const data = turso.getTable("items");
+      expect(data).toHaveLength(1);
+      expect(data[0]).toEqual({ id: 1, name: "Apple" });
+    });
+
+    it("getTable returns empty array for non-existent table", () => {
+      const data = turso.getTable("nonexistent");
+      expect(data).toEqual([]);
+    });
+
+    it("setTable sets table data directly", () => {
+      turso.setTable("products", [
+        { id: 1, name: "Widget" },
+        { id: 2, name: "Gadget" },
+      ]);
+
+      const data = turso.getTable("products");
+      expect(data).toHaveLength(2);
+    });
+  });
+
+  describe("close method", () => {
+    it("close is a no-op", () => {
+      expect(() => turso.close()).not.toThrow();
+    });
+  });
+
+  describe("transaction close", () => {
+    it("transaction close is a no-op", async () => {
+      await turso.execute("CREATE TABLE users (id INTEGER)");
+      const tx = await turso.transaction();
+      await expect(tx.close()).resolves.toBeUndefined();
     });
   });
 });
