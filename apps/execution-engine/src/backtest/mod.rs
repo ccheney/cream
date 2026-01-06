@@ -41,6 +41,7 @@
 
 mod commission;
 mod config;
+mod data_gaps;
 mod fill_engine;
 mod metrics;
 mod monte_carlo;
@@ -62,6 +63,10 @@ pub use config::{
     LimitOrderConfig, PartialFillConfig, PerUnitCommissionConfig, RegulatoryFeesConfig,
     SameBarPriority, SlippageConfig, SlippageModel, SlippedStopTargetConfig, SpreadBasedConfig,
     StopTargetConfig, StopTargetFillModel, VolumeImpactConfig,
+};
+pub use data_gaps::{
+    DataGapError, DataGapType, GapStatistics, GapValidationResult, validate_candle_data,
+    validate_order_data, validate_spread_data, validate_volume_data,
 };
 pub use fill_engine::{
     Candle, FillResult, simulate_limit_order, simulate_market_order, simulate_order,
