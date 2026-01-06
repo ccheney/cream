@@ -12,6 +12,23 @@ export const VERSION = "0.0.1";
 
 // Market calendar and session handling
 export {
+  // Session types
+  type ActionForSession,
+  ActionForSession as ActionForSessionSchema,
+  type InstrumentTypeForSession,
+  InstrumentTypeForSession as InstrumentTypeForSessionSchema,
+  type SessionValidationConfig,
+  type SessionValidationResult,
+  // Session validation functions
+  getAllowedSessions,
+  getMinutesToClose,
+  getNextRTHStart,
+  isEntryAction,
+  isExitAction,
+  isPassiveAction,
+  isTradingPossible,
+  validateSessionForAction,
+  // Core calendar
   canStartCycle,
   DEFAULT_CLOSE_TIME,
   EARLY_CLOSE_TIME,

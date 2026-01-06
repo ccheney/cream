@@ -2,8 +2,10 @@
  * Market Calendar and Session Handling
  *
  * NYSE holiday schedule, trading sessions, and option expiration dates.
+ * Includes session validation for DecisionPlan actions.
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
+ * @see docs/plans/07-execution.md - Trading Calendar Feasibility
  */
 
 import { z } from "zod";
@@ -53,6 +55,53 @@ export interface SessionHours {
  */
 export const ExpirationCycle = z.enum(["MONTHLY", "WEEKLY", "DAILY"]);
 export type ExpirationCycle = z.infer<typeof ExpirationCycle>;
+
+/**
+ * Instrument type for session validation
+ * Note: This mirrors the InstrumentType from decision.ts but is duplicated
+ * here to avoid circular dependencies.
+ */
+export const InstrumentTypeForSession = z.enum(["EQUITY", "OPTION"]);
+export type InstrumentTypeForSession = z.infer<typeof InstrumentTypeForSession>;
+
+/**
+ * Action type for session validation
+ * Note: This mirrors the Action enum from decision.ts but is duplicated
+ * here to avoid circular dependencies.
+ */
+export const ActionForSession = z.enum([
+  "BUY",
+  "SELL",
+  "HOLD",
+  "INCREASE",
+  "REDUCE",
+  "CLOSE",
+]);
+export type ActionForSession = z.infer<typeof ActionForSession>;
+
+/**
+ * Configuration for session validation
+ */
+export interface SessionValidationConfig {
+  /** Override to always consider market open (for testing/backtesting) */
+  alwaysOpen?: boolean;
+  /** Allow equity extended hours trading */
+  allowExtendedHours?: boolean;
+}
+
+/**
+ * Result of session validation
+ */
+export interface SessionValidationResult {
+  /** Whether the action is allowed */
+  valid: boolean;
+  /** Current trading session */
+  session: TradingSession;
+  /** Reason for rejection (if invalid) */
+  reason?: string;
+  /** Suggestion for re-planning (if invalid) */
+  suggestion?: string;
+}
 
 // ============================================
 // NYSE 2026 Holidays
@@ -501,4 +550,281 @@ export function getMonthlyExpirations(year: number): Date[] {
     expirations.push(getMonthlyExpiration(year, month));
   }
   return expirations;
+}
+
+// ============================================
+// Session Validation for DecisionPlan
+// ============================================
+
+/**
+ * Actions that open or increase a position (entries)
+ * These require regular trading hours (RTH).
+ */
+const ENTRY_ACTIONS = new Set<ActionForSession>(["BUY", "SELL", "INCREASE"]);
+
+/**
+ * Actions that close or reduce a position (exits)
+ * These are allowed at any time when market has any session.
+ */
+const EXIT_ACTIONS = new Set<ActionForSession>(["CLOSE", "REDUCE"]);
+
+/**
+ * Check if an action is an entry (opens or increases position)
+ *
+ * @param action - Action to check
+ * @returns true if action is an entry
+ */
+export function isEntryAction(action: ActionForSession): boolean {
+  return ENTRY_ACTIONS.has(action);
+}
+
+/**
+ * Check if an action is an exit (closes or reduces position)
+ *
+ * @param action - Action to check
+ * @returns true if action is an exit
+ */
+export function isExitAction(action: ActionForSession): boolean {
+  return EXIT_ACTIONS.has(action);
+}
+
+/**
+ * Check if an action requires no market interaction
+ *
+ * @param action - Action to check
+ * @returns true if action is passive (HOLD)
+ */
+export function isPassiveAction(action: ActionForSession): boolean {
+  return action === "HOLD";
+}
+
+/**
+ * Get the allowed sessions for an instrument type and action
+ *
+ * @param instrumentType - Type of instrument (EQUITY or OPTION)
+ * @param action - Action being performed
+ * @param config - Optional validation configuration
+ * @returns Array of allowed trading sessions
+ */
+export function getAllowedSessions(
+  instrumentType: InstrumentTypeForSession,
+  action: ActionForSession,
+  config: SessionValidationConfig = {}
+): TradingSession[] {
+  // HOLD is always allowed (no market interaction)
+  if (isPassiveAction(action)) {
+    return ["PRE_MARKET", "RTH", "AFTER_HOURS", "CLOSED"];
+  }
+
+  // Exits are allowed during any open session
+  if (isExitAction(action)) {
+    if (instrumentType === "OPTION") {
+      // Options can only trade during RTH
+      return ["RTH"];
+    }
+    // Equities can exit during any open session
+    if (config.allowExtendedHours) {
+      return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
+    }
+    return ["RTH"];
+  }
+
+  // Entries require RTH for risk management
+  // Options: RTH only (no extended hours)
+  // Equities: RTH by default, extended hours if configured
+  if (instrumentType === "OPTION") {
+    return ["RTH"];
+  }
+
+  // Equity entries
+  if (config.allowExtendedHours) {
+    return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
+  }
+  return ["RTH"];
+}
+
+/**
+ * Validate if an action can be executed at a given datetime
+ *
+ * This is the main validation function for DecisionPlan session feasibility.
+ * It enforces:
+ * - Entries (BUY, SELL, INCREASE) require RTH
+ * - Exits (CLOSE, REDUCE) allowed during any open session
+ * - HOLD is always allowed
+ * - Options can only trade during RTH
+ * - Market holidays/closures are respected
+ *
+ * @param action - Action to validate
+ * @param instrumentType - Type of instrument
+ * @param datetime - DateTime to validate against
+ * @param config - Optional validation configuration
+ * @returns Validation result with session info and rejection reason
+ *
+ * @example
+ * ```typescript
+ * const result = validateSessionForAction("BUY", "EQUITY", new Date());
+ * if (!result.valid) {
+ *   console.log(`Cannot execute: ${result.reason}`);
+ *   console.log(`Suggestion: ${result.suggestion}`);
+ * }
+ * ```
+ */
+export function validateSessionForAction(
+  action: ActionForSession,
+  instrumentType: InstrumentTypeForSession,
+  datetime: Date | string,
+  config: SessionValidationConfig = {}
+): SessionValidationResult {
+  // Override: always consider market open
+  if (config.alwaysOpen) {
+    return {
+      valid: true,
+      session: "RTH",
+    };
+  }
+
+  const session = getTradingSession(datetime);
+  const allowedSessions = getAllowedSessions(instrumentType, action, config);
+
+  // Check if current session is allowed
+  if (allowedSessions.includes(session)) {
+    return {
+      valid: true,
+      session,
+    };
+  }
+
+  // Build rejection reason and suggestion
+  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
+  const timeStr = dateObj.toISOString();
+
+  if (session === "CLOSED") {
+    const dateStr = formatDateOnly(dateObj);
+    const holiday = getHoliday(dateStr);
+
+    if (holiday) {
+      return {
+        valid: false,
+        session,
+        reason: `Market closed for ${holiday.name}`,
+        suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
+      };
+    }
+
+    return {
+      valid: false,
+      session,
+      reason: `Market closed at ${timeStr}`,
+      suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
+    };
+  }
+
+  // Session is open but not allowed for this action/instrument
+  if (isEntryAction(action)) {
+    if (instrumentType === "OPTION") {
+      return {
+        valid: false,
+        session,
+        reason: `Options can only be traded during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+        suggestion: "Re-plan with NO_TRADE or wait for RTH",
+      };
+    }
+
+    return {
+      valid: false,
+      session,
+      reason: `Entry actions (${action}) require RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+      suggestion: "Re-plan with NO_TRADE or wait for RTH",
+    };
+  }
+
+  if (isExitAction(action) && instrumentType === "OPTION") {
+    return {
+      valid: false,
+      session,
+      reason: `Option exits can only be executed during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+      suggestion: "Schedule exit for next RTH session",
+    };
+  }
+
+  // Fallback (shouldn't reach here)
+  return {
+    valid: false,
+    session,
+    reason: `Action ${action} not allowed during ${session}`,
+    suggestion: "Re-plan with NO_TRADE",
+  };
+}
+
+/**
+ * Check if trading is currently possible (market has any open session)
+ *
+ * @param datetime - DateTime to check
+ * @returns true if any trading is possible
+ */
+export function isTradingPossible(datetime: Date | string): boolean {
+  const session = getTradingSession(datetime);
+  return session !== "CLOSED";
+}
+
+/**
+ * Get the next RTH start time from a given datetime
+ *
+ * @param datetime - Starting datetime
+ * @returns DateTime of next RTH start
+ */
+export function getNextRTHStart(datetime: Date | string): Date {
+  const dateObj = typeof datetime === "string" ? new Date(datetime) : new Date(datetime.getTime());
+
+  // Get current session
+  const session = getTradingSession(dateObj);
+
+  // If already in RTH, return current time
+  if (session === "RTH") {
+    return dateObj;
+  }
+
+  // If before RTH today and market is open, return today's RTH start
+  if (session === "PRE_MARKET") {
+    const dateStr = formatDateOnly(dateObj);
+    // Return 9:30 AM ET today (approximate: UTC-5)
+    const rthStart = new Date(dateStr + "T14:30:00.000Z"); // 9:30 AM ET = 14:30 UTC
+    return rthStart;
+  }
+
+  // Otherwise, find next trading day and return its RTH start
+  const nextDay = getNextTradingDay(dateObj);
+  const nextDayStr = formatDateOnly(nextDay);
+  return new Date(nextDayStr + "T14:30:00.000Z");
+}
+
+/**
+ * Get minutes until market close
+ *
+ * @param datetime - DateTime to check
+ * @returns Minutes until close, or null if market closed
+ */
+export function getMinutesToClose(datetime: Date | string): number | null {
+  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
+  const dateStr = formatDateOnly(dateObj);
+
+  if (!isMarketOpen(dateStr)) {
+    return null;
+  }
+
+  const closeTime = getMarketCloseTime(dateStr);
+  if (!closeTime) {
+    return null;
+  }
+
+  // Get current time in minutes since midnight ET
+  const hours = dateObj.getUTCHours() - 5;
+  const minutes = dateObj.getUTCMinutes();
+  const currentMinutes = (hours < 0 ? hours + 24 : hours) * 60 + minutes;
+
+  // Get close time in minutes
+  const closeMinutes = parseTimeToMinutes(closeTime);
+
+  const diff = closeMinutes - currentMinutes;
+  return diff > 0 ? diff : 0;
 }

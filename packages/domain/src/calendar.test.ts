@@ -8,24 +8,32 @@ import {
   DEFAULT_CLOSE_TIME,
   EARLY_CLOSE_TIME,
   getAllHolidays,
+  getAllowedSessions,
   getExpirationCycle,
   getHoliday,
   getMarketCloseTime,
+  getMinutesToClose,
   getMonthlyExpiration,
   getMonthlyExpirations,
+  getNextRTHStart,
   getNextTradingDay,
   getPreviousTradingDay,
   getThirdFriday,
   getTradingSession,
   hasDailyOptions,
   isDailyExpiration,
+  isEntryAction,
+  isExitAction,
   isMarketOpen,
   isMonthlyExpiration,
+  isPassiveAction,
   isRTH,
+  isTradingPossible,
   isWeeklyExpiration,
   MIN_MINUTES_BEFORE_CLOSE,
   NYSE_HOLIDAYS_2026,
   NYSE_SESSIONS,
+  validateSessionForAction,
 } from "./calendar";
 
 // ============================================
@@ -415,5 +423,321 @@ describe("getMonthlyExpirations", () => {
       // Friday (5) or Thursday (4) for holiday adjustment
       expect([4, 5]).toContain(dayOfWeek);
     }
+  });
+});
+
+// ============================================
+// Session Validation Tests
+// ============================================
+
+describe("Action Classification", () => {
+  describe("isEntryAction", () => {
+    test("returns true for BUY", () => {
+      expect(isEntryAction("BUY")).toBe(true);
+    });
+
+    test("returns true for SELL", () => {
+      expect(isEntryAction("SELL")).toBe(true);
+    });
+
+    test("returns true for INCREASE", () => {
+      expect(isEntryAction("INCREASE")).toBe(true);
+    });
+
+    test("returns false for CLOSE", () => {
+      expect(isEntryAction("CLOSE")).toBe(false);
+    });
+
+    test("returns false for REDUCE", () => {
+      expect(isEntryAction("REDUCE")).toBe(false);
+    });
+
+    test("returns false for HOLD", () => {
+      expect(isEntryAction("HOLD")).toBe(false);
+    });
+  });
+
+  describe("isExitAction", () => {
+    test("returns true for CLOSE", () => {
+      expect(isExitAction("CLOSE")).toBe(true);
+    });
+
+    test("returns true for REDUCE", () => {
+      expect(isExitAction("REDUCE")).toBe(true);
+    });
+
+    test("returns false for BUY", () => {
+      expect(isExitAction("BUY")).toBe(false);
+    });
+
+    test("returns false for SELL", () => {
+      expect(isExitAction("SELL")).toBe(false);
+    });
+
+    test("returns false for HOLD", () => {
+      expect(isExitAction("HOLD")).toBe(false);
+    });
+  });
+
+  describe("isPassiveAction", () => {
+    test("returns true for HOLD", () => {
+      expect(isPassiveAction("HOLD")).toBe(true);
+    });
+
+    test("returns false for BUY", () => {
+      expect(isPassiveAction("BUY")).toBe(false);
+    });
+
+    test("returns false for CLOSE", () => {
+      expect(isPassiveAction("CLOSE")).toBe(false);
+    });
+  });
+});
+
+describe("getAllowedSessions", () => {
+  test("HOLD is allowed in all sessions including CLOSED", () => {
+    const sessions = getAllowedSessions("EQUITY", "HOLD");
+    expect(sessions).toContain("RTH");
+    expect(sessions).toContain("PRE_MARKET");
+    expect(sessions).toContain("AFTER_HOURS");
+    expect(sessions).toContain("CLOSED");
+  });
+
+  test("equity entries require RTH by default", () => {
+    const sessions = getAllowedSessions("EQUITY", "BUY");
+    expect(sessions).toEqual(["RTH"]);
+  });
+
+  test("equity entries allow extended hours when configured", () => {
+    const sessions = getAllowedSessions("EQUITY", "BUY", { allowExtendedHours: true });
+    expect(sessions).toContain("RTH");
+    expect(sessions).toContain("PRE_MARKET");
+    expect(sessions).toContain("AFTER_HOURS");
+  });
+
+  test("option entries only allow RTH (even with extended hours config)", () => {
+    const sessions = getAllowedSessions("OPTION", "BUY", { allowExtendedHours: true });
+    expect(sessions).toEqual(["RTH"]);
+  });
+
+  test("equity exits allow RTH by default", () => {
+    const sessions = getAllowedSessions("EQUITY", "CLOSE");
+    expect(sessions).toEqual(["RTH"]);
+  });
+
+  test("equity exits allow extended hours when configured", () => {
+    const sessions = getAllowedSessions("EQUITY", "CLOSE", { allowExtendedHours: true });
+    expect(sessions).toContain("RTH");
+    expect(sessions).toContain("PRE_MARKET");
+    expect(sessions).toContain("AFTER_HOURS");
+  });
+
+  test("option exits only allow RTH", () => {
+    const sessions = getAllowedSessions("OPTION", "CLOSE");
+    expect(sessions).toEqual(["RTH"]);
+  });
+});
+
+describe("validateSessionForAction", () => {
+  // RTH time: 10:30 ET = 15:30 UTC
+  const RTH_TIME = "2026-01-05T15:30:00Z";
+  // Pre-market time: 8:00 ET = 13:00 UTC
+  const PRE_MARKET_TIME = "2026-01-05T13:00:00Z";
+  // After-hours time: 17:00 ET = 22:00 UTC
+  const AFTER_HOURS_TIME = "2026-01-05T22:00:00Z";
+  // Weekend (Saturday)
+  const WEEKEND_TIME = "2026-01-03T15:30:00Z";
+  // Holiday (Christmas)
+  const HOLIDAY_TIME = "2026-12-25T15:30:00Z";
+
+  describe("Entry actions (BUY, SELL, INCREASE)", () => {
+    test("allows equity BUY during RTH", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", RTH_TIME);
+      expect(result.valid).toBe(true);
+      expect(result.session).toBe("RTH");
+    });
+
+    test("rejects equity BUY during pre-market (default config)", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", PRE_MARKET_TIME);
+      expect(result.valid).toBe(false);
+      expect(result.session).toBe("PRE_MARKET");
+      expect(result.reason).toContain("RTH");
+      expect(result.suggestion).toContain("Re-plan");
+    });
+
+    test("rejects equity BUY during after-hours (default config)", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", AFTER_HOURS_TIME);
+      expect(result.valid).toBe(false);
+      expect(result.session).toBe("AFTER_HOURS");
+    });
+
+    test("allows equity BUY during pre-market with extended hours config", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", PRE_MARKET_TIME, {
+        allowExtendedHours: true,
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    test("rejects option BUY during pre-market even with extended hours", () => {
+      const result = validateSessionForAction("BUY", "OPTION", PRE_MARKET_TIME, {
+        allowExtendedHours: true,
+      });
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain("Options");
+    });
+
+    test("rejects BUY on weekend", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", WEEKEND_TIME);
+      expect(result.valid).toBe(false);
+      expect(result.session).toBe("CLOSED");
+      expect(result.reason).toContain("closed");
+    });
+
+    test("rejects BUY on holiday with holiday name", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", HOLIDAY_TIME);
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain("Christmas");
+    });
+  });
+
+  describe("Exit actions (CLOSE, REDUCE)", () => {
+    test("allows equity CLOSE during RTH", () => {
+      const result = validateSessionForAction("CLOSE", "EQUITY", RTH_TIME);
+      expect(result.valid).toBe(true);
+    });
+
+    test("rejects equity CLOSE during pre-market (default config)", () => {
+      const result = validateSessionForAction("CLOSE", "EQUITY", PRE_MARKET_TIME);
+      expect(result.valid).toBe(false);
+    });
+
+    test("allows equity CLOSE during pre-market with extended hours", () => {
+      const result = validateSessionForAction("CLOSE", "EQUITY", PRE_MARKET_TIME, {
+        allowExtendedHours: true,
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    test("rejects option CLOSE during pre-market even with extended hours", () => {
+      const result = validateSessionForAction("CLOSE", "OPTION", PRE_MARKET_TIME, {
+        allowExtendedHours: true,
+      });
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain("Option exits");
+    });
+  });
+
+  describe("HOLD action", () => {
+    test("allows HOLD during RTH", () => {
+      const result = validateSessionForAction("HOLD", "EQUITY", RTH_TIME);
+      expect(result.valid).toBe(true);
+    });
+
+    test("allows HOLD during pre-market", () => {
+      const result = validateSessionForAction("HOLD", "EQUITY", PRE_MARKET_TIME);
+      expect(result.valid).toBe(true);
+    });
+
+    test("allows HOLD on weekend", () => {
+      const result = validateSessionForAction("HOLD", "EQUITY", WEEKEND_TIME);
+      expect(result.valid).toBe(true);
+    });
+
+    test("allows HOLD on holiday", () => {
+      const result = validateSessionForAction("HOLD", "OPTION", HOLIDAY_TIME);
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe("Testing override (alwaysOpen)", () => {
+    test("allows BUY on weekend with alwaysOpen", () => {
+      const result = validateSessionForAction("BUY", "EQUITY", WEEKEND_TIME, {
+        alwaysOpen: true,
+      });
+      expect(result.valid).toBe(true);
+      expect(result.session).toBe("RTH");
+    });
+
+    test("allows BUY on holiday with alwaysOpen", () => {
+      const result = validateSessionForAction("BUY", "OPTION", HOLIDAY_TIME, {
+        alwaysOpen: true,
+      });
+      expect(result.valid).toBe(true);
+    });
+  });
+});
+
+describe("isTradingPossible", () => {
+  test("returns true during RTH", () => {
+    expect(isTradingPossible("2026-01-05T15:30:00Z")).toBe(true);
+  });
+
+  test("returns true during pre-market", () => {
+    expect(isTradingPossible("2026-01-05T13:00:00Z")).toBe(true);
+  });
+
+  test("returns true during after-hours", () => {
+    expect(isTradingPossible("2026-01-05T22:00:00Z")).toBe(true);
+  });
+
+  test("returns false on weekend", () => {
+    expect(isTradingPossible("2026-01-03T15:30:00Z")).toBe(false);
+  });
+
+  test("returns false on holiday", () => {
+    expect(isTradingPossible("2026-12-25T15:30:00Z")).toBe(false);
+  });
+});
+
+describe("getNextRTHStart", () => {
+  test("returns current time if already in RTH", () => {
+    const rthTime = new Date("2026-01-05T15:30:00Z");
+    const result = getNextRTHStart(rthTime);
+    expect(result.getTime()).toBe(rthTime.getTime());
+  });
+
+  test("returns today's RTH start if in pre-market", () => {
+    const result = getNextRTHStart("2026-01-05T13:00:00Z");
+    // 9:30 AM ET on Jan 5 = 14:30 UTC
+    expect(result.toISOString()).toBe("2026-01-05T14:30:00.000Z");
+  });
+
+  test("returns next trading day's RTH start if after hours", () => {
+    const result = getNextRTHStart("2026-01-05T22:00:00Z");
+    // Next trading day (Jan 6) at 9:30 AM ET
+    expect(result.toISOString()).toBe("2026-01-06T14:30:00.000Z");
+  });
+
+  test("returns Monday's RTH start if Friday after hours", () => {
+    const result = getNextRTHStart("2026-01-09T22:00:00Z"); // Friday after-hours
+    // Next trading day (Jan 12, Monday) at 9:30 AM ET
+    expect(result.toISOString()).toBe("2026-01-12T14:30:00.000Z");
+  });
+});
+
+describe("getMinutesToClose", () => {
+  test("returns correct minutes during RTH", () => {
+    // 10:30 ET = 15:30 UTC, close at 16:00 ET
+    // Minutes to close: 16:00 - 10:30 = 5:30 = 330 minutes
+    const result = getMinutesToClose("2026-01-05T15:30:00Z");
+    expect(result).toBe(330);
+  });
+
+  test("returns 0 at market close", () => {
+    // 16:00 ET = 21:00 UTC
+    const result = getMinutesToClose("2026-01-05T21:00:00Z");
+    expect(result).toBe(0);
+  });
+
+  test("returns null on closed day", () => {
+    expect(getMinutesToClose("2026-01-03T15:30:00Z")).toBeNull(); // Saturday
+    expect(getMinutesToClose("2026-12-25T15:30:00Z")).toBeNull(); // Holiday
+  });
+
+  test("returns correct minutes on early close day", () => {
+    // 10:30 ET on Nov 27 (early close at 13:00 ET)
+    // Minutes to close: 13:00 - 10:30 = 2:30 = 150 minutes
+    const result = getMinutesToClose("2026-11-27T15:30:00Z");
+    expect(result).toBe(150);
   });
 });
