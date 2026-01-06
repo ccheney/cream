@@ -49,6 +49,7 @@ mod look_ahead;
 mod metrics;
 mod monte_carlo;
 mod multi_leg;
+mod parallel;
 mod replay;
 mod security;
 mod slippage;
@@ -109,6 +110,11 @@ pub use multi_leg::{
     LegFillResult, MultiLegFillResult, OrderLeg, calculate_total_contracts,
     create_bull_call_spread, create_iron_condor, create_straddle, simulate_multi_leg_order,
     validate_balanced_ratios,
+};
+pub use parallel::{
+    BacktestJob, BacktestJobResult, GridSearchResult, ParallelBacktester, ParallelConfig,
+    ParallelError, ParallelResult, ParamValue, ParameterGrid, ParameterGridBuilder, Progress,
+    ProgressTracker, StrategyConfig,
 };
 pub use replay::{
     CandleDataSource, CandleEvent, DataSourceType, InMemoryDataSource, MissingDataPolicy,

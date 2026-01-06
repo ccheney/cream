@@ -93,6 +93,9 @@ async-trait = "0.1.89"
 libm = "0.2.15"
 rust_decimal_macros = "1.39.0"
 
+# Parallel processing
+rayon = "1.10"
+
 [dev-dependencies]
 # Testing
 tokio-test = "0.4.5"
