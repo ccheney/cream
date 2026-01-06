@@ -63,3 +63,15 @@ export {
   validateConfigOrThrow,
   validatePartialConfig,
 } from "./validate";
+// API Key Rotation
+export {
+  type ApiKey,
+  type ApiService,
+  createKeyRotationRegistry,
+  KeyRotationManager,
+  KeyRotationRegistry,
+  type KeyRotationConfig,
+  type KeyRotationLogger,
+  type KeyStats,
+  type RotationStrategy,
+} from "./keyRotation";
