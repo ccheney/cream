@@ -141,6 +141,30 @@ export {
   type MetricsWindow,
   MetricsWindowSchema,
 } from "./metrics";
+// Prediction markets configuration
+export {
+  type CachingConfig,
+  CachingConfigSchema,
+  createDefaultPredictionMarketsConfig,
+  hasEnabledProvider,
+  type KalshiConfig,
+  KalshiConfigSchema,
+  KalshiRateLimitTier,
+  type KalshiWebSocketConfig,
+  KalshiWebSocketConfigSchema,
+  type MaxMarketAgeConfig,
+  MaxMarketAgeConfigSchema,
+  type PolymarketConfig,
+  PolymarketConfigSchema,
+  type PredictionMarketsConfig,
+  PredictionMarketsConfigSchema,
+  type PreEventPositionReductionConfig,
+  PreEventPositionReductionConfigSchema,
+  type RiskThresholdsConfig,
+  RiskThresholdsConfigSchema,
+  type SignalsConfig,
+  SignalsConfigSchema,
+} from "./prediction_markets";
 // Regime configuration
 export {
   ClassifierType,

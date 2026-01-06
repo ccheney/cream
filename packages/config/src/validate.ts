@@ -17,6 +17,7 @@ import { NormalizationConfigSchema } from "./schemas/features";
 import { IndicatorsConfigSchema } from "./schemas/indicators";
 import { MemoryConfigSchema } from "./schemas/memory";
 import { MetricsConfigSchema } from "./schemas/metrics";
+import { PredictionMarketsConfigSchema } from "./schemas/prediction_markets";
 import { RegimeConfigSchema } from "./schemas/regime";
 import { UniverseConfigSchema } from "./schemas/universe";
 
@@ -79,6 +80,11 @@ export const CreamConfigSchema = z.object({
    * Performance metrics configuration
    */
   metrics: MetricsConfigSchema.optional(),
+
+  /**
+   * Prediction markets configuration (Kalshi, Polymarket)
+   */
+  prediction_markets: PredictionMarketsConfigSchema.optional(),
 });
 export type CreamConfig = z.infer<typeof CreamConfigSchema>;
 
