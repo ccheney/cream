@@ -104,3 +104,15 @@ export {
   type HealthStatus,
   type SystemHealth,
 } from "./health";
+// Layer Boundary Validation
+export {
+  type ArchitecturalLayer,
+  createLayerConfig,
+  createLayerValidator,
+  DEFAULT_LAYERS,
+  type LayerValidationConfig,
+  type LayerValidationResult,
+  LayerValidator,
+  type LayerViolation,
+  parseImports,
+} from "./layerValidation";
