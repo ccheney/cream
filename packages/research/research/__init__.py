@@ -41,6 +41,38 @@ __all__ = [
     "CommissionConfig",
     "BacktestResult",
     "quick_backtest",
+    # Errors (no external dependencies)
+    "ResearchError",
+    "DataQualityError",
+    "SurvivorshipBiasError",
+    "LookAheadBiasError",
+    "CorporateActionError",
+    "TimezoneError",
+    "DataGapError",
+    "DataAnomalyError",
+    "BacktestConfigError",
+    "InvalidDateRangeError",
+    "SlippageConfigError",
+    "CommissionConfigError",
+    "ParameterOverfittingWarning",
+    "CalibrationError",
+    "InsufficientSamplesError",
+    "CalibrationDriftError",
+    "DistributionShiftError",
+    "InsufficientDataError",
+    "EmptyDatasetError",
+    "InsufficientHistoryError",
+    "InsufficientLiquidityError",
+    "EvaluationError",
+    "ModelNotFittedError",
+    "InvalidScoreError",
+    "ErrorSeverity",
+    "ValidationIssue",
+    # Validation (requires pandas, numpy)
+    "DataValidator",
+    "ValidationConfig",
+    "UniverseProvider",
+    "CorporateActionProvider",
 ]
 
 
@@ -137,5 +169,51 @@ def __getattr__(name: str):
             "BacktestResult": BacktestResult,
             "quick_backtest": quick_backtest,
         }[name]
+
+    # Errors module
+    error_exports = (
+        "ResearchError",
+        "DataQualityError",
+        "SurvivorshipBiasError",
+        "LookAheadBiasError",
+        "CorporateActionError",
+        "TimezoneError",
+        "DataGapError",
+        "DataAnomalyError",
+        "BacktestConfigError",
+        "InvalidDateRangeError",
+        "SlippageConfigError",
+        "CommissionConfigError",
+        "ParameterOverfittingWarning",
+        "CalibrationError",
+        "InsufficientSamplesError",
+        "CalibrationDriftError",
+        "DistributionShiftError",
+        "InsufficientDataError",
+        "EmptyDatasetError",
+        "InsufficientHistoryError",
+        "InsufficientLiquidityError",
+        "EvaluationError",
+        "ModelNotFittedError",
+        "InvalidScoreError",
+        "ErrorSeverity",
+        "ValidationIssue",
+    )
+    if name in error_exports:
+        from research import errors
+
+        return getattr(errors, name)
+
+    # Validation module
+    validation_exports = (
+        "DataValidator",
+        "ValidationConfig",
+        "UniverseProvider",
+        "CorporateActionProvider",
+    )
+    if name in validation_exports:
+        from research import validation
+
+        return getattr(validation, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
