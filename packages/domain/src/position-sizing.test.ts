@@ -120,6 +120,29 @@ describe("calculateVolatilityTargeted", () => {
   test("throws on invalid ATR", () => {
     expect(() => calculateVolatilityTargeted({ ...baseInput, atr: 0 }, 0.01)).toThrow();
   });
+
+  test("returns zero quantity when risk budget too small", () => {
+    // Very high ATR relative to account
+    const result = calculateVolatilityTargeted(
+      { accountEquity: 100, price: 100, stopLoss: 95, atr: 50 },
+      0.01
+    );
+    // Max risk = $1, ATR stop = 50 * 2 = 100
+    // Quantity = 1 / 100 = 0
+    expect(result.quantity).toBe(0);
+    expect(result.dollarRisk).toBe(0);
+    expect(result.riskPercent).toBe(0);
+    expect(result.notionalValue).toBe(0);
+  });
+
+  test("returns zero quantity with risk-reward ratio when takeProfit provided", () => {
+    const result = calculateVolatilityTargeted(
+      { accountEquity: 100, price: 100, stopLoss: 95, atr: 50, takeProfit: 110 },
+      0.01
+    );
+    expect(result.quantity).toBe(0);
+    expect(result.riskRewardRatio).toBe(2); // 10 reward / 5 risk
+  });
 });
 
 // ============================================
@@ -173,6 +196,15 @@ describe("calculateFractionalKelly", () => {
 
   test("throws on invalid payoff ratio", () => {
     expect(() => calculateFractionalKelly({ ...baseInput, payoffRatio: 0 }, 0.02)).toThrow();
+  });
+
+  test("throws on invalid kelly fraction", () => {
+    expect(() => calculateFractionalKelly({ ...baseInput, kellyFraction: 0 }, 0.02)).toThrow(
+      "kellyFraction must be between 0 and 1"
+    );
+    expect(() => calculateFractionalKelly({ ...baseInput, kellyFraction: 1.5 }, 0.02)).toThrow(
+      "kellyFraction must be between 0 and 1"
+    );
   });
 });
 
@@ -284,6 +316,33 @@ describe("calculateDeltaAdjustedSize", () => {
   test("throws on invalid target exposure", () => {
     expect(() => calculateDeltaAdjustedSize(baseInput, -1000)).toThrow();
   });
+
+  test("throws on invalid underlying price", () => {
+    expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: 0 }, 10000)).toThrow(
+      "underlyingPrice must be positive"
+    );
+    expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: -50 }, 10000)).toThrow(
+      "underlyingPrice must be positive"
+    );
+  });
+
+  test("returns zero quantity when exposure too small", () => {
+    // Very small target delta exposure relative to contract size
+    // deltaPerContract = 0.5 * 100 * 100 = 5000
+    // contracts = 100 / 5000 = 0
+    const result = calculateDeltaAdjustedSize(baseInput, 100);
+    expect(result.quantity).toBe(0);
+    expect(result.dollarRisk).toBe(0);
+    expect(result.riskPercent).toBe(0);
+    expect(result.notionalValue).toBe(0);
+  });
+
+  test("returns zero quantity with risk-reward when takeProfit provided", () => {
+    const result = calculateDeltaAdjustedSize({ ...baseInput, takeProfit: 10 }, 100);
+    expect(result.quantity).toBe(0);
+    // Risk = 5 - 2.5 = 2.5, Reward = 10 - 5 = 5, RR = 2
+    expect(result.riskRewardRatio).toBe(2);
+  });
 });
 
 // ============================================
@@ -295,5 +354,44 @@ describe("DEFAULT_RISK_LIMITS", () => {
     expect(DEFAULT_RISK_LIMITS.maxRiskPerTrade).toBe(0.02);
     expect(DEFAULT_RISK_LIMITS.maxGrossExposure).toBe(1.0);
     expect(DEFAULT_RISK_LIMITS.minRiskReward).toBe(1.5);
+  });
+});
+
+// ============================================
+// Input Validation Tests
+// ============================================
+
+describe("validateInput (via calculateFixedFractional)", () => {
+  test("throws on invalid price", () => {
+    expect(() =>
+      calculateFixedFractional({ accountEquity: 100000, price: 0, stopLoss: 95 }, 0.01)
+    ).toThrow("price must be positive");
+    expect(() =>
+      calculateFixedFractional({ accountEquity: 100000, price: -10, stopLoss: 95 }, 0.01)
+    ).toThrow("price must be positive");
+  });
+
+  test("throws on invalid stopLoss", () => {
+    expect(() =>
+      calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: 0 }, 0.01)
+    ).toThrow("stopLoss must be positive");
+    expect(() =>
+      calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: -5 }, 0.01)
+    ).toThrow("stopLoss must be positive");
+  });
+
+  test("throws on invalid multiplier", () => {
+    expect(() =>
+      calculateFixedFractional(
+        { accountEquity: 100000, price: 100, stopLoss: 95, multiplier: 0 },
+        0.01
+      )
+    ).toThrow("multiplier must be positive");
+    expect(() =>
+      calculateFixedFractional(
+        { accountEquity: 100000, price: 100, stopLoss: 95, multiplier: -1 },
+        0.01
+      )
+    ).toThrow("multiplier must be positive");
   });
 });

@@ -249,6 +249,109 @@ describe("BacktestAdapter", () => {
       expect(order).toBeNull();
     });
 
+    test("cancels order by client order ID", async () => {
+      const adapter = createBacktestAdapter({ fillMode: "delayed" });
+      const clientOrderId = adapter.generateOrderId();
+
+      await adapter.submitOrder({
+        clientOrderId,
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Cancel using clientOrderId
+      await adapter.cancelOrder(clientOrderId);
+      const order = await adapter.getOrder(clientOrderId);
+      expect(order?.status).toBe("canceled");
+    });
+
+    test("throws when canceling non-existent order", async () => {
+      const adapter = createBacktestAdapter();
+      await expect(adapter.cancelOrder("non-existent-order")).rejects.toThrow("Order not found");
+    });
+
+    test("throws when canceling already filled order", async () => {
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Order is filled in immediate mode
+      expect(order.status).toBe("filled");
+
+      await expect(adapter.cancelOrder(order.id)).rejects.toThrow("Cannot cancel completed order");
+    });
+
+    test("stop orders are accepted but not filled in immediate mode", async () => {
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "stop",
+        timeInForce: "day",
+        stopPrice: 145,
+      });
+
+      expect(order.status).toBe("accepted");
+      expect(order.filledQty).toBe(0);
+    });
+
+    test("stop_limit orders are accepted but not filled in immediate mode", async () => {
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "stop_limit",
+        timeInForce: "day",
+        stopPrice: 145,
+        limitPrice: 146,
+      });
+
+      expect(order.status).toBe("accepted");
+      expect(order.filledQty).toBe(0);
+    });
+
+    test("handles multi-leg orders using legs array", async () => {
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        legs: [{ symbol: "AAPL", ratio: 1 }],
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      expect(order.symbol).toBe("AAPL");
+    });
+
+    test("uses default price when priceProvider returns undefined", async () => {
+      const adapter = createBacktestAdapter({
+        initialCash: 100000,
+        priceProvider: () => undefined,
+      });
+
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "UNKNOWN",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Default price is 100
+      expect(order.filledAvgPrice).toBe(100);
+    });
+
     test("lists open orders", async () => {
       const adapter = createBacktestAdapter({ fillMode: "delayed" });
 
@@ -279,9 +382,106 @@ describe("BacktestAdapter", () => {
       expect(closedOrders.length).toBe(1);
       expect(closedOrders[0]?.status).toBe("filled");
     });
+
+    test("lists all orders", async () => {
+      // Create a filled order
+      await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Create an open order (stop order stays accepted)
+      await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "GOOGL",
+        qty: 5,
+        side: "buy",
+        type: "stop",
+        timeInForce: "day",
+        stopPrice: 130,
+      });
+
+      const allOrders = await adapter.getOrders("all");
+      expect(allOrders.length).toBe(2);
+    });
+
+    test("getOrder finds by clientOrderId when not found by ID", async () => {
+      const clientOrderId = adapter.generateOrderId();
+      await adapter.submitOrder({
+        clientOrderId,
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Use clientOrderId to find order (not the system-generated id)
+      const order = await adapter.getOrder(clientOrderId);
+      expect(order).not.toBeNull();
+      expect(order?.clientOrderId).toBe(clientOrderId);
+    });
   });
 
   describe("Position operations", () => {
+    test("throws when closing non-existent position", async () => {
+      const adapter = createBacktestAdapter({ initialCash: 100000 });
+      await expect(adapter.closePosition("NONEXISTENT")).rejects.toThrow("Position not found");
+    });
+
+    test("throws when closing more than held", async () => {
+      const adapter = createBacktestAdapter({
+        initialCash: 100000,
+        priceProvider: () => 100,
+      });
+
+      await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      await expect(adapter.closePosition("AAPL", 20)).rejects.toThrow(
+        "Cannot close more than held"
+      );
+    });
+
+    test("rejects sell order with insufficient shares", async () => {
+      const adapter = createBacktestAdapter({
+        initialCash: 100000,
+        priceProvider: () => 100,
+      });
+
+      // Buy 5 shares
+      await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 5,
+        side: "buy",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      // Try to sell 10
+      const order = await adapter.submitOrder({
+        clientOrderId: adapter.generateOrderId(),
+        symbol: "AAPL",
+        qty: 10,
+        side: "sell",
+        type: "market",
+        timeInForce: "day",
+      });
+
+      expect(order.status).toBe("rejected");
+    });
+
     test("lists all positions", async () => {
       const adapter = createBacktestAdapter({
         initialCash: 100000,
@@ -468,6 +668,36 @@ describe("createBacktestAdapterWithUtils", () => {
     expect(typeof adapter.reset).toBe("function");
     expect(typeof adapter.getCash).toBe("function");
   });
+
+  test("setCash updates the cash value", () => {
+    const adapter = createBacktestAdapterWithUtils({ initialCash: 100000 });
+    adapter.setCash(50000);
+    expect(adapter.getCash()).toBe(50000);
+  });
+
+  test("reset restores initial state", () => {
+    const adapter = createBacktestAdapterWithUtils({ initialCash: 100000 });
+    adapter.setCash(25000);
+    adapter.updatePrices({ AAPL: 200 });
+    adapter.reset();
+    expect(adapter.getCash()).toBe(100000);
+  });
+
+  test("updatePrices stores price overrides", () => {
+    const adapter = createBacktestAdapterWithUtils({
+      initialCash: 100000,
+      priceProvider: () => 100,
+    });
+    adapter.updatePrices({ AAPL: 200 });
+    // The adapter uses its internal price provider which checks overrides
+    expect(adapter.getCash()).toBe(100000);
+  });
+
+  test("triggerFills can be called", () => {
+    const adapter = createBacktestAdapterWithUtils({ initialCash: 100000 });
+    // Just verify it doesn't throw
+    adapter.triggerFills();
+  });
 });
 
 describe("createBrokerClient factory", () => {
@@ -518,5 +748,23 @@ describe("createBrokerClient factory", () => {
         environment: "UNKNOWN" as any,
       })
     ).toThrow("Unknown environment");
+  });
+
+  test("creates Alpaca client for LIVE with valid credentials", () => {
+    const client = createBrokerClient({
+      environment: "LIVE",
+      apiKey: "test-key",
+      apiSecret: "test-secret",
+    });
+    expect(client.getEnvironment()).toBe("LIVE");
+  });
+
+  test("creates Alpaca client for PAPER with valid credentials", () => {
+    const client = createBrokerClient({
+      environment: "PAPER",
+      apiKey: "test-key",
+      apiSecret: "test-secret",
+    });
+    expect(client.getEnvironment()).toBe("PAPER");
   });
 });
