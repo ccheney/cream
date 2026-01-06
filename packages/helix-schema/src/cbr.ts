@@ -241,7 +241,7 @@ function generateShortSummary(decision: TradeDecision): string {
   const regime = decision.regime_label;
 
   // Extract first sentence or first 100 chars of rationale
-  let rationalePreview = decision.rationale_text.split(".")[0];
+  let rationalePreview = decision.rationale_text.split(".")[0] ?? decision.rationale_text;
   if (rationalePreview.length > 100) {
     rationalePreview = `${rationalePreview.slice(0, 97)}...`;
   }
@@ -297,8 +297,8 @@ export async function retrieveSimilarCases(
   const situationBrief = generateCBRSituationBrief(snapshot);
 
   // 2. Generate embedding
-  const embeddingResult = await embeddingClient.embed(situationBrief);
-  const queryEmbedding = embeddingResult.embedding;
+  const embeddingResult = await embeddingClient.generateEmbedding(situationBrief);
+  const queryEmbedding = embeddingResult.values;
 
   // 3. Build filter conditions
   const filters: Record<string, unknown> = {};
@@ -468,7 +468,7 @@ export async function retainCase(
 
   // Generate embedding if requested
   if (generateEmbedding && decision.rationale_text) {
-    const _embeddingResult = await embeddingClient.embed(decision.rationale_text);
+    const _embeddingResult = await embeddingClient.generateEmbedding(decision.rationale_text);
 
     // TODO: Use client.mutate() to insert TradeDecision with embedding
     // This would call InsertTradeDecision from queries.hx with the

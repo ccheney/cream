@@ -336,13 +336,13 @@ export async function ingestThesisMemory(
   const embeddingText = generateEmbeddingText(memory);
 
   // Generate embedding
-  const embeddingResult = await embeddingClient.embed(embeddingText);
+  const embeddingResult = await embeddingClient.generateEmbedding(embeddingText);
 
   // Store in HelixDB
-  // The client.mutate call would insert the ThesisMemory node with its embedding
-  await client.mutate("InsertThesisMemory", {
+  // The client.query call would insert the ThesisMemory node with its embedding
+  await client.query("InsertThesisMemory", {
     ...memory,
-    entry_thesis_embedding: embeddingResult.embedding,
+    entry_thesis_embedding: embeddingResult.values,
   });
 }
 
@@ -364,7 +364,7 @@ export async function retrieveSimilarTheses(
   const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
   // Generate query embedding
-  const embeddingResult = await embeddingClient.embed(query);
+  const embeddingResult = await embeddingClient.generateEmbedding(query);
 
   // Build filters
   const filters: Record<string, unknown> = {
@@ -381,15 +381,18 @@ export async function retrieveSimilarTheses(
   }
 
   // Execute vector search
-  const results = await client.query("SearchSimilarTheses", {
-    query_embedding: embeddingResult.embedding,
-    top_k: opts.topK,
-    min_similarity: opts.minSimilarity,
-    ...filters,
-  });
+  const results = await client.query<Array<{ node: ThesisMemory; similarity: number }>>(
+    "SearchSimilarTheses",
+    {
+      query_embedding: embeddingResult.values,
+      top_k: opts.topK,
+      min_similarity: opts.minSimilarity,
+      ...filters,
+    }
+  );
 
   // Convert to ThesisMemoryResult
-  return (results as Array<{ node: ThesisMemory; similarity: number }>).map((r) => ({
+  return results.data.map((r) => ({
     memory: r.node,
     similarityScore: r.similarity,
   }));

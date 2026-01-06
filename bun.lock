@@ -199,6 +199,7 @@
       "dependencies": {
         "@cream/config": "workspace:*",
         "@cream/domain": "workspace:*",
+        "@cream/helix": "workspace:*",
         "@google/genai": "1.34.0",
       },
       "devDependencies": {
