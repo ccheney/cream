@@ -636,6 +636,31 @@ export {
   truncateSnapshot,
   validateSnapshotSize,
 } from "./snapshot-limits";
+// Snapshot logging and observability
+export {
+  createConsoleLogger,
+  createLogEntry,
+  createNoOpLogger,
+  defaultSnapshotLogger,
+  diffSnapshots,
+  extractSnapshotMetrics,
+  formatLogEntry,
+  formatSnapshotDiff,
+  type LogLevel,
+  logDataSourceFetch,
+  logSnapshotComplete,
+  logSnapshotError,
+  logSnapshotStart,
+  logValidationResult,
+  redactObject,
+  redactSensitiveData as redactSensitiveDataForLogging,
+  type SnapshotAssemblyMetrics,
+  type SnapshotDiffEntry,
+  type SnapshotDiffOptions,
+  type SnapshotDiffResult,
+  type SnapshotLogEntry,
+  type SnapshotLogger,
+} from "./snapshot-logging";
 // Time utilities
 export {
   addDays,
