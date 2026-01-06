@@ -54,8 +54,12 @@ htmlcov/
 
 # Database files
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite
 *.sqlite3
+file:*.db*
 
 # Docker volumes (local)
 .docker-data/

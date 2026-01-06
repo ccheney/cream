@@ -31,7 +31,9 @@ const baseStyles: React.CSSProperties = {
   lineHeight: "1.5",
   color: "#1c1917", // stone-900
   backgroundColor: "#ffffff",
-  border: "1px solid #d6d3d1", // stone-300
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderColor: "#d6d3d1", // stone-300
   borderRadius: "6px",
   outline: "none",
   transition: "border-color 0.2s, box-shadow 0.2s",
