@@ -5,6 +5,8 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import {
   useBacktest,
@@ -59,8 +61,14 @@ export default function BacktestPage() {
         </h2>
         <div className="grid grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm text-cream-500 dark:text-cream-400 mb-1">Name</label>
+            <label
+              htmlFor="backtest-name"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
+              Name
+            </label>
             <input
+              id="backtest-name"
               type="text"
               value={newBacktest.name}
               onChange={(e) => setNewBacktest({ ...newBacktest, name: e.target.value })}
@@ -69,10 +77,14 @@ export default function BacktestPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-cream-500 dark:text-cream-400 mb-1">
+            <label
+              htmlFor="backtest-start"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
               Start Date
             </label>
             <input
+              id="backtest-start"
               type="date"
               value={newBacktest.startDate}
               onChange={(e) => setNewBacktest({ ...newBacktest, startDate: e.target.value })}
@@ -80,10 +92,14 @@ export default function BacktestPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-cream-500 dark:text-cream-400 mb-1">
+            <label
+              htmlFor="backtest-end"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
               End Date
             </label>
             <input
+              id="backtest-end"
               type="date"
               value={newBacktest.endDate}
               onChange={(e) => setNewBacktest({ ...newBacktest, endDate: e.target.value })}
@@ -91,10 +107,14 @@ export default function BacktestPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-cream-500 dark:text-cream-400 mb-1">
+            <label
+              htmlFor="backtest-capital"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
               Initial Capital
             </label>
             <input
+              id="backtest-capital"
               type="number"
               value={newBacktest.initialCapital}
               onChange={(e) =>
@@ -130,40 +150,52 @@ export default function BacktestPage() {
         ) : backtests && backtests.length > 0 ? (
           <div className="divide-y divide-cream-100 dark:divide-night-700">
             {backtests.map((bt) => (
-              <button
+              <div
                 key={bt.id}
-                onClick={() => setSelectedBacktest(bt.id)}
-                className={`w-full p-4 text-left hover:bg-cream-50 dark:hover:bg-night-750 transition-colors ${
+                className={`flex items-center p-4 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors ${
                   selectedBacktest === bt.id ? "bg-cream-50 dark:bg-night-750" : ""
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-medium text-cream-900 dark:text-cream-100">
-                      {bt.name}
-                    </span>
-                    <span
-                      className={`ml-2 px-2 py-0.5 text-xs font-medium rounded ${
-                        bt.status === "completed"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : bt.status === "running"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                            : bt.status === "failed"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                      }`}
-                    >
-                      {bt.status}
+                <button
+                  type="button"
+                  onClick={() => setSelectedBacktest(bt.id)}
+                  className="flex-1 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-cream-900 dark:text-cream-100">
+                        {bt.name}
+                      </span>
+                      <span
+                        className={`ml-2 px-2 py-0.5 text-xs font-medium rounded ${
+                          bt.status === "completed"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : bt.status === "running"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                              : bt.status === "failed"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
+                        }`}
+                      >
+                        {bt.status}
+                      </span>
+                    </div>
+                    <span className="text-sm text-cream-500 dark:text-cream-400">
+                      {formatDistanceToNow(new Date(bt.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <span className="text-sm text-cream-500 dark:text-cream-400">
-                    {formatDistanceToNow(new Date(bt.createdAt), { addSuffix: true })}
-                  </span>
-                </div>
-                <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
-                  {bt.startDate} to {bt.endDate} | {formatCurrency(bt.initialCapital)}
-                </div>
-              </button>
+                  <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
+                    {bt.startDate} to {bt.endDate} | {formatCurrency(bt.initialCapital)}
+                  </div>
+                </button>
+                <Link
+                  href={`/backtest/${bt.id}`}
+                  className="ml-4 p-2 rounded-md text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+                  title="View details"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Link>
+              </div>
             ))}
           </div>
         ) : (
@@ -202,14 +234,14 @@ export default function BacktestPage() {
             {equity && equity.length > 0 ? (
               <div className="h-64 relative">
                 <div className="absolute inset-0 flex items-end gap-px">
-                  {equity.map((point, i) => {
+                  {equity.map((point) => {
                     const min = Math.min(...equity.map((p) => p.nav));
                     const max = Math.max(...equity.map((p) => p.nav));
                     const range = max - min || 1;
                     const height = ((point.nav - min) / range) * 100;
                     return (
                       <div
-                        key={i}
+                        key={point.timestamp}
                         className="flex-1 bg-blue-500 dark:bg-blue-400 rounded-t"
                         style={{ height: `${height}%` }}
                         title={`${new Date(point.timestamp).toLocaleDateString()}: ${formatCurrency(point.nav)}`}
