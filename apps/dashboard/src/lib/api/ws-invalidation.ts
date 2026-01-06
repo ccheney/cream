@@ -39,6 +39,7 @@ export interface WSMessage<T = unknown> {
 
 /**
  * Quote update message data.
+ * Extended to include streaming data fields from Massive WebSocket.
  */
 export interface QuoteData {
   symbol: string;
@@ -47,6 +48,11 @@ export interface QuoteData {
   last: number;
   volume: number;
   timestamp: string;
+  // Optional fields from WebSocket streaming
+  bidSize?: number;
+  askSize?: number;
+  prevClose?: number;
+  changePercent?: number;
 }
 
 /**
@@ -134,6 +140,7 @@ export function handleWSMessage(message: WSMessage): void {
     case "quote": {
       const quote = message.data as QuoteData;
       // Update quote cache directly to avoid refetch latency
+      // Uses queryKeys.market.quote which returns ["market", symbol, "quote"]
       queryClient.setQueryData(queryKeys.market.quote(quote.symbol), quote);
       break;
     }

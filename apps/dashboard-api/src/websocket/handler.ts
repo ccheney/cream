@@ -20,6 +20,10 @@ import {
   type UnsubscribeMessage,
   type UnsubscribeSymbolsMessage,
 } from "../../../../packages/domain/src/websocket/index.js";
+import {
+  getCachedQuote,
+  subscribeSymbols as subscribeToStreaming,
+} from "../streaming/market-data.js";
 
 // ============================================
 // Types
@@ -182,16 +186,47 @@ function handleUnsubscribe(ws: WebSocketWithMetadata, message: UnsubscribeMessag
 
 /**
  * Handle subscribe symbols message.
+ * Subscribes to the Massive WebSocket for real-time market data.
  */
 function handleSubscribeSymbols(ws: WebSocketWithMetadata, message: SubscribeSymbolsMessage): void {
   const metadata = ws.data;
+  const newSymbols: string[] = [];
 
   for (const symbol of message.symbols) {
-    metadata.symbols.add(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    if (!metadata.symbols.has(upperSymbol)) {
+      metadata.symbols.add(upperSymbol);
+      newSymbols.push(upperSymbol);
+    }
   }
 
   // Auto-subscribe to quotes channel
   metadata.channels.add("quotes");
+
+  // Subscribe to streaming market data for new symbols
+  if (newSymbols.length > 0) {
+    subscribeToStreaming(newSymbols).catch((_error) => {
+      // Silently handle subscription failures - streaming is optional enhancement
+    });
+
+    // Send cached quotes immediately for symbols we have data for
+    for (const symbol of newSymbols) {
+      const cached = getCachedQuote(symbol);
+      if (cached) {
+        sendMessage(ws, {
+          type: "quote",
+          data: {
+            symbol,
+            bid: cached.bid,
+            ask: cached.ask,
+            last: cached.last,
+            volume: cached.volume,
+            timestamp: cached.timestamp.toISOString(),
+          },
+        });
+      }
+    }
+  }
 
   sendMessage(ws, {
     type: "subscribed",

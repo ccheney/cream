@@ -472,6 +472,11 @@ export interface Quote {
   last: number;
   volume: number;
   timestamp: string;
+  // Optional fields from WebSocket streaming
+  bidSize?: number;
+  askSize?: number;
+  prevClose?: number;
+  changePercent?: number;
 }
 
 export interface Candle {
