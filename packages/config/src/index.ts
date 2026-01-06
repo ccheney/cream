@@ -75,3 +75,18 @@ export {
   type KeyStats,
   type RotationStrategy,
 } from "./keyRotation";
+// Secrets Management
+export {
+  createEnvSecretsManager,
+  createSecretsManager,
+  EncryptedFileSecretsProvider,
+  EnvSecretsProvider,
+  type FileEncryptionConfig,
+  MemorySecretsProvider,
+  type Secret,
+  type SecretAuditEvent,
+  SecretsManager,
+  type SecretsManagerConfig,
+  type SecretsLogger,
+  type SecretsProvider,
+} from "./secrets";
