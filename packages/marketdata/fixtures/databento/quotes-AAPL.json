@@ -1,0 +1,7 @@
+[
+  { "ts_event": "1735722000000000000", "bid_px": 185.50, "ask_px": 185.55, "bid_sz": 100, "ask_sz": 200, "symbol": "AAPL" },
+  { "ts_event": "1735722000100000000", "bid_px": 185.51, "ask_px": 185.56, "bid_sz": 150, "ask_sz": 175, "symbol": "AAPL" },
+  { "ts_event": "1735722000200000000", "bid_px": 185.52, "ask_px": 185.57, "bid_sz": 200, "ask_sz": 150, "symbol": "AAPL" },
+  { "ts_event": "1735722000300000000", "bid_px": 185.53, "ask_px": 185.58, "bid_sz": 125, "ask_sz": 225, "symbol": "AAPL" },
+  { "ts_event": "1735722000400000000", "bid_px": 185.54, "ask_px": 185.59, "bid_sz": 175, "ask_sz": 180, "symbol": "AAPL" }
+]
