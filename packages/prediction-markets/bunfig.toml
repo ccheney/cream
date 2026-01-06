@@ -1,0 +1,26 @@
+# Bun configuration for @cream/prediction-markets
+# See: https://bun.sh/docs/runtime/bunfig
+#
+# Coverage tier: Standard (70% line, 65% branch, 70% function)
+
+[test]
+coverage = true
+coverageDir = "coverage"
+
+# Standard tier thresholds (70/65/70)
+coverageThreshold = { line = 70, branch = 65, function = 70 }
+
+# Coverage reporters
+coverageReporter = ["text", "lcov"]
+
+# Patterns to exclude from coverage
+coverageIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/*.d.ts",
+  "**/node_modules/**",
+  "**/dist/**",
+]
+
+# Timeout for individual tests (ms)
+timeout = 30000

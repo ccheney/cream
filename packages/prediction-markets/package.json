@@ -1,0 +1,35 @@
+{
+  "name": "@cream/prediction-markets",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "import": "./src/types.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "typecheck": "tsc --noEmit",
+    "test": "CREAM_ENV=BACKTEST bun test",
+    "lint": "biome check src/",
+    "format": "biome format --write src/",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@cream/domain": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cream/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@typescript/native-preview": "7.0.0-dev.20260106.1"
+  }
+}

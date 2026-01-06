@@ -289,6 +289,19 @@
         "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
+    "packages/prediction-markets": {
+      "name": "@cream/prediction-markets",
+      "version": "0.0.1",
+      "dependencies": {
+        "@cream/domain": "workspace:*",
+        "zod": "^3.24.2",
+      },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
+      },
+    },
     "packages/recovery": {
       "name": "@cream/recovery",
       "version": "0.0.1",
@@ -646,6 +659,8 @@
     "@cream/metrics": ["@cream/metrics@workspace:packages/metrics"],
 
     "@cream/mocks": ["@cream/mocks@workspace:packages/mocks"],
+
+    "@cream/prediction-markets": ["@cream/prediction-markets@workspace:packages/prediction-markets"],
 
     "@cream/recovery": ["@cream/recovery@workspace:packages/recovery"],
 
@@ -3098,6 +3113,8 @@
     "@cream/helix/testcontainers": ["testcontainers@10.28.0", "", { "dependencies": { "@balena/dockerignore": "^1.0.2", "@types/dockerode": "^3.3.35", "archiver": "^7.0.1", "async-lock": "^1.4.1", "byline": "^5.0.0", "debug": "^4.3.5", "docker-compose": "^0.24.8", "dockerode": "^4.0.5", "get-port": "^7.1.0", "proper-lockfile": "^4.1.2", "properties-reader": "^2.3.0", "ssh-remote-port-forward": "^1.0.4", "tar-fs": "^3.0.7", "tmp": "^0.2.3", "undici": "^5.29.0" } }, "sha512-1fKrRRCsgAQNkarjHCMKzBKXSJFmzNTiTbhb5E/j5hflRXChEtHvkefjaHlgkNUjfw92/Dq8LTgwQn6RDBFbMg=="],
 
     "@cream/marketdata/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@cream/prediction-markets/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@grpc/grpc-js/@grpc/proto-loader": ["@grpc/proto-loader@0.8.0", "", { "dependencies": { "lodash.camelcase": "^4.3.0", "long": "^5.0.0", "protobufjs": "^7.5.3", "yargs": "^17.7.2" }, "bin": { "proto-loader-gen-types": "build/bin/proto-loader-gen-types.js" } }, "sha512-rc1hOQtjIWGxcxpb9aHAfLpIctjEnsDehj0DAiVfBlmT84uvR0uUtN2hEi/ecvWVjXUGf5qPF4qEgiLOx1YIMQ=="],
 
