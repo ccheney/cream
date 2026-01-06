@@ -5,6 +5,9 @@
 -- Tables: decisions, agent_outputs, orders, positions, position_history,
 --         portfolio_snapshots, config_versions
 --
+-- Note: CHECK constraints removed - Turso doesn't support them yet.
+-- Validation is handled at the application layer.
+--
 -- @see docs/plans/ui/04-data-requirements.md lines 7-30
 
 -- Track applied migrations
@@ -23,16 +26,16 @@ CREATE TABLE IF NOT EXISTS decisions (
   id TEXT PRIMARY KEY,
   cycle_id TEXT NOT NULL,
   symbol TEXT NOT NULL,
-  action TEXT NOT NULL CHECK (action IN ('BUY', 'SELL', 'HOLD', 'CLOSE', 'INCREASE', 'REDUCE', 'NO_TRADE')),
-  direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT', 'FLAT')),
+  action TEXT NOT NULL, -- BUY, SELL, HOLD, CLOSE, INCREASE, REDUCE, NO_TRADE
+  direction TEXT NOT NULL, -- LONG, SHORT, FLAT
   size REAL NOT NULL,
-  size_unit TEXT NOT NULL CHECK (size_unit IN ('SHARES', 'CONTRACTS', 'DOLLARS', 'PCT_EQUITY')),
+  size_unit TEXT NOT NULL, -- SHARES, CONTRACTS, DOLLARS, PCT_EQUITY
   entry_price REAL,
   stop_loss REAL,
   take_profit REAL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'executed', 'cancelled', 'expired')),
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, approved, rejected, executed, cancelled, expired
   rationale TEXT,
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   executed_at TEXT,
@@ -55,11 +58,9 @@ CREATE INDEX IF NOT EXISTS idx_decisions_environment ON decisions(environment);
 CREATE TABLE IF NOT EXISTS agent_outputs (
   id TEXT PRIMARY KEY,
   decision_id TEXT NOT NULL,
-  agent_type TEXT NOT NULL CHECK (agent_type IN (
-    'technical', 'news', 'fundamentals', 'bullish', 'bearish', 'trader', 'risk', 'critic'
-  )),
-  vote TEXT NOT NULL CHECK (vote IN ('APPROVE', 'REJECT', 'ABSTAIN')),
-  confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
+  agent_type TEXT NOT NULL, -- technical, news, fundamentals, bullish, bearish, trader, risk, critic
+  vote TEXT NOT NULL, -- APPROVE, REJECT, ABSTAIN
+  confidence REAL NOT NULL, -- 0 to 1
   reasoning_summary TEXT,
   full_reasoning TEXT,
   tokens_used INTEGER,
@@ -82,20 +83,18 @@ CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   decision_id TEXT,
   symbol TEXT NOT NULL,
-  side TEXT NOT NULL CHECK (side IN ('buy', 'sell')),
+  side TEXT NOT NULL, -- buy, sell
   qty REAL NOT NULL,
-  order_type TEXT NOT NULL CHECK (order_type IN ('market', 'limit', 'stop', 'stop_limit')),
+  order_type TEXT NOT NULL, -- market, limit, stop, stop_limit
   limit_price REAL,
   stop_price REAL,
-  time_in_force TEXT NOT NULL DEFAULT 'day' CHECK (time_in_force IN ('day', 'gtc', 'ioc', 'fok')),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
-    'pending', 'submitted', 'accepted', 'partial_fill', 'filled', 'cancelled', 'rejected', 'expired'
-  )),
+  time_in_force TEXT NOT NULL DEFAULT 'day', -- day, gtc, ioc, fok
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, submitted, accepted, partial_fill, filled, cancelled, rejected, expired
   broker_order_id TEXT,
   filled_qty REAL DEFAULT 0,
   filled_avg_price REAL,
   commission REAL,
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   submitted_at TEXT,
   filled_at TEXT,
@@ -119,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_environment ON orders(environment);
 CREATE TABLE IF NOT EXISTS positions (
   id TEXT PRIMARY KEY,
   symbol TEXT NOT NULL,
-  side TEXT NOT NULL CHECK (side IN ('long', 'short')),
+  side TEXT NOT NULL, -- long, short
   qty REAL NOT NULL,
   avg_entry REAL NOT NULL,
   current_price REAL,
@@ -128,7 +127,7 @@ CREATE TABLE IF NOT EXISTS positions (
   market_value REAL,
   cost_basis REAL,
   thesis_id TEXT, -- Reference to HelixDB thesis
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   opened_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   closed_at TEXT
@@ -169,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_position_history_position_ts ON position_history(
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp TEXT NOT NULL,
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   nav REAL NOT NULL,
   cash REAL NOT NULL,
   equity REAL NOT NULL,
@@ -196,10 +195,10 @@ CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_environment ON portfolio_snap
 
 CREATE TABLE IF NOT EXISTS config_versions (
   id TEXT PRIMARY KEY,
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   config_json TEXT NOT NULL,
   description TEXT,
-  active INTEGER NOT NULL DEFAULT 0 CHECK (active IN (0, 1)),
+  active INTEGER NOT NULL DEFAULT 0, -- 0 or 1
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   created_by TEXT
 );
