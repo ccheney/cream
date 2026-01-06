@@ -851,7 +851,7 @@ impl ReconciliationManager {
 // ============================================================================
 
 /// Local position snapshot for comparison.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalPositionSnapshot {
     /// Symbol.
     pub symbol: String,
