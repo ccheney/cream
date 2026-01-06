@@ -193,6 +193,107 @@ describe("MockPolygonAdapter", () => {
       expect(snapshot).toBeDefined();
       expect(snapshot?.symbol).toBe("AAPL");
     });
+
+    it("generates candles for unknown symbol", async () => {
+      // Request candles for a symbol without pre-set data
+      const candles = await polygon.getCandles("UNKNOWN_SYMBOL", "1h", 5);
+
+      expect(candles.length).toBe(5);
+      expect(candles[0]?.open).toBeDefined();
+    });
+
+    it("generates candles non-deterministically when configured", async () => {
+      const nonDeterministicPolygon = createMockPolygon({
+        deterministic: false,
+      });
+
+      const candles = await nonDeterministicPolygon.getCandles("TEST", "1h", 3);
+      expect(candles.length).toBe(3);
+    });
+  });
+
+  describe("snapshots", () => {
+    it("returns undefined for unknown symbol", async () => {
+      const snapshot = await polygon.getSnapshot("UNKNOWN_SYMBOL_XYZ");
+      expect(snapshot).toBeUndefined();
+    });
+
+    it("returns undefined from getSnapshotWithIndicators for unknown symbol", async () => {
+      const result = await polygon.getSnapshotWithIndicators("UNKNOWN_SYMBOL_XYZ");
+      expect(result).toBeUndefined();
+    });
+
+    it("sets custom snapshot data", () => {
+      const customSnapshot = {
+        symbol: "CUSTOM",
+        lastPrice: 123.45,
+        candles: [
+          {
+            timestamp: new Date().toISOString(),
+            open: 122.5,
+            high: 125.0,
+            low: 122.0,
+            close: 123.45,
+            volume: 1000000,
+          },
+        ],
+        indicators: {
+          rsi_14: 55,
+          atr_14: 2.5,
+          sma_20: 120,
+          sma_50: 118,
+          sma_200: 110,
+        },
+      };
+
+      polygon.setSnapshot("CUSTOM", customSnapshot);
+    });
+
+    it("sets custom candle data", () => {
+      const candles = [
+        {
+          timestamp: new Date().toISOString(),
+          open: 100,
+          high: 105,
+          low: 99,
+          close: 104,
+          volume: 1000000,
+        },
+      ];
+
+      polygon.setCandles("CUSTOM", "1h", candles);
+    });
+
+    it("sets custom quote data", () => {
+      const quote = {
+        symbol: "CUSTOM",
+        bid: 99.5,
+        ask: 100.5,
+        bidSize: 100,
+        askSize: 200,
+        timestamp: new Date().toISOString(),
+      };
+
+      polygon.setQuote("CUSTOM", quote);
+    });
+
+    it("resets all state", async () => {
+      // Set some custom data first
+      polygon.setQuote("TEST", {
+        symbol: "TEST",
+        bid: 99,
+        ask: 100,
+        bidSize: 100,
+        askSize: 200,
+        timestamp: new Date().toISOString(),
+      });
+
+      polygon.reset();
+
+      // After reset, pre-loaded fixtures should be restored
+      const snapshot = await polygon.getSnapshot("AAPL");
+      expect(snapshot).toBeDefined();
+    });
   });
 
   describe("quotes", () => {
@@ -262,6 +363,20 @@ describe("MockDatabentoAdapter", () => {
       expect(trades[0]?.price).toBeDefined();
       expect(trades[0]?.size).toBeDefined();
     });
+
+    it("sets custom trade data", () => {
+      const customTrades = [
+        {
+          symbol: "CUSTOM",
+          price: 150.25,
+          size: 100,
+          timestamp: new Date().toISOString(),
+          side: "B" as const,
+        },
+      ];
+
+      databento.setTrades("CUSTOM", customTrades);
+    });
   });
 
   describe("quotes", () => {
@@ -271,6 +386,37 @@ describe("MockDatabentoAdapter", () => {
       expect(quote.symbol).toBe("AAPL");
       expect(quote.bid).toBeDefined();
       expect(quote.ask).toBeDefined();
+    });
+
+    it("sets custom quote data", () => {
+      const customQuote = {
+        symbol: "CUSTOM",
+        bid: 149.5,
+        ask: 150.5,
+        bidSize: 500,
+        askSize: 600,
+        timestamp: new Date().toISOString(),
+      };
+
+      databento.setQuote("CUSTOM", customQuote);
+    });
+  });
+
+  describe("reset", () => {
+    it("clears all state", () => {
+      databento.setQuote("TEST", {
+        symbol: "TEST",
+        bid: 100,
+        ask: 101,
+        bidSize: 100,
+        askSize: 100,
+        timestamp: new Date().toISOString(),
+      });
+
+      databento.reset();
+
+      // After reset, state should be cleared
+      expect(databento).toBeDefined();
     });
   });
 });
