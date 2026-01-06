@@ -172,3 +172,22 @@ export {
   setWebsocketState,
   updateSignalFreshness,
 } from "./metrics";
+
+// ============================================
+// Sector Mapping Exports
+// ============================================
+
+export {
+  findRelatedInstruments as findSectorInstruments,
+  findSectorMatches,
+  getAggregateImpact,
+  getPrimarySector,
+  getSectorETFs,
+  type ImpactDirection,
+  isHighVolatilityMarket,
+  SECTOR_MAPPINGS,
+  type Sector,
+  type SectorMarketMapping,
+  type SectorMatchResult,
+  type VolatilityExpectation,
+} from "./mappings";
