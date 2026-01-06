@@ -5,6 +5,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 import { useState } from "react";
 import { useDecisions } from "@/hooks/queries";
 import type { DecisionAction, DecisionStatus } from "@/lib/api/types";
@@ -129,7 +130,10 @@ function DecisionCard({
       : "--";
 
   return (
-    <div className="p-4 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
+    <Link
+      href={`/decisions/${decision.id}`}
+      className="block p-4 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors"
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <span
@@ -196,6 +200,6 @@ function DecisionCard({
           </span>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
