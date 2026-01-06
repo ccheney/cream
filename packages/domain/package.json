@@ -14,6 +14,14 @@
       "types": "./src/env.ts",
       "import": "./src/env.ts"
     },
+    "./schemas": {
+      "types": "./src/schemas/index.ts",
+      "import": "./src/schemas/index.ts"
+    },
+    "./time": {
+      "types": "./src/time.ts",
+      "import": "./src/time.ts"
+    },
     "./websocket": {
       "types": "./src/websocket/index.ts",
       "import": "./src/websocket/index.ts"
