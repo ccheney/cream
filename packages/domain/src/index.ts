@@ -604,3 +604,21 @@ export {
   runPreflightChecks,
   type TraderAgentInterface,
 } from "./enforcement/index.js";
+// Drawdown metrics
+export {
+  calculateDrawdown,
+  calculateDrawdownStats,
+  calculateRecoveryNeeded,
+  checkDrawdownAlert,
+  createEmptyDrawdownStats,
+  DEFAULT_DRAWDOWN_ALERT_CONFIG,
+  type DrawdownAlertConfig,
+  type DrawdownEvent,
+  DrawdownStatsSchema,
+  type DrawdownStats,
+  DrawdownTracker,
+  DRAWDOWN_THRESHOLDS,
+  type EquityPoint,
+  formatDrawdownStats,
+  getRiskLevel,
+} from "./drawdown";

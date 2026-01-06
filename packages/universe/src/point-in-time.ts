@@ -13,7 +13,6 @@ import type { IndexId } from "@cream/config";
 import type {
   IndexConstituentsRepository,
   TickerChangesRepository,
-  TursoClient,
   UniverseSnapshotsRepository,
 } from "@cream/storage";
 import { createFMPClient, type FMPClient, type FMPClientConfig } from "./fmp-client.js";
@@ -449,20 +448,31 @@ export class PointInTimeUniverseResolver {
 // ============================================
 
 /**
- * Create a PointInTimeUniverseResolver from a Turso client
+ * Create a PointInTimeUniverseResolver.
+ *
+ * Note: Repositories must be created by the caller to avoid circular dependencies.
+ *
+ * @example
+ * ```typescript
+ * import { IndexConstituentsRepository, TickerChangesRepository, UniverseSnapshotsRepository } from "@cream/storage";
+ *
+ * const constituentsRepo = new IndexConstituentsRepository(client);
+ * const tickerChangesRepo = new TickerChangesRepository(client);
+ * const snapshotsRepo = new UniverseSnapshotsRepository(client);
+ *
+ * const resolver = createPointInTimeResolver(constituentsRepo, tickerChangesRepo, snapshotsRepo);
+ * ```
  */
 export function createPointInTimeResolver(
-  client: TursoClient,
+  constituentsRepo: IndexConstituentsRepository,
+  tickerChangesRepo: TickerChangesRepository,
+  snapshotsRepo: UniverseSnapshotsRepository,
   config?: PointInTimeResolverConfig
 ): PointInTimeUniverseResolver {
-  // Import repositories dynamically to avoid circular dependencies
-  const { IndexConstituentsRepository, TickerChangesRepository, UniverseSnapshotsRepository } =
-    require("@cream/storage") as typeof import("@cream/storage");
-
   return new PointInTimeUniverseResolver(
-    new IndexConstituentsRepository(client),
-    new TickerChangesRepository(client),
-    new UniverseSnapshotsRepository(client),
+    constituentsRepo,
+    tickerChangesRepo,
+    snapshotsRepo,
     config
   );
 }
