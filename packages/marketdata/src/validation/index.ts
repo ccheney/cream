@@ -31,6 +31,7 @@
 // Export all submodules
 export * from "./anomalies";
 export * from "./calendar";
+export * from "./external";
 export * from "./gaps";
 export * from "./staleness";
 
