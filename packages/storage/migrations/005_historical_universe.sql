@@ -5,6 +5,8 @@
 -- Prevents survivorship bias in backtesting by tracking historical
 -- index compositions and ticker changes.
 --
+-- Note: CHECK constraints removed - Turso doesn't support them yet.
+--
 -- @see docs/plans/12-backtest.md - Survivorship Bias Prevention
 --
 -- Impact of survivorship bias: 1-4% annual return inflation
@@ -19,10 +21,7 @@
 
 CREATE TABLE IF NOT EXISTS index_constituents (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  index_id TEXT NOT NULL CHECK (index_id IN (
-    'SP500', 'NASDAQ100', 'DOWJONES', 'RUSSELL2000', 'RUSSELL3000',
-    'SP400', 'SP600'
-  )),
+  index_id TEXT NOT NULL, -- SP500, NASDAQ100, DOWJONES, RUSSELL2000, RUSSELL3000, SP400, SP600
   symbol TEXT NOT NULL,
   date_added TEXT NOT NULL, -- ISO8601 date when added to index
   date_removed TEXT, -- ISO8601 date when removed (NULL if current)
@@ -65,9 +64,7 @@ CREATE TABLE IF NOT EXISTS ticker_changes (
   old_symbol TEXT NOT NULL,
   new_symbol TEXT NOT NULL,
   change_date TEXT NOT NULL, -- ISO8601 date
-  change_type TEXT NOT NULL CHECK (change_type IN (
-    'rename', 'merger', 'spinoff', 'acquisition', 'restructure'
-  )),
+  change_type TEXT NOT NULL, -- rename, merger, spinoff, acquisition, restructure
   -- For mergers/acquisitions, the ratio if applicable
   conversion_ratio REAL,
   -- Additional context

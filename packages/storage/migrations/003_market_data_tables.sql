@@ -4,6 +4,8 @@
 -- Creates tables for market data storage and feature computation.
 -- Tables: candles, corporate_actions, universe_cache, features, regime_labels
 --
+-- Note: CHECK constraints removed - Turso doesn't support them yet.
+--
 -- @see docs/plans/02-data-layer.md
 
 -- ============================================
@@ -15,7 +17,7 @@
 CREATE TABLE IF NOT EXISTS candles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,
-  timeframe TEXT NOT NULL CHECK (timeframe IN ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w')),
+  timeframe TEXT NOT NULL, -- 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w
   timestamp TEXT NOT NULL,
   open REAL NOT NULL,
   high REAL NOT NULL,
@@ -24,10 +26,10 @@ CREATE TABLE IF NOT EXISTS candles (
   volume REAL NOT NULL DEFAULT 0,
   vwap REAL,
   trade_count INTEGER,
-  -- Quality flags
-  adjusted INTEGER NOT NULL DEFAULT 0 CHECK (adjusted IN (0, 1)),
-  split_adjusted INTEGER NOT NULL DEFAULT 0 CHECK (split_adjusted IN (0, 1)),
-  dividend_adjusted INTEGER NOT NULL DEFAULT 0 CHECK (dividend_adjusted IN (0, 1)),
+  -- Quality flags (0 or 1)
+  adjusted INTEGER NOT NULL DEFAULT 0,
+  split_adjusted INTEGER NOT NULL DEFAULT 0,
+  dividend_adjusted INTEGER NOT NULL DEFAULT 0,
   quality_flags TEXT, -- JSON array of quality issues (gaps, stale, suspicious)
   provider TEXT NOT NULL DEFAULT 'polygon',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -54,10 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_candles_timeframe ON candles(timeframe);
 CREATE TABLE IF NOT EXISTS corporate_actions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,
-  action_type TEXT NOT NULL CHECK (action_type IN (
-    'split', 'reverse_split', 'dividend', 'special_dividend',
-    'spinoff', 'merger', 'acquisition', 'delisting', 'name_change'
-  )),
+  action_type TEXT NOT NULL, -- split, reverse_split, dividend, special_dividend, spinoff, merger, acquisition, delisting, name_change
   ex_date TEXT NOT NULL,
   record_date TEXT,
   pay_date TEXT,
@@ -93,9 +92,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_corporate_actions_unique
 
 CREATE TABLE IF NOT EXISTS universe_cache (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  source_type TEXT NOT NULL CHECK (source_type IN (
-    'index', 'etf', 'screener', 'static', 'custom'
-  )),
+  source_type TEXT NOT NULL, -- index, etf, screener, static, custom
   source_id TEXT NOT NULL, -- e.g., 'SP500', 'QQQ', 'custom-tech'
   source_hash TEXT NOT NULL, -- Hash of source config for cache invalidation
   tickers TEXT NOT NULL, -- JSON array of symbols
@@ -126,15 +123,15 @@ CREATE TABLE IF NOT EXISTS features (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,
   timestamp TEXT NOT NULL,
-  timeframe TEXT NOT NULL CHECK (timeframe IN ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w')),
+  timeframe TEXT NOT NULL, -- 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w
   indicator_name TEXT NOT NULL,
   -- Values
   raw_value REAL NOT NULL,
   normalized_value REAL, -- Z-score or percentile normalized
   -- Parameters used for computation (for reproducibility)
   parameters TEXT, -- JSON
-  -- Quality
-  quality_score REAL CHECK (quality_score >= 0 AND quality_score <= 1),
+  -- Quality (0 to 1)
+  quality_score REAL,
   computed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -162,12 +159,9 @@ CREATE TABLE IF NOT EXISTS regime_labels (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL, -- '_MARKET' for market-wide regime
   timestamp TEXT NOT NULL,
-  timeframe TEXT NOT NULL CHECK (timeframe IN ('1h', '4h', '1d', '1w')),
-  regime TEXT NOT NULL CHECK (regime IN (
-    'bull_trend', 'bear_trend', 'range_bound',
-    'high_volatility', 'low_volatility', 'crisis'
-  )),
-  confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
+  timeframe TEXT NOT NULL, -- 1h, 4h, 1d, 1w
+  regime TEXT NOT NULL, -- bull_trend, bear_trend, range_bound, high_volatility, low_volatility, crisis
+  confidence REAL NOT NULL, -- 0 to 1
   -- Additional regime metrics
   trend_strength REAL,
   volatility_percentile REAL,

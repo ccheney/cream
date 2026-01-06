@@ -5,6 +5,8 @@
 -- Tables: alerts, system_state, backtests, backtest_trades,
 --         backtest_equity, user_preferences
 --
+-- Note: CHECK constraints removed - Turso doesn't support them yet.
+--
 -- @see docs/plans/ui/04-data-requirements.md lines 21-30
 
 -- ============================================
@@ -14,17 +16,15 @@
 
 CREATE TABLE IF NOT EXISTS alerts (
   id TEXT PRIMARY KEY,
-  severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
-  type TEXT NOT NULL CHECK (type IN (
-    'connection', 'order', 'position', 'risk', 'system', 'market', 'agent'
-  )),
+  severity TEXT NOT NULL, -- info, warning, critical
+  type TEXT NOT NULL, -- connection, order, position, risk, system, market, agent
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   metadata TEXT, -- JSON for additional context
-  acknowledged INTEGER NOT NULL DEFAULT 0 CHECK (acknowledged IN (0, 1)),
+  acknowledged INTEGER NOT NULL DEFAULT 0, -- 0 or 1
   acknowledged_by TEXT,
   acknowledged_at TEXT,
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   expires_at TEXT
 );
@@ -44,11 +44,11 @@ CREATE INDEX IF NOT EXISTS idx_alerts_unack_env ON alerts(environment, acknowled
 -- Uses upsert pattern for updates.
 
 CREATE TABLE IF NOT EXISTS system_state (
-  environment TEXT PRIMARY KEY CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
-  status TEXT NOT NULL DEFAULT 'stopped' CHECK (status IN ('running', 'paused', 'stopped', 'error')),
+  environment TEXT PRIMARY KEY, -- BACKTEST, PAPER, LIVE
+  status TEXT NOT NULL DEFAULT 'stopped', -- running, paused, stopped, error
   last_cycle_id TEXT,
   last_cycle_time TEXT,
-  current_phase TEXT CHECK (current_phase IN ('observe', 'orient', 'decide', 'act', NULL)),
+  current_phase TEXT, -- observe, orient, decide, act, NULL
   phase_started_at TEXT,
   next_cycle_at TEXT,
   error_message TEXT,
@@ -74,9 +74,7 @@ CREATE TABLE IF NOT EXISTS backtests (
   initial_capital REAL NOT NULL,
   universe TEXT, -- JSON array of symbols or universe spec
   config_json TEXT, -- Full config snapshot
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
-    'pending', 'running', 'completed', 'failed', 'cancelled'
-  )),
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, running, completed, failed, cancelled
   progress_pct REAL DEFAULT 0,
   -- Result metrics (populated on completion)
   total_return REAL,
@@ -112,7 +110,7 @@ CREATE TABLE IF NOT EXISTS backtest_trades (
   backtest_id TEXT NOT NULL,
   timestamp TEXT NOT NULL,
   symbol TEXT NOT NULL,
-  action TEXT NOT NULL CHECK (action IN ('BUY', 'SELL', 'SHORT', 'COVER')),
+  action TEXT NOT NULL, -- BUY, SELL, SHORT, COVER
   qty REAL NOT NULL,
   price REAL NOT NULL,
   commission REAL DEFAULT 0,
@@ -160,9 +158,9 @@ CREATE INDEX IF NOT EXISTS idx_backtest_equity_bt_ts ON backtest_equity(backtest
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id TEXT PRIMARY KEY,
   preferences_json TEXT NOT NULL DEFAULT '{}',
-  theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
-  default_environment TEXT DEFAULT 'PAPER' CHECK (default_environment IN ('BACKTEST', 'PAPER', 'LIVE')),
-  sidebar_collapsed INTEGER DEFAULT 0 CHECK (sidebar_collapsed IN (0, 1)),
+  theme TEXT DEFAULT 'system', -- light, dark, system
+  default_environment TEXT DEFAULT 'PAPER', -- BACKTEST, PAPER, LIVE
+  sidebar_collapsed INTEGER DEFAULT 0, -- 0 or 1
   chart_settings TEXT, -- JSON
   alert_settings TEXT, -- JSON
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

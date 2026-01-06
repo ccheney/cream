@@ -4,6 +4,8 @@
 -- Creates table for thesis lifecycle tracking across OODA cycles.
 -- Theses track position lifecycle from WATCHING through CLOSED.
 --
+-- Note: CHECK constraints removed - Turso doesn't support them yet.
+--
 -- @see docs/plans/05-agents.md - Thesis State Management section
 
 -- ============================================
@@ -15,26 +17,26 @@
 CREATE TABLE IF NOT EXISTS thesis_state (
   thesis_id TEXT PRIMARY KEY,
   instrument_id TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('WATCHING', 'ENTERED', 'ADDING', 'MANAGING', 'EXITING', 'CLOSED')),
+  state TEXT NOT NULL, -- WATCHING, ENTERED, ADDING, MANAGING, EXITING, CLOSED
   entry_price REAL,
   entry_date TEXT,  -- ISO 8601 format
   current_stop REAL,
   current_target REAL,
-  conviction REAL CHECK (conviction IS NULL OR (conviction >= 0 AND conviction <= 1)),
+  conviction REAL, -- 0 to 1 or NULL
   -- Thesis content
   entry_thesis TEXT,           -- Original bullish/bearish thesis text
   invalidation_conditions TEXT, -- What would invalidate the thesis
   -- Position tracking
   add_count INTEGER NOT NULL DEFAULT 0,  -- Times added to position
-  max_position_reached INTEGER NOT NULL DEFAULT 0 CHECK (max_position_reached IN (0, 1)),
+  max_position_reached INTEGER NOT NULL DEFAULT 0, -- 0 or 1
   peak_unrealized_pnl REAL,
   -- Closure info
-  close_reason TEXT CHECK (close_reason IS NULL OR close_reason IN ('STOP_HIT', 'TARGET_HIT', 'INVALIDATED', 'MANUAL', 'TIME_DECAY', 'CORRELATION')),
+  close_reason TEXT, -- STOP_HIT, TARGET_HIT, INVALIDATED, MANUAL, TIME_DECAY, CORRELATION, or NULL
   exit_price REAL,
   realized_pnl REAL,
   realized_pnl_pct REAL,
   -- Metadata
-  environment TEXT NOT NULL CHECK (environment IN ('BACKTEST', 'PAPER', 'LIVE')),
+  environment TEXT NOT NULL, -- BACKTEST, PAPER, LIVE
   notes TEXT,  -- JSON for agent reasoning history
   -- Timestamps
   last_updated TEXT NOT NULL DEFAULT (datetime('now')),
