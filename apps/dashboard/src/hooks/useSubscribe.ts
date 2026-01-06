@@ -9,7 +9,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useWSStore } from "../stores/websocket.js";
+import { useWSStore } from "../stores/websocket";
 
 // ============================================
 // Types

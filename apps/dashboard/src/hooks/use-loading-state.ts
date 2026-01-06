@@ -9,7 +9,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { type LoadingKey, type LoadingOptions, useLoadingStore } from "../stores/loading-store.js";
+import { type LoadingKey, type LoadingOptions, useLoadingStore } from "../stores/loading-store";
 
 // ============================================
 // Types

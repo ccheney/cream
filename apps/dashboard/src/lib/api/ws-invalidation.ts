@@ -8,7 +8,7 @@
  */
 
 import { type CyclePhase, useCycleStore } from "@/stores/cycle-store";
-import { getQueryClient, queryKeys } from "./query-client.js";
+import { getQueryClient, queryKeys } from "./query-client";
 
 // ============================================
 // Types

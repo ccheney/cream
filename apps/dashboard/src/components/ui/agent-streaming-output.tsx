@@ -10,7 +10,7 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import type { StreamingStatus } from "./use-streaming-text.js";
+import type { StreamingStatus } from "./use-streaming-text";
 
 // ============================================
 // Types

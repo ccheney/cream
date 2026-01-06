@@ -11,8 +11,8 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { useAutoScroll } from "./use-auto-scroll.js";
-import { useRelativeTime } from "./use-relative-time.js";
+import { useAutoScroll } from "./use-auto-scroll";
+import { useRelativeTime } from "./use-relative-time";
 
 // ============================================
 // Types

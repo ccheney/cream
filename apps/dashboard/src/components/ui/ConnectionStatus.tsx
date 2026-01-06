@@ -12,7 +12,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { ConnectionState } from "../../hooks/useWebSocket.js";
+import type { ConnectionState } from "../../hooks/useWebSocket";
 
 // ============================================
 // Types

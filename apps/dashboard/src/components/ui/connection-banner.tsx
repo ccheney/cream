@@ -9,7 +9,7 @@
 "use client";
 
 import type React from "react";
-import type { ConnectionStatus } from "../../lib/ws/connection-monitor.js";
+import type { ConnectionStatus } from "../../lib/ws/connection-monitor";
 
 // ============================================
 // Types

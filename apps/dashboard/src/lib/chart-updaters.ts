@@ -6,8 +6,8 @@
  * @see docs/plans/ui/26-data-viz.md
  */
 
-import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
-import type { OHLCVData } from "./chart-config.js";
+import type { EquityDataPoint } from "@/components/charts/EquityCurve";
+import type { OHLCVData } from "./chart-config";
 
 // ============================================
 // Types

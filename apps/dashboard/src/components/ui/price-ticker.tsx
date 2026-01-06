@@ -9,8 +9,8 @@
 "use client";
 
 import { memo, useEffect } from "react";
-import { usePriceFlash } from "./use-price-flash.js";
-import { useStaleData } from "./use-stale-data.js";
+import { usePriceFlash } from "./use-price-flash";
+import { useStaleData } from "./use-stale-data";
 
 // ============================================
 // Types
