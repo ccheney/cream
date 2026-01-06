@@ -246,32 +246,32 @@ describe("Animation", () => {
 // ============================================
 
 describe("Styling", () => {
-  it("uses currentColor for stroke", () => {
-    const stroke = "currentColor";
-    expect(stroke).toBe("currentColor");
+  it("uses gradients and filters for branding", () => {
+    const fill = "url(#inner_warm)";
+    expect(fill).toContain("url(#");
   });
 
   it("icon variant is square", () => {
-    const sizePx = 48;
+    const sizePx = 120;
     const dimensions = { width: sizePx, height: sizePx };
     expect(dimensions.width).toBe(dimensions.height);
   });
 
   it("full variant width is 3x height", () => {
-    const sizePx = 48;
+    const sizePx = 120;
     const dimensions = { width: sizePx * 3, height: sizePx };
-    expect(dimensions.width).toBe(144);
-    expect(dimensions.height).toBe(48);
+    expect(dimensions.width).toBe(360);
+    expect(dimensions.height).toBe(120);
   });
 
-  it("icon viewBox is 0 0 48 48", () => {
-    const viewBox = "0 0 48 48";
-    expect(viewBox).toBe("0 0 48 48");
+  it("icon viewBox is 0 0 120 120", () => {
+    const viewBox = "0 0 120 120";
+    expect(viewBox).toBe("0 0 120 120");
   });
 
-  it("full viewBox is 0 0 144 48", () => {
-    const viewBox = "0 0 144 48";
-    expect(viewBox).toBe("0 0 144 48");
+  it("full viewBox is 0 0 360 120", () => {
+    const viewBox = "0 0 360 120";
+    expect(viewBox).toBe("0 0 360 120");
   });
 });
 
@@ -390,7 +390,7 @@ describe("Integration Patterns", () => {
 // ============================================
 
 describe("Theme Support", () => {
-  it("inherits color from currentColor", () => {
+  it("wordmark inherits color from currentColor", () => {
     const colorInheritance = "currentColor";
     expect(colorInheritance).toBe("currentColor");
   });

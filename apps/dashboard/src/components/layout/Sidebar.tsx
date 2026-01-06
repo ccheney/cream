@@ -129,9 +129,6 @@ export const Sidebar = memo(function Sidebar({
       {/* Logo */}
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center gap-3 h-14">
         <Logo className="h-8 w-8 flex-shrink-0" />
-        {(!collapsed || isHovered) && (
-          <span className="font-semibold text-cream-900 dark:text-cream-100 truncate">Cream</span>
-        )}
       </div>
 
       {/* Navigation */}

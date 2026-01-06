@@ -1,0 +1,29 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none"
+  xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="inner_depth" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+      <feOffset dy="2" dx="1"/>
+      <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"/>
+      <feFlood flood-color="#D9C8A9" flood-opacity="0.5"/>
+      <feComposite in2="shadowDiff" operator="in"/>
+      <feComposite in2="SourceGraphic" operator="over" result="firstfilter"/>
+      <feGaussianBlur in="firstfilter" stdDeviation="1" />
+    </filter>
+
+    <linearGradient id="outer_bone" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3EAD3"/>
+      <stop offset="1" stop-color="#E6D8B8"/>
+    </linearGradient>
+
+    <linearGradient id="inner_warm" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCE0"/>
+      <stop offset="1" stop-color="#F7E7C6"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M100 35.88C95.5 28.08 89.06 21.54 81.24 17.02C73.42 12.5 64.48 10 55 10C43.06 10 31.62 14.74 23.18 23.18C14.74 31.62 10 43.06 10 55C10 66.94 14.74 78.38 23.18 86.82C31.62 95.26 43.06 100 55 100C64.48 100 73.42 97.5 81.24 92.98C89.06 88.46 95.5 81.92 100 74.12" stroke="url(#outer_bone)" stroke-width="10" stroke-linecap="round"/>
+
+  <path d="M88 42C84.8 36.46 80.2 31.84 74.6 28.6C68.9 25.36 62.44 23.56 55.6 23.56C47.08 23.56 38.92 26.96 32.88 33C26.84 39.04 23.44 47.2 23.44 55.72C23.44 64.24 26.84 72.4 32.88 78.44C38.92 84.48 47.08 87.88 55.6 87.88C62.44 87.88 68.9 86.08 74.6 82.84C80.2 79.6 84.8 74.98 88 69.44" stroke="url(#inner_warm)" stroke-width="8" stroke-linecap="round" filter="url(#inner_depth)"/>
+
+</svg>

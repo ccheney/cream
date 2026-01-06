@@ -2,14 +2,14 @@
 -- Stores market snapshots and computed signals for historical analysis
 
 -- Market snapshots for backtesting and historical analysis
+-- Note: CHECK constraints not supported in Turso yet, validation done at app layer
+-- Valid platforms: KALSHI, POLYMARKET
+-- Valid market_types: FED_RATE, ECONOMIC_DATA, RECESSION, GEOPOLITICAL, REGULATORY, ELECTION, OTHER
 CREATE TABLE IF NOT EXISTS prediction_market_snapshots (
   id TEXT PRIMARY KEY,
-  platform TEXT NOT NULL CHECK (platform IN ('KALSHI', 'POLYMARKET')),
+  platform TEXT NOT NULL,
   market_ticker TEXT NOT NULL,
-  market_type TEXT NOT NULL CHECK (market_type IN (
-    'FED_RATE', 'ECONOMIC_DATA', 'RECESSION', 'GEOPOLITICAL',
-    'REGULATORY', 'ELECTION', 'OTHER'
-  )),
+  market_type TEXT NOT NULL,
   market_question TEXT,
   snapshot_time TEXT NOT NULL,
   data JSON NOT NULL,
@@ -22,13 +22,12 @@ CREATE INDEX IF NOT EXISTS idx_pm_snapshots_type ON prediction_market_snapshots(
 CREATE INDEX IF NOT EXISTS idx_pm_snapshots_time ON prediction_market_snapshots(snapshot_time);
 
 -- Computed signals for performance analysis
+-- Valid signal_types: fed_cut_probability, fed_hike_probability, recession_12m,
+--   macro_uncertainty, policy_event_risk, cpi_surprise, gdp_surprise,
+--   shutdown_probability, tariff_escalation
 CREATE TABLE IF NOT EXISTS prediction_market_signals (
   id TEXT PRIMARY KEY,
-  signal_type TEXT NOT NULL CHECK (signal_type IN (
-    'fed_cut_probability', 'fed_hike_probability', 'recession_12m',
-    'macro_uncertainty', 'policy_event_risk', 'cpi_surprise',
-    'gdp_surprise', 'shutdown_probability', 'tariff_escalation'
-  )),
+  signal_type TEXT NOT NULL,
   signal_value REAL NOT NULL,
   confidence REAL,
   computed_at TEXT NOT NULL,

@@ -70,8 +70,8 @@ services:
   #
   # helix:
   #   build:
-  #     context: ../packages/helix-schema
-  #     dockerfile: Dockerfile
+  #     context: .
+  #     dockerfile: packages/helix-schema/Dockerfile
   #   container_name: cream-helix
   #   ports:
   #     - "6969:6969"
@@ -98,9 +98,9 @@ services:
     ports:
       - "9090:9090"     # Prometheus web UI and API
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./packages/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./packages/infra/prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - ./packages/infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -127,7 +127,7 @@ services:
     ports:
       - "9093:9093"     # Alertmanager web UI and API
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./packages/infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
@@ -152,8 +152,10 @@ services:
       - "4318:4318"     # OTLP HTTP receiver
       - "8888:8888"     # Prometheus metrics (collector metrics)
       - "8889:8889"     # Prometheus exporter (application metrics)
+    environment:
+      - CREAM_ENV=${CREAM_ENV:-PAPER}
     volumes:
-      - ./otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+      - ./packages/infra/otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
@@ -189,8 +191,8 @@ services:
   # Trading dashboard UI for monitoring and control
   dashboard:
     build:
-      context: ../apps/dashboard
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
     container_name: cream-dashboard
     ports:
       - "3000:3000"     # Next.js default port
@@ -202,7 +204,7 @@ services:
       dashboard-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -215,8 +217,8 @@ services:
   # REST API and WebSocket server for dashboard
   dashboard-api:
     build:
-      context: ../apps/dashboard-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/dashboard-api/Dockerfile
     container_name: cream-dashboard-api
     ports:
       - "3001:3001"     # API port
@@ -243,7 +245,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5

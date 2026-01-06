@@ -101,7 +101,7 @@ const mockUsers: Map<string, MockUser> = new Map([
     {
       id: "user-1",
       email: "user@example.com",
-      passwordHash: "password123", // In production, this would be hashed
+      passwordHash: "dolladollabillyall", // In production, this would be hashed
       role: "viewer",
     },
   ],

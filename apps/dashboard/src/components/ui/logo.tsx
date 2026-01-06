@@ -101,49 +101,20 @@ export function Logo({
   const computedSize = sizePx ?? SIZE_MAP[size];
 
   const logoStyle: React.CSSProperties = {
-    width: variant === "icon" ? computedSize : computedSize * 3,
+    width: variant === "icon" ? computedSize : computedSize * 3.2,
     height: computedSize,
     animation: pulse ? "logo-pulse 2s ease-in-out infinite" : "none",
     ...style,
   };
 
-  // Icon-only variant (stylized "C")
-  if (variant === "icon") {
-    return (
-      <>
-        {pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 48 48"
-          fill="none"
-          aria-label={label}
-          data-testid={testId}
-          className={className}
-          style={logoStyle}
-          {...props}
-        >
-          {/* Stylized "C" representing Cream */}
-          <path
-            d="M38 12C34 6 27 4 20 6C10 9 4 19 6 30C8 40 17 46 28 44C34 43 39 39 42 34"
-            stroke="currentColor"
-            strokeWidth="4"
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Small circle accent */}
-          <circle cx="42" cy="12" r="4" fill="currentColor" />
-        </svg>
-      </>
-    );
-  }
+  const viewBoxWidth = variant === "icon" ? 100 : 380;
 
-  // Full logo with wordmark
   return (
     <>
       {pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 144 48"
+        viewBox={`0 0 ${viewBoxWidth} 120`}
         fill="none"
         aria-label={label}
         data-testid={testId}
@@ -151,31 +122,16 @@ export function Logo({
         style={logoStyle}
         {...props}
       >
-        {/* Icon part */}
-        <g transform="translate(0, 0)">
-          {/* Stylized "C" */}
-          <path
-            d="M38 12C34 6 27 4 20 6C10 9 4 19 6 30C8 40 17 46 28 44C34 43 39 39 42 34"
-            stroke="currentColor"
-            strokeWidth="4"
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Small circle accent */}
-          <circle cx="42" cy="12" r="4" fill="currentColor" />
-        </g>
-
-        {/* Wordmark "ream" */}
         <text
-          x="52"
-          y="34"
+          x="0"
+          y="95"
           fontFamily="system-ui, -apple-system, sans-serif"
-          fontSize="28"
-          fontWeight="600"
+          fontSize="110"
+          fontWeight="700"
           fill="currentColor"
-          letterSpacing="-1"
+          letterSpacing="-0.05em"
         >
-          ream
+          {variant === "icon" ? "C" : "Cream"}
         </text>
       </svg>
     </>

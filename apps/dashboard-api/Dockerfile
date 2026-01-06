@@ -2,50 +2,37 @@
 # ======================================
 # Production deployment for the dashboard API
 #
-# Build: docker build -t cream-dashboard-api .
-# Run:   docker run -p 3001:3001 cream-dashboard-api
+# Build: docker compose build dashboard-api
+# Run:   docker compose up dashboard-api
 
 # Stage 1: Install dependencies
 FROM oven/bun:1 AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lock* ./
-COPY ../../packages/domain/package.json ./packages/domain/
-COPY ../../packages/storage/package.json ./packages/storage/
+# Copy package files for dependency installation
+COPY package.json bunfig.toml bun.lock ./
+COPY apps/dashboard-api/package.json ./apps/dashboard-api/
+COPY packages ./packages
 
-# Install dependencies
-RUN bun install --frozen-lockfile --production
+# Install production dependencies
+RUN bun install --ignore-scripts
 
-# Stage 2: Build the application
-FROM oven/bun:1 AS builder
-WORKDIR /app
-
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Build TypeScript
-RUN bun build src/index.ts --outdir=dist --target=bun
-
-# Stage 3: Production image
+# Stage 2: Production image (bun runs TypeScript directly)
 FROM oven/bun:1-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Create non-root user
-RUN addgroup --system --gid 1001 bunjs && \
-    adduser --system --uid 1001 hono
+# Copy node_modules and source with correct ownership
+COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
+COPY --from=deps --chown=bun:bun /app/packages ./packages
+COPY --chown=bun:bun apps/dashboard-api ./apps/dashboard-api
 
-# Copy built application and dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./
+WORKDIR /app/apps/dashboard-api
 
-USER hono
+USER bun
 
 EXPOSE 3001
 ENV PORT=3001
 
-CMD ["bun", "run", "dist/index.js"]
+CMD ["bun", "run", "src/index.ts"]

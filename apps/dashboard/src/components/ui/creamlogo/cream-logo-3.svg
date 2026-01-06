@@ -1,0 +1,29 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none"
+  xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="warm_point" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0.5 0.5) scale(0.5)">
+      <stop stop-color="#FFF9E6"/>
+      <stop offset="1" stop-color="#EBD5A7"/>
+    </radialGradient>
+    <filter id="point_glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
+      <feComposite in="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+
+  <path d="M98.5 31C93.86 23.8 87.2 17.8 79.14 13.66C71.08 9.52 61.9 7.4 52.5 7.4C40.58 7.4 29.14 12.14 20.7 20.58C12.26 29.02 7.52 40.46 7.52 52.38C7.52 64.3 12.26 75.74 20.7 84.18C29.14 92.62 40.58 97.36 52.5 97.36C61.9 97.36 71.08 95.24 79.14 91.1C87.2 86.96 93.86 80.96 98.5 73.76" stroke="#EBD5A7" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 6" opacity="0.7">
+    <animate attributeName="opacity" values="0.5;0.9;0.5" dur="6s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1; 0.42 0 0.58 1"/>
+  </path>
+
+  <g filter="url(#point_glow)">
+    <circle cx="98.5" cy="31" r="5" fill="url(#warm_point)"/>
+    <circle cx="79.14" cy="13.66" r="5" fill="url(#warm_point)"/>
+    <circle cx="52.5" cy="7.4" r="5" fill="url(#warm_point)"/>
+    <circle cx="20.7" cy="20.58" r="5" fill="url(#warm_point)"/>
+    <circle cx="7.52" cy="52.38" r="5" fill="url(#warm_point)"/>
+    <circle cx="20.7" cy="84.18" r="5" fill="url(#warm_point)"/>
+    <circle cx="52.5" cy="97.36" r="5" fill="url(#warm_point)"/>
+    <circle cx="79.14" cy="91.1" r="5" fill="url(#warm_point)"/>
+    <circle cx="98.5" cy="73.76" r="5" fill="url(#warm_point)"/>
+  </g>
+</svg>

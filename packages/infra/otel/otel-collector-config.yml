@@ -46,7 +46,7 @@ processors:
   resource:
     attributes:
       - key: environment
-        value: "${CREAM_ENV:-PAPER}"
+        value: "${env:CREAM_ENV}"
         action: upsert
       - key: service.namespace
         value: "cream"
@@ -56,7 +56,7 @@ processors:
   attributes:
     actions:
       - key: deployment.environment
-        value: "${CREAM_ENV:-PAPER}"
+        value: "${env:CREAM_ENV}"
         action: upsert
 
   # Filter processor to drop noisy traces (optional)
@@ -77,7 +77,7 @@ exporters:
     endpoint: "0.0.0.0:8889"
     namespace: "cream"
     const_labels:
-      environment: "${CREAM_ENV:-PAPER}"
+      environment: "development"
     enable_open_metrics: true
 
   # OTLP exporter (for Jaeger, Tempo, or other OTLP backends)

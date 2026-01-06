@@ -116,7 +116,6 @@ export const NavDrawer = memo(function NavDrawer({ open, onClose, userEmail }: N
         <div className="flex items-center justify-between p-4 border-b border-cream-200 dark:border-night-700">
           <div className="flex items-center gap-3">
             <Logo className="h-8 w-8" />
-            <span className="font-semibold text-cream-900 dark:text-cream-100">Cream</span>
           </div>
           <button
             ref={closeButtonRef}

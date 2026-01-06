@@ -20,8 +20,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, verifyMFA, isLoading: authLoading, mfaRequired } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("user@example.com");
+  const [password, setPassword] = useState("dolladollabillyall");
   const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -179,7 +179,7 @@ export default function LoginPage() {
           {/* Demo credentials hint */}
           <div className="mt-6 pt-4 border-t border-cream-200 dark:border-night-700">
             <p className="text-xs text-cream-500 dark:text-cream-500 text-center">
-              Demo: user@example.com / password123
+              Demo: user@example.com / dolladollabillyall
             </p>
           </div>
         </div>
