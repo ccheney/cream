@@ -15,6 +15,7 @@ import {
   getEventSurpriseScore,
   isEarningsEvent,
   isMacroEvent,
+  isNewsEvent,
   MacroEventPayloadSchema,
   MergerAcquisitionPayloadSchema,
   NewsEventPayloadSchema,
@@ -381,6 +382,13 @@ describe("Helper Functions", () => {
       { indicatorName: "CPI", value: 3.2, unit: "", country: "US" }
     );
 
+    const newsEvent = createNewsEvent(
+      "550e8400-e29b-41d4-a716-446655440000",
+      "2026-01-05T10:00:00Z",
+      { headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
+      ["AAPL"]
+    );
+
     it("isEarningsEvent should work", () => {
       expect(isEarningsEvent(earningsEvent)).toBe(true);
       expect(isEarningsEvent(macroEvent)).toBe(false);
@@ -389,6 +397,12 @@ describe("Helper Functions", () => {
     it("isMacroEvent should work", () => {
       expect(isMacroEvent(macroEvent)).toBe(true);
       expect(isMacroEvent(earningsEvent)).toBe(false);
+    });
+
+    it("isNewsEvent should work", () => {
+      expect(isNewsEvent(newsEvent)).toBe(true);
+      expect(isNewsEvent(earningsEvent)).toBe(false);
+      expect(isNewsEvent(macroEvent)).toBe(false);
     });
   });
 
@@ -431,6 +445,75 @@ describe("Helper Functions", () => {
         }
       );
       expect(getEventSurpriseScore(event)).toBe(1); // Capped at 1
+    });
+
+    it("should calculate from macro payload surprisePct", () => {
+      const event = createMacroEvent(
+        "550e8400-e29b-41d4-a716-446655440000",
+        "2026-01-05T10:00:00Z",
+        {
+          indicatorName: "Non-Farm Payrolls",
+          value: 250000,
+          surprisePct: 20,
+          unit: "jobs",
+          country: "US",
+        }
+      );
+      expect(getEventSurpriseScore(event)).toBe(0.4); // 20/50 = 0.4
+    });
+
+    it("should cap macro surprise score at ±1", () => {
+      const event = createMacroEvent(
+        "550e8400-e29b-41d4-a716-446655440000",
+        "2026-01-05T10:00:00Z",
+        {
+          indicatorName: "CPI",
+          value: 4.5,
+          surprisePct: 75,
+          unit: "%",
+          country: "US",
+        }
+      );
+      expect(getEventSurpriseScore(event)).toBe(1); // Capped at 1 (75/50 > 1)
+    });
+
+    it("should cap negative surprise scores at -1", () => {
+      const event = createMacroEvent(
+        "550e8400-e29b-41d4-a716-446655440000",
+        "2026-01-05T10:00:00Z",
+        {
+          indicatorName: "GDP",
+          value: -1.5,
+          surprisePct: -80,
+          unit: "%",
+          country: "US",
+        }
+      );
+      expect(getEventSurpriseScore(event)).toBe(-1); // Capped at -1
+    });
+
+    it("should return undefined for event without surprise data", () => {
+      const event = createMacroEvent(
+        "550e8400-e29b-41d4-a716-446655440000",
+        "2026-01-05T10:00:00Z",
+        {
+          indicatorName: "GDP",
+          value: 2.5,
+          unit: "%",
+          country: "US",
+        }
+      );
+      expect(getEventSurpriseScore(event)).toBeUndefined();
+    });
+
+    it("should return undefined for news event", () => {
+      const event = createNewsEvent(
+        "550e8400-e29b-41d4-a716-446655440000",
+        "2026-01-05T10:00:00Z",
+        { headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
+        ["AAPL"]
+      );
+      expect(getEventSurpriseScore(event)).toBeUndefined();
     });
   });
 });

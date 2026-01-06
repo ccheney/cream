@@ -18,7 +18,7 @@ import {
   createOrderReconciler,
   type OrderReconciler,
 } from "./reconciler.js";
-import { createRecoveryManager, RecoveryManager } from "./recovery.js";
+import { createRecoveryManager, createRecoverySystem, RecoveryManager } from "./recovery.js";
 import type {
   AgentsState,
   BrokerOrder,
@@ -513,5 +513,78 @@ describe("RecoveryManager", () => {
 
     expect(id1).not.toBe(id2);
     expect(id1).toMatch(/^cycle-/);
+  });
+
+  test("performFullRecovery returns none with cleanup result when no incomplete cycles", async () => {
+    const result = await manager.performFullRecovery();
+    expect(result.action.type).toBe("none");
+    expect(result.cleanupResult).toBeDefined();
+    expect(result.cleanupResult.checkpointsDeleted).toBeGreaterThanOrEqual(0);
+    expect(result.cleanupResult.eventsDeleted).toBeGreaterThanOrEqual(0);
+  });
+
+  test("performFullRecovery performs recovery and cleanup", async () => {
+    // Create an incomplete cycle
+    await checkpointer.markCycleStarted("test-cycle");
+    const state: DataFetchState = {
+      symbols: ["AAPL"],
+      dataTimestamp: "2026-01-05T10:00:00Z",
+      complete: false,
+    };
+    await checkpointer.saveCheckpoint("test-cycle", "data_fetch", state);
+
+    const result = await manager.performFullRecovery();
+    expect(result.action.type).toBe("restart");
+    expect(result.cleanupResult).toBeDefined();
+  });
+});
+
+// ============================================
+// Recovery System Tests
+// ============================================
+
+describe("createRecoverySystem", () => {
+  test("creates complete recovery system with all components", async () => {
+    // Create a mock broker fetcher
+    const mockFetcher = createMockBrokerFetcher([]);
+
+    // Create the system
+    const system = createRecoverySystem(db, mockFetcher);
+
+    try {
+      // Initialize the checkpointer
+      await system.checkpointer.initialize();
+
+      // Verify all components are created
+      expect(system.checkpointer).toBeDefined();
+      expect(system.detector).toBeDefined();
+      expect(system.reconciler).toBeDefined();
+      expect(system.manager).toBeDefined();
+      expect(system.cleanup).toBeDefined();
+      expect(typeof system.cleanup).toBe("function");
+
+      // Verify the system works by performing a check
+      const action = await system.manager.checkAndRecover();
+      expect(action.type).toBe("none");
+    } finally {
+      // Clean up
+      system.cleanup();
+    }
+  });
+
+  test("creates system with custom config", async () => {
+    const mockFetcher = createMockBrokerFetcher([]);
+
+    const system = createRecoverySystem(db, mockFetcher, {
+      maxCheckpointAge: 60000,
+      cleanupInterval: 30000,
+    });
+
+    try {
+      await system.checkpointer.initialize();
+      expect(system.manager).toBeDefined();
+    } finally {
+      system.cleanup();
+    }
   });
 });

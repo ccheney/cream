@@ -2,7 +2,7 @@
  * Tests for Kalshi API client
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { KalshiConfig } from "@cream/config";
 import type { AuthenticationError } from "../../index";
 import {
@@ -432,46 +432,93 @@ describe("MARKET_TYPE_TO_SERIES extended", () => {
 // Factory Functions
 // ============================================
 
-// Factory Functions tests are in a separate describe.skip block to avoid
-// Bun test runner isolation issues when running the full test suite.
-// These functions are covered via integration testing (unified-client tests).
-describe.skip("Factory Functions", () => {
-  describe("createKalshiClient", () => {
-    it("should throw AuthenticationError without api_key_id", () => {
-      const config = {
-        enabled: true,
-      } as KalshiConfig;
+describe("createKalshiClient", () => {
+  it("should throw AuthenticationError without api_key_id", () => {
+    const config = {
+      enabled: true,
+    } as KalshiConfig;
 
-      try {
-        createKalshiClient(config);
-        expect.unreachable("Should have thrown");
-      } catch (error) {
-        expect((error as Error).name).toBe("PredictionMarketError");
-        expect((error as AuthenticationError).code).toBe("AUTH_ERROR");
-      }
-    });
+    try {
+      createKalshiClient(config);
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect((error as Error).name).toBe("PredictionMarketError");
+      expect((error as AuthenticationError).code).toBe("AUTH_ERROR");
+    }
   });
 
-  describe("createKalshiClientFromEnv", () => {
-    const originalEnv = { ...process.env };
+  it("should throw AuthenticationError with undefined api_key_id", () => {
+    const config = {
+      enabled: true,
+      api_key_id: undefined,
+    } as unknown as KalshiConfig;
 
-    beforeEach(() => {
+    try {
+      createKalshiClient(config);
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect((error as Error).name).toBe("PredictionMarketError");
+      expect((error as AuthenticationError).code).toBe("AUTH_ERROR");
+    }
+  });
+
+  it("should throw AuthenticationError with empty api_key_id", () => {
+    const config = {
+      enabled: true,
+      api_key_id: "",
+    } as KalshiConfig;
+
+    try {
+      createKalshiClient(config);
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect((error as Error).name).toBe("PredictionMarketError");
+      expect((error as AuthenticationError).code).toBe("AUTH_ERROR");
+    }
+  });
+});
+
+describe("createKalshiClientFromEnv", () => {
+  const originalApiKeyId = process.env.KALSHI_API_KEY_ID;
+  const originalPrivateKeyPath = process.env.KALSHI_PRIVATE_KEY_PATH;
+
+  afterEach(() => {
+    // Restore original env
+    if (originalApiKeyId !== undefined) {
+      process.env.KALSHI_API_KEY_ID = originalApiKeyId;
+    } else {
       delete process.env.KALSHI_API_KEY_ID;
+    }
+    if (originalPrivateKeyPath !== undefined) {
+      process.env.KALSHI_PRIVATE_KEY_PATH = originalPrivateKeyPath;
+    } else {
       delete process.env.KALSHI_PRIVATE_KEY_PATH;
-    });
+    }
+  });
 
-    afterEach(() => {
-      process.env = originalEnv;
-    });
+  it("should throw AuthenticationError without KALSHI_API_KEY_ID", () => {
+    delete process.env.KALSHI_API_KEY_ID;
+    delete process.env.KALSHI_PRIVATE_KEY_PATH;
 
-    it("should throw AuthenticationError without KALSHI_API_KEY_ID", () => {
-      try {
-        createKalshiClientFromEnv();
-        expect.unreachable("Should have thrown");
-      } catch (error) {
-        expect((error as Error).name).toBe("PredictionMarketError");
-        expect((error as AuthenticationError).message).toContain("KALSHI_API_KEY_ID");
-      }
-    });
+    try {
+      createKalshiClientFromEnv();
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect((error as Error).name).toBe("PredictionMarketError");
+      expect((error as AuthenticationError).message).toContain("KALSHI_API_KEY_ID");
+    }
+  });
+
+  it("should throw AuthenticationError without KALSHI_PRIVATE_KEY_PATH", () => {
+    process.env.KALSHI_API_KEY_ID = "test-key-id";
+    delete process.env.KALSHI_PRIVATE_KEY_PATH;
+
+    try {
+      createKalshiClientFromEnv();
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect((error as Error).name).toBe("PredictionMarketError");
+      expect((error as AuthenticationError).message).toContain("KALSHI_PRIVATE_KEY_PATH");
+    }
   });
 });
