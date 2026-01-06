@@ -19,7 +19,7 @@ import { NextResponse } from "next/server";
 const PUBLIC_ROUTES = ["/login", "/api"];
 
 // Cookie name for access token (set by dashboard-api)
-const AUTH_COOKIE_NAME = "cream_access_token";
+const AUTH_COOKIE_NAME = "cream_access";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

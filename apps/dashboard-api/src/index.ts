@@ -25,6 +25,7 @@ import {
   decisionsRoutes,
   marketRoutes,
   portfolioRoutes,
+  preferencesRoutes,
   riskRoutes,
   systemRoutes,
   thesesRoutes,
@@ -135,6 +136,7 @@ app.use("/api/market/*", requireAuth);
 app.use("/api/risk/*", requireAuth);
 app.use("/api/backtests/*", requireAuth);
 app.use("/api/theses/*", requireAuth);
+app.use("/api/preferences/*", requireAuth);
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -153,6 +155,7 @@ app.route("/api/market", marketRoutes);
 app.route("/api/risk", riskRoutes);
 app.route("/api/backtests", backtestRoutes);
 app.route("/api/theses", thesesRoutes);
+app.route("/api/preferences", preferencesRoutes);
 
 // ============================================
 // OpenAPI Documentation

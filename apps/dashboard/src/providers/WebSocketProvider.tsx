@@ -89,31 +89,57 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     },
   });
 
+  // Destructure all values to avoid depending on unstable ws object reference
+  const {
+    connectionState,
+    connected,
+    reconnecting,
+    sendMessage,
+    subscribe,
+    unsubscribe,
+    subscribeSymbols,
+    connect,
+    disconnect,
+    lastError,
+  } = ws;
+
   // Connect when authenticated
   useEffect(() => {
-    if (isAuthenticated && ws.connectionState === "disconnected") {
-      ws.connect();
-    } else if (!isAuthenticated && ws.connected) {
-      ws.disconnect();
+    if (isAuthenticated && connectionState === "disconnected") {
+      connect();
+    } else if (!isAuthenticated && connected) {
+      disconnect();
     }
-  }, [isAuthenticated, ws]);
+  }, [isAuthenticated, connectionState, connected, connect, disconnect]);
 
   const value = useMemo<WebSocketContextValue>(
     () => ({
-      connectionState: ws.connectionState,
-      connected: ws.connected,
-      isConnected: ws.connected,
-      reconnecting: ws.reconnecting,
+      connectionState,
+      connected,
+      isConnected: connected,
+      reconnecting,
       lastMessage,
-      sendMessage: ws.sendMessage,
-      subscribe: ws.subscribe,
-      unsubscribe: ws.unsubscribe,
-      subscribeSymbols: ws.subscribeSymbols,
-      connect: ws.connect,
-      disconnect: ws.disconnect,
-      lastError: ws.lastError,
+      sendMessage,
+      subscribe,
+      unsubscribe,
+      subscribeSymbols,
+      connect,
+      disconnect,
+      lastError,
     }),
-    [ws, lastMessage]
+    [
+      connectionState,
+      connected,
+      reconnecting,
+      lastMessage,
+      sendMessage,
+      subscribe,
+      unsubscribe,
+      subscribeSymbols,
+      connect,
+      disconnect,
+      lastError,
+    ]
   );
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
