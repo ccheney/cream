@@ -10,6 +10,7 @@ Provides scoring and evaluation of trading plans:
 - Pre-execution evaluation with weighted aggregation
 - Post-execution evaluation with Brinson-style attribution
 - Evaluator training pipeline with four-phase curriculum
+- Expected value computation with probability estimation
 """
 
 from research.evaluator.bradley_terry import (
@@ -19,6 +20,16 @@ from research.evaluator.bradley_terry import (
 from research.evaluator.calibration import (
     CalibrationDriftDetector,
     ProbabilityCalibrator,
+)
+from research.evaluator.expected_value import (
+    REGIME_WIN_RATE_MODIFIERS,
+    EVConfig,
+    ExpectedValueCalculator,
+    ExpectedValueEstimate,
+    MarketRegime,
+    compute_expected_value,
+    estimate_probabilities,
+    estimate_scratch_probability,
 )
 from research.evaluator.llm_judge import LLMJudge
 from research.evaluator.post_execution import (
@@ -57,13 +68,17 @@ __all__ = [
     "BradleyTerryRewardModel",
     "CalibrationDriftDetector",
     "DimensionScores",
+    "EVConfig",
     "EvaluatorTrainingPipeline",
     "ExecutedTradeOutcome",
+    "ExpectedValueCalculator",
+    "ExpectedValueEstimate",
     "ExpertAnnotation",
     "HistoricalOutcome",
     "LLMJudge",
     "MarketContext",
     "MarketData",
+    "MarketRegime",
     "OutcomeScore",
     "PhaseProgress",
     "PlanScore",
@@ -71,6 +86,7 @@ __all__ = [
     "PreExecutionEvaluator",
     "PreferencePair",
     "ProbabilityCalibrator",
+    "REGIME_WIN_RATE_MODIFIERS",
     "RuleBasedScorer",
     "ScoringResult",
     "SyntheticPreferenceGenerator",
@@ -79,6 +95,9 @@ __all__ = [
     "TrainingConfig",
     "TrainingPhase",
     "TrainingResult",
+    "compute_expected_value",
+    "estimate_probabilities",
+    "estimate_scratch_probability",
     "generate_random_contexts",
     "train_bradley_terry_model",
 ]
