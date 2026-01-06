@@ -25,39 +25,68 @@ import {
 // ============================================
 
 let dbClient: TursoClient | null = null;
+let initPromise: Promise<TursoClient> | null = null;
 
 /**
- * Get or create the database client
+ * Get or create the database client.
+ * Uses a lock to prevent race conditions during initialization.
  */
 export async function getDbClient(): Promise<TursoClient> {
-  if (!dbClient) {
-    const tursoUrl = process.env.TURSO_DATABASE_URL;
-
-    if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
-      // Remote Turso server (Docker or cloud)
-      dbClient = await createTursoClient({
-        syncUrl: tursoUrl,
-        authToken: process.env.TURSO_AUTH_TOKEN ?? undefined,
-      });
-    } else if (tursoUrl === ":memory:" || process.env.NODE_ENV === "test") {
-      // In-memory for testing
-      dbClient = await createInMemoryClient();
-    } else {
-      // Local file database
-      dbClient = await createTursoClient({
-        path: tursoUrl ?? "cream.db",
-      });
-    }
-
-    // Run migrations on first connection
-    const result = await runMigrations(dbClient, {
-      logger: (msg) => console.log(`[DB Migration] ${msg}`),
-    });
-    if (result.applied.length > 0) {
-      console.log(`[DB] Applied ${result.applied.length} migration(s)`);
-    }
+  // Fast path: already initialized
+  if (dbClient) {
+    return dbClient;
   }
-  return dbClient;
+
+  // Initialization in progress: wait for it
+  if (initPromise) {
+    return initPromise;
+  }
+
+  // First caller: start initialization
+  initPromise = initializeDb();
+
+  try {
+    dbClient = await initPromise;
+    return dbClient;
+  } catch (error) {
+    // Reset on failure so next call can retry
+    initPromise = null;
+    throw error;
+  }
+}
+
+/**
+ * Initialize database client and run migrations.
+ */
+async function initializeDb(): Promise<TursoClient> {
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  let client: TursoClient;
+
+  if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
+    // Remote Turso server (Docker or cloud)
+    client = await createTursoClient({
+      syncUrl: tursoUrl,
+      authToken: process.env.TURSO_AUTH_TOKEN ?? undefined,
+    });
+  } else if (tursoUrl === ":memory:" || process.env.NODE_ENV === "test") {
+    // In-memory for testing
+    client = await createInMemoryClient();
+  } else {
+    // Local file database
+    client = await createTursoClient({
+      path: tursoUrl ?? "cream.db",
+    });
+  }
+
+  // Run migrations on first connection
+  const result = await runMigrations(client, {
+    logger: (msg) => console.log(`[DB Migration] ${msg}`),
+  });
+  if (result.applied.length > 0) {
+    console.log(`[DB] Applied ${result.applied.length} migration(s)`);
+  }
+
+  return client;
 }
 
 /**
@@ -68,6 +97,7 @@ export function closeDb(): void {
     dbClient.close();
     dbClient = null;
   }
+  initPromise = null;
 }
 
 // ============================================
