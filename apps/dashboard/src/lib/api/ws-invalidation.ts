@@ -7,6 +7,7 @@
  * @see docs/plans/ui/07-state-management.md lines 47-66
  */
 
+import { type CyclePhase, useCycleStore } from "@/stores/cycle-store";
 import { getQueryClient, queryKeys } from "./query-client.js";
 
 // ============================================
@@ -75,9 +76,22 @@ export interface DecisionData {
 export interface AgentOutputData {
   decisionId: string;
   agentType: string;
-  vote: string;
-  confidence: number;
+  status: "processing" | "complete";
+  vote?: "APPROVE" | "REJECT" | "ABSTAIN";
+  confidence?: number;
   reasoning?: string;
+  output?: string; // Partial output during streaming
+}
+
+/**
+ * Cycle progress message data.
+ */
+export interface CycleProgressData {
+  cycleId: string;
+  phase: CyclePhase;
+  progress: number;
+  startedAt: string;
+  estimatedEndAt?: string;
 }
 
 /**
@@ -150,16 +164,49 @@ export function handleWSMessage(message: WSMessage): void {
     }
 
     case "agent_output": {
-      const output = message.data as AgentOutputData;
-      // Invalidate specific decision to show agent votes
+      const data = message.data as AgentOutputData;
+      const store = useCycleStore.getState();
+
+      if (data.status === "processing") {
+        // Streaming partial output
+        store.setStreamingOutput({
+          agentType: data.agentType,
+          text: data.output || "",
+        });
+      } else if (data.status === "complete") {
+        // Agent finished - save final output and clear streaming
+        store.updateAgentOutput({
+          decisionId: data.decisionId,
+          agentType: data.agentType,
+          vote: data.vote || "ABSTAIN",
+          confidence: data.confidence || 0,
+          reasoningSummary: data.reasoning,
+          timestamp: new Date().toISOString(),
+        });
+        store.setStreamingOutput(null);
+      }
+
+      // Also invalidate decision detail for vote display
       queryClient.invalidateQueries({
-        queryKey: queryKeys.decisions.detail(output.decisionId),
+        queryKey: queryKeys.decisions.detail(data.decisionId),
       });
       break;
     }
 
     case "cycle_progress": {
-      // System status updated during OODA cycle
+      const data = message.data as CycleProgressData;
+      const store = useCycleStore.getState();
+
+      // Update cycle store with progress
+      store.setCycle({
+        id: data.cycleId,
+        phase: data.phase,
+        progress: data.progress,
+        startedAt: data.startedAt,
+        estimatedEndAt: data.estimatedEndAt,
+      });
+
+      // Also invalidate system status
       queryClient.invalidateQueries({ queryKey: queryKeys.system.status() });
       break;
     }
