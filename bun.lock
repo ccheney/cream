@@ -296,6 +296,7 @@
         "@cream/config": "workspace:*",
         "@cream/domain": "workspace:*",
         "kalshi-typescript": "^3.3.0",
+        "prom-client": "15.1.3",
         "zod": "^3.24.2",
       },
       "devDependencies": {
@@ -1598,6 +1599,8 @@
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
+    "bintrees": ["bintrees@1.0.2", "", {}, "sha512-VOMgTMwjAaUG580SXn3LacVgjurrbMme7ZZNYGSSV7mmtY6QQRh0Eg3pwIcntQ77DErK1L0NxkbetjcoXzVwKw=="],
+
     "bl": ["bl@4.1.0", "", { "dependencies": { "buffer": "^5.5.0", "inherits": "^2.0.4", "readable-stream": "^3.4.0" } }, "sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w=="],
 
     "bluebird": ["bluebird@3.7.2", "", {}, "sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg=="],
@@ -2564,6 +2567,8 @@
 
     "process-warning": ["process-warning@5.0.0", "", {}, "sha512-a39t9ApHNx2L4+HBnQKqxxHNs1r7KF+Intd8Q/g1bUh6q0WIp9voPXJ/x0j+ZL45KF1pJd9+q2jLIRMfvEshkA=="],
 
+    "prom-client": ["prom-client@15.1.3", "", { "dependencies": { "@opentelemetry/api": "^1.4.0", "tdigest": "^0.1.1" } }, "sha512-6ZiOBfCywsD4k1BN9IX0uZhF+tJkV8q8llP64G5Hajs4JOeVLPCwpPVcpXy3BwYiUGgyJzsJJQeOIv7+hDSq8g=="],
+
     "promptfoo": ["promptfoo@0.120.8", "", { "dependencies": { "@anthropic-ai/sdk": "^0.71.2", "@apidevtools/json-schema-ref-parser": "^15.0.0", "@googleapis/sheets": "^13.0.0", "@inquirer/checkbox": "^5.0.1", "@inquirer/confirm": "^6.0.1", "@inquirer/core": "^11.0.1", "@inquirer/editor": "^5.0.1", "@inquirer/input": "^5.0.1", "@inquirer/select": "^5.0.1", "@modelcontextprotocol/sdk": "^1.24.3", "@openai/agents": "^0.3.4", "@opencode-ai/sdk": "^1.0.123", "@opentelemetry/api": "^1.9.0", "@opentelemetry/core": "^2.2.0", "@opentelemetry/exporter-trace-otlp-http": "^0.208.0", "@opentelemetry/resources": "^2.2.0", "@opentelemetry/sdk-trace-base": "^2.2.0", "@opentelemetry/sdk-trace-node": "^2.2.0", "@opentelemetry/semantic-conventions": "^1.38.0", "@types/ws": "^8.18.1", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "async": "^3.2.6", "better-sqlite3": "^12.5.0", "binary-extensions": "^3.1.0", "cache-manager": "^7.2.5", "chalk": "^5.0.0", "chokidar": "5.0.0", "cli-progress": "^3.12.0", "cli-table3": "^0.6.5", "commander": "^14.0.2", "compression": "^1.8.1", "cors": "^2.8.5", "csv-parse": "^6.1.0", "csv-stringify": "^6.6.0", "debounce": "^3.0.0", "dedent": "^1.7.0", "dotenv": "^17.2.3", "drizzle-orm": "^0.45.0", "execa": "^9.6.0", "express": "^5.2.1", "exsolve": "^1.0.8", "fast-deep-equal": "^3.1.3", "fast-safe-stringify": "^2.1.1", "fast-xml-parser": "^5.3.2", "fastest-levenshtein": "^1.0.16", "gcp-metadata": "^8.1.2", "glob": "^13.0.0", "http-z": "^8.1.1", "istextorbinary": "^9.5.0", "jks-js": "^1.1.4", "js-rouge": "^3.0.0", "js-yaml": "^4.1.1", "jsdom": "^26.1.0", "keyv": "^5.5.4", "keyv-file": "^5.3.3", "lru-cache": "^11.2.2", "mathjs": "^15.1.0", "minimatch": "^10.1.1", "nunjucks": "^3.2.4", "openai": "^6.14.0", "opener": "^1.5.2", "ora": "^9.0.0", "pem": "^1.15.1", "posthog-node": "^5.14.0", "protobufjs": "^7.5.4", "proxy-agent": "^6.5.0", "proxy-from-env": "^1.1.0", "python-shell": "^5.0.0", "rfdc": "^1.4.1", "rxjs": "^7.8.2", "semver": "^7.7.3", "simple-git": "^3.30.0", "socket.io": "^4.8.1", "socket.io-client": "^4.8.1", "text-extensions": "^3.1.0", "tsx": "^4.20.6", "undici": "^7.16.0", "winston": "^3.19.0", "ws": "^8.18.3", "zod": "^3.25.76", "zod-validation-error": "^3.5.4" }, "optionalDependencies": { "@adaline/anthropic": "1.10.0", "@adaline/azure": "1.8.2", "@adaline/gateway": "1.11.0", "@adaline/google": "1.12.1", "@adaline/groq": "1.10.2", "@adaline/open-router": "1.7.0", "@adaline/openai": "1.14.0", "@adaline/provider": "1.7.0", "@adaline/together-ai": "1.7.0", "@adaline/types": "1.10.0", "@adaline/vertex": "1.10.1", "@anthropic-ai/claude-agent-sdk": "^0.1.72", "@aws-sdk/client-bedrock-agent-runtime": "^3.954.0", "@aws-sdk/client-bedrock-runtime": "^3.954.0", "@aws-sdk/client-sagemaker-runtime": "^3.954.0", "@aws-sdk/credential-provider-sso": "^3.940.0", "@azure/ai-projects": "^1.0.1", "@azure/identity": "^4.13.0", "@azure/msal-node": "^3.8.3", "@azure/openai-assistants": "^1.0.0-beta.6", "@biomejs/cli-darwin-arm64": "2.3.10", "@biomejs/cli-darwin-x64": "2.3.10", "@biomejs/cli-linux-x64": "2.3.10", "@biomejs/cli-linux-x64-musl": "2.3.10", "@biomejs/cli-win32-x64": "2.3.10", "@fal-ai/client": "^1.7.2", "@ibm-cloud/watsonx-ai": "^1.7.5", "@ibm-generative-ai/node-sdk": "^3.2.4", "@openai/codex-sdk": "^0.72.0", "@playwright/browser-chromium": "^1.57.0", "@rollup/rollup-linux-x64-gnu": "^4.53.3", "@slack/web-api": "^7.12.0", "@smithy/node-http-handler": "^4.4.5", "@swc/core": "^1.15.3", "@swc/core-darwin-arm64": "^1.15.3", "@swc/core-darwin-x64": "^1.15.3", "@swc/core-linux-x64-gnu": "^1.15.3", "@swc/core-linux-x64-musl": "^1.15.3", "@swc/core-win32-x64-msvc": "^1.15.3", "fluent-ffmpeg": "^2.1.3", "google-auth-library": "^10.5.0", "ibm-cloud-sdk-core": "^5.4.4", "langfuse": "^3.38.6", "natural": "^8.1.0", "node-sql-parser": "^5.3.13", "pdf-parse": "^2.0.0", "playwright": "^1.57.0", "playwright-extra": "^4.3.6", "puppeteer-extra-plugin-stealth": "^2.11.2", "read-excel-file": "^6.0.1", "sharp": "^0.34.5" }, "bin": { "promptfoo": "dist/src/main.js", "pf": "dist/src/main.js" } }, "sha512-cZZ9ac/SG+wQQmTPgEBSLRcDpiSFA1s7jex2US83c2OdGgHlporodLNjPf3GOvNObj2QbcTmQVxrvpfctkgerg=="],
 
     "prop-types": ["prop-types@15.8.1", "", { "dependencies": { "loose-envify": "^1.4.0", "object-assign": "^4.1.1", "react-is": "^16.13.1" } }, "sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg=="],
@@ -2803,6 +2808,8 @@
     "tar-fs": ["tar-fs@3.1.1", "", { "dependencies": { "pump": "^3.0.0", "tar-stream": "^3.1.5" }, "optionalDependencies": { "bare-fs": "^4.0.1", "bare-path": "^3.0.0" } }, "sha512-LZA0oaPOc2fVo82Txf3gw+AkEd38szODlptMYejQUhndHMLQ9M059uXR+AfS7DNo0NpINvSqDsvyaCrBVkptWg=="],
 
     "tar-stream": ["tar-stream@3.1.7", "", { "dependencies": { "b4a": "^1.6.4", "fast-fifo": "^1.2.0", "streamx": "^2.15.0" } }, "sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ=="],
+
+    "tdigest": ["tdigest@0.1.2", "", { "dependencies": { "bintrees": "1.0.2" } }, "sha512-+G0LLgjjo9BZX2MfdvPfH+MKLCrxlXSYec5DaPYP1fe6Iyhf0/fSmJ0bFiZ1F8BT6cGXl2LpltQptzjXKWEkKA=="],
 
     "termi-link": ["termi-link@1.1.0", "", {}, "sha512-2qSN6TnomHgVLtk+htSWbaYs4Rd2MH/RU7VpHTy6MBstyNyWbM4yKd1DCYpE3fDg8dmGWojXCngNi/MHCzGuAA=="],
 

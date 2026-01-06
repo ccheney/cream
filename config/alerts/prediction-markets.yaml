@@ -1,0 +1,167 @@
+# Prometheus Alerting Rules for Prediction Markets
+#
+# These rules monitor the health and performance of the prediction markets
+# integration. Configure AlertManager routing for appropriate notification channels.
+#
+# @see docs/plans/18-prediction-markets.md (Monitoring & Observability)
+
+groups:
+  - name: prediction-markets
+    interval: 30s
+    rules:
+      # ============================================
+      # API Health Alerts
+      # ============================================
+
+      - alert: PredictionMarketAPIDown
+        expr: increase(prediction_market_api_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market API experiencing errors"
+          description: "Platform {{ $labels.platform }} has {{ $value | printf \"%.0f\" }} errors in last 5m"
+          runbook_url: "https://docs.cream.dev/runbooks/prediction-markets-api"
+
+      - alert: PredictionMarketAPICritical
+        expr: increase(prediction_market_api_errors_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market API critical failure"
+          description: "Platform {{ $labels.platform }} has {{ $value | printf \"%.0f\" }} errors in last 5m - trading signals may be stale"
+
+      # ============================================
+      # Signal Freshness Alerts
+      # ============================================
+
+      - alert: StaleSignals
+        expr: (time() - prediction_market_signal_age_seconds) > 3600
+        for: 15m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market signals are stale (>1 hour old)"
+          description: "Signal type {{ $labels.signal_type }} last updated {{ $value | humanizeDuration }} ago"
+
+      - alert: CriticallyStaleSignals
+        expr: (time() - prediction_market_signal_age_seconds) > 7200
+        for: 5m
+        labels:
+          severity: critical
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market signals critically stale (>2 hours old)"
+          description: "Signal type {{ $labels.signal_type }} is {{ $value | humanizeDuration }} old - trading decisions may be affected"
+
+      # ============================================
+      # Latency Alerts
+      # ============================================
+
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(prediction_market_api_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market API P95 latency above 2 seconds"
+          description: "Platform {{ $labels.platform }} endpoint {{ $labels.endpoint }} P95 latency is {{ $value | printf \"%.2f\" }}s"
+
+      - alert: VeryHighAPILatency
+        expr: histogram_quantile(0.95, rate(prediction_market_api_latency_seconds_bucket[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market API P95 latency above 5 seconds"
+          description: "Platform {{ $labels.platform }} is experiencing severe latency - consider circuit breaker activation"
+
+      # ============================================
+      # Cache Performance Alerts
+      # ============================================
+
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            rate(prediction_market_cache_hits_total{status="hit"}[5m]) /
+            rate(prediction_market_cache_hits_total[5m])
+          ) < 0.5
+        for: 15m
+        labels:
+          severity: info
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market cache hit rate below 50%"
+          description: "Cache hit rate is {{ $value | printf \"%.1f\" }}% - consider increasing cache TTL or capacity"
+
+      - alert: CacheNotWorking
+        expr: |
+          (
+            rate(prediction_market_cache_hits_total{status="hit"}[5m]) /
+            rate(prediction_market_cache_hits_total[5m])
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market cache hit rate critically low (<10%)"
+          description: "Cache appears to be ineffective - investigate cache configuration"
+
+      # ============================================
+      # WebSocket Connection Alerts
+      # ============================================
+
+      - alert: WebSocketDisconnected
+        expr: prediction_market_websocket_connected == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market WebSocket disconnected"
+          description: "Platform {{ $labels.platform }} WebSocket has been disconnected for >5 minutes"
+
+      - alert: WebSocketLongDisconnection
+        expr: prediction_market_websocket_connected == 0
+        for: 30m
+        labels:
+          severity: critical
+          component: prediction-markets
+        annotations:
+          summary: "Prediction market WebSocket disconnected for extended period"
+          description: "Platform {{ $labels.platform }} WebSocket has been disconnected for >30 minutes - real-time updates are not flowing"
+
+      # ============================================
+      # Market Availability Alerts
+      # ============================================
+
+      - alert: NoActiveMarkets
+        expr: sum(prediction_market_active_markets) by (platform) == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "No active markets found on prediction platform"
+          description: "Platform {{ $labels.platform }} reports 0 active markets - API may be down or markets may be closed"
+
+      # ============================================
+      # Rate Limiting Alerts
+      # ============================================
+
+      - alert: RateLimitErrors
+        expr: increase(prediction_market_api_errors_total{error_type="rate_limit"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: prediction-markets
+        annotations:
+          summary: "Rate limit errors on prediction market API"
+          description: "Platform {{ $labels.platform }} has {{ $value | printf \"%.0f\" }} rate limit errors - consider reducing request frequency"
