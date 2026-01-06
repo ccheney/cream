@@ -6,6 +6,7 @@ import { describe, expect, it } from "bun:test";
 import {
   checkGoldenStaleness,
   getAllGoldenCaseIds,
+  getAllGoldenCases,
   getGoldenDatasetStats,
   hasGoldenDataset,
   loadGoldenCase,
@@ -243,6 +244,10 @@ describe("loadGoldenOutput", () => {
     expect(output).toBeDefined();
     expect((output as { decision: { action: string } }).decision.action).toBe("BUY");
   });
+
+  it("should throw for non-existent output", () => {
+    expect(() => loadGoldenOutput("trader", "999")).toThrow();
+  });
 });
 
 describe("loadGoldenCase", () => {
@@ -297,5 +302,26 @@ describe("getGoldenDatasetStats", () => {
     expect(stats.totalCases).toBeGreaterThan(0);
     expect(stats.byAgent.trader).toBeGreaterThan(0);
     expect(stats.byRegime.bull_trend).toBeGreaterThan(0);
+  });
+});
+
+describe("getAllGoldenCases", () => {
+  it("should return all cases with input, output, and metadata for trader", () => {
+    const cases = getAllGoldenCases("trader");
+
+    expect(cases.length).toBeGreaterThan(0);
+    const firstCase = cases[0];
+    if (firstCase) {
+      expect(firstCase.caseId).toBeDefined();
+      expect(firstCase.input).toBeDefined();
+      expect(firstCase.output).toBeDefined();
+      expect((firstCase.input as { symbol: string }).symbol).toBe("AAPL");
+    }
+  });
+
+  it("should return empty array for agent with no cases", () => {
+    const cases = getAllGoldenCases("news_analyst");
+
+    expect(cases).toHaveLength(0);
   });
 });

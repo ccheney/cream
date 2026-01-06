@@ -24,11 +24,13 @@ class MockWebSocketServer {
   private server: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
   private port = 0;
+  private autoAuth = true;
 
   /**
    * Start the mock server.
    */
-  async start(): Promise<number> {
+  async start(options?: { autoAuth?: boolean }): Promise<number> {
+    this.autoAuth = options?.autoAuth ?? true;
     return new Promise((resolve) => {
       this.server = new WebSocketServer({ port: 0 }, () => {
         this.port = (this.server!.address() as { port: number }).port;
@@ -115,7 +117,7 @@ class MockWebSocketServer {
       const message = JSON.parse(data.toString());
 
       // Handle authentication
-      if (message.message_type === "authentication") {
+      if (message.message_type === "authentication" && this.autoAuth) {
         ws.send(
           JSON.stringify({
             message_type: "authentication_response",
@@ -183,6 +185,32 @@ class MockWebSocketServer {
       msg: message,
       code: "ERROR",
     });
+  }
+
+  /**
+   * Force close all client connections.
+   */
+  forceCloseClients(): void {
+    for (const client of this.clients) {
+      client.close(1006, "Test close");
+    }
+  }
+
+  /**
+   * Send failed authentication response.
+   */
+  sendFailedAuth(): void {
+    for (const client of this.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(
+          JSON.stringify({
+            message_type: "authentication_response",
+            status: "failed",
+            error: "Invalid API key",
+          })
+        );
+      }
+    }
   }
 }
 
@@ -562,6 +590,183 @@ describe("DatabentoClient", () => {
 
       // Should not have any pending timers
       expect(client.getState()).toBe(ConnectionState.DISCONNECTED);
+    });
+
+    test("should handle unsubscribe when not connected", async () => {
+      expect(client.isConnected()).toBe(false);
+
+      await expect(client.unsubscribe("XNAS.ITCH", ["AAPL"])).rejects.toThrow("Not connected");
+    });
+
+    test("should handle OHLCV messages", async () => {
+      await client.connect();
+      await waitForEvent(client, "authenticated");
+
+      await client.subscribe({
+        dataset: "XNAS.ITCH",
+        schema: "ohlcv-1m",
+        symbols: ["AAPL"],
+      });
+      await waitForEvent(client, "subscribed");
+
+      const messagePromise = waitForEvent(client, "message");
+
+      // Send OHLCV message
+      server.broadcast({
+        ts_event: Date.now() * 1_000_000,
+        symbol: "AAPL",
+        open: 150.0,
+        high: 151.0,
+        low: 149.5,
+        close: 150.5,
+        volume: 1000000,
+      });
+
+      const event = await messagePromise;
+      expect(event.type).toBe("message");
+      if (event.type === "message") {
+        expect(event.schema).toBe("ohlcv-1m");
+      }
+    });
+
+    test("should handle MBP-10 messages", async () => {
+      await client.connect();
+      await waitForEvent(client, "authenticated");
+
+      await client.subscribe({
+        dataset: "XNAS.ITCH",
+        schema: "mbp-10",
+        symbols: ["AAPL"],
+      });
+      await waitForEvent(client, "subscribed");
+
+      const messagePromise = waitForEvent(client, "message");
+
+      // Send MBP-10 message with 10 levels
+      const levels = Array.from({ length: 10 }, (_, i) => ({
+        bid_px: 150 - i * 0.01,
+        ask_px: 150.01 + i * 0.01,
+        bid_sz: 100 * (10 - i),
+        ask_sz: 100 * (10 - i),
+      }));
+
+      server.broadcast({
+        ts_event: Date.now() * 1_000_000,
+        symbol: "AAPL",
+        bid_px: 150,
+        ask_px: 150.01,
+        levels,
+      });
+
+      const event = await messagePromise;
+      expect(event.type).toBe("message");
+      if (event.type === "message") {
+        expect(event.schema).toBe("mbp-10");
+      }
+    });
+
+    test("should handle symbol mapping messages", async () => {
+      await client.connect();
+      await waitForEvent(client, "authenticated");
+
+      const messagePromise = waitForEvent(client, "message");
+
+      server.broadcast({
+        stype_in_symbol: "AAPL",
+        stype_out_symbol: "AAPL",
+        start_ts: Date.now() * 1_000_000,
+        end_ts: Date.now() * 1_000_000 + 86400000000000,
+      });
+
+      const event = await messagePromise;
+      expect(event.type).toBe("message");
+    });
+
+    test("should handle non-object JSON responses", async () => {
+      await client.connect();
+      await waitForEvent(client, "authenticated");
+
+      // Send null JSON - should be handled gracefully
+      server.broadcast(null);
+
+      // Wait a bit
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Should still be connected
+      expect(client.isConnected()).toBe(true);
+    });
+  });
+
+  describe("Error Handling", () => {
+    test("should handle failed authentication", async () => {
+      // Stop the auto-auth server and create new one without auto-auth
+      await server.stop();
+      server = new MockWebSocketServer();
+      await server.start({ autoAuth: false });
+
+      client = new DatabentoClient({
+        apiKey: "invalid-key",
+        liveUrl: server.getUrl(),
+        heartbeatIntervalS: 1,
+        autoReconnect: false,
+      });
+
+      const errorPromise = waitForEvent(client, "error");
+
+      await client.connect();
+
+      // Manually send failed auth response
+      server.sendFailedAuth();
+
+      const event = await errorPromise;
+      expect(event.type).toBe("error");
+    });
+
+    test("should handle connection close", async () => {
+      await client.connect();
+      await waitForEvent(client, "authenticated");
+
+      const disconnectedPromise = waitForEvent(client, "disconnected");
+
+      // Force close all connections
+      server.forceCloseClients();
+
+      const event = await disconnectedPromise;
+      expect(event.type).toBe("disconnected");
+    });
+  });
+
+  describe("Reconnection with Auto-Reconnect", () => {
+    test("should emit reconnecting event when connection closes with autoReconnect enabled", async () => {
+      // Stop the existing server and create a new client with reconnection enabled
+      await server.stop();
+      server = new MockWebSocketServer();
+      await server.start();
+
+      const reconnectClient = new DatabentoClient({
+        apiKey: "test-api-key",
+        liveUrl: server.getUrl(),
+        autoReconnect: true,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: 100,
+      });
+
+      await reconnectClient.connect();
+      await waitForEvent(reconnectClient, "authenticated");
+
+      const reconnectingPromise = waitForEvent(reconnectClient, "reconnecting", 2000);
+
+      // Force close the connection
+      server.forceCloseClients();
+
+      const event = await reconnectingPromise;
+      expect(event.type).toBe("reconnecting");
+      if (event.type === "reconnecting") {
+        expect(event.attempt).toBe(1);
+      }
+
+      // Cleanup
+      reconnectClient.disconnect();
     });
   });
 });
