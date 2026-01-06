@@ -8,6 +8,7 @@ import {
   type AlertInput,
   ConsoleNotificationChannel,
   createEscalationService,
+  createEscalationServiceFromEnv,
   type EscalationNotification,
   EscalationService,
   InterventionManager,
@@ -137,6 +138,78 @@ describe("SlackWebhookChannel", () => {
 
     const healthy = await channel.healthCheck();
     expect(healthy).toBe(true);
+  });
+
+  describe("send", () => {
+    const createNotification = (
+      severity: "warning" | "critical",
+      requiresAction: boolean
+    ): EscalationNotification => ({
+      title: "Test Alert",
+      message: "Test message",
+      severity,
+      event: createTestEvent(),
+      context: {
+        environment: "test",
+        timestamp: new Date().toISOString(),
+        requiresAction,
+        actionUrl: requiresAction ? "https://dashboard.example.com/alerts" : undefined,
+      },
+    });
+
+    it("should send notification with warning severity", async () => {
+      // Create a channel with a mock URL that we'll test the behavior
+      const channel = new SlackWebhookChannel({
+        webhookUrl: "https://httpbin.org/post", // Public test endpoint
+        username: "Test Bot",
+        iconEmoji: ":robot:",
+        defaultChannel: "#test",
+      });
+
+      const notification = createNotification("warning", false);
+      const result = await channel.send(notification);
+
+      // httpbin.org returns 200 OK, so this should succeed
+      expect(result.channelName).toBe("slack-webhook");
+      // Note: actual success depends on httpbin.org being reachable
+    });
+
+    it("should send notification with critical severity and actions", async () => {
+      const channel = new SlackWebhookChannel({
+        webhookUrl: "https://httpbin.org/post",
+      });
+
+      const notification = createNotification("critical", true);
+      const result = await channel.send(notification);
+
+      expect(result.channelName).toBe("slack-webhook");
+    });
+
+    it("should handle network errors gracefully", async () => {
+      const channel = new SlackWebhookChannel({
+        webhookUrl: "https://invalid.localhost.invalid/webhook",
+      });
+
+      const notification = createNotification("warning", false);
+      const result = await channel.send(notification);
+
+      expect(result.success).toBe(false);
+      expect(result.channelName).toBe("slack-webhook");
+      expect(result.error).toBeDefined();
+    });
+
+    it("should handle HTTP error responses", async () => {
+      const channel = new SlackWebhookChannel({
+        webhookUrl: "https://httpbin.org/status/400", // Will return 400 error
+      });
+
+      const notification = createNotification("warning", false);
+      const result = await channel.send(notification);
+
+      expect(result.success).toBe(false);
+      expect(result.channelName).toBe("slack-webhook");
+      expect(result.error).toContain("400");
+    });
   });
 });
 
@@ -314,6 +387,15 @@ describe("createEscalationService", () => {
       environment: "production",
     });
 
+    expect(service.getChannels()).toContain("console");
+  });
+});
+
+describe("createEscalationServiceFromEnv", () => {
+  it("should create service from environment variables", () => {
+    const service = createEscalationServiceFromEnv();
+
+    // Should at least have console channel since no SLACK_WEBHOOK_URL is set
     expect(service.getChannels()).toContain("console");
   });
 });

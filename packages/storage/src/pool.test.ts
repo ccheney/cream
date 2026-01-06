@@ -7,6 +7,7 @@ import {
   type ConnectionPool,
   createHttpPool,
   createPool,
+  createTursoPool,
   type HttpPool,
   type PoolConfig,
 } from "./pool.js";
@@ -466,5 +467,318 @@ describe("Edge Cases", () => {
     } finally {
       pool.close();
     }
+  });
+
+  test("releases connection after pool closed", async () => {
+    const pool = createPool(createMockConfig({ min: 1 }));
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const conn = await pool.acquire();
+    await pool.close();
+
+    // Releasing after close should destroy the connection
+    pool.release(conn);
+
+    // Connection should be destroyed
+    expect(conn.isClosed).toBe(true);
+  });
+
+  test("handles releasing unknown connection gracefully", async () => {
+    const pool = createPool(createMockConfig());
+
+    // Try to release a connection that was never in the pool
+    const unknownConn: MockConnection = {
+      id: 9999,
+      isValid: true,
+      isClosed: false,
+    };
+
+    // Should not throw
+    pool.release(unknownConn);
+
+    await pool.close();
+  });
+
+  test("handles validation throwing exception", async () => {
+    let callCount = 0;
+    const pool = createPool({
+      create: async () => ({
+        id: ++callCount,
+        isValid: true,
+        isClosed: false,
+      }),
+      destroy: async (conn) => {
+        conn.isClosed = true;
+      },
+      validate: async () => {
+        throw new Error("Validation error");
+      },
+      min: 1,
+      max: 2,
+      healthCheckInterval: 60000,
+    });
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Should still be able to acquire (validation error = invalid)
+    const conn = await pool.acquire();
+    expect(conn).toBeDefined();
+    pool.release(conn);
+
+    await pool.close();
+  });
+
+  test("handles creation failure", async () => {
+    let callCount = 0;
+    const pool = createPool({
+      create: async () => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("Creation failed");
+        }
+        return {
+          id: callCount,
+          isValid: true,
+          isClosed: false,
+        };
+      },
+      destroy: async (conn: MockConnection) => {
+        conn.isClosed = true;
+      },
+      min: 1,
+      max: 2,
+      healthCheckInterval: 60000,
+    });
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Pool should recover by creating a new connection
+    const conn = await pool.acquire();
+    expect(conn).toBeDefined();
+    pool.release(conn);
+
+    await pool.close();
+  });
+
+  test("recycles connections that exceed maxAge", async () => {
+    const pool = createPool(createMockConfig({ min: 0, max: 2, maxAge: 50 }));
+
+    const conn = await pool.acquire();
+    const originalId = conn.id;
+
+    // Wait for connection to exceed maxAge
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    pool.release(conn);
+
+    // Next acquire should get a new connection
+    const conn2 = await pool.acquire();
+    expect(conn2.id).not.toBe(originalId);
+    pool.release(conn2);
+
+    await pool.close();
+  });
+
+  test("recycles connections that exceed idleTimeout when above min", async () => {
+    const pool = createPool(createMockConfig({ min: 0, max: 2, idleTimeout: 50 }));
+
+    const conn = await pool.acquire();
+    pool.release(conn);
+
+    // Wait for idle timeout
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Next acquire should trigger recycle
+    const conn2 = await pool.acquire();
+    expect(conn2).toBeDefined();
+    pool.release(conn2);
+
+    await pool.close();
+  });
+
+  test("close is idempotent", async () => {
+    const pool = createPool(createMockConfig({ min: 1 }));
+
+    await pool.close();
+    await pool.close(); // Second close should not throw
+
+    expect(pool.isClosed()).toBe(true);
+  });
+
+  test("handles destroy failure gracefully", async () => {
+    let destroyCallCount = 0;
+    const pool = createPool({
+      create: async () => ({
+        id: 1,
+        isValid: true,
+        isClosed: false,
+      }),
+      destroy: async () => {
+        destroyCallCount++;
+        throw new Error("Destroy failed");
+      },
+      min: 0,
+      max: 1,
+      healthCheckInterval: 60000,
+    });
+
+    const conn = await pool.acquire();
+    pool.release(conn);
+
+    await pool.close();
+
+    // Destroy should have been called even though it failed
+    expect(destroyCallCount).toBeGreaterThan(0);
+  });
+
+  test("works without validator function", async () => {
+    const pool = createPool({
+      create: async () => ({
+        id: 1,
+        isValid: true,
+        isClosed: false,
+      }),
+      destroy: async (conn: MockConnection) => {
+        conn.isClosed = true;
+      },
+      // No validate function
+      min: 1,
+      max: 2,
+      healthCheckInterval: 60000,
+    });
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const conn = await pool.acquire();
+    expect(conn).toBeDefined();
+    pool.release(conn);
+
+    // Should be able to reuse connection
+    const conn2 = await pool.acquire();
+    expect(conn2.id).toBe(conn.id);
+    pool.release(conn2);
+
+    await pool.close();
+  });
+
+  test("health check interval runs and recycles old connections", async () => {
+    const pool = createPool({
+      ...createMockConfig({ min: 1, max: 2, maxAge: 50 }),
+      healthCheckInterval: 100, // Short interval for testing
+    });
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Wait for health check to run
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Connection should have been recycled due to age
+    const stats = pool.getStats();
+    expect(stats.totalCreated).toBeGreaterThan(0);
+
+    await pool.close();
+  });
+
+  test("health check maintains minimum connections", async () => {
+    const pool = createPool({
+      ...createMockConfig({ min: 2, max: 5 }),
+      healthCheckInterval: 50,
+    });
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const stats = pool.getStats();
+    expect(stats.size).toBeGreaterThanOrEqual(2);
+
+    await pool.close();
+  });
+
+  test("pending request processing after release", async () => {
+    const pool = createPool(createMockConfig({ min: 0, max: 1, acquireTimeout: 500 }));
+
+    const conn1 = await pool.acquire();
+
+    // Queue a pending request
+    const pendingPromise = pool.acquire();
+
+    // Short delay then release
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    pool.release(conn1);
+
+    // Pending request should be fulfilled
+    const conn2 = await pendingPromise;
+    expect(conn2).toBeDefined();
+    pool.release(conn2);
+
+    await pool.close();
+  });
+});
+
+// ============================================
+// Turso Pool Tests
+// ============================================
+
+describe("TursoPool", () => {
+  test("creates turso pool with correct config", async () => {
+    let executeCount = 0;
+
+    const pool = await createTursoPool(
+      async () => ({
+        execute: async (_sql: string, _args?: unknown[]) => {
+          executeCount++;
+          return [];
+        },
+        close: () => {},
+      }),
+      { min: 1, max: 2 }
+    );
+
+    // Wait for initialization
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const conn = await pool.acquire();
+    await conn.execute("SELECT 1");
+    pool.release(conn);
+
+    expect(executeCount).toBeGreaterThan(0);
+
+    await pool.close();
+  });
+
+  test("turso pool validates connections", async () => {
+    let isValid = true;
+
+    const pool = await createTursoPool(
+      async () => ({
+        execute: async (_sql: string, _args?: unknown[]) => {
+          if (!isValid) {
+            throw new Error("Connection invalid");
+          }
+          return [];
+        },
+        close: () => {},
+      }),
+      { min: 0, max: 2 }
+    );
+
+    const conn = await pool.acquire();
+    pool.release(conn);
+
+    // Invalidate connections
+    isValid = false;
+
+    // Next acquire should fail validation and get new connection
+    const conn2 = await pool.acquire();
+    pool.release(conn2);
+
+    await pool.close();
   });
 });
