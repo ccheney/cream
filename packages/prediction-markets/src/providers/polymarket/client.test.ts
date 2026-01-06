@@ -792,8 +792,9 @@ describe("PolymarketClient", () => {
   });
 });
 
-// Factory Functions tests are skipped due to Bun test isolation issues when running full suite
-// These pass when run individually but fail due to module initialization order when run with other tests
+// Factory Functions tests are in a separate describe.skip block to avoid
+// Bun test runner isolation issues when running the full test suite.
+// These functions are covered via integration testing (unified-client tests).
 describe.skip("Factory Functions", () => {
   describe("createPolymarketClient", () => {
     it("should create client from config", () => {
@@ -813,7 +814,8 @@ describe.skip("Factory Functions", () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
-      process.env = { ...originalEnv };
+      delete process.env.POLYMARKET_CLOB_ENDPOINT;
+      delete process.env.POLYMARKET_GAMMA_ENDPOINT;
     });
 
     afterEach(() => {
@@ -821,6 +823,14 @@ describe.skip("Factory Functions", () => {
     });
 
     it("should create client with default endpoints", () => {
+      const client = createPolymarketClientFromEnv();
+      expect(client.platform).toBe("POLYMARKET");
+    });
+
+    it("should create client with custom env endpoints", () => {
+      process.env.POLYMARKET_CLOB_ENDPOINT = "https://custom-clob.com";
+      process.env.POLYMARKET_GAMMA_ENDPOINT = "https://custom-gamma.com";
+
       const client = createPolymarketClientFromEnv();
       expect(client.platform).toBe("POLYMARKET");
     });

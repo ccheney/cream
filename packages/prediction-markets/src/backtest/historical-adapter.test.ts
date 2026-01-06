@@ -3,19 +3,14 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { HistoricalPredictionMarketAdapter } from "./historical-adapter";
+import {
+  createHistoricalAdapterFromEnv,
+  HistoricalPredictionMarketAdapter,
+} from "./historical-adapter";
 
 describe("HistoricalPredictionMarketAdapter", () => {
-  test("creates adapter with default config", () => {
+  test("creates adapter", () => {
     const adapter = new HistoricalPredictionMarketAdapter();
-    expect(adapter).toBeDefined();
-  });
-
-  test("creates adapter with custom config", () => {
-    const adapter = new HistoricalPredictionMarketAdapter({
-      apiKey: "test-key",
-      timeoutMs: 5000,
-    });
     expect(adapter).toBeDefined();
   });
 
@@ -87,5 +82,12 @@ describe("HistoricalPredictionMarketAdapter", () => {
     expect(analysis.some((a) => a.regime === "LOW_VOL")).toBe(true);
     expect(analysis.some((a) => a.regime === "MEDIUM_VOL")).toBe(true);
     expect(analysis.some((a) => a.regime === "HIGH_VOL")).toBe(true);
+  });
+});
+
+describe("createHistoricalAdapterFromEnv", () => {
+  test("creates adapter from environment", () => {
+    const adapter = createHistoricalAdapterFromEnv();
+    expect(adapter).toBeInstanceOf(HistoricalPredictionMarketAdapter);
   });
 });

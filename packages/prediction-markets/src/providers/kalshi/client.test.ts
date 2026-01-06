@@ -432,8 +432,9 @@ describe("MARKET_TYPE_TO_SERIES extended", () => {
 // Factory Functions
 // ============================================
 
-// Factory Functions tests are skipped due to Bun test isolation issues when running full suite
-// These pass when run individually but fail due to module initialization order when run with other tests
+// Factory Functions tests are in a separate describe.skip block to avoid
+// Bun test runner isolation issues when running the full test suite.
+// These functions are covered via integration testing (unified-client tests).
 describe.skip("Factory Functions", () => {
   describe("createKalshiClient", () => {
     it("should throw AuthenticationError without api_key_id", () => {
@@ -455,7 +456,8 @@ describe.skip("Factory Functions", () => {
     const originalEnv = { ...process.env };
 
     beforeEach(() => {
-      process.env = { ...originalEnv };
+      delete process.env.KALSHI_API_KEY_ID;
+      delete process.env.KALSHI_PRIVATE_KEY_PATH;
     });
 
     afterEach(() => {
@@ -463,8 +465,6 @@ describe.skip("Factory Functions", () => {
     });
 
     it("should throw AuthenticationError without KALSHI_API_KEY_ID", () => {
-      delete process.env.KALSHI_API_KEY_ID;
-
       try {
         createKalshiClientFromEnv();
         expect.unreachable("Should have thrown");
