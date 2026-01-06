@@ -17,6 +17,7 @@ import {
   computeSentimentFromExtraction,
   computeSentimentMomentum,
   computeSentimentScore,
+  computeSurpriseFromExtraction,
   computeSurpriseScore,
   getSourceCredibility,
   getSurpriseDirection,
@@ -206,6 +207,21 @@ describe("Surprise Scoring", () => {
     expect(hugeBeat).toBeCloseTo(1, 1);
   });
 
+  it("should handle zero expected value with positive actual", () => {
+    const score = computeSurpriseScore(10, 0);
+    expect(score).toBe(0.5);
+  });
+
+  it("should handle zero expected value with negative actual", () => {
+    const score = computeSurpriseScore(-10, 0);
+    expect(score).toBe(-0.5);
+  });
+
+  it("should handle zero expected value with zero actual", () => {
+    const score = computeSurpriseScore(0, 0);
+    expect(score).toBe(0);
+  });
+
   it("should aggregate multiple surprises", () => {
     const dataPoints = [
       { actual: 110, expected: 100, weight: 1 },
@@ -214,6 +230,20 @@ describe("Surprise Scoring", () => {
     const agg = computeAggregatedSurprise(dataPoints);
     expect(agg).toBeGreaterThan(-0.5);
     expect(agg).toBeLessThan(0.5);
+  });
+
+  it("should return 0 for empty data points", () => {
+    const agg = computeAggregatedSurprise([]);
+    expect(agg).toBe(0);
+  });
+
+  it("should return 0 when total weight is zero", () => {
+    const dataPoints = [
+      { actual: 110, expected: 100, weight: 0 },
+      { actual: 95, expected: 100, weight: 0 },
+    ];
+    const agg = computeAggregatedSurprise(dataPoints);
+    expect(agg).toBe(0);
   });
 
   it("should classify surprise", () => {
@@ -234,5 +264,137 @@ describe("Surprise Scoring", () => {
     expect(getSurpriseDirection(0.2)).toBe("positive");
     expect(getSurpriseDirection(-0.2)).toBe("negative");
     expect(getSurpriseDirection(0)).toBe("neutral");
+  });
+
+  it("should compute surprise from extraction with matching data points", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [
+        { metric: "revenue", value: 110, unit: "B" },
+        { metric: "eps", value: 2.5, unit: "USD" },
+      ],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [
+      { metric: "revenue", expectedValue: 100 },
+      { metric: "eps", expectedValue: 2.0 },
+    ];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    expect(score).toBeGreaterThan(0); // Should be positive (beat expectations)
+  });
+
+  it("should compute surprise from extraction with partial match", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [{ metric: "total revenue", value: 110, unit: "B" }],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [{ metric: "revenue", expectedValue: 100 }];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    expect(score).toBeGreaterThan(0); // Partial match: "total revenue" contains "revenue"
+  });
+
+  it("should compute surprise from extraction with no matches (fallback to event-based)", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [{ metric: "unknown_metric", value: 110, unit: "B" }],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [{ metric: "completely_different", expectedValue: 100 }];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    // Falls back to event-based surprise
+    expect(typeof score).toBe("number");
+  });
+
+  it("should compute surprise from extraction with empty data points", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const score = computeSurpriseFromExtraction(extraction, []);
+    // Falls back to event-based surprise
+    expect(typeof score).toBe("number");
+  });
+
+  it("should apply metric weight for eps", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [{ metric: "EPS", value: 2.5, unit: "USD" }],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [{ metric: "eps", expectedValue: 2.0 }];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it("should apply metric weight for growth", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [{ metric: "revenue growth", value: 15, unit: "%" }],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [{ metric: "growth", expectedValue: 10 }];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it("should use default weight for unknown metrics", () => {
+    const extraction: ExtractionResult = {
+      sentiment: "bullish",
+      confidence: 0.8,
+      entities: [],
+      dataPoints: [{ metric: "custom_metric_xyz", value: 110, unit: "units" }],
+      eventType: "earnings",
+      importance: 4,
+      summary: "Test",
+      keyInsights: [],
+    };
+
+    const expectations = [{ metric: "custom_metric_xyz", expectedValue: 100 }];
+
+    const score = computeSurpriseFromExtraction(extraction, expectations);
+    expect(score).toBeGreaterThan(0);
   });
 });
