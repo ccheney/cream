@@ -316,6 +316,9 @@ export interface MentionedInEdge {
 // Node Type Union
 // ============================================
 
+// Import ThesisMemory type for node union
+import type { ThesisMemory as ThesisMemoryNode } from "./thesisMemory";
+
 /**
  * All node types
  */
@@ -327,7 +330,8 @@ export type NodeType =
   | TranscriptChunk
   | NewsItem
   | Company
-  | MacroEntity;
+  | MacroEntity
+  | ThesisMemoryNode;
 
 /**
  * Node type names for runtime type checking
@@ -341,6 +345,7 @@ export const NODE_TYPES = [
   "NewsItem",
   "Company",
   "MacroEntity",
+  "ThesisMemory",
 ] as const;
 
 export type NodeTypeName = (typeof NODE_TYPES)[number];
@@ -361,6 +366,7 @@ export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
   NewsItem: ["headline", "body_text"],
   Company: [],
   MacroEntity: [],
+  ThesisMemory: ["entry_thesis"],
 };
 
 // ============================================
@@ -620,3 +626,40 @@ export {
   type VersionHistoryEntry,
   VersionHistoryEntrySchema,
 } from "./compliance";
+
+// ============================================
+// Thesis Memory (Post-Hoc Analysis)
+// ============================================
+
+export {
+  // Outcome classification
+  calculateHoldingPeriod,
+  classifyOutcome,
+  // ThesisMemory creation
+  createThesisMemory,
+  // Retrieval options
+  DEFAULT_RETRIEVAL_OPTIONS as DEFAULT_THESIS_RETRIEVAL_OPTIONS,
+  // Embedding
+  generateEmbeddingText as generateThesisEmbeddingText,
+  // Post-hoc analysis
+  generateLessonsLearned,
+  // HelixDB operations
+  ingestThesisMemory,
+  // Utility
+  parseLessonsLearned,
+  // Convenience retrieval
+  retrieveLosingTheses,
+  // Retrieval
+  retrieveSimilarTheses,
+  retrieveWinningTheses,
+  // Constants
+  SCRATCH_THRESHOLD_PERCENT,
+  summarizeThesisMemory,
+  // Types
+  type ThesisCloseReason,
+  type ThesisMemory,
+  type ThesisMemoryInput,
+  type ThesisMemoryResult,
+  type ThesisMemoryRetrievalOptions,
+  type ThesisOutcome,
+} from "./thesisMemory";

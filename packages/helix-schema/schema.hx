@@ -373,3 +373,79 @@ E::MENTIONED_IN {
     // Mention type: PRIMARY (main subject), SECONDARY (notable mention), PEER_COMPARISON (comparison context)
     mention_type: String,
 }
+
+
+// ============================================
+// Thesis Memory Nodes (Post-Hoc Analysis)
+// ============================================
+
+// Stores closed thesis outcomes for agent learning and retrieval
+// Created when a thesis closes - captures lessons learned for future reference
+N::ThesisMemory {
+    // Unique identifier (matches thesis_id from Turso)
+    thesis_id: String,
+
+    // Traded instrument
+    instrument_id: String,
+
+    // Underlying symbol (for options)
+    underlying_symbol: String?,
+
+    // Original entry thesis - EMBEDDED for semantic retrieval
+    entry_thesis: Embed(String),
+
+    // Outcome: WIN, LOSS, SCRATCH
+    outcome: String,
+
+    // P&L percentage (e.g., 5.5 for +5.5%, -3.2 for -3.2%)
+    pnl_percent: F64,
+
+    // Holding period in days
+    holding_period_days: I64,
+
+    // Post-hoc analysis: lessons learned from this thesis
+    // Stored as JSON array of strings
+    lessons_learned: String,
+
+    // Market regime when thesis was entered
+    entry_regime: String,
+
+    // Market regime when thesis was closed
+    exit_regime: String?,
+
+    // Close reason: STOP_HIT, TARGET_HIT, INVALIDATED, MANUAL, TIME_DECAY, CORRELATION
+    close_reason: String,
+
+    // Entry price
+    entry_price: F64?,
+
+    // Exit price
+    exit_price: F64?,
+
+    // When thesis was entered (ISO 8601)
+    entry_date: String,
+
+    // When thesis was closed (ISO 8601)
+    closed_at: String,
+
+    // Trading environment: BACKTEST, PAPER, LIVE
+    environment: String,
+}
+
+// Indexes for ThesisMemory
+INDEX ThesisMemory.thesis_id
+INDEX ThesisMemory.instrument_id
+INDEX ThesisMemory.outcome
+INDEX ThesisMemory.environment
+// Composite index for filtering by outcome and regime
+INDEX ThesisMemory.(outcome, entry_regime)
+// Composite index for instrument and outcome
+INDEX ThesisMemory.(instrument_id, outcome)
+
+
+// Links ThesisMemory to related TradeDecisions
+E::THESIS_INCLUDES {
+    // Source: ThesisMemory, Target: TradeDecision
+    source: ThesisMemory,
+    target: TradeDecision,
+}

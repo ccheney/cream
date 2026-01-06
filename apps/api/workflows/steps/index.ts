@@ -42,3 +42,15 @@ export {
   type SnapshotBuilderInput,
   type SnapshotBuilderResult,
 } from "./marketSnapshotBuilder";
+
+// Thesis Memory Ingestion
+export {
+  type BatchIngestionResult,
+  batchIngestClosedTheses,
+  getThesisMemoryStats,
+  ingestClosedThesis,
+  onThesisClose,
+  type ThesisIngestionInput,
+  type ThesisIngestionResult,
+  type ThesisMemoryStats,
+} from "./thesisMemoryIngestion";
