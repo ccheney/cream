@@ -207,7 +207,7 @@ describe("Metric Types", () => {
     const output = await metrics.registry.metrics();
     const match = output.match(/prediction_market_cache_hits_total\{status="hit"\}\s+(\d+)/);
     expect(match).not.toBeNull();
-    expect(parseInt(match![1])).toBe(3);
+    expect(parseInt(match![1], 10)).toBe(3);
   });
 
   test("gauges can be set to any value", async () => {

@@ -364,7 +364,7 @@ export function getPrimarySector(marketQuestion: string): Sector | null {
   const sorted = matches.sort(
     (a, b) => volatilityOrder[b.volatilityExpectation] - volatilityOrder[a.volatilityExpectation]
   );
-  return sorted[0]!.sector;
+  return sorted[0]?.sector ?? null;
 }
 
 /**
@@ -461,5 +461,5 @@ export function getAggregateImpact(marketQuestion: string): ImpactDirection {
     return "MIXED";
   }
 
-  return matches[0]!.impactDirection;
+  return matches[0]?.impactDirection ?? "MIXED";
 }

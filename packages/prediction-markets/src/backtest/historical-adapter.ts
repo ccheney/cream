@@ -127,7 +127,7 @@ export interface HistoricalAdapterConfig {
 // Constants
 // ============================================
 
-const DEFAULT_CONFIG: Required<HistoricalAdapterConfig> = {
+const _DEFAULT_CONFIG: Required<HistoricalAdapterConfig> = {
   apiBaseUrl: "https://api.predictiondata.dev/v1",
   apiKey: "",
   timeoutMs: 30000,
@@ -167,32 +167,18 @@ const DEFAULT_CONFIG: Required<HistoricalAdapterConfig> = {
  * ```
  */
 export class HistoricalPredictionMarketAdapter {
-  private readonly config: Required<HistoricalAdapterConfig>;
-
-  constructor(config: HistoricalAdapterConfig = {}) {
-    this.config = {
-      ...DEFAULT_CONFIG,
-      ...config,
-    };
-  }
-
   /**
    * Get historical markets for a date range
    */
   async getHistoricalMarkets(
-    startDate: Date,
-    endDate: Date,
-    marketTypes: MarketType[]
+    _startDate: Date,
+    _endDate: Date,
+    _marketTypes: MarketType[]
   ): Promise<HistoricalPredictionMarket[]> {
     // Note: This is a placeholder implementation.
     // In production, this would call PredictionData.dev API
     // or query from Turso historical storage.
     const markets: HistoricalPredictionMarket[] = [];
-
-    // Log the query parameters for debugging
-    console.debug(
-      `[HistoricalAdapter] Fetching markets: ${startDate.toISOString()} to ${endDate.toISOString()}, types: ${marketTypes.join(", ")}`
-    );
 
     // Return mock data structure for now
     // Real implementation would fetch from API
@@ -202,11 +188,7 @@ export class HistoricalPredictionMarketAdapter {
   /**
    * Get market snapshot at a specific point in time
    */
-  async getMarketAtTime(ticker: string, asOf: Date): Promise<HistoricalMarketSnapshot | null> {
-    // Note: Placeholder implementation
-    // Would query historical data for the specific market at the given time
-    console.debug(`[HistoricalAdapter] Getting market ${ticker} at ${asOf.toISOString()}`);
-
+  async getMarketAtTime(_ticker: string, _asOf: Date): Promise<HistoricalMarketSnapshot | null> {
     return null;
   }
 
@@ -215,15 +197,9 @@ export class HistoricalPredictionMarketAdapter {
    */
   async computeSignalAccuracy(
     signalType: string,
-    threshold: number,
+    _threshold: number,
     period: { start: Date; end: Date }
   ): Promise<SignalAccuracyReport> {
-    // Note: Placeholder implementation
-    // Would analyze historical signals vs actual outcomes
-    console.debug(
-      `[HistoricalAdapter] Computing accuracy for ${signalType} with threshold ${threshold}`
-    );
-
     return {
       signalType,
       period: {
@@ -245,17 +221,11 @@ export class HistoricalPredictionMarketAdapter {
    * Compute correlation between prediction market signals and equity movements
    */
   async computeSignalCorrelation(
-    signalType: string,
-    instrument: string,
-    period: { start: Date; end: Date },
-    maxLagHours = 24
+    _signalType: string,
+    _instrument: string,
+    _period: { start: Date; end: Date },
+    _maxLagHours = 24
   ): Promise<SignalCorrelation[]> {
-    // Note: Placeholder implementation
-    // Would compute cross-correlation at various lags
-    console.debug(
-      `[HistoricalAdapter] Computing correlation: ${signalType} vs ${instrument}, max lag ${maxLagHours}h`
-    );
-
     return [];
   }
 
@@ -264,12 +234,8 @@ export class HistoricalPredictionMarketAdapter {
    */
   async computeOptimalWeights(
     signalTypes: string[],
-    period: { start: Date; end: Date }
+    _period: { start: Date; end: Date }
   ): Promise<Record<string, number>> {
-    // Note: Placeholder implementation
-    // Would run optimization to find best signal weights
-    console.debug(`[HistoricalAdapter] Computing optimal weights for ${signalTypes.join(", ")}`);
-
     const weights: Record<string, number> = {};
     const equalWeight = 1 / signalTypes.length;
 
@@ -284,8 +250,8 @@ export class HistoricalPredictionMarketAdapter {
    * Analyze signal effectiveness by market regime
    */
   async analyzeByRegime(
-    signalType: string,
-    period: { start: Date; end: Date }
+    _signalType: string,
+    _period: { start: Date; end: Date }
   ): Promise<
     {
       regime: string;
@@ -293,10 +259,6 @@ export class HistoricalPredictionMarketAdapter {
       sampleSize: number;
     }[]
   > {
-    // Note: Placeholder implementation
-    // Would segment analysis by volatility regime
-    console.debug(`[HistoricalAdapter] Analyzing ${signalType} by regime`);
-
     return [
       { regime: "LOW_VOL", accuracy: 0, sampleSize: 0 },
       { regime: "MEDIUM_VOL", accuracy: 0, sampleSize: 0 },
@@ -311,9 +273,10 @@ export class HistoricalPredictionMarketAdapter {
 
 /**
  * Create a historical adapter from environment variables
+ * Note: Config currently unused while adapter returns stub data
  */
 export function createHistoricalAdapterFromEnv(): HistoricalPredictionMarketAdapter {
-  return new HistoricalPredictionMarketAdapter({
-    apiKey: process.env.PREDICTION_DATA_API_KEY,
-  });
+  // TODO: Use config when API integration is added
+  // const config = { apiKey: process.env.PREDICTION_DATA_API_KEY };
+  return new HistoricalPredictionMarketAdapter();
 }
