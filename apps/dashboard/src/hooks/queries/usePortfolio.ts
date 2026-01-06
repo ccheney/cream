@@ -4,8 +4,8 @@
  * TanStack Query hooks for portfolio data.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { get } from "@/lib/api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { del, get, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
   EquityPoint,
@@ -90,5 +90,109 @@ export function usePerformanceMetrics() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
+  });
+}
+
+// ============================================
+// Mutations
+// ============================================
+
+/**
+ * Close a position.
+ *
+ * @example
+ * ```tsx
+ * const { mutate, isPending } = useClosePosition();
+ * return (
+ *   <button onClick={() => mutate(positionId)} disabled={isPending}>
+ *     Close Position
+ *   </button>
+ * );
+ * ```
+ */
+export function useClosePosition() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (positionId: string) => {
+      await del(`/api/portfolio/positions/${positionId}`);
+      return positionId;
+    },
+    onSuccess: (positionId) => {
+      queryClient.removeQueries({ queryKey: queryKeys.portfolio.position(positionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+    },
+  });
+}
+
+/**
+ * Modify stop loss for a position.
+ *
+ * @example
+ * ```tsx
+ * const { mutate, isPending } = useModifyStop();
+ * return (
+ *   <button
+ *     onClick={() => mutate({ positionId: "pos-123", stop: 150.00 })}
+ *     disabled={isPending}
+ *   >
+ *     Update Stop
+ *   </button>
+ * );
+ * ```
+ */
+export function useModifyStop() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ positionId, stop }: { positionId: string; stop: number }) => {
+      const { data } = await put<Position>(`/api/portfolio/positions/${positionId}/stop`, {
+        stop,
+      });
+      return data;
+    },
+    onSuccess: (data, { positionId }) => {
+      queryClient.setQueryData(
+        queryKeys.portfolio.position(positionId),
+        (old: PositionDetail | undefined) => (old ? { ...old, stop: data.stop } : undefined)
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
+    },
+  });
+}
+
+/**
+ * Modify target price for a position.
+ *
+ * @example
+ * ```tsx
+ * const { mutate, isPending } = useModifyTarget();
+ * return (
+ *   <button
+ *     onClick={() => mutate({ positionId: "pos-123", target: 200.00 })}
+ *     disabled={isPending}
+ *   >
+ *     Update Target
+ *   </button>
+ * );
+ * ```
+ */
+export function useModifyTarget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ positionId, target }: { positionId: string; target: number }) => {
+      const { data } = await put<Position>(`/api/portfolio/positions/${positionId}/target`, {
+        target,
+      });
+      return data;
+    },
+    onSuccess: (data, { positionId }) => {
+      queryClient.setQueryData(
+        queryKeys.portfolio.position(positionId),
+        (old: PositionDetail | undefined) => (old ? { ...old, target: data.target } : undefined)
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
+    },
   });
 }

@@ -18,6 +18,16 @@ export {
   useAgentStatuses,
   useUpdateAgentConfig,
 } from "./useAgents";
+// Alerts
+export {
+  useAcknowledgeAlert,
+  useAcknowledgeAllAlerts,
+  useAlertSettings,
+  useAlerts,
+  useDismissAlert,
+  useUnacknowledgedAlertCount,
+  useUpdateAlertSettings,
+} from "./useAlerts";
 // Backtest
 export {
   useBacktest,
@@ -59,7 +69,10 @@ export {
 } from "./useMarket";
 // Portfolio
 export {
+  useClosePosition,
   useEquityCurve,
+  useModifyStop,
+  useModifyTarget,
   usePerformanceMetrics,
   usePortfolioSummary,
   usePositionDetail,
