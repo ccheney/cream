@@ -37,3 +37,11 @@ export {
   type SourceResolutionResult,
   type SourceResolverOptions,
 } from "./sources.js";
+// Point-in-Time Universe (survivorship bias prevention)
+export {
+  createPointInTimeResolver,
+  type DataValidationResult,
+  type PointInTimeResolverConfig,
+  type PointInTimeResult,
+  PointInTimeUniverseResolver,
+} from "./point-in-time.js";

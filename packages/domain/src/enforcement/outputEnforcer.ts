@@ -688,6 +688,8 @@ export function createFallbackPlan(
           entryOrderType: "LIMIT",
           exitOrderType: "MARKET",
           timeInForce: "DAY",
+          executionTactic: "",
+          executionParams: {},
         },
         riskLevels: {
           // Maintain existing risk levels (these should be from the original plan)
@@ -698,6 +700,11 @@ export function createFallbackPlan(
         strategyFamily: "TREND",
         rationale: "Fallback: maintaining existing position due to plan validation failure",
         confidence: 0.5,
+        references: {
+          usedIndicators: [],
+          memoryCaseIds: [],
+          eventIds: [],
+        },
       });
     }
   }
