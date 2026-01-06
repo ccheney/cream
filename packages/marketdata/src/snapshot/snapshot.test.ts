@@ -471,6 +471,83 @@ describe("SnapshotCache", () => {
     const cache2 = getGlobalCache();
     expect(cache1).not.toBe(cache2);
   });
+
+  it("should clear all entries and reset stats", () => {
+    const cache = new SnapshotCache();
+    const ts = Date.now();
+
+    const snapshot: FeatureSnapshot = {
+      symbol: "AAPL",
+      timestamp: ts,
+      createdAt: new Date().toISOString(),
+      candles: {},
+      latestPrice: 150,
+      latestVolume: 1000000,
+      indicators: {},
+      normalized: {},
+      regime: { regime: "BULL_TREND", confidence: 0.8 },
+      recentEvents: [],
+      metadata: { symbol: "AAPL" },
+      config: { lookbackWindow: 100, timeframes: ["1h"], eventLookbackHours: 72 },
+    };
+
+    cache.set(snapshot);
+    cache.get("AAPL", ts); // hit
+    cache.get("MISSING", ts); // miss
+
+    const statsBefore = cache.getStats();
+    expect(statsBefore.size).toBe(1);
+    expect(statsBefore.hits).toBe(1);
+    expect(statsBefore.misses).toBe(1);
+
+    cache.clear();
+
+    const statsAfter = cache.getStats();
+    expect(statsAfter.size).toBe(0);
+    expect(statsAfter.hits).toBe(0);
+    expect(statsAfter.misses).toBe(0);
+    expect(cache.get("AAPL", ts)).toBeNull();
+  });
+
+  it("should prune expired entries", async () => {
+    const cache = new SnapshotCache({ ttlMs: 50 });
+    const ts = Date.now();
+
+    const snapshot1: FeatureSnapshot = {
+      symbol: "AAPL",
+      timestamp: ts,
+      createdAt: new Date().toISOString(),
+      candles: {},
+      latestPrice: 150,
+      latestVolume: 1000000,
+      indicators: {},
+      normalized: {},
+      regime: { regime: "BULL_TREND", confidence: 0.8 },
+      recentEvents: [],
+      metadata: { symbol: "AAPL" },
+      config: { lookbackWindow: 100, timeframes: ["1h"], eventLookbackHours: 72 },
+    };
+
+    cache.set(snapshot1);
+
+    // Wait for entry to expire
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Add a fresh entry
+    const snapshot2: FeatureSnapshot = {
+      ...snapshot1,
+      symbol: "MSFT",
+      timestamp: Date.now(),
+    };
+    cache.set(snapshot2);
+
+    // Prune should remove AAPL but keep MSFT
+    const pruned = cache.prune();
+    expect(pruned).toBe(1);
+
+    const stats = cache.getStats();
+    expect(stats.size).toBe(1);
+  });
 });
 
 // ============================================
