@@ -5,6 +5,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 import { useConfig, useConfigHistory, useConstraintsConfig } from "@/hooks/queries";
 
 export default function ConfigPage() {
@@ -48,7 +49,7 @@ export default function ConfigPage() {
       ) : config ? (
         <div className="grid grid-cols-2 gap-6">
           {/* Trading Config */}
-          <ConfigSection title="Trading">
+          <ConfigSection title="Trading" href="/config/universe">
             <ConfigField label="Environment" value={config.environment} />
             <ConfigField
               label="Cycle Interval"
@@ -65,7 +66,7 @@ export default function ConfigPage() {
           </ConfigSection>
 
           {/* Universe Config */}
-          <ConfigSection title="Universe">
+          <ConfigSection title="Universe" href="/config/universe">
             <ConfigField
               label="Source"
               value={
@@ -89,7 +90,7 @@ export default function ConfigPage() {
           </ConfigSection>
 
           {/* Per-Instrument Limits */}
-          <ConfigSection title="Per-Instrument Limits">
+          <ConfigSection title="Per-Instrument Limits" href="/config/constraints">
             <ConfigField
               label="Max Shares"
               value={constraints?.perInstrument.maxShares.toLocaleString() ?? "--"}
@@ -109,7 +110,7 @@ export default function ConfigPage() {
           </ConfigSection>
 
           {/* Portfolio Limits */}
-          <ConfigSection title="Portfolio Limits">
+          <ConfigSection title="Portfolio Limits" href="/config/constraints">
             <ConfigField
               label="Max Gross Exposure"
               value={`${((constraints?.portfolio.maxGrossExposure ?? 0) * 100).toFixed(0)}%`}
@@ -129,7 +130,7 @@ export default function ConfigPage() {
           </ConfigSection>
 
           {/* Options Limits */}
-          <ConfigSection title="Options Greeks Limits">
+          <ConfigSection title="Options Greeks Limits" href="/config/constraints">
             <ConfigField label="Max Delta" value={String(constraints?.options.maxDelta ?? "--")} />
             <ConfigField label="Max Gamma" value={String(constraints?.options.maxGamma ?? "--")} />
             <ConfigField label="Max Vega" value={String(constraints?.options.maxVega ?? "--")} />
@@ -201,11 +202,43 @@ export default function ConfigPage() {
   );
 }
 
-function ConfigSection({ title, children }: { title: string; children: React.ReactNode }) {
+function ConfigSection({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href?: string;
+  children: React.ReactNode;
+}) {
+  const content = (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">{title}</h2>
+        {href && (
+          <span className="text-xs text-cream-400 dark:text-cream-500 group-hover:text-blue-500">
+            Edit &rarr;
+          </span>
+        )}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
+      >
+        {content}
+      </Link>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">{title}</h2>
-      <div className="space-y-3">{children}</div>
+      {content}
     </div>
   );
 }
