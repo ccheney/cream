@@ -20,6 +20,13 @@ lint:
     - PACKAGE_VERSION_SUFFIX
 
 # Breaking change detection
+# FILE: Source-level compatibility (field names, types)
+# WIRE_JSON: Wire format and JSON compatibility
 breaking:
   use:
     - FILE
+    - WIRE_JSON
+  except:
+    # Allow JSON name changes with explicit annotation
+    - FIELD_SAME_JSON_NAME
+  ignore_unstable_packages: true

@@ -1900,8 +1900,14 @@ pub struct SymbolSnapshot {
     pub as_of: ::core::option::Option<::prost_types::Timestamp>,
 }
 /// Full market snapshot for multiple symbols
+///
+/// Reserved fields - never reuse these numbers
+/// reserved 100;  // Example: removed deprecated_field (YYYY-MM-DD)
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MarketSnapshot {
+    /// Schema version for backward compatibility (semver: "1.0.0")
+    #[prost(string, tag="6")]
+    pub schema_version: ::prost::alloc::string::String,
     /// Trading environment
     #[prost(enumeration="Environment", tag="1")]
     pub environment: i32,
