@@ -441,6 +441,137 @@ impl PositionSizer {
 }
 
 // ============================================================================
+// Adaptive Sizing Adjustments
+// ============================================================================
+
+/// Apply DTE-based sizing adjustment for options.
+///
+/// Reduces position size for near-expiration options:
+/// - DTE < 7 days: 50% reduction (higher gamma/theta risk)
+/// - DTE < 30 days: 25% reduction (elevated time decay)
+/// - DTE >= 30 days: No reduction
+///
+/// # Arguments
+///
+/// * `base_size` - The base position size in contracts
+/// * `dte` - Days to expiration
+///
+/// # Returns
+///
+/// Adjusted position size rounded down to integer
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use execution_engine::risk::sizing::apply_dte_sizing_adjustment;
+///
+/// assert_eq!(apply_dte_sizing_adjustment(100, 45), 100); // No reduction
+/// assert_eq!(apply_dte_sizing_adjustment(100, 20), 75);  // 25% reduction
+/// assert_eq!(apply_dte_sizing_adjustment(100, 5), 50);   // 50% reduction
+/// ```
+#[must_use]
+pub fn apply_dte_sizing_adjustment(base_size: u32, dte: u32) -> u32 {
+    if dte < 7 {
+        // 50% reduction for very short-dated options
+        (base_size as f64 * 0.5).floor() as u32
+    } else if dte < 30 {
+        // 25% reduction for options with < 30 DTE
+        (base_size as f64 * 0.75).floor() as u32
+    } else {
+        // No reduction for longer-dated options
+        base_size
+    }
+}
+
+/// Apply IV rank-based sizing adjustment for options.
+///
+/// Reduces position size when implied volatility is low:
+/// - IV rank < 0.25 (25th percentile): 25% reduction (poor premium collection)
+/// - IV rank >= 0.25: No reduction
+///
+/// For selling options, low IV means less premium captured for the risk taken.
+/// This adjustment encourages smaller positions when conditions are unfavorable.
+///
+/// # Arguments
+///
+/// * `base_size` - The base position size in contracts
+/// * `iv_rank` - IV rank as a percentile (0.0 to 1.0)
+///
+/// # Returns
+///
+/// Adjusted position size rounded down to integer
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use execution_engine::risk::sizing::apply_iv_sizing_adjustment;
+///
+/// assert_eq!(apply_iv_sizing_adjustment(100, 0.80), 100); // No reduction (high IV)
+/// assert_eq!(apply_iv_sizing_adjustment(100, 0.50), 100); // No reduction (mid IV)
+/// assert_eq!(apply_iv_sizing_adjustment(100, 0.20), 75);  // 25% reduction (low IV)
+/// ```
+#[must_use]
+pub fn apply_iv_sizing_adjustment(base_size: u32, iv_rank: f64) -> u32 {
+    if iv_rank < 0.25 {
+        // 25% reduction for low IV environments
+        (base_size as f64 * 0.75).floor() as u32
+    } else {
+        // No reduction for normal or high IV
+        base_size
+    }
+}
+
+/// Apply combined DTE and IV rank adjustments.
+///
+/// Applies both adjustments multiplicatively:
+/// - First applies DTE adjustment
+/// - Then applies IV rank adjustment to the result
+///
+/// # Arguments
+///
+/// * `base_size` - The base position size in contracts
+/// * `dte` - Days to expiration
+/// * `iv_rank` - IV rank as a percentile (0.0 to 1.0)
+///
+/// # Returns
+///
+/// Adjusted position size rounded down to integer
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use execution_engine::risk::sizing::apply_combined_sizing_adjustment;
+///
+/// // 100 contracts, 5 DTE, low IV
+/// // DTE adjustment: 100 * 0.5 = 50
+/// // IV adjustment: 50 * 0.75 = 37
+/// assert_eq!(apply_combined_sizing_adjustment(100, 5, 0.20), 37);
+/// ```
+#[must_use]
+pub fn apply_combined_sizing_adjustment(base_size: u32, dte: u32, iv_rank: f64) -> u32 {
+    let dte_adjusted = apply_dte_sizing_adjustment(base_size, dte);
+    apply_iv_sizing_adjustment(dte_adjusted, iv_rank)
+}
+
+/// Calculate maximum loss for a long option position.
+///
+/// For long options, maximum loss is limited to the premium paid.
+///
+/// # Arguments
+///
+/// * `contracts` - Number of contracts
+/// * `premium_paid` - Premium paid per share (not per contract)
+/// * `multiplier` - Contract multiplier (default: 100 for equity options)
+///
+/// # Returns
+///
+/// Maximum potential loss in dollars
+#[must_use]
+pub fn calculate_max_loss_long_option(contracts: u32, premium_paid: f64, multiplier: u32) -> f64 {
+    contracts as f64 * premium_paid * multiplier as f64
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -675,5 +806,144 @@ mod tests {
         // No constraints applied
         assert_eq!(result.quantity, 5000);
         assert!(!result.was_constrained);
+    }
+
+    // =========================================================================
+    // DTE Sizing Adjustment Tests
+    // =========================================================================
+
+    #[test]
+    fn test_dte_adjustment_no_reduction() {
+        // DTE >= 30: no reduction
+        assert_eq!(apply_dte_sizing_adjustment(100, 30), 100);
+        assert_eq!(apply_dte_sizing_adjustment(100, 45), 100);
+        assert_eq!(apply_dte_sizing_adjustment(100, 90), 100);
+        assert_eq!(apply_dte_sizing_adjustment(100, 365), 100);
+    }
+
+    #[test]
+    fn test_dte_adjustment_25_percent_reduction() {
+        // DTE 7-29: 25% reduction
+        assert_eq!(apply_dte_sizing_adjustment(100, 7), 75);
+        assert_eq!(apply_dte_sizing_adjustment(100, 14), 75);
+        assert_eq!(apply_dte_sizing_adjustment(100, 20), 75);
+        assert_eq!(apply_dte_sizing_adjustment(100, 29), 75);
+    }
+
+    #[test]
+    fn test_dte_adjustment_50_percent_reduction() {
+        // DTE < 7: 50% reduction
+        assert_eq!(apply_dte_sizing_adjustment(100, 0), 50);
+        assert_eq!(apply_dte_sizing_adjustment(100, 1), 50);
+        assert_eq!(apply_dte_sizing_adjustment(100, 5), 50);
+        assert_eq!(apply_dte_sizing_adjustment(100, 6), 50);
+    }
+
+    #[test]
+    fn test_dte_adjustment_rounding() {
+        // Test rounding behavior (floors)
+        assert_eq!(apply_dte_sizing_adjustment(10, 5), 5); // 10 * 0.5 = 5
+        assert_eq!(apply_dte_sizing_adjustment(11, 5), 5); // 11 * 0.5 = 5.5 → 5
+        assert_eq!(apply_dte_sizing_adjustment(10, 20), 7); // 10 * 0.75 = 7.5 → 7
+        assert_eq!(apply_dte_sizing_adjustment(11, 20), 8); // 11 * 0.75 = 8.25 → 8
+    }
+
+    #[test]
+    fn test_dte_adjustment_edge_cases() {
+        assert_eq!(apply_dte_sizing_adjustment(0, 5), 0); // Zero size
+        assert_eq!(apply_dte_sizing_adjustment(1, 5), 0); // 1 * 0.5 = 0.5 → 0
+        assert_eq!(apply_dte_sizing_adjustment(2, 5), 1); // 2 * 0.5 = 1.0 → 1
+    }
+
+    // =========================================================================
+    // IV Rank Sizing Adjustment Tests
+    // =========================================================================
+
+    #[test]
+    fn test_iv_adjustment_no_reduction() {
+        // IV rank >= 0.25: no reduction
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.25), 100);
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.50), 100);
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.75), 100);
+        assert_eq!(apply_iv_sizing_adjustment(100, 1.0), 100);
+    }
+
+    #[test]
+    fn test_iv_adjustment_25_percent_reduction() {
+        // IV rank < 0.25: 25% reduction
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.0), 75);
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.10), 75);
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.20), 75);
+        assert_eq!(apply_iv_sizing_adjustment(100, 0.24), 75);
+    }
+
+    #[test]
+    fn test_iv_adjustment_rounding() {
+        assert_eq!(apply_iv_sizing_adjustment(10, 0.20), 7); // 10 * 0.75 = 7.5 → 7
+        assert_eq!(apply_iv_sizing_adjustment(11, 0.20), 8); // 11 * 0.75 = 8.25 → 8
+    }
+
+    #[test]
+    fn test_iv_adjustment_edge_cases() {
+        assert_eq!(apply_iv_sizing_adjustment(0, 0.10), 0); // Zero size
+        assert_eq!(apply_iv_sizing_adjustment(1, 0.10), 0); // 1 * 0.75 = 0.75 → 0
+    }
+
+    // =========================================================================
+    // Combined Sizing Adjustment Tests
+    // =========================================================================
+
+    #[test]
+    fn test_combined_adjustment() {
+        // 100 contracts, 5 DTE (50% reduction), low IV (25% reduction)
+        // DTE: 100 * 0.5 = 50
+        // IV: 50 * 0.75 = 37.5 → 37
+        assert_eq!(apply_combined_sizing_adjustment(100, 5, 0.20), 37);
+    }
+
+    #[test]
+    fn test_combined_adjustment_no_reductions() {
+        // High DTE, high IV: no reductions
+        assert_eq!(apply_combined_sizing_adjustment(100, 45, 0.80), 100);
+    }
+
+    #[test]
+    fn test_combined_adjustment_dte_only() {
+        // Low DTE, high IV: only DTE reduction
+        assert_eq!(apply_combined_sizing_adjustment(100, 5, 0.80), 50);
+    }
+
+    #[test]
+    fn test_combined_adjustment_iv_only() {
+        // High DTE, low IV: only IV reduction
+        assert_eq!(apply_combined_sizing_adjustment(100, 45, 0.20), 75);
+    }
+
+    // =========================================================================
+    // Max Loss Calculation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_max_loss_long_option() {
+        // 5 contracts × $2.50 premium × 100 multiplier = $1,250
+        assert_eq!(calculate_max_loss_long_option(5, 2.50, 100), 1250.0);
+    }
+
+    #[test]
+    fn test_max_loss_single_contract() {
+        // 1 contract × $5.00 premium × 100 multiplier = $500
+        assert_eq!(calculate_max_loss_long_option(1, 5.0, 100), 500.0);
+    }
+
+    #[test]
+    fn test_max_loss_mini_option() {
+        // Mini options have multiplier of 10
+        // 5 contracts × $2.50 premium × 10 multiplier = $125
+        assert_eq!(calculate_max_loss_long_option(5, 2.50, 10), 125.0);
+    }
+
+    #[test]
+    fn test_max_loss_zero_contracts() {
+        assert_eq!(calculate_max_loss_long_option(0, 5.0, 100), 0.0);
     }
 }
