@@ -47,6 +47,10 @@ __pycache__/
 .venv/
 venv/
 .uv/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Database files
 *.db
