@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "@cream/domain": "workspace:*",
+    "@cream/helix": "workspace:*",
+    "@cream/marketdata": "workspace:*",
     "@cream/mastra-kit": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "^0.24.9",
