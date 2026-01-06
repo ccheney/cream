@@ -311,6 +311,123 @@ describe("DecisionsRepository", () => {
     const found = await repo.findById("dec-delete");
     expect(found).toBeNull();
   });
+
+  test("finds decisions by cycle", async () => {
+    await repo.create({
+      id: "dec-cycle-1",
+      cycleId: "cycle-123",
+      symbol: "AAPL",
+      action: "BUY",
+      direction: "LONG",
+      size: 100,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "dec-cycle-2",
+      cycleId: "cycle-123",
+      symbol: "MSFT",
+      action: "BUY",
+      direction: "LONG",
+      size: 50,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+
+    const decisions = await repo.findByCycle("cycle-123");
+    expect(decisions).toHaveLength(2);
+  });
+
+  test("finds recent decisions", async () => {
+    await repo.create({
+      id: "dec-recent-1",
+      cycleId: "cycle-001",
+      symbol: "AAPL",
+      action: "BUY",
+      direction: "LONG",
+      size: 100,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "dec-recent-2",
+      cycleId: "cycle-002",
+      symbol: "MSFT",
+      action: "BUY",
+      direction: "LONG",
+      size: 50,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+
+    const recent = await repo.findRecent("PAPER", 10);
+    expect(recent).toHaveLength(2);
+  });
+
+  test("updates a decision with multiple fields", async () => {
+    await repo.create({
+      id: "dec-update",
+      cycleId: "cycle-001",
+      symbol: "AAPL",
+      action: "BUY",
+      direction: "LONG",
+      size: 100,
+      sizeUnit: "SHARES",
+      entryPrice: 150.0,
+      environment: "PAPER",
+    });
+
+    const updated = await repo.update("dec-update", {
+      size: 200,
+      stopPrice: 145.0,
+      targetPrice: 165.0,
+      status: "approved",
+      rationale: "Updated rationale",
+      bullishFactors: ["Strong earnings", "Positive guidance"],
+      bearishFactors: ["Market uncertainty"],
+      confidenceScore: 0.85,
+      riskScore: 0.3,
+      metadata: { source: "test" },
+    });
+
+    expect(updated.size).toBe(200);
+    expect(updated.stopPrice).toBe(145);
+    expect(updated.targetPrice).toBe(165);
+    expect(updated.status).toBe("approved");
+    expect(updated.rationale).toBe("Updated rationale");
+    expect(updated.bullishFactors).toHaveLength(2);
+    expect(updated.bearishFactors).toHaveLength(1);
+    expect(updated.confidenceScore).toBe(0.85);
+    expect(updated.riskScore).toBe(0.3);
+  });
+
+  test("counts decisions by status", async () => {
+    await repo.create({
+      id: "dec-count-1",
+      cycleId: "cycle-001",
+      symbol: "AAPL",
+      action: "BUY",
+      direction: "LONG",
+      size: 100,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "dec-count-2",
+      cycleId: "cycle-002",
+      symbol: "MSFT",
+      action: "BUY",
+      direction: "LONG",
+      size: 50,
+      sizeUnit: "SHARES",
+      environment: "PAPER",
+    });
+    await repo.updateStatus("dec-count-2", "approved");
+
+    const counts = await repo.countByStatus("PAPER");
+    expect(counts.pending).toBe(1);
+    expect(counts.approved).toBe(1);
+  });
 });
 
 // ============================================
@@ -442,6 +559,138 @@ describe("AlertsRepository", () => {
     expect(counts.warning).toBe(2);
     expect(counts.info).toBe(0);
   });
+
+  test("finds alerts with filters", async () => {
+    await repo.create({
+      id: "alert-filter-1",
+      severity: "critical",
+      type: "risk",
+      title: "Risk Alert",
+      message: "Test",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "alert-filter-2",
+      severity: "warning",
+      type: "order",
+      title: "Order Alert",
+      message: "Test",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "alert-filter-3",
+      severity: "info",
+      type: "system",
+      title: "System Alert",
+      message: "Test",
+      environment: "LIVE",
+    });
+
+    // Filter by severity
+    const criticalAlerts = await repo.findMany({ severity: "critical" });
+    expect(criticalAlerts.data).toHaveLength(1);
+
+    // Filter by severity array
+    const multiSeverity = await repo.findMany({ severity: ["critical", "warning"] });
+    expect(multiSeverity.data).toHaveLength(2);
+
+    // Filter by type
+    const orderAlerts = await repo.findMany({ type: "order" });
+    expect(orderAlerts.data).toHaveLength(1);
+
+    // Filter by type array
+    const multiType = await repo.findMany({ type: ["order", "risk"] });
+    expect(multiType.data).toHaveLength(2);
+
+    // Filter by environment
+    const liveAlerts = await repo.findMany({ environment: "LIVE" });
+    expect(liveAlerts.data).toHaveLength(1);
+
+    // Filter by acknowledged
+    const unackAlerts = await repo.findMany({ acknowledged: false });
+    expect(unackAlerts.data).toHaveLength(3);
+  });
+
+  test("finds recent alerts", async () => {
+    await repo.create({
+      id: "alert-recent-1",
+      severity: "info",
+      type: "system",
+      title: "Recent 1",
+      message: "Test",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "alert-recent-2",
+      severity: "info",
+      type: "system",
+      title: "Recent 2",
+      message: "Test",
+      environment: "PAPER",
+    });
+
+    const recent = await repo.findRecent("PAPER", 10);
+    expect(recent).toHaveLength(2);
+  });
+
+  test("acknowledges all alerts", async () => {
+    await repo.create({
+      id: "alert-all-1",
+      severity: "info",
+      type: "system",
+      title: "Test 1",
+      message: "Test",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "alert-all-2",
+      severity: "info",
+      type: "system",
+      title: "Test 2",
+      message: "Test",
+      environment: "PAPER",
+    });
+
+    const count = await repo.acknowledgeAll("PAPER", "admin");
+    expect(count).toBe(2);
+
+    const unack = await repo.findUnacknowledged("PAPER");
+    expect(unack).toHaveLength(0);
+  });
+
+  test("deletes an alert", async () => {
+    await repo.create({
+      id: "alert-delete",
+      severity: "info",
+      type: "system",
+      title: "To Delete",
+      message: "Test",
+      environment: "PAPER",
+    });
+
+    const deleted = await repo.delete("alert-delete");
+    expect(deleted).toBe(true);
+
+    const found = await repo.findById("alert-delete");
+    expect(found).toBeNull();
+  });
+
+  test("deletes expired alerts", async () => {
+    const pastDate = new Date(Date.now() - 86400000).toISOString(); // 1 day ago
+
+    await repo.create({
+      id: "alert-expired",
+      severity: "info",
+      type: "system",
+      title: "Expired",
+      message: "Test",
+      environment: "PAPER",
+      expiresAt: pastDate,
+    });
+
+    const count = await repo.deleteExpired();
+    expect(count).toBe(1);
+  });
 });
 
 // ============================================
@@ -540,6 +789,172 @@ describe("OrdersRepository", () => {
     const active = await repo.findActive("PAPER");
     expect(active).toHaveLength(2);
   });
+
+  test("finds order by broker order ID", async () => {
+    await repo.create({
+      id: "order-broker-id",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+    await repo.updateStatus("order-broker-id", "submitted", "broker-abc-123");
+
+    const order = await repo.findByBrokerOrderId("broker-abc-123");
+    expect(order).not.toBeNull();
+    expect(order!.id).toBe("order-broker-id");
+  });
+
+  test("finds orders with filters", async () => {
+    await repo.create({
+      id: "order-filter-1",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "LIMIT",
+      limitPrice: 150.0,
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "order-filter-2",
+      symbol: "MSFT",
+      side: "SELL",
+      quantity: 50,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "order-filter-3",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 200,
+      orderType: "MARKET",
+      environment: "LIVE",
+    });
+
+    // Filter by symbol
+    const aaplOrders = await repo.findMany({ symbol: "AAPL" });
+    expect(aaplOrders.data).toHaveLength(2);
+
+    // Filter by side
+    const buyOrders = await repo.findMany({ side: "BUY" });
+    expect(buyOrders.data).toHaveLength(2);
+
+    // Filter by order type
+    const limitOrders = await repo.findMany({ orderType: "LIMIT" });
+    expect(limitOrders.data).toHaveLength(1);
+
+    // Filter by status (array)
+    const pendingOrders = await repo.findMany({ status: ["pending", "submitted"] });
+    expect(pendingOrders.data).toHaveLength(3);
+
+    // Filter by environment
+    const liveOrders = await repo.findMany({ environment: "LIVE" });
+    expect(liveOrders.data).toHaveLength(1);
+  });
+
+  test("finds orders by decision", async () => {
+    await repo.create({
+      id: "order-decision-1",
+      symbol: "SPY",
+      side: "BUY",
+      quantity: 10,
+      orderType: "MARKET",
+      environment: "PAPER",
+      decisionId: "decision-123",
+    });
+    await repo.create({
+      id: "order-decision-2",
+      symbol: "QQQ",
+      side: "BUY",
+      quantity: 20,
+      orderType: "MARKET",
+      environment: "PAPER",
+      decisionId: "decision-123",
+    });
+
+    const orders = await repo.findByDecision("decision-123");
+    expect(orders).toHaveLength(2);
+  });
+
+  test("finds recent orders", async () => {
+    await repo.create({
+      id: "order-recent-1",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "order-recent-2",
+      symbol: "MSFT",
+      side: "BUY",
+      quantity: 50,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+
+    const recent = await repo.findRecent("PAPER", 10);
+    expect(recent).toHaveLength(2);
+  });
+
+  test("cancels an order", async () => {
+    await repo.create({
+      id: "order-cancel",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "LIMIT",
+      limitPrice: 150.0,
+      environment: "PAPER",
+    });
+
+    const cancelled = await repo.cancel("order-cancel");
+    expect(cancelled.status).toBe("cancelled");
+  });
+
+  test("deletes an order", async () => {
+    await repo.create({
+      id: "order-delete",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+
+    const deleted = await repo.delete("order-delete");
+    expect(deleted).toBe(true);
+
+    const found = await repo.findById("order-delete");
+    expect(found).toBeNull();
+  });
+
+  test("counts orders by status", async () => {
+    await repo.create({
+      id: "order-count-1",
+      symbol: "AAPL",
+      side: "BUY",
+      quantity: 100,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "order-count-2",
+      symbol: "MSFT",
+      side: "BUY",
+      quantity: 50,
+      orderType: "MARKET",
+      environment: "PAPER",
+    });
+    await repo.updateStatus("order-count-2", "filled");
+
+    const counts = await repo.countByStatus("PAPER");
+    expect(counts.pending).toBe(1);
+    expect(counts.filled).toBe(1);
+  });
 });
 
 // ============================================
@@ -635,6 +1050,123 @@ describe("PositionsRepository", () => {
     expect(summary.totalPositions).toBe(2);
     expect(summary.longPositions).toBe(1);
     expect(summary.shortPositions).toBe(1);
+  });
+
+  test("finds positions with filters", async () => {
+    await repo.create({
+      id: "pos-filter-1",
+      symbol: "AAPL",
+      side: "LONG",
+      quantity: 100,
+      avgEntryPrice: 150.0,
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "pos-filter-2",
+      symbol: "MSFT",
+      side: "SHORT",
+      quantity: 50,
+      avgEntryPrice: 400.0,
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "pos-filter-3",
+      symbol: "GOOGL",
+      side: "LONG",
+      quantity: 25,
+      avgEntryPrice: 140.0,
+      environment: "LIVE",
+    });
+
+    // Filter by symbol
+    const aaplPos = await repo.findMany({ symbol: "AAPL" });
+    expect(aaplPos.data).toHaveLength(1);
+
+    // Filter by side
+    const longPos = await repo.findMany({ side: "LONG" });
+    expect(longPos.data).toHaveLength(2);
+
+    // Filter by status
+    const openPos = await repo.findMany({ status: "open" });
+    expect(openPos.data).toHaveLength(3);
+
+    // Filter by environment
+    const livePos = await repo.findMany({ environment: "LIVE" });
+    expect(livePos.data).toHaveLength(1);
+  });
+
+  test("finds open positions", async () => {
+    await repo.create({
+      id: "pos-open-1",
+      symbol: "AAPL",
+      side: "LONG",
+      quantity: 100,
+      avgEntryPrice: 150.0,
+      environment: "PAPER",
+    });
+    await repo.create({
+      id: "pos-open-2",
+      symbol: "MSFT",
+      side: "LONG",
+      quantity: 50,
+      avgEntryPrice: 400.0,
+      environment: "PAPER",
+    });
+
+    const open = await repo.findOpen("PAPER");
+    expect(open).toHaveLength(2);
+  });
+
+  test("finds position by symbol", async () => {
+    await repo.create({
+      id: "pos-symbol",
+      symbol: "AAPL",
+      side: "LONG",
+      quantity: 100,
+      avgEntryPrice: 150.0,
+      environment: "PAPER",
+    });
+
+    const pos = await repo.findBySymbol("AAPL", "PAPER");
+    expect(pos).not.toBeNull();
+    expect(pos!.id).toBe("pos-symbol");
+
+    const notFound = await repo.findBySymbol("MSFT", "PAPER");
+    expect(notFound).toBeNull();
+  });
+
+  test("updates position quantity", async () => {
+    await repo.create({
+      id: "pos-qty",
+      symbol: "AAPL",
+      side: "LONG",
+      quantity: 100,
+      avgEntryPrice: 150.0,
+      environment: "PAPER",
+    });
+
+    // Add to position at higher price
+    const updated = await repo.updateQuantity("pos-qty", 150, 160.0);
+    expect(updated.quantity).toBe(150);
+    // New avg = (100*150 + 50*160) / 150 = 23000/150 = 153.33
+    expect(updated.avgEntryPrice).toBeCloseTo(153.33, 1);
+  });
+
+  test("deletes a position", async () => {
+    await repo.create({
+      id: "pos-delete",
+      symbol: "AAPL",
+      side: "LONG",
+      quantity: 100,
+      avgEntryPrice: 150.0,
+      environment: "PAPER",
+    });
+
+    const deleted = await repo.delete("pos-delete");
+    expect(deleted).toBe(true);
+
+    const found = await repo.findById("pos-delete");
+    expect(found).toBeNull();
   });
 });
 
@@ -1062,6 +1594,55 @@ describe("ThesisStateRepository", () => {
 
     const found = await repo.findById("thesis-delete");
     expect(found).toBeNull();
+  });
+
+  test("finds theses with filters", async () => {
+    await repo.create({
+      thesisId: "t-filter-1",
+      instrumentId: "AAPL",
+      state: "WATCHING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t-filter-2",
+      instrumentId: "AAPL",
+      state: "MANAGING",
+      environment: "PAPER",
+    });
+    await repo.create({
+      thesisId: "t-filter-3",
+      instrumentId: "MSFT",
+      state: "WATCHING",
+      environment: "LIVE",
+    });
+
+    // Filter by instrument
+    const aaplTheses = await repo.findMany({ instrumentId: "AAPL" });
+    expect(aaplTheses.data).toHaveLength(2);
+
+    // Filter by state
+    const watchingTheses = await repo.findMany({ state: "WATCHING" });
+    expect(watchingTheses.data).toHaveLength(2);
+
+    // Filter by multiple states
+    const multiStateTheses = await repo.findMany({ states: ["WATCHING", "MANAGING"] });
+    expect(multiStateTheses.data).toHaveLength(3);
+
+    // Filter by environment
+    const liveTheses = await repo.findMany({ environment: "LIVE" });
+    expect(liveTheses.data).toHaveLength(1);
+  });
+
+  test("finds active thesis for instrument returns null for closed thesis", async () => {
+    await repo.create({
+      thesisId: "thesis-closed-inst",
+      instrumentId: "META",
+      state: "CLOSED",
+      environment: "PAPER",
+    });
+
+    const active = await repo.findActiveForInstrument("META", "PAPER");
+    expect(active).toBeNull();
   });
 });
 
