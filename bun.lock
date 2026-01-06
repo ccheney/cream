@@ -14,7 +14,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
         "husky": "9.1.7",
         "testcontainers": "11.11.0",
         "turbo": "^2.7.2",
@@ -38,7 +38,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "^1.2.0",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "apps/dashboard": {
@@ -71,12 +71,12 @@
         "@types/node": "25.0.3",
         "@types/react": "19.2.7",
         "@types/react-dom": "19.2.3",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
         "babel-plugin-react-compiler": "1.0.0",
         "tailwindcss": "4.1.18",
       },
       "peerDependencies": {
-        "typescript": "^5.6.0",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "apps/dashboard-api": {
@@ -92,7 +92,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "^1.2.0",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "apps/worker": {
@@ -107,7 +107,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "^1.2.0",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/broker": {
@@ -120,7 +120,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/config": {
@@ -135,7 +135,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/dashboard-types": {
@@ -146,7 +146,7 @@
       },
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
-        "typescript": "^5.7.3",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/design-system": {
@@ -157,7 +157,7 @@
       },
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
-        "typescript": "^5.7.2",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/domain": {
@@ -173,7 +173,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/external-context": {
@@ -188,7 +188,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/helix": {
@@ -203,7 +203,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
         "testcontainers": "^10.13.0",
       },
     },
@@ -218,7 +218,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/indicators": {
@@ -227,7 +227,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/marketdata": {
@@ -246,7 +246,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/mastra-kit": {
@@ -264,7 +264,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/metrics": {
@@ -273,7 +273,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/mocks": {
@@ -286,7 +286,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/recovery": {
@@ -300,7 +300,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/regime": {
@@ -313,7 +313,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/schema": {
@@ -328,7 +328,7 @@
         "@connectrpc/connect": "^2.0.0",
       },
       "devDependencies": {
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/storage": {
@@ -343,7 +343,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/test-fixtures": {
@@ -358,7 +358,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/tsconfig": {
@@ -376,7 +376,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
     "packages/validation": {
@@ -388,7 +388,7 @@
       "devDependencies": {
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@typescript/native-preview": "7.0.0-dev.20260104.1",
+        "@typescript/native-preview": "7.0.0-dev.20260106.1",
       },
     },
   },
@@ -1443,21 +1443,21 @@
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
-    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260104.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260104.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260104.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260104.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260104.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260104.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260104.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260104.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-uUf3nybwgHpDpzPFjreMb6aDnyp1vcVdWqp7Ac4bmiOAtE0TlmvoSI7KTJeTZ8xozFVyHyCoFch5bNyDQr3uHQ=="],
+    "@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260106.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260106.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260106.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260106.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260106.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260106.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260106.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260106.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-EeH81rQsgLjewxuVOBN0MnQWAyf5YNeHRP3+Et6wJyr4d7HuA7zFwfNaEdfX1k366kgpKOR5K6dakorBhKZGng=="],
 
-    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260104.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-tVPVpozQmSVTpn97Uu+ZDdC5G9YkHt6YPgv/wtzDVLc8CRCpCwIZZF8MvWMar8f4WiA+3uJIMeX+RAsSQknu5w=="],
+    "@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260106.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-9n7HIVP3UMgWSK8Yi2H+23hrrEDNNfkW78mbkxfatGh/ghU4m2QuO8R6MdMdPsSmmKDvbWOtpLEuSZFKNzu7eQ=="],
 
-    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260104.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-6fdywq9zx2QJtDpZKt59e+y8P/WDd10KsX6MReDpaKXTtGpqkVq9+Zb7LbNqRlLJU4gpwURepCTqX/AsZjzUwg=="],
+    "@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260106.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-zHJ1KsgQTpBnG3RbI1kjH/fD8juc5DTlQ9gbmJi23OhhaOgNF+PkqC2vAAWLFqdH99tAMvmJf9BJncbB7LwxXA=="],
 
-    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260104.1", "", { "os": "linux", "cpu": "arm" }, "sha512-mi/NiyKyH/CpNrL3FNCL7Vp9Q/c7MW+7La6xNgpG29M7SK4U9LnBnJLSHS0ahpnt2QsZBlCY6NaRZpbKT2pYNw=="],
+    "@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260106.1", "", { "os": "linux", "cpu": "arm" }, "sha512-z7hdUMOOhdiVg1RmWyRyrIG3IIki4eJF3/TUtVVSTRwGq3t+j2JnLUUoK5VgX7EiqlN6wuJ94/FpWtyf+X4fkw=="],
 
-    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260104.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-M7vUDJGXDUfIKO7X+DlBIoKaE3uA6dKx8wVky39FHcvjiTJIR+tphPU3uLY7xLpuj3y9PtGQQ2WoGY2wcft4Ug=="],
+    "@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260106.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-Mp7M7fgUsVW8MHadN58gjie1bzg06K1Id6vm2Aycnmk9rKgu8CxdaDayllr5giPo+iZLZOnw2FyGItrywd4fuA=="],
 
-    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260104.1", "", { "os": "linux", "cpu": "x64" }, "sha512-58eQFmQLCFHmPxyaLT7p3lJNHjcxqLwxO5IFAujrMp+VPHCUuL9QfxcKWnCJlkjgoKd8c95pT0ZNzBhsq00Hyg=="],
+    "@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260106.1", "", { "os": "linux", "cpu": "x64" }, "sha512-H+c7xgK0gItbntnPFvt9nVv+cjjjn0lTj2tIjBQcTbH92q9RgFkIfztgxrP5zD8MzJKDOyIw/iAUSsb57lyxjw=="],
 
-    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260104.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-g5pE6oveg7lDsBP8nYnjhikMzoZbMWEVYG1JkVZcNUG9equw1Fg4cZdBa/HbZENj1Afy9xrzrRywpvhAYF0lDw=="],
+    "@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260106.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-PS1FyYa+/sHQa5Va0yz21DxaBkGGwOYfjMyRSs6oHq01DzMnVIjtsdNAALP0+oqki8Adw0D2XtsdB5QapDbBJw=="],
 
-    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260104.1", "", { "os": "win32", "cpu": "x64" }, "sha512-kdufkNpH5DNIeJ5ZHsfcxTC30IfTkvW+ITc0IHHv4plgKiTJ71i/BZDavkTNmpd1zODe4P8PVGrRrGYpdVF06A=="],
+    "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260106.1", "", { "os": "win32", "cpu": "x64" }, "sha512-AKVSTGcIE7d5KFtclhK3PVwUrsNnzziA7ZC/VDbMbvYCjLk7FE2GdNKaxQxLGHb53IUirgmltR5r4htn0WSM6A=="],
 
     "@typespec/ts-http-runtime": ["@typespec/ts-http-runtime@0.3.2", "", { "dependencies": { "http-proxy-agent": "^7.0.0", "https-proxy-agent": "^7.0.0", "tslib": "^2.6.2" } }, "sha512-IlqQ/Gv22xUC1r/WQm4StLkYQmaaTsXAhUVsNE0+xiyf0yRFiH5++q78U3bw6bLKDCTmh0uqKB9eG9+Bt75Dkg=="],
 
@@ -2854,8 +2854,6 @@
     "type-is": ["type-is@1.6.18", "", { "dependencies": { "media-typer": "0.3.0", "mime-types": "~2.1.24" } }, "sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g=="],
 
     "typed-function": ["typed-function@4.2.2", "", {}, "sha512-VwaXim9Gp1bngi/q3do8hgttYn2uC3MoT/gfuMWylnj1IeZBUAyPddHZlo1K05BDoj8DYPpMdiHqH1dDYdJf2A=="],
-
-    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "underscore": ["underscore@1.13.7", "", {}, "sha512-GMXzWtsc57XAtguZgaQViUOzs0KTkk8ojr3/xAxXLITqf/3EMwxC0inyETfDFjH/Krbhuep0HNbbjI9i/q3F3g=="],
 
