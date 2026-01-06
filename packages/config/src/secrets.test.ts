@@ -155,20 +155,21 @@ describe("MemorySecretsProvider", () => {
 // ============================================
 
 describe("EncryptedFileSecretsProvider", () => {
+  const testFilePath = "/tmp/test-secrets-" + Date.now() + ".enc";
+  const testPassword = "test-encryption-password-123";
+  const testSecrets = {
+    API_KEY: "secret-api-key",
+    DB_PASSWORD: "super-secret-password",
+  };
+
   it("should have correct name", () => {
     const provider = new EncryptedFileSecretsProvider("/tmp/secrets.enc", "password");
     expect(provider.name).toBe("encrypted-file");
   });
 
   it("should encrypt and decrypt secrets", () => {
-    const secrets = {
-      API_KEY: "secret-api-key",
-      DB_PASSWORD: "super-secret-password",
-    };
-    const password = "test-encryption-password";
-
     // Encrypt
-    const encrypted = EncryptedFileSecretsProvider.encrypt(secrets, password);
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
     expect(encrypted).toBeDefined();
     expect(typeof encrypted).toBe("string");
 
@@ -179,6 +180,106 @@ describe("EncryptedFileSecretsProvider", () => {
   it("should fail health check for missing file", async () => {
     const provider = new EncryptedFileSecretsProvider("/nonexistent/path/secrets.enc", "password");
     expect(await provider.healthCheck()).toBe(false);
+  });
+
+  it("should get secret from encrypted file", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    const value = await provider.get("API_KEY");
+    expect(value).toBe("secret-api-key");
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
+  });
+
+  it("should check if key exists in encrypted file", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    expect(await provider.has("API_KEY")).toBe(true);
+    expect(await provider.has("NONEXISTENT")).toBe(false);
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
+  });
+
+  it("should list all keys in encrypted file", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    const keys = await provider.list();
+    expect(keys.sort()).toEqual(["API_KEY", "DB_PASSWORD"]);
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
+  });
+
+  it("should pass health check for valid encrypted file", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    expect(await provider.healthCheck()).toBe(true);
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
+  });
+
+  it("should cache secrets and use cache", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    // First call loads from file
+    const value1 = await provider.get("API_KEY");
+    expect(value1).toBe("secret-api-key");
+
+    // Second call uses cache
+    const value2 = await provider.get("DB_PASSWORD");
+    expect(value2).toBe("super-secret-password");
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
+  });
+
+  it("should return null for missing key", async () => {
+    // Create encrypted file
+    const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
+    await Bun.write(testFilePath, encrypted);
+
+    const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
+
+    const value = await provider.get("MISSING_KEY");
+    expect(value).toBeNull();
+
+    // Cleanup
+    await Bun.file(testFilePath)
+      .delete()
+      .catch(() => {});
   });
 });
 

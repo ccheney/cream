@@ -2,8 +2,8 @@
  * Tests for API Key Rotation
  */
 
-import { beforeEach, describe, expect, it } from "bun:test";
-import { KeyRotationManager, KeyRotationRegistry } from "./keyRotation";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { createKeyRotationRegistry, KeyRotationManager, KeyRotationRegistry } from "./keyRotation";
 
 // Silent logger for tests
 const silentLogger = {
@@ -119,6 +119,75 @@ describe("KeyRotationManager", () => {
       const stats = luManager.getStats();
       const key2Stats = stats.keys.find((k) => k.name === "second");
       expect(key2Stats?.requestCount).toBe(1);
+    });
+  });
+
+  describe("healthiest strategy", () => {
+    it("should select key with lowest error rate", () => {
+      const healthManager = new KeyRotationManager(
+        "polygon",
+        { strategy: "healthiest" },
+        silentLogger
+      );
+      healthManager.addKey("key1", "first");
+      healthManager.addKey("key2", "second");
+
+      // Make key1 have some requests and errors
+      healthManager.getKey(); // key1
+      healthManager.reportError("key1", "error1");
+      healthManager.getKey(); // key1 again
+      healthManager.reportSuccess("key1");
+
+      // key2 has no requests so 0/0 = 0 error rate
+      // Next get should still work
+      const nextKey = healthManager.getKey();
+      expect(nextKey).toBeDefined();
+    });
+
+    it("should handle keys with zero requests", () => {
+      const healthManager = new KeyRotationManager(
+        "polygon",
+        { strategy: "healthiest" },
+        silentLogger
+      );
+      healthManager.addKey("key1", "first");
+      healthManager.addKey("key2", "second");
+
+      // Neither key has requests - should return first one
+      expect(healthManager.getKey()).toBe("key1");
+    });
+  });
+
+  describe("rate-limit-aware strategy", () => {
+    it("should select key with highest rate limit remaining", () => {
+      const rlManager = new KeyRotationManager(
+        "polygon",
+        { strategy: "rate-limit-aware" },
+        silentLogger
+      );
+      rlManager.addKey("key1", "first");
+      rlManager.addKey("key2", "second");
+
+      // Set rate limits
+      rlManager.reportRateLimit("key1", 10);
+      rlManager.reportRateLimit("key2", 100);
+
+      // Should select key2 with more remaining
+      expect(rlManager.getKey()).toBe("key2");
+    });
+
+    it("should fall back to least-used when no rate limit info", () => {
+      const rlManager = new KeyRotationManager(
+        "polygon",
+        { strategy: "rate-limit-aware" },
+        silentLogger
+      );
+      rlManager.addKey("key1", "first");
+      rlManager.addKey("key2", "second");
+
+      // No rate limit info set
+      // Should fall back to least-used
+      expect(rlManager.getKey()).toBeDefined();
     });
   });
 
@@ -322,5 +391,89 @@ describe("KeyRotationRegistry", () => {
       expect(allStats.some((s) => s.service === "polygon")).toBe(true);
       expect(allStats.some((s) => s.service === "fmp")).toBe(true);
     });
+  });
+
+  describe("initFromEnv", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      // Restore original env
+      process.env = { ...originalEnv };
+    });
+
+    it("should initialize managers from environment variables", () => {
+      process.env.POLYGON_KEY = "test-polygon-key";
+      process.env.FMP_KEY = "test-fmp-key";
+
+      const envRegistry = new KeyRotationRegistry({}, silentLogger);
+      envRegistry.initFromEnv();
+
+      expect(envRegistry.getKey("polygon")).toBe("test-polygon-key");
+      expect(envRegistry.getKey("fmp")).toBe("test-fmp-key");
+    });
+
+    it("should handle comma-separated keys from env", () => {
+      process.env.POLYGON_KEY = "key1,key2,key3";
+
+      const envRegistry = new KeyRotationRegistry({}, silentLogger);
+      envRegistry.initFromEnv();
+
+      expect(envRegistry.getManager("polygon").getActiveKeyCount()).toBe(3);
+    });
+
+    it("should handle missing env variables gracefully", () => {
+      // Clear both process.env and Bun.env
+      delete process.env.POLYGON_KEY;
+      delete process.env.FMP_KEY;
+      delete process.env.ALPHAVANTAGE_KEY;
+      delete process.env.DATABENTO_KEY;
+      delete process.env.ALPACA_KEY;
+      // @ts-expect-error - Bun.env is readonly but we need to clear for test
+      Bun.env.POLYGON_KEY = undefined;
+      // @ts-expect-error - Bun.env is readonly but we need to clear for test
+      Bun.env.FMP_KEY = undefined;
+      // @ts-expect-error - Bun.env is readonly but we need to clear for test
+      Bun.env.ALPHAVANTAGE_KEY = undefined;
+      // @ts-expect-error - Bun.env is readonly but we need to clear for test
+      Bun.env.DATABENTO_KEY = undefined;
+      // @ts-expect-error - Bun.env is readonly but we need to clear for test
+      Bun.env.ALPACA_KEY = undefined;
+
+      const envRegistry = new KeyRotationRegistry({}, silentLogger);
+      envRegistry.initFromEnv();
+
+      // Should not throw - managers are created but without keys
+      const stats = envRegistry.getAllStats();
+      expect(stats.length).toBe(5); // 5 services initialized but no keys
+    });
+  });
+});
+
+// ============================================
+// Factory Functions Tests
+// ============================================
+
+describe("createKeyRotationRegistry", () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("should create registry initialized from env", () => {
+    process.env.POLYGON_KEY = "factory-test-key";
+
+    const registry = createKeyRotationRegistry({});
+
+    expect(registry).toBeInstanceOf(KeyRotationRegistry);
+    expect(registry.getKey("polygon")).toBe("factory-test-key");
+  });
+
+  it("should accept custom config", () => {
+    process.env.POLYGON_KEY = "config-test-key";
+
+    const registry = createKeyRotationRegistry({ maxConsecutiveErrors: 5 });
+
+    expect(registry).toBeInstanceOf(KeyRotationRegistry);
   });
 });

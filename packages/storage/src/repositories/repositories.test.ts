@@ -10,6 +10,7 @@ process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "../turso.js";
+import { fromBoolean, mapRow, mapRows, parseJson, query, toBoolean, toJson } from "./base.js";
 import {
   AlertsRepository,
   DecisionsRepository,
@@ -164,6 +165,141 @@ async function setupTables(client: TursoClient): Promise<void> {
     )
   `);
 }
+
+// ============================================
+// Base Utilities Tests
+// ============================================
+
+describe("RepositoryError", () => {
+  test("creates notFound error", () => {
+    const error = RepositoryError.notFound("users", "123");
+    expect(error.code).toBe("NOT_FOUND");
+    expect(error.table).toBe("users");
+    expect(error.message).toContain("123");
+  });
+
+  test("creates duplicateKey error", () => {
+    const error = RepositoryError.duplicateKey("users", "email", "test@example.com");
+    expect(error.code).toBe("DUPLICATE_KEY");
+    expect(error.table).toBe("users");
+    expect(error.message).toContain("email");
+    expect(error.message).toContain("test@example.com");
+  });
+
+  test("creates constraintViolation error", () => {
+    const cause = new Error("Foreign key error");
+    const error = RepositoryError.constraintViolation("orders", "Invalid reference", cause);
+    expect(error.code).toBe("CONSTRAINT_VIOLATION");
+    expect(error.table).toBe("orders");
+    expect(error.cause).toBe(cause);
+  });
+
+  test("fromSqliteError handles unique constraint", () => {
+    const sqliteError = new Error("UNIQUE constraint failed: users.email");
+    const error = RepositoryError.fromSqliteError("users", sqliteError);
+    expect(error.code).toBe("DUPLICATE_KEY");
+  });
+
+  test("fromSqliteError handles foreign key constraint", () => {
+    const sqliteError = new Error("FOREIGN KEY constraint failed");
+    const error = RepositoryError.fromSqliteError("orders", sqliteError);
+    expect(error.code).toBe("CONSTRAINT_VIOLATION");
+  });
+
+  test("fromSqliteError handles generic constraint", () => {
+    const sqliteError = new Error("CHECK constraint failed");
+    const error = RepositoryError.fromSqliteError("users", sqliteError);
+    expect(error.code).toBe("CONSTRAINT_VIOLATION");
+  });
+
+  test("fromSqliteError handles generic error", () => {
+    const sqliteError = new Error("Some other SQL error");
+    const error = RepositoryError.fromSqliteError("users", sqliteError);
+    expect(error.code).toBe("QUERY_ERROR");
+  });
+});
+
+describe("QueryBuilder", () => {
+  test("builds query with limit and offset", () => {
+    const builder = query().limit(50).offset(100);
+    const { sql, args } = builder.build("SELECT * FROM users");
+    expect(sql).toContain("LIMIT ? OFFSET ?");
+    expect(args).toContain(50);
+    expect(args).toContain(100);
+  });
+
+  test("resets builder state", () => {
+    const builder = query().eq("name", "test").orderBy("created_at", "DESC").limit(10).offset(5);
+
+    builder.reset();
+    const { sql, args } = builder.build("SELECT * FROM users");
+
+    // After reset, should have default limit/offset and no WHERE clause
+    expect(sql).not.toContain("WHERE");
+    expect(args).toContain(100); // default limit
+    expect(args).toContain(0); // default offset
+  });
+});
+
+describe("Type Utilities", () => {
+  test("mapRow transforms a single row", () => {
+    const row = { id: 1, name: "test" };
+    const result = mapRow(row, (r) => ({ id: r.id as number, name: r.name as string }));
+    expect(result).toEqual({ id: 1, name: "test" });
+  });
+
+  test("mapRows transforms multiple rows", () => {
+    const rows = [
+      { id: 1, name: "test1" },
+      { id: 2, name: "test2" },
+    ];
+    const result = mapRows(rows, (r) => ({ id: r.id as number, name: r.name as string }));
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ id: 1, name: "test1" });
+  });
+
+  test("toBoolean handles various truthy values", () => {
+    expect(toBoolean(1)).toBe(true);
+    expect(toBoolean(true)).toBe(true);
+    expect(toBoolean("1")).toBe(true);
+    expect(toBoolean("true")).toBe(true);
+  });
+
+  test("toBoolean handles various falsy values", () => {
+    expect(toBoolean(0)).toBe(false);
+    expect(toBoolean(false)).toBe(false);
+    expect(toBoolean("0")).toBe(false);
+    expect(toBoolean(null)).toBe(false);
+    expect(toBoolean(undefined)).toBe(false);
+  });
+
+  test("fromBoolean converts boolean to SQLite integer", () => {
+    expect(fromBoolean(true)).toBe(1);
+    expect(fromBoolean(false)).toBe(0);
+  });
+
+  test("toJson serializes objects", () => {
+    const obj = { key: "value", nested: { a: 1 } };
+    const json = toJson(obj);
+    expect(typeof json).toBe("string");
+    expect(JSON.parse(json)).toEqual(obj);
+  });
+
+  test("parseJson deserializes valid JSON strings", () => {
+    const json = '{"key":"value"}';
+    const obj = parseJson(json, {});
+    expect(obj).toEqual({ key: "value" });
+  });
+
+  test("parseJson returns default for null/undefined", () => {
+    expect(parseJson(null, { default: true })).toEqual({ default: true });
+    expect(parseJson(undefined, [])).toEqual([]);
+  });
+
+  test("parseJson returns default for invalid JSON", () => {
+    expect(parseJson("not valid json", { fallback: true })).toEqual({ fallback: true });
+  });
+});
 
 // ============================================
 // DecisionsRepository Tests

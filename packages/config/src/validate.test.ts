@@ -4,6 +4,7 @@ import {
   validateAtStartup,
   validateConfig,
   validateConfigOrThrow,
+  validatePartialConfig,
 } from "./validate";
 
 describe("CreamConfigSchema", () => {
@@ -99,6 +100,62 @@ describe("validateConfigOrThrow", () => {
   });
 });
 
+describe("validatePartialConfig", () => {
+  it("returns success for valid partial config", () => {
+    const result = validatePartialConfig({
+      constraints: {
+        per_instrument: {
+          max_pct_equity: 0.1,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("returns success for empty object", () => {
+    const result = validatePartialConfig({});
+    expect(result.success).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("returns success for partial core config", () => {
+    const result = validatePartialConfig({
+      core: {
+        environment: "LIVE",
+        llm: { model_id: "gemini-3-pro-preview" },
+      },
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.core?.environment).toBe("LIVE");
+  });
+
+  it("returns errors for invalid values", () => {
+    const result = validatePartialConfig({
+      core: {
+        environment: "INVALID_ENV",
+        llm: { model_id: "gemini-3-pro-preview" },
+      },
+    });
+    expect(result.success).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors.some((e) => e.includes("core.environment"))).toBe(true);
+  });
+
+  it("returns errors for nested invalid values", () => {
+    const result = validatePartialConfig({
+      constraints: {
+        per_instrument: {
+          max_pct_equity: "not-a-number",
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
 describe("validateAtStartup", () => {
   const baseConfig = {
     core: {
@@ -177,5 +234,33 @@ describe("validateAtStartup", () => {
     });
     expect(result.success).toBe(true);
     expect(result.warnings.some((w) => w.includes("leverage"))).toBe(true);
+  });
+
+  it("returns errors with empty warnings for invalid config", () => {
+    const result = validateAtStartup({});
+    expect(result.success).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it("accepts valid HMM classifier with proper config", () => {
+    const result = validateAtStartup({
+      core: {
+        environment: "PAPER",
+        llm: { model_id: "gemini-3-pro-preview" },
+      },
+      regime: {
+        classifier_type: "hmm",
+        hmm: {
+          n_states: 5,
+          features: ["return_5h"],
+          retrain_frequency: "weekly",
+          covariance_type: "full",
+          n_iter: 100,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    expect(result.warnings).toHaveLength(0);
   });
 });

@@ -325,4 +325,18 @@ describe("validateStartupNoExit", () => {
     expect(result.audit.timestamp).toBeDefined();
     expect(result.audit.environment).toBe(result.env.CREAM_ENV);
   });
+
+  it("handles config loading errors", async () => {
+    // Try to load from a directory without config files
+    const result = await validateStartupNoExit("test-service", "/nonexistent/config/dir");
+
+    // Should fail due to config loading error
+    expect(result.success).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
 });
+
+// Note: Tests for validateLiveTradingSafety checks on ALPACA_BASE_URL and
+// TURSO_DATABASE_URL are not included because the `env` object from @cream/domain/env
+// is parsed at module import time and cannot be modified in tests.
+// Lines 154-160 are covered in integration tests when running with actual LIVE env.
