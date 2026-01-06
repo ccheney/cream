@@ -1,27 +1,34 @@
 /**
  * Auth Layout - Wraps all authenticated routes
  *
- * This layout provides:
- * - Authentication guard
- * - Sidebar navigation
- * - Header with connection status
+ * Responsive layout with:
+ * - Desktop (≥1280px): Full sidebar with icons + labels
+ * - Laptop (1024-1279px): Collapsed sidebar, expand on hover
+ * - Tablet (768-1023px): Hamburger menu with slide-in drawer
+ * - Mobile (<768px): Bottom navigation bar
+ *
+ * @see docs/plans/ui/30-themes.md responsive design
  */
 
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { Logo } from "@/components/ui/logo";
 import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { connected, connectionState } = useWebSocketContext();
+  const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -29,6 +36,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Close drawer on breakpoint change
+  useEffect(() => {
+    if (isDesktop || isLaptop) {
+      setDrawerOpen(false);
+    }
+  }, [isDesktop, isLaptop]);
 
   // Show loading while checking auth
   if (isLoading) {
@@ -44,50 +58,112 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     return null;
   }
 
+  // Mobile layout: bottom nav + hamburger header
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
+        <SkipLink />
+
+        {/* Mobile Header */}
+        <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 -ml-2 rounded-md text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <Logo className="h-6 w-auto" />
+          </div>
+          <div className="flex items-center gap-3">
+            <ConnectionBadge connected={connected} state={connectionState} />
+            <EnvBadge />
+          </div>
+        </header>
+
+        {/* Main Content - with bottom padding for nav bar */}
+        <Suspense fallback={<LoadingFallback />}>
+          <div id="main-content" className="flex-1 p-4 pb-20 overflow-auto" tabIndex={-1}>
+            {children}
+          </div>
+        </Suspense>
+
+        {/* Bottom Navigation */}
+        <MobileNav onMoreClick={() => setDrawerOpen(true)} />
+
+        {/* Navigation Drawer */}
+        <NavDrawer
+          open={isDrawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          userEmail={user?.email}
+        />
+      </div>
+    );
+  }
+
+  // Tablet layout: hamburger menu with overlay drawer
+  if (isTablet) {
+    return (
+      <div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
+        <SkipLink />
+
+        {/* Tablet Header */}
+        <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 -ml-2 rounded-md text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <Logo className="h-7 w-auto" />
+          </div>
+          <div className="flex items-center gap-4">
+            <ConnectionBadge connected={connected} state={connectionState} />
+            <EnvBadge />
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <Suspense fallback={<LoadingFallback />}>
+          <main id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
+            {children}
+          </main>
+        </Suspense>
+
+        {/* Navigation Drawer */}
+        <NavDrawer
+          open={isDrawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          userEmail={user?.email}
+        />
+      </div>
+    );
+  }
+
+  // Desktop/Laptop layout: sidebar (collapsed on laptop)
   return (
     <div className="flex h-screen bg-cream-50 dark:bg-night-900">
-      {/* Skip to content link for keyboard accessibility */}
       <SkipLink />
 
       {/* Sidebar */}
-      <aside className="w-64 border-r border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 flex flex-col">
-        <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <Logo className="h-8 w-auto" />
-        </div>
-        <nav className="flex-1 mt-4 px-2 space-y-1 overflow-y-auto">
-          <NavLink href="/dashboard">Dashboard</NavLink>
-          <NavLink href="/decisions">Decisions</NavLink>
-          <NavLink href="/portfolio">Portfolio</NavLink>
-          <NavLink href="/agents">Agents</NavLink>
-          <NavLink href="/charts">Charts</NavLink>
-          <NavLink href="/risk">Risk</NavLink>
-          <NavLink href="/backtest">Backtest</NavLink>
-          <NavLink href="/theses">Theses</NavLink>
-          <NavLink href="/config">Config</NavLink>
-          <NavLink href="/feed">Feed</NavLink>
-        </nav>
-        <div className="p-4 border-t border-cream-200 dark:border-night-700">
-          <div className="text-xs text-cream-500 dark:text-cream-400">{user?.email}</div>
-        </div>
-      </aside>
+      <Sidebar collapsed={isLaptop} userEmail={user?.email} />
 
       {/* Main content */}
       <main className="flex-1 overflow-auto flex flex-col">
         {/* Header */}
-        <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-6 flex items-center justify-between shrink-0">
-          <div className="text-sm text-cream-600 dark:text-cream-400">
-            {/* Breadcrumb or page title can be added here */}
-          </div>
+        <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-6 flex items-center justify-end shrink-0">
           <div className="flex items-center gap-4">
-            {/* Connection status indicator */}
             <ConnectionBadge connected={connected} state={connectionState} />
-            <span className="text-sm text-cream-600 dark:text-cream-400 uppercase">
-              {process.env.NEXT_PUBLIC_CREAM_ENV ?? "PAPER"}
-            </span>
+            <EnvBadge />
           </div>
         </header>
 
-        {/* Page content with Suspense boundary */}
+        {/* Page content */}
         <Suspense fallback={<LoadingFallback />}>
           <div id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
             {children}
@@ -95,24 +171,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </Suspense>
       </main>
     </div>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isActive = pathname === href || pathname.startsWith(`${href}/`);
-
-  return (
-    <Link
-      href={href}
-      className={`block px-3 py-2 rounded-md text-sm transition-colors ${
-        isActive
-          ? "bg-cream-100 dark:bg-night-700 text-cream-900 dark:text-cream-100 font-medium"
-          : "text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700"
-      }`}
-    >
-      {children}
-    </Link>
   );
 }
 
@@ -129,10 +187,19 @@ function ConnectionBadge({ connected, state }: { connected: boolean; state: stri
   return (
     <div className="flex items-center gap-2">
       <div className={`w-2 h-2 rounded-full ${color}`} title={state} />
-      <span className="text-xs text-cream-500 dark:text-cream-400 capitalize">
+      <span className="text-xs text-cream-500 dark:text-cream-400 capitalize hidden sm:inline">
         {connected ? "Connected" : state}
       </span>
     </div>
+  );
+}
+
+function EnvBadge() {
+  const env = process.env.NEXT_PUBLIC_CREAM_ENV ?? "PAPER";
+  return (
+    <span className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
+      {env}
+    </span>
   );
 }
 
