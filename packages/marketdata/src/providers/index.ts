@@ -83,6 +83,29 @@ export {
   type SymbolChange,
   SymbolChangeSchema,
 } from "./fmp";
+// Massive WebSocket (real-time streaming)
+export {
+  createMassiveOptionsClientFromEnv,
+  createMassiveStocksClientFromEnv,
+  createMassiveWebSocketClientFromEnv,
+  type MassiveAggregateMessage,
+  MassiveAggregateMessageSchema,
+  type MassiveChannel,
+  MassiveConnectionState,
+  type MassiveEvent,
+  type MassiveEventHandler,
+  type MassiveFeed,
+  type MassiveMarket,
+  type MassiveMessage,
+  type MassiveQuoteMessage,
+  MassiveQuoteMessageSchema,
+  type MassiveStatusMessage,
+  MassiveStatusMessageSchema,
+  type MassiveTradeMessage,
+  MassiveTradeMessageSchema,
+  MassiveWebSocketClient,
+  type MassiveWebSocketConfig,
+} from "./massive-websocket";
 // Polygon.io / Massive.com
 export {
   type AggregateBar,
