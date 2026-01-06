@@ -32,7 +32,8 @@ coverageReporter = ["text", "lcov"]
 
 # Exclude Playwright visual regression tests (run separately via playwright test)
 # Note: *.spec.ts files in visual/ and e2e/ directories use Playwright, not bun:test
-exclude = ["**/tests/visual/**", "**/tests/e2e/**", "**/visual/*.spec.ts", "**/e2e/*.spec.ts"]
+# Also exclude dashboard React component tests (require Next.js JSX runtime, run via dashboard package)
+exclude = ["**/tests/visual/**", "**/tests/e2e/**", "**/visual/*.spec.ts", "**/e2e/*.spec.ts", "**/dashboard/**/*.test.tsx", "**/dashboard/**/*.test.ts"]
 
 # Patterns to exclude from coverage
 coverageIgnorePatterns = [

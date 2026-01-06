@@ -406,7 +406,8 @@ describe("Combined Validation", () => {
         new Date(candles[9]!.timestamp).getTime() + 5 * 3600000
       ).toISOString();
 
-      const result = validateCandleData(candles);
+      // Disable calendar awareness so gap is detected regardless of day-of-week
+      const result = validateCandleData(candles, { calendarAware: false });
 
       expect(result.gaps?.hasGaps).toBe(true);
       expect(result.issues.some((i) => i.type === "gap")).toBe(true);
