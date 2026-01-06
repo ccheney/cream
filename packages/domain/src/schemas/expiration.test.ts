@@ -9,12 +9,13 @@ import {
   checkPinRisk,
   classifyMoneyness,
   DEFAULT_EXPIRATION_POLICY,
+  EXPIRATION_CHECKPOINT_TIMES,
   ExpirationAction,
   ExpirationCheckpoint,
   ExpirationEvaluationSchema,
   ExpirationPolicyConfig,
   ExpirationReason,
-  EXPIRATION_CHECKPOINT_TIMES,
+  type ExpiringPosition,
   ExpiringPositionSchema,
   getCurrentCheckpoint,
   getMinimumDTE,
@@ -22,11 +23,10 @@ import {
   isPastCheckpoint,
   MinimumDTEConfig,
   Moneyness,
-  parseETTimeToMinutes,
   PinRiskConfig,
   PositionTypeForDTE,
+  parseETTimeToMinutes,
   shouldLetExpireWorthless,
-  type ExpiringPosition,
 } from "./expiration.js";
 
 // ============================================
@@ -249,7 +249,12 @@ describe("checkPinRisk", () => {
 
   it("should use custom config", () => {
     // With highPriceThreshold: 200, price 100 uses threshold: 1.0
-    const config = { threshold: 1.0, thresholdHighPrice: 2.0, highPriceThreshold: 200, autoClose: true };
+    const config = {
+      threshold: 1.0,
+      thresholdHighPrice: 2.0,
+      highPriceThreshold: 200,
+      autoClose: true,
+    };
     expect(checkPinRisk(101, 100, config)).toBe(true); // $1 distance, within $1.0 threshold
     expect(checkPinRisk(102, 100, config)).toBe(false); // $2 distance, outside $1.0 threshold
   });

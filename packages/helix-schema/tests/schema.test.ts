@@ -19,8 +19,8 @@ import {
 } from "../src/index.js";
 
 describe("Node Types", () => {
-  it("has all 8 node types defined", () => {
-    expect(NODE_TYPES.length).toBe(8);
+  it("has all 9 node types defined", () => {
+    expect(NODE_TYPES.length).toBe(9);
     expect(NODE_TYPES).toContain("TradeDecision");
     expect(NODE_TYPES).toContain("TradeLifecycleEvent");
     expect(NODE_TYPES).toContain("ExternalEvent");
@@ -29,6 +29,7 @@ describe("Node Types", () => {
     expect(NODE_TYPES).toContain("NewsItem");
     expect(NODE_TYPES).toContain("Company");
     expect(NODE_TYPES).toContain("MacroEntity");
+    expect(NODE_TYPES).toContain("ThesisMemory");
   });
 });
 

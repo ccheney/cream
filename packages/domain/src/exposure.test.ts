@@ -32,7 +32,7 @@ function createPosition(
 ): Position {
   const avgEntryPrice = Math.abs(marketValue / quantity);
   return {
-    instrument: { symbol, type },
+    instrument: { instrumentId: symbol, instrumentType: type },
     quantity,
     avgEntryPrice,
     marketValue,

@@ -33,6 +33,7 @@ import {
  */
 export class ArrowFlightClient {
   private connected = false;
+  private config: FlightClientConfig;
 
   constructor(config: FlightClientConfig) {
     this.config = {

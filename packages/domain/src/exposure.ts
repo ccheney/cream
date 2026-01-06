@@ -266,7 +266,7 @@ export function calculateExposureByInstrumentType(
   const buckets = new Map<string, Position[]>();
 
   for (const pos of positions) {
-    const key = pos.instrument.type;
+    const key = pos.instrument.instrumentType;
     const existing = buckets.get(key) ?? [];
     existing.push(pos);
     buckets.set(key, existing);
@@ -480,8 +480,8 @@ export function validateExposure(
         limitType: "single_position",
         currentValue: posExposure,
         limit: effectiveLimits.maxSinglePositionExposure,
-        message: `Position ${pos.instrument.symbol} exposure ${(posExposure * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxSinglePositionExposure * 100).toFixed(1)}%`,
-        context: pos.instrument.symbol,
+        message: `Position ${pos.instrument.instrumentId} exposure ${(posExposure * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxSinglePositionExposure * 100).toFixed(1)}%`,
+        context: pos.instrument.instrumentId,
       });
     }
   }
@@ -565,7 +565,7 @@ export function calculateDeltaAdjustedExposure(
     if (pos.delta !== undefined && pos.underlyingPrice !== undefined) {
       // Options: use delta-adjusted exposure
       // Delta exposure = |delta| × underlying × |qty| × multiplier(100)
-      const multiplier = pos.instrument.type === "OPTION" ? 100 : 1;
+      const multiplier = pos.instrument.instrumentType === "OPTION" ? 100 : 1;
       notional = Math.abs(pos.delta) * pos.underlyingPrice * Math.abs(pos.quantity) * multiplier;
     } else {
       // Equities: use market value

@@ -14,8 +14,8 @@
   /* Display & UI: Satoshi with fallbacks */
   --font-ui: 'Satoshi', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Data & Monospace: Geist Mono with fallbacks */
-  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+  /* Data & Monospace: Geist Mono */
+  --font-mono: 'Geist Mono', monospace;
 }
 
 /* ============================================

@@ -156,12 +156,22 @@ export const ExpirationPolicyConfig = z.object({
   /**
    * Minimum DTE thresholds by position type.
    */
-  minimumDTE: MinimumDTEConfig.default({}),
+  minimumDTE: MinimumDTEConfig.default({
+    longOption: 1,
+    shortUncovered: 3,
+    definedRiskSpread: 1,
+    complexStrategy: 3,
+  }),
 
   /**
    * Pin risk detection configuration.
    */
-  pinRisk: PinRiskConfig.default({}),
+  pinRisk: PinRiskConfig.default({
+    threshold: 0.5,
+    thresholdHighPrice: 1.0,
+    highPriceThreshold: 500,
+    autoClose: true,
+  }),
 
   /**
    * Whether to allow exercise (vs always close).

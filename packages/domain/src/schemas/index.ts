@@ -235,33 +235,33 @@ export {
 // ============================================
 
 export {
+  // Utilities
+  checkPinRisk,
+  classifyMoneyness,
+  // Constants
+  DEFAULT_EXPIRATION_POLICY,
+  EXPIRATION_CHECKPOINT_TIMES,
   // Enums
   ExpirationAction,
   ExpirationCheckpoint,
-  ExpirationReason,
-  Moneyness,
-  PositionTypeForDTE,
   // Schemas
   type ExpirationEvaluation,
   ExpirationEvaluationSchema,
   type ExpirationPolicyConfig,
   ExpirationPolicyConfig as ExpirationPolicyConfigSchema,
+  ExpirationReason,
   type ExpiringPosition,
   ExpiringPositionSchema,
-  type MinimumDTEConfig,
-  MinimumDTEConfig as MinimumDTEConfigSchema,
-  type PinRiskConfig,
-  PinRiskConfig as PinRiskConfigSchema,
-  // Constants
-  DEFAULT_EXPIRATION_POLICY,
-  EXPIRATION_CHECKPOINT_TIMES,
-  // Utilities
-  checkPinRisk,
-  classifyMoneyness,
   getCurrentCheckpoint,
   getMinimumDTE,
   getPinRiskThreshold,
   isPastCheckpoint,
+  type MinimumDTEConfig,
+  MinimumDTEConfig as MinimumDTEConfigSchema,
+  Moneyness,
+  type PinRiskConfig,
+  PinRiskConfig as PinRiskConfigSchema,
+  PositionTypeForDTE,
   parseETTimeToMinutes,
   shouldLetExpireWorthless,
 } from "./expiration.js";
