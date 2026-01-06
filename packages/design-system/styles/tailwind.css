@@ -1,0 +1,156 @@
+/**
+ * Tailwind CSS Directives
+ *
+ * Import this file in your app's main CSS file.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Base Layer Customizations
+   ============================================ */
+
+@layer base {
+  /* Apply default font */
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Default body styles */
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: var(--transition-colors);
+  }
+
+  /* Monospace for data */
+  code, pre, kbd, samp,
+  [data-mono] {
+    font-family: var(--font-mono);
+  }
+
+  /* Focus visible styles */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+  }
+
+  /* Selection styles */
+  ::selection {
+    background-color: var(--color-accent-primary-bg);
+    color: var(--color-text-primary);
+  }
+}
+
+/* ============================================
+   Component Layer
+   ============================================ */
+
+@layer components {
+  /* Trading value colors */
+  .text-profit {
+    color: var(--color-trading-profit);
+  }
+
+  .text-loss {
+    color: var(--color-trading-loss);
+  }
+
+  .text-neutral {
+    color: var(--color-trading-neutral);
+  }
+
+  .bg-profit {
+    background-color: var(--color-trading-profit-bg);
+  }
+
+  .bg-loss {
+    background-color: var(--color-trading-loss-bg);
+  }
+
+  .bg-neutral {
+    background-color: var(--color-trading-neutral-bg);
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-tertiary) 25%,
+      var(--color-bg-secondary) 50%,
+      var(--color-bg-tertiary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  /* Card styles */
+  .card {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+  }
+
+  .card-elevated {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}
+
+/* ============================================
+   Utility Layer
+   ============================================ */
+
+@layer utilities {
+  /* Transition utilities */
+  .transition-theme {
+    transition: var(--transition-colors);
+  }
+
+  .transition-default {
+    transition: var(--transition-default);
+  }
+
+  .transition-fast {
+    transition: var(--transition-fast);
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn var(--duration-normal) var(--easing-out);
+  }
+
+  .animate-fade-out {
+    animation: fadeOut var(--duration-normal) var(--easing-out);
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight var(--duration-slow) var(--easing-snappy);
+  }
+
+  .animate-slide-in-bottom {
+    animation: slideInBottom var(--duration-slow) var(--easing-snappy);
+  }
+
+  .animate-scale-in {
+    animation: scaleIn var(--duration-normal) var(--easing-snappy);
+  }
+
+  /* Data display utilities */
+  .font-data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

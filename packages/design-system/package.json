@@ -1,0 +1,39 @@
+{
+  "name": "@cream/design-system",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Design tokens, Tailwind configuration, and shared styles for Cream dashboard",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens": {
+      "types": "./dist/tokens/index.d.ts",
+      "default": "./dist/tokens/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "default": "./dist/config/index.js"
+    },
+    "./styles/globals.css": "./styles/globals.css",
+    "./styles/tailwind.css": "./styles/tailwind.css"
+  },
+  "files": [
+    "dist",
+    "styles"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cream/tsconfig": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}
