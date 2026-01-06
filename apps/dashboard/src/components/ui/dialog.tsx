@@ -9,6 +9,7 @@
 "use client";
 
 import {
+  type ButtonHTMLAttributes,
   createContext,
   forwardRef,
   type HTMLAttributes,
@@ -78,7 +79,7 @@ export interface DialogFooterProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export interface DialogCloseProps extends HTMLAttributes<HTMLButtonElement> {
+export interface DialogCloseProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 

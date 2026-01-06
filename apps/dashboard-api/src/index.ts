@@ -219,8 +219,29 @@ if (import.meta.main) {
 
       // WebSocket upgrade on /ws path
       if (url.pathname === "/ws") {
-        const authHeader = req.headers.get("Authorization");
-        const authResult = validateAuthToken(authHeader);
+        // Try multiple auth sources: Authorization header, query param, or cookie
+        let token: string | null = req.headers.get("Authorization");
+
+        // Check query parameter if no Authorization header
+        if (!token) {
+          token = url.searchParams.get("token");
+        }
+
+        // Check cookie if still no token
+        if (!token) {
+          const cookieHeader = req.headers.get("Cookie");
+          if (cookieHeader) {
+            const cookies = Object.fromEntries(
+              cookieHeader.split(";").map((c) => {
+                const [key, ...rest] = c.trim().split("=");
+                return [key, rest.join("=")];
+              })
+            );
+            token = cookies["cream_access"] ?? null;
+          }
+        }
+
+        const authResult = validateAuthToken(token);
 
         if (!authResult.valid) {
           return new Response(authResult.error ?? "Unauthorized", { status: 401 });
