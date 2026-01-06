@@ -32,3 +32,11 @@ export {
   type UseStaggeredAnimationReturn,
   useStaggeredAnimation,
 } from "./useStaggeredAnimation";
+export {
+  type SwipeDirection,
+  type TouchGestureHandlers,
+  type TouchGestureOptions,
+  type TouchGestureState,
+  type UseTouchGesturesReturn,
+  useTouchGestures,
+} from "./useTouchGestures";
