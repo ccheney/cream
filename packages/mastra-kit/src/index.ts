@@ -23,6 +23,7 @@ export const VERSION = "0.1.0";
 export * from "./agents/index.js";
 export * from "./consensus.js";
 export * from "./escalation.js";
+export * from "./loadtest.js";
 export * from "./prompts/index.js";
 export * from "./tools/index.js";
 export * from "./types.js";
