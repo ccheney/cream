@@ -116,3 +116,17 @@ export {
   type LayerViolation,
   parseImports,
 } from "./layerValidation";
+// Package Dependency Validation
+export {
+  type CircularDependency,
+  createDependencyValidator,
+  type DependencyGraphSummary,
+  type DependencyValidationConfig,
+  type DependencyValidationResult,
+  DependencyValidator,
+  type DependencyViolation,
+  type PackageInfo,
+  parsePackageJson,
+  scanPackages,
+  validatePackageDependencies,
+} from "./dependencyValidation";
