@@ -613,6 +613,29 @@ export {
   validateEnvironmentConsistency,
   validateOrderIdEnvironment,
 } from "./safety";
+// Snapshot size limits and performance monitoring
+export {
+  // Size limit constants
+  createPerformanceTracker,
+  estimateSnapshotSize,
+  estimateSnapshotTokens,
+  estimateTokenCount,
+  formatBytes,
+  formatPerformanceMetrics,
+  formatSizeValidation,
+  PERFORMANCE_LIMITS,
+  PerformanceTracker,
+  SNAPSHOT_SIZE_LIMITS,
+  type SnapshotPerformanceMetrics,
+  type SnapshotSizeEstimate,
+  type SnapshotSizeValidation,
+  TOKEN_ESTIMATION,
+  TRUNCATION_LIMITS,
+  type TruncationOptions,
+  truncateArray,
+  truncateSnapshot,
+  validateSnapshotSize,
+} from "./snapshot-limits";
 // Time utilities
 export {
   addDays,
