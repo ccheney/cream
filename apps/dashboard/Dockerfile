@@ -21,6 +21,12 @@ RUN bun install --ignore-scripts && bun add typescript@5 --dev --no-save
 FROM oven/bun:1 AS builder
 WORKDIR /app
 
+# NEXT_PUBLIC_* vars must be available at build time (baked into client JS)
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ARG NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+
 # Copy everything from deps (includes node_modules)
 COPY --from=deps /app ./
 

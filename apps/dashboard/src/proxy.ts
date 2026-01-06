@@ -52,6 +52,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     );
 
     // CSP in production (development needs unsafe-eval for HMR)
+    // Note: API URL must be included in connect-src for cross-origin requests
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws";
     response.headers.set(
       "Content-Security-Policy",
       [
@@ -60,7 +63,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: https: blob:",
         "font-src 'self' data:",
-        "connect-src 'self' wss: ws: https://api.polygon.io https://api.massive.com https://financialmodelingprep.com",
+        `connect-src 'self' ${apiUrl} ${wsUrl} wss: ws: https://api.polygon.io https://api.massive.com https://financialmodelingprep.com`,
         "frame-src 'self'",
         "frame-ancestors 'none'",
         "object-src 'none'",

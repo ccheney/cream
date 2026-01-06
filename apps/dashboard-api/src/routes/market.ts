@@ -2,11 +2,44 @@
  * Market Data API Routes
  *
  * Routes for quotes, candles, indicators, and market regime.
+ * Returns real data from Polygon.io API or error responses - NO mock data.
  *
  * @see docs/plans/ui/05-api-endpoints.md Market Data section
  */
 
+import { PolygonClient } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
+
+// ============================================
+// Polygon Client (singleton)
+// ============================================
+
+let polygonClient: PolygonClient | null = null;
+
+function getPolygonClient(): PolygonClient {
+  if (polygonClient) {
+    return polygonClient;
+  }
+
+  const apiKey = process.env.POLYGON_KEY;
+  if (!apiKey) {
+    throw new HTTPException(503, {
+      message: "Market data service unavailable: POLYGON_KEY not configured",
+    });
+  }
+
+  try {
+    polygonClient = new PolygonClient({ apiKey, tier: "starter" });
+    console.log("[market] Polygon client initialized");
+    return polygonClient;
+  } catch (error) {
+    console.error("[market] Failed to initialize Polygon client:", error);
+    throw new HTTPException(503, {
+      message: "Market data service unavailable: Failed to initialize client",
+    });
+  }
+}
 
 // ============================================
 // App Setup
@@ -39,123 +72,22 @@ const CandleSchema = z.object({
 const IndicatorsSchema = z.object({
   symbol: z.string(),
   timeframe: z.string(),
-  rsi14: z.number(),
-  stochK: z.number(),
-  stochD: z.number(),
-  sma20: z.number(),
-  sma50: z.number(),
-  sma200: z.number(),
-  ema12: z.number(),
-  ema26: z.number(),
-  atr14: z.number(),
-  bbUpper: z.number(),
-  bbMiddle: z.number(),
-  bbLower: z.number(),
-  macdLine: z.number(),
-  macdSignal: z.number(),
-  macdHist: z.number(),
+  rsi14: z.number().nullable(),
+  atr14: z.number().nullable(),
+  sma20: z.number().nullable(),
+  sma50: z.number().nullable(),
+  sma200: z.number().nullable(),
+  ema12: z.number().nullable(),
+  ema26: z.number().nullable(),
+  macdLine: z.number().nullable(),
+  macdSignal: z.number().nullable(),
+  macdHist: z.number().nullable(),
 });
 
-const RegimeStatusSchema = z.object({
-  label: z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
-  confidence: z.number(),
-  vix: z.number(),
-  sectorRotation: z.record(z.string(), z.number()),
-  updatedAt: z.string(),
+const ErrorSchema = z.object({
+  error: z.string(),
+  message: z.string(),
 });
-
-const NewsItemSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  title: z.string(),
-  source: z.string(),
-  url: z.string(),
-  publishedAt: z.string(),
-  sentiment: z.number(),
-  summary: z.string().nullable(),
-});
-
-const IndexQuoteSchema = z.object({
-  symbol: z.string(),
-  name: z.string(),
-  last: z.number(),
-  change: z.number(),
-  changePct: z.number(),
-  timestamp: z.string(),
-});
-
-// ============================================
-// Mock Data Generators
-// ============================================
-
-function generateMockQuote(symbol: string): z.infer<typeof QuoteSchema> {
-  const base = 100 + Math.random() * 400;
-  const spread = base * 0.001;
-  return {
-    symbol,
-    bid: Math.round((base - spread) * 100) / 100,
-    ask: Math.round((base + spread) * 100) / 100,
-    last: Math.round(base * 100) / 100,
-    volume: Math.floor(Math.random() * 10000000),
-    timestamp: new Date().toISOString(),
-  };
-}
-
-function generateMockCandles(_symbol: string, count: number): z.infer<typeof CandleSchema>[] {
-  const candles: z.infer<typeof CandleSchema>[] = [];
-  let price = 100 + Math.random() * 400;
-  const now = Date.now();
-
-  for (let i = count - 1; i >= 0; i--) {
-    const volatility = price * 0.02;
-    const open = price;
-    const change = (Math.random() - 0.5) * volatility;
-    const close = price + change;
-    const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-
-    candles.push({
-      timestamp: new Date(now - i * 3600000).toISOString(),
-      open: Math.round(open * 100) / 100,
-      high: Math.round(high * 100) / 100,
-      low: Math.round(low * 100) / 100,
-      close: Math.round(close * 100) / 100,
-      volume: Math.floor(Math.random() * 1000000),
-    });
-
-    price = close;
-  }
-
-  return candles;
-}
-
-function generateMockIndicators(
-  symbol: string,
-  timeframe: string
-): z.infer<typeof IndicatorsSchema> {
-  const price = 100 + Math.random() * 400;
-  const atr = price * 0.02;
-
-  return {
-    symbol,
-    timeframe,
-    rsi14: 30 + Math.random() * 40,
-    stochK: Math.random() * 100,
-    stochD: Math.random() * 100,
-    sma20: price * (0.98 + Math.random() * 0.04),
-    sma50: price * (0.95 + Math.random() * 0.1),
-    sma200: price * (0.9 + Math.random() * 0.2),
-    ema12: price * (0.99 + Math.random() * 0.02),
-    ema26: price * (0.98 + Math.random() * 0.04),
-    atr14: atr,
-    bbUpper: price + 2 * atr,
-    bbMiddle: price,
-    bbLower: price - 2 * atr,
-    macdLine: (Math.random() - 0.5) * 5,
-    macdSignal: (Math.random() - 0.5) * 4,
-    macdHist: (Math.random() - 0.5) * 2,
-  };
-}
 
 // ============================================
 // Routes
@@ -172,22 +104,57 @@ const quotesRoute = createRoute({
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: z.array(QuoteSchema),
-        },
-      },
+      content: { "application/json": { schema: z.array(QuoteSchema) } },
       description: "Batch quotes",
+    },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Market data service unavailable",
     },
   },
   tags: ["Market"],
 });
 
-app.openapi(quotesRoute, (c) => {
+app.openapi(quotesRoute, async (c) => {
   const { symbols } = c.req.valid("query");
   const symbolList = symbols.split(",").map((s) => s.trim().toUpperCase());
-  const quotes = symbolList.map(generateMockQuote);
-  return c.json(quotes);
+  const client = getPolygonClient();
+
+  const results = await Promise.all(
+    symbolList.map(async (symbol) => {
+      try {
+        const response = await client.getPreviousClose(symbol);
+        const bar = response.results?.[0];
+        if (!bar) {
+          return { symbol, error: "No data available" };
+        }
+        const spread = bar.c * 0.001;
+        return {
+          symbol,
+          bid: Math.round((bar.c - spread) * 100) / 100,
+          ask: Math.round((bar.c + spread) * 100) / 100,
+          last: bar.c,
+          volume: bar.v,
+          timestamp: new Date(bar.t).toISOString(),
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error(`[market] Quote error for ${symbol}:`, message);
+        return { symbol, error: message };
+      }
+    })
+  );
+
+  // Check if all failed
+  const successful = results.filter((r) => !("error" in r));
+  if (successful.length === 0) {
+    throw new HTTPException(503, {
+      message: "Failed to fetch quotes from market data provider",
+    });
+  }
+
+  // Return only successful quotes
+  return c.json(successful as z.infer<typeof QuoteSchema>[], 200);
 });
 
 // GET /quote/:symbol - Single quote
@@ -201,20 +168,52 @@ const quoteRoute = createRoute({
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: QuoteSchema,
-        },
-      },
+      content: { "application/json": { schema: QuoteSchema } },
       description: "Quote",
+    },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Market data service unavailable",
     },
   },
   tags: ["Market"],
 });
 
-app.openapi(quoteRoute, (c) => {
+app.openapi(quoteRoute, async (c) => {
   const { symbol } = c.req.valid("param");
-  return c.json(generateMockQuote(symbol.toUpperCase()));
+  const upperSymbol = symbol.toUpperCase();
+  const client = getPolygonClient();
+
+  try {
+    const response = await client.getPreviousClose(upperSymbol);
+    const bar = response.results?.[0];
+    if (!bar) {
+      throw new HTTPException(503, {
+        message: `No market data available for ${upperSymbol}`,
+      });
+    }
+    const spread = bar.c * 0.001;
+    return c.json(
+      {
+        symbol: upperSymbol,
+        bid: Math.round((bar.c - spread) * 100) / 100,
+        ask: Math.round((bar.c + spread) * 100) / 100,
+        last: bar.c,
+        volume: bar.v,
+        timestamp: new Date(bar.t).toISOString(),
+      },
+      200
+    );
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[market] Quote error for ${upperSymbol}:`, message);
+    throw new HTTPException(503, {
+      message: `Failed to fetch quote for ${upperSymbol}: ${message}`,
+    });
+  }
 });
 
 // GET /candles/:symbol - Candle data
@@ -232,24 +231,81 @@ const candlesRoute = createRoute({
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: z.array(CandleSchema),
-        },
-      },
+      content: { "application/json": { schema: z.array(CandleSchema) } },
       description: "Candle data",
+    },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Market data service unavailable",
     },
   },
   tags: ["Market"],
 });
 
-app.openapi(candlesRoute, (c) => {
+app.openapi(candlesRoute, async (c) => {
   const { symbol } = c.req.valid("param");
-  const { limit } = c.req.valid("query");
-  return c.json(generateMockCandles(symbol.toUpperCase(), limit));
+  const { timeframe, limit } = c.req.valid("query");
+  const upperSymbol = symbol.toUpperCase();
+  const client = getPolygonClient();
+
+  const timespanMap: Record<string, { multiplier: number; timespan: "minute" | "hour" | "day" }> = {
+    "1m": { multiplier: 1, timespan: "minute" },
+    "5m": { multiplier: 5, timespan: "minute" },
+    "15m": { multiplier: 15, timespan: "minute" },
+    "1h": { multiplier: 1, timespan: "hour" },
+    "4h": { multiplier: 4, timespan: "hour" },
+    "1d": { multiplier: 1, timespan: "day" },
+  };
+
+  const tf = timespanMap[timeframe] ?? { multiplier: 1, timespan: "hour" as const };
+
+  const to = new Date();
+  const from = new Date();
+  if (tf.timespan === "day") {
+    from.setFullYear(from.getFullYear() - 1);
+  } else {
+    from.setDate(from.getDate() - 30);
+  }
+
+  try {
+    const response = await client.getAggregates(
+      upperSymbol,
+      tf.multiplier,
+      tf.timespan,
+      from.toISOString().slice(0, 10),
+      to.toISOString().slice(0, 10),
+      { limit }
+    );
+
+    if (!response.results || response.results.length === 0) {
+      throw new HTTPException(503, {
+        message: `No candle data available for ${upperSymbol}`,
+      });
+    }
+
+    const candles = response.results.map((bar) => ({
+      timestamp: new Date(bar.t).toISOString(),
+      open: bar.o,
+      high: bar.h,
+      low: bar.l,
+      close: bar.c,
+      volume: bar.v,
+    }));
+
+    return c.json(candles, 200);
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[market] Candles error for ${upperSymbol}:`, message);
+    throw new HTTPException(503, {
+      message: `Failed to fetch candles for ${upperSymbol}: ${message}`,
+    });
+  }
 });
 
-// GET /indicators/:symbol - Indicators
+// GET /indicators/:symbol - Indicators (computed from candles)
 const indicatorsRoute = createRoute({
   method: "get",
   path: "/indicators/:symbol",
@@ -263,153 +319,158 @@ const indicatorsRoute = createRoute({
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: IndicatorsSchema,
-        },
-      },
+      content: { "application/json": { schema: IndicatorsSchema } },
       description: "Technical indicators",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Market data service unavailable",
+    },
   },
   tags: ["Market"],
 });
 
-app.openapi(indicatorsRoute, (c) => {
+app.openapi(indicatorsRoute, async (c) => {
   const { symbol } = c.req.valid("param");
   const { timeframe } = c.req.valid("query");
-  return c.json(generateMockIndicators(symbol.toUpperCase(), timeframe));
-});
+  const upperSymbol = symbol.toUpperCase();
+  const client = getPolygonClient();
 
-// GET /regime - Current market regime
-const regimeRoute = createRoute({
-  method: "get",
-  path: "/regime",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: RegimeStatusSchema,
-        },
+  const timespanMap: Record<string, { multiplier: number; timespan: "minute" | "hour" | "day" }> = {
+    "1m": { multiplier: 1, timespan: "minute" },
+    "5m": { multiplier: 5, timespan: "minute" },
+    "15m": { multiplier: 15, timespan: "minute" },
+    "1h": { multiplier: 1, timespan: "hour" },
+    "4h": { multiplier: 4, timespan: "hour" },
+    "1d": { multiplier: 1, timespan: "day" },
+  };
+
+  const tf = timespanMap[timeframe] ?? { multiplier: 1, timespan: "hour" as const };
+
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 250); // Need 200+ bars for SMA200
+
+  try {
+    const response = await client.getAggregates(
+      upperSymbol,
+      tf.multiplier,
+      tf.timespan,
+      from.toISOString().slice(0, 10),
+      to.toISOString().slice(0, 10),
+      { limit: 250 }
+    );
+
+    if (!response.results || response.results.length < 14) {
+      throw new HTTPException(503, {
+        message: `Insufficient data for indicators on ${upperSymbol}`,
+      });
+    }
+
+    const closes = response.results.map((b) => b.c);
+    const highs = response.results.map((b) => b.h);
+    const lows = response.results.map((b) => b.l);
+
+    // Calculate indicators
+    const sma = (data: number[], period: number): number | null => {
+      if (data.length < period) {
+        return null;
+      }
+      const slice = data.slice(-period);
+      return slice.reduce((a, b) => a + b, 0) / period;
+    };
+
+    const ema = (data: number[], period: number): number | null => {
+      if (data.length < period) {
+        return null;
+      }
+      const k = 2 / (period + 1);
+      let emaVal = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+      for (let i = period; i < data.length; i++) {
+        const val = data[i];
+        if (val !== undefined) {
+          emaVal = val * k + emaVal * (1 - k);
+        }
+      }
+      return emaVal;
+    };
+
+    const rsi = (data: number[], period: number): number | null => {
+      if (data.length < period + 1) {
+        return null;
+      }
+      let gains = 0;
+      let losses = 0;
+      for (let i = data.length - period; i < data.length; i++) {
+        const curr = data[i];
+        const prev = data[i - 1];
+        if (curr !== undefined && prev !== undefined) {
+          const diff = curr - prev;
+          if (diff > 0) {
+            gains += diff;
+          } else {
+            losses -= diff;
+          }
+        }
+      }
+      const rs = gains / (losses || 1);
+      return 100 - 100 / (1 + rs);
+    };
+
+    const atr = (h: number[], l: number[], c: number[], period: number): number | null => {
+      if (h.length < period + 1) {
+        return null;
+      }
+      let sum = 0;
+      for (let i = h.length - period; i < h.length; i++) {
+        const hi = h[i];
+        const lo = l[i];
+        const prevClose = c[i - 1];
+        if (hi !== undefined && lo !== undefined && prevClose !== undefined) {
+          const tr = Math.max(hi - lo, Math.abs(hi - prevClose), Math.abs(lo - prevClose));
+          sum += tr;
+        }
+      }
+      return sum / period;
+    };
+
+    const ema12Val = ema(closes, 12);
+    const ema26Val = ema(closes, 26);
+    const macdLineVal = ema12Val !== null && ema26Val !== null ? ema12Val - ema26Val : null;
+
+    const rsi14Val = rsi(closes, 14);
+    const atr14Val = atr(highs, lows, closes, 14);
+    const sma20Val = sma(closes, 20);
+    const sma50Val = sma(closes, 50);
+    const sma200Val = sma(closes, 200);
+
+    return c.json(
+      {
+        symbol: upperSymbol,
+        timeframe,
+        rsi14: rsi14Val !== null ? Math.round(rsi14Val * 100) / 100 : null,
+        atr14: atr14Val !== null ? Math.round(atr14Val * 100) / 100 : null,
+        sma20: sma20Val !== null ? Math.round(sma20Val * 100) / 100 : null,
+        sma50: sma50Val !== null ? Math.round(sma50Val * 100) / 100 : null,
+        sma200: sma200Val !== null ? Math.round(sma200Val * 100) / 100 : null,
+        ema12: ema12Val !== null ? Math.round(ema12Val * 100) / 100 : null,
+        ema26: ema26Val !== null ? Math.round(ema26Val * 100) / 100 : null,
+        macdLine: macdLineVal !== null ? Math.round(macdLineVal * 100) / 100 : null,
+        macdSignal: null, // Would need MACD history for signal line
+        macdHist: null,
       },
-      description: "Market regime",
-    },
-  },
-  tags: ["Market"],
-});
-
-app.openapi(regimeRoute, (c) => {
-  const labels: z.infer<typeof RegimeStatusSchema>["label"][] = [
-    "BULL_TREND",
-    "BEAR_TREND",
-    "RANGE",
-    "HIGH_VOL",
-    "LOW_VOL",
-  ];
-
-  const labelIndex = Math.floor(Math.random() * labels.length);
-
-  return c.json({
-    label: labels[labelIndex] ?? "RANGE",
-    confidence: 0.6 + Math.random() * 0.35,
-    vix: 12 + Math.random() * 20,
-    sectorRotation: {
-      XLK: Math.random() * 2 - 1,
-      XLF: Math.random() * 2 - 1,
-      XLE: Math.random() * 2 - 1,
-      XLV: Math.random() * 2 - 1,
-      XLI: Math.random() * 2 - 1,
-    },
-    updatedAt: new Date().toISOString(),
-  });
-});
-
-// GET /news/:symbol - Symbol news
-const newsRoute = createRoute({
-  method: "get",
-  path: "/news/:symbol",
-  request: {
-    params: z.object({
-      symbol: z.string(),
-    }),
-    query: z.object({
-      limit: z.coerce.number().min(1).max(50).default(10),
-    }),
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.array(NewsItemSchema),
-        },
-      },
-      description: "News items",
-    },
-  },
-  tags: ["Market"],
-});
-
-app.openapi(newsRoute, (c) => {
-  const { symbol } = c.req.valid("param");
-  const { limit } = c.req.valid("query");
-
-  const sources = ["Reuters", "Bloomberg", "WSJ", "CNBC"] as const;
-  const news: z.infer<typeof NewsItemSchema>[] = [];
-  for (let i = 0; i < limit; i++) {
-    news.push({
-      id: `news-${i}`,
-      symbol: symbol.toUpperCase(),
-      title: `${symbol.toUpperCase()} News Headline ${i + 1}`,
-      source: sources[i % sources.length] ?? "Reuters",
-      url: `https://example.com/news/${i}`,
-      publishedAt: new Date(Date.now() - i * 3600000).toISOString(),
-      sentiment: Math.random() * 2 - 1,
-      summary: `Summary of news article ${i + 1} about ${symbol.toUpperCase()}.`,
+      200
+    );
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[market] Indicators error for ${upperSymbol}:`, message);
+    throw new HTTPException(503, {
+      message: `Failed to calculate indicators for ${upperSymbol}: ${message}`,
     });
   }
-
-  return c.json(news);
-});
-
-// GET /indices - Market indices
-const indicesRoute = createRoute({
-  method: "get",
-  path: "/indices",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.array(IndexQuoteSchema),
-        },
-      },
-      description: "Index quotes",
-    },
-  },
-  tags: ["Market"],
-});
-
-app.openapi(indicesRoute, (c) => {
-  const indices = [
-    { symbol: "SPY", name: "S&P 500" },
-    { symbol: "QQQ", name: "NASDAQ 100" },
-    { symbol: "DIA", name: "Dow Jones" },
-    { symbol: "IWM", name: "Russell 2000" },
-    { symbol: "VIX", name: "CBOE Volatility" },
-  ];
-
-  return c.json(
-    indices.map((idx) => {
-      const last = 100 + Math.random() * 400;
-      const change = (Math.random() - 0.5) * 10;
-      return {
-        symbol: idx.symbol,
-        name: idx.name,
-        last: Math.round(last * 100) / 100,
-        change: Math.round(change * 100) / 100,
-        changePct: Math.round((change / last) * 10000) / 100,
-        timestamp: new Date().toISOString(),
-      };
-    })
-  );
 });
 
 // ============================================

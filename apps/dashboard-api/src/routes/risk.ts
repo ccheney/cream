@@ -2,11 +2,17 @@
  * Risk API Routes
  *
  * Routes for exposure, Greeks, VaR, and risk limits.
+ * Returns real data from Rust execution engine or error responses - NO mock data.
+ *
+ * Note: Rust execution engine integration is not yet complete.
+ * All routes return 503 Service Unavailable until the engine is integrated.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
+ * @see docs/plans/09-rust-core.md
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 
 // ============================================
 // App Setup
@@ -82,6 +88,25 @@ const LimitStatusSchema = z.object({
   status: z.enum(["ok", "warning", "critical"]),
 });
 
+const ErrorSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
+
+// ============================================
+// Service Availability Check
+// ============================================
+
+/**
+ * Check if risk service (Rust execution engine) is available.
+ * Currently always throws 503 as the engine is not yet integrated.
+ */
+function requireRiskService(): never {
+  throw new HTTPException(503, {
+    message: "Risk service unavailable: Rust execution engine not yet integrated (Phase 3)",
+  });
+}
+
 // ============================================
 // Routes
 // ============================================
@@ -99,44 +124,16 @@ const exposureRoute = createRoute({
       },
       description: "Exposure metrics",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Risk service unavailable",
+    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(exposureRoute, (c) => {
-  const grossLimit = 200000;
-  const netLimit = 100000;
-  const long = 80000 + Math.random() * 40000;
-  const short = 20000 + Math.random() * 20000;
-  const gross = long + short;
-  const net = long - short;
-
-  return c.json({
-    gross: {
-      current: Math.round(gross),
-      limit: grossLimit,
-      pct: Math.round((gross / grossLimit) * 100) / 100,
-    },
-    net: {
-      current: Math.round(net),
-      limit: netLimit,
-      pct: Math.round((net / netLimit) * 100) / 100,
-    },
-    long: Math.round(long),
-    short: Math.round(short),
-    concentrationMax: {
-      symbol: "AAPL",
-      pct: 0.08 + Math.random() * 0.07,
-    },
-    sectorExposure: {
-      Technology: 0.35,
-      Healthcare: 0.2,
-      Financials: 0.15,
-      "Consumer Discretionary": 0.12,
-      Energy: 0.08,
-      Other: 0.1,
-    },
-  });
+app.openapi(exposureRoute, () => {
+  requireRiskService();
 });
 
 // GET /greeks - Options Greeks summary
@@ -152,42 +149,16 @@ const greeksRoute = createRoute({
       },
       description: "Greeks summary",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Risk service unavailable",
+    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(greeksRoute, (c) => {
-  const positions = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"].map((symbol) => ({
-    symbol,
-    delta: (Math.random() - 0.5) * 100,
-    gamma: Math.random() * 10,
-    vega: Math.random() * 500,
-    theta: -Math.random() * 100,
-  }));
-
-  const totals = positions.reduce(
-    (acc, p) => ({
-      delta: acc.delta + p.delta,
-      gamma: acc.gamma + p.gamma,
-      vega: acc.vega + p.vega,
-      theta: acc.theta + p.theta,
-    }),
-    { delta: 0, gamma: 0, vega: 0, theta: 0 }
-  );
-
-  return c.json({
-    delta: { current: Math.round(totals.delta * 100) / 100, limit: 100 },
-    gamma: { current: Math.round(totals.gamma * 100) / 100, limit: 50 },
-    vega: { current: Math.round(totals.vega * 100) / 100, limit: 1000 },
-    theta: { current: Math.round(totals.theta * 100) / 100, limit: -500 },
-    byPosition: positions.map((p) => ({
-      symbol: p.symbol,
-      delta: Math.round(p.delta * 100) / 100,
-      gamma: Math.round(p.gamma * 100) / 100,
-      vega: Math.round(p.vega * 100) / 100,
-      theta: Math.round(p.theta * 100) / 100,
-    })),
-  });
+app.openapi(greeksRoute, () => {
+  requireRiskService();
 });
 
 // GET /correlation - Correlation matrix
@@ -203,62 +174,16 @@ const correlationRoute = createRoute({
       },
       description: "Correlation matrix",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Risk service unavailable",
+    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(correlationRoute, (c) => {
-  const symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"];
-  const n = symbols.length;
-
-  // Generate symmetric correlation matrix
-  const matrix: number[][] = Array(n)
-    .fill(null)
-    .map(() => Array(n).fill(0) as number[]);
-
-  for (let i = 0; i < n; i++) {
-    const rowI = matrix[i];
-    if (!rowI) {
-      continue;
-    }
-    for (let j = 0; j < n; j++) {
-      if (i === j) {
-        rowI[j] = 1;
-      } else if (i < j) {
-        const corr = Math.round((0.3 + Math.random() * 0.5) * 100) / 100;
-        rowI[j] = corr;
-        const rowJ = matrix[j];
-        if (rowJ) {
-          rowJ[i] = corr;
-        }
-      }
-    }
-  }
-
-  // Find high correlation pairs
-  const highCorrelationPairs: { a: string; b: string; correlation: number }[] = [];
-  for (let i = 0; i < n; i++) {
-    const rowI = matrix[i];
-    if (!rowI) {
-      continue;
-    }
-    for (let j = i + 1; j < n; j++) {
-      const corr = rowI[j] ?? 0;
-      if (corr > 0.7) {
-        highCorrelationPairs.push({
-          a: symbols[i] ?? "",
-          b: symbols[j] ?? "",
-          correlation: corr,
-        });
-      }
-    }
-  }
-
-  return c.json({
-    symbols,
-    matrix,
-    highCorrelationPairs,
-  });
+app.openapi(correlationRoute, () => {
+  requireRiskService();
 });
 
 // GET /var - Value at Risk
@@ -274,18 +199,16 @@ const varRoute = createRoute({
       },
       description: "VaR metrics",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Risk service unavailable",
+    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(varRoute, (c) => {
-  const portfolioValue = 100000;
-  return c.json({
-    oneDay95: Math.round(portfolioValue * 0.015 * 100) / 100,
-    oneDay99: Math.round(portfolioValue * 0.023 * 100) / 100,
-    tenDay95: Math.round(portfolioValue * 0.015 * Math.sqrt(10) * 100) / 100,
-    method: "historical" as const,
-  });
+app.openapi(varRoute, () => {
+  requireRiskService();
 });
 
 // GET /limits - Limit utilization
@@ -301,71 +224,16 @@ const limitsRoute = createRoute({
       },
       description: "Limit statuses",
     },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Risk service unavailable",
+    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(limitsRoute, (c) => {
-  const limits: z.infer<typeof LimitStatusSchema>[] = [
-    {
-      name: "Max Position Size",
-      category: "per_instrument",
-      current: 4500,
-      limit: 5000,
-      utilization: 0.9,
-      status: "warning",
-    },
-    {
-      name: "Max Notional",
-      category: "per_instrument",
-      current: 35000,
-      limit: 50000,
-      utilization: 0.7,
-      status: "ok",
-    },
-    {
-      name: "Gross Exposure",
-      category: "portfolio",
-      current: 180000,
-      limit: 200000,
-      utilization: 0.9,
-      status: "warning",
-    },
-    {
-      name: "Net Exposure",
-      category: "portfolio",
-      current: 60000,
-      limit: 100000,
-      utilization: 0.6,
-      status: "ok",
-    },
-    {
-      name: "Max Concentration",
-      category: "portfolio",
-      current: 0.15,
-      limit: 0.2,
-      utilization: 0.75,
-      status: "ok",
-    },
-    {
-      name: "Portfolio Delta",
-      category: "options",
-      current: 45,
-      limit: 100,
-      utilization: 0.45,
-      status: "ok",
-    },
-    {
-      name: "Portfolio Vega",
-      category: "options",
-      current: 850,
-      limit: 1000,
-      utilization: 0.85,
-      status: "warning",
-    },
-  ];
-
-  return c.json(limits);
+app.openapi(limitsRoute, () => {
+  requireRiskService();
 });
 
 // ============================================

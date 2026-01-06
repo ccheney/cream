@@ -157,12 +157,8 @@ services:
     volumes:
       - ./packages/infra/otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    # Note: otel-collector-contrib is distroless (no curl/wget/shell)
+    # Health verified externally via http://localhost:8888/metrics
     networks:
       - cream-network
     restart: unless-stopped
@@ -198,8 +194,10 @@ services:
       - "3000:3000"     # Next.js default port
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://dashboard-api:3001
-      - NEXT_PUBLIC_WS_URL=ws://dashboard-api:3001/ws
+      # NEXT_PUBLIC_* vars are baked into client JS at build time
+      # Must use localhost since browser accesses API directly, not via Docker network
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
     depends_on:
       dashboard-api:
         condition: service_healthy
@@ -239,6 +237,7 @@ services:
       - ALPACA_SECRET=${ALPACA_SECRET:-}
       - POLYGON_KEY=${POLYGON_KEY:-}
       - FMP_KEY=${FMP_KEY:-}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
     depends_on:
       turso:
         condition: service_healthy

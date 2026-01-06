@@ -158,11 +158,12 @@ export const DEFAULT_JWT_CONFIG: JWTConfig = {
 
 /**
  * Default cookie configuration.
+ * Note: secure: true requires HTTPS. Only enable for LIVE environment.
  */
 export const DEFAULT_COOKIE_CONFIG: CookieConfig = {
   accessTokenName: "cream_access",
   refreshTokenName: "cream_refresh",
   path: "/",
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.CREAM_ENV === "LIVE",
   sameSite: "Strict",
 };
