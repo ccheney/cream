@@ -6,7 +6,7 @@
  * @see docs/plans/ui/05-api-endpoints.md Backtest section
  */
 
-import { OpenAPIHono, z } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 // ============================================
@@ -168,7 +168,7 @@ app.openapi(listRoute, (c) => {
 });
 
 // POST / - Create backtest
-const createRoute = createRoute({
+const createBacktestRoute = createRoute({
   method: "post",
   path: "/",
   request: {
@@ -193,7 +193,7 @@ const createRoute = createRoute({
   tags: ["Backtest"],
 });
 
-app.openapi(createRoute, (c) => {
+app.openapi(createBacktestRoute, (c) => {
   const { name, startDate, endDate, initialCapital } = c.req.valid("json");
 
   const id = `bt-${String(backtests.size + 1).padStart(3, "0")}`;
@@ -322,10 +322,11 @@ app.openapi(tradesRoute, (c) => {
         cumulativePnl += pnl;
       }
 
+      const symbolIndex = Math.floor(Math.random() * symbols.length);
       trades.push({
         id: `trade-${i}`,
         timestamp: new Date(startTime + Math.random() * (endTime - startTime)).toISOString(),
-        symbol: symbols[Math.floor(Math.random() * symbols.length)],
+        symbol: symbols[symbolIndex] ?? "AAPL",
         action: i % 2 === 0 ? "BUY" : "SELL",
         side: Math.random() > 0.3 ? "LONG" : "SHORT",
         qty: Math.floor(10 + Math.random() * 90),

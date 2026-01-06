@@ -15,6 +15,7 @@ import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
 import { liveProtection, requireAuth } from "./auth/index.js";
 import { closeDb } from "./db.js";
+import { AUTH_CONFIG, rateLimit } from "./middleware/index.js";
 import {
   agentsRoutes,
   alertsRoutes,
@@ -68,6 +69,12 @@ app.use("/*", timing());
 if (process.env.NODE_ENV !== "production") {
   app.use("/*", prettyJSON());
 }
+
+// Global rate limiting (100 req/min per endpoint)
+app.use("/api/*", rateLimit());
+
+// Stricter rate limiting for auth endpoints (10 req/min)
+app.use("/api/auth/*", rateLimit(AUTH_CONFIG));
 
 // ============================================
 // Health Check Route

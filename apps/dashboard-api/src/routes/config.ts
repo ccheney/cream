@@ -26,7 +26,7 @@ const UniverseSourceSchema = z.object({
   symbols: z.array(z.string()).optional(),
   index: z.string().optional(),
   etf: z.string().optional(),
-  screenerParams: z.record(z.unknown()).optional(),
+  screenerParams: z.record(z.string(), z.unknown()).optional(),
 });
 
 const UniverseConfigSchema = z.object({
@@ -67,12 +67,12 @@ const ConfigurationSchema = z.object({
   version: z.string(),
   environment: EnvironmentSchema,
   universe: UniverseConfigSchema,
-  indicators: z.record(z.unknown()),
-  regime: z.record(z.unknown()),
+  indicators: z.record(z.string(), z.unknown()),
+  regime: z.record(z.string(), z.unknown()),
   constraints: ConstraintsConfigSchema,
-  options: z.record(z.unknown()),
-  memory: z.record(z.unknown()),
-  schedule: z.record(z.unknown()),
+  options: z.record(z.string(), z.unknown()),
+  memory: z.record(z.string(), z.unknown()),
+  schedule: z.record(z.string(), z.unknown()),
 });
 
 const ConfigVersionSchema = z.object({
@@ -216,11 +216,15 @@ const updateConfigRoute = createRoute({
 app.openapi(updateConfigRoute, (c) => {
   const updates = c.req.valid("json");
 
+  // Parse version and increment major
+  const versionParts = currentConfig.version.split(".");
+  const majorVersion = parseInt(versionParts[0] ?? "0", 10);
+
   // Merge updates
   currentConfig = {
     ...currentConfig,
     ...updates,
-    version: `${parseInt(currentConfig.version.split(".")[0], 10) + 1}.0.0`,
+    version: `${majorVersion + 1}.0.0`,
   };
 
   // Add to history

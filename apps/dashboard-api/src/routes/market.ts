@@ -60,7 +60,7 @@ const RegimeStatusSchema = z.object({
   label: z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
   confidence: z.number(),
   vix: z.number(),
-  sectorRotation: z.record(z.number()),
+  sectorRotation: z.record(z.string(), z.number()),
   updatedAt: z.string(),
 });
 
@@ -306,8 +306,10 @@ app.openapi(regimeRoute, (c) => {
     "LOW_VOL",
   ];
 
+  const labelIndex = Math.floor(Math.random() * labels.length);
+
   return c.json({
-    label: labels[Math.floor(Math.random() * labels.length)],
+    label: labels[labelIndex] ?? "RANGE",
     confidence: 0.6 + Math.random() * 0.35,
     vix: 12 + Math.random() * 20,
     sectorRotation: {
@@ -350,13 +352,14 @@ app.openapi(newsRoute, (c) => {
   const { symbol } = c.req.valid("param");
   const { limit } = c.req.valid("query");
 
+  const sources = ["Reuters", "Bloomberg", "WSJ", "CNBC"] as const;
   const news: z.infer<typeof NewsItemSchema>[] = [];
   for (let i = 0; i < limit; i++) {
     news.push({
       id: `news-${i}`,
       symbol: symbol.toUpperCase(),
       title: `${symbol.toUpperCase()} News Headline ${i + 1}`,
-      source: ["Reuters", "Bloomberg", "WSJ", "CNBC"][i % 4],
+      source: sources[i % sources.length] ?? "Reuters",
       url: `https://example.com/news/${i}`,
       publishedAt: new Date(Date.now() - i * 3600000).toISOString(),
       sentiment: Math.random() * 2 - 1,

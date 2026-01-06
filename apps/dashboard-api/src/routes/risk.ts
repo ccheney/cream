@@ -35,7 +35,7 @@ const ExposureMetricsSchema = z.object({
     symbol: z.string(),
     pct: z.number(),
   }),
-  sectorExposure: z.record(z.number()),
+  sectorExposure: z.record(z.string(), z.number()),
 });
 
 const PositionGreeksSchema = z.object({
@@ -214,15 +214,23 @@ app.openapi(correlationRoute, (c) => {
   // Generate symmetric correlation matrix
   const matrix: number[][] = Array(n)
     .fill(null)
-    .map(() => Array(n).fill(0));
+    .map(() => Array(n).fill(0) as number[]);
 
   for (let i = 0; i < n; i++) {
+    const rowI = matrix[i];
+    if (!rowI) {
+      continue;
+    }
     for (let j = 0; j < n; j++) {
       if (i === j) {
-        matrix[i][j] = 1;
+        rowI[j] = 1;
       } else if (i < j) {
-        matrix[i][j] = Math.round((0.3 + Math.random() * 0.5) * 100) / 100;
-        matrix[j][i] = matrix[i][j];
+        const corr = Math.round((0.3 + Math.random() * 0.5) * 100) / 100;
+        rowI[j] = corr;
+        const rowJ = matrix[j];
+        if (rowJ) {
+          rowJ[i] = corr;
+        }
       }
     }
   }
@@ -230,12 +238,17 @@ app.openapi(correlationRoute, (c) => {
   // Find high correlation pairs
   const highCorrelationPairs: { a: string; b: string; correlation: number }[] = [];
   for (let i = 0; i < n; i++) {
+    const rowI = matrix[i];
+    if (!rowI) {
+      continue;
+    }
     for (let j = i + 1; j < n; j++) {
-      if (matrix[i][j] > 0.7) {
+      const corr = rowI[j] ?? 0;
+      if (corr > 0.7) {
         highCorrelationPairs.push({
-          a: symbols[i],
-          b: symbols[j],
-          correlation: matrix[i][j],
+          a: symbols[i] ?? "",
+          b: symbols[j] ?? "",
+          correlation: corr,
         });
       }
     }
