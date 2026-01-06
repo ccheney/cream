@@ -225,11 +225,11 @@ function renderCustomLegend(props: {
         fontSize: 11,
       }}
     >
-      {payload.map((entry) => {
+      {payload.map((entry, index) => {
         const percentage = calculatePercentage(entry.payload?.value ?? 0, total);
         return (
           <li
-            key={`legend-${entry.value ?? entry.dataKey}`}
+            key={`legend-${entry.value ?? index}`}
             style={{
               display: "flex",
               alignItems: "center",

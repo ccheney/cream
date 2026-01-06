@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
-    "typecheck": "echo 'Typecheck skipped - workspace resolution in progress'",
+    "typecheck": "tsc --noEmit",
     "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/",
@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@cream/config": "workspace:*",
-    "@cream/domain": "workspace:*"
+    "@cream/domain": "workspace:*",
+    "@cream/storage": "workspace:*"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

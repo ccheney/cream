@@ -45,12 +45,12 @@ describe("MockAdapter", () => {
 
     it("should filter candles by date range", async () => {
       const allCandles = await adapter.getCandles("AAPL", "1h");
-      if (allCandles.length < 2) {
+      if (allCandles.length < 6) {
         return;
       }
 
-      const startTs = allCandles[2].timestamp;
-      const endTs = allCandles[5].timestamp;
+      const startTs = allCandles[2]!.timestamp;
+      const endTs = allCandles[5]!.timestamp;
 
       const filtered = await adapter.getCandlesInRange("AAPL", "1h", startTs, endTs);
       expect(filtered.length).toBeLessThanOrEqual(allCandles.length);
