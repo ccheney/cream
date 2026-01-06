@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ============================================
 // Types
@@ -175,15 +175,27 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     autoConnect = true,
   } = options;
 
-  const reconnectionConfig: ReconnectionConfig = {
-    ...DEFAULT_RECONNECTION,
-    ...reconnection,
-  };
+  // Memoize configs to prevent recreating connect/startHeartbeat on every render
+  const reconnectionConfig = useMemo<ReconnectionConfig>(
+    () => ({
+      ...DEFAULT_RECONNECTION,
+      ...reconnection,
+    }),
+    [
+      reconnection.maxAttempts,
+      reconnection.initialDelay,
+      reconnection.maxDelay,
+      reconnection.backoffMultiplier,
+    ]
+  );
 
-  const heartbeatConfig: HeartbeatConfig = {
-    ...DEFAULT_HEARTBEAT,
-    ...heartbeat,
-  };
+  const heartbeatConfig = useMemo<HeartbeatConfig>(
+    () => ({
+      ...DEFAULT_HEARTBEAT,
+      ...heartbeat,
+    }),
+    [heartbeat.pingInterval, heartbeat.pongTimeout]
+  );
 
   // State
   const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
