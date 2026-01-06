@@ -18,6 +18,10 @@ export type {
   Transition,
 } from "../tokens/motion";
 export type {
+  BorderRadius,
+  ComponentRadius,
+} from "../tokens/radius";
+export type {
   Spacing,
   SpacingTokens,
 } from "../tokens/spacing";

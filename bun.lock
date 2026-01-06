@@ -52,6 +52,7 @@
         "dompurify": "3.3.1",
         "framer-motion": "12.23.26",
         "lightweight-charts": "^5.1.0",
+        "lucide-react": "0.562.0",
         "next": "^16.0.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -131,6 +132,17 @@
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "@typescript/native-preview": "7.0.0-dev.20260104.1",
+      },
+    },
+    "packages/design-system": {
+      "name": "@cream/design-system",
+      "version": "0.0.1",
+      "dependencies": {
+        "tailwindcss": "^4.0.0",
+      },
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "typescript": "^5.7.2",
       },
     },
     "packages/domain": {
@@ -594,6 +606,8 @@
     "@cream/dashboard": ["@cream/dashboard@workspace:apps/dashboard"],
 
     "@cream/dashboard-api": ["@cream/dashboard-api@workspace:apps/dashboard-api"],
+
+    "@cream/design-system": ["@cream/design-system@workspace:packages/design-system"],
 
     "@cream/domain": ["@cream/domain@workspace:packages/domain"],
 

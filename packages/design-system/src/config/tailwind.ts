@@ -7,6 +7,7 @@
 
 import { darkColors, lightColors, palette } from "../tokens/colors";
 import { animation, duration, easing, keyframes } from "../tokens/motion";
+import { borderRadius } from "../tokens/radius";
 import { spacing, spacingTokens } from "../tokens/spacing";
 import { fontFamily, fontSize, fontWeight, letterSpacing, lineHeight } from "../tokens/typography";
 
@@ -24,6 +25,9 @@ export const tailwindConfig = {
 
     // Spacing scale
     spacing,
+
+    // Border radius
+    borderRadius,
 
     // Typography
     fontFamily: {
