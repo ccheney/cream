@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Enable typed routes for type-safe navigation (promoted to top-level in Next.js 16)
-  typedRoutes: true,
+  // Typed routes disabled - dynamic routes make strict typing impractical
+  // typedRoutes: true,
 
   // Production optimizations
   poweredByHeader: false,

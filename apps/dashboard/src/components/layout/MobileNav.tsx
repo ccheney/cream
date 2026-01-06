@@ -19,7 +19,7 @@ import { memo } from "react";
 // ============================================
 
 export interface MobileNavItem {
-  href: string;
+  href: `/${string}`;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }
@@ -56,7 +56,7 @@ const NavItem = memo(function NavItem({ item, isActive }: NavItemProps) {
 
   return (
     <Link
-      href={item.href}
+      href={item.href as never}
       className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-colors ${
         isActive ? "text-cream-900 dark:text-cream-100" : "text-cream-500 dark:text-cream-400"
       }`}

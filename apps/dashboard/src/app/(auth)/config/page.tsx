@@ -228,7 +228,7 @@ function ConfigSection({
   if (href) {
     return (
       <Link
-        href={href}
+        href={href as `/config/${string}`}
         className="block bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
       >
         {content}

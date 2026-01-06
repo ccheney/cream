@@ -9,7 +9,8 @@
     "test": {
       "dependsOn": ["build"],
       "outputs": ["coverage/**"],
-      "env": ["CREAM_ENV"]
+      "env": ["CREAM_ENV"],
+      "passThroughEnv": ["CREAM_ENV"]
     },
     "lint": {
       "dependsOn": ["^build"],

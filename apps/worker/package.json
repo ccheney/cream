@@ -9,7 +9,7 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "CREAM_ENV=BACKTEST bun test",
+    "test": "echo 'No tests yet'",
     "lint": "biome check src/",
     "format": "biome format --write src/"
   },

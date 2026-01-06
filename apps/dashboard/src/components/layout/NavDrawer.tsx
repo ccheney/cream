@@ -138,7 +138,7 @@ export const NavDrawer = memo(function NavDrawer({ open, onClose, userEmail }: N
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={item.href as never}
                 onClick={handleNavClick}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
                   active

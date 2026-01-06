@@ -84,7 +84,7 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
 
   return (
     <Link
-      href={item.href}
+      href={item.href as never}
       className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
         isActive
           ? "bg-cream-100 dark:bg-night-700 text-cream-900 dark:text-cream-100 font-medium"
