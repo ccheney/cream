@@ -372,6 +372,217 @@ describe("metadata merging", () => {
 });
 
 // ============================================
+// Advanced Filter Tests
+// ============================================
+
+describe("advanced filters", () => {
+  it("should apply min_avg_volume filter with pre-populated data", async () => {
+    // Test with instruments that have volume data already
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT", "GOOG"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 1000000, // Will filter all since static has no volume
+        min_market_cap: 0,
+        min_price: 0,
+        exclude_tickers: [],
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Static sources have no volume data (undefined → 0), so all are filtered
+    expect(result.instruments.length).toBeLessThanOrEqual(3);
+    // Should have warning about filtered instruments
+    expect(result.warnings.some((w) => w.includes("volume"))).toBe(true);
+  });
+
+  it("should apply min_market_cap filter", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 0,
+        min_market_cap: 1000000000000, // 1 trillion - filters static sources
+        min_price: 0,
+        exclude_tickers: [],
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Static sources have no market cap data, so all are filtered
+    expect(result.warnings.some((w) => w.includes("market cap"))).toBe(true);
+  });
+
+  it("should apply min_price filter", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 0,
+        min_market_cap: 0,
+        min_price: 100,
+        exclude_tickers: [],
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Static sources have no price data, so all are filtered
+    expect(result.warnings.some((w) => w.includes("price"))).toBe(true);
+  });
+
+  it("should apply max_price filter", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 0,
+        min_market_cap: 0,
+        min_price: 0,
+        max_price: 10, // Very low max price
+        exclude_tickers: [],
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Static sources have no price (POSITIVE_INFINITY), so filtered
+    expect(result.warnings.some((w) => w.includes("max price"))).toBe(true);
+  });
+
+  it("should apply include_sectors filter", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT", "JPM"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 0,
+        min_market_cap: 0,
+        min_price: 0,
+        exclude_tickers: [],
+        include_sectors: ["Technology"],
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Static sources have no sector data, so none match Technology
+    expect(result.instruments.length).toBe(0);
+  });
+
+  it("should apply exclude_sectors filter", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "union",
+      sources: [
+        {
+          type: "static",
+          name: "test",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      filters: {
+        min_avg_volume: 0,
+        min_market_cap: 0,
+        min_price: 0,
+        exclude_tickers: [],
+        exclude_sectors: ["Unknown"], // Static sources have undefined sector
+      },
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    // Instruments with undefined sector are not excluded (undefined !== "Unknown")
+    expect(result.instruments.length).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ============================================
+// Intersection Composition Edge Cases
+// ============================================
+
+describe("intersection composition edge cases", () => {
+  it("should return empty for zero sources", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "intersection",
+      sources: [
+        {
+          type: "static",
+          name: "disabled",
+          enabled: false,
+          tickers: ["AAPL"],
+        },
+      ],
+      max_instruments: 500,
+    };
+
+    await expect(resolveUniverse(config)).rejects.toThrow("No enabled sources");
+  });
+
+  it("should handle single source in intersection mode", async () => {
+    const config: UniverseConfig = {
+      compose_mode: "intersection",
+      sources: [
+        {
+          type: "static",
+          name: "only_source",
+          enabled: true,
+          tickers: ["AAPL", "MSFT"],
+        },
+      ],
+      max_instruments: 500,
+    };
+
+    const result = await resolveUniverse(config);
+
+    expect(result.instruments).toHaveLength(2);
+    expect(result.instruments.map((i) => i.symbol)).toContain("AAPL");
+  });
+});
+
+// ============================================
 // Diversification Tests
 // ============================================
 

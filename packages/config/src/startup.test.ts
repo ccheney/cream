@@ -356,4 +356,38 @@ describe("validateStartup edge cases", () => {
     // Warnings array should be present even if empty
     expect(Array.isArray(result.warnings)).toBe(true);
   });
+
+  it("handles ZodError with proper error formatting", async () => {
+    // Create a temp directory with an invalid config to trigger ZodError
+    const tempDir = join(__dirname, "..", "configs-invalid-test");
+    const { mkdirSync, writeFileSync, rmSync } = await import("node:fs");
+
+    try {
+      mkdirSync(tempDir, { recursive: true });
+      // Write invalid YAML that will fail Zod validation
+      writeFileSync(
+        join(tempDir, "default.yaml"),
+        `
+core:
+  environment: INVALID_ENV
+  llm:
+    model_id: 123
+`
+      );
+
+      const result = await validateStartupNoExit("test-service", tempDir);
+
+      // Should fail with Zod validation errors
+      expect(result.success).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+      // Check that errors are formatted with path
+      expect(result.errors.some((e) => e.includes("config."))).toBe(true);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });
+
+// Note: Additional ALPACA_BASE_URL and TURSO_DATABASE_URL checks in validateLiveTradingSafety
+// cannot be tested here because the `env` object from @cream/domain/env is parsed at module
+// import time. These are covered in integration tests when running with actual LIVE environment.

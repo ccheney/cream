@@ -325,3 +325,77 @@ describe("getAllGoldenCases", () => {
     expect(cases).toHaveLength(0);
   });
 });
+
+// ============================================
+// Error Handling Tests (via mocking)
+// ============================================
+
+import { spyOn } from "bun:test";
+import * as fs from "node:fs";
+
+describe("Error Handling", () => {
+  it("checkGoldenStaleness should return error result when metadata fails to load", () => {
+    // Save original function
+    const originalExistsSync = fs.existsSync;
+
+    // Mock existsSync to return false for metadata path
+    const spy = spyOn(fs, "existsSync").mockImplementation((path: fs.PathLike) => {
+      if (typeof path === "string" && path.includes("metadata.json")) {
+        return false;
+      }
+      return originalExistsSync(path);
+    });
+
+    try {
+      const result = checkGoldenStaleness();
+
+      expect(result.isStale).toBe(true);
+      expect(result.isCritical).toBe(true);
+      expect(result.ageMonths).toBe(Number.POSITIVE_INFINITY);
+      expect(result.message).toContain("Cannot check staleness");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("getGoldenDatasetStats should return empty stats when metadata fails to load", () => {
+    // Save original function
+    const originalExistsSync = fs.existsSync;
+
+    // Mock existsSync to return false for metadata path
+    const spy = spyOn(fs, "existsSync").mockImplementation((path: fs.PathLike) => {
+      if (typeof path === "string" && path.includes("metadata.json")) {
+        return false;
+      }
+      return originalExistsSync(path);
+    });
+
+    try {
+      const stats = getGoldenDatasetStats();
+
+      expect(stats.totalCases).toBe(0);
+      expect(stats.adversarialCount).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("loadGoldenMetadata should throw when metadata file not found", () => {
+    // Save original function
+    const originalExistsSync = fs.existsSync;
+
+    // Mock existsSync to return false for metadata path
+    const spy = spyOn(fs, "existsSync").mockImplementation((path: fs.PathLike) => {
+      if (typeof path === "string" && path.includes("metadata.json")) {
+        return false;
+      }
+      return originalExistsSync(path);
+    });
+
+    try {
+      expect(() => loadGoldenMetadata()).toThrow("Golden metadata not found");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

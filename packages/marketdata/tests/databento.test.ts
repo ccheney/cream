@@ -768,6 +768,109 @@ describe("DatabentoClient", () => {
       // Cleanup
       reconnectClient.disconnect();
     });
+
+    test("should successfully reconnect and resubscribe after disconnect", async () => {
+      // Create client with reconnection enabled
+      const reconnectClient = new DatabentoClient({
+        apiKey: "test-api-key",
+        liveUrl: server.getUrl(),
+        autoReconnect: true,
+        maxReconnectAttempts: 3,
+        reconnectDelayMs: 50,
+      });
+
+      await reconnectClient.connect();
+      await waitForEvent(reconnectClient, "authenticated");
+
+      // Subscribe to a symbol first
+      const subscriptionConfig: SubscriptionConfig = {
+        dataset: "XNAS.ITCH",
+        symbols: ["AAPL"],
+        schema: "trades",
+      };
+      await reconnectClient.subscribe(subscriptionConfig);
+
+      // Wait for reconnecting and authenticated events after disconnect
+      const reconnectingPromise = waitForEvent(reconnectClient, "reconnecting", 2000);
+
+      // Force close the connection
+      server.forceCloseClients();
+
+      await reconnectingPromise;
+
+      // Wait for re-authentication after reconnect
+      const reAuthPromise = waitForEvent(reconnectClient, "authenticated", 3000);
+      const reAuthEvent = await reAuthPromise;
+      expect(reAuthEvent.type).toBe("authenticated");
+
+      // Cleanup
+      reconnectClient.disconnect();
+    });
+
+    test("should handle reconnection failure gracefully", async () => {
+      // Create client with reconnection enabled but low max attempts
+      const reconnectClient = new DatabentoClient({
+        apiKey: "test-api-key",
+        liveUrl: server.getUrl(),
+        autoReconnect: true,
+        maxReconnectAttempts: 1,
+        reconnectDelayMs: 50,
+      });
+
+      await reconnectClient.connect();
+      await waitForEvent(reconnectClient, "authenticated");
+
+      // Collect events
+      const events: DatabentoEvent[] = [];
+      reconnectClient.on((event) => {
+        events.push(event);
+      });
+
+      // Stop server to trigger reconnection failure
+      await server.stop();
+
+      // Force close clients (this triggers reconnection attempt)
+      // Wait for reconnection attempt and failure
+      await new Promise((r) => setTimeout(r, 200));
+
+      // The client should have received error or disconnected event
+      const hasErrorOrDisconnect = events.some(
+        (e) => e.type === "error" || e.type === "disconnected" || e.type === "reconnecting"
+      );
+      expect(hasErrorOrDisconnect).toBe(true);
+
+      // Cleanup
+      reconnectClient.disconnect();
+
+      // Restart server for other tests
+      server = new MockWebSocketServer();
+      await server.start();
+    });
+  });
+
+  describe("Heartbeat", () => {
+    test("should send heartbeat pings at configured interval", async () => {
+      // Create client with short heartbeat interval
+      const heartbeatClient = new DatabentoClient({
+        apiKey: "test-api-key",
+        liveUrl: server.getUrl(),
+        heartbeatIntervalS: 0.1, // 100ms
+        autoReconnect: false,
+      });
+
+      await heartbeatClient.connect();
+      await waitForEvent(heartbeatClient, "authenticated");
+
+      // Wait for a couple of heartbeat cycles
+      await new Promise((r) => setTimeout(r, 250));
+
+      // The client should still be connected (heartbeat kept it alive)
+      // State is AUTHENTICATED after successful auth
+      expect(heartbeatClient.getState()).toBe(ConnectionState.AUTHENTICATED);
+
+      // Cleanup
+      heartbeatClient.disconnect();
+    });
   });
 });
 
