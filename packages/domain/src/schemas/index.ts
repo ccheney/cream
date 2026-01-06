@@ -229,3 +229,39 @@ export {
   validateDecisionPlan,
   validateRiskReward,
 } from "./decision-plan.js";
+
+// ============================================
+// Expiration Handling Schemas
+// ============================================
+
+export {
+  // Enums
+  ExpirationAction,
+  ExpirationCheckpoint,
+  ExpirationReason,
+  Moneyness,
+  PositionTypeForDTE,
+  // Schemas
+  type ExpirationEvaluation,
+  ExpirationEvaluationSchema,
+  type ExpirationPolicyConfig,
+  ExpirationPolicyConfig as ExpirationPolicyConfigSchema,
+  type ExpiringPosition,
+  ExpiringPositionSchema,
+  type MinimumDTEConfig,
+  MinimumDTEConfig as MinimumDTEConfigSchema,
+  type PinRiskConfig,
+  PinRiskConfig as PinRiskConfigSchema,
+  // Constants
+  DEFAULT_EXPIRATION_POLICY,
+  EXPIRATION_CHECKPOINT_TIMES,
+  // Utilities
+  checkPinRisk,
+  classifyMoneyness,
+  getCurrentCheckpoint,
+  getMinimumDTE,
+  getPinRiskThreshold,
+  isPastCheckpoint,
+  parseETTimeToMinutes,
+  shouldLetExpireWorthless,
+} from "./expiration.js";
