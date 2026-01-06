@@ -19,3 +19,30 @@ export {
   KalshiMarketSchema,
   MARKET_TYPE_TO_SERIES,
 } from "./client";
+
+// WebSocket Client
+export {
+  type CachedMarketState,
+  type ConnectionState,
+  createKalshiWebSocketClient,
+  DEFAULT_RECONNECT_CONFIG,
+  HEARTBEAT_INTERVAL_MS,
+  KALSHI_DEMO_WEBSOCKET_URL,
+  KALSHI_WEBSOCKET_URL,
+  type KalshiWebSocketCallback,
+  type KalshiWebSocketChannel,
+  KalshiWebSocketClient,
+  type KalshiWebSocketConfig,
+  type KalshiWebSocketMessage,
+  MarketStateCache,
+  type OrderbookDeltaMessage,
+  OrderbookDeltaMessageSchema,
+  type SubscribeCommand,
+  SubscribeCommandSchema,
+  type TickerMessage,
+  TickerMessageSchema,
+  type TradeMessage,
+  TradeMessageSchema,
+  type UnsubscribeCommand,
+  UnsubscribeCommandSchema,
+} from "./websocket";
