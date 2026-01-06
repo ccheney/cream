@@ -89,7 +89,9 @@ export class IndexConstituentsRepository {
   /**
    * Add or update an index constituent record
    */
-  async upsert(constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">): Promise<void> {
+  async upsert(
+    constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
+  ): Promise<void> {
     try {
       await this.client.run(
         `INSERT INTO index_constituents (
@@ -122,8 +124,12 @@ export class IndexConstituentsRepository {
   /**
    * Bulk insert constituents (more efficient for initial load)
    */
-  async bulkInsert(constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
-    if (constituents.length === 0) return 0;
+  async bulkInsert(
+    constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]
+  ): Promise<number> {
+    if (constituents.length === 0) {
+      return 0;
+    }
 
     let inserted = 0;
     for (const constituent of constituents) {
@@ -319,7 +325,9 @@ export class TickerChangesRepository {
         [current]
       );
 
-      if (!row) break;
+      if (!row) {
+        break;
+      }
       current = row.new_symbol;
     }
 
@@ -344,7 +352,9 @@ export class TickerChangesRepository {
         [historical, asOfDate]
       );
 
-      if (!row) break;
+      if (!row) {
+        break;
+      }
       historical = row.old_symbol;
     }
 

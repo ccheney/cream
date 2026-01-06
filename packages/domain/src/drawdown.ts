@@ -90,7 +90,7 @@ export const DRAWDOWN_THRESHOLDS = {
   /** Optimal threshold (< 5%) */
   optimal: 0.05,
   /** Normal threshold (< 10%) */
-  normal: 0.10,
+  normal: 0.1,
   /** Elevated threshold (< 15%) */
   elevated: 0.15,
   /** High risk threshold (< 25%) */

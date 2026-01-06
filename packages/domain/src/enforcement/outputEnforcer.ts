@@ -11,14 +11,13 @@
  */
 
 import type { ZodSchema } from "zod";
+import { defaultLogger, type ParseLogger, parseOnce, parseWithRetry } from "../llm-parsing";
 import {
-  parseWithRetry,
-  parseOnce,
-  type ParseResult,
-  type ParseLogger,
-  defaultLogger,
-} from "../llm-parsing";
-import { DecisionPlanSchema, type DecisionPlan, type Decision, type Action } from "../schemas/decision-plan";
+  type Action,
+  type Decision,
+  type DecisionPlan,
+  DecisionPlanSchema,
+} from "../schemas/decision-plan";
 
 // ============================================
 // Types
@@ -237,10 +236,7 @@ export class OutputEnforcer {
    * - Check action conflicts with current holdings
    * - Do NOT coerce or clip - require explicit re-planning
    */
-  runPreflightChecks(
-    plan: DecisionPlan,
-    context: MarketContext
-  ): PreflightResult {
+  runPreflightChecks(plan: DecisionPlan, context: MarketContext): PreflightResult {
     const errors: PreflightError[] = [];
     const warnings: PreflightError[] = [];
     let estimatedCost = 0;
@@ -269,10 +265,7 @@ export class OutputEnforcer {
       const currentPosition = context.currentPositions.get(instrumentId);
 
       // Check action compatibility with current holdings
-      const actionError = this.validateActionCompatibility(
-        decision,
-        currentPosition
-      );
+      const actionError = this.validateActionCompatibility(decision, currentPosition);
       if (actionError) {
         errors.push(actionError);
       }
@@ -451,10 +444,7 @@ export class OutputEnforcer {
 
       if (revisionResult.ok) {
         // Re-run preflight on revised plan
-        const revisedPreflightResult = this.runPreflightChecks(
-          revisionResult.value,
-          context
-        );
+        const revisedPreflightResult = this.runPreflightChecks(revisionResult.value, context);
 
         if (revisedPreflightResult.valid) {
           this.options.logger.info("Revised plan passed enforcement", {
@@ -632,9 +622,7 @@ export class OutputEnforcer {
 /**
  * Create an output enforcer with default options
  */
-export function createOutputEnforcer(
-  options?: EnforcementOptions
-): OutputEnforcer {
+export function createOutputEnforcer(options?: EnforcementOptions): OutputEnforcer {
   return new OutputEnforcer(options);
 }
 
@@ -711,7 +699,7 @@ export function createFallbackPlan(
 
   return {
     cycleId,
-    asOfTimestamp: new Date().toISOString().replace(/\.\d{3}/, "") + "Z",
+    asOfTimestamp: `${new Date().toISOString().replace(/\.\d{3}/, "")}Z`,
     environment: "PAPER",
     decisions,
     portfolioNotes: "Fallback plan: no new entries, maintaining existing positions",

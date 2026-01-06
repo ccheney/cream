@@ -103,8 +103,7 @@ export class SlackWebhookChannel implements NotificationChannel {
 
   async send(notification: EscalationNotification): Promise<NotificationResult> {
     const color = notification.severity === "critical" ? "#dc2626" : "#f59e0b";
-    const emoji =
-      notification.severity === "critical" ? ":rotating_light:" : ":warning:";
+    const emoji = notification.severity === "critical" ? ":rotating_light:" : ":warning:";
 
     const payload = {
       username: this.config.username ?? "Cream Trading Bot",
@@ -231,21 +230,9 @@ export class ConsoleNotificationChannel implements NotificationChannel {
   readonly name = "console";
 
   async send(notification: EscalationNotification): Promise<NotificationResult> {
-    const prefix = notification.severity === "critical" ? "🚨 CRITICAL" : "⚠️ WARNING";
-
-    console.log(`\n${"=".repeat(60)}`);
-    console.log(`${prefix}: ${notification.title}`);
-    console.log(`${"=".repeat(60)}`);
-    console.log(`Message: ${notification.message}`);
-    console.log(`Event Type: ${notification.event.type}`);
-    console.log(`Cycle ID: ${notification.event.cycleId}`);
-    console.log(`Iteration: ${notification.event.iteration}`);
-    console.log(`Environment: ${notification.context.environment}`);
-    console.log(`Timestamp: ${notification.context.timestamp}`);
+    const _prefix = notification.severity === "critical" ? "🚨 CRITICAL" : "⚠️ WARNING";
     if (notification.context.requiresAction) {
-      console.log(`⚡ ACTION REQUIRED`);
     }
-    console.log(`${"=".repeat(60)}\n`);
 
     return {
       success: true,
@@ -305,9 +292,9 @@ export interface EscalationLogger {
 }
 
 const DEFAULT_LOGGER: EscalationLogger = {
-  info: (msg, data) => console.log(`[Escalation] ${msg}`, data ?? ""),
-  warn: (msg, data) => console.warn(`[Escalation] ${msg}`, data ?? ""),
-  error: (msg, data) => console.error(`[Escalation] ${msg}`, data ?? ""),
+  info: (_msg, _data) => {},
+  warn: (_msg, _data) => {},
+  error: (_msg, _data) => {},
 };
 
 /**
@@ -657,9 +644,7 @@ export class InterventionManager {
    * Wait for response or timeout.
    * In production, this would use a proper async mechanism.
    */
-  private async waitForResponse(
-    request: InterventionRequest
-  ): Promise<InterventionResponse> {
+  private async waitForResponse(request: InterventionRequest): Promise<InterventionResponse> {
     const deadline = new Date(request.deadline).getTime();
     const now = Date.now();
     const timeout = deadline - now;
@@ -667,20 +652,23 @@ export class InterventionManager {
     // For now, immediately return default action
     // In production, this would wait for a callback or poll
     return new Promise((resolve) => {
-      setTimeout(() => {
-        // Check if still pending (not responded to)
-        if (this.pendingInterventions.has(request.id)) {
-          this.pendingInterventions.delete(request.id);
+      setTimeout(
+        () => {
+          // Check if still pending (not responded to)
+          if (this.pendingInterventions.has(request.id)) {
+            this.pendingInterventions.delete(request.id);
 
-          resolve({
-            requestId: request.id,
-            decision: request.defaultAction === "proceed" ? "approve" : "reject",
-            respondedBy: "system-timeout",
-            timestamp: new Date().toISOString(),
-            notes: "No response received within deadline, using default action",
-          });
-        }
-      }, Math.min(timeout, 1000)); // Cap at 1 second for testing, production would use full timeout
+            resolve({
+              requestId: request.id,
+              decision: request.defaultAction === "proceed" ? "approve" : "reject",
+              respondedBy: "system-timeout",
+              timestamp: new Date().toISOString(),
+              notes: "No response received within deadline, using default action",
+            });
+          }
+        },
+        Math.min(timeout, 1000)
+      ); // Cap at 1 second for testing, production would use full timeout
     });
   }
 }

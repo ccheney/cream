@@ -365,11 +365,13 @@ describe("LoadTestAssertions", () => {
 
   describe("chaining", () => {
     it("should allow chaining assertions", () => {
-      const assertions = assertLoadTest(mockResults({
-        errorRate: 0.01,
-        timeoutRate: 0.01,
-        throughput: 100,
-      }));
+      const assertions = assertLoadTest(
+        mockResults({
+          errorRate: 0.01,
+          timeoutRate: 0.01,
+          throughput: 100,
+        })
+      );
 
       expect(() =>
         assertions
@@ -382,9 +384,7 @@ describe("LoadTestAssertions", () => {
 
     it("should return results after chaining", () => {
       const results = mockResults();
-      const returned = assertLoadTest(results)
-        .errorRateBelow(0.1)
-        .getResults();
+      const returned = assertLoadTest(results).errorRateBelow(0.1).getResults();
 
       expect(returned).toBe(results);
     });

@@ -13,7 +13,7 @@ import type {
   UniverseSnapshot,
   UniverseSnapshotsRepository,
 } from "@cream/storage";
-import { PointInTimeUniverseResolver, type PointInTimeResolverConfig } from "./point-in-time.js";
+import { type PointInTimeResolverConfig, PointInTimeUniverseResolver } from "./point-in-time.js";
 
 // ============================================
 // Mock Repositories
@@ -147,7 +147,9 @@ function createMockTickerChangesRepo(): TickerChangesRepository {
       while (!visited.has(current)) {
         visited.add(current);
         const change = changes.find((c) => c.oldSymbol === current);
-        if (!change) break;
+        if (!change) {
+          break;
+        }
         current = change.newSymbol;
       }
 
@@ -160,7 +162,9 @@ function createMockTickerChangesRepo(): TickerChangesRepository {
       while (!visited.has(historical)) {
         visited.add(historical);
         const change = changes.find((c) => c.newSymbol === historical && c.changeDate > asOfDate);
-        if (!change) break;
+        if (!change) {
+          break;
+        }
         historical = change.oldSymbol;
       }
 
@@ -185,7 +189,9 @@ function createMockSnapshotsRepo(): UniverseSnapshotsRepository {
   return {
     save: mock(async () => {}),
     get: mock(async (indexId: string, snapshotDate: string) => {
-      return snapshots.find((s) => s.indexId === indexId && s.snapshotDate === snapshotDate) ?? null;
+      return (
+        snapshots.find((s) => s.indexId === indexId && s.snapshotDate === snapshotDate) ?? null
+      );
     }),
     getClosestBefore: mock(async (indexId: string, date: string) => {
       const matching = snapshots
@@ -356,12 +362,9 @@ describe("Survivorship Bias Prevention", () => {
     const tickerChangesRepo = createMockTickerChangesRepo();
     const snapshotsRepo = createMockSnapshotsRepo();
 
-    resolver = new PointInTimeUniverseResolver(
-      constituentsRepo,
-      tickerChangesRepo,
-      snapshotsRepo,
-      { useCache: false }
-    );
+    resolver = new PointInTimeUniverseResolver(constituentsRepo, tickerChangesRepo, snapshotsRepo, {
+      useCache: false,
+    });
   });
 
   it("should demonstrate survivorship bias without point-in-time", () => {

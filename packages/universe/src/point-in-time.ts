@@ -119,7 +119,7 @@ export class PointInTimeUniverseResolver {
     const tickerChangesMapped = new Map<string, string>();
     const delistedExcluded: string[] = [];
     let tickerChangesApplied = 0;
-    let fromCache = false;
+    let _fromCache = false;
 
     // 1. Try to get from cached snapshot first
     if (this.config.useCache) {
@@ -149,7 +149,7 @@ export class PointInTimeUniverseResolver {
         );
 
         if (daysDiff <= this.config.maxCacheAgeDays) {
-          fromCache = true;
+          _fromCache = true;
           // Use snapshot but note it's approximate
           warnings.push(
             `Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`
@@ -266,7 +266,9 @@ export class PointInTimeUniverseResolver {
       symbol,
       asOfDate
     );
-    if (directMembership) return true;
+    if (directMembership) {
+      return true;
+    }
 
     // Check if symbol might have had a different ticker on that date
     const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
@@ -305,7 +307,10 @@ export class PointInTimeUniverseResolver {
     const currentConstituents = await this.constituentsRepo.getCurrentConstituents(indexId);
 
     // Get ticker changes
-    const tickerChanges = await this.tickerChangesRepo.getChangesInRange("1900-01-01", "2100-12-31");
+    const tickerChanges = await this.tickerChangesRepo.getChangesInRange(
+      "1900-01-01",
+      "2100-12-31"
+    );
 
     // Get snapshot dates
     const snapshotDates = await this.snapshotsRepo.listDates(indexId);
@@ -360,7 +365,7 @@ export class PointInTimeUniverseResolver {
   async populateHistoricalData(
     indexId: IndexId,
     startDate: string,
-    endDate: string
+    _endDate: string
   ): Promise<{ snapshotsCreated: number; constituentsAdded: number }> {
     const fmp = this.getFMPClient();
     let snapshotsCreated = 0;

@@ -4,7 +4,6 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-  DEFAULT_EXTERNAL_VALIDATION_CONFIG,
   extractApiErrorMessage,
   extractRateLimitStatus,
   isApiErrorResponse,

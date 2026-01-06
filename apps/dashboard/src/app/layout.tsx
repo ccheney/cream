@@ -33,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Theme initialization script - prevents flash of wrong theme */}
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for synchronous theme init before hydration
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { DecisionPlanSchema, InstrumentSchema } from "../decision";
 import {
   AccountStateSchema,
   ConstraintCheckSchema,
@@ -16,10 +17,6 @@ import {
   SubmitOrderRequestSchema,
   SubmitOrderResponseSchema,
 } from "../execution";
-import {
-  DecisionPlanSchema,
-  InstrumentSchema,
-} from "../decision";
 import {
   FIXTURE_ACCOUNT_STATE,
   FIXTURE_CONSTRAINT_CHECK,
@@ -33,7 +30,6 @@ import {
   validateAllContracts,
   validateContract,
   validateHTTPContracts,
-  type ContractValidationResult,
 } from "./execution-contracts";
 
 // ============================================
@@ -219,31 +215,19 @@ describe("Contract Fixtures", () => {
 describe("Contract Validation", () => {
   describe("validateContract", () => {
     test("returns valid for correct payload", () => {
-      const result = validateContract(
-        InstrumentSchema,
-        FIXTURE_INSTRUMENT,
-        "TestInstrument"
-      );
+      const result = validateContract(InstrumentSchema, FIXTURE_INSTRUMENT, "TestInstrument");
       expect(result.valid).toBe(true);
       expect(result.errors.length).toBe(0);
     });
 
     test("returns invalid for incorrect payload", () => {
-      const result = validateContract(
-        InstrumentSchema,
-        { invalid: "data" },
-        "TestInstrument"
-      );
+      const result = validateContract(InstrumentSchema, { invalid: "data" }, "TestInstrument");
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
     test("includes contract name in result", () => {
-      const result = validateContract(
-        InstrumentSchema,
-        FIXTURE_INSTRUMENT,
-        "MyContract"
-      );
+      const result = validateContract(InstrumentSchema, FIXTURE_INSTRUMENT, "MyContract");
       expect(result.contract).toBe("MyContract");
     });
   });
@@ -255,11 +239,8 @@ describe("Contract Validation", () => {
       const failedContracts = results.filter((r) => !r.valid);
 
       if (failedContracts.length > 0) {
-        console.error("Failed contracts:");
         for (const failed of failedContracts) {
-          console.error(`  ${failed.contract}:`);
-          for (const error of failed.errors) {
-            console.error(`    - ${error.path}: ${error.message}`);
+          for (const _error of failed.errors) {
           }
         }
       }
@@ -280,11 +261,8 @@ describe("Contract Validation", () => {
       const failedContracts = results.filter((r) => !r.valid);
 
       if (failedContracts.length > 0) {
-        console.error("Failed HTTP contracts:");
         for (const failed of failedContracts) {
-          console.error(`  ${failed.contract}:`);
-          for (const error of failed.errors) {
-            console.error(`    - ${error.path}: ${error.message}`);
+          for (const _error of failed.errors) {
           }
         }
       }

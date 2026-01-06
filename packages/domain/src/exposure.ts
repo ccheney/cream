@@ -13,19 +13,13 @@
 
 import { z } from "zod";
 import type { Position } from "./execution";
-import type { InstrumentType } from "./decision";
 
 // ============================================
 // Types
 // ============================================
 
 /** Bucket key for aggregating exposures */
-export type ExposureBucket =
-  | "total"
-  | "instrument_type"
-  | "sector"
-  | "strategy"
-  | "asset_class";
+export type ExposureBucket = "total" | "instrument_type" | "sector" | "strategy" | "asset_class";
 
 /** Position with optional metadata for bucketing */
 export interface PositionWithMetadata {
@@ -196,10 +190,7 @@ export function calculateExposureStats(
  * @param accountEquity - Total account equity
  * @returns ExposurePair with all exposure metrics
  */
-export function calculateExposurePair(
-  positions: Position[],
-  accountEquity: number
-): ExposurePair {
+export function calculateExposurePair(positions: Position[], accountEquity: number): ExposurePair {
   if (accountEquity <= 0) {
     throw new Error("accountEquity must be positive");
   }
@@ -621,8 +612,8 @@ export function formatExposureStats(stats: ExposureStats): string {
   const lines = [
     `Gross Exposure: ${(stats.grossExposurePctEquity * 100).toFixed(1)}% ($${stats.grossExposureNotional.toLocaleString()})`,
     `Net Exposure: ${(stats.netExposurePctEquity * 100).toFixed(1)}% ($${stats.netExposureNotional.toLocaleString()})`,
-    `Long: ${(stats.longExposureNotional / stats.grossExposureNotional * 100 || 0).toFixed(1)}% ($${stats.longExposureNotional.toLocaleString()}) - ${stats.longPositionCount} positions`,
-    `Short: ${(stats.shortExposureNotional / stats.grossExposureNotional * 100 || 0).toFixed(1)}% ($${stats.shortExposureNotional.toLocaleString()}) - ${stats.shortPositionCount} positions`,
+    `Long: ${((stats.longExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.longExposureNotional.toLocaleString()}) - ${stats.longPositionCount} positions`,
+    `Short: ${((stats.shortExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.shortExposureNotional.toLocaleString()}) - ${stats.shortPositionCount} positions`,
   ];
   return lines.join("\n");
 }

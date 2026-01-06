@@ -113,7 +113,7 @@ const DAYS_PER_YEAR = 365;
 export function normalCDF(x: number): number {
   // Coefficients for the approximation
   const p = 0.2316419;
-  const b1 = 0.319381530;
+  const b1 = 0.31938153;
   const b2 = -0.356563782;
   const b3 = 1.781477937;
   const b4 = -1.821255978;
@@ -189,7 +189,7 @@ export function calculateGreeks(position: OptionPosition): OptionGreeks {
   if (T <= 0) {
     const isCall = optionType === "CALL";
     const intrinsicValue = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
-    const delta = isCall ? (S > K ? 1 : 0) : (S < K ? -1 : 0);
+    const delta = isCall ? (S > K ? 1 : 0) : S < K ? -1 : 0;
 
     return {
       delta,
@@ -205,10 +205,8 @@ export function calculateGreeks(position: OptionPosition): OptionGreeks {
   if (sigma <= 0) {
     const isCall = optionType === "CALL";
     const pv = Math.exp(-r * T);
-    const intrinsicValue = isCall
-      ? Math.max(S - K * pv, 0)
-      : Math.max(K * pv - S, 0);
-    const delta = isCall ? (S > K * pv ? 1 : 0) : (S < K * pv ? -1 : 0);
+    const intrinsicValue = isCall ? Math.max(S - K * pv, 0) : Math.max(K * pv - S, 0);
+    const delta = isCall ? (S > K * pv ? 1 : 0) : S < K * pv ? -1 : 0;
 
     return {
       delta,

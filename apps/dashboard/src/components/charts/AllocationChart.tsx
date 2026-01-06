@@ -225,11 +225,11 @@ function renderCustomLegend(props: {
         fontSize: 11,
       }}
     >
-      {payload.map((entry, index) => {
+      {payload.map((entry) => {
         const percentage = calculatePercentage(entry.payload?.value ?? 0, total);
         return (
           <li
-            key={`legend-${index}`}
+            key={`legend-${entry.value ?? entry.dataKey}`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -331,7 +331,7 @@ function AllocationChartComponent({
           >
             {data.map((entry, index) => (
               <Cell
-                key={`cell-${index}`}
+                key={`cell-${entry.name}`}
                 fill={getAllocationColor(index, entry.color)}
                 stroke="transparent"
               />

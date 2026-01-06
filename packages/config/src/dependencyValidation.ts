@@ -283,7 +283,9 @@ export class DependencyValidator {
     const result: string[] = [];
 
     const visit = (name: string): void => {
-      if (visited.has(name)) return;
+      if (visited.has(name)) {
+        return;
+      }
       visited.add(name);
 
       const deps = this.dependencyGraph.get(name);
@@ -307,7 +309,9 @@ export class DependencyValidator {
     const result: string[] = [];
 
     const visit = (name: string): void => {
-      if (visited.has(name)) return;
+      if (visited.has(name)) {
+        return;
+      }
       visited.add(name);
 
       const dependents = this.reverseDependencyGraph.get(name);
@@ -330,11 +334,15 @@ export class DependencyValidator {
     const visited = new Set<string>();
 
     const calculateDepth = (name: string): number => {
-      if (visited.has(name)) return 0;
+      if (visited.has(name)) {
+        return 0;
+      }
       visited.add(name);
 
       const deps = this.dependencyGraph.get(name);
-      if (!deps || deps.size === 0) return 0;
+      if (!deps || deps.size === 0) {
+        return 0;
+      }
 
       let maxChildDepth = 0;
       for (const dep of deps) {
@@ -369,12 +377,16 @@ export class DependencyValidator {
     let hasCycle = false;
 
     const visit = (name: string): void => {
-      if (hasCycle) return;
+      if (hasCycle) {
+        return;
+      }
       if (temp.has(name)) {
         hasCycle = true;
         return;
       }
-      if (visited.has(name)) return;
+      if (visited.has(name)) {
+        return;
+      }
 
       temp.add(name);
       const deps = this.dependencyGraph.get(name);
@@ -444,7 +456,7 @@ export class DependencyValidator {
       if (!this.reverseDependencyGraph.has(dep)) {
         this.reverseDependencyGraph.set(dep, new Set());
       }
-      this.reverseDependencyGraph.get(dep)!.add(info.name);
+      this.reverseDependencyGraph.get(dep)?.add(info.name);
     }
   }
 
@@ -492,7 +504,9 @@ export class DependencyValidator {
   }
 
   private normalizeCycle(cycle: string[]): string[] {
-    if (cycle.length <= 1) return cycle;
+    if (cycle.length <= 1) {
+      return cycle;
+    }
 
     // Remove the repeated last element
     const withoutLast = cycle.slice(0, -1);
@@ -516,7 +530,9 @@ export class DependencyValidator {
   }
 
   private cyclesEqual(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return false;
+    if (a.length !== b.length) {
+      return false;
+    }
     return a.every((val, i) => val === b[i]);
   }
 
@@ -526,8 +542,12 @@ export class DependencyValidator {
 
     while (queue.length > 0) {
       const current = queue.shift()!;
-      if (current === to) return true;
-      if (visited.has(current)) continue;
+      if (current === to) {
+        return true;
+      }
+      if (visited.has(current)) {
+        continue;
+      }
       visited.add(current);
 
       const deps = this.dependencyGraph.get(current);
@@ -614,10 +634,7 @@ export class DependencyValidator {
 /**
  * Parse a package.json file into PackageInfo.
  */
-export function parsePackageJson(
-  content: string,
-  path: string
-): PackageInfo | null {
+export function parsePackageJson(content: string, path: string): PackageInfo | null {
   try {
     const json = JSON.parse(content) as {
       name?: string;
@@ -625,7 +642,9 @@ export function parsePackageJson(
       devDependencies?: Record<string, string>;
     };
 
-    if (!json.name) return null;
+    if (!json.name) {
+      return null;
+    }
 
     return {
       name: json.name,

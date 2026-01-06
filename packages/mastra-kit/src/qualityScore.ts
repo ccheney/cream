@@ -11,22 +11,22 @@
  * @see docs/plans/01-architecture.md line 111
  */
 
-import type { Decision, DecisionPlan } from "./types.js";
 import {
-  DecisionScorer,
+  type CompletedTrade,
+  getOutcomeSummary,
+  type OutcomeScore,
+  OutcomeScorer,
+  type OutcomeScoringConfig,
+  type OutcomeSummary,
+} from "./outcomeScoring.js";
+import {
   type DecisionQualityScore,
+  DecisionScorer,
   type DecisionScoringConfig,
   type MarketContext,
   type PlanQualityScore,
 } from "./planScoring.js";
-import {
-  OutcomeScorer,
-  type CompletedTrade,
-  type OutcomeScore,
-  type OutcomeScoringConfig,
-  type OutcomeSummary,
-  getOutcomeSummary,
-} from "./outcomeScoring.js";
+import type { Decision, DecisionPlan } from "./types.js";
 
 // ============================================
 // Types
@@ -167,16 +167,8 @@ export class QualityScoreService {
   /**
    * Score a decision before execution.
    */
-  scoreDecision(
-    decision: Decision,
-    portfolioValue: number,
-    context?: MarketContext
-  ): QualityScore {
-    const planScore = this.decisionScorer.scoreDecision(
-      decision,
-      portfolioValue,
-      context
-    );
+  scoreDecision(decision: Decision, portfolioValue: number, context?: MarketContext): QualityScore {
+    const planScore = this.decisionScorer.scoreDecision(decision, portfolioValue, context);
 
     const qualityScore: QualityScore = {
       scoreId: this.generateScoreId(),
@@ -195,16 +187,8 @@ export class QualityScoreService {
   /**
    * Score an entire plan before execution.
    */
-  scorePlan(
-    plan: DecisionPlan,
-    portfolioValue: number,
-    context?: MarketContext
-  ): QualityScore {
-    const planScore = this.decisionScorer.scorePlan(
-      plan,
-      portfolioValue,
-      context
-    );
+  scorePlan(plan: DecisionPlan, portfolioValue: number, context?: MarketContext): QualityScore {
+    const planScore = this.decisionScorer.scorePlan(plan, portfolioValue, context);
 
     const qualityScore: QualityScore = {
       scoreId: this.generateScoreId(),
@@ -255,11 +239,10 @@ export class QualityScoreService {
   /**
    * Score a completed trade and combine with pre-execution score.
    */
-  scoreCombined(
-    trade: CompletedTrade,
-    preScore?: DecisionQualityScore
-  ): QualityScore {
-    const planScore = preScore ?? (this.scoreCache.get(trade.decisionId)?.planScore as DecisionQualityScore | undefined);
+  scoreCombined(trade: CompletedTrade, preScore?: DecisionQualityScore): QualityScore {
+    const planScore =
+      preScore ??
+      (this.scoreCache.get(trade.decisionId)?.planScore as DecisionQualityScore | undefined);
     const outcomeScore = this.outcomeScorer.scoreOutcome(trade, planScore);
 
     // Calculate combined score
@@ -267,7 +250,7 @@ export class QualityScoreService {
     if (planScore) {
       combinedOverall = Math.round(
         planScore.overall * this.config.planWeight +
-        outcomeScore.outcomeScore * this.config.outcomeWeight
+          outcomeScore.outcomeScore * this.config.outcomeWeight
       );
     } else {
       combinedOverall = outcomeScore.outcomeScore;
@@ -338,27 +321,28 @@ export class QualityScoreService {
       this.feedbackHistory.reduce((sum, f) => sum + f.accuracy.returnDifferenceAbs, 0) /
       totalEntries;
 
-    const avgPreScore =
-      this.feedbackHistory.reduce((sum, f) => sum + f.preScore, 0) / totalEntries;
+    const avgPreScore = this.feedbackHistory.reduce((sum, f) => sum + f.preScore, 0) / totalEntries;
 
     const avgPostScore =
       this.feedbackHistory.reduce((sum, f) => sum + f.postScore, 0) / totalEntries;
 
     const avgAccuracyScore =
-      this.feedbackHistory.reduce((sum, f) => sum + f.accuracy.accuracyScore, 0) /
-      totalEntries;
+      this.feedbackHistory.reduce((sum, f) => sum + f.accuracy.accuracyScore, 0) / totalEntries;
 
     // Calibration analysis
     const highConfidenceTrades = this.feedbackHistory.filter((f) => f.preScore >= 70);
     const lowConfidenceTrades = this.feedbackHistory.filter((f) => f.preScore < 50);
 
-    const highConfidenceCorrect = highConfidenceTrades.length > 0
-      ? highConfidenceTrades.filter((f) => f.actualReturn > 0).length / highConfidenceTrades.length
-      : 0;
+    const highConfidenceCorrect =
+      highConfidenceTrades.length > 0
+        ? highConfidenceTrades.filter((f) => f.actualReturn > 0).length /
+          highConfidenceTrades.length
+        : 0;
 
-    const lowConfidenceCorrect = lowConfidenceTrades.length > 0
-      ? lowConfidenceTrades.filter((f) => f.actualReturn > 0).length / lowConfidenceTrades.length
-      : 0;
+    const lowConfidenceCorrect =
+      lowConfidenceTrades.length > 0
+        ? lowConfidenceTrades.filter((f) => f.actualReturn > 0).length / lowConfidenceTrades.length
+        : 0;
 
     // Overconfidence: high pre-score but negative outcome
     const overconfidentCount = this.feedbackHistory.filter(
@@ -450,9 +434,15 @@ export class QualityScoreService {
 
     // Overall accuracy score
     let accuracyScore = 50;
-    if (directionCorrect) accuracyScore += 30;
-    if (riskLevelCorrect) accuracyScore += 10;
-    if (returnDifferenceAbs < 5) accuracyScore += 10;
+    if (directionCorrect) {
+      accuracyScore += 30;
+    }
+    if (riskLevelCorrect) {
+      accuracyScore += 10;
+    }
+    if (returnDifferenceAbs < 5) {
+      accuracyScore += 10;
+    }
 
     return {
       directionCorrect,
@@ -462,10 +452,7 @@ export class QualityScoreService {
     };
   }
 
-  private recordFeedback(
-    planScore: DecisionQualityScore,
-    outcomeScore: OutcomeScore
-  ): void {
+  private recordFeedback(planScore: DecisionQualityScore, outcomeScore: OutcomeScore): void {
     const feedback: QualityFeedback = {
       decisionId: outcomeScore.decisionId,
       predictedReturn: planScore.expectedValue.netExpectedValue * 100,
@@ -535,17 +522,16 @@ export function createQualityScoreService(
 // Re-exports
 // ============================================
 
-export {
-  type DecisionQualityScore,
-  type PlanQualityScore,
-  type MarketContext,
-} from "./planScoring.js";
-
-export {
-  type OutcomeScore,
-  type CompletedTrade,
-  type OutcomeSummary,
+export type {
+  CompletedTrade,
+  OutcomeScore,
+  OutcomeSummary,
 } from "./outcomeScoring.js";
+export type {
+  DecisionQualityScore,
+  MarketContext,
+  PlanQualityScore,
+} from "./planScoring.js";
 
 // ============================================
 // Exports

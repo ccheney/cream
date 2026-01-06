@@ -3,13 +3,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { DecisionScorer, type MarketContext, scoreDecision, scorePlan } from "../src/planScoring";
 import type { Decision, DecisionPlan } from "../src/types";
-import {
-  DecisionScorer,
-  scoreDecision,
-  scorePlan,
-  type MarketContext,
-} from "../src/planScoring";
 
 // ============================================
 // Test Helpers

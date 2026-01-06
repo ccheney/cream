@@ -4,12 +4,12 @@
 
 import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  createEnvSecretsManager,
+  createSecretsManager,
   EncryptedFileSecretsProvider,
   EnvSecretsProvider,
   MemorySecretsProvider,
   SecretsManager,
-  createEnvSecretsManager,
-  createSecretsManager,
 } from "./secrets";
 
 // Silent logger for tests
@@ -177,10 +177,7 @@ describe("EncryptedFileSecretsProvider", () => {
   });
 
   it("should fail health check for missing file", async () => {
-    const provider = new EncryptedFileSecretsProvider(
-      "/nonexistent/path/secrets.enc",
-      "password"
-    );
+    const provider = new EncryptedFileSecretsProvider("/nonexistent/path/secrets.enc", "password");
     expect(await provider.healthCheck()).toBe(false);
   });
 });

@@ -87,9 +87,9 @@ const DEFAULT_ESCALATION: EscalationConfig = {
 };
 
 const DEFAULT_LOGGER: ConsensusLogger = {
-  info: (message, data) => console.log(`[Consensus] ${message}`, data ?? ""),
-  warn: (message, data) => console.warn(`[Consensus] ${message}`, data ?? ""),
-  error: (message, data) => console.error(`[Consensus] ${message}`, data ?? ""),
+  info: (_message, _data) => {},
+  warn: (_message, _data) => {},
+  error: (_message, _data) => {},
 };
 
 const DEFAULT_CONFIG: ConsensusGateConfig = {
@@ -520,7 +520,10 @@ export type ActionType = "BUY" | "SELL" | "HOLD" | "CLOSE";
  * @param originalAction - The action from the failed plan
  * @param forceCloseOnFail - Whether to execute CLOSE even on consensus failure (default: false)
  */
-export function getFallbackAction(originalAction: ActionType, forceCloseOnFail = false): ActionType {
+export function getFallbackAction(
+  originalAction: ActionType,
+  forceCloseOnFail = false
+): ActionType {
   switch (originalAction) {
     case "BUY":
       return "HOLD"; // Don't enter new position

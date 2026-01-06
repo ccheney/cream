@@ -6,10 +6,9 @@
  */
 
 export {
-  // Validation functions
-  validateAllContracts,
-  validateContract,
-  validateHTTPContracts,
+  // Types
+  type ContractError,
+  type ContractValidationResult,
   // HTTP contracts
   EXECUTION_HTTP_CONTRACTS,
   // Fixtures
@@ -23,8 +22,9 @@ export {
   FIXTURE_POSITION,
   FIXTURE_SUBMIT_ORDER_REQUEST,
   FIXTURE_SUBMIT_ORDER_RESPONSE,
-  // Types
-  type ContractError,
-  type ContractValidationResult,
   type HTTPEndpointContract,
+  // Validation functions
+  validateAllContracts,
+  validateContract,
+  validateHTTPContracts,
 } from "./execution-contracts";

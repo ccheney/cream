@@ -17,12 +17,7 @@
 /**
  * Service that requires API keys.
  */
-export type ApiService =
-  | "polygon"
-  | "alphavantage"
-  | "fmp"
-  | "databento"
-  | "alpaca";
+export type ApiService = "polygon" | "alphavantage" | "fmp" | "databento" | "alpaca";
 
 /**
  * API key with metadata.
@@ -54,10 +49,10 @@ export interface ApiKey {
  * Key rotation strategy.
  */
 export type RotationStrategy =
-  | "round-robin"      // Rotate through keys sequentially
-  | "least-used"       // Use the key with fewest requests
-  | "healthiest"       // Use the key with lowest error rate
-  | "rate-limit-aware" // Use key with most remaining rate limit
+  | "round-robin" // Rotate through keys sequentially
+  | "least-used" // Use the key with fewest requests
+  | "healthiest" // Use the key with lowest error rate
+  | "rate-limit-aware"; // Use key with most remaining rate limit
 
 /**
  * Key rotation configuration.
@@ -142,7 +137,10 @@ export class KeyRotationManager {
       return;
     }
 
-    const keys = envValue.split(",").map((k) => k.trim()).filter(Boolean);
+    const keys = envValue
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
 
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
@@ -193,7 +191,9 @@ export class KeyRotationManager {
    */
   reportError(key: string, error: string): void {
     const apiKey = this.keys.find((k) => k.key === key);
-    if (!apiKey) return;
+    if (!apiKey) {
+      return;
+    }
 
     apiKey.errorCount++;
     apiKey.lastError = error;
@@ -220,16 +220,15 @@ export class KeyRotationManager {
    */
   reportRateLimit(key: string, remaining: number, resetTime?: Date): void {
     const apiKey = this.keys.find((k) => k.key === key);
-    if (!apiKey) return;
+    if (!apiKey) {
+      return;
+    }
 
     apiKey.rateLimitRemaining = remaining;
     apiKey.rateLimitReset = resetTime;
 
     // Auto-rotate if below threshold
-    if (
-      this.config.autoRotateOnRateLimit &&
-      remaining < this.config.minRateLimitThreshold
-    ) {
+    if (this.config.autoRotateOnRateLimit && remaining < this.config.minRateLimitThreshold) {
       this.logger.info(`Rate limit low for ${this.serviceName}, rotating`, {
         name: apiKey.name,
         remaining,
@@ -323,9 +322,7 @@ export class KeyRotationManager {
   }
 
   private selectLeastUsed(keys: ApiKey[]): ApiKey {
-    return keys.reduce((min, k) =>
-      k.requestCount < min.requestCount ? k : min
-    );
+    return keys.reduce((min, k) => (k.requestCount < min.requestCount ? k : min));
   }
 
   private selectHealthiest(keys: ApiKey[]): ApiKey {
@@ -409,9 +406,9 @@ export interface KeyRotationLogger {
 }
 
 const DEFAULT_LOGGER: KeyRotationLogger = {
-  info: (msg, data) => console.log(`[KeyRotation] ${msg}`, data ?? ""),
-  warn: (msg, data) => console.warn(`[KeyRotation] ${msg}`, data ?? ""),
-  error: (msg, data) => console.error(`[KeyRotation] ${msg}`, data ?? ""),
+  info: (_msg, _data) => {},
+  warn: (_msg, _data) => {},
+  error: (_msg, _data) => {},
 };
 
 // ============================================
@@ -426,10 +423,7 @@ export class KeyRotationRegistry {
   private readonly config: Partial<KeyRotationConfig>;
   private readonly logger: KeyRotationLogger;
 
-  constructor(
-    config: Partial<KeyRotationConfig> = {},
-    logger?: KeyRotationLogger
-  ) {
+  constructor(config: Partial<KeyRotationConfig> = {}, logger?: KeyRotationLogger) {
     this.config = config;
     this.logger = logger ?? DEFAULT_LOGGER;
   }
@@ -466,10 +460,7 @@ export class KeyRotationRegistry {
     );
 
     // FMP
-    this.getManager("fmp").addKeysFromEnv(
-      process.env.FMP_KEY ?? Bun.env.FMP_KEY,
-      "FMP_KEY"
-    );
+    this.getManager("fmp").addKeysFromEnv(process.env.FMP_KEY ?? Bun.env.FMP_KEY, "FMP_KEY");
 
     // Databento
     this.getManager("databento").addKeysFromEnv(
@@ -515,12 +506,7 @@ export class KeyRotationRegistry {
   /**
    * Report rate limit for a service key.
    */
-  reportRateLimit(
-    service: ApiService,
-    key: string,
-    remaining: number,
-    resetTime?: Date
-  ): void {
+  reportRateLimit(service: ApiService, key: string, remaining: number, resetTime?: Date): void {
     this.getManager(service).reportRateLimit(key, remaining, resetTime);
   }
 }

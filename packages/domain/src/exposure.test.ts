@@ -5,19 +5,19 @@
 import { describe, expect, test } from "bun:test";
 import type { Position } from "./execution";
 import {
-  calculateExposureStats,
-  calculateExposurePair,
+  calculateDeltaAdjustedExposure,
   calculateExposureByInstrumentType,
   calculateExposureBySector,
   calculateExposureByStrategy,
-  validateExposure,
-  validateSectorExposure,
-  calculateDeltaAdjustedExposure,
-  formatExposureStats,
+  calculateExposurePair,
+  calculateExposureStats,
   createEmptyExposureStats,
   DEFAULT_EXPOSURE_LIMITS,
-  type PositionWithMetadata,
+  formatExposureStats,
   type PositionWithDelta,
+  type PositionWithMetadata,
+  validateExposure,
+  validateSectorExposure,
 } from "./exposure";
 
 // ============================================
@@ -362,10 +362,7 @@ describe("calculateDeltaAdjustedExposure", () => {
 describe("formatExposureStats", () => {
   test("formats stats as readable string", () => {
     const stats = calculateExposureStats(
-      [
-        createPosition("AAPL", 100, 70000),
-        createPosition("TSLA", -50, -30000),
-      ],
+      [createPosition("AAPL", 100, 70000), createPosition("TSLA", -50, -30000)],
       100000
     );
 

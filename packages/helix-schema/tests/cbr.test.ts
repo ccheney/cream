@@ -3,18 +3,18 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { TradeDecision } from "../src/index";
+import { calculateCaseStatistics } from "@cream/domain";
 import {
   buildMemoryContext,
+  type CBRMarketSnapshot,
+  type CBRRetrievalResult,
   calculateCBRQuality,
   convertToRetrievedCase,
   extractSimilarityFeatures,
   generateCBRSituationBrief,
   SIMILARITY_WEIGHTS,
-  type CBRMarketSnapshot,
-  type CBRRetrievalResult,
 } from "../src/cbr";
-import { calculateCaseStatistics } from "@cream/domain";
+import type { TradeDecision } from "../src/index";
 
 // ============================================
 // Test Fixtures
@@ -149,7 +149,8 @@ describe("convertToRetrievedCase", () => {
     const decision = createMockDecision({
       action: "BUY",
       instrument_id: "TSLA",
-      rationale_text: "Bullish momentum confirmed by RSI crossover. Volume spike indicates institutional buying.",
+      rationale_text:
+        "Bullish momentum confirmed by RSI crossover. Volume spike indicates institutional buying.",
     });
 
     const result = convertToRetrievedCase(decision);
@@ -161,7 +162,7 @@ describe("convertToRetrievedCase", () => {
   });
 
   test("truncates long rationale in summary", () => {
-    const longRationale = "A".repeat(200) + ". Second sentence.";
+    const longRationale = `${"A".repeat(200)}. Second sentence.`;
     const decision = createMockDecision({ rationale_text: longRationale });
 
     const result = convertToRetrievedCase(decision);

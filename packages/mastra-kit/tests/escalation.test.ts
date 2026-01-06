@@ -2,27 +2,25 @@
  * Tests for Escalation Service
  */
 
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { EscalationEvent } from "../src/consensus.js";
 import {
+  type AlertInput,
   ConsoleNotificationChannel,
   createEscalationService,
+  type EscalationNotification,
   EscalationService,
   InterventionManager,
-  SlackWebhookChannel,
-  type AlertInput,
-  type EscalationNotification,
   type NotificationChannel,
   type NotificationResult,
+  SlackWebhookChannel,
 } from "../src/escalation.js";
 
 // ============================================
 // Test Fixtures
 // ============================================
 
-function createTestEvent(
-  type: EscalationEvent["type"] = "TIMEOUT"
-): EscalationEvent {
+function createTestEvent(type: EscalationEvent["type"] = "TIMEOUT"): EscalationEvent {
   return {
     type,
     cycleId: "test-cycle-123",
@@ -222,9 +220,7 @@ describe("EscalationService", () => {
       expect(mockChannel.sentNotifications[0]?.context.actionUrl).toContain(
         "dashboard.example.com"
       );
-      expect(mockChannel.sentNotifications[0]?.context.actionUrl).toContain(
-        event.cycleId
-      );
+      expect(mockChannel.sentNotifications[0]?.context.actionUrl).toContain(event.cycleId);
     });
 
     it("should continue if channel fails", async () => {

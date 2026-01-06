@@ -141,9 +141,9 @@ export interface LoadTestLogger {
 }
 
 const DEFAULT_LOGGER: LoadTestLogger = {
-  info: (msg, data) => console.log(`[LoadTest] ${msg}`, data ?? ""),
-  warn: (msg, data) => console.warn(`[LoadTest] ${msg}`, data ?? ""),
-  error: (msg, data) => console.error(`[LoadTest] ${msg}`, data ?? ""),
+  info: (_msg, _data) => {},
+  warn: (_msg, _data) => {},
+  error: (_msg, _data) => {},
 };
 
 const DEFAULT_CONFIG: LoadTestConfig = {
@@ -211,16 +211,8 @@ export class LoadTestRunner<T = void> {
    * @param options - Run options
    * @returns Test results
    */
-  async run(
-    operation: () => Promise<T>,
-    options: LoadTestRunOptions
-  ): Promise<LoadTestResults> {
-    const {
-      durationMs,
-      concurrency,
-      targetOpsPerSecond = 0,
-      rampUpMs = 0,
-    } = options;
+  async run(operation: () => Promise<T>, options: LoadTestRunOptions): Promise<LoadTestResults> {
+    const { durationMs, concurrency, targetOpsPerSecond = 0, rampUpMs = 0 } = options;
 
     // Validate concurrency
     const effectiveConcurrency = Math.min(concurrency, this.config.maxConcurrency);
@@ -241,9 +233,7 @@ export class LoadTestRunner<T = void> {
     let running = true;
 
     // Calculate delay between operations for rate limiting
-    const delayMs = targetOpsPerSecond > 0
-      ? (1000 / targetOpsPerSecond) * effectiveConcurrency
-      : 0;
+    const delayMs = targetOpsPerSecond > 0 ? (1000 / targetOpsPerSecond) * effectiveConcurrency : 0;
 
     // Worker function
     const worker = async (workerId: number): Promise<void> => {

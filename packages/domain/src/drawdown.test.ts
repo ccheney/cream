@@ -13,9 +13,9 @@ import {
   DRAWDOWN_THRESHOLDS,
   DrawdownStatsSchema,
   DrawdownTracker,
+  type EquityPoint,
   formatDrawdownStats,
   getRiskLevel,
-  type EquityPoint,
 } from "./drawdown";
 
 // ============================================
@@ -90,7 +90,7 @@ describe("getRiskLevel", () => {
   });
 
   it("should return elevated for 10-15% drawdown", () => {
-    expect(getRiskLevel(0.10)).toBe("elevated");
+    expect(getRiskLevel(0.1)).toBe("elevated");
     expect(getRiskLevel(0.14)).toBe("elevated");
   });
 
@@ -101,7 +101,7 @@ describe("getRiskLevel", () => {
 
   it("should return critical for >= 25% drawdown", () => {
     expect(getRiskLevel(0.25)).toBe("critical");
-    expect(getRiskLevel(0.50)).toBe("critical");
+    expect(getRiskLevel(0.5)).toBe("critical");
   });
 });
 
@@ -286,7 +286,7 @@ describe("checkDrawdownAlert", () => {
 
   it("should alert when current drawdown exceeds threshold", () => {
     const stats = createEmptyDrawdownStats();
-    stats.currentDrawdown = 0.20; // 20% > 15% threshold
+    stats.currentDrawdown = 0.2; // 20% > 15% threshold
 
     const alert = checkDrawdownAlert(stats);
     expect(alert.shouldAlert).toBe(true);
@@ -296,7 +296,7 @@ describe("checkDrawdownAlert", () => {
 
   it("should alert when max drawdown exceeds threshold", () => {
     const stats = createEmptyDrawdownStats();
-    stats.maxDrawdown = 0.30; // 30% > 25% threshold
+    stats.maxDrawdown = 0.3; // 30% > 25% threshold
 
     const alert = checkDrawdownAlert(stats);
     expect(alert.shouldAlert).toBe(true);
@@ -314,7 +314,7 @@ describe("checkDrawdownAlert", () => {
 
   it("should alert for multiple reasons", () => {
     const stats = createEmptyDrawdownStats();
-    stats.currentDrawdown = 0.30;
+    stats.currentDrawdown = 0.3;
     stats.maxDrawdown = 0.35;
     stats.drawdownDuration = 48;
 
@@ -371,7 +371,7 @@ describe("formatDrawdownStats", () => {
 describe("DRAWDOWN_THRESHOLDS", () => {
   it("should have correct threshold values", () => {
     expect(DRAWDOWN_THRESHOLDS.optimal).toBe(0.05);
-    expect(DRAWDOWN_THRESHOLDS.normal).toBe(0.10);
+    expect(DRAWDOWN_THRESHOLDS.normal).toBe(0.1);
     expect(DRAWDOWN_THRESHOLDS.elevated).toBe(0.15);
     expect(DRAWDOWN_THRESHOLDS.high).toBe(0.25);
     expect(DRAWDOWN_THRESHOLDS.critical).toBe(0.25);

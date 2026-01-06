@@ -5,14 +5,14 @@
 import { describe, expect, it } from "bun:test";
 import {
   calculateGreeks,
+  calculateMoneyness,
   calculateOptionsExposure,
   createEmptyExposure,
+  daysToYears,
+  formatExposure,
+  getMoneyStatus,
   normalCDF,
   normalPDF,
-  daysToYears,
-  calculateMoneyness,
-  getMoneyStatus,
-  formatExposure,
   type OptionPosition,
 } from "./greeks";
 
@@ -71,7 +71,7 @@ describe("normalPDF", () => {
   });
 
   it("should return ~0.2420 for x=1", () => {
-    expectApprox(normalPDF(1), 0.2420, 0.001);
+    expectApprox(normalPDF(1), 0.242, 0.001);
   });
 
   it("should be symmetric around 0", () => {
@@ -329,11 +329,7 @@ describe("calculateOptionsExposure", () => {
     const shortExposure = calculateOptionsExposure([shortPosition]);
 
     // Short should have opposite delta notional
-    expectApprox(
-      shortExposure.deltaNotional,
-      -longExposure.deltaNotional,
-      1
-    );
+    expectApprox(shortExposure.deltaNotional, -longExposure.deltaNotional, 1);
   });
 
   it("should aggregate by symbol", () => {
@@ -455,9 +451,7 @@ describe("getMoneyStatus", () => {
 
 describe("formatExposure", () => {
   it("should format exposure for display", () => {
-    const exposure = calculateOptionsExposure([
-      createPosition({ contracts: 10 }),
-    ]);
+    const exposure = calculateOptionsExposure([createPosition({ contracts: 10 })]);
 
     const formatted = formatExposure(exposure);
 
@@ -504,7 +498,7 @@ describe("Integration", () => {
         strike: 2800,
         underlyingPrice: 2850,
         timeToExpiration: 60 / 365,
-        impliedVolatility: 0.30,
+        impliedVolatility: 0.3,
         optionType: "CALL",
       }),
     ];
@@ -538,7 +532,7 @@ describe("Integration", () => {
       optionType: "CALL",
     });
 
-    const callGreeks = calculateGreeks(callPosition);
+    const _callGreeks = calculateGreeks(callPosition);
     const exposure = calculateOptionsExposure([callPosition]);
 
     // If we were delta-hedged with stock:

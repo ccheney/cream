@@ -91,21 +91,15 @@ export interface ChaosLogger {
 }
 
 const DEFAULT_LOGGER: ChaosLogger = {
-  info: (msg, data) => console.log(`[Chaos] ${msg}`, data ?? ""),
-  warn: (msg, data) => console.warn(`[Chaos] ${msg}`, data ?? ""),
-  error: (msg, data) => console.error(`[Chaos] ${msg}`, data ?? ""),
+  info: (_msg, _data) => {},
+  warn: (_msg, _data) => {},
+  error: (_msg, _data) => {},
 };
 
 const DEFAULT_CONFIG: ChaosConfig = {
   enabled: false,
   failureRate: 0.1,
-  enabledFailures: [
-    "timeout",
-    "network_error",
-    "rate_limit",
-    "server_error",
-    "slow_response",
-  ],
+  enabledFailures: ["timeout", "network_error", "rate_limit", "server_error", "slow_response"],
   minLatencyMs: 100,
   maxLatencyMs: 2000,
   timeoutMs: 30000,
@@ -260,11 +254,7 @@ export class ChaosEngine {
   /**
    * Wrap an async function with chaos injection.
    */
-  async wrap<T>(
-    fn: () => Promise<T>,
-    operation: string,
-    overrideRate?: number
-  ): Promise<T> {
+  async wrap<T>(fn: () => Promise<T>, operation: string, overrideRate?: number): Promise<T> {
     if (!this.config.enabled) {
       return fn();
     }
@@ -312,10 +302,7 @@ export class ChaosEngine {
   /**
    * Corrupt data by modifying random fields.
    */
-  corruptData<T extends Record<string, unknown>>(
-    data: T,
-    operation: string
-  ): T {
+  corruptData<T extends Record<string, unknown>>(data: T, operation: string): T {
     if (!this.config.enabled) {
       return data;
     }
@@ -371,10 +358,7 @@ export class ChaosEngine {
     return failures[index] ?? "network_error";
   }
 
-  private async injectFailure(
-    type: ChaosFailureType,
-    operation: string
-  ): Promise<never> {
+  private async injectFailure(type: ChaosFailureType, operation: string): Promise<never> {
     this.logEvent(type, operation);
 
     switch (type) {
@@ -477,7 +461,10 @@ export async function runWithChaos<T>(
       if (error instanceof ChaosError) {
         results.push({ success: false, error: error.message, type: error.chaosType });
       } else {
-        results.push({ success: false, error: error instanceof Error ? error.message : String(error) });
+        results.push({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }
@@ -547,7 +534,7 @@ export const ChaosPresets = {
    */
   heavy: (): Partial<ChaosConfig> => ({
     enabled: true,
-    failureRate: 0.30,
+    failureRate: 0.3,
     enabledFailures: [
       "timeout",
       "network_error",
@@ -577,7 +564,7 @@ export const ChaosPresets = {
    */
   rateLimiting: (): Partial<ChaosConfig> => ({
     enabled: true,
-    failureRate: 0.20,
+    failureRate: 0.2,
     enabledFailures: ["rate_limit"],
     rateLimitRetryAfterMs: 30000,
   }),
@@ -587,7 +574,7 @@ export const ChaosPresets = {
    */
   dataCorruption: (): Partial<ChaosConfig> => ({
     enabled: true,
-    failureRate: 0.10,
+    failureRate: 0.1,
     enabledFailures: ["corrupt_response"],
   }),
 };

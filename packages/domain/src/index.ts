@@ -15,30 +15,21 @@ export {
   // Session types
   type ActionForSession,
   ActionForSession as ActionForSessionSchema,
-  type InstrumentTypeForSession,
-  InstrumentTypeForSession as InstrumentTypeForSessionSchema,
-  type SessionValidationConfig,
-  type SessionValidationResult,
-  // Session validation functions
-  getAllowedSessions,
-  getMinutesToClose,
-  getNextRTHStart,
-  isEntryAction,
-  isExitAction,
-  isPassiveAction,
-  isTradingPossible,
-  validateSessionForAction,
   // Core calendar
   canStartCycle,
   DEFAULT_CLOSE_TIME,
   EARLY_CLOSE_TIME,
   type ExpirationCycle,
   getAllHolidays,
+  // Session validation functions
+  getAllowedSessions,
   getExpirationCycle,
   getHoliday,
   getMarketCloseTime,
+  getMinutesToClose,
   getMonthlyExpiration,
   getMonthlyExpirations,
+  getNextRTHStart,
   getNextTradingDay,
   getPreviousTradingDay,
   getThirdFriday,
@@ -46,16 +37,25 @@ export {
   type Holiday,
   HolidayType,
   hasDailyOptions,
+  type InstrumentTypeForSession,
+  InstrumentTypeForSession as InstrumentTypeForSessionSchema,
   isDailyExpiration,
+  isEntryAction,
+  isExitAction,
   isMarketOpen,
   isMonthlyExpiration,
+  isPassiveAction,
   isRTH,
+  isTradingPossible,
   isWeeklyExpiration,
   MIN_MINUTES_BEFORE_CLOSE,
   NYSE_HOLIDAYS_2026,
   NYSE_SESSIONS,
   type SessionHours,
+  type SessionValidationConfig,
+  type SessionValidationResult,
   TradingSession,
+  validateSessionForAction,
 } from "./calendar";
 // Clock synchronization and timestamp validation
 export {
@@ -77,6 +77,30 @@ export {
   validateTimestamp,
   validateTimestampConsistency,
 } from "./clock";
+// Contract testing
+export {
+  // Types
+  type ContractError,
+  type ContractValidationResult,
+  // HTTP contracts
+  EXECUTION_HTTP_CONTRACTS,
+  // Fixtures
+  FIXTURE_ACCOUNT_STATE,
+  FIXTURE_CONSTRAINT_CHECK,
+  FIXTURE_DECISION,
+  FIXTURE_DECISION_PLAN,
+  FIXTURE_EXECUTION_ACK,
+  FIXTURE_INSTRUMENT,
+  FIXTURE_OPTION_INSTRUMENT,
+  FIXTURE_POSITION,
+  FIXTURE_SUBMIT_ORDER_REQUEST,
+  FIXTURE_SUBMIT_ORDER_RESPONSE,
+  type HTTPEndpointContract,
+  // Validation functions
+  validateAllContracts,
+  validateContract,
+  validateHTTPContracts,
+} from "./contracts/index.js";
 // Decision contracts
 export {
   // Enums
@@ -115,6 +139,42 @@ export {
   validateDecisionPlan,
   validateRiskLevels,
 } from "./decision";
+// Drawdown metrics
+export {
+  calculateDrawdown,
+  calculateDrawdownStats,
+  calculateRecoveryNeeded,
+  checkDrawdownAlert,
+  createEmptyDrawdownStats,
+  DEFAULT_DRAWDOWN_ALERT_CONFIG,
+  DRAWDOWN_THRESHOLDS,
+  type DrawdownAlertConfig,
+  type DrawdownEvent,
+  type DrawdownStats,
+  DrawdownStatsSchema,
+  DrawdownTracker,
+  type EquityPoint,
+  formatDrawdownStats,
+  getRiskLevel,
+} from "./drawdown";
+// Output enforcement
+export {
+  createFallbackPlan,
+  createOutputEnforcer,
+  type EnforcementOptions,
+  type EnforcementResult,
+  type MarketContext,
+  OutputEnforcer,
+  type ParseError,
+  type PositionInfo,
+  type PreflightError,
+  type PreflightErrorType,
+  type PreflightResult,
+  parseAndValidateJSON,
+  type Result,
+  runPreflightChecks,
+  type TraderAgentInterface,
+} from "./enforcement/index.js";
 // Environment configuration
 export {
   CreamBroker,
@@ -268,6 +328,35 @@ export {
   type SubmitOrderResponse,
   SubmitOrderResponseSchema,
 } from "./execution";
+// Exposure calculations
+export {
+  type BucketedExposure,
+  calculateDeltaAdjustedExposure,
+  calculateExposureByAssetClass,
+  calculateExposureByBucket,
+  calculateExposureByInstrumentType,
+  calculateExposureBySector,
+  calculateExposureByStrategy,
+  calculateExposurePair,
+  calculateExposureStats,
+  createEmptyExposureStats,
+  DEFAULT_EXPOSURE_LIMITS,
+  type ExposureBucket,
+  type ExposureLimits,
+  type ExposurePair,
+  ExposurePairSchema,
+  type ExposureStats,
+  ExposureStatsSchema,
+  type ExposureValidationResult,
+  type ExposureValues,
+  ExposureValuesSchema,
+  type ExposureViolation,
+  formatExposureStats,
+  type PositionWithDelta,
+  type PositionWithMetadata,
+  validateExposure,
+  validateSectorExposure,
+} from "./exposure";
 // External context types
 export {
   type AnalystRatings,
@@ -603,92 +692,3 @@ export {
 } from "./universe";
 // WebSocket schemas
 export * from "./websocket/index.js";
-// Contract testing
-export {
-  // Validation functions
-  validateAllContracts,
-  validateContract,
-  validateHTTPContracts,
-  // HTTP contracts
-  EXECUTION_HTTP_CONTRACTS,
-  // Fixtures
-  FIXTURE_ACCOUNT_STATE,
-  FIXTURE_CONSTRAINT_CHECK,
-  FIXTURE_DECISION,
-  FIXTURE_DECISION_PLAN,
-  FIXTURE_EXECUTION_ACK,
-  FIXTURE_INSTRUMENT,
-  FIXTURE_OPTION_INSTRUMENT,
-  FIXTURE_POSITION,
-  FIXTURE_SUBMIT_ORDER_REQUEST,
-  FIXTURE_SUBMIT_ORDER_RESPONSE,
-  // Types
-  type ContractError,
-  type ContractValidationResult,
-  type HTTPEndpointContract,
-} from "./contracts/index.js";
-// Output enforcement
-export {
-  createFallbackPlan,
-  createOutputEnforcer,
-  type EnforcementOptions,
-  type EnforcementResult,
-  type MarketContext,
-  OutputEnforcer,
-  parseAndValidateJSON,
-  type ParseError,
-  type PositionInfo,
-  type PreflightError,
-  type PreflightErrorType,
-  type PreflightResult,
-  type Result,
-  runPreflightChecks,
-  type TraderAgentInterface,
-} from "./enforcement/index.js";
-// Drawdown metrics
-export {
-  calculateDrawdown,
-  calculateDrawdownStats,
-  calculateRecoveryNeeded,
-  checkDrawdownAlert,
-  createEmptyDrawdownStats,
-  DEFAULT_DRAWDOWN_ALERT_CONFIG,
-  type DrawdownAlertConfig,
-  type DrawdownEvent,
-  DrawdownStatsSchema,
-  type DrawdownStats,
-  DrawdownTracker,
-  DRAWDOWN_THRESHOLDS,
-  type EquityPoint,
-  formatDrawdownStats,
-  getRiskLevel,
-} from "./drawdown";
-// Exposure calculations
-export {
-  calculateDeltaAdjustedExposure,
-  calculateExposureByAssetClass,
-  calculateExposureByBucket,
-  calculateExposureByInstrumentType,
-  calculateExposureBySector,
-  calculateExposureByStrategy,
-  calculateExposurePair,
-  calculateExposureStats,
-  createEmptyExposureStats,
-  DEFAULT_EXPOSURE_LIMITS,
-  type ExposureBucket,
-  type ExposureLimits,
-  ExposurePairSchema,
-  type ExposurePair,
-  type ExposureStats,
-  ExposureStatsSchema,
-  type ExposureValidationResult,
-  ExposureValuesSchema,
-  type ExposureValues,
-  type ExposureViolation,
-  formatExposureStats,
-  type BucketedExposure,
-  type PositionWithDelta,
-  type PositionWithMetadata,
-  validateExposure,
-  validateSectorExposure,
-} from "./exposure";

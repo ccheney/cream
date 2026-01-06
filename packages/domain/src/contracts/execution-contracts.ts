@@ -16,40 +16,26 @@
 
 import { z } from "zod";
 import {
-  AccountStateSchema,
-  CheckConstraintsRequestSchema,
-  CheckConstraintsResponseSchema,
-  ConstraintCheckSchema,
-  ExecutionAckSchema,
-  GetAccountStateRequestSchema,
-  GetAccountStateResponseSchema,
-  GetPositionsRequestSchema,
-  GetPositionsResponseSchema,
-  OrderSide,
-  OrderStatus,
-  PortfolioStateSchema,
-  PositionSchema,
-  StreamExecutionsRequestSchema,
-  StreamExecutionsResponseSchema,
-  SubmitOrderRequestSchema,
-  SubmitOrderResponseSchema,
-  type AccountState,
-  type CheckConstraintsRequest,
-  type CheckConstraintsResponse,
-  type ConstraintCheck,
-  type ExecutionAck,
-  type Position,
-  type SubmitOrderRequest,
-  type SubmitOrderResponse,
-} from "../execution";
-import {
-  DecisionPlanSchema,
-  InstrumentSchema,
-  InstrumentType,
   type Decision,
   type DecisionPlan,
+  DecisionPlanSchema,
   type Instrument,
+  InstrumentSchema,
 } from "../decision";
+import {
+  type AccountState,
+  AccountStateSchema,
+  type ConstraintCheck,
+  ConstraintCheckSchema,
+  type ExecutionAck,
+  ExecutionAckSchema,
+  type Position,
+  PositionSchema,
+  type SubmitOrderRequest,
+  SubmitOrderRequestSchema,
+  type SubmitOrderResponse,
+  SubmitOrderResponseSchema,
+} from "../execution";
 
 // ============================================
 // Contract Validation Result Types
@@ -275,9 +261,7 @@ export function validateAllContracts(): ContractValidationResult[] {
 
   // Validate each fixture against its schema
   results.push(validateContract(InstrumentSchema, FIXTURE_INSTRUMENT, "Instrument"));
-  results.push(
-    validateContract(InstrumentSchema, FIXTURE_OPTION_INSTRUMENT, "OptionInstrument")
-  );
+  results.push(validateContract(InstrumentSchema, FIXTURE_OPTION_INSTRUMENT, "OptionInstrument"));
   results.push(validateContract(AccountStateSchema, FIXTURE_ACCOUNT_STATE, "AccountState"));
   results.push(validateContract(PositionSchema, FIXTURE_POSITION, "Position"));
   results.push(

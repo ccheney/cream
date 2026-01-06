@@ -14,7 +14,6 @@
  * @see docs/plans/04-memory-helixdb.md - Trade Memory Retrieval
  */
 
-import type { HelixClient } from "@cream/helix";
 import type {
   CaseResult,
   CaseStatistics,
@@ -23,8 +22,9 @@ import type {
   RetrievedCase,
 } from "@cream/domain";
 import { calculateCaseStatistics } from "@cream/domain";
+import type { HelixClient } from "@cream/helix";
+import type { EmbeddingClient } from "./embeddings";
 import type { TradeDecision } from "./index";
-import { EmbeddingClient, createEmbeddingClient, type EmbeddingConfig } from "./embeddings";
 
 // ============================================
 // Types
@@ -243,7 +243,7 @@ function generateShortSummary(decision: TradeDecision): string {
   // Extract first sentence or first 100 chars of rationale
   let rationalePreview = decision.rationale_text.split(".")[0];
   if (rationalePreview.length > 100) {
-    rationalePreview = rationalePreview.slice(0, 97) + "...";
+    rationalePreview = `${rationalePreview.slice(0, 97)}...`;
   }
 
   return `${action} ${instrument} (${regime}): ${rationalePreview}`;
@@ -578,19 +578,15 @@ export interface CBRQualityMetrics {
 /**
  * Calculate quality metrics for a CBR retrieval result.
  */
-export function calculateCBRQuality(
-  result: CBRRetrievalResult,
-  minCases: number = 5
-): CBRQualityMetrics {
+export function calculateCBRQuality(result: CBRRetrievalResult, minCases = 5): CBRQualityMetrics {
   const { cases, statistics } = result;
 
   // Average similarity
   const similarities = cases
     .filter((c) => c.similarityScore !== undefined)
     .map((c) => c.similarityScore!);
-  const avgSimilarity = similarities.length > 0
-    ? similarities.reduce((a, b) => a + b, 0) / similarities.length
-    : 0;
+  const avgSimilarity =
+    similarities.length > 0 ? similarities.reduce((a, b) => a + b, 0) / similarities.length : 0;
 
   // Regime diversity (unique regimes / total cases)
   const uniqueRegimes = new Set(cases.filter((c) => c.regime).map((c) => c.regime));
@@ -600,12 +596,11 @@ export function calculateCBRQuality(
   const historicalWinRate = statistics.winRate ?? 0;
 
   // Composite quality score
-  const qualityScore = (
+  const qualityScore =
     avgSimilarity * 0.4 +
-    (cases.length >= minCases ? 0.3 : cases.length / minCases * 0.3) +
+    (cases.length >= minCases ? 0.3 : (cases.length / minCases) * 0.3) +
     regimeDiversity * 0.15 +
-    historicalWinRate * 0.15
-  );
+    historicalWinRate * 0.15;
 
   return {
     avgSimilarity,

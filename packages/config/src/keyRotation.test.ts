@@ -3,11 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import {
-  KeyRotationManager,
-  KeyRotationRegistry,
-  type KeyRotationConfig,
-} from "./keyRotation";
+import { KeyRotationManager, KeyRotationRegistry } from "./keyRotation";
 
 // Silent logger for tests
 const silentLogger = {
@@ -111,11 +107,7 @@ describe("KeyRotationManager", () => {
 
   describe("least-used strategy", () => {
     it("should select least used key", () => {
-      const luManager = new KeyRotationManager(
-        "polygon",
-        { strategy: "least-used" },
-        silentLogger
-      );
+      const luManager = new KeyRotationManager("polygon", { strategy: "least-used" }, silentLogger);
       luManager.addKey("key1", "first");
       luManager.addKey("key2", "second");
 

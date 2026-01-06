@@ -474,7 +474,9 @@ export function validateRawCandles(
 
   for (let i = 0; i < candles.length; i++) {
     const candle = candles[i];
-    if (!candle) continue;
+    if (!candle) {
+      continue;
+    }
 
     const result = validateRawCandle(candle, config);
     totalIssues += result.issues.length;
@@ -550,16 +552,28 @@ export function extractApiErrorMessage(response: unknown): string {
   const obj = response as Record<string, unknown>;
 
   // Try common error message fields
-  if (typeof obj.error === "string") return obj.error;
-  if (typeof obj.message === "string") return obj.message;
-  if (typeof obj.Error === "string") return obj.Error;
-  if (typeof obj.Message === "string") return obj.Message;
-  if (typeof obj.error_message === "string") return obj.error_message;
+  if (typeof obj.error === "string") {
+    return obj.error;
+  }
+  if (typeof obj.message === "string") {
+    return obj.message;
+  }
+  if (typeof obj.Error === "string") {
+    return obj.Error;
+  }
+  if (typeof obj.Message === "string") {
+    return obj.Message;
+  }
+  if (typeof obj.error_message === "string") {
+    return obj.error_message;
+  }
 
   // Try nested error object
   if (typeof obj.error === "object" && obj.error !== null) {
     const nested = obj.error as Record<string, unknown>;
-    if (typeof nested.message === "string") return nested.message;
+    if (typeof nested.message === "string") {
+      return nested.message;
+    }
   }
 
   return JSON.stringify(response);
@@ -604,7 +618,8 @@ export function extractRateLimitStatus(headers: Headers | Record<string, string>
     const resetNum = parseInt(reset, 10);
     if (!Number.isNaN(resetNum)) {
       // Could be Unix timestamp or seconds from now
-      resetTime = resetNum > 1e9 ? new Date(resetNum * 1000) : new Date(Date.now() + resetNum * 1000);
+      resetTime =
+        resetNum > 1e9 ? new Date(resetNum * 1000) : new Date(Date.now() + resetNum * 1000);
     }
   }
 

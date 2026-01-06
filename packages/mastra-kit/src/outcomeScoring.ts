@@ -183,7 +183,7 @@ export interface OutcomeScoringConfig {
 
 const DEFAULT_CONFIG: OutcomeScoringConfig = {
   assumedBeta: 1.0,
-  returnWeight: 0.50,
+  returnWeight: 0.5,
   executionWeight: 0.25,
   predictionWeight: 0.25,
   slippageWarningThreshold: 0.5,
@@ -206,10 +206,7 @@ export class OutcomeScorer {
   /**
    * Score a completed trade.
    */
-  scoreOutcome(
-    trade: CompletedTrade,
-    planScore?: DecisionQualityScore
-  ): OutcomeScore {
+  scoreOutcome(trade: CompletedTrade, planScore?: DecisionQualityScore): OutcomeScore {
     const flags: OutcomeFlag[] = [];
 
     // Calculate basic metrics
@@ -257,9 +254,7 @@ export class OutcomeScorer {
     trades: CompletedTrade[],
     planScores?: Map<string, DecisionQualityScore>
   ): OutcomeScore[] {
-    return trades.map((trade) =>
-      this.scoreOutcome(trade, planScores?.get(trade.decisionId))
-    );
+    return trades.map((trade) => this.scoreOutcome(trade, planScores?.get(trade.decisionId)));
   }
 
   /**
@@ -301,10 +296,7 @@ export class OutcomeScorer {
   /**
    * Calculate detailed metrics.
    */
-  private calculateMetrics(
-    trade: CompletedTrade,
-    flags: OutcomeFlag[]
-  ): OutcomeMetrics {
+  private calculateMetrics(trade: CompletedTrade, flags: OutcomeFlag[]): OutcomeMetrics {
     // Entry slippage: how much worse was actual vs expected
     const entrySlippagePct = this.calculateEntrySlippage(trade);
     const exitSlippagePct = this.calculateExitSlippage(trade);
@@ -320,8 +312,7 @@ export class OutcomeScorer {
     }
 
     // Determine if stop/target was hit
-    const hitStopLoss = trade.exitReason === "STOP_LOSS" ||
-      trade.exitReason === "TRAILING_STOP";
+    const hitStopLoss = trade.exitReason === "STOP_LOSS" || trade.exitReason === "TRAILING_STOP";
     const hitTakeProfit = trade.exitReason === "TAKE_PROFIT";
 
     // Calculate achieved R:R if we have stop loss info
@@ -332,7 +323,7 @@ export class OutcomeScorer {
       const actualReturn = Math.abs(trade.exitPrice - trade.entryPrice);
 
       if (plannedRisk > 0) {
-        const plannedRR = plannedReward / plannedRisk;
+        const _plannedRR = plannedReward / plannedRisk;
         const achievedReturnInR = actualReturn / plannedRisk;
 
         // Positive if profitable, negative if loss
@@ -384,10 +375,7 @@ export class OutcomeScorer {
   /**
    * Score execution quality.
    */
-  private scoreExecution(
-    metrics: OutcomeMetrics,
-    _flags: OutcomeFlag[]
-  ): number {
+  private scoreExecution(metrics: OutcomeMetrics, _flags: OutcomeFlag[]): number {
     const { totalSlippagePct } = metrics;
     const absSlippage = Math.abs(totalSlippagePct);
 
@@ -407,10 +395,7 @@ export class OutcomeScorer {
   /**
    * Calculate return attribution.
    */
-  private calculateAttribution(
-    trade: CompletedTrade,
-    realizedReturn: number
-  ): ReturnAttribution {
+  private calculateAttribution(trade: CompletedTrade, realizedReturn: number): ReturnAttribution {
     const benchmarkReturn = trade.benchmarkReturn ?? 0;
 
     // Market contribution = beta * benchmark return
@@ -665,13 +650,9 @@ export function getOutcomeSummary(scores: OutcomeScore[]): OutcomeSummary {
   const grossProfit = winners.reduce((sum, s) => sum + s.realizedReturn, 0);
   const grossLoss = Math.abs(losers.reduce((sum, s) => sum + s.realizedReturn, 0));
 
-  const avgWinner = winners.length > 0
-    ? grossProfit / winners.length
-    : 0;
+  const avgWinner = winners.length > 0 ? grossProfit / winners.length : 0;
 
-  const avgLoser = losers.length > 0
-    ? grossLoss / losers.length
-    : 0;
+  const avgLoser = losers.length > 0 ? grossLoss / losers.length : 0;
 
   // Aggregate attribution
   const totalAttribution = scores.reduce(

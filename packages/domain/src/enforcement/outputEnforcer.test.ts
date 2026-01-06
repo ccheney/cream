@@ -2,18 +2,18 @@
  * Tests for Output Enforcement
  */
 
-import { describe, expect, it, beforeEach, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type { DecisionPlan } from "../schemas/decision-plan";
 import {
-  OutputEnforcer,
+  createFallbackPlan,
   createOutputEnforcer,
+  type MarketContext,
+  OutputEnforcer,
+  type PositionInfo,
   parseAndValidateJSON,
   runPreflightChecks,
-  createFallbackPlan,
-  type MarketContext,
-  type PositionInfo,
   type TraderAgentInterface,
 } from "./outputEnforcer";
-import type { DecisionPlan } from "../schemas/decision-plan";
 
 // ============================================
 // Test Fixtures
@@ -67,11 +67,7 @@ function createMarketContext(overrides: Partial<MarketContext> = {}): MarketCont
   };
 }
 
-function createPosition(
-  instrumentId: string,
-  quantity: number,
-  avgEntryPrice = 150
-): PositionInfo {
+function createPosition(instrumentId: string, quantity: number, avgEntryPrice = 150): PositionInfo {
   return {
     instrumentId,
     quantity,

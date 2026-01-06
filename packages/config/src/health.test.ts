@@ -2,14 +2,13 @@
  * Tests for Component Health Check System
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  HealthCheckRegistry,
+  createCustomHealthCheck,
   createHealthRegistry,
   createHttpHealthCheck,
   createMemoryHealthCheck,
-  createCustomHealthCheck,
-  type HealthCheckResult,
+  HealthCheckRegistry,
 } from "./health";
 
 // ============================================
@@ -329,9 +328,7 @@ describe("HealthCheckRegistry", () => {
       });
 
       // Run 10 checks
-      const checks = Array.from({ length: 10 }, () =>
-        smallRegistry.checkComponent("limited")
-      );
+      const checks = Array.from({ length: 10 }, () => smallRegistry.checkComponent("limited"));
 
       Promise.all(checks).then(() => {
         const history = smallRegistry.getHistory();

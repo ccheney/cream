@@ -2,15 +2,11 @@
  * Tests for Quality Score Integration
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
-import {
-  QualityScoreService,
-  createQualityScoreService,
-  type QualityScore,
-} from "../src/qualityScore";
-import type { Decision, DecisionPlan } from "../src/types";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { CompletedTrade } from "../src/outcomeScoring";
 import type { DecisionQualityScore, MarketContext } from "../src/planScoring";
+import { createQualityScoreService, QualityScoreService } from "../src/qualityScore";
+import type { Decision, DecisionPlan } from "../src/types";
 
 // ============================================
 // Test Helpers
@@ -178,7 +174,7 @@ describe("QualityScoreService", () => {
   describe("scoreCombined", () => {
     it("should combine pre and post execution scores", () => {
       const decision = createValidDecision();
-      const preScore = service.scoreDecision(decision, 100000, createMarketContext());
+      const _preScore = service.scoreDecision(decision, 100000, createMarketContext());
 
       const trade = createCompletedTrade();
       const result = service.scoreCombined(trade);
@@ -375,19 +371,23 @@ describe("Feedback System", () => {
       // Create high confidence winning trade
       const highConfWin = createValidDecision({ decisionId: "hc-win" });
       service.scoreDecision(highConfWin, 100000, createMarketContext());
-      service.scoreCombined(createCompletedTrade({
-        decisionId: "hc-win",
-        exitPrice: 120, // Big win
-      }));
+      service.scoreCombined(
+        createCompletedTrade({
+          decisionId: "hc-win",
+          exitPrice: 120, // Big win
+        })
+      );
 
       // Create high confidence losing trade (overconfident)
       const highConfLoss = createValidDecision({ decisionId: "hc-loss" });
       service.scoreDecision(highConfLoss, 100000, createMarketContext());
-      service.scoreCombined(createCompletedTrade({
-        decisionId: "hc-loss",
-        exitPrice: 90,
-        exitReason: "STOP_LOSS",
-      }));
+      service.scoreCombined(
+        createCompletedTrade({
+          decisionId: "hc-loss",
+          exitPrice: 90,
+          exitReason: "STOP_LOSS",
+        })
+      );
 
       const summary = service.getFeedbackSummary();
 

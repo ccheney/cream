@@ -69,14 +69,7 @@ export type InstrumentTypeForSession = z.infer<typeof InstrumentTypeForSession>;
  * Note: This mirrors the Action enum from decision.ts but is duplicated
  * here to avoid circular dependencies.
  */
-export const ActionForSession = z.enum([
-  "BUY",
-  "SELL",
-  "HOLD",
-  "INCREASE",
-  "REDUCE",
-  "CLOSE",
-]);
+export const ActionForSession = z.enum(["BUY", "SELL", "HOLD", "INCREASE", "REDUCE", "CLOSE"]);
 export type ActionForSession = z.infer<typeof ActionForSession>;
 
 /**
@@ -788,14 +781,14 @@ export function getNextRTHStart(datetime: Date | string): Date {
   if (session === "PRE_MARKET") {
     const dateStr = formatDateOnly(dateObj);
     // Return 9:30 AM ET today (approximate: UTC-5)
-    const rthStart = new Date(dateStr + "T14:30:00.000Z"); // 9:30 AM ET = 14:30 UTC
+    const rthStart = new Date(`${dateStr}T14:30:00.000Z`); // 9:30 AM ET = 14:30 UTC
     return rthStart;
   }
 
   // Otherwise, find next trading day and return its RTH start
   const nextDay = getNextTradingDay(dateObj);
   const nextDayStr = formatDateOnly(nextDay);
-  return new Date(nextDayStr + "T14:30:00.000Z");
+  return new Date(`${nextDayStr}T14:30:00.000Z`);
 }
 
 /**

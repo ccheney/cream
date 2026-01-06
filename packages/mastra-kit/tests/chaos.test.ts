@@ -2,16 +2,16 @@
  * Tests for Chaos Testing Framework
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
+  ChaosConnectionResetError,
   ChaosEngine,
   ChaosError,
-  ChaosTimeoutError,
   ChaosNetworkError,
+  ChaosPresets,
   ChaosRateLimitError,
   ChaosServerError,
-  ChaosConnectionResetError,
-  ChaosPresets,
+  ChaosTimeoutError,
   createChaosMiddleware,
   runWithChaos,
 } from "../src/chaos";
@@ -117,27 +117,19 @@ describe("ChaosEngine", () => {
         logger: silentLogger,
       });
 
-      await expect(chaosEngine.forceInject("timeout", "test")).rejects.toThrow(
-        ChaosTimeoutError
-      );
+      await expect(chaosEngine.forceInject("timeout", "test")).rejects.toThrow(ChaosTimeoutError);
     });
 
     it("should inject network error", async () => {
-      await expect(engine.forceInject("network_error", "test")).rejects.toThrow(
-        ChaosNetworkError
-      );
+      await expect(engine.forceInject("network_error", "test")).rejects.toThrow(ChaosNetworkError);
     });
 
     it("should inject rate limit", async () => {
-      await expect(engine.forceInject("rate_limit", "test")).rejects.toThrow(
-        ChaosRateLimitError
-      );
+      await expect(engine.forceInject("rate_limit", "test")).rejects.toThrow(ChaosRateLimitError);
     });
 
     it("should inject server error", async () => {
-      await expect(engine.forceInject("server_error", "test")).rejects.toThrow(
-        ChaosServerError
-      );
+      await expect(engine.forceInject("server_error", "test")).rejects.toThrow(ChaosServerError);
     });
 
     it("should inject connection reset", async () => {
@@ -167,9 +159,7 @@ describe("ChaosEngine", () => {
 
       // Something should be different
       const changed =
-        result.price !== data.price ||
-        result.name !== data.name ||
-        result.active !== data.active;
+        result.price !== data.price || result.name !== data.name || result.active !== data.active;
 
       expect(changed).toBe(true);
     });
@@ -327,12 +317,7 @@ describe("runWithChaos", () => {
       logger: silentLogger,
     });
 
-    const result = await runWithChaos(
-      engine,
-      async () => "success",
-      "test-op",
-      20
-    );
+    const result = await runWithChaos(engine, async () => "success", "test-op", 20);
 
     expect(result.iterations).toBe(20);
     expect(result.successCount + result.failureCount).toBe(20);
@@ -349,14 +334,9 @@ describe("runWithChaos", () => {
       logger: silentLogger,
     });
 
-    const result = await runWithChaos(
-      engine,
-      async () => "success",
-      "test-op",
-      10
-    );
+    const result = await runWithChaos(engine, async () => "success", "test-op", 10);
 
-    expect(result.failuresByType["network_error"]).toBe(10);
+    expect(result.failuresByType.network_error).toBe(10);
   });
 });
 
@@ -379,7 +359,7 @@ describe("ChaosPresets", () => {
 
   it("should create heavy preset", () => {
     const config = ChaosPresets.heavy();
-    expect(config.failureRate).toBe(0.30);
+    expect(config.failureRate).toBe(0.3);
     expect(config.enabledFailures).toContain("connection_reset");
   });
 

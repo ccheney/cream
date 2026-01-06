@@ -4,12 +4,12 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  type CompletedTrade,
+  getOutcomeSummary,
+  type OutcomeScore,
   OutcomeScorer,
   scoreOutcome,
   scoreOutcomes,
-  getOutcomeSummary,
-  type CompletedTrade,
-  type OutcomeScore,
 } from "../src/outcomeScoring";
 import type { DecisionQualityScore } from "../src/planScoring";
 
@@ -451,11 +451,21 @@ describe("getOutcomeSummary", () => {
     const scores: OutcomeScore[] = [
       {
         ...createOutcomeScore(),
-        attribution: { marketContribution: 2, alphaContribution: 5, timingContribution: 1, totalReturn: 8 },
+        attribution: {
+          marketContribution: 2,
+          alphaContribution: 5,
+          timingContribution: 1,
+          totalReturn: 8,
+        },
       },
       {
         ...createOutcomeScore(),
-        attribution: { marketContribution: 1, alphaContribution: 3, timingContribution: -1, totalReturn: 3 },
+        attribution: {
+          marketContribution: 1,
+          alphaContribution: 3,
+          timingContribution: -1,
+          totalReturn: 3,
+        },
       },
     ];
 

@@ -374,10 +374,14 @@ export class LayerValidator {
    */
   isViolation(fromLayer: string, toLayer: string): boolean {
     const source = this.layerMap.get(fromLayer);
-    if (!source) return false;
+    if (!source) {
+      return false;
+    }
 
     // Same layer is OK
-    if (fromLayer === toLayer) return false;
+    if (fromLayer === toLayer) {
+      return false;
+    }
 
     // Check forbidden
     if (source.forbiddenDependencies.includes(toLayer)) {
@@ -414,9 +418,7 @@ export class LayerValidator {
 /**
  * Parse imports from TypeScript/JavaScript source code.
  */
-export function parseImports(
-  source: string
-): Array<{ path: string; line: number }> {
+export function parseImports(source: string): Array<{ path: string; line: number }> {
   const imports: Array<{ path: string; line: number }> = [];
   const lines = source.split("\n");
 
@@ -459,18 +461,14 @@ export function parseImports(
 /**
  * Create a layer validator with default Clean Architecture config.
  */
-export function createLayerValidator(
-  config?: Partial<LayerValidationConfig>
-): LayerValidator {
+export function createLayerValidator(config?: Partial<LayerValidationConfig>): LayerValidator {
   return new LayerValidator(config);
 }
 
 /**
  * Create custom layers configuration.
  */
-export function createLayerConfig(
-  layers: ArchitecturalLayer[]
-): LayerValidationConfig {
+export function createLayerConfig(layers: ArchitecturalLayer[]): LayerValidationConfig {
   return {
     ...DEFAULT_CONFIG,
     layers,

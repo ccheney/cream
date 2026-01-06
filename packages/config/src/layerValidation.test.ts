@@ -4,12 +4,12 @@
 
 import { describe, expect, it } from "bun:test";
 import {
+  type ArchitecturalLayer,
+  createLayerConfig,
+  createLayerValidator,
+  DEFAULT_LAYERS,
   LayerValidator,
   parseImports,
-  createLayerValidator,
-  createLayerConfig,
-  DEFAULT_LAYERS,
-  type ArchitecturalLayer,
 } from "./layerValidation";
 
 // ============================================
@@ -63,10 +63,7 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       // Domain layer importing from infrastructure (forbidden)
-      const violation = validator.validateImport(
-        "packages/domain/src/types.ts",
-        "@cream/storage"
-      );
+      const violation = validator.validateImport("packages/domain/src/types.ts", "@cream/storage");
 
       expect(violation).not.toBeNull();
       expect(violation?.severity).toBe("ERROR");
@@ -78,10 +75,7 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       // Application layer importing from presentation (not allowed)
-      const violation = validator.validateImport(
-        "packages/mastra-kit/src/workflow.ts",
-        "apps/api"
-      );
+      const violation = validator.validateImport("packages/mastra-kit/src/workflow.ts", "apps/api");
 
       expect(violation).not.toBeNull();
       expect(violation?.severity).toBe("ERROR");
@@ -92,10 +86,7 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       // Infrastructure importing from infrastructure
-      const violation = validator.validateImport(
-        "packages/storage/src/client.ts",
-        "@cream/helix"
-      );
+      const violation = validator.validateImport("packages/storage/src/client.ts", "@cream/helix");
 
       expect(violation).toBeNull();
     });
@@ -103,10 +94,7 @@ describe("LayerValidator", () => {
     it("should warn on unknown source file when configured", () => {
       const validator = new LayerValidator({ warnOnUnknown: true });
 
-      const violation = validator.validateImport(
-        "unknown/path/file.ts",
-        "@cream/domain"
-      );
+      const violation = validator.validateImport("unknown/path/file.ts", "@cream/domain");
 
       expect(violation).not.toBeNull();
       expect(violation?.severity).toBe("WARNING");
@@ -116,10 +104,7 @@ describe("LayerValidator", () => {
     it("should not warn on unknown when disabled", () => {
       const validator = new LayerValidator({ warnOnUnknown: false });
 
-      const violation = validator.validateImport(
-        "unknown/path/file.ts",
-        "@cream/domain"
-      );
+      const violation = validator.validateImport("unknown/path/file.ts", "@cream/domain");
 
       expect(violation).toBeNull();
     });
@@ -141,14 +126,11 @@ describe("LayerValidator", () => {
     it("should validate multiple imports", () => {
       const validator = new LayerValidator();
 
-      const violations = validator.validateFile(
-        "packages/domain/src/entities.ts",
-        [
-          { path: "@cream/storage", line: 1 }, // Violation
-          { path: "./types", line: 2 }, // OK (relative)
-          { path: "@cream/helix", line: 3 }, // Violation
-        ]
-      );
+      const violations = validator.validateFile("packages/domain/src/entities.ts", [
+        { path: "@cream/storage", line: 1 }, // Violation
+        { path: "./types", line: 2 }, // OK (relative)
+        { path: "@cream/helix", line: 3 }, // Violation
+      ]);
 
       expect(violations).toHaveLength(2);
     });
@@ -156,13 +138,10 @@ describe("LayerValidator", () => {
     it("should return empty array for valid file", () => {
       const validator = new LayerValidator();
 
-      const violations = validator.validateFile(
-        "packages/mastra-kit/src/agents.ts",
-        [
-          { path: "@cream/domain", line: 1 },
-          { path: "./types", line: 2 },
-        ]
-      );
+      const violations = validator.validateFile("packages/mastra-kit/src/agents.ts", [
+        { path: "@cream/domain", line: 1 },
+        { path: "./types", line: 2 },
+      ]);
 
       expect(violations).toHaveLength(0);
     });
@@ -231,15 +210,11 @@ describe("LayerValidator", () => {
     it("should find layer by package path", () => {
       const validator = new LayerValidator();
 
-      expect(validator.findLayerForFile("packages/domain/src/types.ts")?.name).toBe(
-        "domain"
-      );
+      expect(validator.findLayerForFile("packages/domain/src/types.ts")?.name).toBe("domain");
       expect(validator.findLayerForFile("packages/storage/src/client.ts")?.name).toBe(
         "infrastructure"
       );
-      expect(validator.findLayerForFile("apps/api/src/index.ts")?.name).toBe(
-        "presentation"
-      );
+      expect(validator.findLayerForFile("apps/api/src/index.ts")?.name).toBe("presentation");
     });
 
     it("should return null for unknown path", () => {
@@ -254,20 +229,14 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       expect(validator.findLayerForImport("@cream/domain")?.name).toBe("domain");
-      expect(validator.findLayerForImport("@cream/storage")?.name).toBe(
-        "infrastructure"
-      );
-      expect(validator.findLayerForImport("@cream/mastra-kit")?.name).toBe(
-        "application"
-      );
+      expect(validator.findLayerForImport("@cream/storage")?.name).toBe("infrastructure");
+      expect(validator.findLayerForImport("@cream/mastra-kit")?.name).toBe("application");
     });
 
     it("should handle package subpaths", () => {
       const validator = new LayerValidator();
 
-      expect(validator.findLayerForImport("@cream/domain/types")?.name).toBe(
-        "domain"
-      );
+      expect(validator.findLayerForImport("@cream/domain/types")?.name).toBe("domain");
     });
 
     it("should return null for relative imports", () => {
@@ -451,10 +420,7 @@ describe("createLayerValidator", () => {
     });
 
     // Should not warn on unknown
-    const violation = validator.validateImport(
-      "unknown/file.ts",
-      "@cream/domain"
-    );
+    const violation = validator.validateImport("unknown/file.ts", "@cream/domain");
     expect(violation).toBeNull();
   });
 });

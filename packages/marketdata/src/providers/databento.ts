@@ -259,7 +259,6 @@ export class DatabentoClient {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  private sessionId: string | null = null;
 
   constructor(config: DatabentoClientConfig) {
     this.config = {

@@ -2,12 +2,12 @@
  * Tests for Package Dependency Validation
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import {
-  DependencyValidator,
-  parsePackageJson,
   createDependencyValidator,
+  DependencyValidator,
   type PackageInfo,
+  parsePackageJson,
 } from "./dependencyValidation";
 
 // ============================================
@@ -211,10 +211,7 @@ describe("DependencyValidator", () => {
     });
 
     it("should return false if adding dependency is safe", () => {
-      const packages = [
-        createPackage("@cream/a"),
-        createPackage("@cream/b"),
-      ];
+      const packages = [createPackage("@cream/a"), createPackage("@cream/b")];
 
       validator.addPackages(packages);
 
@@ -239,9 +236,7 @@ describe("DependencyValidator", () => {
     });
 
     it("should return empty for leaf package", () => {
-      const packages = [
-        createPackage("@cream/domain"),
-      ];
+      const packages = [createPackage("@cream/domain")];
 
       validator.addPackages(packages);
 
@@ -283,9 +278,7 @@ describe("DependencyValidator", () => {
 
   describe("getDepth", () => {
     it("should return 0 for leaf package", () => {
-      const packages = [
-        createPackage("@cream/domain"),
-      ];
+      const packages = [createPackage("@cream/domain")];
 
       validator.addPackages(packages);
 

@@ -55,8 +55,8 @@ export const loadStateStep = createStep({
   }),
   outputSchema: LoadStateOutputSchema,
   retries: 3,
-  execute: async ({ inputData }) => {
-    // TODO: Implement actual database queries
+  execute: async ({ inputData: _inputData }) => {
+    // TODO: Implement actual database queries using _inputData.cycleId and _inputData.environment
     // For now, return mock data
     return {
       positions: [],

@@ -99,8 +99,9 @@ const buildSnapshotStep = createStep({
   inputSchema: LoadStateOutputSchema,
   outputSchema: SnapshotOutputSchema,
   retries: 3,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement actual snapshot building using @cream/marketdata
+    // Will use _inputData.positions, _inputData.accountBalance, etc.
     return {
       snapshots: {},
       timestamp: new Date().toISOString(),
@@ -115,8 +116,9 @@ const retrieveMemoryStep = createStep({
   inputSchema: SnapshotOutputSchema,
   outputSchema: MemoryOutputSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement HelixDB retrieval using @cream/helix
+    // Will use _inputData.snapshots for similarity search
     return {
       similarTrades: [],
       relevantPatterns: [],
@@ -131,8 +133,9 @@ const gatherExternalContextStep = createStep({
   inputSchema: MemoryOutputSchema,
   outputSchema: ExternalContextSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement FMP/Alpha Vantage integration
+    // Will use _inputData.similarTrades for context
     return {
       news: [],
       sentiment: {},
@@ -147,8 +150,9 @@ const runAnalystsStep = createStep({
   inputSchema: ExternalContextSchema,
   outputSchema: AnalystOutputSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement Mastra agent calls
+    // Will pass _inputData.news, _inputData.sentiment to agents
     return {
       technical: { signals: [] },
       news: { summary: "" },
@@ -163,8 +167,9 @@ const runDebateStep = createStep({
   inputSchema: AnalystOutputSchema,
   outputSchema: DebateOutputSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement debate agent calls
+    // Will use _inputData.technical, _inputData.news, _inputData.fundamentals
     return {
       bullishCase: {},
       bearishCase: {},
@@ -179,8 +184,9 @@ const synthesizePlanStep = createStep({
   inputSchema: DebateOutputSchema,
   outputSchema: DecisionPlanSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement trader agent synthesis
+    // Will use _inputData.bullishCase, _inputData.bearishCase
     return {
       cycleId: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -195,8 +201,9 @@ const validateRiskStep = createStep({
   inputSchema: DecisionPlanSchema,
   outputSchema: ValidationResultSchema,
   retries: 1,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement risk validation via Rust execution engine
+    // Will validate _inputData.decisions against risk constraints
     return {
       approved: true,
       violations: [],
@@ -249,8 +256,9 @@ const persistMemoryStep = createStep({
     memoryId: z.string().optional(),
   }),
   retries: 3,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData: _inputData }) => {
     // TODO: Implement HelixDB persistence
+    // Will persist _inputData.ordersSubmitted, _inputData.orderIds
     return {
       persisted: true,
       memoryId: crypto.randomUUID(),

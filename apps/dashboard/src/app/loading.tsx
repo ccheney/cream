@@ -39,8 +39,9 @@ const pulseKeyframes = `
 export default function Loading() {
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required for SSR keyframe animation - constant styles defined at build time */}
       <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
-      <div
+      <output
         className="loading-container"
         style={{
           position: "fixed",
@@ -54,13 +55,12 @@ export default function Loading() {
           backgroundColor: "var(--background, #ffffff)",
           zIndex: 50,
         }}
-        role="status"
         aria-live="polite"
         aria-label="Loading page..."
         data-testid="page-loading"
       >
         <LoadingLogo size="xl" variant="icon" label="Loading page..." testId="page-loading-logo" />
-      </div>
+      </output>
     </>
   );
 }

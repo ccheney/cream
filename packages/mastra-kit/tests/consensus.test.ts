@@ -10,11 +10,11 @@ import {
   createNoTradePlan,
   createTimeoutCriticOutput,
   createTimeoutRiskOutput,
+  type EscalationEvent,
   getFallbackAction,
   runConsensusLoop,
   withAgentTimeout,
   wouldPassConsensus,
-  type EscalationEvent,
 } from "../src/consensus.js";
 import type { CriticOutput, DecisionPlan, RiskManagerOutput } from "../src/types.js";
 

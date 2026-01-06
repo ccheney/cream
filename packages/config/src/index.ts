@@ -10,6 +10,20 @@
 export const PACKAGE_NAME = "@cream/config";
 export const VERSION = "0.0.1";
 
+// Package Dependency Validation
+export {
+  type CircularDependency,
+  createDependencyValidator,
+  type DependencyGraphSummary,
+  type DependencyValidationConfig,
+  type DependencyValidationResult,
+  DependencyValidator,
+  type DependencyViolation,
+  type PackageInfo,
+  parsePackageJson,
+  scanPackages,
+  validatePackageDependencies,
+} from "./dependencyValidation";
 // Feature flags runtime
 export {
   areFlagsInitialized,
@@ -31,6 +45,44 @@ export {
   isOptionsEnabled,
   resetFlags,
 } from "./flags";
+// Health Checks
+export {
+  type ComponentHealthConfig,
+  createCustomHealthCheck,
+  createHealthRegistry,
+  createHttpHealthCheck,
+  createMemoryHealthCheck,
+  type HealthCheckConfig,
+  type HealthCheckFn,
+  HealthCheckRegistry,
+  type HealthCheckResult,
+  type HealthStatus,
+  type SystemHealth,
+} from "./health";
+// API Key Rotation
+export {
+  type ApiKey,
+  type ApiService,
+  createKeyRotationRegistry,
+  type KeyRotationConfig,
+  type KeyRotationLogger,
+  KeyRotationManager,
+  KeyRotationRegistry,
+  type KeyStats,
+  type RotationStrategy,
+} from "./keyRotation";
+// Layer Boundary Validation
+export {
+  type ArchitecturalLayer,
+  createLayerConfig,
+  createLayerValidator,
+  DEFAULT_LAYERS,
+  type LayerValidationConfig,
+  type LayerValidationResult,
+  LayerValidator,
+  type LayerViolation,
+  parseImports,
+} from "./layerValidation";
 // Loading utilities
 export {
   type ConfigEnvironment,
@@ -40,6 +92,21 @@ export {
 } from "./loader";
 // All schemas and types
 export * from "./schemas";
+// Secrets Management
+export {
+  createEnvSecretsManager,
+  createSecretsManager,
+  EncryptedFileSecretsProvider,
+  EnvSecretsProvider,
+  type FileEncryptionConfig,
+  MemorySecretsProvider,
+  type Secret,
+  type SecretAuditEvent,
+  type SecretsLogger,
+  SecretsManager,
+  type SecretsManagerConfig,
+  type SecretsProvider,
+} from "./secrets";
 // Startup validation utilities
 export {
   createAuditLog,
@@ -63,70 +130,3 @@ export {
   validateConfigOrThrow,
   validatePartialConfig,
 } from "./validate";
-// API Key Rotation
-export {
-  type ApiKey,
-  type ApiService,
-  createKeyRotationRegistry,
-  KeyRotationManager,
-  KeyRotationRegistry,
-  type KeyRotationConfig,
-  type KeyRotationLogger,
-  type KeyStats,
-  type RotationStrategy,
-} from "./keyRotation";
-// Secrets Management
-export {
-  createEnvSecretsManager,
-  createSecretsManager,
-  EncryptedFileSecretsProvider,
-  EnvSecretsProvider,
-  type FileEncryptionConfig,
-  MemorySecretsProvider,
-  type Secret,
-  type SecretAuditEvent,
-  SecretsManager,
-  type SecretsManagerConfig,
-  type SecretsLogger,
-  type SecretsProvider,
-} from "./secrets";
-// Health Checks
-export {
-  type ComponentHealthConfig,
-  createCustomHealthCheck,
-  createHealthRegistry,
-  createHttpHealthCheck,
-  createMemoryHealthCheck,
-  type HealthCheckConfig,
-  type HealthCheckFn,
-  HealthCheckRegistry,
-  type HealthCheckResult,
-  type HealthStatus,
-  type SystemHealth,
-} from "./health";
-// Layer Boundary Validation
-export {
-  type ArchitecturalLayer,
-  createLayerConfig,
-  createLayerValidator,
-  DEFAULT_LAYERS,
-  type LayerValidationConfig,
-  type LayerValidationResult,
-  LayerValidator,
-  type LayerViolation,
-  parseImports,
-} from "./layerValidation";
-// Package Dependency Validation
-export {
-  type CircularDependency,
-  createDependencyValidator,
-  type DependencyGraphSummary,
-  type DependencyValidationConfig,
-  type DependencyValidationResult,
-  DependencyValidator,
-  type DependencyViolation,
-  type PackageInfo,
-  parsePackageJson,
-  scanPackages,
-  validatePackageDependencies,
-} from "./dependencyValidation";

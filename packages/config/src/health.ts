@@ -155,7 +155,9 @@ export class HealthCheckRegistry {
   /**
    * Register a component for health checking.
    */
-  register(component: Partial<ComponentHealthConfig> & { name: string; check: HealthCheckFn }): void {
+  register(
+    component: Partial<ComponentHealthConfig> & { name: string; check: HealthCheckFn }
+  ): void {
     const fullConfig: ComponentHealthConfig = {
       name: component.name,
       check: component.check,
@@ -264,13 +266,15 @@ export class HealthCheckRegistry {
     const results: HealthCheckResult[] = [];
 
     for (const [name, state] of this.components) {
-      results.push(state.lastResult ?? {
-        component: name,
-        status: "UNKNOWN",
-        message: "Not yet checked",
-        responseTimeMs: 0,
-        timestamp: new Date().toISOString(),
-      });
+      results.push(
+        state.lastResult ?? {
+          component: name,
+          status: "UNKNOWN",
+          message: "Not yet checked",
+          responseTimeMs: 0,
+          timestamp: new Date().toISOString(),
+        }
+      );
     }
 
     return this.aggregateResults(results);
@@ -346,7 +350,7 @@ export class HealthCheckRegistry {
   // Private Methods
   // ============================================
 
-  private createTimeoutPromise(component: string, timeoutMs: number): Promise<HealthCheckResult> {
+  private createTimeoutPromise(_component: string, timeoutMs: number): Promise<HealthCheckResult> {
     return new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error(`Health check timed out after ${timeoutMs}ms`));
@@ -579,9 +583,7 @@ export function createCustomHealthCheck(
 /**
  * Create a health check registry.
  */
-export function createHealthRegistry(
-  config?: Partial<HealthCheckConfig>
-): HealthCheckRegistry {
+export function createHealthRegistry(config?: Partial<HealthCheckConfig>): HealthCheckRegistry {
   return new HealthCheckRegistry(config);
 }
 

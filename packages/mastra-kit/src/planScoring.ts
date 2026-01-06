@@ -169,9 +169,9 @@ const DEFAULT_CONFIG: DecisionScoringConfig = {
   maxStopLossDistancePct: 10.0,
   minWinProbability: 0.4,
   weights: {
-    riskReward: 0.30,
-    stopLoss: 0.20,
-    sizing: 0.20,
+    riskReward: 0.3,
+    stopLoss: 0.2,
+    sizing: 0.2,
     entryTiming: 0.15,
     rationaleQuality: 0.15,
   },
@@ -220,10 +220,10 @@ export class DecisionScorer {
     // Calculate weighted overall score
     const overall = Math.round(
       riskReward * this.config.weights.riskReward +
-      stopLoss * this.config.weights.stopLoss +
-      sizing * this.config.weights.sizing +
-      entryTiming * this.config.weights.entryTiming +
-      rationaleQuality * this.config.weights.rationaleQuality
+        stopLoss * this.config.weights.stopLoss +
+        sizing * this.config.weights.sizing +
+        entryTiming * this.config.weights.entryTiming +
+        rationaleQuality * this.config.weights.rationaleQuality
     );
 
     // Calculate expected value
@@ -256,19 +256,16 @@ export class DecisionScorer {
   /**
    * Score an entire DecisionPlan.
    */
-  scorePlan(
-    plan: DecisionPlan,
-    portfolioValue: number,
-    context?: MarketContext
-  ): PlanQualityScore {
+  scorePlan(plan: DecisionPlan, portfolioValue: number, context?: MarketContext): PlanQualityScore {
     const decisionScores = plan.decisions.map((d) =>
       this.scoreDecision(d, portfolioValue, context)
     );
 
     const overallScores = decisionScores.map((s) => s.overall);
-    const average = overallScores.length > 0
-      ? overallScores.reduce((a, b) => a + b, 0) / overallScores.length
-      : 0;
+    const average =
+      overallScores.length > 0
+        ? overallScores.reduce((a, b) => a + b, 0) / overallScores.length
+        : 0;
 
     // Aggregate flag counts
     const flagCounts: Record<string, number> = { ERROR: 0, WARNING: 0, INFO: 0 };
@@ -388,7 +385,7 @@ export class DecisionScorer {
     const stopLossPrice = decision.stopLoss.price;
 
     // Calculate stop loss distance
-    const distancePct = Math.abs(entryPrice - stopLossPrice) / entryPrice * 100;
+    const distancePct = (Math.abs(entryPrice - stopLossPrice) / entryPrice) * 100;
 
     // Check for too tight stop
     if (distancePct < 1.0) {
@@ -492,7 +489,7 @@ export class DecisionScorer {
         message: `Position size ${positionPct.toFixed(1)}% exceeds ${this.config.maxPositionPct}% limit`,
       });
       recommendations.push(`Reduce position size to below ${this.config.maxPositionPct}%`);
-      return Math.max(0, 100 - ((positionPct - this.config.maxPositionPct) * 10));
+      return Math.max(0, 100 - (positionPct - this.config.maxPositionPct) * 10);
     }
 
     // Check for very small position
@@ -515,7 +512,7 @@ export class DecisionScorer {
     }
 
     // Below 1%
-    return 60 + ((positionPct / 1.0) * 40);
+    return 60 + (positionPct / 1.0) * 40;
   }
 
   /**
@@ -670,8 +667,7 @@ export class DecisionScorer {
 
     if (context) {
       const isLong = decision.direction === "LONG";
-      if ((isLong && context.trend === "UPTREND") ||
-          (!isLong && context.trend === "DOWNTREND")) {
+      if ((isLong && context.trend === "UPTREND") || (!isLong && context.trend === "DOWNTREND")) {
         winProbability += 0.1;
       } else if (context.trend !== "SIDEWAYS") {
         winProbability -= 0.1;
@@ -682,7 +678,7 @@ export class DecisionScorer {
 
     const expectedGain = rewardPct;
     const expectedLoss = riskPct;
-    const netExpectedValue = (winProbability * expectedGain) - ((1 - winProbability) * expectedLoss);
+    const netExpectedValue = winProbability * expectedGain - (1 - winProbability) * expectedLoss;
 
     // Kelly criterion
     const b = rrRatio;
@@ -732,15 +728,15 @@ export class DecisionScorer {
     scores: DecisionQualityScore[],
     flagCounts: Record<string, number>
   ): "LOW" | "MEDIUM" | "HIGH" | "EXTREME" {
-    if (scores.some((s) => s.riskLevel === "EXTREME") || (flagCounts["ERROR"] ?? 0) > 0) {
+    if (scores.some((s) => s.riskLevel === "EXTREME") || (flagCounts.ERROR ?? 0) > 0) {
       return "EXTREME";
     }
 
-    if (scores.some((s) => s.riskLevel === "HIGH") || (flagCounts["WARNING"] ?? 0) >= 3) {
+    if (scores.some((s) => s.riskLevel === "HIGH") || (flagCounts.WARNING ?? 0) >= 3) {
       return "HIGH";
     }
 
-    if (scores.some((s) => s.riskLevel === "MEDIUM") || (flagCounts["WARNING"] ?? 0) >= 1) {
+    if (scores.some((s) => s.riskLevel === "MEDIUM") || (flagCounts.WARNING ?? 0) >= 1) {
       return "MEDIUM";
     }
 
@@ -750,18 +746,27 @@ export class DecisionScorer {
   /**
    * Calculate confidence in the assessment.
    */
-  private calculateConfidence(
-    decision: Decision,
-    context?: MarketContext
-  ): number {
+  private calculateConfidence(decision: Decision, context?: MarketContext): number {
     let confidence = 0.6;
 
-    if (decision.rationale.summary) confidence += 0.1;
-    if (decision.rationale.bullishFactors.length > 0) confidence += 0.05;
-    if (decision.rationale.bearishFactors.length > 0) confidence += 0.05;
-    if (decision.stopLoss) confidence += 0.05;
-    if (decision.takeProfit) confidence += 0.05;
-    if (context) confidence += 0.10;
+    if (decision.rationale.summary) {
+      confidence += 0.1;
+    }
+    if (decision.rationale.bullishFactors.length > 0) {
+      confidence += 0.05;
+    }
+    if (decision.rationale.bearishFactors.length > 0) {
+      confidence += 0.05;
+    }
+    if (decision.stopLoss) {
+      confidence += 0.05;
+    }
+    if (decision.takeProfit) {
+      confidence += 0.05;
+    }
+    if (context) {
+      confidence += 0.1;
+    }
 
     return Math.min(1.0, confidence);
   }
@@ -788,11 +793,13 @@ export class DecisionScorer {
         netExpectedValue: 0,
         kellyFraction: 0,
       },
-      flags: [{
-        type: "INFO",
-        code: "HOLD_DECISION",
-        message: "HOLD decisions maintain current positions",
-      }],
+      flags: [
+        {
+          type: "INFO",
+          code: "HOLD_DECISION",
+          message: "HOLD decisions maintain current positions",
+        },
+      ],
       recommendations: [],
       confidence: 1.0,
     };

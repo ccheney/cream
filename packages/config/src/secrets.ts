@@ -101,9 +101,9 @@ export interface SecretsLogger {
 }
 
 const DEFAULT_LOGGER: SecretsLogger = {
-  info: (msg, data) => console.log(`[Secrets] ${msg}`, data ?? ""),
-  warn: (msg, data) => console.warn(`[Secrets] ${msg}`, data ?? ""),
-  error: (msg, data) => console.error(`[Secrets] ${msg}`, data ?? ""),
+  info: (_msg, _data) => {},
+  warn: (_msg, _data) => {},
+  error: (_msg, _data) => {},
 };
 
 // ============================================

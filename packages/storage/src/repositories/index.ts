@@ -82,6 +82,22 @@ export {
   type FeatureInsert,
   FeaturesRepository,
 } from "./features.js";
+// Historical universe (migration 005) - point-in-time survivorship bias prevention
+export {
+  type ChangeType,
+  ChangeTypeSchema,
+  type IndexConstituent,
+  IndexConstituentSchema,
+  IndexConstituentsRepository,
+  type IndexId as HistoricalIndexId,
+  IndexIdSchema as HistoricalIndexIdSchema,
+  type TickerChange,
+  TickerChangeSchema,
+  TickerChangesRepository,
+  type UniverseSnapshot,
+  UniverseSnapshotSchema,
+  UniverseSnapshotsRepository,
+} from "./historical-universe.js";
 export {
   type CreateOrderInput,
   type Order as OrderEntity,
@@ -136,19 +152,3 @@ export {
   type UniverseCacheInsert,
   UniverseCacheRepository,
 } from "./universe-cache.js";
-// Historical universe (migration 005) - point-in-time survivorship bias prevention
-export {
-  type ChangeType,
-  ChangeTypeSchema,
-  type IndexConstituent,
-  IndexConstituentSchema,
-  IndexConstituentsRepository,
-  type IndexId as HistoricalIndexId,
-  IndexIdSchema as HistoricalIndexIdSchema,
-  type TickerChange,
-  TickerChangeSchema,
-  TickerChangesRepository,
-  type UniverseSnapshot,
-  UniverseSnapshotSchema,
-  UniverseSnapshotsRepository,
-} from "./historical-universe.js";
