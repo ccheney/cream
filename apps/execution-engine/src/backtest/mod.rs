@@ -39,6 +39,7 @@
 //! assert!(fill.filled);
 //! ```
 
+mod cleanup;
 mod commission;
 mod config;
 mod data_gaps;
@@ -59,6 +60,11 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
+pub use cleanup::{
+    CleanupConfig, CleanupResult, QuotaStatus, ResultFileInfo, StorageUsage,
+    calculate_storage_usage, check_storage_quota, identify_cleanup_candidates, perform_cleanup,
+    scan_results_dir,
+};
 pub use commission::{InstrumentType, calculate_commission, calculate_multi_leg_commission};
 pub use config::{
     BacktestConfig, CommissionConfig, CommissionModel, FillModelConfig, FixedBpsConfig,

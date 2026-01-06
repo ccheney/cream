@@ -101,6 +101,8 @@ proptest = "1.9"
 criterion = { version = "0.8.1", features = ["html_reports"] }
 test-case = "3.3.1"
 wiremock = "0.6"
+tempfile = "3.17"
+filetime = "0.2"
 
 [build-dependencies]
 # Protobuf codegen (future)
