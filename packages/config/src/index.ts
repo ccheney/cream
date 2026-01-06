@@ -90,3 +90,17 @@ export {
   type SecretsLogger,
   type SecretsProvider,
 } from "./secrets";
+// Health Checks
+export {
+  type ComponentHealthConfig,
+  createCustomHealthCheck,
+  createHealthRegistry,
+  createHttpHealthCheck,
+  createMemoryHealthCheck,
+  type HealthCheckConfig,
+  type HealthCheckFn,
+  HealthCheckRegistry,
+  type HealthCheckResult,
+  type HealthStatus,
+  type SystemHealth,
+} from "./health";
