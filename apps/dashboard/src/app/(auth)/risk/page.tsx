@@ -55,11 +55,13 @@ export default function RiskPage() {
           value={
             exposureLoading
               ? "--"
-              : `${exposure?.concentrationMax.symbol} ${formatPct(
-                  exposure?.concentrationMax.pct ?? 0
-                )}`
+              : exposure?.concentrationMax?.symbol
+                ? `${exposure.concentrationMax.symbol} ${formatPct(
+                    exposure.concentrationMax.pct ?? 0
+                  )}`
+                : "0.0%"
           }
-          status={getStatus(exposure?.concentrationMax.pct ?? 0, 0.15, 0.2)}
+          status={getStatus(exposure?.concentrationMax?.pct ?? 0, 0.15, 0.2)}
           isLoading={exposureLoading}
         />
       </div>

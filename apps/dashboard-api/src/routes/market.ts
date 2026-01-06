@@ -17,6 +17,34 @@ import { HTTPException } from "hono/http-exception";
 
 let polygonClient: PolygonClient | null = null;
 
+// ============================================
+// Simple Cache (60 second TTL)
+// ============================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+const CACHE_TTL_MS = 60000; // 60 seconds
+
+function getCached<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) {
+    return undefined;
+  }
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
 function getPolygonClient(): PolygonClient {
   if (polygonClient) {
     return polygonClient;
@@ -30,8 +58,10 @@ function getPolygonClient(): PolygonClient {
   }
 
   try {
-    polygonClient = new PolygonClient({ apiKey, tier: "starter" });
-    console.log("[market] Polygon client initialized");
+    const tier =
+      (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "free";
+    polygonClient = new PolygonClient({ apiKey, tier });
+    console.log(`[market] Polygon client initialized (tier: ${tier})`);
     return polygonClient;
   } catch (error) {
     console.error("[market] Failed to initialize Polygon client:", error);
@@ -120,30 +150,40 @@ app.openapi(quotesRoute, async (c) => {
   const symbolList = symbols.split(",").map((s) => s.trim().toUpperCase());
   const client = getPolygonClient();
 
-  const results = await Promise.all(
-    symbolList.map(async (symbol) => {
-      try {
-        const response = await client.getPreviousClose(symbol);
-        const bar = response.results?.[0];
-        if (!bar) {
-          return { symbol, error: "No data available" };
-        }
-        const spread = bar.c * 0.001;
-        return {
-          symbol,
-          bid: Math.round((bar.c - spread) * 100) / 100,
-          ask: Math.round((bar.c + spread) * 100) / 100,
-          last: bar.c,
-          volume: bar.v,
-          timestamp: new Date(bar.t).toISOString(),
-        };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        console.error(`[market] Quote error for ${symbol}:`, message);
-        return { symbol, error: message };
+  // Process sequentially to avoid rate limiting, use cache
+  const results: Array<z.infer<typeof QuoteSchema> | { symbol: string; error: string }> = [];
+  for (const symbol of symbolList) {
+    const cacheKey = `quote:${symbol}`;
+    const cached = getCached<z.infer<typeof QuoteSchema>>(cacheKey);
+    if (cached) {
+      results.push(cached);
+      continue;
+    }
+
+    try {
+      const response = await client.getPreviousClose(symbol);
+      const bar = response.results?.[0];
+      if (!bar) {
+        results.push({ symbol, error: "No data available" });
+        continue;
       }
-    })
-  );
+      const spread = bar.c * 0.001;
+      const quote = {
+        symbol,
+        bid: Math.round((bar.c - spread) * 100) / 100,
+        ask: Math.round((bar.c + spread) * 100) / 100,
+        last: bar.c,
+        volume: bar.v,
+        timestamp: new Date(bar.t).toISOString(),
+      };
+      setCache(cacheKey, quote);
+      results.push(quote);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[market] Quote error for ${symbol}:`, message);
+      results.push({ symbol, error: message });
+    }
+  }
 
   // Check if all failed
   const successful = results.filter((r) => !("error" in r));
@@ -182,6 +222,14 @@ const quoteRoute = createRoute({
 app.openapi(quoteRoute, async (c) => {
   const { symbol } = c.req.valid("param");
   const upperSymbol = symbol.toUpperCase();
+  const cacheKey = `quote:${upperSymbol}`;
+
+  // Check cache first
+  const cached = getCached<z.infer<typeof QuoteSchema>>(cacheKey);
+  if (cached) {
+    return c.json(cached, 200);
+  }
+
   const client = getPolygonClient();
 
   try {
@@ -193,17 +241,16 @@ app.openapi(quoteRoute, async (c) => {
       });
     }
     const spread = bar.c * 0.001;
-    return c.json(
-      {
-        symbol: upperSymbol,
-        bid: Math.round((bar.c - spread) * 100) / 100,
-        ask: Math.round((bar.c + spread) * 100) / 100,
-        last: bar.c,
-        volume: bar.v,
-        timestamp: new Date(bar.t).toISOString(),
-      },
-      200
-    );
+    const quote = {
+      symbol: upperSymbol,
+      bid: Math.round((bar.c - spread) * 100) / 100,
+      ask: Math.round((bar.c + spread) * 100) / 100,
+      last: bar.c,
+      volume: bar.v,
+      timestamp: new Date(bar.t).toISOString(),
+    };
+    setCache(cacheKey, quote);
+    return c.json(quote, 200);
   } catch (error) {
     if (error instanceof HTTPException) {
       throw error;
@@ -246,6 +293,14 @@ app.openapi(candlesRoute, async (c) => {
   const { symbol } = c.req.valid("param");
   const { timeframe, limit } = c.req.valid("query");
   const upperSymbol = symbol.toUpperCase();
+  const cacheKey = `candles:${upperSymbol}:${timeframe}:${limit}`;
+
+  // Check cache first
+  const cached = getCached<z.infer<typeof CandleSchema>[]>(cacheKey);
+  if (cached) {
+    return c.json(cached, 200);
+  }
+
   const client = getPolygonClient();
 
   const timespanMap: Record<string, { multiplier: number; timespan: "minute" | "hour" | "day" }> = {
@@ -292,6 +347,7 @@ app.openapi(candlesRoute, async (c) => {
       volume: bar.v,
     }));
 
+    setCache(cacheKey, candles);
     return c.json(candles, 200);
   } catch (error) {
     if (error instanceof HTTPException) {
@@ -334,6 +390,14 @@ app.openapi(indicatorsRoute, async (c) => {
   const { symbol } = c.req.valid("param");
   const { timeframe } = c.req.valid("query");
   const upperSymbol = symbol.toUpperCase();
+  const cacheKey = `indicators:${upperSymbol}:${timeframe}`;
+
+  // Check cache first
+  const cached = getCached<z.infer<typeof IndicatorsSchema>>(cacheKey);
+  if (cached) {
+    return c.json(cached, 200);
+  }
+
   const client = getPolygonClient();
 
   const timespanMap: Record<string, { multiplier: number; timespan: "minute" | "hour" | "day" }> = {
@@ -349,7 +413,14 @@ app.openapi(indicatorsRoute, async (c) => {
 
   const to = new Date();
   const from = new Date();
-  from.setDate(from.getDate() - 250); // Need 200+ bars for SMA200
+  // Use appropriate date range based on timeframe
+  // Daily: 250+ days for SMA200
+  // Intraday: 30 days (SMA200 won't be available but shorter SMAs will work)
+  if (tf.timespan === "day") {
+    from.setDate(from.getDate() - 300); // 300 days for daily to get SMA200
+  } else {
+    from.setDate(from.getDate() - 30); // 30 days for intraday timeframes
+  }
 
   try {
     const response = await client.getAggregates(
@@ -444,23 +515,22 @@ app.openapi(indicatorsRoute, async (c) => {
     const sma50Val = sma(closes, 50);
     const sma200Val = sma(closes, 200);
 
-    return c.json(
-      {
-        symbol: upperSymbol,
-        timeframe,
-        rsi14: rsi14Val !== null ? Math.round(rsi14Val * 100) / 100 : null,
-        atr14: atr14Val !== null ? Math.round(atr14Val * 100) / 100 : null,
-        sma20: sma20Val !== null ? Math.round(sma20Val * 100) / 100 : null,
-        sma50: sma50Val !== null ? Math.round(sma50Val * 100) / 100 : null,
-        sma200: sma200Val !== null ? Math.round(sma200Val * 100) / 100 : null,
-        ema12: ema12Val !== null ? Math.round(ema12Val * 100) / 100 : null,
-        ema26: ema26Val !== null ? Math.round(ema26Val * 100) / 100 : null,
-        macdLine: macdLineVal !== null ? Math.round(macdLineVal * 100) / 100 : null,
-        macdSignal: null, // Would need MACD history for signal line
-        macdHist: null,
-      },
-      200
-    );
+    const indicators = {
+      symbol: upperSymbol,
+      timeframe,
+      rsi14: rsi14Val !== null ? Math.round(rsi14Val * 100) / 100 : null,
+      atr14: atr14Val !== null ? Math.round(atr14Val * 100) / 100 : null,
+      sma20: sma20Val !== null ? Math.round(sma20Val * 100) / 100 : null,
+      sma50: sma50Val !== null ? Math.round(sma50Val * 100) / 100 : null,
+      sma200: sma200Val !== null ? Math.round(sma200Val * 100) / 100 : null,
+      ema12: ema12Val !== null ? Math.round(ema12Val * 100) / 100 : null,
+      ema26: ema26Val !== null ? Math.round(ema26Val * 100) / 100 : null,
+      macdLine: macdLineVal !== null ? Math.round(macdLineVal * 100) / 100 : null,
+      macdSignal: null, // Would need MACD history for signal line
+      macdHist: null,
+    };
+    setCache(cacheKey, indicators);
+    return c.json(indicators, 200);
   } catch (error) {
     if (error instanceof HTTPException) {
       throw error;
