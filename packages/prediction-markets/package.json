@@ -24,7 +24,9 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "kalshi-typescript": "^3.3.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
