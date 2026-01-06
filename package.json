@@ -22,6 +22,7 @@
     "lint:ts": "biome check .",
     "lint:rust": "cargo clippy --all-targets --all-features -- -D warnings",
     "lint:py": "ruff check apps/filings-service apps/vision-service apps/evals packages/research",
+    "validate": "bun scripts/validate-versions.ts",
     "prepare": "husky"
   },
   "devDependencies": {
