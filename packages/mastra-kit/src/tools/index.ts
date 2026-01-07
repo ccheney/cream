@@ -7,6 +7,7 @@
  * Implementation status:
  * - getQuotes: Uses gRPC MarketDataService (falls back to mock if unavailable)
  * - getPortfolioState: Uses gRPC ExecutionService (falls back to mock if unavailable)
+ * - recalcIndicator: Uses gRPC for bars + @cream/indicators for calculation
  * - Other tools: Stubbed with mock implementations
  *
  * @see docs/plans/05-agents.md
@@ -20,6 +21,16 @@ import {
   GrpcError,
   type MarketDataServiceClient,
 } from "@cream/domain/grpc";
+import {
+  type Candle,
+  calculateATR,
+  calculateBollingerBands,
+  calculateEMA,
+  calculateRSI,
+  calculateSMA,
+  calculateStochastic,
+  calculateVolumeSMA,
+} from "@cream/indicators";
 
 // ============================================
 // Tool Types
@@ -324,22 +335,9 @@ export async function getGreeks(contract: string): Promise<Greeks> {
 }
 
 /**
- * Recalculate a technical indicator
- *
- * @param indicator - Indicator name (RSI, ATR, SMA, etc.)
- * @param symbol - Instrument symbol
- * @param params - Indicator parameters
- * @returns Indicator values
- *
- * @stub Returns mock data until gRPC ready
+ * Create mock indicator result for backtest/fallback
  */
-export async function recalcIndicator(
-  indicator: string,
-  symbol: string,
-  params: Record<string, number> = {}
-): Promise<IndicatorResult> {
-  // TODO: Replace with gRPC call to execution engine
-  void params; // Suppress unused parameter warning
+function createMockIndicatorResult(indicator: string, symbol: string): IndicatorResult {
   return {
     indicator,
     symbol,
@@ -352,6 +350,181 @@ export async function recalcIndicator(
       new Date().toISOString(),
     ],
   };
+}
+
+/**
+ * Supported indicator types for recalcIndicator tool
+ */
+type SupportedIndicator = "RSI" | "SMA" | "EMA" | "ATR" | "BOLLINGER" | "STOCHASTIC" | "VOLUME_SMA";
+
+/**
+ * Calculate a specific indicator from candle data
+ */
+function calculateIndicatorFromCandles(
+  indicator: SupportedIndicator,
+  candles: Candle[],
+  params: Record<string, number>
+): { values: number[]; timestamps: number[] } {
+  const results: { value: number; timestamp: number }[] = [];
+
+  switch (indicator) {
+    case "RSI": {
+      const period = params.period ?? 14;
+      const rsiResults = calculateRSI(candles, { period });
+      for (const r of rsiResults) {
+        results.push({ value: r.rsi, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "SMA": {
+      const period = params.period ?? 20;
+      const smaResults = calculateSMA(candles, { period });
+      for (const r of smaResults) {
+        results.push({ value: r.ma, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "EMA": {
+      const period = params.period ?? 20;
+      const emaResults = calculateEMA(candles, { period });
+      for (const r of emaResults) {
+        results.push({ value: r.ma, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "ATR": {
+      const period = params.period ?? 14;
+      const atrResults = calculateATR(candles, { period });
+      for (const r of atrResults) {
+        results.push({ value: r.atr, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "BOLLINGER": {
+      const period = params.period ?? 20;
+      const stdDev = params.stdDev ?? 2.0;
+      const bbResults = calculateBollingerBands(candles, { period, stdDev });
+      // Return middle band as the primary value
+      for (const r of bbResults) {
+        results.push({ value: r.middle, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "STOCHASTIC": {
+      const kPeriod = params.kPeriod ?? 14;
+      const dPeriod = params.dPeriod ?? 3;
+      const stochResults = calculateStochastic(candles, { kPeriod, dPeriod, slow: true });
+      // Return %K as the primary value
+      for (const r of stochResults) {
+        results.push({ value: r.k, timestamp: r.timestamp });
+      }
+      break;
+    }
+    case "VOLUME_SMA": {
+      const period = params.period ?? 20;
+      const volResults = calculateVolumeSMA(candles, { period });
+      for (const r of volResults) {
+        results.push({ value: r.volumeSma, timestamp: r.timestamp });
+      }
+      break;
+    }
+  }
+
+  return {
+    values: results.map((r) => r.value),
+    timestamps: results.map((r) => r.timestamp),
+  };
+}
+
+/**
+ * Recalculate a technical indicator
+ *
+ * Uses gRPC MarketDataService to fetch bars, then calculates indicator
+ * using the @cream/indicators package. Falls back to mock data if unavailable.
+ *
+ * @param indicator - Indicator name (RSI, ATR, SMA, EMA, BOLLINGER, STOCHASTIC, VOLUME_SMA)
+ * @param symbol - Instrument symbol
+ * @param params - Indicator parameters (period, etc.)
+ * @returns Indicator values with timestamps
+ */
+export async function recalcIndicator(
+  indicator: string,
+  symbol: string,
+  params: Record<string, number> = {}
+): Promise<IndicatorResult> {
+  // Validate indicator name
+  const normalizedIndicator = indicator.toUpperCase() as SupportedIndicator;
+  const supportedIndicators: SupportedIndicator[] = [
+    "RSI",
+    "SMA",
+    "EMA",
+    "ATR",
+    "BOLLINGER",
+    "STOCHASTIC",
+    "VOLUME_SMA",
+  ];
+
+  if (!supportedIndicators.includes(normalizedIndicator)) {
+    // Return mock for unsupported indicators
+    return createMockIndicatorResult(indicator, symbol);
+  }
+
+  // In backtest mode, always return mock data for performance
+  if (isBacktest()) {
+    return createMockIndicatorResult(indicator, symbol);
+  }
+
+  try {
+    const client = getMarketDataClient();
+
+    // Fetch bars from MarketDataService
+    // Request 1-hour bars (timeframe 60) for the symbol
+    const timeframe = params.timeframe ?? 60;
+    const response = await client.getSnapshot({
+      symbols: [symbol],
+      includeBars: true,
+      barTimeframes: [timeframe],
+    });
+
+    // Extract bars and convert to Candle format
+    const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
+    const bars = symbolSnapshot?.bars ?? [];
+
+    if (bars.length === 0) {
+      return createMockIndicatorResult(indicator, symbol);
+    }
+
+    // Convert protobuf bars to Candle format
+    const candles: Candle[] = bars.map((bar) => ({
+      timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: Number(bar.volume),
+    }));
+
+    // Sort by timestamp (oldest first)
+    candles.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Calculate the indicator
+    const result = calculateIndicatorFromCandles(normalizedIndicator, candles, params);
+
+    return {
+      indicator: normalizedIndicator,
+      symbol,
+      values: result.values,
+      timestamps: result.timestamps.map((ts) => new Date(ts).toISOString()),
+    };
+  } catch (error) {
+    // Fall back to mock data if gRPC fails
+    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+      // Expected during development - silently fall back
+      return createMockIndicatorResult(indicator, symbol);
+    }
+    // Unexpected errors - silently fall back to mock data
+    return createMockIndicatorResult(indicator, symbol);
+  }
 }
 
 /**

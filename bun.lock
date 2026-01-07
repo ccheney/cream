@@ -28,6 +28,7 @@
         "@connectrpc/connect": "^1.6.1",
         "@connectrpc/connect-node": "^1.6.1",
         "@cream/domain": "workspace:*",
+        "@cream/external-context": "workspace:*",
         "@cream/helix": "workspace:*",
         "@cream/helix-schema": "workspace:*",
         "@cream/marketdata": "workspace:*",
@@ -259,6 +260,7 @@
       "dependencies": {
         "@cream/config": "workspace:*",
         "@cream/domain": "workspace:*",
+        "@cream/indicators": "workspace:*",
         "@mastra/core": "^0.24.9",
         "autoevals": "^0.0.131",
         "braintrust": "^1.1.1",

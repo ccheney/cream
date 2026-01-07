@@ -26,6 +26,7 @@
   "dependencies": {
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
+    "@cream/indicators": "workspace:*",
     "@mastra/core": "^0.24.9",
     "langsmith": "^0.4.4",
     "braintrust": "^1.1.1",
