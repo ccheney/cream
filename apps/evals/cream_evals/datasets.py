@@ -6,7 +6,7 @@ Each test case includes input context, expected output, and evaluation criteria.
 
 from dataclasses import dataclass, field
 
-from deepeval.test_case import LLMTestCase
+from deepeval.test_case import LLMTestCase  # type: ignore[import-not-found]
 
 
 @dataclass
@@ -570,7 +570,7 @@ def get_tests_by_tag(tag: str) -> list[GoldenTestCase]:
     Returns:
         List of matching test cases
     """
-    results = []
+    results: list[GoldenTestCase] = []
     for tests in ALL_GOLDEN_TESTS.values():
         results.extend(t for t in tests if tag in t.tags)
     return results

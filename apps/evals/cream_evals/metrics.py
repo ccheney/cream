@@ -13,8 +13,8 @@ Agent Types:
 - Critic: Bias detection accuracy
 """
 
-from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCaseParams
+from deepeval.metrics import GEval  # type: ignore[import-not-found]
+from deepeval.test_case import LLMTestCaseParams  # type: ignore[import-not-found]
 
 
 def create_technical_analyst_metric(model: str = "gemini-3-pro-preview") -> GEval:

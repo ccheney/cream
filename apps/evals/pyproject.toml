@@ -16,7 +16,7 @@ description = "Agent evaluation framework for Cream trading system"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
-requires-python = ">=3.15"
+requires-python = ">=3.14"
 
 dependencies = [
     "deepeval>=2.0.0",
@@ -56,7 +56,7 @@ markers = [
 # Ruff Configuration
 # ============================================
 [tool.ruff]
-target-version = "py314"
+target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
@@ -70,5 +70,5 @@ select = ["E", "W", "F", "I", "B", "C4", "UP"]
 # MyPy Configuration
 # ============================================
 [tool.mypy]
-python_version = "3.15"
+python_version = "3.13"
 strict = true

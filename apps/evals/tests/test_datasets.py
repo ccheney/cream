@@ -1,7 +1,7 @@
 """Tests for golden test datasets."""
 
 import pytest
-from deepeval.test_case import LLMTestCase
+from deepeval.test_case import LLMTestCase  # type: ignore[import-not-found]
 
 from cream_evals import (
     GoldenTestCase,
@@ -11,7 +11,7 @@ from cream_evals import (
 )
 
 
-def test_golden_test_case_creation():
+def test_golden_test_case_creation() -> None:
     """Test creating a GoldenTestCase."""
     test = GoldenTestCase(
         agent_type="test_agent",
@@ -26,7 +26,7 @@ def test_golden_test_case_creation():
     assert len(test.tags) == 2
 
 
-def test_golden_test_to_llm_test_case():
+def test_golden_test_to_llm_test_case() -> None:
     """Test converting GoldenTestCase to LLMTestCase."""
     test = GoldenTestCase(
         agent_type="test_agent",
@@ -44,34 +44,34 @@ def test_golden_test_to_llm_test_case():
     assert llm_test.expected_output == "Expected output"
 
 
-def test_get_tests_for_agent():
+def test_get_tests_for_agent() -> None:
     """Test getting tests for a specific agent type."""
     tests = get_tests_for_agent("technical_analyst")
     assert len(tests) > 0
     assert all(t.agent_type == "technical_analyst" for t in tests)
 
 
-def test_get_tests_for_unknown_agent():
+def test_get_tests_for_unknown_agent() -> None:
     """Test that unknown agent types raise ValueError."""
     with pytest.raises(ValueError, match="Unknown agent type"):
         get_tests_for_agent("unknown_agent")
 
 
-def test_get_all_tests():
+def test_get_all_tests() -> None:
     """Test getting all tests."""
     all_tests = get_all_tests()
     assert "technical_analyst" in all_tests
     assert "risk_manager" in all_tests
 
 
-def test_get_tests_by_tag():
+def test_get_tests_by_tag() -> None:
     """Test filtering tests by tag."""
     breakout_tests = get_tests_by_tag("breakout")
     assert len(breakout_tests) > 0
     assert all("breakout" in t.tags for t in breakout_tests)
 
 
-def test_technical_analyst_tests_have_required_fields():
+def test_technical_analyst_tests_have_required_fields() -> None:
     """Test that technical analyst tests have proper structure."""
     tests = get_tests_for_agent("technical_analyst")
     for test in tests:
@@ -80,12 +80,12 @@ def test_technical_analyst_tests_have_required_fields():
         assert "instrument" in test.input_context.lower() or "OHLCV" in test.input_context
 
 
-def test_risk_manager_tests_include_constraint_scenarios():
+def test_risk_manager_tests_include_constraint_scenarios() -> None:
     """Test that risk manager tests cover constraint violations."""
     tests = get_tests_for_agent("risk_manager")
 
     # Should have tests for constraint violations
-    tags = set()
+    tags: set[str] = set()
     for test in tests:
         tags.update(test.tags)
 

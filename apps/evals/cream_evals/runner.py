@@ -6,11 +6,12 @@ using DeepEval metrics and golden test datasets.
 
 import asyncio
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-from deepeval.test_case import LLMTestCase
+from deepeval.test_case import LLMTestCase  # type: ignore[import-not-found]
 
 from .datasets import GoldenTestCase, get_tests_for_agent
 from .metrics import get_all_metrics
@@ -80,7 +81,7 @@ class AgentEvaluator:
     async def evaluate_agent(
         self,
         agent_type: str,
-        agent_fn: callable,
+        agent_fn: Callable[[str], Awaitable[str]],
         tests: list[GoldenTestCase] | None = None,
     ) -> AgentEvaluationSummary:
         """Evaluate a single agent type.
@@ -185,7 +186,7 @@ class AgentEvaluator:
 
     async def evaluate_all_agents(
         self,
-        agent_fns: dict[str, callable],
+        agent_fns: dict[str, Callable[[str], Awaitable[str]]],
     ) -> FullEvaluationReport:
         """Evaluate all agent types.
 
@@ -423,7 +424,7 @@ def generate_html_report(report: FullEvaluationReport, path: str | Path) -> None
 
 
 async def run_evaluation(
-    agent_fns: dict[str, callable],
+    agent_fns: dict[str, Callable[[str], Awaitable[str]]],
     model: str = "gemini-3-pro-preview",
     output_json: str | None = "eval-results.json",
     output_html: str | None = "eval-report.html",
@@ -497,9 +498,9 @@ def main() -> None:
     ]
 
     if args.agent:
-        agent_fns = {args.agent: mock_agent}
+        agent_fns: dict[str, Callable[[str], Awaitable[str]]] = {args.agent: mock_agent}
     else:
-        agent_fns = dict.fromkeys(agent_types, mock_agent)
+        agent_fns = {agent: mock_agent for agent in agent_types}  # noqa: C420
 
     asyncio.run(
         run_evaluation(
