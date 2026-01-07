@@ -42,6 +42,7 @@ import {
   calculateVolumeSMA,
 } from "@cream/indicators";
 import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
+import { type WebSearchParams, type WebSearchResponse, webSearch } from "./webSearch.js";
 
 // ============================================
 // Tool Types
@@ -1147,6 +1148,7 @@ export const TOOL_REGISTRY = {
   economic_calendar: getEconomicCalendar,
   news_search: searchNews,
   helix_query: helixQuery,
+  web_search: webSearch,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;
@@ -1168,3 +1170,14 @@ export function getTool(name: ToolName): (typeof TOOL_REGISTRY)[ToolName] {
 export function getAvailableTools(): ToolName[] {
   return Object.keys(TOOL_REGISTRY) as ToolName[];
 }
+
+// ============================================
+// Re-exports
+// ============================================
+
+// Web search types and function
+export { webSearch, type WebSearchParams, type WebSearchResponse };
+
+// Mastra tool definitions
+export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./definitions/index.js";
+export type { WebSearchResult } from "./webSearch.js";
