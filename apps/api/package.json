@@ -35,6 +35,7 @@
     "@cream/marketdata": "workspace:*",
     "@cream/mastra-kit": "workspace:*",
     "@cream/prediction-markets": "workspace:*",
+    "@cream/regime": "workspace:*",
     "@cream/schema-gen": "workspace:*",
     "@cream/storage": "workspace:*",
     "@cream/universe": "workspace:*",

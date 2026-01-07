@@ -11,6 +11,7 @@ import {
   OrdersRepository,
   PositionsRepository,
   PredictionMarketsRepository,
+  RegimeLabelsRepository,
   runMigrations,
   ThesisStateRepository,
   type TursoClient,
@@ -140,4 +141,12 @@ export async function getExternalEventsRepo(): Promise<ExternalEventsRepository>
 export async function getPredictionMarketsRepo(): Promise<PredictionMarketsRepository> {
   const client = await getDbClient();
   return new PredictionMarketsRepository(client);
+}
+
+/**
+ * Get regime labels repository
+ */
+export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
+  const client = await getDbClient();
+  return new RegimeLabelsRepository(client);
 }

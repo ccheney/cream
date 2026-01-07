@@ -21,6 +21,7 @@ import {
   runConsensusLoop,
   withAgentTimeout,
 } from "@cream/mastra-kit";
+import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
 import {
   type AgentContext,
@@ -35,6 +36,7 @@ import {
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
+import { getRegimeLabelsRepo } from "../db.js";
 
 // ============================================
 // Types
@@ -69,9 +71,15 @@ export interface MarketSnapshot {
   quotes: Record<string, unknown>;
 }
 
+export interface RegimeData {
+  regime: string;
+  confidence: number;
+  reasoning?: string;
+}
+
 export interface MemoryContext {
   relevantCases: unknown[];
-  regimeLabels: Record<string, string>;
+  regimeLabels: Record<string, RegimeData>;
 }
 
 export interface TechnicalAnalysis {
@@ -192,11 +200,108 @@ async function fetchMarketSnapshot(instruments: string[]): Promise<MarketSnapsho
 }
 
 async function loadMemoryContext(snapshot: MarketSnapshot): Promise<MemoryContext> {
-  // STUB: Return mock memory context
+  // STUB: Return mock memory context with default regime
   return {
     relevantCases: [],
-    regimeLabels: Object.fromEntries(snapshot.instruments.map((i) => [i, "RANGE"])),
+    regimeLabels: Object.fromEntries(
+      snapshot.instruments.map((i) => [
+        i,
+        { regime: "RANGE", confidence: 0.5, reasoning: "Stub default regime" },
+      ])
+    ),
   };
+}
+
+/**
+ * Compute regime classifications for instruments and store to database.
+ * Uses the rule-based classifier from @cream/regime.
+ */
+async function computeAndStoreRegimes(
+  snapshot: MarketSnapshot
+): Promise<Record<string, RegimeData>> {
+  const regimeLabels: Record<string, RegimeData> = {};
+
+  // Get the repo for storing (fire-and-forget, don't block workflow)
+  const repoPromise = getRegimeLabelsRepo().catch(() => null);
+
+  for (const instrument of snapshot.instruments) {
+    const candles = snapshot.candles[instrument];
+
+    // Check if we have enough data for regime classification
+    if (!candles || !Array.isArray(candles) || candles.length < 51) {
+      // Not enough data - use default
+      regimeLabels[instrument] = {
+        regime: "RANGE",
+        confidence: 0.3,
+        reasoning: "Insufficient data for classification",
+      };
+      continue;
+    }
+
+    try {
+      // Classify using rule-based classifier
+      // Candle type expects timestamp as number (unix ms)
+      const classification: RegimeClassification = classifyRegime({
+        candles: candles as Array<{
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume: number;
+          timestamp: number;
+        }>,
+      });
+
+      // Map regime label (regime package uses uppercase, may need mapping)
+      regimeLabels[instrument] = {
+        regime: classification.regime,
+        confidence: classification.confidence,
+        reasoning: classification.reasoning,
+      };
+    } catch {
+      // Classification failed - use default
+      regimeLabels[instrument] = {
+        regime: "RANGE",
+        confidence: 0.3,
+        reasoning: "Classification error",
+      };
+    }
+  }
+
+  // Store to database asynchronously (don't block workflow)
+  repoPromise.then(async (repo) => {
+    if (!repo) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    for (const [symbol, data] of Object.entries(regimeLabels)) {
+      try {
+        await repo.upsert({
+          symbol,
+          timestamp,
+          timeframe: "1h",
+          regime: data.regime.toLowerCase().replace("_", "_") as
+            | "bull_trend"
+            | "bear_trend"
+            | "range_bound"
+            | "high_volatility"
+            | "low_volatility"
+            | "crisis",
+          confidence: data.confidence,
+          trendStrength: null,
+          volatilityPercentile: null,
+          correlationToMarket: null,
+          modelName: "rule_based",
+          modelVersion: "1.0.0",
+        });
+      } catch {
+        // Storage failed - continue without blocking
+      }
+    }
+  });
+
+  return regimeLabels;
 }
 
 async function runTechnicalAnalystStub(instruments: string[]): Promise<TechnicalAnalysis[]> {
@@ -388,10 +493,13 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // Observe Phase
   const marketSnapshot = await fetchMarketSnapshot(instruments);
 
-  // Orient Phase
-  const memoryContext = await loadMemoryContext(marketSnapshot);
+  // Orient Phase - Load memory and compute regimes in parallel
+  const [memoryContext, regimeLabels] = await Promise.all([
+    loadMemoryContext(marketSnapshot),
+    computeAndStoreRegimes(marketSnapshot),
+  ]);
 
-  // Build agent context with external news and macro data
+  // Build agent context with external news, macro data, and regime classifications
   const agentContext: AgentContext = {
     cycleId,
     symbols: instruments,
@@ -402,6 +510,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       macroIndicators: externalContext?.macroIndicators ?? {},
       sentiment: externalContext?.sentiment ?? {},
     },
+    regimeLabels,
   };
 
   // ============================================

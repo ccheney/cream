@@ -489,16 +489,22 @@ export async function runFundamentalsAnalyst(
       e.eventType === "macro_release"
   );
 
+  const regimeContext = buildRegimeContext(context.regimeLabels);
+
   const prompt = `Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
-
+${regimeContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
 
 Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+The market regime classification reflects the current market environment.
+Use this context to assess whether fundamental drivers align with or diverge from the regime.
+HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.`;
 
   const response = await fundamentalsAnalystAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {
