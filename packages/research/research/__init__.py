@@ -62,6 +62,11 @@ __all__ = [
     "EquivalenceValidator",
     "EquivalenceTestResult",
     "compare_outputs",
+    # Feedback loop (requires polars, numpy)
+    "ValidationFeedback",
+    "FeedbackConfig",
+    "FeedbackGenerator",
+    "RefinementOrchestrator",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -308,6 +313,27 @@ def __getattr__(name: str) -> Any:
             "EquivalenceValidator": EquivalenceValidator,
             "EquivalenceTestResult": EquivalenceTestResult,
             "compare_outputs": compare_outputs,
+        }[name]
+
+    # Feedback loop
+    if name in (
+        "ValidationFeedback",
+        "FeedbackConfig",
+        "FeedbackGenerator",
+        "RefinementOrchestrator",
+    ):
+        from research.feedback import (
+            FeedbackConfig,
+            FeedbackGenerator,
+            RefinementOrchestrator,
+            ValidationFeedback,
+        )
+
+        return {
+            "ValidationFeedback": ValidationFeedback,
+            "FeedbackConfig": FeedbackConfig,
+            "FeedbackGenerator": FeedbackGenerator,
+            "RefinementOrchestrator": RefinementOrchestrator,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

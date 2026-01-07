@@ -207,6 +207,7 @@ module = [
     "research.stage_validation.*",
     "research.hypothesis_alignment",
     "research.equivalence",
+    "research.feedback",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",

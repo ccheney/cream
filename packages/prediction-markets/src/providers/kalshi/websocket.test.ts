@@ -389,19 +389,24 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
   let mockWebSocketInstance: any;
   let mockSend: ReturnType<typeof mock>;
 
+  // Track clients created in tests for cleanup
+  const testClients: KalshiWebSocketClient[] = [];
+
+  // Store reference to the actual MockWebSocket instance (reset in beforeEach via createMockWebSocket)
+  let currentMockWs: {
+    onopen: ((ev: Event) => void) | null;
+    onclose: ((ev: CloseEvent) => void) | null;
+    onerror: ((ev: Event) => void) | null;
+    onmessage: ((ev: MessageEvent) => void) | null;
+    readyState: number;
+    send: ReturnType<typeof mock>;
+    close: ReturnType<typeof mock>;
+  } | null = null;
+
   // Create a mock WebSocket class
   const createMockWebSocket = () => {
     mockSend = mock(() => {});
-
-    mockWebSocketInstance = {
-      onopen: null as ((ev: Event) => void) | null,
-      onclose: null as ((ev: CloseEvent) => void) | null,
-      onerror: null as ((ev: Event) => void) | null,
-      onmessage: null as ((ev: MessageEvent) => void) | null,
-      send: mockSend,
-      close: mock(() => {}),
-      readyState: 0,
-    };
+    currentMockWs = null; // Reset reference on each test
 
     class MockWebSocket {
       onopen: ((ev: Event) => void) | null = null;
@@ -409,30 +414,68 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
       onerror: ((ev: Event) => void) | null = null;
       onmessage: ((ev: MessageEvent) => void) | null = null;
       readyState = 0;
-
-      constructor(_url: string) {
-        // Copy handlers back to mockWebSocketInstance for testing
-        setTimeout(() => {
-          mockWebSocketInstance.onopen = this.onopen;
-          mockWebSocketInstance.onclose = this.onclose;
-          mockWebSocketInstance.onerror = this.onerror;
-          mockWebSocketInstance.onmessage = this.onmessage;
-        }, 0);
-      }
-
       send = mockSend;
       close = mock(() => {});
+
+      constructor(_url: string) {
+        // Store reference so tests can access handlers directly
+        currentMockWs = this;
+      }
     }
 
+    // Create proxy that forwards to current MockWebSocket instance
+    mockWebSocketInstance = {
+      get onopen() {
+        return currentMockWs?.onopen ?? null;
+      },
+      set onopen(val) {
+        if (currentMockWs) currentMockWs.onopen = val;
+      },
+      get onclose() {
+        return currentMockWs?.onclose ?? null;
+      },
+      set onclose(val) {
+        if (currentMockWs) currentMockWs.onclose = val;
+      },
+      get onerror() {
+        return currentMockWs?.onerror ?? null;
+      },
+      set onerror(val) {
+        if (currentMockWs) currentMockWs.onerror = val;
+      },
+      get onmessage() {
+        return currentMockWs?.onmessage ?? null;
+      },
+      set onmessage(val) {
+        if (currentMockWs) currentMockWs.onmessage = val;
+      },
+      send: mockSend,
+      close: mock(() => {}),
+      readyState: 0,
+    };
+
     return MockWebSocket;
+  };
+
+  // Helper to create clients and track them for cleanup
+  const createTrackedClient = (config?: Parameters<typeof createKalshiWebSocketClient>[0]) => {
+    const client = new KalshiWebSocketClient(config);
+    testClients.push(client);
+    return client;
   };
 
   beforeEach(() => {
     originalWebSocket = globalThis.WebSocket;
     (globalThis as any).WebSocket = createMockWebSocket();
+    testClients.length = 0; // Clear clients list
   });
 
   afterEach(() => {
+    // Disconnect all clients to stop any pending reconnect timers
+    for (const client of testClients) {
+      client.disconnect();
+    }
+    testClients.length = 0;
     globalThis.WebSocket = originalWebSocket;
   });
 
@@ -859,7 +902,7 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
 
   describe("reconnection", () => {
     it("should auto-reconnect on disconnect when enabled", async () => {
-      const client = new KalshiWebSocketClient({
+      const client = createTrackedClient({
         autoReconnect: true,
         reconnect: {
           initialDelayMs: 10,
@@ -885,7 +928,7 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
     });
 
     it("should call onError when max retries exceeded", async () => {
-      const client = new KalshiWebSocketClient({
+      const client = createTrackedClient({
         autoReconnect: true,
         reconnect: {
           initialDelayMs: 1,
@@ -916,7 +959,7 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
     });
 
     it("should not auto-reconnect when disabled", async () => {
-      const client = new KalshiWebSocketClient({
+      const client = createTrackedClient({
         autoReconnect: false,
       });
 
