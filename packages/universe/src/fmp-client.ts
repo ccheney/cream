@@ -235,10 +235,9 @@ export class FMPClient {
 
     for (const change of history) {
       const changeDate = change.dateAdded;
-      const targetDate = asOfDateStr!;
 
       // If change happened after our target date, reverse it
-      if (changeDate > targetDate) {
+      if (asOfDateStr && changeDate > asOfDateStr) {
         // Remove the added ticker
         if (change.symbol) {
           currentSymbols.delete(change.symbol);
