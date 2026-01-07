@@ -6,6 +6,45 @@
  * for input validation and output typing.
  */
 
+// Factor Zoo tools (require FactorZooRepository dependency injection)
+export {
+  type CheckFactorDecayInput,
+  CheckFactorDecayInputSchema,
+  type CheckFactorDecayOutput,
+  CheckFactorDecayOutputSchema,
+  type ComputeMegaAlphaForSymbolsInput,
+  ComputeMegaAlphaForSymbolsInputSchema,
+  type ComputeMegaAlphaForSymbolsOutput,
+  ComputeMegaAlphaForSymbolsOutputSchema,
+  type ComputeMegaAlphaInput,
+  ComputeMegaAlphaInputSchema,
+  type ComputeMegaAlphaOutput,
+  ComputeMegaAlphaOutputSchema,
+  // Check factor decay tool
+  createCheckFactorDecayTool,
+  // Compute Mega-Alpha for symbols tool
+  createComputeMegaAlphaForSymbolsTool,
+  // Compute Mega-Alpha tool
+  createComputeMegaAlphaTool,
+  // Get current weights tool
+  createGetCurrentWeightsTool,
+  // Get Factor Zoo stats tool
+  createGetFactorZooStatsTool,
+  // Update daily weights tool
+  createUpdateDailyWeightsTool,
+  type GetCurrentWeightsInput,
+  GetCurrentWeightsInputSchema,
+  type GetCurrentWeightsOutput,
+  GetCurrentWeightsOutputSchema,
+  type GetFactorZooStatsInput,
+  GetFactorZooStatsInputSchema,
+  type GetFactorZooStatsOutput,
+  GetFactorZooStatsOutputSchema,
+  type UpdateDailyWeightsInput,
+  UpdateDailyWeightsInputSchema,
+  type UpdateDailyWeightsOutput,
+  UpdateDailyWeightsOutputSchema,
+} from "./factorZoo.js";
 // Research trigger tools (require FactorZooRepository dependency injection)
 export {
   type CheckResearchStatusInput,
