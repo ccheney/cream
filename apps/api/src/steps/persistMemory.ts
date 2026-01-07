@@ -29,8 +29,9 @@ import { ExecutionResultSchema } from "./executeOrders.js";
 
 /**
  * Decision from the trading plan (passed from validation step)
+ * Includes thesis state fields for downstream ingestion
  */
-const DecisionSchema = z.object({
+export const DecisionSchema = z.object({
   decisionId: z.string(),
   instrumentId: z.string(),
   action: z.enum(["BUY", "SELL", "HOLD", "CLOSE"]),
@@ -51,6 +52,10 @@ const DecisionSchema = z.object({
     memoryReferences: z.array(z.string()),
   }),
   thesisState: z.string(),
+  // Thesis closing fields (optional, used by ingestThesisMemory step)
+  closeReason: z.string().optional(),
+  exitPrice: z.number().optional(),
+  realizedPnl: z.number().optional(),
 });
 
 /**
@@ -67,6 +72,10 @@ export const PersistMemoryOutputSchema = z.object({
   memoryId: z.string().optional(),
   nodesCreated: z.number(),
   errors: z.array(z.string()),
+  // Pass-through for next step
+  cycleId: z.string().optional(),
+  decisions: z.array(DecisionSchema).optional(),
+  regimeLabel: z.string().optional(),
 });
 
 export type PersistMemoryInput = z.infer<typeof PersistMemoryInputSchema>;
@@ -224,6 +233,10 @@ export const persistMemoryStep = createStep({
         memoryId: `backtest-memory-${Date.now()}`,
         nodesCreated: 0,
         errors: [],
+        // Pass-through for next step
+        cycleId,
+        decisions,
+        regimeLabel,
       };
     }
 
@@ -234,6 +247,10 @@ export const persistMemoryStep = createStep({
         memoryId: undefined,
         nodesCreated: 0,
         errors: ordersSubmitted === 0 ? [] : ["No decisions provided for persistence"],
+        // Pass-through for next step
+        cycleId,
+        decisions,
+        regimeLabel,
       };
     }
 
@@ -246,6 +263,10 @@ export const persistMemoryStep = createStep({
         memoryId: `memory-batch-${Date.now()}`,
         nodesCreated: orderIds.length,
         errors: ["HelixDB client not available - persistence skipped"],
+        // Pass-through for next step
+        cycleId,
+        decisions,
+        regimeLabel,
       };
     }
 
@@ -280,6 +301,10 @@ export const persistMemoryStep = createStep({
       memoryId: result.successful.length > 0 ? `memory-batch-${cycleId}` : undefined,
       nodesCreated: result.successful.length,
       errors,
+      // Pass-through for next step
+      cycleId,
+      decisions,
+      regimeLabel,
     };
   },
 });

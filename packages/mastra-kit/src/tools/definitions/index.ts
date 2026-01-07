@@ -6,6 +6,21 @@
  * for input validation and output typing.
  */
 
+// Data tools (indicators, news, calendar, helix)
+export {
+  EconomicCalendarInputSchema,
+  EconomicCalendarOutputSchema,
+  economicCalendarTool,
+  HelixQueryInputSchema,
+  HelixQueryOutputSchema,
+  helixQueryTool,
+  NewsSearchInputSchema,
+  NewsSearchOutputSchema,
+  newsSearchTool,
+  RecalcIndicatorInputSchema,
+  RecalcIndicatorOutputSchema,
+  recalcIndicatorTool,
+} from "./dataTools.js";
 // Factor Zoo tools (require FactorZooRepository dependency injection)
 export {
   type CheckFactorDecayInput,
@@ -84,4 +99,19 @@ export {
   type TriggerResearchOutput,
   TriggerResearchOutputSchema,
 } from "./researchTrigger.js";
+// Trading tools (quotes, portfolio, options)
+export {
+  GetGreeksInputSchema,
+  GetGreeksOutputSchema,
+  GetOptionChainInputSchema,
+  GetOptionChainOutputSchema,
+  GetPortfolioStateInputSchema,
+  GetPortfolioStateOutputSchema,
+  GetQuotesInputSchema,
+  GetQuotesOutputSchema,
+  getGreeksTool,
+  getOptionChainTool,
+  getPortfolioStateTool,
+  getQuotesTool,
+} from "./tradingTools.js";
 export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./webSearch.js";

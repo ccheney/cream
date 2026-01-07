@@ -19,8 +19,16 @@ import {
   type BullishResearchOutput,
   type CriticOutput,
   type DecisionPlan,
+  economicCalendarTool,
   type FundamentalsAnalysisOutput,
+  getGreeksTool,
+  getOptionChainTool,
+  getPortfolioStateTool,
+  getQuotesTool,
+  helixQueryTool,
+  newsSearchTool,
   type RiskManagerOutput,
+  recalcIndicatorTool,
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
   webSearchTool,
@@ -72,12 +80,17 @@ function getModelId(internalModel: string): string {
  */
 // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
 const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
+  // Trading tools
+  get_quotes: getQuotesTool,
+  get_portfolio_state: getPortfolioStateTool,
+  option_chain: getOptionChainTool,
+  get_greeks: getGreeksTool,
+  // Data tools
+  recalc_indicator: recalcIndicatorTool,
+  economic_calendar: economicCalendarTool,
+  news_search: newsSearchTool,
+  helix_query: helixQueryTool,
   web_search: webSearchTool,
-  // Future tools will be added here as they get Mastra definitions:
-  // get_quotes: getQuotesTool,
-  // helix_query: helixQueryTool,
-  // news_search: newsSearchTool,
-  // etc.
 };
 
 // ============================================

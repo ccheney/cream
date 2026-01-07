@@ -16,6 +16,7 @@
  * 9. criticReview - Critic agent reviews for biases
  * 10. executeOrders - Send approved orders to execution engine
  * 11. persistMemory - Store decision + outcome in HelixDB
+ * 12. ingestThesisMemory - Ingest closed theses into HelixDB for agent learning
  */
 
 import { createStep, createWorkflow } from "@mastra/core/workflows";
@@ -28,6 +29,7 @@ import {
   ExternalContextSchema,
   gatherExternalContextStep,
 } from "../steps/gatherExternalContext.js";
+import { ingestThesisMemoryStep } from "../steps/ingestThesisMemory.js";
 import { loadStateStep } from "../steps/loadState.js";
 import { persistMemoryStep } from "../steps/persistMemory.js";
 import { retrieveMemoryStep } from "../steps/retrieveMemory.js";
@@ -187,6 +189,7 @@ tradingCycleWorkflow
   .then(criticReviewStep)
   .then(executeOrdersStep)
   .then(persistMemoryStep)
+  .then(ingestThesisMemoryStep)
   .commit();
 
 export type TradingCycleInput = z.infer<typeof tradingCycleWorkflow.inputSchema>;

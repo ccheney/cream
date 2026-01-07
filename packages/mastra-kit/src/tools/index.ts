@@ -1200,6 +1200,36 @@ export {
   implementIndicator,
 } from "./claudeCodeIndicator.js";
 // Mastra tool definitions
+// Trading tools
+export {
+  getGreeksTool,
+  GetGreeksInputSchema,
+  GetGreeksOutputSchema,
+  getOptionChainTool,
+  GetOptionChainInputSchema,
+  GetOptionChainOutputSchema,
+  getPortfolioStateTool,
+  GetPortfolioStateInputSchema,
+  GetPortfolioStateOutputSchema,
+  getQuotesTool,
+  GetQuotesInputSchema,
+  GetQuotesOutputSchema,
+} from "./definitions/index.js";
+// Data tools
+export {
+  economicCalendarTool,
+  EconomicCalendarInputSchema,
+  EconomicCalendarOutputSchema,
+  helixQueryTool,
+  HelixQueryInputSchema,
+  HelixQueryOutputSchema,
+  newsSearchTool,
+  NewsSearchInputSchema,
+  NewsSearchOutputSchema,
+  recalcIndicatorTool,
+  RecalcIndicatorInputSchema,
+  RecalcIndicatorOutputSchema,
+} from "./definitions/index.js";
 // Research trigger tools (require FactorZooRepository dependency injection)
 export {
   type CheckFactorDecayInput,

@@ -18,7 +18,7 @@ import {
   createEmbeddingClient,
   createThesisMemory,
   type EmbeddingClient,
-  generateEmbeddingText,
+  generateThesisEmbeddingText,
   ingestThesisMemory,
   type ThesisCloseReason,
   type ThesisMemory,
@@ -197,8 +197,8 @@ export async function ingestClosedThesis(
     const thesisMemory = createThesisMemory(memoryInput);
 
     // Generate embedding text and embedding
-    const embeddingText = generateEmbeddingText(thesisMemory);
-    const embeddingResult = await embedder.embed(embeddingText);
+    const embeddingText = generateThesisEmbeddingText(thesisMemory);
+    const embeddingResult = await embedder.generateEmbedding(embeddingText);
 
     // Ingest into HelixDB
     await ingestThesisMemory(helix, embedder, thesisMemory);
@@ -213,7 +213,7 @@ export async function ingestClosedThesis(
     return {
       success: true,
       thesisMemory,
-      embedding: embeddingResult.embedding,
+      embedding: embeddingResult.values,
       executionTimeMs,
     };
   } catch (error) {
@@ -242,7 +242,7 @@ async function createThesisDecisionEdges(
   decisionIds: string[]
 ): Promise<void> {
   for (const decisionId of decisionIds) {
-    await client.mutate("CreateThesisIncludesEdge", {
+    await client.query("CreateThesisIncludesEdge", {
       source_id: thesisId,
       target_id: decisionId,
     });
@@ -380,9 +380,18 @@ export async function getThesisMemoryStats(
   client: HelixClient,
   environment: string
 ): Promise<ThesisMemoryStats> {
-  const results = await client.query("GetThesisMemoryStats", { environment });
+  const results = await client.query<ThesisMemoryStats>("GetThesisMemoryStats", { environment });
 
-  // The query would return aggregate statistics
-  // This is a placeholder structure
-  return results as ThesisMemoryStats;
+  // The query returns aggregate statistics with the expected shape
+  // If data is missing, provide default values
+  return (
+    results.data ?? {
+      total: 0,
+      byOutcome: { WIN: 0, LOSS: 0, SCRATCH: 0 },
+      byCloseReason: {},
+      avgHoldingDays: 0,
+      avgPnlPercent: 0,
+      winRate: 0,
+    }
+  );
 }
