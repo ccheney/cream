@@ -18,6 +18,8 @@
 
 import type { Position } from "@cream/broker";
 import {
+  createExecutionClient,
+  type ExecutionServiceClient,
   env,
   type MarketSnapshot,
   type MarketStatus,
@@ -25,7 +27,9 @@ import {
   type SymbolSnapshot,
   type UniverseConfig,
 } from "@cream/domain";
-import { createPolygonClientFromEnv, type Snapshot } from "@cream/marketdata";
+import type { Candle } from "@cream/indicators";
+import { createPolygonClientFromEnv, type PolygonClient, type Snapshot } from "@cream/marketdata";
+import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
 import { resolveUniverseSymbols as resolveUniverseSymbolsFromConfig } from "@cream/universe";
 
 // ============================================
@@ -74,6 +78,8 @@ interface SnapshotData {
   marketSnapshots: Map<string, Snapshot>;
   positions: Position[];
   regime: Regime;
+  /** Historical candles for indicators (keyed by symbol) */
+  historicalCandles: Map<string, Candle[]>;
 }
 
 // ============================================
@@ -102,6 +108,18 @@ export const PERFORMANCE_TARGETS = {
   indicatorCalculationMs: 1000, // 1 second for all indicators
   regimeClassificationMs: 100, // 100ms for regime
   totalMs: 10000, // 10 seconds total
+};
+
+/**
+ * gRPC execution engine configuration.
+ */
+const GRPC_CONFIG = {
+  /** gRPC server URL (from env or default) */
+  baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50051",
+  /** Connection timeout */
+  timeoutMs: 5000,
+  /** Max retries */
+  maxRetries: 2,
 };
 
 // ============================================
@@ -220,19 +238,36 @@ async function gatherSnapshotData(
   errors: string[],
   warnings: string[]
 ): Promise<SnapshotData> {
+  // Create Polygon client for market data
+  let polygonClient: PolygonClient | null = null;
+  const creamEnv = "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
+  const polygonKey = "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
+
+  if (creamEnv !== "BACKTEST" || polygonKey) {
+    try {
+      polygonClient = createPolygonClientFromEnv();
+    } catch (error) {
+      warnings.push(`Could not create Polygon client: ${formatError(error)}`);
+    }
+  }
+
   // Fetch market data for all symbols
   const marketSnapshots = await fetchMarketData(symbols, input, errors, warnings);
+
+  // Fetch historical candles for regime classification and indicators
+  const historicalCandles = await fetchHistoricalCandles(symbols, polygonClient, errors, warnings);
 
   // Fetch current positions from broker
   const positions = await fetchPositions(errors, warnings);
 
   // Classify regime based on market leader (SPY)
-  const regime = await classifyMarketRegime(marketSnapshots, errors, warnings);
+  const regime = await classifyMarketRegime(historicalCandles, errors, warnings);
 
   return {
     marketSnapshots,
     positions,
     regime,
+    historicalCandles,
   };
 }
 
@@ -325,56 +360,210 @@ function createMockSnapshot(symbol: string): Snapshot {
 }
 
 /**
- * Fetch current positions from broker.
+ * Fetch historical candles for all symbols.
+ */
+async function fetchHistoricalCandles(
+  symbols: string[],
+  polygonClient: PolygonClient | null,
+  errors: string[],
+  warnings: string[]
+): Promise<Map<string, Candle[]>> {
+  const candles = new Map<string, Candle[]>();
+  const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
+
+  // If no client available, return mock candles in BACKTEST mode
+  if (!polygonClient) {
+    warnings.push("Using mock historical candles (no Polygon client available)");
+    for (const symbol of symbols) {
+      candles.set(symbol, createMockCandles(symbol, requiredBars));
+    }
+    return candles;
+  }
+
+  // Calculate date range (fetch last ~60 trading days for hourly bars)
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 90); // ~60 trading days
+
+  const toStr = to.toISOString().split("T")[0];
+  const fromStr = from.toISOString().split("T")[0];
+
+  // Fetch candles in batches
+  const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
+
+  for (const batch of batches) {
+    const results = await Promise.allSettled(
+      batch.map(async (symbol) => {
+        const response = await polygonClient.getAggregates(symbol, 1, "hour", fromStr, toStr, {
+          limit: requiredBars,
+          sort: "desc",
+        });
+
+        const bars = response.results ?? [];
+        // Convert to Candle format and reverse to oldest-first
+        const symbolCandles: Candle[] = bars
+          .map((bar) => ({
+            timestamp: bar.t,
+            open: bar.o,
+            high: bar.h,
+            low: bar.l,
+            close: bar.c,
+            volume: bar.v,
+          }))
+          .reverse();
+
+        return { symbol, candles: symbolCandles };
+      })
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        candles.set(result.value.symbol, result.value.candles);
+      } else {
+        errors.push(`Failed to fetch candles for symbol: ${result.reason}`);
+      }
+    }
+  }
+
+  return candles;
+}
+
+/**
+ * Create mock candles for testing.
+ */
+function createMockCandles(_symbol: string, count: number): Candle[] {
+  const candles: Candle[] = [];
+  let basePrice = 150.0 + Math.random() * 50;
+  const now = Date.now();
+  const hourMs = 60 * 60 * 1000;
+
+  for (let i = count - 1; i >= 0; i--) {
+    const volatility = 0.01 + Math.random() * 0.02;
+    const change = (Math.random() - 0.5) * volatility * basePrice;
+    const open = basePrice;
+    const close = basePrice + change;
+    const high = Math.max(open, close) * (1 + Math.random() * volatility);
+    const low = Math.min(open, close) * (1 - Math.random() * volatility);
+
+    candles.push({
+      timestamp: now - i * hourMs,
+      open,
+      high,
+      low,
+      close,
+      volume: Math.floor(100000 + Math.random() * 500000),
+    });
+
+    basePrice = close;
+  }
+
+  return candles;
+}
+
+/**
+ * Singleton gRPC client (lazy-initialized).
+ */
+let executionClient: ExecutionServiceClient | null = null;
+
+/**
+ * Get or create the execution gRPC client.
+ */
+function getExecutionClient(): ExecutionServiceClient {
+  if (!executionClient) {
+    executionClient = createExecutionClient(GRPC_CONFIG.baseUrl, {
+      timeoutMs: GRPC_CONFIG.timeoutMs,
+      maxRetries: GRPC_CONFIG.maxRetries,
+    });
+  }
+  return executionClient;
+}
+
+/**
+ * Fetch current positions from broker via gRPC.
  */
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
   try {
     // In BACKTEST mode, positions come from backtest state
-    // In PAPER/LIVE, fetch from broker via gRPC execution engine
     const environment = env.CREAM_ENV;
 
     if (environment === "BACKTEST") {
-      // Backtest positions managed by backtest adapter
       warnings.push("Backtest mode: positions not fetched from broker");
       return [];
     }
 
-    // TODO: Fetch from execution engine gRPC when available
-    warnings.push("Position fetching not yet implemented");
-    return [];
+    // Fetch from execution engine gRPC
+    const client = getExecutionClient();
+    const result = await client.getPositions({});
+
+    // Convert gRPC Position to broker Position
+    const positions: Position[] = result.data.positions.map((p) => ({
+      symbol: p.instrument?.symbol ?? "",
+      qty: p.quantity,
+      side: p.quantity >= 0 ? "long" : "short",
+      avgEntryPrice: p.avgEntryPrice,
+      marketValue: p.marketValue,
+      costBasis: p.costBasis,
+      unrealizedPl: p.unrealizedPnl,
+      unrealizedPlpc: p.unrealizedPnlPct,
+      currentPrice: p.marketValue / Math.abs(p.quantity || 1),
+      lastdayPrice: 0, // Not available from gRPC
+      changeToday: 0, // Not available from gRPC
+    }));
+
+    return positions;
   } catch (error) {
-    errors.push(`Position fetch error: ${formatError(error)}`);
+    // Graceful degradation - return empty positions if gRPC fails
+    const errorMsg = formatError(error);
+    if (errorMsg.includes("UNAVAILABLE") || errorMsg.includes("connect")) {
+      warnings.push(`Execution engine not available: ${errorMsg}`);
+    } else {
+      errors.push(`Position fetch error: ${errorMsg}`);
+    }
     return [];
   }
 }
 
 /**
- * Classify current market regime.
+ * Classify current market regime using historical candles.
  */
 async function classifyMarketRegime(
-  marketSnapshots: Map<string, Snapshot>,
+  historicalCandles: Map<string, Candle[]>,
   errors: string[],
   warnings: string[]
 ): Promise<Regime> {
   try {
     // Use SPY as market leader for regime classification
-    const spySnapshot = marketSnapshots.get("SPY");
+    const spyCandles = historicalCandles.get("SPY");
 
-    if (!spySnapshot) {
-      warnings.push("SPY snapshot not available for regime classification");
+    if (!spyCandles || spyCandles.length === 0) {
+      warnings.push("SPY candles not available for regime classification");
       return "RANGE_BOUND"; // Default regime
     }
 
-    // Convert Polygon snapshot to candles for regime classifier
-    // TODO: Fetch historical candles for regime classification
-    warnings.push("Regime classification using mock data (historical candles needed)");
+    // Check if we have enough data for classification
+    const requiredCount = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG);
+    if (spyCandles.length < requiredCount) {
+      warnings.push(
+        `Insufficient SPY candles for regime classification: ${spyCandles.length}/${requiredCount}`
+      );
+      return "RANGE_BOUND";
+    }
 
-    // For now, return default regime
-    // Real implementation will use:
-    // const result = classifyRegime({ candles }, config);
-    // return result.regime;
+    // Classify regime using rule-based classifier
+    const result = classifyRegime({ candles: spyCandles }, DEFAULT_RULE_BASED_CONFIG);
 
-    return "RANGE_BOUND";
+    // Map regime labels to domain Regime type
+    const regimeMap: Record<string, Regime> = {
+      BULL_TREND: "BULL_TREND",
+      BEAR_TREND: "BEAR_TREND",
+      RANGE: "RANGE_BOUND",
+      HIGH_VOL: "HIGH_VOL",
+      LOW_VOL: "LOW_VOL",
+    };
+
+    const regime = regimeMap[result.regime] ?? "RANGE_BOUND";
+
+    return regime;
   } catch (error) {
     errors.push(`Regime classification error: ${formatError(error)}`);
     return "RANGE_BOUND"; // Default fallback
@@ -412,9 +601,18 @@ async function buildSymbolSnapshot(
     timestamp: new Date(polygonSnapshot.lastTrade?.timestamp ?? Date.now()).toISOString(),
   };
 
-  // TODO: Fetch historical bars and calculate indicators
-  // For now, return snapshot with minimal bar data
-  const bars = [];
+  // Get historical candles for this symbol
+  const candles = data.historicalCandles.get(symbol) ?? [];
+
+  // Convert candles to bar format for snapshot
+  const bars = candles.slice(-DEFAULT_SNAPSHOT_CONFIG.historicalBars).map((candle) => ({
+    timestamp: new Date(candle.timestamp).toISOString(),
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    volume: candle.volume,
+  }));
 
   const marketStatus = determineMarketStatus();
   const asOf = input.asOf ?? new Date().toISOString();
