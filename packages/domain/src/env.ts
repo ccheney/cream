@@ -87,6 +87,9 @@ const envSchema = z
     // Prediction Markets
     KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
     KALSHI_PRIVATE_KEY_PATH: z.string().optional().describe("Path to Kalshi private key file"),
+
+    // Web Search
+    TAVILY_API_KEY: z.string().optional().describe("Tavily API key for web search"),
   })
   .superRefine((data, ctx) => {
     const env = data.CREAM_ENV;
@@ -182,6 +185,7 @@ function parseEnv(): EnvConfig {
     GOOGLE_API_KEY: Bun.env.GOOGLE_API_KEY ?? process.env.GOOGLE_API_KEY,
     KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,
     KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH ?? process.env.KALSHI_PRIVATE_KEY_PATH,
+    TAVILY_API_KEY: Bun.env.TAVILY_API_KEY ?? process.env.TAVILY_API_KEY,
   };
 
   const result = envSchema.safeParse(rawEnv);
@@ -270,6 +274,13 @@ export function getHelixUrl(): string {
     return `http://${env.HELIX_HOST}:${env.HELIX_PORT}`;
   }
   return "http://localhost:6969";
+}
+
+/**
+ * Check if web search capability is available (Tavily API key configured)
+ */
+export function hasWebSearchCapability(): boolean {
+  return !!env.TAVILY_API_KEY;
 }
 
 // ============================================
@@ -427,6 +438,11 @@ export function getEnvVarDocumentation(): Array<{
       name: "KALSHI_PRIVATE_KEY_PATH",
       required: false,
       description: "Path to Kalshi private key file",
+    },
+    {
+      name: "TAVILY_API_KEY",
+      required: false,
+      description: "Tavily API key for web search",
     },
   ];
 }

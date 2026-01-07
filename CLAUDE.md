@@ -136,6 +136,9 @@ GOOGLE_API_KEY=              # Google Gemini API key
 # Prediction Markets
 KALSHI_API_KEY_ID=           # Kalshi API key ID
 KALSHI_PRIVATE_KEY_PATH=     # Path to Kalshi private key
+
+# Web Search
+TAVILY_API_KEY=              # Tavily API key for web search
 ```
 
 ### Startup Validation
