@@ -455,6 +455,35 @@ export class FMPClient {
     }
     return this.request<FMPEconomicEvent[]>("/economic_calendar", params);
   }
+
+  // ============================================
+  // Stock News
+  // ============================================
+
+  /**
+   * Get stock news for specific symbols
+   *
+   * @param symbols - Array of ticker symbols (max 5 recommended)
+   * @param limit - Number of articles to return (default 50)
+   * @returns Stock news articles
+   */
+  async getStockNews(symbols?: string[], limit = 50): Promise<FMPStockNews[]> {
+    const params: Record<string, string | number> = { limit };
+    if (symbols && symbols.length > 0) {
+      params.tickers = symbols.join(",");
+    }
+    return this.request<FMPStockNews[]>("/stock_news", params);
+  }
+
+  /**
+   * Get general market news (not symbol-specific)
+   *
+   * @param limit - Number of articles to return (default 50)
+   * @returns General market news articles
+   */
+  async getGeneralNews(limit = 50): Promise<FMPStockNews[]> {
+    return this.request<FMPStockNews[]>("/stock_news", { limit });
+  }
 }
 
 /**
@@ -471,6 +500,19 @@ export interface FMPEconomicEvent {
   changePercentage?: number | null;
   unit?: string;
   impact?: "Low" | "Medium" | "High";
+}
+
+/**
+ * Stock news article from FMP
+ */
+export interface FMPStockNews {
+  symbol: string;
+  publishedDate: string;
+  title: string;
+  image: string;
+  site: string;
+  text: string;
+  url: string;
 }
 
 /**

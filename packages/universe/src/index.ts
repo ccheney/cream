@@ -18,6 +18,7 @@ export {
   type FMPHistoricalConstituent,
   type FMPScreenerFilters,
   type FMPScreenerResult,
+  type FMPStockNews,
 } from "./fmp-client.js";
 // Point-in-Time Universe (survivorship bias prevention)
 export {

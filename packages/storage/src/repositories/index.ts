@@ -77,6 +77,18 @@ export {
   type DecisionStatus,
   DecisionsRepository,
 } from "./decisions.js";
+// External events (migration 007)
+export {
+  type ContentSourceType,
+  type CreateExternalEventInput,
+  type DataPoint,
+  type EventType,
+  type ExternalEvent,
+  type ExternalEventFilters,
+  ExternalEventsRepository,
+  type ExtractedEntity,
+  type Sentiment,
+} from "./external-events.js";
 export {
   type Feature,
   type FeatureInsert,

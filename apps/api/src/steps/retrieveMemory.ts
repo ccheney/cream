@@ -22,9 +22,11 @@ import {
   type TradeMemoryRetrievalResult,
 } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
+import type { ExternalEvent } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
+import { getExternalEventsRepo } from "../db.js";
 import { SnapshotOutputSchema } from "./buildSnapshot.js";
 
 // ============================================
@@ -41,16 +43,30 @@ const TradeMemorySchema = z.object({
   similarity: z.number().optional(),
 });
 
+const RecentEventSchema = z.object({
+  id: z.string(),
+  sourceType: z.string(),
+  eventType: z.string(),
+  eventTime: z.string(),
+  sentiment: z.string(),
+  summary: z.string(),
+  importanceScore: z.number(),
+  relatedInstruments: z.array(z.string()),
+});
+
 export const MemoryOutputSchema = z.object({
   /** Similar trade decisions per symbol */
   similarTrades: z.record(z.string(), z.array(TradeMemorySchema)),
   /** Formatted memory summaries for agent context */
   memorySummaries: z.record(z.string(), z.string()),
+  /** Recent external events (news, macro, etc.) */
+  recentEvents: z.array(RecentEventSchema),
   /** Aggregate statistics */
   stats: z.object({
     totalMemoriesRetrieved: z.number(),
     symbolsWithMemories: z.number(),
     avgRetrievalTimeMs: z.number(),
+    recentEventsCount: z.number(),
   }),
 });
 
@@ -114,6 +130,39 @@ function formatTradeMemory(memory: TradeMemory): z.infer<typeof TradeMemorySchem
 }
 
 /**
+ * Convert ExternalEvent to serializable format for output
+ */
+function formatExternalEvent(event: ExternalEvent): z.infer<typeof RecentEventSchema> {
+  return {
+    id: event.id,
+    sourceType: event.sourceType,
+    eventType: event.eventType,
+    eventTime: event.eventTime,
+    sentiment: event.sentiment,
+    summary: event.summary,
+    importanceScore: event.importanceScore,
+    relatedInstruments: event.relatedInstruments,
+  };
+}
+
+/**
+ * Retrieve recent external events for given symbols
+ */
+async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]> {
+  try {
+    const repo = await getExternalEventsRepo();
+    // Get events from last 24 hours relevant to our symbols
+    const events = await repo.findBySymbols(symbols, 50);
+    return events;
+  } catch (error) {
+    // Log but don't fail - external events are optional context
+    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
+    console.warn("Failed to retrieve recent events:", error);
+    return [];
+  }
+}
+
+/**
  * Retrieve memories for a single symbol
  */
 async function retrieveMemoriesForSymbol(
@@ -162,10 +211,12 @@ export const retrieveMemoryStep = createStep({
     const emptyResult: MemoryOutput = {
       similarTrades: {},
       memorySummaries: {},
+      recentEvents: [],
       stats: {
         totalMemoriesRetrieved: 0,
         symbolsWithMemories: 0,
         avgRetrievalTimeMs: 0,
+        recentEventsCount: 0,
       },
     };
 
@@ -179,6 +230,9 @@ export const retrieveMemoryStep = createStep({
       return emptyResult;
     }
 
+    // Get symbols list
+    const symbols = Object.keys(snapshots);
+
     // Initialize clients
     let helix: HelixClient;
     let embedder: EmbeddingClient;
@@ -190,29 +244,45 @@ export const retrieveMemoryStep = createStep({
       // If clients fail to initialize (missing API keys, etc.), return empty
       // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
       console.warn("Memory retrieval clients not available:", error);
-      return emptyResult;
+      // Still try to get recent events even if Helix is unavailable
+      const recentEvents = await retrieveRecentEvents(symbols);
+      return {
+        ...emptyResult,
+        recentEvents: recentEvents.map(formatExternalEvent),
+        stats: {
+          ...emptyResult.stats,
+          recentEventsCount: recentEvents.length,
+        },
+      };
     }
 
-    // Retrieve memories for each symbol in parallel
-    const symbols = Object.keys(snapshots);
+    // Retrieve memories and events in parallel
     const retrievalTimes: number[] = [];
 
-    const results = await Promise.all(
-      symbols.map(async (symbol) => {
-        const startTime = performance.now();
-        const result = await retrieveMemoriesForSymbol(symbol, snapshots[symbol], helix, embedder);
-        retrievalTimes.push(performance.now() - startTime);
-        return { symbol, result };
-      })
-    );
+    const [memoryResults, recentEvents] = await Promise.all([
+      Promise.all(
+        symbols.map(async (symbol) => {
+          const startTime = performance.now();
+          const result = await retrieveMemoriesForSymbol(
+            symbol,
+            snapshots[symbol],
+            helix,
+            embedder
+          );
+          retrievalTimes.push(performance.now() - startTime);
+          return { symbol, result };
+        })
+      ),
+      retrieveRecentEvents(symbols),
+    ]);
 
-    // Aggregate results
+    // Aggregate memory results
     const similarTrades: Record<string, z.infer<typeof TradeMemorySchema>[]> = {};
     const memorySummaries: Record<string, string> = {};
     let totalMemories = 0;
     let symbolsWithMemories = 0;
 
-    for (const { symbol, result } of results) {
+    for (const { symbol, result } of memoryResults) {
       if (result && result.memories.length > 0) {
         similarTrades[symbol] = result.memories.map(formatTradeMemory);
         memorySummaries[symbol] = formatTradeMemorySummary(result);
@@ -229,10 +299,12 @@ export const retrieveMemoryStep = createStep({
     return {
       similarTrades,
       memorySummaries,
+      recentEvents: recentEvents.map(formatExternalEvent),
       stats: {
         totalMemoriesRetrieved: totalMemories,
         symbolsWithMemories,
         avgRetrievalTimeMs,
+        recentEventsCount: recentEvents.length,
       },
     };
   },

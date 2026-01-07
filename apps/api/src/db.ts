@@ -7,6 +7,7 @@
 import {
   createInMemoryClient,
   createTursoClient,
+  ExternalEventsRepository,
   OrdersRepository,
   PositionsRepository,
   runMigrations,
@@ -120,4 +121,12 @@ export async function getOrdersRepo(): Promise<OrdersRepository> {
 export async function getThesisStateRepo(): Promise<ThesisStateRepository> {
   const client = await getDbClient();
   return new ThesisStateRepository(client);
+}
+
+/**
+ * Get external events repository
+ */
+export async function getExternalEventsRepo(): Promise<ExternalEventsRepository> {
+  const client = await getDbClient();
+  return new ExternalEventsRepository(client);
 }

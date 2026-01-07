@@ -40,11 +40,27 @@ import {
 // Types
 // ============================================
 
+export interface ExternalContext {
+  news: Array<{
+    eventId: string;
+    type: string;
+    summary: string;
+    sentiment: string;
+    symbols: string[];
+    importance: number;
+    eventTime: string;
+  }>;
+  sentiment: Record<string, number>;
+  macroIndicators: Record<string, number>;
+}
+
 export interface WorkflowInput {
   cycleId: string;
   instruments?: string[];
   /** Force stub mode even in PAPER/LIVE (for testing) */
   forceStub?: boolean;
+  /** External context from gatherExternalContext step */
+  externalContext?: ExternalContext;
 }
 
 export interface MarketSnapshot {
@@ -367,7 +383,7 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
 // ============================================
 
 async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowResult> {
-  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"] } = input;
+  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"], externalContext } = input;
 
   // Observe Phase
   const marketSnapshot = await fetchMarketSnapshot(instruments);
@@ -375,13 +391,17 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // Orient Phase
   const memoryContext = await loadMemoryContext(marketSnapshot);
 
-  // Build agent context
+  // Build agent context with external news and macro data
   const agentContext: AgentContext = {
     cycleId,
     symbols: instruments,
     snapshots: marketSnapshot.candles,
     memory: { relevantCases: memoryContext.relevantCases },
-    externalContext: { news: [], macroIndicators: {} },
+    externalContext: {
+      news: externalContext?.news ?? [],
+      macroIndicators: externalContext?.macroIndicators ?? {},
+      sentiment: externalContext?.sentiment ?? {},
+    },
   };
 
   // ============================================
