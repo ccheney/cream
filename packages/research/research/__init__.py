@@ -52,6 +52,12 @@ __all__ = [
     "check_originality_batch",
     "subtree_similarity",
     "compute_factor_hash",
+    # Hypothesis alignment (requires google-generativeai)
+    "Hypothesis",
+    "AlignmentResult",
+    "HypothesisAlignmentEvaluator",
+    "MockHypothesisAlignmentEvaluator",
+    "compute_full_regularization",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -260,6 +266,30 @@ def __getattr__(name: str) -> Any:
             "check_originality_batch": check_originality_batch,
             "subtree_similarity": subtree_similarity,
             "compute_factor_hash": compute_factor_hash,
+        }[name]
+
+    # Hypothesis alignment
+    if name in (
+        "Hypothesis",
+        "AlignmentResult",
+        "HypothesisAlignmentEvaluator",
+        "MockHypothesisAlignmentEvaluator",
+        "compute_full_regularization",
+    ):
+        from research.hypothesis_alignment import (
+            AlignmentResult,
+            Hypothesis,
+            HypothesisAlignmentEvaluator,
+            MockHypothesisAlignmentEvaluator,
+            compute_full_regularization,
+        )
+
+        return {
+            "Hypothesis": Hypothesis,
+            "AlignmentResult": AlignmentResult,
+            "HypothesisAlignmentEvaluator": HypothesisAlignmentEvaluator,
+            "MockHypothesisAlignmentEvaluator": MockHypothesisAlignmentEvaluator,
+            "compute_full_regularization": compute_full_regularization,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

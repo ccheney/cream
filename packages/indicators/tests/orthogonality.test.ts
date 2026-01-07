@@ -196,16 +196,22 @@ describe("computePairwiseCorrelations", () => {
   });
 
   test("marks moderate correlations as warnings", () => {
-    const n = 100;
-    const base = generateIndicator(n);
-    const modCorr = generateCorrelated(base, 0.6);
+    // Use deterministic data with known correlation of ~0.55
+    // Constructed so correlation falls in warning range (0.5-0.7)
+    const base = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // Pattern with correlation ~0.55 to base
+    const modCorr = [6, 3, 7, 4, 8, 5, 9, 6, 10, 7];
 
     const results = computePairwiseCorrelations(
       base,
       { moderate: modCorr },
-      { maxCorrelation: 0.7, correlationWarning: 0.5 }
+      { maxCorrelation: 0.7, correlationWarning: 0.5, minObservations: 5 }
     );
 
+    // Verify correlation is in warning range (0.5-0.7)
+    const absCorr = Math.abs(results[0]!.correlation);
+    expect(absCorr).toBeGreaterThanOrEqual(0.5);
+    expect(absCorr).toBeLessThan(0.7);
     expect(results[0]!.isAcceptable).toBe(true);
     expect(results[0]!.isWarning).toBe(true);
   });
