@@ -58,6 +58,10 @@ __all__ = [
     "HypothesisAlignmentEvaluator",
     "MockHypothesisAlignmentEvaluator",
     "compute_full_regularization",
+    # Equivalence testing (requires polars, numpy)
+    "EquivalenceValidator",
+    "EquivalenceTestResult",
+    "compare_outputs",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -290,6 +294,20 @@ def __getattr__(name: str) -> Any:
             "HypothesisAlignmentEvaluator": HypothesisAlignmentEvaluator,
             "MockHypothesisAlignmentEvaluator": MockHypothesisAlignmentEvaluator,
             "compute_full_regularization": compute_full_regularization,
+        }[name]
+
+    # Equivalence testing
+    if name in ("EquivalenceValidator", "EquivalenceTestResult", "compare_outputs"):
+        from research.equivalence import (
+            EquivalenceTestResult,
+            EquivalenceValidator,
+            compare_outputs,
+        )
+
+        return {
+            "EquivalenceValidator": EquivalenceValidator,
+            "EquivalenceTestResult": EquivalenceTestResult,
+            "compare_outputs": compare_outputs,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

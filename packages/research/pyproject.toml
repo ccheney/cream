@@ -150,6 +150,9 @@ ignore = [
 "research/stage_validation/*" = [
     "ARG002",  # VectorBT/skfolio methods require specific signatures
 ]
+"research/hypothesis_alignment.py" = [
+    "ARG002",  # Mock class methods have required signatures
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["research"]
@@ -203,6 +206,7 @@ module = [
     "research.validation",
     "research.stage_validation.*",
     "research.hypothesis_alignment",
+    "research.equivalence",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",
