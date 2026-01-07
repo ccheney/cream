@@ -12,7 +12,7 @@
  * @see docs/plans/20-research-to-production-pipeline.md - Phase 7
  */
 
-import type { Factor, FactorPerformance } from "@cream/domain";
+import type { Factor } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
 import { z } from "zod";
 
@@ -353,9 +353,12 @@ export class DecayMonitorService {
     const alerts: DecayAlert[] = [];
     const correlationMatrix = await this.factorZoo.getCorrelationMatrix();
 
-    // Check each pair once
+    // Check each pair once using indices with proper guards
     for (let i = 0; i < factors.length; i++) {
-      const factor1 = factors[i]!;
+      const factor1 = factors[i];
+      if (!factor1) {
+        continue;
+      }
       const factor1Correlations = correlationMatrix.get(factor1.factorId);
 
       if (!factor1Correlations) {
@@ -363,7 +366,10 @@ export class DecayMonitorService {
       }
 
       for (let j = i + 1; j < factors.length; j++) {
-        const factor2 = factors[j]!;
+        const factor2 = factors[j];
+        if (!factor2) {
+          continue;
+        }
         const correlation = factor1Correlations.get(factor2.factorId) ?? 0;
 
         if (Math.abs(correlation) > this.config.correlationSpikeThreshold) {
@@ -398,14 +404,20 @@ export class DecayMonitorService {
     const alerts: DecayAlert[] = [];
 
     const icAlert = await this.checkICDecay(factor);
-    if (icAlert) alerts.push(icAlert);
+    if (icAlert) {
+      alerts.push(icAlert);
+    }
 
     const sharpeAlert = await this.checkSharpeDecay(factor);
-    if (sharpeAlert) alerts.push(sharpeAlert);
+    if (sharpeAlert) {
+      alerts.push(sharpeAlert);
+    }
 
     if (this.marketData) {
       const crowdingAlert = await this.checkCrowding(factor);
-      if (crowdingAlert) alerts.push(crowdingAlert);
+      if (crowdingAlert) {
+        alerts.push(crowdingAlert);
+      }
     }
 
     return alerts;
@@ -432,7 +444,9 @@ export class DecayMonitorService {
       return 0; // Not enough data
     }
 
-    const marketReturns = await this.marketData.getMarketReturns(this.config.correlationLookbackDays);
+    const marketReturns = await this.marketData.getMarketReturns(
+      this.config.correlationLookbackDays
+    );
 
     if (marketReturns.length < 20) {
       return 0; // Not enough market data
@@ -453,7 +467,9 @@ export class DecayMonitorService {
    * Compute mean of an array
    */
   private mean(arr: number[]): number {
-    if (arr.length === 0) return 0;
+    if (arr.length === 0) {
+      return 0;
+    }
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   }
 
@@ -462,25 +478,37 @@ export class DecayMonitorService {
    */
   private correlation(x: number[], y: number[]): number {
     const n = Math.min(x.length, y.length);
-    if (n < 2) return 0;
+    if (n < 2) {
+      return 0;
+    }
 
-    const meanX = x.slice(0, n).reduce((a, b) => a + b, 0) / n;
-    const meanY = y.slice(0, n).reduce((a, b) => a + b, 0) / n;
+    const xSlice = x.slice(0, n);
+    const ySlice = y.slice(0, n);
+
+    const meanX = xSlice.reduce((a, b) => a + b, 0) / n;
+    const meanY = ySlice.reduce((a, b) => a + b, 0) / n;
 
     let num = 0;
     let denX = 0;
     let denY = 0;
 
     for (let i = 0; i < n; i++) {
-      const dx = x[i]! - meanX;
-      const dy = y[i]! - meanY;
+      const xi = xSlice[i];
+      const yi = ySlice[i];
+      if (xi === undefined || yi === undefined) {
+        continue;
+      }
+      const dx = xi - meanX;
+      const dy = yi - meanY;
       num += dx * dy;
       denX += dx * dx;
       denY += dy * dy;
     }
 
     const denominator = Math.sqrt(denX * denY);
-    if (denominator === 0) return 0;
+    if (denominator === 0) {
+      return 0;
+    }
 
     return num / denominator;
   }

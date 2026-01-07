@@ -5,6 +5,22 @@
  */
 
 export {
+  createDecayMonitorService,
+  type DailyCheckResult,
+  DEFAULT_DECAY_MONITOR_CONFIG,
+  type DecayAlert,
+  DecayAlertSchema,
+  type DecayAlertService,
+  type DecayAlertType,
+  DecayAlertTypeSchema,
+  type DecayMonitorConfig,
+  type DecayMonitorDependencies,
+  DecayMonitorService,
+  type DecaySeverity,
+  DecaySeveritySchema,
+  type MarketDataProvider,
+} from "./decay-monitor";
+export {
   createFactorZooService,
   DEFAULT_FACTOR_ZOO_CONFIG,
   type DecayCheckResult,
@@ -30,20 +46,3 @@ export {
   type ResearchTriggerDependencies,
   ResearchTriggerService,
 } from "./research-trigger";
-
-export {
-  createDecayMonitorService,
-  type DailyCheckResult,
-  type DecayAlert,
-  type DecayAlertService,
-  DecayAlertSchema,
-  DecayAlertTypeSchema,
-  type DecayAlertType,
-  type DecayMonitorConfig,
-  type DecayMonitorDependencies,
-  DecayMonitorService,
-  DecaySeveritySchema,
-  type DecaySeverity,
-  DEFAULT_DECAY_MONITOR_CONFIG,
-  type MarketDataProvider,
-} from "./decay-monitor";

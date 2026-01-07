@@ -4,14 +4,14 @@
  * Tests for alpha decay detection and alerting system.
  */
 
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Factor, FactorPerformance } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
-import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
+  DEFAULT_DECAY_MONITOR_CONFIG,
   type DecayAlert,
   type DecayAlertService,
   DecayMonitorService,
-  DEFAULT_DECAY_MONITOR_CONFIG,
   type MarketDataProvider,
 } from "./decay-monitor.js";
 
@@ -539,7 +539,9 @@ describe("DecayMonitorService", () => {
 
       repository = createMockRepository({
         findActiveFactors: mock(() => Promise.resolve(factors)),
-        getPerformanceHistory: mock(() => Promise.resolve(createStableHistory("f1", 0.05, 1.0, 20))),
+        getPerformanceHistory: mock(() =>
+          Promise.resolve(createStableHistory("f1", 0.05, 1.0, 20))
+        ),
         getCorrelationMatrix: mock(() => Promise.resolve(new Map())),
       });
 
@@ -596,7 +598,9 @@ describe("DecayMonitorService", () => {
 
       repository = createMockRepository({
         findActiveFactors: mock(() => Promise.resolve(factors)),
-        getPerformanceHistory: mock(() => Promise.resolve(createStableHistory("f1", 0.05, 1.0, 20))),
+        getPerformanceHistory: mock(() =>
+          Promise.resolve(createStableHistory("f1", 0.05, 1.0, 20))
+        ),
         getCorrelationMatrix: mock(() => Promise.resolve(correlations)),
       });
 
