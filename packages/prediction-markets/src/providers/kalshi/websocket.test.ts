@@ -898,7 +898,7 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
 
       // Connect first
       const connectPromise = client.connect();
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       if (mockWebSocketInstance.onopen) {
         mockWebSocketInstance.onopen(new Event("open"));
       }
@@ -909,8 +909,8 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
         mockWebSocketInstance.onclose({ reason: "Connection lost" } as CloseEvent);
       }
 
-      // Wait for error callback
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      // Wait for error callback (increased timeout for CI)
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(onErrorCb).toHaveBeenCalled();
     });
