@@ -203,11 +203,19 @@ export const gatherExternalContextStep = createStep({
       };
     }
 
-    // Create extraction pipeline with dry-run mode (skip LLM calls for now)
-    // TODO: Remove dryRun when LLM extraction is fully tested
+    // Create extraction pipeline - uses Claude for LLM extraction
+    // Requires ANTHROPIC_API_KEY environment variable for real extraction
+    const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
     const pipeline = createExtractionPipeline({
-      dryRun: true,
+      dryRun: !hasAnthropicKey, // Fallback to dry run if no API key
     });
+
+    if (!hasAnthropicKey) {
+      // biome-ignore lint/suspicious/noConsole: Intentional warning for missing API key
+      console.warn(
+        "[gatherExternalContext] ANTHROPIC_API_KEY not set - using dry run mode (no LLM extraction)"
+      );
+    }
 
     try {
       // Fetch news and economic calendar in parallel
@@ -226,6 +234,17 @@ export const gatherExternalContextStep = createStep({
 
       // Process macro releases through pipeline
       const macroResults = await pipeline.processMacroReleases(economicEvents);
+
+      // Log extraction metrics for monitoring
+      // biome-ignore lint/suspicious/noConsole: Intentional metrics logging
+      console.log(
+        `[gatherExternalContext] Extraction complete: ` +
+          `news=${newsResults.stats.successCount}/${newsResults.stats.inputCount} ` +
+          `(${newsResults.stats.errorCount} errors, ${newsResults.stats.processingTimeMs}ms), ` +
+          `macro=${macroResults.stats.successCount}/${macroResults.stats.inputCount} ` +
+          `(${macroResults.stats.errorCount} errors, ${macroResults.stats.processingTimeMs}ms), ` +
+          `mode=${hasAnthropicKey ? "llm" : "dry-run"}`
+      );
 
       // Combine all events
       const allEvents = [...newsResults.events, ...macroResults.events];
@@ -276,8 +295,13 @@ export const gatherExternalContextStep = createStep({
             }
           : undefined,
       };
-    } catch (_error) {
+    } catch (error) {
       // Error gathering external context - return empty context to avoid blocking workflow
+      // biome-ignore lint/suspicious/noConsole: Error logging is intentional
+      console.error(
+        "[gatherExternalContext] Failed to gather external context:",
+        error instanceof Error ? error.message : String(error)
+      );
       return {
         news: [],
         sentiment: {},
