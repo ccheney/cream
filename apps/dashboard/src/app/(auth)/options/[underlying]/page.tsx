@@ -12,11 +12,16 @@
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ExpirationTabs, OptionsChainTable } from "@/components/options";
+import {
+  ExpirationTabs,
+  OptionsChainTable,
+  PositionBuilderModal,
+  type OptionsOrderRequest,
+} from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Spinner } from "@/components/ui/spinner";
 import { useQuote } from "@/hooks/queries/useMarket";
-import { useOptionsChain, useOptionsExpirations } from "@/hooks/queries/useOptions";
+import { useOptionsChain, useOptionsExpirations, useOptionsOrder } from "@/hooks/queries/useOptions";
 import type { OptionsContract } from "@/lib/api/types";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
@@ -66,6 +71,15 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   // State
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
 
+  // Position builder modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<OptionsContract | null>(null);
+  const [selectedContractType, setSelectedContractType] = useState<"call" | "put" | null>(null);
+  const [selectedStrike, setSelectedStrike] = useState<number | null>(null);
+
+  // Options order mutation
+  const { mutateAsync: submitOrder } = useOptionsOrder();
+
   // Fetch underlying quote
   const { data: quote, connected: wsConnected } = useQuote(upperUnderlying);
 
@@ -104,10 +118,29 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
   // Handle contract click (for position builder)
   const handleContractClick = useCallback(
-    (_contract: OptionsContract, _type: "call" | "put", _strike: number) => {
-      // TODO: Open position builder modal (cream-xpyp7)
+    (contract: OptionsContract, type: "call" | "put", strike: number) => {
+      setSelectedContract(contract);
+      setSelectedContractType(type);
+      setSelectedStrike(strike);
+      setModalOpen(true);
     },
     []
+  );
+
+  // Handle modal close
+  const handleModalClose = useCallback(() => {
+    setModalOpen(false);
+    setSelectedContract(null);
+    setSelectedContractType(null);
+    setSelectedStrike(null);
+  }, []);
+
+  // Handle order submission
+  const handleSubmitOrder = useCallback(
+    async (order: OptionsOrderRequest) => {
+      await submitOrder(order);
+    },
+    [submitOrder]
   );
 
   // Handle visible rows change (for subscription management)
@@ -266,6 +299,19 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
           </span>
         </div>
       </div>
+
+      {/* Position Builder Modal */}
+      <PositionBuilderModal
+        isOpen={modalOpen}
+        onClose={handleModalClose}
+        contract={selectedContract}
+        contractType={selectedContractType}
+        strike={selectedStrike}
+        underlying={upperUnderlying}
+        expiration={selectedExpiration}
+        onSubmit={handleSubmitOrder}
+        data-testid="position-builder-modal"
+      />
     </div>
   );
 }

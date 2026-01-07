@@ -14,3 +14,13 @@ export type { OptionsChainRowProps } from "./OptionsChainRow";
 export { OptionsChainRow } from "./OptionsChainRow";
 export type { OptionsChainTableProps } from "./OptionsChainTable";
 export { OptionsChainTable } from "./OptionsChainTable";
+export type { OrderPreviewProps } from "./OrderPreview";
+export { OrderPreview } from "./OrderPreview";
+export type {
+  OptionsOrderRequest,
+  OrderSide,
+  OrderType,
+  PositionBuilderModalProps,
+  TimeInForce,
+} from "./PositionBuilderModal";
+export { PositionBuilderModal } from "./PositionBuilderModal";

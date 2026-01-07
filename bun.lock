@@ -92,6 +92,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@cream/dashboard-types": "workspace:*",
+        "@cream/domain": "workspace:*",
         "@cream/helix": "workspace:*",
         "@cream/marketdata": "workspace:*",
         "@cream/metrics": "workspace:*",

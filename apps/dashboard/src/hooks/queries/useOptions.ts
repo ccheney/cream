@@ -7,9 +7,10 @@
  * @see docs/plans/ui/40-streaming-data-integration.md Part 2.1
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { get } from "@/lib/api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { get, post } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
+import type { OptionsOrderRequest } from "@/components/options/PositionBuilderModal";
 import type {
   ExpirationsResponse,
   OptionsChainResponse,
@@ -178,4 +179,56 @@ export function parseOccSymbol(symbol: string): {
     type: typeChar as "C" | "P",
     strike: Number.parseInt(strikeStr, 10) / 1000,
   };
+}
+
+// ============================================
+// Options Order Mutation
+// ============================================
+
+/**
+ * Options order response from the API.
+ */
+export interface OptionsOrderResponse {
+  /** Order ID */
+  orderId: string;
+  /** Client order ID */
+  clientOrderId: string;
+  /** Order status */
+  status: "pending" | "accepted" | "filled" | "rejected";
+  /** Filled quantity */
+  filledQty: number;
+  /** Average fill price */
+  avgFillPrice: number | null;
+  /** Created timestamp */
+  createdAt: string;
+}
+
+/**
+ * Submit an options order.
+ *
+ * @example
+ * ```tsx
+ * const { mutateAsync, isPending } = useOptionsOrder();
+ *
+ * const handleSubmit = async (order: OptionsOrderRequest) => {
+ *   const result = await mutateAsync(order);
+ *   console.log('Order submitted:', result.orderId);
+ * };
+ * ```
+ */
+export function useOptionsOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (order: OptionsOrderRequest) => {
+      const { data } = await post<OptionsOrderResponse>("/api/orders/options", order);
+      return data;
+    },
+    onSuccess: () => {
+      // Invalidate portfolio positions to reflect new order
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
+      // Invalidate options positions
+      queryClient.invalidateQueries({ queryKey: ["options-positions"] });
+    },
+  });
 }
