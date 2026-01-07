@@ -14,14 +14,16 @@
 
 import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { Logo } from "@/components/ui/logo";
 import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
+import { TickerStrip } from "@/components/ui/ticker-strip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
+import { useWatchlistStore } from "@/stores/watchlist-store";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,6 +31,23 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const { connected, connectionState } = useWebSocketContext();
   const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const watchlistSymbols = useWatchlistStore((s) => s.symbols);
+  const removeSymbol = useWatchlistStore((s) => s.removeSymbol);
+
+  const handleSymbolClick = useCallback(
+    (symbol: string) => {
+      router.push(`/charts?symbol=${symbol}`);
+    },
+    [router]
+  );
+
+  const handleSymbolAdd = useCallback(() => {
+    // TODO: Open add symbol modal
+    const symbol = window.prompt("Enter symbol to add:");
+    if (symbol) {
+      useWatchlistStore.getState().addSymbol(symbol);
+    }
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -83,6 +102,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
+        {/* Ticker Strip */}
+        <TickerStrip
+          symbols={watchlistSymbols}
+          onSymbolClick={handleSymbolClick}
+          onSymbolRemove={removeSymbol}
+          onSymbolAdd={handleSymbolAdd}
+          showTickHistory
+          allowRemove
+          allowAdd
+        />
+
         {/* Main Content - with bottom padding for nav bar */}
         <Suspense fallback={<LoadingFallback />}>
           <div id="main-content" className="flex-1 p-4 pb-20 overflow-auto" tabIndex={-1}>
@@ -128,6 +158,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
+        {/* Ticker Strip */}
+        <TickerStrip
+          symbols={watchlistSymbols}
+          onSymbolClick={handleSymbolClick}
+          onSymbolRemove={removeSymbol}
+          onSymbolAdd={handleSymbolAdd}
+          showTickHistory
+          allowRemove
+          allowAdd
+        />
+
         {/* Main Content */}
         <Suspense fallback={<LoadingFallback />}>
           <main id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
@@ -162,6 +203,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <EnvBadge />
           </div>
         </header>
+
+        {/* Ticker Strip */}
+        <TickerStrip
+          symbols={watchlistSymbols}
+          onSymbolClick={handleSymbolClick}
+          onSymbolRemove={removeSymbol}
+          onSymbolAdd={handleSymbolAdd}
+          showTickHistory
+          allowRemove
+          allowAdd
+        />
 
         {/* Page content */}
         <Suspense fallback={<LoadingFallback />}>
