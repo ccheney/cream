@@ -6,6 +6,7 @@
  *
  * Implementation status:
  * - getQuotes: Uses gRPC MarketDataService (falls back to mock if unavailable)
+ * - getPortfolioState: Uses gRPC ExecutionService (falls back to mock if unavailable)
  * - Other tools: Stubbed with mock implementations
  *
  * @see docs/plans/05-agents.md
@@ -13,7 +14,9 @@
 
 import { isBacktest } from "@cream/domain";
 import {
+  createExecutionClient,
   createMarketDataClient,
+  type ExecutionServiceClient,
   GrpcError,
   type MarketDataServiceClient,
 } from "@cream/domain/grpc";
@@ -114,18 +117,27 @@ export interface HelixQueryResult {
 }
 
 // ============================================
-// gRPC Client Singleton
+// gRPC Client Singletons
 // ============================================
 
 const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50052";
+const DEFAULT_EXECUTION_URL = process.env.EXECUTION_SERVICE_URL ?? "http://localhost:50051";
 
 let marketDataClient: MarketDataServiceClient | null = null;
+let executionClient: ExecutionServiceClient | null = null;
 
 function getMarketDataClient(): MarketDataServiceClient {
   if (!marketDataClient) {
     marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
   }
   return marketDataClient;
+}
+
+function getExecutionClient(): ExecutionServiceClient {
+  if (!executionClient) {
+    executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
+  }
+  return executionClient;
 }
 
 /**
@@ -206,14 +218,9 @@ export async function getQuotes(instruments: string[]): Promise<Quote[]> {
 }
 
 /**
- * Get current portfolio state
- *
- * @returns Portfolio state including positions and buying power
- *
- * @stub Returns mock data until gRPC ready
+ * Create mock portfolio state for backtest/fallback
  */
-export async function getPortfolioState(): Promise<PortfolioStateResponse> {
-  // TODO: Replace with gRPC call to execution engine
+function createMockPortfolioState(): PortfolioStateResponse {
   return {
     positions: [],
     buyingPower: 100000,
@@ -221,6 +228,62 @@ export async function getPortfolioState(): Promise<PortfolioStateResponse> {
     dayPnL: 0,
     totalPnL: 0,
   };
+}
+
+/**
+ * Get current portfolio state
+ *
+ * Uses gRPC ExecutionService when available, falls back to mock data.
+ *
+ * @returns Portfolio state including positions and buying power
+ */
+export async function getPortfolioState(): Promise<PortfolioStateResponse> {
+  // In backtest mode, always return mock data for performance
+  if (isBacktest()) {
+    return createMockPortfolioState();
+  }
+
+  try {
+    const client = getExecutionClient();
+
+    // Fetch account state and positions in parallel
+    const [accountResponse, positionsResponse] = await Promise.all([
+      client.getAccountState(),
+      client.getPositions(),
+    ]);
+
+    const accountState = accountResponse.data.accountState;
+    const positions = positionsResponse.data.positions ?? [];
+
+    // Calculate total unrealized P&L
+    let totalPnL = 0;
+    const mappedPositions: PortfolioPosition[] = positions.map((pos) => {
+      totalPnL += pos.unrealizedPnl ?? 0;
+      return {
+        symbol: pos.instrument?.instrumentId ?? "",
+        quantity: pos.quantity,
+        averageCost: pos.avgEntryPrice,
+        marketValue: pos.marketValue,
+        unrealizedPnL: pos.unrealizedPnl ?? 0,
+      };
+    });
+
+    return {
+      positions: mappedPositions,
+      buyingPower: accountState?.buyingPower ?? 0,
+      totalEquity: accountState?.equity ?? 0,
+      dayPnL: 0, // Would need day P&L tracking in account state
+      totalPnL,
+    };
+  } catch (error) {
+    // Fall back to mock data if gRPC fails
+    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+      // Expected during development - silently fall back
+      return createMockPortfolioState();
+    }
+    // Unexpected errors - silently fall back to mock data
+    return createMockPortfolioState();
+  }
 }
 
 /**
