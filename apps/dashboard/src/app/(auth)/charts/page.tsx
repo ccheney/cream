@@ -147,18 +147,36 @@ export default function ChartsPage() {
         />
         <IndicatorCard
           name="ATR(14)"
-          value={indicatorsLoading ? "--" : (indicators?.atr14 != null ? `$${indicators.atr14.toFixed(2)}` : "--")}
+          value={
+            indicatorsLoading
+              ? "--"
+              : indicators?.atr14 != null
+                ? `$${indicators.atr14.toFixed(2)}`
+                : "--"
+          }
           isLoading={indicatorsLoading}
         />
         <IndicatorCard
           name="SMA(20)"
-          value={indicatorsLoading ? "--" : (indicators?.sma20 != null ? formatPrice(indicators.sma20) : "--")}
+          value={
+            indicatorsLoading
+              ? "--"
+              : indicators?.sma20 != null
+                ? formatPrice(indicators.sma20)
+                : "--"
+          }
           isLoading={indicatorsLoading}
         />
         <IndicatorCard
           name="MACD"
           value={indicatorsLoading ? "--" : (indicators?.macdHist?.toFixed(2) ?? "--")}
-          status={indicators?.macdHist != null ? (indicators.macdHist > 0 ? "bullish" : "bearish") : "neutral"}
+          status={
+            indicators?.macdHist != null
+              ? indicators.macdHist > 0
+                ? "bullish"
+                : "bearish"
+              : "neutral"
+          }
           isLoading={indicatorsLoading}
         />
       </div>

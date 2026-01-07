@@ -134,6 +134,31 @@ export {
   type TriggerEvaluationResult,
   TriggerEvaluationResultSchema,
 } from "./trigger.js";
+// Validation Pipeline Orchestrator
+export {
+  type DSRGateResult,
+  DSRGateResultSchema,
+  estimateSurvivalRate,
+  evaluateValidation,
+  type ICGateResult,
+  ICGateResultSchema,
+  isIndicatorValid,
+  type OrthogonalityGateResult,
+  OrthogonalityGateResultSchema,
+  type PBOGateResult,
+  PBOGateResultSchema,
+  runValidationPipeline,
+  type TrialInfo,
+  TrialInfoSchema,
+  VALIDATION_DEFAULTS,
+  type ValidationInput,
+  ValidationInputSchema,
+  type ValidationResult,
+  ValidationResultSchema,
+  validateAndRank,
+  type WalkForwardGateResult,
+  WalkForwardGateResultSchema,
+} from "./validationPipeline.js";
 // Walk-Forward Validation
 export {
   compareWalkForwardMethods,
