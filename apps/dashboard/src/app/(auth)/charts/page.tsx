@@ -5,13 +5,15 @@
  * Charts Page - Market context with candle charts and indicators
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
+import { StreamPanel, StreamToggleButton } from "@/components/charts/StreamPanel";
 import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries";
 
 export default function ChartsPage() {
   const [symbol, setSymbol] = useState("AAPL");
   const [timeframe, setTimeframe] = useState<"1h" | "4h" | "1d">("1h");
+  const [isStreamOpen, setIsStreamOpen] = useState(false);
 
   const { data: candles, isLoading: candlesLoading } = useCandles(symbol, timeframe, 100);
   const { data: indicators, isLoading: indicatorsLoading } = useIndicators(symbol, timeframe);
@@ -20,6 +22,23 @@ export default function ChartsPage() {
 
   const formatPrice = (price: number | null | undefined) =>
     price != null ? `$${price.toFixed(2)}` : "--";
+
+  const toggleStream = useCallback(() => {
+    setIsStreamOpen((prev) => !prev);
+  }, []);
+
+  // Keyboard shortcut: Shift+E to toggle stream
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.key === "E") {
+        e.preventDefault();
+        toggleStream();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleStream]);
 
   return (
     <div className="space-y-6">
@@ -42,8 +61,12 @@ export default function ChartsPage() {
             <option value="4h">4H</option>
             <option value="1d">1D</option>
           </select>
+          <StreamToggleButton isOpen={isStreamOpen} onClick={toggleStream} />
         </div>
       </div>
+
+      {/* Stream Panel (slide-out) */}
+      <StreamPanel symbol={symbol} isOpen={isStreamOpen} onClose={() => setIsStreamOpen(false)} />
 
       {/* Enhanced Quote Header */}
       {!quoteLoading && quote && (
