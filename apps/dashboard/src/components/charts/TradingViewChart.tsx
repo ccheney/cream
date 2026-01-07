@@ -79,6 +79,7 @@ function TradingViewChartComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts IPriceLine type
   const priceLineRefs = useRef<Map<string, any>>(new Map());
 
   // Initialize chart
@@ -97,6 +98,7 @@ function TradingViewChartComponent({
     chartRef.current = chart;
 
     // Add candlestick series
+    // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
     const series = chart.addSeries(
       "candlestick" as any,
       DEFAULT_CANDLESTICK_OPTIONS
@@ -176,6 +178,7 @@ function TradingViewChartComponent({
     }));
 
     // Type assertion for setMarkers which exists on candlestick series
+    // biome-ignore lint/suspicious/noExplicitAny: setMarkers exists on candlestick series
     (seriesRef.current as any).setMarkers(formattedMarkers);
   }, [markers]);
 

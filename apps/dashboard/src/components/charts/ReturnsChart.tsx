@@ -285,8 +285,8 @@ function ReturnsChartComponent({
               <CustomBar {...(props as CustomBarProps)} radius={barRadius} />
             )}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getReturnColor(entry.value)} />
+            {data.map((entry) => (
+              <Cell key={`cell-${entry.period}`} fill={getReturnColor(entry.value)} />
             ))}
           </Bar>
         </BarChart>

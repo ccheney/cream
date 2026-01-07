@@ -163,7 +163,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
   // Validate form
   const validationError = useMemo(() => {
     const qty = parseInt(quantity, 10);
-    if (isNaN(qty) || qty <= 0) {
+    if (Number.isNaN(qty) || qty <= 0) {
       return "Quantity must be a positive integer";
     }
     if (qty > 100) {
@@ -172,14 +172,14 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
     if (orderType === "limit" || orderType === "stop_limit") {
       const price = parseFloat(limitPrice);
-      if (isNaN(price) || price <= 0) {
+      if (Number.isNaN(price) || price <= 0) {
         return "Limit price is required";
       }
     }
 
     if (orderType === "stop" || orderType === "stop_limit") {
       const price = parseFloat(stopPrice);
-      if (isNaN(price) || price <= 0) {
+      if (Number.isNaN(price) || price <= 0) {
         return "Stop price is required";
       }
     }

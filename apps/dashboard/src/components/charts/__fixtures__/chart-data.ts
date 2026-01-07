@@ -33,6 +33,7 @@ export function generateOHLCVData(days: number, startPrice = 100): OHLCVData[] {
     const volume = Math.floor(Math.random() * 1000000) + 100000;
 
     data.push({
+      // biome-ignore lint/style/noNonNullAssertion: split always returns array
       time: date.toISOString().split("T")[0]!,
       open: Number(open.toFixed(2)),
       high: Number(high.toFixed(2)),
@@ -137,6 +138,7 @@ export function generateEquityData(days: number, startEquity = 100000): EquityDa
     const drawdown = ((peak - equity) / peak) * 100;
 
     data.push({
+      // biome-ignore lint/style/noNonNullAssertion: split always returns array
       time: date.toISOString().split("T")[0]!,
       value: Math.round(equity * 100) / 100,
       drawdown: Math.round(drawdown * 100) / 100,

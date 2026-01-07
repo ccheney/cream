@@ -330,6 +330,7 @@ function initMACD(chart: IChartApi, data: MACDData[]) {
 
 function initStochastic(chart: IChartApi, data: StochasticData[]) {
   // %K line
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
   const kSeries = chart.addSeries("line" as any, {
     color: INDICATOR_COLORS.stochastic.k,
     lineWidth: 2,
@@ -346,6 +347,7 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
   }
 
   // %D line
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
   const dSeries = chart.addSeries("line" as any, {
     color: INDICATOR_COLORS.stochastic.d,
     lineWidth: 2,
@@ -382,6 +384,7 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
 }
 
 function initVolume(chart: IChartApi, data: VolumeData[]) {
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
   const series = chart.addSeries("histogram" as any, {
     priceLineVisible: false,
     priceFormat: {
