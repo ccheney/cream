@@ -1,0 +1,152 @@
+/**
+ * PortfolioSummary Component
+ *
+ * Summary cards showing portfolio metrics with real-time streaming updates.
+ *
+ * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
+ */
+
+"use client";
+
+import { memo } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import type { PortfolioStreamingState } from "@/hooks/usePortfolioStreaming";
+
+// ============================================
+// Types
+// ============================================
+
+export interface PortfolioSummaryProps {
+  /** Streaming state with live metrics */
+  state: PortfolioStreamingState;
+  /** Static cash balance */
+  cash: number;
+  /** Is data loading */
+  isLoading?: boolean;
+}
+
+// ============================================
+// MetricCard Component
+// ============================================
+
+interface MetricCardProps {
+  label: string;
+  value: number;
+  format?: "currency" | "percent";
+  isPositive?: boolean;
+  secondaryValue?: number;
+  isLoading?: boolean;
+  isStreaming?: boolean;
+}
+
+const MetricCard = memo(function MetricCard({
+  label,
+  value,
+  format = "currency",
+  isPositive,
+  secondaryValue,
+  isLoading = false,
+  isStreaming = false,
+}: MetricCardProps) {
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+        <div className="h-4 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
+        <div className="h-8 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  const valueColor =
+    isPositive === undefined
+      ? "text-cream-900 dark:text-cream-100"
+      : isPositive
+        ? "text-green-600 dark:text-green-400"
+        : "text-red-600 dark:text-red-400";
+
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm text-cream-500 dark:text-cream-400">{label}</span>
+        {isStreaming && (
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+            title="Live"
+            role="status"
+            aria-label="Live streaming"
+          />
+        )}
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className={`text-2xl font-semibold ${valueColor}`}>
+          {isPositive !== undefined && value >= 0 ? "+" : ""}
+          <AnimatedNumber
+            value={value}
+            format={format}
+            decimals={format === "percent" ? 2 : 0}
+            className="inline"
+            animationThreshold={format === "percent" ? 0.01 : 1}
+          />
+        </span>
+        {secondaryValue !== undefined && (
+          <span className={`text-sm ${valueColor}`}>
+            {secondaryValue >= 0 ? "+" : ""}
+            {secondaryValue.toFixed(2)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ============================================
+// PortfolioSummary Component
+// ============================================
+
+/**
+ * PortfolioSummary displays the portfolio metrics with live updates.
+ *
+ * Shows:
+ * - Total NAV (cash + positions value)
+ * - Cash balance
+ * - Unrealized P/L
+ * - Day P/L
+ */
+export const PortfolioSummary = memo(function PortfolioSummary({
+  state,
+  cash,
+  isLoading = false,
+}: PortfolioSummaryProps) {
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      <MetricCard
+        label="Total NAV"
+        value={state.liveNav}
+        format="currency"
+        isLoading={isLoading}
+        isStreaming={state.isStreaming}
+      />
+      <MetricCard label="Cash" value={cash} format="currency" isLoading={isLoading} />
+      <MetricCard
+        label="Unrealized P&L"
+        value={state.liveTotalPnl}
+        format="currency"
+        isPositive={state.liveTotalPnl >= 0}
+        secondaryValue={state.liveTotalPnlPct}
+        isLoading={isLoading}
+        isStreaming={state.isStreaming}
+      />
+      <MetricCard
+        label="Day P&L"
+        value={state.liveDayPnl}
+        format="currency"
+        isPositive={state.liveDayPnl >= 0}
+        secondaryValue={state.liveDayPnlPct}
+        isLoading={isLoading}
+        isStreaming={state.isStreaming}
+      />
+    </div>
+  );
+});
+
+export default PortfolioSummary;

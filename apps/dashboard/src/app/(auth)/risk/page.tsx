@@ -2,13 +2,15 @@
 
 /**
  * Risk Page - Risk exposure monitoring
+ *
+ * @see docs/plans/ui/40-streaming-data-integration.md Part 4.3
  */
 
-import { useExposure, useGreeks, useLimits, useVaR } from "@/hooks/queries";
+import { PortfolioGreeks } from "@/components/risk";
+import { useExposure, useLimits, useVaR } from "@/hooks/queries";
 
 export default function RiskPage() {
   const { data: exposure, isLoading: exposureLoading } = useExposure();
-  const { data: greeks, isLoading: greeksLoading } = useGreeks();
   const { data: var_, isLoading: varLoading } = useVaR();
   const { data: limits, isLoading: limitsLoading } = useLimits();
 
@@ -97,48 +99,15 @@ export default function RiskPage() {
         )}
       </div>
 
-      {/* Greeks */}
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-          Portfolio Greeks
-        </h2>
-        {greeksLoading ? (
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-            ))}
-          </div>
-        ) : greeks ? (
-          <div className="grid grid-cols-4 gap-4">
-            <GreekCard
-              letter="Δ"
-              name="Delta"
-              value={greeks.delta.current.toFixed(1)}
-              limit={greeks.delta.limit}
-            />
-            <GreekCard
-              letter="Γ"
-              name="Gamma"
-              value={greeks.gamma.current.toFixed(2)}
-              limit={greeks.gamma.limit}
-            />
-            <GreekCard
-              letter="Θ"
-              name="Theta"
-              value={greeks.theta.current.toFixed(0)}
-              limit={greeks.theta.limit}
-            />
-            <GreekCard
-              letter="V"
-              name="Vega"
-              value={greeks.vega.current.toFixed(0)}
-              limit={greeks.vega.limit}
-            />
-          </div>
-        ) : (
-          <div className="text-center text-cream-400">No Greeks data</div>
-        )}
-      </div>
+      {/* Portfolio Greeks - Real-time streaming from options positions */}
+      <PortfolioGreeks
+        deltaLimit={500000}
+        gammaLimit={10000}
+        thetaLimit={100}
+        vegaLimit={50000}
+        showGauge
+        showLimits
+      />
 
       {/* Limit Utilization */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
@@ -250,27 +219,6 @@ function RiskMetricCard({
       <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${statusColors[status]}`}>{value}</div>
       {limit && <div className="mt-1 text-xs text-cream-400">Limit: {limit}</div>}
-    </div>
-  );
-}
-
-function GreekCard({
-  letter,
-  name,
-  value,
-  limit,
-}: {
-  letter: string;
-  name: string;
-  value: string;
-  limit: number;
-}) {
-  return (
-    <div className="text-center p-4 bg-cream-50 dark:bg-night-750 rounded-lg">
-      <div className="text-3xl font-serif text-cream-400">{letter}</div>
-      <div className="text-xs text-cream-500 dark:text-cream-400 mt-1">{name}</div>
-      <div className="mt-2 text-xl font-mono text-cream-900 dark:text-cream-100">{value}</div>
-      <div className="text-xs text-cream-400 mt-1">Limit: {limit}</div>
     </div>
   );
 }

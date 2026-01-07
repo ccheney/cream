@@ -9,6 +9,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
+import { getAgentOutputsRepo } from "../db.js";
 
 // ============================================
 // App Setup
@@ -69,7 +70,7 @@ const PaginatedOutputsSchema = z.object({
 });
 
 // ============================================
-// Mock Data Store (replace with real DB)
+// Agent Definitions
 // ============================================
 
 const AGENT_DEFINITIONS = [
@@ -83,7 +84,7 @@ const AGENT_DEFINITIONS = [
   { type: "critic", displayName: "Critic" },
 ];
 
-// In-memory config store (replace with DB)
+// In-memory config store (TODO: persist to database when agent_configs table is added)
 const agentConfigs = new Map<string, z.infer<typeof AgentConfigSchema>>(
   AGENT_DEFINITIONS.map((agent) => [
     agent.type,
@@ -97,9 +98,6 @@ const agentConfigs = new Map<string, z.infer<typeof AgentConfigSchema>>(
     },
   ])
 );
-
-// In-memory outputs store (replace with DB)
-const agentOutputs: z.infer<typeof AgentOutputSchema>[] = [];
 
 // ============================================
 // Helper Functions
