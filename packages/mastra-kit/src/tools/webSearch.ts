@@ -63,6 +63,85 @@ export interface WebSearchResponse {
 }
 
 // ============================================
+// Cache Configuration
+// ============================================
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 100; // Max entries before LRU eviction
+
+interface CacheEntry {
+  results: WebSearchResponse;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+/**
+ * Generate cache key from search params
+ * Query is normalized (lowercase, trimmed) for better hit rate
+ * maxResults excluded - can serve larger cached set with slice
+ */
+function getCacheKey(params: z.infer<typeof WebSearchParamsSchema>): string {
+  return JSON.stringify({
+    query: params.query.toLowerCase().trim(),
+    sources: params.sources?.slice().sort(),
+    topic: params.topic,
+    maxAgeHours: params.maxAgeHours,
+    symbols: params.symbols?.slice().sort(),
+  });
+}
+
+/**
+ * Get cached result if still valid
+ */
+function getCached(key: string): WebSearchResponse | null {
+  const entry = cache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  // Check TTL
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+
+  return entry.results;
+}
+
+/**
+ * Store result in cache with LRU eviction
+ */
+function setCache(key: string, results: WebSearchResponse): void {
+  // LRU eviction if at capacity
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+
+  cache.set(key, {
+    results,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Clear all cached results (for testing)
+ */
+export function clearWebSearchCache(): void {
+  cache.clear();
+}
+
+/**
+ * Get current cache size (for testing/monitoring)
+ */
+export function getWebSearchCacheSize(): number {
+  return cache.size;
+}
+
+// ============================================
 // Domain Mapping
 // ============================================
 
@@ -232,33 +311,47 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
   }
   const { query, maxAgeHours, sources, topic, maxResults, symbols } = parsed.data;
 
-  // 2. Backtest mode → empty results
+  // 2. Backtest mode → empty results (don't cache)
   if (isBacktest()) {
     return createEmptyResponse(query, startTime);
   }
 
-  // 3. Check for Tavily client
+  // 3. Check cache before API call
+  const cacheKey = getCacheKey(parsed.data);
+  const cached = getCached(cacheKey);
+  if (cached) {
+    // Return cached result with updated execution time, sliced to requested maxResults
+    return {
+      results: cached.results.slice(0, maxResults),
+      metadata: {
+        ...cached.metadata,
+        executionTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  // 4. Check for Tavily client
   const client = getTavilyClient();
   if (!client) {
     console.warn("[webSearch] TAVILY_API_KEY not configured");
     return createEmptyResponse(query, startTime);
   }
 
-  // 4. Build domain filters from sources
+  // 5. Build domain filters from sources
   const includeDomains = buildDomainFilter(sources);
 
-  // 5. Calculate time bounds (hybrid filtering strategy)
+  // 6. Calculate time bounds (hybrid filtering strategy)
   const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
   const timeRange = calculateTimeRange(maxAgeHours);
 
-  // 6. Build enhanced query with symbols if provided
+  // 7. Build enhanced query with symbols if provided
   let enhancedQuery = query;
   if (symbols && symbols.length > 0) {
     enhancedQuery = `${query} ${symbols.map((s) => `$${s}`).join(" ")}`;
   }
 
   try {
-    // 7. Execute Tavily search
+    // 8. Execute Tavily search
     const result = await client.search({
       query: enhancedQuery,
       topic,
@@ -274,11 +367,11 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
       return createEmptyResponse(query, startTime);
     }
 
-    // 8. Client-side time filtering for precise hour-level window
+    // 9. Client-side time filtering for precise hour-level window
     const filteredResults = normalizeResults(result.data.results, cutoffTime);
     const resultsFiltered = result.data.results.length - filteredResults.length;
 
-    return {
+    const response: WebSearchResponse = {
       results: filteredResults.slice(0, maxResults),
       metadata: {
         query,
@@ -287,6 +380,15 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
         resultsFiltered,
       },
     };
+
+    // 10. Cache successful results (store full result set for reuse with different maxResults)
+    const responseToCache: WebSearchResponse = {
+      results: filteredResults,
+      metadata: response.metadata,
+    };
+    setCache(cacheKey, responseToCache);
+
+    return response;
   } catch (error) {
     console.warn("[webSearch] Search failed:", error);
     return createEmptyResponse(query, startTime);

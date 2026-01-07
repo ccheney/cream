@@ -56,7 +56,27 @@ export {
   useRecentDecisions,
   useRejectDecision,
 } from "./useDecisions";
-
+// Indicator Lab
+export {
+  type Activity as IndicatorActivity,
+  type ICHistoryEntry,
+  type IndicatorCategory,
+  type IndicatorDetail,
+  type IndicatorStatus,
+  type IndicatorSummary,
+  indicatorLabKeys,
+  type PaperTradingIndicator,
+  type TriggerConditions,
+  type TriggerStatus,
+  useForceTriggerCheck,
+  useIndicatorActivity,
+  useIndicatorDetail,
+  useIndicatorICHistory,
+  useIndicatorList,
+  usePaperTradingIndicators,
+  useRetireIndicator,
+  useTriggerStatus,
+} from "./useIndicatorLab";
 // Market
 export {
   useCandles,
