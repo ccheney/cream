@@ -219,12 +219,10 @@ app.openapi(getIndicatorRoute, async (c) => {
   const db = await getDbClient();
 
   const rows = await db.execute("SELECT * FROM indicators WHERE id = ?", [id]);
-
-  if (rows.length === 0) {
+  const row = rows[0];
+  if (!row) {
     throw new HTTPException(404, { message: "Indicator not found" });
   }
-
-  const row = rows[0]!;
   const indicator = {
     id: row.id as string,
     name: row.name as string,
@@ -656,8 +654,13 @@ function calculateSimpleIC(signals: number[], outcomes: number[]): number {
   let denomOutcome = 0;
 
   for (let i = 0; i < n; i++) {
-    const diffSignal = signals[i]! - meanSignal;
-    const diffOutcome = outcomes[i]! - meanOutcome;
+    const signal = signals[i];
+    const outcome = outcomes[i];
+    if (signal === undefined || outcome === undefined) {
+      continue;
+    }
+    const diffSignal = signal - meanSignal;
+    const diffOutcome = outcome - meanOutcome;
     numerator += diffSignal * diffOutcome;
     denomSignal += diffSignal * diffSignal;
     denomOutcome += diffOutcome * diffOutcome;
