@@ -44,6 +44,19 @@ export {
   OrderSide,
   OrderStatus,
 } from "@cream/schema-gen/cream/v1/execution";
+// Market data types
+export type {
+  Bar,
+  GetOptionChainRequest,
+  GetOptionChainResponse,
+  GetSnapshotRequest,
+  GetSnapshotResponse,
+  MarketSnapshot,
+  OptionChain,
+  OptionQuote,
+  Quote,
+  SymbolSnapshot,
+} from "@cream/schema-gen/cream/v1/market_snapshot";
 // Errors
 export { GrpcError, RetryBackoff, sleep } from "./errors.js";
 // Clients
@@ -51,6 +64,10 @@ export {
   createExecutionClient,
   ExecutionServiceClient,
 } from "./execution.js";
+export {
+  createMarketDataClient,
+  MarketDataServiceClient,
+} from "./marketdata.js";
 // Types
 export {
   DEFAULT_GRPC_CONFIG,

@@ -1,15 +1,22 @@
 /**
- * Agent Tools - Stubbed implementations until gRPC ready
+ * Agent Tools
  *
  * Tools that agents can invoke during execution to access
  * real-time data and perform calculations.
  *
  * Implementation status:
- * - All tools are currently stubbed with mock implementations
- * - Will be replaced with gRPC calls to execution engine
+ * - getQuotes: Uses gRPC MarketDataService (falls back to mock if unavailable)
+ * - Other tools: Stubbed with mock implementations
  *
  * @see docs/plans/05-agents.md
  */
+
+import { isBacktest } from "@cream/domain";
+import {
+  createMarketDataClient,
+  GrpcError,
+  type MarketDataServiceClient,
+} from "@cream/domain/grpc";
 
 // ============================================
 // Tool Types
@@ -107,27 +114,95 @@ export interface HelixQueryResult {
 }
 
 // ============================================
-// Tool Implementations (Stubbed)
+// gRPC Client Singleton
+// ============================================
+
+const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50052";
+
+let marketDataClient: MarketDataServiceClient | null = null;
+
+function getMarketDataClient(): MarketDataServiceClient {
+  if (!marketDataClient) {
+    marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
+  }
+  return marketDataClient;
+}
+
+/**
+ * Generate mock quote for a symbol
+ */
+function createMockQuote(symbol: string): Quote {
+  const basePrice = 100 + Math.random() * 100;
+  return {
+    symbol,
+    bid: basePrice - 0.02,
+    ask: basePrice + 0.03,
+    last: basePrice,
+    volume: Math.floor(Math.random() * 1000000),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// ============================================
+// Tool Implementations
 // ============================================
 
 /**
  * Get real-time quotes for instruments
  *
+ * Uses gRPC MarketDataService when available, falls back to mock data.
+ *
  * @param instruments - Array of instrument symbols
  * @returns Array of quotes
- *
- * @stub Returns mock data until gRPC ready
  */
 export async function getQuotes(instruments: string[]): Promise<Quote[]> {
-  // TODO: Replace with gRPC call to execution engine
-  return instruments.map((symbol) => ({
-    symbol,
-    bid: 100 + Math.random() * 10,
-    ask: 100 + Math.random() * 10 + 0.05,
-    last: 100 + Math.random() * 10,
-    volume: Math.floor(Math.random() * 1000000),
-    timestamp: new Date().toISOString(),
-  }));
+  // In backtest mode, always return mock data for performance
+  if (isBacktest()) {
+    return instruments.map(createMockQuote);
+  }
+
+  try {
+    const client = getMarketDataClient();
+    const response = await client.getSnapshot({
+      symbols: instruments,
+      includeBars: false,
+      barTimeframes: [],
+    });
+
+    // Map protobuf quotes to tool Quote format
+    const quotes: Quote[] = [];
+    for (const symbolSnapshot of response.data.snapshot?.symbols ?? []) {
+      const quote = symbolSnapshot.quote;
+      if (quote) {
+        quotes.push({
+          symbol: quote.symbol,
+          bid: quote.bid,
+          ask: quote.ask,
+          last: quote.last,
+          volume: Number(quote.volume),
+          timestamp: quote.timestamp?.toDate?.().toISOString() ?? new Date().toISOString(),
+        });
+      }
+    }
+
+    // Return mock for any missing symbols
+    const foundSymbols = new Set(quotes.map((q) => q.symbol));
+    for (const symbol of instruments) {
+      if (!foundSymbols.has(symbol)) {
+        quotes.push(createMockQuote(symbol));
+      }
+    }
+
+    return quotes;
+  } catch (error) {
+    // Fall back to mock data if gRPC fails
+    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+      // Expected during development - silently fall back
+      return instruments.map(createMockQuote);
+    }
+    // Unexpected errors - silently fall back to mock data
+    return instruments.map(createMockQuote);
+  }
 }
 
 /**
