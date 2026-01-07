@@ -15,13 +15,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ExpirationTabs,
   OptionsChainTable,
-  PositionBuilderModal,
   type OptionsOrderRequest,
+  PositionBuilderModal,
 } from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Spinner } from "@/components/ui/spinner";
 import { useQuote } from "@/hooks/queries/useMarket";
-import { useOptionsChain, useOptionsExpirations, useOptionsOrder } from "@/hooks/queries/useOptions";
+import {
+  useOptionsChain,
+  useOptionsExpirations,
+  useOptionsOrder,
+} from "@/hooks/queries/useOptions";
 import type { OptionsContract } from "@/lib/api/types";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
