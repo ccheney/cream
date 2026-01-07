@@ -198,6 +198,7 @@ module = [
     "research.vectorbt_runner",
     "research.nautilus_runner",
     "research.validation",
+    "research.stage_validation.*",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",
