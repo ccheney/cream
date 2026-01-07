@@ -461,6 +461,7 @@ pub enum OrderPurpose {
 }
 
 /// Tactic selector for choosing the best execution tactic.
+#[derive(Debug, Clone)]
 pub struct TacticSelector {
     /// Default tactic for entries.
     default_entry: TacticType,

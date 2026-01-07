@@ -17,11 +17,15 @@ use crate::broker::{
     RetryAfterExtractor,
 };
 use crate::models::{
-    Decision, Environment, ExecutionAck, ExecutionError, OrderSide, OrderState, OrderStatus,
-    OrderType, SubmitOrdersRequest, TimeInForce,
+    Action, Decision, Environment, ExecutionAck, ExecutionError, OrderSide, OrderState,
+    OrderStatus, OrderType, SubmitOrdersRequest, TimeHorizon, TimeInForce,
 };
 
 use super::gateway::BrokerError;
+use super::tactics::{
+    AggressiveLimitConfig, MarketState, OrderPurpose, PassiveLimitConfig, TacticConfig,
+    TacticSelectionContext, TacticSelector, TacticType, TacticUrgency,
+};
 
 /// Errors from the Alpaca adapter.
 #[derive(Debug, Error)]
@@ -112,6 +116,8 @@ pub struct AlpacaAdapter {
     client: Client,
     /// Retry policy.
     retry_policy: BrokerRetryPolicy,
+    /// Tactic selector for execution strategy.
+    tactic_selector: TacticSelector,
 }
 
 impl AlpacaAdapter {
@@ -148,6 +154,7 @@ impl AlpacaAdapter {
             base_url,
             client,
             retry_policy: BrokerRetryPolicy::default(),
+            tactic_selector: TacticSelector::default(),
         })
     }
 
@@ -346,9 +353,139 @@ impl AlpacaAdapter {
         })
     }
 
-    /// Submit a single order to Alpaca.
+    /// Build tactic selection context from a decision.
+    ///
+    /// Maps decision attributes to tactic selection criteria.
+    fn build_tactic_context(decision: &Decision) -> TacticSelectionContext {
+        // Map time horizon to urgency
+        let urgency = match decision.time_horizon {
+            TimeHorizon::Intraday => TacticUrgency::High,
+            TimeHorizon::Swing => TacticUrgency::Normal,
+            TimeHorizon::Position | TimeHorizon::LongTerm => TacticUrgency::Low,
+        };
+
+        // Map action to order purpose
+        let order_purpose = match decision.action {
+            Action::Buy => OrderPurpose::Entry,
+            Action::Sell | Action::Close => OrderPurpose::Exit,
+            // For Hold/NoTrade, default to Entry (shouldn't be called for these)
+            Action::Hold | Action::NoTrade => OrderPurpose::Entry,
+        };
+
+        // TODO: Get actual ADV from market data
+        // For now, default to small order (<1% ADV)
+        let size_pct_adv = Decimal::new(5, 3); // 0.5%
+
+        // TODO: Get actual market state from bid/ask spread
+        // For now, default to normal market
+        let market_state = MarketState::Normal;
+
+        TacticSelectionContext {
+            size_pct_adv,
+            urgency,
+            market_state,
+            order_purpose,
+        }
+    }
+
+    /// Select and log the execution tactic for a decision.
+    fn select_tactic(&self, decision: &Decision) -> (TacticType, TacticConfig) {
+        let context = Self::build_tactic_context(decision);
+        let tactic = self.tactic_selector.select(&context);
+
+        tracing::info!(
+            decision_id = %decision.decision_id,
+            instrument = %decision.instrument_id,
+            tactic = ?tactic,
+            urgency = ?context.urgency,
+            purpose = ?context.order_purpose,
+            "Selected execution tactic"
+        );
+
+        // Build tactic config with defaults
+        let config = match tactic {
+            TacticType::PassiveLimit => TacticConfig::passive_limit(PassiveLimitConfig::default()),
+            TacticType::AggressiveLimit => {
+                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
+            }
+            TacticType::Iceberg => {
+                tracing::warn!("Iceberg tactic not fully implemented, using aggressive limit");
+                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
+            }
+            TacticType::Twap => {
+                tracing::warn!("TWAP tactic not fully implemented, using aggressive limit");
+                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
+            }
+            TacticType::Vwap => {
+                tracing::warn!("VWAP tactic not fully implemented, using aggressive limit");
+                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
+            }
+            TacticType::Adaptive => {
+                tracing::warn!("Adaptive tactic not fully implemented, using aggressive limit");
+                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
+            }
+        };
+
+        (tactic, config)
+    }
+
+    /// Submit a single order to Alpaca with tactic-aware execution.
     async fn submit_single_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
-        let order_request = AlpacaOrderRequest::from_decision(decision);
+        // Select execution tactic
+        let (tactic, _config) = self.select_tactic(decision);
+
+        // Build base order request
+        let mut order_request = AlpacaOrderRequest::from_decision(decision);
+
+        // Apply tactic-specific modifications
+        // Note: For PassiveLimit/AggressiveLimit, we need current bid/ask prices
+        // which we don't have in this context. For now, we'll use the decision's
+        // limit_price if provided, or let Alpaca default to market order.
+        //
+        // Full implementation would:
+        // 1. Query current quote via get_quote()
+        // 2. Apply tactic pricing logic (PassiveLimitConfig::calculate_buy_price etc)
+        // 3. Set time_in_force based on tactic requirements
+        match tactic {
+            TacticType::PassiveLimit => {
+                // Passive orders should be day orders with limit price
+                if order_request.limit_price.is_some() {
+                    order_request.time_in_force = "day".to_string();
+                }
+                tracing::debug!(
+                    decision_id = %decision.decision_id,
+                    "Submitting passive limit order"
+                );
+            }
+            TacticType::AggressiveLimit => {
+                // Aggressive orders should be IOC (immediate-or-cancel) if limit
+                // or just market orders
+                if order_request.limit_price.is_some() {
+                    order_request.time_in_force = "ioc".to_string();
+                }
+                tracing::debug!(
+                    decision_id = %decision.decision_id,
+                    "Submitting aggressive order"
+                );
+            }
+            _ => {
+                // Other tactics fall back to default behavior
+                tracing::debug!(
+                    decision_id = %decision.decision_id,
+                    tactic = ?tactic,
+                    "Using default order parameters for tactic"
+                );
+            }
+        }
+
+        // Store tactic info for tracking (would be in order metadata in full impl)
+        tracing::info!(
+            decision_id = %decision.decision_id,
+            tactic = ?tactic,
+            order_type = %order_request.order_type,
+            time_in_force = %order_request.time_in_force,
+            "Submitting order to Alpaca"
+        );
 
         let response: AlpacaOrderResponse = self
             .request("POST", "/v2/orders", Some(&order_request))

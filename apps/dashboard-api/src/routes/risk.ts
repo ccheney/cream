@@ -19,6 +19,8 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
+import { getPositionsRepo } from "../db.js";
+import { getCorrelationMatrix } from "../services/risk/correlation.js";
 
 // ============================================
 // App Setup
@@ -197,8 +199,34 @@ const correlationRoute = createRoute({
   tags: ["Risk"],
 });
 
-app.openapi(correlationRoute, () => {
-  requireRiskService();
+app.openapi(correlationRoute, async (c) => {
+  // Get positions from database
+  const positionsRepo = await getPositionsRepo();
+  const env = process.env.CREAM_ENV ?? "PAPER";
+  const positions = await positionsRepo.findOpen(env);
+
+  // Extract unique symbols
+  const symbols = [...new Set(positions.map((p) => p.symbol))];
+
+  if (symbols.length === 0) {
+    return c.json(
+      {
+        symbols: [],
+        matrix: [],
+        highCorrelationPairs: [],
+      },
+      200
+    );
+  }
+
+  // Calculate correlation matrix
+  const result = await getCorrelationMatrix({
+    symbols,
+    lookbackDays: 60,
+    threshold: 0.7,
+  });
+
+  return c.json(result, 200);
 });
 
 // GET /var - Value at Risk

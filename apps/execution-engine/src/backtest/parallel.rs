@@ -952,9 +952,9 @@ mod tests {
         assert_eq!(int_val.as_float(), Some(42.0));
         assert_eq!(int_val.as_str(), "42");
 
-        let float_val = ParamValue::Float(3.14);
+        let float_val = ParamValue::Float(3.5);
         assert_eq!(float_val.as_int(), Some(3));
-        assert_eq!(float_val.as_float(), Some(3.14));
+        assert_eq!(float_val.as_float(), Some(3.5));
 
         let string_val = ParamValue::String("test".to_string());
         assert_eq!(string_val.as_int(), None);
