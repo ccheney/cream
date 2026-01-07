@@ -252,6 +252,142 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter();
 
 // ============================================
+// Security Configuration
+// ============================================
+
+const MAX_QUERY_LENGTH = 500;
+const MAX_TITLE_LENGTH = 200;
+const MAX_SNIPPET_LENGTH = 1000;
+const MAX_RAW_CONTENT_LENGTH = 10000;
+
+/** Characters that could be used for injection attacks */
+const DANGEROUS_CHARS = /[<>{}|\\^`]/g;
+
+/** Allowed URL protocols */
+const ALLOWED_PROTOCOLS = ["https:", "http:"];
+
+/** Blocked TLDs for security */
+const BLOCKED_TLDS = [".onion", ".local", ".internal"];
+
+/** Patterns for internal/private IP addresses */
+const INTERNAL_IP_PATTERNS = [
+  /^10\./, // 10.0.0.0/8
+  /^172\.(1[6-9]|2[0-9]|3[01])\./, // 172.16.0.0/12
+  /^192\.168\./, // 192.168.0.0/16
+  /^127\./, // 127.0.0.0/8 (loopback)
+  /^169\.254\./, // 169.254.0.0/16 (link-local)
+  /^0\./, // 0.0.0.0/8
+  /^localhost$/i,
+];
+
+/**
+ * Sanitize a search query for security
+ * - Trims and limits length
+ * - Removes potentially dangerous characters
+ * - Normalizes whitespace
+ */
+export function sanitizeQuery(query: string): string {
+  // Trim and limit length
+  let sanitized = query.trim().slice(0, MAX_QUERY_LENGTH);
+
+  // Remove potentially dangerous characters
+  sanitized = sanitized.replace(DANGEROUS_CHARS, "");
+
+  // Normalize whitespace (collapse multiple spaces)
+  sanitized = sanitized.replace(/\s+/g, " ");
+
+  return sanitized;
+}
+
+/**
+ * Check if a hostname is an internal/private IP address
+ */
+function isInternalIP(hostname: string): boolean {
+  return INTERNAL_IP_PATTERNS.some((pattern) => pattern.test(hostname));
+}
+
+/**
+ * Validate a result URL for security
+ * - Checks protocol is allowed
+ * - Blocks internal IPs
+ * - Blocks dangerous TLDs
+ */
+export function validateResultUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+
+    // Check protocol
+    if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+      return false;
+    }
+
+    // Check for blocked TLDs
+    if (BLOCKED_TLDS.some((tld) => parsed.hostname.endsWith(tld))) {
+      return false;
+    }
+
+    // Check for internal IP addresses
+    if (isInternalIP(parsed.hostname)) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sanitize HTML content by removing tags
+ */
+function sanitizeHtml(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+/**
+ * Simple hash for audit logging (non-cryptographic)
+ * Used to avoid logging raw queries while maintaining correlation
+ */
+function hashQueryForAudit(query: string): string {
+  let hash = 0;
+  for (let i = 0; i < query.length; i++) {
+    const char = query.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(8, "0");
+}
+
+/**
+ * Audit log entry for security monitoring
+ */
+interface AuditLogEntry {
+  timestamp: string;
+  action: "query" | "result_filtered" | "url_blocked";
+  queryHash: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Log an audit entry for security monitoring
+ */
+function logAudit(entry: Omit<AuditLogEntry, "timestamp">): void {
+  const fullEntry: AuditLogEntry = {
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  // In production, this would go to a dedicated audit log system
+  console.log("[AUDIT]", JSON.stringify(fullEntry));
+}
+
+// ============================================
 // Domain Mapping
 // ============================================
 
@@ -307,7 +443,7 @@ function extractDomain(url: string): string {
 
 /**
  * Normalize Tavily results to WebSearchResult format
- * and filter by time cutoff
+ * with security sanitization, URL validation, and time filtering
  */
 function normalizeResults(
   results: Array<{
@@ -318,11 +454,19 @@ function normalizeResults(
     published_date?: string;
     raw_content?: string | null;
   }>,
-  cutoffTime: Date
+  cutoffTime: Date,
+  queryHash: string
 ): WebSearchResult[] {
   const normalized: WebSearchResult[] = [];
+  let urlsBlocked = 0;
 
   for (const result of results) {
+    // Security: Validate URL before including result
+    if (!validateResultUrl(result.url)) {
+      urlsBlocked++;
+      continue;
+    }
+
     // Parse published date
     let publishedAt: Date | null = null;
     if (result.published_date) {
@@ -333,14 +477,26 @@ function normalizeResults(
       }
     }
 
+    // Security: Sanitize and limit content lengths
     normalized.push({
-      title: result.title,
-      snippet: result.content,
+      title: sanitizeHtml(result.title).slice(0, MAX_TITLE_LENGTH),
+      snippet: sanitizeHtml(result.content).slice(0, MAX_SNIPPET_LENGTH),
       url: result.url,
       source: extractDomain(result.url),
       publishedAt: publishedAt?.toISOString() ?? new Date().toISOString(),
       relevanceScore: result.score,
-      rawContent: result.raw_content ?? undefined,
+      rawContent: result.raw_content
+        ? sanitizeHtml(result.raw_content).slice(0, MAX_RAW_CONTENT_LENGTH)
+        : undefined,
+    });
+  }
+
+  // Audit: Log if URLs were blocked
+  if (urlsBlocked > 0) {
+    logAudit({
+      action: "url_blocked",
+      queryHash,
+      details: { count: urlsBlocked },
     });
   }
 
@@ -419,15 +575,19 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
     console.warn("[webSearch] Invalid params:", parsed.error.message);
     return createEmptyResponse(params.query ?? "", startTime);
   }
-  const { query, maxAgeHours, sources, topic, maxResults, symbols } = parsed.data;
+  const { maxAgeHours, sources, topic, maxResults, symbols } = parsed.data;
 
-  // 2. Backtest mode → empty results (don't cache)
+  // 2. Security: Sanitize the query
+  const query = sanitizeQuery(parsed.data.query);
+  const queryHash = hashQueryForAudit(query);
+
+  // 3. Backtest mode → empty results (don't cache)
   if (isBacktest()) {
     return createEmptyResponse(query, startTime);
   }
 
-  // 3. Check cache before API call
-  const cacheKey = getCacheKey(parsed.data);
+  // 4. Check cache before API call
+  const cacheKey = getCacheKey({ ...parsed.data, query });
   const cached = getCached(cacheKey);
   if (cached) {
     // Return cached result with updated execution time, sliced to requested maxResults
@@ -440,31 +600,43 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
     };
   }
 
-  // 4. Check rate limit before API call
+  // 5. Check rate limit before API call
   if (!rateLimiter.canProceed("tavily")) {
     console.warn("[webSearch] Rate limited, returning empty response");
     return createEmptyResponse(query, startTime);
   }
 
-  // 5. Check for Tavily client
+  // 6. Check for Tavily client
   const client = getTavilyClient();
   if (!client) {
     console.warn("[webSearch] TAVILY_API_KEY not configured");
     return createEmptyResponse(query, startTime);
   }
 
-  // 6. Build domain filters from sources
+  // 7. Build domain filters from sources
   const includeDomains = buildDomainFilter(sources);
 
-  // 7. Calculate time bounds (hybrid filtering strategy)
+  // 8. Calculate time bounds (hybrid filtering strategy)
   const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
   const timeRange = calculateTimeRange(maxAgeHours);
 
-  // 8. Build enhanced query with symbols if provided
+  // 9. Build enhanced query with symbols if provided
   let enhancedQuery = query;
   if (symbols && symbols.length > 0) {
     enhancedQuery = `${query} ${symbols.map((s) => `$${s}`).join(" ")}`;
   }
+
+  // Audit: Log query execution (hash only, not raw query)
+  logAudit({
+    action: "query",
+    queryHash,
+    details: {
+      topic,
+      sources,
+      maxAgeHours,
+      hasSymbols: symbols && symbols.length > 0,
+    },
+  });
 
   try {
     // 9. Execute Tavily search
@@ -483,11 +655,11 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
       return createEmptyResponse(query, startTime);
     }
 
-    // 10. Record successful API call for rate limiting
+    // 11. Record successful API call for rate limiting
     rateLimiter.record("tavily");
 
-    // 11. Client-side time filtering for precise hour-level window
-    const filteredResults = normalizeResults(result.data.results, cutoffTime);
+    // 12. Client-side time filtering with security sanitization
+    const filteredResults = normalizeResults(result.data.results, cutoffTime, queryHash);
     const resultsFiltered = result.data.results.length - filteredResults.length;
 
     const response: WebSearchResponse = {
@@ -500,7 +672,7 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
       },
     };
 
-    // 12. Cache successful results (store full result set for reuse with different maxResults)
+    // 13. Cache successful results (store full result set for reuse with different maxResults)
     const responseToCache: WebSearchResponse = {
       results: filteredResults,
       metadata: response.metadata,
