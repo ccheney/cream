@@ -12,7 +12,7 @@
  * - recalcIndicator: Uses gRPC for bars + @cream/indicators for calculation
  * - helixQuery: Uses @cream/helix HelixDB client (falls back to empty on error)
  * - economicCalendar: Uses FMP API for economic events (falls back to empty if unavailable)
- * - searchNews: Stubbed - needs external API integration
+ * - searchNews: Uses FMP API for news with keyword-based sentiment (falls back to empty if unavailable)
  *
  * @see docs/plans/05-agents.md
  */
@@ -41,7 +41,7 @@ import {
   calculateStochastic,
   calculateVolumeSMA,
 } from "@cream/indicators";
-import { createFMPClient, type FMPClient } from "@cream/universe";
+import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
 
 // ============================================
 // Tool Types
@@ -914,19 +914,160 @@ function mapFMPImpact(impact?: "Low" | "Medium" | "High"): "low" | "medium" | "h
 }
 
 /**
+ * Simple sentiment detection based on keywords
+ * Used as a quick heuristic; for more sophisticated analysis,
+ * use the external-context package extraction pipeline.
+ */
+function detectSentiment(text: string): "positive" | "negative" | "neutral" {
+  const lowerText = text.toLowerCase();
+
+  // Positive keywords
+  const positiveKeywords = [
+    "surge",
+    "soar",
+    "jump",
+    "rally",
+    "gain",
+    "rise",
+    "beat",
+    "exceed",
+    "strong",
+    "bullish",
+    "upgrade",
+    "outperform",
+    "profit",
+    "growth",
+    "record",
+    "breakthrough",
+    "positive",
+    "success",
+  ];
+
+  // Negative keywords
+  const negativeKeywords = [
+    "drop",
+    "fall",
+    "plunge",
+    "crash",
+    "decline",
+    "loss",
+    "miss",
+    "weak",
+    "bearish",
+    "downgrade",
+    "underperform",
+    "cut",
+    "warning",
+    "concern",
+    "risk",
+    "negative",
+    "failure",
+    "layoff",
+  ];
+
+  let positiveCount = 0;
+  let negativeCount = 0;
+
+  for (const keyword of positiveKeywords) {
+    if (lowerText.includes(keyword)) {
+      positiveCount++;
+    }
+  }
+
+  for (const keyword of negativeKeywords) {
+    if (lowerText.includes(keyword)) {
+      negativeCount++;
+    }
+  }
+
+  if (positiveCount > negativeCount) {
+    return "positive";
+  }
+  if (negativeCount > positiveCount) {
+    return "negative";
+  }
+  return "neutral";
+}
+
+/**
+ * Transform FMP news to NewsItem format
+ */
+function transformFMPNews(news: FMPStockNews): NewsItem {
+  const combinedText = `${news.title} ${news.text}`;
+
+  return {
+    id: `fmp-${news.symbol}-${new Date(news.publishedDate).getTime()}`,
+    headline: news.title,
+    summary: news.text.substring(0, 500), // Limit summary length
+    source: news.site,
+    publishedAt: news.publishedDate,
+    symbols: news.symbol ? [news.symbol] : [],
+    sentiment: detectSentiment(combinedText),
+  };
+}
+
+/**
  * Search news for symbols or keywords
  *
- * @param query - Search query
- * @param symbols - Optional symbol filter
- * @returns Array of news items
+ * Fetches news from FMP API for the given symbols.
+ * If no symbols provided, fetches general market news.
+ * Uses simple keyword-based sentiment detection.
  *
- * @stub Returns mock data until gRPC ready
+ * For more sophisticated sentiment analysis with entity extraction,
+ * use the @cream/external-context extraction pipeline.
+ *
+ * @param query - Search query (used for filtering results)
+ * @param symbols - Optional symbol filter (fetches news for these symbols)
+ * @param limit - Maximum number of results (default: 20)
+ * @returns Array of news items with sentiment
  */
-export async function searchNews(query: string, symbols: string[] = []): Promise<NewsItem[]> {
-  // TODO: Replace with external API call
-  void query;
-  void symbols;
-  return [];
+export async function searchNews(
+  query: string,
+  symbols: string[] = [],
+  limit = 20
+): Promise<NewsItem[]> {
+  // In backtest mode, return empty array for consistent/fast execution
+  if (isBacktest()) {
+    return [];
+  }
+
+  const client = getFMPClient();
+  if (!client) {
+    // FMP_KEY not set - return empty array
+    return [];
+  }
+
+  try {
+    let newsItems: FMPStockNews[];
+
+    if (symbols.length > 0) {
+      // Fetch news for specific symbols
+      newsItems = await client.getStockNews(symbols, limit);
+    } else {
+      // Fetch general market news
+      newsItems = await client.getGeneralNews(limit);
+    }
+
+    // Transform to NewsItem format
+    let results = newsItems.map(transformFMPNews);
+
+    // Filter by query if provided
+    if (query && query.trim() !== "") {
+      const queryLower = query.toLowerCase();
+      results = results.filter(
+        (item) =>
+          item.headline.toLowerCase().includes(queryLower) ||
+          item.summary.toLowerCase().includes(queryLower)
+      );
+    }
+
+    return results;
+  } catch (error) {
+    // Log but don't fail - news is supplementary context
+    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
+    console.warn("Failed to fetch news:", error);
+    return [];
+  }
 }
 
 /**
