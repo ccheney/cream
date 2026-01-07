@@ -63,6 +63,29 @@ export {
   spearmanCorrelation,
   timeSeriesIC,
 } from "./ic.js";
+// Orthogonality Checker (Correlation + VIF)
+export {
+  type CorrelationResult,
+  CorrelationResultSchema,
+  checkOrthogonality,
+  computeAllVIFs,
+  computeCorrelationMatrix,
+  computePairwiseCorrelations,
+  computeVIF,
+  evaluateOrthogonality,
+  isIndicatorOrthogonal,
+  ORTHOGONALITY_DEFAULTS,
+  type OrthogonalityInput,
+  OrthogonalityInputSchema,
+  type OrthogonalityResult,
+  OrthogonalityResultSchema,
+  orthogonalize,
+  orthogonalizeMultiple,
+  pearsonCorrelation as orthPearsonCorrelation,
+  rankByOrthogonality,
+  type VIFResult,
+  VIFResultSchema,
+} from "./orthogonality.js";
 // Probability of Backtest Overfitting (PBO)
 export {
   type CSCVCombinationResult,
