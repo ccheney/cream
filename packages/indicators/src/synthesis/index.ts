@@ -111,3 +111,20 @@ export {
   type TriggerEvaluationResult,
   TriggerEvaluationResultSchema,
 } from "./trigger.js";
+// Walk-Forward Validation
+export {
+  compareWalkForwardMethods,
+  evaluateWalkForward,
+  isWalkForwardRobust,
+  minimumWalkForwardLength,
+  type WalkForwardInput,
+  WalkForwardInputSchema,
+  type WalkForwardMethod,
+  type WalkForwardPeriod,
+  WalkForwardPeriodSchema,
+  type WalkForwardResult,
+  WalkForwardResultSchema,
+  WF_DEFAULTS,
+  walkForwardSweep,
+  walkForwardValidation,
+} from "./walkForward.js";
