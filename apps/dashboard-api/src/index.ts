@@ -23,6 +23,7 @@ import {
   backtestRoutes,
   configRoutes,
   decisionsRoutes,
+  indicatorsRoutes,
   marketRoutes,
   optionsRoutes,
   portfolioRoutes,
@@ -144,6 +145,7 @@ app.use("/api/risk/*", requireAuth);
 app.use("/api/backtests/*", requireAuth);
 app.use("/api/theses/*", requireAuth);
 app.use("/api/preferences/*", requireAuth);
+app.use("/api/indicators/*", requireAuth);
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -164,6 +166,7 @@ app.route("/api/risk", riskRoutes);
 app.route("/api/backtests", backtestRoutes);
 app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
+app.route("/api/indicators", indicatorsRoutes);
 
 // ============================================
 // OpenAPI Documentation
