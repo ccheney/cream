@@ -202,6 +202,7 @@ module = [
     "research.nautilus_runner",
     "research.validation",
     "research.stage_validation.*",
+    "research.hypothesis_alignment",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",
