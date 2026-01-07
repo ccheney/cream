@@ -24,6 +24,7 @@ import {
   configRoutes,
   decisionsRoutes,
   marketRoutes,
+  optionsRoutes,
   portfolioRoutes,
   preferencesRoutes,
   riskRoutes,
@@ -158,6 +159,7 @@ app.route("/api/alerts", alertsRoutes);
 app.route("/api/agents", agentsRoutes);
 app.route("/api/config", configRoutes);
 app.route("/api/market", marketRoutes);
+app.route("/api/options", optionsRoutes);
 app.route("/api/risk", riskRoutes);
 app.route("/api/backtests", backtestRoutes);
 app.route("/api/theses", thesesRoutes);

@@ -11,6 +11,7 @@ export { default as backtestRoutes } from "./backtest.js";
 export { default as configRoutes } from "./config.js";
 export { default as decisionsRoutes } from "./decisions.js";
 export { default as marketRoutes } from "./market.js";
+export { default as optionsRoutes } from "./options.js";
 export { default as portfolioRoutes } from "./portfolio.js";
 export { default as preferencesRoutes } from "./preferences.js";
 export { default as riskRoutes } from "./risk.js";
