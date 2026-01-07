@@ -38,12 +38,12 @@ export type {
   StreamExecutionsResponse,
   SubmitOrderRequest,
   SubmitOrderResponse,
-} from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
+} from "@cream/schema-gen/cream/v1/execution";
 export {
   ConstraintResult,
   OrderSide,
   OrderStatus,
-} from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
+} from "@cream/schema-gen/cream/v1/execution";
 // Errors
 export { GrpcError, RetryBackoff, sleep } from "./errors.js";
 // Clients

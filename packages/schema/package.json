@@ -10,5 +10,8 @@
     "clean": "rm -rf ../schema-gen/ts ../schema-gen/python ../schema-gen/rust",
     "build": "bun run lint && bun run generate"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.10.2",
+    "@connectrpc/protoc-gen-connect-es": "1.7.0"
+  }
 }

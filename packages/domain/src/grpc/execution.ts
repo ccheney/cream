@@ -21,7 +21,7 @@ import type {
   StreamExecutionsResponse,
   SubmitOrderRequest,
   SubmitOrderResponse,
-} from "@cream/schema-gen/ts/cream/v1/execution_pb.js";
+} from "@cream/schema-gen/cream/v1/execution";
 import { GrpcError } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,

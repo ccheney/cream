@@ -12,7 +12,10 @@ mod state;
 pub mod stops;
 pub mod tactics;
 
-pub use alpaca::{AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, RegulatoryFeeCalculator};
+pub use alpaca::{
+    AccountInfo, AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, Position as AlpacaPosition,
+    RegulatoryFeeCalculator,
+};
 pub use gateway::{
     BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
 };

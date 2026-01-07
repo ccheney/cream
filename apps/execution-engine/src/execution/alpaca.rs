@@ -417,6 +417,13 @@ impl AlpacaAdapter {
             equity: response.equity.parse().unwrap_or(Decimal::ZERO),
             buying_power: response.buying_power.parse().unwrap_or(Decimal::ZERO),
             cash: response.cash.parse().unwrap_or(Decimal::ZERO),
+            margin_used: response
+                .maintenance_margin
+                .as_ref()
+                .and_then(|m| m.parse().ok())
+                .unwrap_or(Decimal::ZERO),
+            daytrade_count: response.daytrade_count.unwrap_or(0),
+            pattern_day_trader: response.pattern_day_trader.unwrap_or(false),
         })
     }
 
@@ -607,6 +614,12 @@ struct AlpacaAccountResponse {
     equity: String,
     cash: String,
     buying_power: String,
+    #[serde(default)]
+    maintenance_margin: Option<String>,
+    #[serde(default)]
+    daytrade_count: Option<i32>,
+    #[serde(default)]
+    pattern_day_trader: Option<bool>,
 }
 
 /// Account information from Alpaca.
@@ -620,6 +633,12 @@ pub struct AccountInfo {
     pub buying_power: Decimal,
     /// Cash balance.
     pub cash: Decimal,
+    /// Maintenance margin used.
+    pub margin_used: Decimal,
+    /// Day trade count (for PDT rule).
+    pub daytrade_count: i32,
+    /// Whether account is flagged as pattern day trader.
+    pub pattern_day_trader: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -631,6 +650,10 @@ struct AlpacaPositionResponse {
     market_value: String,
     current_price: String,
     unrealized_pl: String,
+    #[serde(default)]
+    unrealized_plpc: Option<String>,
+    #[serde(default)]
+    cost_basis: Option<String>,
 }
 
 /// Position information.
@@ -648,17 +671,37 @@ pub struct Position {
     pub current_price: Decimal,
     /// Unrealized profit/loss.
     pub unrealized_pl: Decimal,
+    /// Unrealized P&L percentage.
+    pub unrealized_pl_pct: Decimal,
+    /// Cost basis.
+    pub cost_basis: Decimal,
 }
 
 impl Position {
     fn from_alpaca(response: &AlpacaPositionResponse) -> Self {
+        let qty: Decimal = response.qty.parse().unwrap_or(Decimal::ZERO);
+        let avg_entry_price: Decimal = response.avg_entry_price.parse().unwrap_or(Decimal::ZERO);
+
+        // Calculate cost basis if not provided (qty * avg_entry_price)
+        let cost_basis = response
+            .cost_basis
+            .as_ref()
+            .and_then(|c| c.parse().ok())
+            .unwrap_or_else(|| qty.abs() * avg_entry_price);
+
         Self {
             symbol: response.symbol.clone(),
-            qty: response.qty.parse().unwrap_or(Decimal::ZERO),
-            avg_entry_price: response.avg_entry_price.parse().unwrap_or(Decimal::ZERO),
+            qty,
+            avg_entry_price,
             market_value: response.market_value.parse().unwrap_or(Decimal::ZERO),
             current_price: response.current_price.parse().unwrap_or(Decimal::ZERO),
             unrealized_pl: response.unrealized_pl.parse().unwrap_or(Decimal::ZERO),
+            unrealized_pl_pct: response
+                .unrealized_plpc
+                .as_ref()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(Decimal::ZERO),
+            cost_basis,
         }
     }
 }

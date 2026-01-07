@@ -16,14 +16,14 @@ inputs:
   - directory: .
 
 plugins:
-  # TypeScript (ES modules) - Protobuf-ES for message types
-  - remote: buf.build/bufbuild/es
+  # TypeScript (ES modules) - Protobuf-ES v1.x for message types
+  - remote: buf.build/bufbuild/es:v1.10.0
     out: ../schema-gen/ts
     opt:
       - target=ts
 
-  # Connect-ES (gRPC-web client) - For Connect/gRPC-Web service clients
-  - remote: buf.build/bufbuild/connect-es
+  # Connect-ES v1.x (gRPC client) - For Connect/gRPC service clients
+  - remote: buf.build/connectrpc/es:v1.6.1
     out: ../schema-gen/ts
     opt:
       - target=ts
