@@ -34,6 +34,14 @@ export {
   getRequiredWarmupPeriod,
   type IndicatorPipelineConfig,
 } from "./pipeline";
+// Storage Integration
+export {
+  type PersistIndicatorsOptions,
+  type PersistResult,
+  persistHistoricalIndicators,
+  persistIndicators,
+  persistMultipleIndicators,
+} from "./storage";
 // Synthesis (Dynamic Indicator Generation)
 export * from "./synthesis/index";
 // Normalization Transforms
@@ -46,11 +54,3 @@ export * from "./types";
 export * from "./volatility/index";
 // Volume Indicators
 export * from "./volume/index";
-// Storage Integration
-export {
-  persistHistoricalIndicators,
-  persistIndicators,
-  persistMultipleIndicators,
-  type PersistIndicatorsOptions,
-  type PersistResult,
-} from "./storage";

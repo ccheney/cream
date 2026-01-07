@@ -379,6 +379,15 @@ export interface AgentContext {
     importanceScore: number;
     relatedInstruments: string[];
   }>;
+  /** Market regime classifications per symbol from @cream/regime */
+  regimeLabels?: Record<
+    string,
+    {
+      regime: string;
+      confidence: number;
+      reasoning?: string;
+    }
+  >;
 }
 
 /**
@@ -390,16 +399,39 @@ const DEFAULT_MODEL_SETTINGS = {
 };
 
 /**
+ * Build regime context section for prompts.
+ */
+function buildRegimeContext(regimeLabels?: AgentContext["regimeLabels"]): string {
+  if (!regimeLabels || Object.keys(regimeLabels).length === 0) {
+    return "";
+  }
+
+  const lines = Object.entries(regimeLabels).map(([symbol, data]) => {
+    const confidence = (data.confidence * 100).toFixed(0);
+    return `- ${symbol}: ${data.regime} (${confidence}% confidence)${data.reasoning ? ` - ${data.reasoning}` : ""}`;
+  });
+
+  return `\nMarket Regime Classifications:
+${lines.join("\n")}
+`;
+}
+
+/**
  * Run Technical Analyst agent.
  */
 export async function runTechnicalAnalyst(
   context: AgentContext
 ): Promise<TechnicalAnalysisOutput[]> {
+  const regimeContext = buildRegimeContext(context.regimeLabels);
+
   const prompt = `Analyze the following instruments:
 ${JSON.stringify(context.snapshots, null, 2)}
-
+${regimeContext}
 Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+Consider the market regime when assessing trend, momentum, and volatility.
+Regime context should inform your setup classification and technical thesis.`;
 
   const response = await technicalAnalystAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {

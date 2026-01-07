@@ -42,11 +42,7 @@ import {
   calculateVolumeSMA,
 } from "@cream/indicators";
 import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
-import {
-  checkIndicatorTrigger,
-  type CheckIndicatorTriggerInput,
-  type CheckIndicatorTriggerOutput,
-} from "./checkIndicatorTrigger.js";
+import { checkIndicatorTrigger } from "./checkIndicatorTrigger.js";
 import { implementIndicator } from "./claudeCodeIndicator.js";
 import { type WebSearchParams, type WebSearchResponse, webSearch } from "./webSearch.js";
 
@@ -1186,25 +1182,23 @@ export function getAvailableTools(): ToolName[] {
 // Web search types and function
 export { webSearch, type WebSearchParams, type WebSearchResponse };
 
-// Mastra tool definitions
-export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./definitions/index.js";
-export type { WebSearchResult } from "./webSearch.js";
-
 // Indicator trigger detection tool
 export {
-  checkIndicatorTrigger,
   type CheckIndicatorTriggerInput,
   type CheckIndicatorTriggerOutput,
+  checkIndicatorTrigger,
 } from "./checkIndicatorTrigger.js";
-
 // Claude Code indicator implementation tool
 export {
   buildImplementationPrompt,
-  claudeCodeIndicator,
   type ClaudeCodeConfig,
-  implementIndicator,
+  claudeCodeIndicator,
   type ImplementIndicatorInput,
   ImplementIndicatorInputSchema,
   type ImplementIndicatorOutput,
   ImplementIndicatorOutputSchema,
+  implementIndicator,
 } from "./claudeCodeIndicator.js";
+// Mastra tool definitions
+export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./definitions/index.js";
+export type { WebSearchResult } from "./webSearch.js";
