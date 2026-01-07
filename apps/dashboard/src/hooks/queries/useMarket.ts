@@ -1,12 +1,12 @@
 /**
  * Market Query Hooks
  *
- * TanStack Query hooks for market data with WebSocket streaming support.
- * When WebSocket is connected, quote data streams in real-time and HTTP
- * polling is disabled. Falls back to HTTP polling when WebSocket is unavailable.
+ * TanStack Query hooks for market data with WebSocket streaming.
+ * Quote data is sourced exclusively from WebSocket - no REST fallback.
+ * Other market data (candles, indicators) still uses REST API.
  */
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { get } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
@@ -21,12 +21,13 @@ import type {
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
 /**
- * Get batch quotes with WebSocket streaming support.
+ * Get batch quotes via WebSocket streaming only.
  *
- * When WebSocket is connected, subscribes symbols for real-time updates
- * and disables HTTP polling. Falls back to polling when disconnected.
+ * Data is populated exclusively by WebSocket messages updating the query cache.
+ * No REST API calls are made for quotes.
  */
 export function useQuotes(symbols: string[]) {
+  const queryClient = useQueryClient();
   const { connected, subscribeSymbols } = useWebSocketContext();
 
   // Subscribe symbols to WebSocket when connected
@@ -36,18 +37,19 @@ export function useQuotes(symbols: string[]) {
     }
   }, [connected, symbols, subscribeSymbols]);
 
-  // Use individual queries for each symbol so WebSocket updates work correctly
+  // Use individual queries for each symbol - data comes from WebSocket cache updates
   const queries = useQueries({
     queries: symbols.map((symbol) => ({
       queryKey: queryKeys.market.quote(symbol),
-      queryFn: async () => {
-        const { data } = await get<Quote>(`/api/market/quote/${symbol}`);
-        return data;
-      },
-      staleTime: STALE_TIMES.MARKET,
+      // No queryFn - data is set directly by WebSocket messages
+      // Return existing cache data or undefined
+      queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)),
+      staleTime: Infinity, // Never stale - WebSocket keeps it fresh
       gcTime: CACHE_TIMES.MARKET,
-      // Disable polling when WebSocket is connected (streaming updates cache directly)
-      refetchInterval: connected ? false : 5000,
+      refetchInterval: false, // No polling - WebSocket only
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       enabled: Boolean(symbol),
     })),
   });
@@ -57,10 +59,10 @@ export function useQuotes(symbols: string[]) {
     return queries.map((q) => q.data).filter((d): d is Quote => d !== undefined);
   }, [queries]);
 
-  const isLoading = queries.some((q) => q.isLoading);
+  const isLoading = !connected || (queries.some((q) => q.isLoading) && data.length === 0);
   const isFetching = queries.some((q) => q.isFetching);
-  const isError = queries.some((q) => q.isError);
-  const error = queries.find((q) => q.error)?.error;
+  const isError = !connected;
+  const error = !connected ? new Error("WebSocket not connected") : null;
 
   return {
     data,
@@ -68,18 +70,20 @@ export function useQuotes(symbols: string[]) {
     isFetching,
     isError,
     error,
+    connected,
     // Expose individual query access for per-symbol updates
     queries,
   };
 }
 
 /**
- * Get single quote with WebSocket streaming support.
+ * Get single quote via WebSocket streaming only.
  *
- * When WebSocket is connected, subscribes the symbol for real-time updates
- * and disables HTTP polling. Falls back to polling when disconnected.
+ * Data is populated exclusively by WebSocket messages updating the query cache.
+ * No REST API calls are made for quotes.
  */
 export function useQuote(symbol: string) {
+  const queryClient = useQueryClient();
   const { connected, subscribeSymbols } = useWebSocketContext();
 
   // Subscribe symbol to WebSocket when connected
@@ -89,18 +93,27 @@ export function useQuote(symbol: string) {
     }
   }, [connected, symbol, subscribeSymbols]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.market.quote(symbol),
-    queryFn: async () => {
-      const { data } = await get<Quote>(`/api/market/quote/${symbol}`);
-      return data;
-    },
-    staleTime: STALE_TIMES.MARKET,
+    // No queryFn - data is set directly by WebSocket messages
+    queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)),
+    staleTime: Infinity, // Never stale - WebSocket keeps it fresh
     gcTime: CACHE_TIMES.MARKET,
-    // Disable polling when WebSocket is connected (streaming updates cache directly)
-    refetchInterval: connected ? false : 5000,
+    refetchInterval: false, // No polling - WebSocket only
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     enabled: Boolean(symbol),
   });
+
+  return {
+    ...query,
+    // Override loading/error states to reflect WebSocket connection
+    isLoading: !connected || (query.isLoading && !query.data),
+    isError: !connected,
+    error: !connected ? new Error("WebSocket not connected") : query.error,
+    connected,
+  };
 }
 
 /**
