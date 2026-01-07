@@ -8,8 +8,8 @@ import numpy as np
 import polars as pl
 import pytest
 
+from research.stage_validation.stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
 from research.strategies.base import FactorMetadata, ResearchFactor
-from research.validation.stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
 
 
 class MockFactor(ResearchFactor):
@@ -51,13 +51,15 @@ def sample_data() -> pl.DataFrame:
     open_ = low + np.random.rand(n) * (high - low)
     volume = np.random.uniform(1e6, 1e8, n)
 
-    return pl.DataFrame({
-        "open": open_,
-        "high": high,
-        "low": low,
-        "close": close,
-        "volume": volume,
-    })
+    return pl.DataFrame(
+        {
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }
+    )
 
 
 @pytest.fixture
@@ -118,13 +120,15 @@ def test_check_gates_pass() -> None:
     """Test gate checking when all pass."""
     metadata = FactorMetadata(factor_id="test", hypothesis_id="hypo")
     factor = MockFactor(metadata)
-    data = pl.DataFrame({
-        "open": [100.0] * 100,
-        "high": [101.0] * 100,
-        "low": [99.0] * 100,
-        "close": [100.0] * 100,
-        "volume": [1e6] * 100,
-    })
+    data = pl.DataFrame(
+        {
+            "open": [100.0] * 100,
+            "high": [101.0] * 100,
+            "low": [99.0] * 100,
+            "close": [100.0] * 100,
+            "volume": [1e6] * 100,
+        }
+    )
     validator = Stage1Validator(factor, data)
 
     metrics = {
@@ -145,13 +149,15 @@ def test_check_gates_fail() -> None:
     """Test gate checking when some fail."""
     metadata = FactorMetadata(factor_id="test", hypothesis_id="hypo")
     factor = MockFactor(metadata)
-    data = pl.DataFrame({
-        "open": [100.0] * 100,
-        "high": [101.0] * 100,
-        "low": [99.0] * 100,
-        "close": [100.0] * 100,
-        "volume": [1e6] * 100,
-    })
+    data = pl.DataFrame(
+        {
+            "open": [100.0] * 100,
+            "high": [101.0] * 100,
+            "low": [99.0] * 100,
+            "close": [100.0] * 100,
+            "volume": [1e6] * 100,
+        }
+    )
     validator = Stage1Validator(factor, data)
 
     metrics = {

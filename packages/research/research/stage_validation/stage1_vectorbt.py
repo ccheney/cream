@@ -180,10 +180,12 @@ class Stage1Validator:
             try:
                 signals = self.factor.compute_signal(self.data)
                 metrics = self._run_backtest(signals)
-                results.append({
-                    "params": params,
-                    **metrics,
-                })
+                results.append(
+                    {
+                        "params": params,
+                        **metrics,
+                    }
+                )
             except Exception as e:
                 logger.warning(f"Parameter scan failed for {params}: {e}")
                 continue
@@ -351,9 +353,7 @@ class Stage1Validator:
         # Rank IC = Spearman correlation
         rank_ic_result = stats.spearmanr(valid_signals, valid_returns)
         rank_ic = (
-            float(rank_ic_result.correlation)
-            if not np.isnan(rank_ic_result.correlation)
-            else 0.0
+            float(rank_ic_result.correlation) if not np.isnan(rank_ic_result.correlation) else 0.0
         )
 
         # ICIR = rolling IC mean / std
@@ -391,15 +391,11 @@ class Stage1Validator:
 
         # Sharpe
         if metrics.get("sharpe", 0) < self.gates.sharpe_min:
-            violations.append(
-                f"sharpe {metrics.get('sharpe', 0):.3f} < {self.gates.sharpe_min}"
-            )
+            violations.append(f"sharpe {metrics.get('sharpe', 0):.3f} < {self.gates.sharpe_min}")
 
         # Sortino
         if metrics.get("sortino", 0) < self.gates.sortino_min:
-            violations.append(
-                f"sortino {metrics.get('sortino', 0):.3f} < {self.gates.sortino_min}"
-            )
+            violations.append(f"sortino {metrics.get('sortino', 0):.3f} < {self.gates.sortino_min}")
 
         # Win rate
         if metrics.get("win_rate", 0) < self.gates.win_rate_min:
@@ -415,15 +411,11 @@ class Stage1Validator:
 
         # IC
         if metrics.get("ic", 0) < self.gates.ic_min:
-            violations.append(
-                f"ic {metrics.get('ic', 0):.4f} < {self.gates.ic_min}"
-            )
+            violations.append(f"ic {metrics.get('ic', 0):.4f} < {self.gates.ic_min}")
 
         # ICIR
         if metrics.get("icir", 0) < self.gates.icir_min:
-            violations.append(
-                f"icir {metrics.get('icir', 0):.3f} < {self.gates.icir_min}"
-            )
+            violations.append(f"icir {metrics.get('icir', 0):.3f} < {self.gates.icir_min}")
 
         return len(violations) == 0, violations
 

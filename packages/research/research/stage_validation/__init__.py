@@ -1,5 +1,5 @@
 """
-Validation Module
+Stage Validation Module
 
 Multi-stage validation framework for research factors.
 
@@ -9,9 +9,10 @@ Stages:
 3. Walk-Forward Validation - Out-of-sample stability testing
 """
 
-from .stage1_vectorbt import Stage1Results, Stage1Validator
+from .stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
 
 __all__ = [
-    "Stage1Validator",
+    "Stage1Gates",
     "Stage1Results",
+    "Stage1Validator",
 ]
