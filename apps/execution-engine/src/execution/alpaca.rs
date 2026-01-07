@@ -495,6 +495,34 @@ struct AlpacaErrorResponse {
     message: String,
 }
 
+/// Take profit leg for bracket orders
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TakeProfitLeg {
+    limit_price: String,
+}
+
+/// Stop loss leg for bracket orders
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct StopLossLeg {
+    stop_price: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    limit_price: Option<String>,
+}
+
+/// Order class for advanced order types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum OrderClass {
+    /// Simple order (no bracket)
+    Simple,
+    /// Bracket order with stop-loss and take-profit
+    Bracket,
+    /// One-triggers-other (entry + single exit)
+    Oto,
+    /// One-cancels-other (two exits)
+    Oco,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct AlpacaOrderRequest {
     symbol: String,
@@ -510,6 +538,20 @@ struct AlpacaOrderRequest {
     stop_price: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     client_order_id: Option<String>,
+    /// Order class for bracket/OTO/OCO orders
+    #[serde(skip_serializing_if = "is_simple_order")]
+    order_class: OrderClass,
+    /// Take profit leg for bracket orders
+    #[serde(skip_serializing_if = "Option::is_none")]
+    take_profit: Option<TakeProfitLeg>,
+    /// Stop loss leg for bracket orders
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop_loss: Option<StopLossLeg>,
+}
+
+/// Helper to skip serializing order_class when it's simple
+fn is_simple_order(class: &OrderClass) -> bool {
+    *class == OrderClass::Simple
 }
 
 impl AlpacaOrderRequest {
@@ -537,6 +579,43 @@ impl AlpacaOrderRequest {
             "market"
         };
 
+        // Determine order class and legs based on stop/target levels
+        let has_stop = decision.stop_loss_level > Decimal::ZERO;
+        let has_target = decision.take_profit_level > Decimal::ZERO;
+
+        let (order_class, take_profit, stop_loss) = match (has_stop, has_target) {
+            // Both stop and target: bracket order
+            (true, true) => (
+                OrderClass::Bracket,
+                Some(TakeProfitLeg {
+                    limit_price: decision.take_profit_level.to_string(),
+                }),
+                Some(StopLossLeg {
+                    stop_price: decision.stop_loss_level.to_string(),
+                    limit_price: None, // Use stop market order for stop loss
+                }),
+            ),
+            // Only stop loss: OTO (one-triggers-other)
+            (true, false) => (
+                OrderClass::Oto,
+                None,
+                Some(StopLossLeg {
+                    stop_price: decision.stop_loss_level.to_string(),
+                    limit_price: None,
+                }),
+            ),
+            // Only take profit: OTO with take profit
+            (false, true) => (
+                OrderClass::Oto,
+                Some(TakeProfitLeg {
+                    limit_price: decision.take_profit_level.to_string(),
+                }),
+                None,
+            ),
+            // No stop or target: simple order
+            (false, false) => (OrderClass::Simple, None, None),
+        };
+
         Self {
             symbol: decision.instrument_id.clone(),
             qty,
@@ -547,8 +626,31 @@ impl AlpacaOrderRequest {
             limit_price: decision.limit_price.map(|p| p.to_string()),
             stop_price: None,
             client_order_id: Some(decision.decision_id.clone()),
+            order_class,
+            take_profit,
+            stop_loss,
         }
     }
+}
+
+/// Bracket order leg from Alpaca API response
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AlpacaOrderLeg {
+    id: String,
+    #[serde(default)]
+    client_order_id: Option<String>,
+    status: String,
+    #[serde(rename = "type")]
+    order_type: String,
+    side: String,
+    #[serde(default)]
+    limit_price: Option<String>,
+    #[serde(default)]
+    stop_price: Option<String>,
+    qty: String,
+    filled_qty: String,
+    #[serde(default)]
+    filled_avg_price: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -574,14 +676,57 @@ struct AlpacaOrderResponse {
     submitted_at: String,
     #[serde(default)]
     filled_at: Option<String>,
+    /// Order class (simple, bracket, oto, oco)
+    #[serde(default)]
+    order_class: Option<String>,
+    /// Bracket order legs (stop loss and take profit)
+    #[serde(default)]
+    legs: Option<Vec<AlpacaOrderLeg>>,
 }
+
+use crate::models::OrderLegState;
 
 impl OrderState {
     fn from_alpaca_response(response: &AlpacaOrderResponse) -> Self {
+        // Determine if this is a multi-leg order (bracket/OTO/OCO)
+        let is_multi_leg = response
+            .order_class
+            .as_ref()
+            .is_some_and(|c| c != "simple" && !c.is_empty());
+
+        // Convert bracket legs to our OrderLegState format
+        let legs: Vec<OrderLegState> = response
+            .legs
+            .as_ref()
+            .map(|alpaca_legs| {
+                alpaca_legs
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, leg)| OrderLegState {
+                        leg_index: idx as u32,
+                        instrument_id: response.symbol.clone(),
+                        side: if leg.side == "buy" {
+                            OrderSide::Buy
+                        } else {
+                            OrderSide::Sell
+                        },
+                        quantity: leg.qty.parse().unwrap_or(Decimal::ZERO),
+                        filled_quantity: leg.filled_qty.parse().unwrap_or(Decimal::ZERO),
+                        avg_fill_price: leg
+                            .filled_avg_price
+                            .as_ref()
+                            .and_then(|p| p.parse().ok())
+                            .unwrap_or(Decimal::ZERO),
+                        status: parse_order_status(&leg.status),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         Self {
             order_id: response.client_order_id.clone(),
             broker_order_id: response.id.clone(),
-            is_multi_leg: false,
+            is_multi_leg,
             instrument_id: response.symbol.clone(),
             status: parse_order_status(&response.status),
             side: if response.side == "buy" {
@@ -603,7 +748,7 @@ impl OrderState {
             submitted_at: response.submitted_at.clone(),
             last_update_at: response.updated_at.clone(),
             status_message: response.status.clone(),
-            legs: vec![],
+            legs,
         }
     }
 }
