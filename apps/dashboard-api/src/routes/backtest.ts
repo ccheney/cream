@@ -4,11 +4,13 @@
  * Routes for running and viewing backtests.
  * Returns real data from backtesting engine or error responses - NO mock data.
  *
- * Note: Backtesting engine (NautilusTrader) is not yet implemented.
- * All routes return 503 Service Unavailable until the engine is integrated.
+ * Data Sources:
+ * - Backtest execution: NautilusTrader (event-driven) or VectorBT (fast scan)
+ * - Historical data: Massive REST aggregates
+ * - Results storage: Turso database
  *
  * @see docs/plans/ui/05-api-endpoints.md Backtest section
- * @see docs/plans/15-implementation.md Phase 11 (Research Stack)
+ * @see docs/plans/12-backtest.md Full backtest specification
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -89,12 +91,20 @@ const ErrorSchema = z.object({
 // ============================================
 
 /**
- * Check if backtesting service is available.
- * Currently always throws 503 as NautilusTrader is not yet integrated.
+ * Stub function - backtest endpoints not yet implemented.
+ *
+ * Required integrations:
+ * - NautilusTrader or VectorBT Python service for backtest execution
+ * - Turso tables for backtest metadata, trades, and equity curves
+ * - Job queue (Bull/BullMQ) for async backtest runs
+ * - WebSocket updates for progress streaming
+ *
+ * @see bead: cream-hurbx (Backtest Dashboard API: NautilusTrader Integration)
  */
 function requireBacktestService(): never {
   throw new HTTPException(503, {
-    message: "Backtest service unavailable: NautilusTrader engine not yet integrated (Phase 11)",
+    message:
+      "Backtest endpoints not yet implemented. Requires: NautilusTrader/VectorBT + Turso storage integration.",
   });
 }
 

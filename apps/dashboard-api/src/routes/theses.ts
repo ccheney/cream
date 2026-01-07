@@ -4,11 +4,13 @@
  * Routes for managing trading theses and convictions.
  * Returns real data from HelixDB or error responses - NO mock data.
  *
- * Note: HelixDB integration is not yet complete.
- * All routes return 503 Service Unavailable until the database is integrated.
+ * Data Sources:
+ * - Thesis storage: HelixDB graph + vector database
+ * - Semantic search: HelixDB embeddings (gemini-embedding-001)
+ * - Position linking: Graph edges to TradeDecision nodes
  *
  * @see docs/plans/ui/05-api-endpoints.md Theses section
- * @see docs/plans/07-helix-schema.md
+ * @see docs/plans/04-memory-helixdb.md HelixDB schema
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -87,12 +89,19 @@ const ErrorSchema = z.object({
 // ============================================
 
 /**
- * Check if theses service (HelixDB) is available.
- * Currently always throws 503 as HelixDB is not yet integrated.
+ * Stub function - theses endpoints not yet implemented.
+ *
+ * Required integrations:
+ * - HelixDB client connection (packages/helix)
+ * - Thesis node schema in HelixDB
+ * - Embedding generation for semantic search
+ * - Graph edges linking theses to decisions/positions
+ *
+ * @see bead: cream-9s0n8 (Theses Dashboard API: HelixDB Integration)
  */
 function requireThesesService(): never {
   throw new HTTPException(503, {
-    message: "Theses service unavailable: HelixDB not yet integrated (Phase 7)",
+    message: "Theses endpoints not yet implemented. Requires: HelixDB graph database integration.",
   });
 }
 

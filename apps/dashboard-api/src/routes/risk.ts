@@ -2,13 +2,19 @@
  * Risk API Routes
  *
  * Routes for exposure, Greeks, VaR, and risk limits.
- * Returns real data from Rust execution engine or error responses - NO mock data.
+ * Returns real data from positions (Turso) + market data (Massive API) - NO mock data.
  *
- * Note: Rust execution engine integration is not yet complete.
- * All routes return 503 Service Unavailable until the engine is integrated.
+ * Data Sources:
+ * - Positions: Turso database
+ * - Real-time prices: Massive WebSocket streaming
+ * - Greeks: Massive Options Snapshot API or local Black-Scholes
+ * - Historical data: Massive REST aggregates (for correlation/VaR)
+ * - Limits: Config constraints
+ *
+ * Note: Does NOT require the Rust execution engine - that's for order routing only.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
- * @see docs/plans/09-rust-core.md
+ * @see docs/plans/ui/40-streaming-data-integration.md
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -98,12 +104,21 @@ const ErrorSchema = z.object({
 // ============================================
 
 /**
- * Check if risk service (Rust execution engine) is available.
- * Currently always throws 503 as the engine is not yet integrated.
+ * Stub function - risk endpoints not yet implemented.
+ *
+ * Required integrations:
+ * - /exposure: Positions (Turso) + Massive WebSocket prices + sector mapping
+ * - /greeks: Options positions + Massive Options Snapshot API (or local Black-Scholes)
+ * - /correlation: Massive REST aggregates (historical prices)
+ * - /var: Massive REST aggregates (historical returns)
+ * - /limits: Config + above metrics
+ *
+ * @see beads: cream-lj151, cream-onrak, cream-eahae, cream-a4td0, cream-qubb4
  */
 function requireRiskService(): never {
   throw new HTTPException(503, {
-    message: "Risk service unavailable: Rust execution engine not yet integrated (Phase 3)",
+    message:
+      "Risk endpoints not yet implemented. Requires: Turso positions + Massive market data integration.",
   });
 }
 
