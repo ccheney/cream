@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -97,7 +98,7 @@ def mock_paper() -> PaperValidationResult:
 
 
 @pytest.fixture
-def temp_repo() -> Path:
+def temp_repo() -> Iterator[Path]:
     """Create a temporary repository structure."""
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_path = Path(tmpdir)
