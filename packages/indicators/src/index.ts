@@ -34,6 +34,8 @@ export {
   getRequiredWarmupPeriod,
   type IndicatorPipelineConfig,
 } from "./pipeline";
+// Synthesis (Dynamic Indicator Generation)
+export * from "./synthesis/index";
 // Normalization Transforms
 export * from "./transforms/index";
 // Trend Indicators

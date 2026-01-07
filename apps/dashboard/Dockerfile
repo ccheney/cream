@@ -14,8 +14,8 @@ COPY package.json bunfig.toml bun.lock ./
 COPY apps/dashboard/package.json ./apps/dashboard/
 COPY packages ./packages
 
-# Install all dependencies + typescript (required by Next.js type checking)
-RUN bun install --ignore-scripts && bun add typescript@5 --dev --no-save
+# Install all dependencies + typescript 5.9.3 (required by Next.js type checking and ES2024 lib)
+RUN bun install --ignore-scripts && bun add typescript@5.9.3 --dev --no-save
 
 # Stage 2: Build the application
 FROM oven/bun:1 AS builder

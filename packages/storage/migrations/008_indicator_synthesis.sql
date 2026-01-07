@@ -16,8 +16,8 @@
 CREATE TABLE IF NOT EXISTS indicators (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
-  category TEXT NOT NULL CHECK (category IN ('momentum', 'trend', 'volatility', 'volume', 'custom')),
-  status TEXT NOT NULL DEFAULT 'staging' CHECK (status IN ('staging', 'paper', 'production', 'retired')),
+  category TEXT NOT NULL, -- Valid: 'momentum', 'trend', 'volatility', 'volume', 'custom'
+  status TEXT NOT NULL DEFAULT 'staging', -- Valid: 'staging', 'paper', 'production', 'retired'
 
   -- Generation metadata
   hypothesis TEXT NOT NULL,
@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS indicator_trials (
   calmar_ratio REAL,
   sortino_ratio REAL,
 
-  -- Selection
-  selected INTEGER NOT NULL DEFAULT 0 CHECK (selected IN (0, 1)),
+  -- Selection (0 = not selected, 1 = selected)
+  selected INTEGER NOT NULL DEFAULT 0,
 
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
 
