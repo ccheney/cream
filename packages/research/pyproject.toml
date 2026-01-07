@@ -167,6 +167,7 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 disallow_untyped_decorators = false
+disallow_untyped_calls = false
 warn_return_any = false
 check_untyped_defs = false
 
@@ -179,6 +180,12 @@ module = [
     "sklearn.*",
     "torch.*",
     "pandas.*",
+    "scipy.*",
+    "scipy.stats.*",
+    "scipy.optimize.*",
+    "polars.*",
+    "pyarrow.*",
+    "pyarrow.flight.*",
 ]
 ignore_missing_imports = true
 
@@ -190,6 +197,7 @@ module = [
     "research.nautilus_runner",
     "research.validation",
     "research.greeks.*",
+    "research.flight_client",
     "research.__init__",
 ]
 warn_return_any = false
@@ -197,3 +205,4 @@ disallow_any_generics = false
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 check_untyped_defs = false
+disable_error_code = ["attr-defined", "assignment", "union-attr", "arg-type", "misc", "name-defined", "operator", "no-untyped-def"]

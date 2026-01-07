@@ -40,7 +40,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 
 class ConvictionLevel(Enum):
@@ -69,14 +69,14 @@ class ScoringResult:
     grade: str
     """Letter grade (A, B, C, D, F)"""
 
-    components: dict[str, float]
-    """Breakdown of score components"""
+    components: dict[str, Any]
+    """Breakdown of score components (floats and strings)"""
 
     feedback: str
     """Human-readable feedback"""
 
     @staticmethod
-    def from_score(score: float, components: dict[str, float], feedback: str) -> ScoringResult:
+    def from_score(score: float, components: dict[str, Any], feedback: str) -> ScoringResult:
         """Create ScoringResult from a score value."""
         grade = ScoringResult._score_to_grade(score)
         return ScoringResult(

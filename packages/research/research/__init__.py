@@ -10,6 +10,8 @@ This package provides research and backtesting utilities including:
 
 from __future__ import annotations
 
+from typing import Any
+
 __version__ = "0.1.0"
 
 # Lazy imports to avoid requiring all dependencies
@@ -76,7 +78,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import of optional dependencies."""
     if name in ("ArrowFlightClient", "FlightClientConfig", "FlightError", "create_flight_client"):
         from research.flight_client import (
