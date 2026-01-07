@@ -772,20 +772,24 @@ CREATE TABLE IF NOT EXISTS factor_correlations (
 
 CREATE TABLE IF NOT EXISTS research_runs (
   run_id TEXT PRIMARY KEY,
-  trigger_type TEXT NOT NULL,
-  trigger_metadata TEXT,
-  status TEXT NOT NULL DEFAULT 'running',
-  hypotheses_generated INTEGER DEFAULT 0,
-  factors_generated INTEGER DEFAULT 0,
-  factors_validated INTEGER DEFAULT 0,
-  factors_promoted INTEGER DEFAULT 0,
+  trigger_type TEXT NOT NULL, -- Valid: 'scheduled', 'decay_detected', 'regime_change', 'manual', 'refinement'
+  trigger_reason TEXT NOT NULL,
+  phase TEXT NOT NULL DEFAULT 'idea', -- Valid: 'idea', 'implementation', 'stage1', 'stage2', 'translation', 'equivalence', 'paper', 'promotion', 'completed', 'failed'
+  current_iteration INTEGER NOT NULL DEFAULT 1,
+  hypothesis_id TEXT REFERENCES hypotheses(hypothesis_id),
+  factor_id TEXT REFERENCES factors(factor_id),
+  pr_url TEXT,
+  error_message TEXT,
+  tokens_used INTEGER DEFAULT 0,
+  compute_hours REAL DEFAULT 0.0,
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
-  completed_at TEXT,
-  error_message TEXT
+  completed_at TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_research_runs_status ON research_runs(status);
-CREATE INDEX IF NOT EXISTS idx_research_runs_started ON research_runs(started_at);
+CREATE INDEX IF NOT EXISTS idx_research_runs_phase ON research_runs(phase);
+CREATE INDEX IF NOT EXISTS idx_research_runs_trigger ON research_runs(trigger_type);
+CREATE INDEX IF NOT EXISTS idx_research_runs_hypothesis ON research_runs(hypothesis_id);
+CREATE INDEX IF NOT EXISTS idx_research_runs_factor ON research_runs(factor_id);
 
 CREATE TABLE IF NOT EXISTS factor_weights (
   factor_id TEXT PRIMARY KEY REFERENCES factors(factor_id) ON DELETE CASCADE,
