@@ -93,12 +93,60 @@ bun run typecheck                   # All TS packages
 
 Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 
+### Required by Environment
+
+| Variable | BACKTEST | PAPER | LIVE | Description |
+|----------|----------|-------|------|-------------|
+| `CREAM_ENV` | ✓ | ✓ | ✓ | Trading environment |
+| `ALPACA_KEY` | - | ✓ | ✓ | Alpaca API key |
+| `ALPACA_SECRET` | - | ✓ | ✓ | Alpaca API secret |
+| `POLYGON_KEY` | - | - | ✓ | Polygon/Massive API key |
+| `DATABENTO_KEY` | - | - | ✓ | Databento API key |
+| `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` | - | - | ✓ | LLM API key |
+
+### All Environment Variables
+
 ```bash
-CREAM_ENV=PAPER              # Environment mode
-TURSO_DATABASE_URL=          # Database URL
-POLYGON_KEY=                 # Market data (Massive.com)
-ALPACA_KEY=                  # Broker API key
-ALPACA_SECRET=               # Broker API secret
+# Core (required)
+CREAM_ENV=BACKTEST           # BACKTEST | PAPER | LIVE
+CREAM_BROKER=ALPACA          # Broker (default: ALPACA)
+
+# Database
+TURSO_DATABASE_URL=          # Turso/libsql URL (default: http://localhost:8080)
+TURSO_AUTH_TOKEN=            # Turso Cloud auth token
+HELIX_URL=                   # HelixDB URL (default: http://localhost:6969)
+HELIX_HOST=                  # HelixDB host (alternative)
+HELIX_PORT=                  # HelixDB port (alternative)
+
+# Broker
+ALPACA_KEY=                  # Alpaca API key
+ALPACA_SECRET=               # Alpaca API secret
+ALPACA_BASE_URL=             # Alpaca base URL (auto-set by environment)
+
+# Market Data
+POLYGON_KEY=                 # Polygon/Massive API key
+DATABENTO_KEY=               # Databento execution-grade data
+FMP_KEY=                     # FMP fundamentals/transcripts
+ALPHAVANTAGE_KEY=            # Alpha Vantage macro indicators
+
+# LLM
+ANTHROPIC_API_KEY=           # Anthropic Claude API key
+GOOGLE_API_KEY=              # Google Gemini API key
+
+# Prediction Markets
+KALSHI_API_KEY_ID=           # Kalshi API key ID
+KALSHI_PRIVATE_KEY_PATH=     # Path to Kalshi private key
+```
+
+### Startup Validation
+
+Services validate environment at startup using `@cream/domain`:
+
+```typescript
+import { validateEnvironmentOrExit } from "@cream/domain";
+
+// At service startup - fails fast with clear error messages
+validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
 ```
 
 ## Testing Conventions

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { CreamBroker, CreamEnvironment, envSchema } from "./env";
+import {
+  CreamBroker,
+  CreamEnvironment,
+  envSchema,
+  getEnvVarDocumentation,
+  getHelixUrl,
+  validateEnvironment,
+} from "./env";
 
 describe("CreamEnvironment", () => {
   it("accepts valid environment values", () => {
@@ -89,11 +96,26 @@ describe("envSchema", () => {
         expect(messages).toContain("ALPACA_SECRET is required for LIVE environment");
         expect(messages).toContain("POLYGON_KEY is required for LIVE environment");
         expect(messages).toContain("DATABENTO_KEY is required for LIVE environment");
-        expect(messages).toContain("GOOGLE_API_KEY is required for LIVE environment");
+        // Now requires at least one of ANTHROPIC_API_KEY or GOOGLE_API_KEY
+        expect(messages).toContain(
+          "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment"
+        );
       }
     });
 
-    it("succeeds with all required credentials", () => {
+    it("succeeds with all required credentials (using Anthropic)", () => {
+      const result = envSchema.safeParse({
+        CREAM_ENV: "LIVE",
+        ALPACA_KEY: "test-key",
+        ALPACA_SECRET: "test-secret",
+        POLYGON_KEY: "polygon-key",
+        DATABENTO_KEY: "databento-key",
+        ANTHROPIC_API_KEY: "anthropic-key",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("succeeds with all required credentials (using Google)", () => {
       const result = envSchema.safeParse({
         CREAM_ENV: "LIVE",
         ALPACA_KEY: "test-key",
@@ -168,5 +190,128 @@ describe("missing CREAM_ENV", () => {
   it("fails validation when CREAM_ENV is missing", () => {
     const result = envSchema.safeParse({});
     expect(result.success).toBe(false);
+  });
+});
+
+describe("LIVE environment LLM requirements", () => {
+  it("requires at least one LLM API key", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "LIVE",
+      ALPACA_KEY: "test-key",
+      ALPACA_SECRET: "test-secret",
+      POLYGON_KEY: "polygon-key",
+      DATABENTO_KEY: "databento-key",
+      // No LLM keys
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((e) => e.message);
+      expect(messages).toContain(
+        "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment"
+      );
+    }
+  });
+
+  it("succeeds with ANTHROPIC_API_KEY only", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "LIVE",
+      ALPACA_KEY: "test-key",
+      ALPACA_SECRET: "test-secret",
+      POLYGON_KEY: "polygon-key",
+      DATABENTO_KEY: "databento-key",
+      ANTHROPIC_API_KEY: "anthropic-key",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("succeeds with GOOGLE_API_KEY only", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "LIVE",
+      ALPACA_KEY: "test-key",
+      ALPACA_SECRET: "test-secret",
+      POLYGON_KEY: "polygon-key",
+      DATABENTO_KEY: "databento-key",
+      GOOGLE_API_KEY: "google-key",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("new environment variables", () => {
+  it("accepts HELIX_HOST and HELIX_PORT", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "BACKTEST",
+      HELIX_HOST: "localhost",
+      HELIX_PORT: "6969",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.HELIX_HOST).toBe("localhost");
+      expect(result.data.HELIX_PORT).toBe(6969);
+    }
+  });
+
+  it("accepts Kalshi credentials", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "BACKTEST",
+      KALSHI_API_KEY_ID: "key-id",
+      KALSHI_PRIVATE_KEY_PATH: "/path/to/key",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.KALSHI_API_KEY_ID).toBe("key-id");
+      expect(result.data.KALSHI_PRIVATE_KEY_PATH).toBe("/path/to/key");
+    }
+  });
+
+  it("accepts ANTHROPIC_API_KEY", () => {
+    const result = envSchema.safeParse({
+      CREAM_ENV: "BACKTEST",
+      ANTHROPIC_API_KEY: "sk-ant-test",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.ANTHROPIC_API_KEY).toBe("sk-ant-test");
+    }
+  });
+});
+
+describe("getHelixUrl", () => {
+  it("returns HELIX_URL when set", () => {
+    // This test uses the actual env, so we just verify the function exists
+    const url = getHelixUrl();
+    expect(typeof url).toBe("string");
+    expect(url).toMatch(/^https?:\/\//);
+  });
+});
+
+describe("validateEnvironment", () => {
+  it("returns valid for BACKTEST with no additional requirements", () => {
+    const result = validateEnvironment("test-service");
+    expect(result.valid).toBe(true);
+    expect(result.environment).toBe("BACKTEST");
+  });
+
+  it("returns errors for missing additional requirements", () => {
+    // Use KALSHI keys which are very unlikely to be set in test environment
+    const result = validateEnvironment("test-service", ["KALSHI_API_KEY_ID"]);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toContain("KALSHI_API_KEY_ID");
+  });
+});
+
+describe("getEnvVarDocumentation", () => {
+  it("returns documentation for all env vars", () => {
+    const docs = getEnvVarDocumentation();
+    expect(docs.length).toBeGreaterThan(10);
+
+    const creamEnv = docs.find((d) => d.name === "CREAM_ENV");
+    expect(creamEnv).toBeDefined();
+    expect(creamEnv?.required).toBe(true);
+
+    const anthropicKey = docs.find((d) => d.name === "ANTHROPIC_API_KEY");
+    expect(anthropicKey).toBeDefined();
+    expect(anthropicKey?.description).toContain("Anthropic");
   });
 });

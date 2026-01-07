@@ -180,13 +180,18 @@ export {
   CreamBroker,
   CreamEnvironment,
   type EnvConfig,
+  type EnvValidationResult,
   env,
   envSchema,
   getAlpacaBaseUrl,
   getEnvDatabaseSuffix,
+  getEnvVarDocumentation,
+  getHelixUrl,
   isBacktest,
   isLive,
   isPaper,
+  validateEnvironment,
+  validateEnvironmentOrExit,
 } from "./env";
 // Execution errors and gRPC mapping
 export {
