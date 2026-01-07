@@ -98,8 +98,8 @@ function TradingViewChartComponent({
     chartRef.current = chart;
 
     // Add candlestick series
-    // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
     const series = chart.addSeries(
+      // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
       "candlestick" as any,
       DEFAULT_CANDLESTICK_OPTIONS
     ) as ISeriesApi<"Candlestick">;

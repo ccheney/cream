@@ -231,7 +231,8 @@ export class FMPClient {
     const history = await this.getHistoricalConstituents(indexId);
 
     // Apply changes in reverse chronological order
-    const asOfDateStr = asOfDate.toISOString().split("T")[0];
+    // biome-ignore lint/style/noNonNullAssertion: split always returns array
+    const asOfDateStr = asOfDate.toISOString().split("T")[0]!;
 
     for (const change of history) {
       const changeDate = change.dateAdded;

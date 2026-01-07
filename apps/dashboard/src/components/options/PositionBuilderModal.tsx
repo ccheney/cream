@@ -268,6 +268,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           {/* Side Selection */}
           <div className="mb-4">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label for button group */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
               Side
             </label>
@@ -326,6 +327,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           {/* Order Type */}
           <div className="mb-4">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
               Order Type
             </label>
@@ -381,6 +383,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           {/* Time in Force */}
           <div className="mb-4">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
               Time in Force
             </label>

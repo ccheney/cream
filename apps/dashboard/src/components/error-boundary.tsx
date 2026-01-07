@@ -176,12 +176,16 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
           type="button"
           onClick={reset}
           style={fallbackStyles.primaryButton}
-          // biome-ignore lint/a11y/useKeyWithMouseEvents: button handles keyboard by default
           onMouseOver={(e) => {
             e.currentTarget.style.backgroundColor = "#b91c1c";
           }}
-          // biome-ignore lint/a11y/useKeyWithMouseEvents: button handles keyboard by default
+          onFocus={(e) => {
+            e.currentTarget.style.backgroundColor = "#b91c1c";
+          }}
           onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = "#dc2626";
+          }}
+          onBlur={(e) => {
             e.currentTarget.style.backgroundColor = "#dc2626";
           }}
         >
@@ -192,12 +196,16 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
           type="button"
           onClick={() => setShowDetails(!showDetails)}
           style={fallbackStyles.secondaryButton}
-          // biome-ignore lint/a11y/useKeyWithMouseEvents: button handles keyboard by default
           onMouseOver={(e) => {
             e.currentTarget.style.backgroundColor = "#fef2f2";
           }}
-          // biome-ignore lint/a11y/useKeyWithMouseEvents: button handles keyboard by default
+          onFocus={(e) => {
+            e.currentTarget.style.backgroundColor = "#fef2f2";
+          }}
           onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          onBlur={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
         >

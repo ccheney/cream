@@ -150,6 +150,7 @@ export const Sidebar = memo(function Sidebar({
       {/* Theme Toggle */}
       <div className="px-2 mb-2">
         <button
+          type="button"
           onClick={toggleTheme}
           className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
           title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

@@ -321,10 +321,12 @@ export class ThesisStateRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
+    // biome-ignore lint/style/noNonNullAssertion: split always returns array
     const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
 
     const result = await paginate<Row>(
       this.client,
+      // biome-ignore lint/style/noNonNullAssertion: split always returns array
       sql.split(" LIMIT ")[0]!,
       countSql,
       args.slice(0, -2),

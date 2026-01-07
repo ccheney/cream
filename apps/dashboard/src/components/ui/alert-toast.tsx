@@ -168,6 +168,7 @@ export function AlertToastContainer() {
 
   return (
     <div
+      role="region"
       aria-label="Notifications"
       className="
         fixed bottom-4 right-4 z-40
