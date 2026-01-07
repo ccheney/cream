@@ -182,7 +182,7 @@ function UniverseEditor() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      filters: { ...formData.filters!, minAvgVolume: parseInt(e.target.value) },
+                      filters: { ...formData.filters!, minAvgVolume: parseInt(e.target.value, 10) },
                     })
                   }
                   className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
@@ -204,7 +204,7 @@ function UniverseEditor() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      filters: { ...formData.filters!, minMarketCap: parseInt(e.target.value) },
+                      filters: { ...formData.filters!, minMarketCap: parseInt(e.target.value, 10) },
                     })
                   }
                   className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
