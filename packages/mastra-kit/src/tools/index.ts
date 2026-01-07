@@ -8,6 +8,7 @@
  * - getQuotes: Uses gRPC MarketDataService (falls back to mock if unavailable)
  * - getPortfolioState: Uses gRPC ExecutionService (falls back to mock if unavailable)
  * - recalcIndicator: Uses gRPC for bars + @cream/indicators for calculation
+ * - helixQuery: Uses @cream/helix HelixDB client (falls back to empty on error)
  * - Other tools: Stubbed with mock implementations
  *
  * @see docs/plans/05-agents.md
@@ -21,6 +22,7 @@ import {
   GrpcError,
   type MarketDataServiceClient,
 } from "@cream/domain/grpc";
+import { createHelixClientFromEnv, type HelixClient, HelixError } from "@cream/helix";
 import {
   type Candle,
   calculateATR,
@@ -149,6 +151,15 @@ function getExecutionClient(): ExecutionServiceClient {
     executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
   }
   return executionClient;
+}
+
+let helixClient: HelixClient | null = null;
+
+function getHelixClient(): HelixClient {
+  if (!helixClient) {
+    helixClient = createHelixClientFromEnv();
+  }
+  return helixClient;
 }
 
 /**
@@ -563,26 +574,67 @@ export async function searchNews(query: string, symbols: string[] = []): Promise
 }
 
 /**
- * Query HelixDB for memory/graph data
- *
- * @param query - HelixQL query string
- * @param filters - Optional filters
- * @returns Query result with nodes and edges
- *
- * @stub Returns mock data until gRPC ready
+ * Create mock helixQuery result for backtest/fallback
  */
-export async function helixQuery(
-  query: string,
-  filters: Record<string, unknown> = {}
-): Promise<HelixQueryResult> {
-  // TODO: Replace with HelixDB client call
-  void query;
-  void filters;
+function createMockHelixResult(): HelixQueryResult {
   return {
     nodes: [],
     edges: [],
     metadata: {},
   };
+}
+
+/**
+ * Query HelixDB for memory/graph data
+ *
+ * Uses the @cream/helix client to execute HelixQL queries.
+ * Falls back to empty results in backtest mode or on errors.
+ *
+ * @param queryName - HelixQL query name (registered in HelixDB)
+ * @param params - Query parameters
+ * @returns Query result with nodes and edges
+ */
+export async function helixQuery(
+  queryName: string,
+  params: Record<string, unknown> = {}
+): Promise<HelixQueryResult> {
+  // In backtest mode, always return empty data for performance
+  if (isBacktest()) {
+    return createMockHelixResult();
+  }
+
+  try {
+    const client = getHelixClient();
+
+    // Execute the HelixQL query
+    const result = await client.query(queryName, params);
+
+    // Map query result to HelixQueryResult format
+    // The actual structure depends on the query, but typically includes nodes and edges
+    const data = result.data as {
+      nodes?: unknown[];
+      edges?: unknown[];
+      [key: string]: unknown;
+    };
+
+    return {
+      nodes: data.nodes ?? [],
+      edges: data.edges ?? [],
+      metadata: {
+        executionTimeMs: result.executionTimeMs,
+        queryName,
+        ...params,
+      },
+    };
+  } catch (error) {
+    // Fall back to empty data if HelixDB fails
+    if (error instanceof HelixError && error.code === "CONNECTION_FAILED") {
+      // Expected during development - silently fall back
+      return createMockHelixResult();
+    }
+    // Unexpected errors - silently fall back to empty data
+    return createMockHelixResult();
+  }
 }
 
 // ============================================
