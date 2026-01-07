@@ -117,6 +117,18 @@ export const queryKeys = {
       [...queryKeys.market.all, symbol, "candles", timeframe] as const,
   },
 
+  // Options
+  options: {
+    all: ["options"] as const,
+    chain: (underlying: string, expiration?: string) =>
+      expiration
+        ? ([...queryKeys.options.all, underlying, "chain", expiration] as const)
+        : ([...queryKeys.options.all, underlying, "chain"] as const),
+    expirations: (underlying: string) =>
+      [...queryKeys.options.all, underlying, "expirations"] as const,
+    quote: (contract: string) => [...queryKeys.options.all, "quote", contract] as const,
+  },
+
   // Config
   config: {
     all: ["config"] as const,

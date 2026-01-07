@@ -1,181 +1,35 @@
 /**
- * Connection Status Indicator Component
+ * ConnectionStatus Component
  *
- * Compact WebSocket connection status indicator with three states:
- * - Connected: Green dot, stable
- * - Connecting: Amber dot, pulsing animation
- * - Disconnected: Red dot, action needed
+ * Displays WebSocket connection state with reconnection status.
  *
- * @see docs/plans/ui/31-realtime-patterns.md lines 7-16
+ * @see docs/plans/ui/40-streaming-data-integration.md Part 6.3
  */
 
 "use client";
 
-import { useCallback, useState } from "react";
-import type { ConnectionState } from "../../hooks/useWebSocket";
+import { RefreshCw, Wifi, WifiOff, Zap } from "lucide-react";
+import { memo } from "react";
 
 // ============================================
 // Types
 // ============================================
 
 export interface ConnectionStatusProps {
-  /** Current connection state */
-  connectionState: ConnectionState;
-  /** Last connected timestamp */
-  lastConnectedAt?: Date;
-  /** Callback when reconnect is clicked */
-  onReconnect?: () => void;
-  /** Number of reconnection attempts */
-  reconnectAttempts?: number;
-  /** Show text label (default: false for compact mode) */
-  showLabel?: boolean;
-  /** Test ID for testing */
-  testId?: string;
-}
-
-// ============================================
-// Constants
-// ============================================
-
-const STATE_CONFIG = {
-  connected: {
-    color: "#22c55e", // green-500
-    bgColor: "#22c55e",
-    label: "Connected",
-    ariaLabel: "WebSocket connected",
-    pulse: false,
-  },
-  connecting: {
-    color: "#f59e0b", // amber-500
-    bgColor: "#f59e0b",
-    label: "Connecting...",
-    ariaLabel: "Connecting to server",
-    pulse: true,
-  },
-  reconnecting: {
-    color: "#f59e0b", // amber-500
-    bgColor: "#f59e0b",
-    label: "Reconnecting...",
-    ariaLabel: "Reconnecting to server",
-    pulse: true,
-  },
-  disconnected: {
-    color: "#ef4444", // red-500
-    bgColor: "#ef4444",
-    label: "Disconnected",
-    ariaLabel: "WebSocket disconnected. Click to reconnect.",
-    pulse: false,
-  },
-} as const;
-
-// ============================================
-// Styles
-// ============================================
-
-const styles = {
-  container: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    cursor: "pointer",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    transition: "background-color 0.2s ease",
-  },
-  dot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    flexShrink: 0,
-    transition: "background-color 0.2s ease",
-  },
-  label: {
-    fontSize: "12px",
-    fontWeight: 500,
-    color: "#6b7280", // gray-500
-    transition: "color 0.2s ease",
-  },
-  tooltip: {
-    position: "absolute" as const,
-    bottom: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    marginBottom: "8px",
-    padding: "8px 12px",
-    backgroundColor: "#1f2937", // gray-800
-    color: "#f9fafb", // gray-50
-    fontSize: "12px",
-    borderRadius: "6px",
-    whiteSpace: "nowrap" as const,
-    zIndex: 50,
-    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-  },
-  tooltipArrow: {
-    position: "absolute" as const,
-    top: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    borderWidth: "6px",
-    borderStyle: "solid",
-    borderColor: "#1f2937 transparent transparent transparent",
-  },
-};
-
-// Pulse animation keyframes
-const pulseKeyframes = `
-  @keyframes connection-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.1); }
-  }
-`;
-
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Format the last connected time for tooltip.
- */
-function formatLastConnected(date?: Date): string {
-  if (!date) {
-    return "";
-  }
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-
-  if (diffSecs < 60) {
-    return `Last connected: ${diffSecs}s ago`;
-  }
-  if (diffMins < 60) {
-    return `Last connected: ${diffMins}m ago`;
-  }
-  return `Last connected: ${diffHours}h ago`;
-}
-
-/**
- * Get tooltip content based on state.
- */
-function getTooltipContent(
-  state: ConnectionState,
-  lastConnectedAt?: Date,
-  reconnectAttempts?: number
-): string {
-  const config = STATE_CONFIG[state];
-  let content = config.label;
-
-  if (state === "reconnecting" && reconnectAttempts !== undefined) {
-    content += ` (attempt ${reconnectAttempts + 1})`;
-  }
-
-  if (state === "disconnected" && lastConnectedAt) {
-    content += `\n${formatLastConnected(lastConnectedAt)}`;
-    content += "\nClick to reconnect";
-  }
-
-  return content;
+  /** Connection state */
+  state: "connected" | "connecting" | "reconnecting" | "disconnected";
+  /** Current reconnection attempt */
+  attempt?: number;
+  /** Maximum reconnection attempts */
+  maxAttempts?: number;
+  /** Seconds until next retry */
+  nextRetryIn?: number | null;
+  /** Show detailed status */
+  showDetails?: boolean;
+  /** Size variant */
+  size?: "sm" | "md" | "lg";
+  /** Custom class */
+  className?: string;
 }
 
 // ============================================
@@ -183,83 +37,104 @@ function getTooltipContent(
 // ============================================
 
 /**
- * Compact connection status indicator.
+ * ConnectionStatus shows the WebSocket connection state.
  *
- * @example
- * ```tsx
- * <ConnectionStatus
- *   connectionState="connected"
- *   onReconnect={() => ws.connect()}
- * />
- * ```
+ * States:
+ * - Connected: Green dot with "Connected" label
+ * - Connecting: Yellow pulsing dot with "Connecting..."
+ * - Reconnecting: Yellow pulsing dot with attempt count and countdown
+ * - Disconnected: Red dot with "Disconnected"
  */
-export function ConnectionStatus({
-  connectionState,
-  lastConnectedAt,
-  onReconnect,
-  reconnectAttempts,
-  showLabel = false,
-  testId = "connection-status",
+export const ConnectionStatus = memo(function ConnectionStatus({
+  state,
+  attempt = 0,
+  maxAttempts = 10,
+  nextRetryIn,
+  showDetails = false,
+  size = "md",
+  className = "",
 }: ConnectionStatusProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const config = STATE_CONFIG[connectionState];
+  const sizeClasses = {
+    sm: { dot: "w-1.5 h-1.5", text: "text-xs", icon: "w-3 h-3" },
+    md: { dot: "w-2 h-2", text: "text-sm", icon: "w-4 h-4" },
+    lg: { dot: "w-2.5 h-2.5", text: "text-base", icon: "w-5 h-5" },
+  };
 
-  const handleClick = useCallback(() => {
-    if (connectionState === "disconnected" && onReconnect) {
-      onReconnect();
-    }
-  }, [connectionState, onReconnect]);
+  const styles = sizeClasses[size];
 
-  const tooltipContent = getTooltipContent(connectionState, lastConnectedAt, reconnectAttempts);
+  const stateConfig = {
+    connected: {
+      dotColor: "bg-green-500",
+      textColor: "text-green-600 dark:text-green-400",
+      label: "Connected",
+      icon: Wifi,
+      animate: false,
+    },
+    connecting: {
+      dotColor: "bg-yellow-500",
+      textColor: "text-yellow-600 dark:text-yellow-400",
+      label: "Connecting...",
+      icon: RefreshCw,
+      animate: true,
+    },
+    reconnecting: {
+      dotColor: "bg-yellow-500",
+      textColor: "text-yellow-600 dark:text-yellow-400",
+      label: `Reconnecting (${attempt}/${maxAttempts})`,
+      icon: RefreshCw,
+      animate: true,
+    },
+    disconnected: {
+      dotColor: "bg-red-500",
+      textColor: "text-red-600 dark:text-red-400",
+      label: "Disconnected",
+      icon: WifiOff,
+      animate: false,
+    },
+  };
+
+  const config = stateConfig[state];
+  const Icon = config.icon;
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
-      <div
-        role="status"
-        aria-label={config.ariaLabel}
-        data-testid={testId}
-        data-state={connectionState}
-        style={{
-          ...styles.container,
-          position: "relative",
-          cursor: connectionState === "disconnected" ? "pointer" : "default",
-        }}
-        onClick={handleClick}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            handleClick();
-          }
-        }}
-        tabIndex={connectionState === "disconnected" ? 0 : -1}
-      >
-        {/* Status Dot */}
-        <div
-          style={{
-            ...styles.dot,
-            backgroundColor: config.bgColor,
-            animation: config.pulse ? "connection-pulse 1.5s ease-in-out infinite" : "none",
-          }}
-          aria-hidden="true"
+    <div className={`flex items-center gap-2 ${className}`} role="status" aria-live="polite">
+      {/* Status dot */}
+      <span
+        className={`${styles.dot} rounded-full ${config.dotColor} ${config.animate ? "animate-pulse" : ""}`}
+      />
+
+      {/* Icon (for larger sizes or when showing details) */}
+      {(showDetails || size === "lg") && (
+        <Icon
+          className={`${styles.icon} ${config.textColor} ${config.animate ? "animate-spin" : ""}`}
         />
+      )}
 
-        {/* Label (optional) */}
-        {showLabel && <span style={{ ...styles.label, color: config.color }}>{config.label}</span>}
+      {/* Label */}
+      <span className={`${styles.text} ${config.textColor}`}>{config.label}</span>
 
-        {/* Tooltip */}
-        {showTooltip && (
-          <div style={styles.tooltip} role="tooltip">
-            {tooltipContent.split("\n").map((line, i) => (
-              <div key={i}>{line}</div>
-            ))}
-            <div style={styles.tooltipArrow} aria-hidden="true" />
-          </div>
+      {/* Countdown (reconnecting only) */}
+      {state === "reconnecting" &&
+        nextRetryIn !== null &&
+        nextRetryIn !== undefined &&
+        nextRetryIn > 0 && (
+          <span className={`${styles.text} text-cream-500 dark:text-cream-400`}>
+            ({nextRetryIn}s)
+          </span>
         )}
-      </div>
-    </>
+
+      {/* Streaming indicator when connected */}
+      {state === "connected" && showDetails && (
+        <span title="Streaming active">
+          <Zap className={`${styles.icon} text-green-500 animate-pulse`} />
+        </span>
+      )}
+    </div>
   );
-}
+});
+
+// ============================================
+// Exports
+// ============================================
 
 export default ConnectionStatus;

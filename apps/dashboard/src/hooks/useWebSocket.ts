@@ -91,6 +91,12 @@ export interface UseWebSocketReturn {
   /** Current reconnection attempt */
   reconnectAttempts: number;
 
+  /** Max reconnection attempts */
+  maxReconnectAttempts: number;
+
+  /** Seconds until next reconnection attempt */
+  nextRetryIn: number | null;
+
   /** Send a message */
   send: (data: unknown) => boolean;
 
@@ -106,6 +112,15 @@ export interface UseWebSocketReturn {
   /** Subscribe to symbols */
   subscribeSymbols: (symbols: string[]) => void;
 
+  /** Unsubscribe from symbols */
+  unsubscribeSymbols: (symbols: string[]) => void;
+
+  /** Subscribe to options contracts */
+  subscribeOptions: (contracts: string[]) => void;
+
+  /** Unsubscribe from options contracts */
+  unsubscribeOptions: (contracts: string[]) => void;
+
   /** Connect manually */
   connect: () => void;
 
@@ -114,6 +129,15 @@ export interface UseWebSocketReturn {
 
   /** Last error */
   lastError: Error | null;
+
+  /** Current subscribed channels */
+  subscribedChannels: string[];
+
+  /** Current subscribed symbols */
+  subscribedSymbols: string[];
+
+  /** Current subscribed options contracts */
+  subscribedContracts: string[];
 }
 
 // ============================================
@@ -137,10 +161,14 @@ const DEFAULT_HEARTBEAT: HeartbeatConfig = {
 // ============================================
 
 /**
- * Calculate reconnection delay with exponential backoff.
+ * Calculate reconnection delay with exponential backoff and jitter.
+ * Jitter prevents reconnection storms when many clients reconnect simultaneously.
  */
 export function calculateBackoffDelay(attempt: number, config: ReconnectionConfig): number {
-  const delay = config.initialDelay * config.backoffMultiplier ** attempt;
+  const baseDelay = config.initialDelay * config.backoffMultiplier ** attempt;
+  // Add jitter: 50% to 100% of the calculated delay
+  const jitter = 0.5 + Math.random() * 0.5;
+  const delay = baseDelay * jitter;
   return Math.min(delay, config.maxDelay);
 }
 
@@ -186,6 +214,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       reconnection.initialDelay,
       reconnection.maxDelay,
       reconnection.backoffMultiplier,
+      reconnection,
     ]
   );
 
@@ -194,21 +223,33 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       ...DEFAULT_HEARTBEAT,
       ...heartbeat,
     }),
-    [heartbeat.pingInterval, heartbeat.pongTimeout]
+    [heartbeat.pingInterval, heartbeat.pongTimeout, heartbeat]
   );
 
   // State
   const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [lastError, setLastError] = useState<Error | null>(null);
+  const [nextRetryIn, setNextRetryIn] = useState<number | null>(null);
+
+  // Subscription tracking state
+  const [subscribedChannels, setSubscribedChannels] = useState<string[]>([]);
+  const [subscribedSymbols, setSubscribedSymbols] = useState<string[]>([]);
+  const [subscribedContracts, setSubscribedContracts] = useState<string[]>([]);
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shouldReconnectRef = useRef(true);
   const isUnmountedRef = useRef(false);
+
+  // Subscription refs (for replay after reconnect)
+  const subscribedChannelsRef = useRef<Set<string>>(new Set());
+  const subscribedSymbolsRef = useRef<Set<string>>(new Set());
+  const subscribedContractsRef = useRef<Set<string>>(new Set());
 
   // Callback refs
   const onMessageRef = useRef(onMessage);
@@ -238,6 +279,11 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       clearTimeout(pongTimeoutRef.current);
       pongTimeoutRef.current = null;
     }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setNextRetryIn(null);
   }, []);
 
   // Start heartbeat
@@ -264,6 +310,27 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     if (pongTimeoutRef.current) {
       clearTimeout(pongTimeoutRef.current);
       pongTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Replay subscriptions after reconnect
+  const replaySubscriptions = useCallback((ws: WebSocket) => {
+    // Replay channel subscriptions
+    const channels = Array.from(subscribedChannelsRef.current);
+    if (channels.length > 0) {
+      ws.send(JSON.stringify({ type: "subscribe", channels }));
+    }
+
+    // Replay symbol subscriptions
+    const symbols = Array.from(subscribedSymbolsRef.current);
+    if (symbols.length > 0) {
+      ws.send(JSON.stringify({ type: "subscribe_symbols", symbols }));
+    }
+
+    // Replay options contract subscriptions
+    const contracts = Array.from(subscribedContractsRef.current);
+    if (contracts.length > 0) {
+      ws.send(JSON.stringify({ type: "subscribe_options", contracts }));
     }
   }, []);
 
@@ -294,7 +361,12 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       setConnectionState("connected");
       setReconnectAttempts(0);
       setLastError(null);
+      setNextRetryIn(null);
       startHeartbeat();
+
+      // Replay subscriptions after reconnect
+      replaySubscriptions(ws);
+
       onConnectRef.current?.();
     };
 
@@ -310,7 +382,23 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       if (shouldReconnectRef.current && reconnectAttempts < reconnectionConfig.maxAttempts) {
         setConnectionState("reconnecting");
         const delay = calculateBackoffDelay(reconnectAttempts, reconnectionConfig);
+        const delaySeconds = Math.ceil(delay / 1000);
         setReconnectAttempts((prev) => prev + 1);
+
+        // Start countdown
+        setNextRetryIn(delaySeconds);
+        countdownIntervalRef.current = setInterval(() => {
+          setNextRetryIn((prev) => {
+            if (prev === null || prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
 
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
@@ -350,7 +438,16 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     };
 
     wsRef.current = ws;
-  }, [url, token, reconnectAttempts, reconnectionConfig, clearTimers, startHeartbeat, handlePong]);
+  }, [
+    url,
+    token,
+    reconnectAttempts,
+    reconnectionConfig,
+    clearTimers,
+    startHeartbeat,
+    handlePong,
+    replaySubscriptions,
+  ]);
 
   // Disconnect
   const disconnect = useCallback(() => {
@@ -392,6 +489,11 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   // Subscribe to channels
   const subscribe = useCallback(
     (channels: string[]) => {
+      // Track subscriptions for replay
+      for (const channel of channels) {
+        subscribedChannelsRef.current.add(channel);
+      }
+      setSubscribedChannels(Array.from(subscribedChannelsRef.current));
       sendMessage("subscribe", { channels });
     },
     [sendMessage]
@@ -400,6 +502,11 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   // Unsubscribe from channels
   const unsubscribe = useCallback(
     (channels: string[]) => {
+      // Remove from tracking
+      for (const channel of channels) {
+        subscribedChannelsRef.current.delete(channel);
+      }
+      setSubscribedChannels(Array.from(subscribedChannelsRef.current));
       sendMessage("unsubscribe", { channels });
     },
     [sendMessage]
@@ -408,7 +515,51 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   // Subscribe to symbols
   const subscribeSymbols = useCallback(
     (symbols: string[]) => {
+      // Track subscriptions for replay
+      for (const symbol of symbols) {
+        subscribedSymbolsRef.current.add(symbol);
+      }
+      setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
       sendMessage("subscribe_symbols", { symbols });
+    },
+    [sendMessage]
+  );
+
+  // Unsubscribe from symbols
+  const unsubscribeSymbols = useCallback(
+    (symbols: string[]) => {
+      // Remove from tracking
+      for (const symbol of symbols) {
+        subscribedSymbolsRef.current.delete(symbol);
+      }
+      setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
+      sendMessage("unsubscribe_symbols", { symbols });
+    },
+    [sendMessage]
+  );
+
+  // Subscribe to options contracts
+  const subscribeOptions = useCallback(
+    (contracts: string[]) => {
+      // Track subscriptions for replay
+      for (const contract of contracts) {
+        subscribedContractsRef.current.add(contract);
+      }
+      setSubscribedContracts(Array.from(subscribedContractsRef.current));
+      sendMessage("subscribe_options", { contracts });
+    },
+    [sendMessage]
+  );
+
+  // Unsubscribe from options contracts
+  const unsubscribeOptions = useCallback(
+    (contracts: string[]) => {
+      // Remove from tracking
+      for (const contract of contracts) {
+        subscribedContractsRef.current.delete(contract);
+      }
+      setSubscribedContracts(Array.from(subscribedContractsRef.current));
+      sendMessage("unsubscribe_options", { contracts });
     },
     [sendMessage]
   );
@@ -455,14 +606,22 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     connected: connectionState === "connected",
     reconnecting: connectionState === "reconnecting",
     reconnectAttempts,
+    maxReconnectAttempts: reconnectionConfig.maxAttempts,
+    nextRetryIn,
     send,
     sendMessage,
     subscribe,
     unsubscribe,
     subscribeSymbols,
+    unsubscribeSymbols,
+    subscribeOptions,
+    unsubscribeOptions,
     connect,
     disconnect,
     lastError,
+    subscribedChannels,
+    subscribedSymbols,
+    subscribedContracts,
   };
 }
 

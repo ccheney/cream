@@ -67,6 +67,14 @@ export {
   useQuotes,
   useRegime,
 } from "./useMarket";
+// Options
+export {
+  formatOccSymbol,
+  parseOccSymbol,
+  useOptionQuote,
+  useOptionsChain,
+  useOptionsExpirations,
+} from "./useOptions";
 // Portfolio
 export {
   useClosePosition,

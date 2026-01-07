@@ -559,6 +559,84 @@ export interface OptionChain {
   >;
 }
 
+/**
+ * Options contract data from REST API.
+ */
+export interface OptionsContract {
+  symbol: string;
+  bid: number | null;
+  ask: number | null;
+  last: number | null;
+  volume: number | null;
+  openInterest: number | null;
+  impliedVolatility: number | null;
+}
+
+/**
+ * Options chain row with call and put at same strike.
+ */
+export interface OptionsChainRow {
+  strike: number;
+  call: OptionsContract | null;
+  put: OptionsContract | null;
+}
+
+/**
+ * Options chain response from REST API.
+ */
+export interface OptionsChainResponse {
+  underlying: string;
+  underlyingPrice: number | null;
+  expirations: string[];
+  atmStrike: number | null;
+  chain: OptionsChainRow[];
+}
+
+/**
+ * Expiration info from REST API.
+ */
+export interface ExpirationInfo {
+  date: string;
+  dte: number;
+  type: "weekly" | "monthly" | "quarterly";
+}
+
+/**
+ * Expirations response from REST API.
+ */
+export interface ExpirationsResponse {
+  underlying: string;
+  expirations: ExpirationInfo[];
+}
+
+/**
+ * Greeks for an option contract.
+ */
+export interface OptionsGreeks {
+  delta: number | null;
+  gamma: number | null;
+  theta: number | null;
+  vega: number | null;
+}
+
+/**
+ * Detailed option quote with greeks from REST API.
+ */
+export interface OptionsQuoteDetail {
+  symbol: string;
+  underlying: string;
+  expiration: string;
+  strike: number;
+  right: "CALL" | "PUT";
+  bid: number | null;
+  ask: number | null;
+  last: number | null;
+  volume: number | null;
+  openInterest: number | null;
+  impliedVolatility: number | null;
+  greeks: OptionsGreeks;
+}
+
 export interface IndexQuote {
   symbol: string;
   name: string;
