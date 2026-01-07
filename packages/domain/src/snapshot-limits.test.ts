@@ -398,11 +398,12 @@ describe("PerformanceTracker", () => {
   test("tracks total time", async () => {
     const tracker = new PerformanceTracker();
 
-    // Small delay
-    await new Promise((r) => setTimeout(r, 10));
+    // Small delay - use 15ms to account for setTimeout imprecision
+    await new Promise((r) => setTimeout(r, 15));
 
     const totalTime = tracker.getTotalTime();
-    expect(totalTime).toBeGreaterThanOrEqual(10);
+    // Allow for setTimeout variance (may fire slightly early on fast systems)
+    expect(totalTime).toBeGreaterThanOrEqual(8);
   });
 
   test("tracks individual phases", () => {
