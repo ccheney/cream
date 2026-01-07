@@ -86,6 +86,27 @@ export {
   type VIFResult,
   VIFResultSchema,
 } from "./orthogonality.js";
+// Paper Trading Validation
+export {
+  aggregatePaperTradingResults,
+  type BacktestedMetrics,
+  BacktestedMetricsSchema,
+  calculateRealizedMetrics,
+  canEvaluatePaperTrading,
+  daysUntilEvaluation,
+  determinePaperTradingAction,
+  evaluatePaperTrading,
+  PAPER_TRADING_DEFAULTS,
+  type PaperSignal,
+  PaperSignalSchema,
+  type PaperTradingConfig,
+  PaperTradingConfigSchema,
+  type PaperTradingResult,
+  PaperTradingResultSchema,
+  type RealizedMetrics,
+  RealizedMetricsSchema,
+  tradingDaysBetween,
+} from "./paperTrading.js";
 // Probability of Backtest Overfitting (PBO)
 export {
   type CSCVCombinationResult,
