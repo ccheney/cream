@@ -165,3 +165,19 @@ validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
 - Financial calculations use `rust_decimal` (Rust) or handle precision carefully (TS)
 - All trading decisions flow through the 8-agent consensus network
 - DecisionPlans require: action, direction, size with unit, stop-loss, take-profit
+
+## Database Limitations (Turso/libSQL)
+
+**IMPORTANT: Do NOT use CHECK constraints in SQL migrations.**
+
+Turso's libsql-server does not support CHECK constraints. Migrations using `CHECK (...)` will fail with:
+```
+SqliteError: prepare failed: Parse error: CHECK constraints are not supported yet
+```
+
+**Workarounds:**
+- Document allowed values in comments: `category TEXT NOT NULL, -- Valid: 'a', 'b', 'c'`
+- Validate at the application layer using Zod schemas
+- Use triggers if database-level enforcement is required
+
+See: [tursodatabase/turso#3753](https://github.com/tursodatabase/turso/issues/3753) - CHECK constraints not yet implemented

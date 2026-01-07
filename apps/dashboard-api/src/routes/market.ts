@@ -432,10 +432,17 @@ app.openapi(indicatorsRoute, async (c) => {
       { limit: 250 }
     );
 
-    if (!response.results || response.results.length < 14) {
+    if (!response.results || response.results.length === 0) {
       throw new HTTPException(503, {
-        message: `Insufficient data for indicators on ${upperSymbol}`,
+        message: `No market data available for ${upperSymbol}`,
       });
+    }
+
+    // Log warning if insufficient data for some indicators
+    if (response.results.length < 14) {
+      console.warn(
+        `[market] Limited data for ${upperSymbol} (${response.results.length} bars). Some indicators will be null.`
+      );
     }
 
     const closes = response.results.map((b) => b.c);

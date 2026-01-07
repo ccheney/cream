@@ -6,6 +6,24 @@
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
 
+// AST Similarity (Deduplication)
+export {
+  AST_SIMILARITY_DEFAULTS,
+  type ASTSignature,
+  ASTSignatureSchema,
+  type ASTSimilarityResult,
+  ASTSimilarityResultSchema,
+  compareComputationalCore,
+  compareIndicator,
+  computeSimilarity,
+  createSignatureHash,
+  evaluateSimilarityResult,
+  extractComputationalCore,
+  longestCommonSubsequence,
+  normalizeCode,
+  parseToSignature,
+} from "./astSimilarity.js";
+
 // Trigger Detection
 export {
   calculateICDecayDays,
