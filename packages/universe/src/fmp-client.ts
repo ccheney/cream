@@ -433,6 +433,44 @@ export class FMPClient {
 
     return results;
   }
+
+  // ============================================
+  // Economic Calendar
+  // ============================================
+
+  /**
+   * Get economic calendar events
+   *
+   * @param from - Start date (YYYY-MM-DD format)
+   * @param to - End date (YYYY-MM-DD format)
+   * @returns Economic calendar events
+   */
+  async getEconomicCalendar(from?: string, to?: string): Promise<FMPEconomicEvent[]> {
+    const params: Record<string, string> = {};
+    if (from) {
+      params.from = from;
+    }
+    if (to) {
+      params.to = to;
+    }
+    return this.request<FMPEconomicEvent[]>("/economic_calendar", params);
+  }
+}
+
+/**
+ * Economic calendar event from FMP
+ */
+export interface FMPEconomicEvent {
+  date: string;
+  country: string;
+  event: string;
+  actual?: number | null;
+  previous?: number | null;
+  estimate?: number | null;
+  change?: number | null;
+  changePercentage?: number | null;
+  unit?: string;
+  impact?: "Low" | "Medium" | "High";
 }
 
 /**

@@ -11,12 +11,17 @@
  * - getGreeks: Uses gRPC MarketDataService GetOptionChain (falls back to mock if unavailable)
  * - recalcIndicator: Uses gRPC for bars + @cream/indicators for calculation
  * - helixQuery: Uses @cream/helix HelixDB client (falls back to empty on error)
- * - economicCalendar: Stubbed - needs external API integration
+ * - economicCalendar: Uses FMP API for economic events (falls back to empty if unavailable)
  * - searchNews: Stubbed - needs external API integration
  *
  * @see docs/plans/05-agents.md
  */
 
+import {
+  type AlpacaClient,
+  type Position as BrokerPosition,
+  createBrokerClient,
+} from "@cream/broker";
 import { isBacktest } from "@cream/domain";
 import {
   createExecutionClient,
@@ -36,6 +41,7 @@ import {
   calculateStochastic,
   calculateVolumeSMA,
 } from "@cream/indicators";
+import { createFMPClient, type FMPClient } from "@cream/universe";
 
 // ============================================
 // Tool Types
@@ -165,6 +171,29 @@ function getHelixClient(): HelixClient {
   return helixClient;
 }
 
+let brokerClient: AlpacaClient | null = null;
+
+/**
+ * Get broker client for Alpaca API access.
+ * Returns null if credentials are not configured.
+ */
+function getBrokerClient(): AlpacaClient | null {
+  if (brokerClient) {
+    return brokerClient;
+  }
+
+  // Check for required credentials
+  const apiKey = process.env.ALPACA_KEY;
+  const apiSecret = process.env.ALPACA_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    return null;
+  }
+
+  brokerClient = createBrokerClient();
+  return brokerClient;
+}
+
 /**
  * Generate mock quote for a symbol
  */
@@ -258,7 +287,10 @@ function createMockPortfolioState(): PortfolioStateResponse {
 /**
  * Get current portfolio state
  *
- * Uses gRPC ExecutionService when available, falls back to mock data.
+ * Priority order:
+ * 1. gRPC ExecutionService (when Rust backend is running)
+ * 2. Alpaca broker client (direct API access)
+ * 3. Mock data (for development/testing)
  *
  * @returns Portfolio state including positions and buying power
  */
@@ -268,6 +300,7 @@ export async function getPortfolioState(): Promise<PortfolioStateResponse> {
     return createMockPortfolioState();
   }
 
+  // Try gRPC first
   try {
     const client = getExecutionClient();
 
@@ -301,12 +334,52 @@ export async function getPortfolioState(): Promise<PortfolioStateResponse> {
       totalPnL,
     };
   } catch (error) {
-    // Fall back to mock data if gRPC fails
+    // gRPC failed - try broker client
     if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
-      // Expected during development - silently fall back
-      return createMockPortfolioState();
+      return getPortfolioStateFromBroker();
     }
-    // Unexpected errors - silently fall back to mock data
+    // Other gRPC errors - also try broker
+    return getPortfolioStateFromBroker();
+  }
+}
+
+/**
+ * Get portfolio state directly from Alpaca broker API
+ */
+async function getPortfolioStateFromBroker(): Promise<PortfolioStateResponse> {
+  const client = getBrokerClient();
+  if (!client) {
+    // No broker credentials - fall back to mock data
+    return createMockPortfolioState();
+  }
+
+  try {
+    // Fetch account and positions in parallel
+    const [account, positions] = await Promise.all([client.getAccount(), client.getPositions()]);
+
+    // Map positions to our format
+    let totalPnL = 0;
+    const mappedPositions: PortfolioPosition[] = positions.map((pos: BrokerPosition) => {
+      const unrealizedPnL = pos.unrealizedPl;
+      totalPnL += unrealizedPnL;
+      return {
+        symbol: pos.symbol,
+        quantity: pos.qty,
+        averageCost: pos.avgEntryPrice,
+        marketValue: pos.marketValue,
+        unrealizedPnL,
+      };
+    });
+
+    return {
+      positions: mappedPositions,
+      buyingPower: account.buyingPower,
+      totalEquity: account.equity,
+      dayPnL: account.equity - account.lastEquity,
+      totalPnL,
+    };
+  } catch {
+    // Broker failed - fall back to mock data
     return createMockPortfolioState();
   }
 }
@@ -745,23 +818,99 @@ export async function recalcIndicator(
   }
 }
 
+// FMP client singleton (lazy initialization)
+let fmpClient: FMPClient | null = null;
+
+function getFMPClient(): FMPClient | null {
+  if (fmpClient) {
+    return fmpClient;
+  }
+
+  // Only initialize if API key is available
+  const apiKey = process.env.FMP_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  fmpClient = createFMPClient({ apiKey });
+  return fmpClient;
+}
+
 /**
  * Get economic calendar events
  *
- * @param startDate - Start date (ISO 8601)
- * @param endDate - End date (ISO 8601)
- * @returns Array of economic events
+ * Fetches upcoming and recent economic data releases from FMP API.
+ * Returns empty array in backtest mode or if FMP API is unavailable.
  *
- * @stub Returns mock data until gRPC ready
+ * @param startDate - Start date (YYYY-MM-DD format)
+ * @param endDate - End date (YYYY-MM-DD format)
+ * @returns Array of economic events
  */
 export async function getEconomicCalendar(
   startDate: string,
   endDate: string
 ): Promise<EconomicEvent[]> {
-  // TODO: Replace with external API call
-  void startDate;
-  void endDate;
-  return [];
+  // In backtest mode, return empty array for consistent/fast execution
+  if (isBacktest()) {
+    return [];
+  }
+
+  const client = getFMPClient();
+  if (!client) {
+    // FMP_KEY not set - return empty array
+    return [];
+  }
+
+  try {
+    // Convert ISO dates to YYYY-MM-DD format
+    const from = startDate.split("T")[0] ?? startDate;
+    const to = endDate.split("T")[0] ?? endDate;
+
+    const events = await client.getEconomicCalendar(from, to);
+
+    // Transform FMP events to our EconomicEvent format
+    return events.map((event) => {
+      // Extract time from date if it includes time, otherwise use midnight
+      const [datePart, timePart] = event.date.includes(" ")
+        ? event.date.split(" ")
+        : [event.date, "00:00:00"];
+
+      // Generate a stable ID from date and event name
+      const id = `${datePart}-${event.event.replace(/\s+/g, "-").toLowerCase()}`;
+
+      return {
+        id,
+        name: event.event,
+        date: datePart ?? event.date,
+        time: timePart ?? "00:00:00",
+        impact: mapFMPImpact(event.impact) ?? "medium",
+        forecast: event.estimate != null ? String(event.estimate) : null,
+        previous: event.previous != null ? String(event.previous) : null,
+        actual: event.actual != null ? String(event.actual) : null,
+      };
+    });
+  } catch (error) {
+    // Log but don't fail - economic calendar is supplementary context
+    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
+    console.warn("Failed to fetch economic calendar:", error);
+    return [];
+  }
+}
+
+/**
+ * Map FMP impact levels to our impact enum
+ */
+function mapFMPImpact(impact?: "Low" | "Medium" | "High"): "low" | "medium" | "high" | undefined {
+  switch (impact) {
+    case "Low":
+      return "low";
+    case "Medium":
+      return "medium";
+    case "High":
+      return "high";
+    default:
+      return undefined;
+  }
 }
 
 /**
