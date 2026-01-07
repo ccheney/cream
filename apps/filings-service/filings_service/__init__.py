@@ -8,7 +8,49 @@ This service handles:
 
 __version__ = "0.1.0"
 
+from .edgar_client import (
+    EdgarClient,
+    EdgarClientError,
+    NotFoundError,
+    RateLimitError,
+)
+from .models import (
+    Company,
+    Filing,
+    FilingDocument,
+    FilingType,
+    FinancialData,
+    Form8KItem,
+    ParsedFiling,
+)
+from .parsers import (
+    FilingParser,
+    Form8KParser,
+    Form10KParser,
+    Form10QParser,
+    get_parser,
+    parse_filing,
+)
 
-def placeholder() -> str:
-    """Placeholder function for initial setup."""
-    return "Filings service - Coming in Phase 10"
+__all__ = [
+    # Client
+    "EdgarClient",
+    "EdgarClientError",
+    "NotFoundError",
+    "RateLimitError",
+    # Models
+    "Company",
+    "Filing",
+    "FilingDocument",
+    "FilingType",
+    "FinancialData",
+    "Form8KItem",
+    "ParsedFiling",
+    # Parsers
+    "FilingParser",
+    "Form8KParser",
+    "Form10KParser",
+    "Form10QParser",
+    "get_parser",
+    "parse_filing",
+]

@@ -13,6 +13,7 @@ import {
   createInMemoryClient,
   createTursoClient,
   DecisionsRepository,
+  FactorZooRepository,
   OrdersRepository,
   PortfolioSnapshotsRepository,
   PositionsRepository,
@@ -175,4 +176,12 @@ export async function getConfigVersionsRepo(): Promise<ConfigVersionsRepository>
 export async function getThesesRepo(): Promise<ThesisStateRepository> {
   const client = await getDbClient();
   return new ThesisStateRepository(client);
+}
+
+/**
+ * Get factor zoo repository
+ */
+export async function getFactorZooRepo(): Promise<FactorZooRepository> {
+  const client = await getDbClient();
+  return new FactorZooRepository(client);
 }
