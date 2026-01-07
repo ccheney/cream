@@ -15,12 +15,13 @@
  */
 
 import { isBacktest } from "@cream/domain";
+// Use relative imports from source to avoid requiring package build
 import {
   ConsensusGate,
   type DecisionPlan,
   runConsensusLoop,
   withAgentTimeout,
-} from "@cream/mastra-kit";
+} from "../../../../packages/mastra-kit/src/index.js";
 
 import {
   type AgentContext,

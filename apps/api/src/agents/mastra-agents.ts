@@ -11,6 +11,9 @@
  * @see docs/plans/05-agents.md
  */
 
+import { Agent } from "@mastra/core/agent";
+import { z } from "zod";
+// Use relative imports from source to avoid requiring package build
 import {
   AGENT_CONFIGS,
   AGENT_PROMPTS,
@@ -23,9 +26,7 @@ import {
   type RiskManagerOutput,
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
-} from "@cream/mastra-kit";
-import { Agent } from "@mastra/core/agent";
-import { z } from "zod";
+} from "../../../../packages/mastra-kit/src/index.js";
 
 // Re-export types for convenience
 export type {
