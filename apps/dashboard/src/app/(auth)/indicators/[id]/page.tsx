@@ -5,26 +5,27 @@
  *
  * Detailed view of a single indicator with IC history, validation report,
  * and paper trading metrics.
- *
- * TODO: Full implementation in cream-400dz
  */
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { ICChart, RetireButton, ValidationReport } from "@/components/indicators";
 import { useIndicatorDetail, useIndicatorICHistory } from "@/hooks/queries";
 
 export default function IndicatorDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const { data: indicator, isLoading } = useIndicatorDetail(id);
-  const { data: icHistory } = useIndicatorICHistory(id, 30);
+  const { data: icHistory, isLoading: icLoading } = useIndicatorICHistory(id, 180);
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
         <div className="h-64 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+        <div className="h-48 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
       </div>
     );
   }
@@ -49,14 +50,38 @@ export default function IndicatorDetailPage() {
     retired: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400",
   };
 
+  // Parse validation report from indicator data
+  const validationReport = indicator.validationReport
+    ? (indicator.validationReport as {
+        validatedAt?: string;
+        trialNumber?: number;
+        gates?: Array<{
+          name: string;
+          value: number;
+          threshold: string;
+          passed: boolean;
+        }>;
+        paperTrading?: {
+          startDate: string;
+          endDate: string;
+          durationDays: number;
+          backtestedSharpe: number;
+          realizedSharpe: number;
+          ratio: number;
+        };
+      })
+    : null;
+
+  const canRetire = indicator.status === "production" || indicator.status === "paper";
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm text-cream-500 dark:text-cream-400 mb-1">
-            <Link href="/indicators" className="hover:text-blue-600">
-              Indicator Lab
+            <Link href="/indicators" className="hover:text-blue-600 dark:hover:text-blue-400">
+              ← Indicator Lab
             </Link>
             <span>/</span>
             <span>{indicator.name}</span>
@@ -75,14 +100,23 @@ export default function IndicatorDetailPage() {
             </span>
           </div>
         </div>
+
+        {/* Actions */}
+        {canRetire && (
+          <RetireButton
+            indicatorId={indicator.id}
+            indicatorName={indicator.name}
+            onSuccess={() => router.push("/indicators")}
+          />
+        )}
       </div>
 
-      {/* Hypothesis */}
+      {/* Hypothesis & Rationale */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
         <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-2">Hypothesis</h3>
         <p className="text-cream-600 dark:text-cream-400">{indicator.hypothesis}</p>
         {indicator.economicRationale && (
-          <div className="mt-4">
+          <div className="mt-4 pt-4 border-t border-cream-100 dark:border-night-700">
             <h4 className="text-sm font-medium text-cream-500 dark:text-cream-400 mb-1">
               Economic Rationale
             </h4>
@@ -91,26 +125,13 @@ export default function IndicatorDetailPage() {
         )}
       </div>
 
-      {/* IC History */}
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-          IC History (30 days)
-        </h3>
-        {icHistory && icHistory.length > 0 ? (
-          <div className="space-y-2">
-            <div className="text-sm text-cream-500 dark:text-cream-400">
-              Latest IC: {icHistory[0]?.icValue.toFixed(4)}
-            </div>
-            <div className="text-sm text-cream-400">
-              Full chart implementation coming in cream-400dz
-            </div>
-          </div>
-        ) : (
-          <p className="text-cream-400">No IC history available</p>
-        )}
-      </div>
+      {/* IC Performance Chart */}
+      <ICChart history={icHistory} isLoading={icLoading} />
 
-      {/* Metadata */}
+      {/* Validation Report */}
+      <ValidationReport report={validationReport} isLoading={false} />
+
+      {/* Code & Metadata */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
         <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">Details</h3>
         <dl className="grid grid-cols-2 gap-4 text-sm">
@@ -140,15 +161,23 @@ export default function IndicatorDetailPage() {
               </dd>
             </div>
           )}
+          {indicator.codeHash && (
+            <div>
+              <dt className="text-cream-500 dark:text-cream-400">Code Hash</dt>
+              <dd className="text-cream-900 dark:text-cream-100 font-mono text-xs">
+                {indicator.codeHash}
+              </dd>
+            </div>
+          )}
           {indicator.prUrl && (
             <div className="col-span-2">
-              <dt className="text-cream-500 dark:text-cream-400">PR</dt>
+              <dt className="text-cream-500 dark:text-cream-400">Pull Request</dt>
               <dd>
                 <a
                   href={indicator.prUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   {indicator.prUrl}
                 </a>
@@ -157,6 +186,23 @@ export default function IndicatorDetailPage() {
           )}
         </dl>
       </div>
+
+      {/* Paper Trading Period */}
+      {indicator.paperTradingStart && (
+        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+          <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+            Paper Trading Period
+          </h3>
+          <div className="text-sm text-cream-600 dark:text-cream-400">
+            <span>Started: {new Date(indicator.paperTradingStart).toLocaleDateString()}</span>
+            {indicator.paperTradingEnd && (
+              <span className="ml-4">
+                Ended: {new Date(indicator.paperTradingEnd).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
