@@ -82,7 +82,7 @@ jobs:
         run: bun install
 
       - name: Build packages
-        run: bunx turbo run build --filter='!@cream/schema' --filter='!@cream/schema-gen'
+        run: bunx turbo run build --filter='!@cream/schema' --filter='!@cream/schema-gen' --filter='!@cream/dashboard'
 
       - name: Run tests
         run: bun test
