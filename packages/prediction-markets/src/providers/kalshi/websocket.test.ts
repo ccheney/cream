@@ -429,25 +429,33 @@ describe("KalshiWebSocketClient with Mock WebSocket", () => {
         return currentMockWs?.onopen ?? null;
       },
       set onopen(val) {
-        if (currentMockWs) currentMockWs.onopen = val;
+        if (currentMockWs) {
+          currentMockWs.onopen = val;
+        }
       },
       get onclose() {
         return currentMockWs?.onclose ?? null;
       },
       set onclose(val) {
-        if (currentMockWs) currentMockWs.onclose = val;
+        if (currentMockWs) {
+          currentMockWs.onclose = val;
+        }
       },
       get onerror() {
         return currentMockWs?.onerror ?? null;
       },
       set onerror(val) {
-        if (currentMockWs) currentMockWs.onerror = val;
+        if (currentMockWs) {
+          currentMockWs.onerror = val;
+        }
       },
       get onmessage() {
         return currentMockWs?.onmessage ?? null;
       },
       set onmessage(val) {
-        if (currentMockWs) currentMockWs.onmessage = val;
+        if (currentMockWs) {
+          currentMockWs.onmessage = val;
+        }
       },
       send: mockSend,
       close: mock(() => {}),

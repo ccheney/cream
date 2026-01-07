@@ -208,6 +208,7 @@ module = [
     "research.hypothesis_alignment",
     "research.equivalence",
     "research.feedback",
+    "research.translation",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",

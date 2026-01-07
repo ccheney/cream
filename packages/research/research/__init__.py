@@ -67,6 +67,12 @@ __all__ = [
     "FeedbackConfig",
     "FeedbackGenerator",
     "RefinementOrchestrator",
+    # Translation (requires polars, numpy)
+    "TranslationContext",
+    "TranslationResult",
+    "TranslationConfig",
+    "TranslationOrchestrator",
+    "generate_typescript_template",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -334,6 +340,30 @@ def __getattr__(name: str) -> Any:
             "FeedbackConfig": FeedbackConfig,
             "FeedbackGenerator": FeedbackGenerator,
             "RefinementOrchestrator": RefinementOrchestrator,
+        }[name]
+
+    # Translation
+    if name in (
+        "TranslationContext",
+        "TranslationResult",
+        "TranslationConfig",
+        "TranslationOrchestrator",
+        "generate_typescript_template",
+    ):
+        from research.translation import (
+            TranslationConfig,
+            TranslationContext,
+            TranslationOrchestrator,
+            TranslationResult,
+            generate_typescript_template,
+        )
+
+        return {
+            "TranslationContext": TranslationContext,
+            "TranslationResult": TranslationResult,
+            "TranslationConfig": TranslationConfig,
+            "TranslationOrchestrator": TranslationOrchestrator,
+            "generate_typescript_template": generate_typescript_template,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
