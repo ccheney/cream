@@ -170,6 +170,17 @@ export {
   PBOResultSchema,
   rankStrategiesByPBO,
 } from "./pbo.js";
+// Retirement Pipeline
+export {
+  generateDeprecationComment,
+  generateRetirementPRBody,
+  IndicatorRetirement,
+  RETIREMENT_DEFAULTS,
+  type RetirementRequest,
+  RetirementRequestSchema,
+  type RetirementResult,
+  RetirementResultSchema,
+} from "./retirement.js";
 // Security Scanning
 export {
   getCriticalIssues,
