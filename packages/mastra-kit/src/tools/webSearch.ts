@@ -1192,3 +1192,140 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
 export function resetTavilyClient(): void {
   tavilyClient = null;
 }
+
+// ============================================
+// Batch Search
+// ============================================
+
+/**
+ * Parameters for batch searching multiple symbols
+ */
+export interface BatchSearchParams {
+  /** Base query template - {SYMBOL} will be replaced with each symbol */
+  queryTemplate: string;
+  /** Symbols to search for */
+  symbols: string[];
+  /** Common parameters for all searches */
+  commonParams?: Omit<WebSearchParams, "query" | "symbols">;
+}
+
+/**
+ * Response from a batch search operation
+ */
+export interface BatchSearchResponse {
+  /** Results keyed by symbol */
+  results: Record<string, WebSearchResult[]>;
+  /** Aggregate metadata */
+  metadata: {
+    symbolsSearched: number;
+    totalResults: number;
+    queriesExecuted: number;
+    cachedCount: number;
+    executionTimeMs: number;
+  };
+}
+
+/** Default concurrency limit for batch searches */
+const BATCH_CONCURRENCY = 3;
+
+/**
+ * Chunk an array into smaller arrays of specified size
+ */
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * Batch search for multiple symbols with concurrency control
+ *
+ * Executes searches for multiple symbols in parallel with a concurrency limit,
+ * tracking cache hits separately from API calls. Each symbol gets its own
+ * search query generated from the template.
+ *
+ * @param params - Batch search parameters
+ * @returns Results keyed by symbol with aggregate metadata
+ *
+ * @example
+ * ```typescript
+ * const batch = await batchSearch({
+ *   queryTemplate: "{SYMBOL} stock sentiment Reddit",
+ *   symbols: ["NVDA", "AAPL", "MSFT"],
+ *   commonParams: {
+ *     sources: ["reddit"],
+ *     maxAgeHours: 24,
+ *     topic: "finance",
+ *   },
+ * });
+ *
+ * // Access results per symbol
+ * const nvdaResults = batch.results["NVDA"];
+ * ```
+ */
+export async function batchSearch(params: BatchSearchParams): Promise<BatchSearchResponse> {
+  const startTime = Date.now();
+  const results: Record<string, WebSearchResult[]> = {};
+  let cachedCount = 0;
+  let queriesExecuted = 0;
+
+  // Handle empty symbols array
+  if (params.symbols.length === 0) {
+    return {
+      results: {},
+      metadata: {
+        symbolsSearched: 0,
+        totalResults: 0,
+        queriesExecuted: 0,
+        cachedCount: 0,
+        executionTimeMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  // Execute in parallel with concurrency limit
+  const chunks = chunkArray(params.symbols, BATCH_CONCURRENCY);
+
+  for (const chunk of chunks) {
+    const chunkPromises = chunk.map(async (symbol) => {
+      const query = params.queryTemplate.replace(/\{SYMBOL\}/g, symbol);
+
+      try {
+        const response = await webSearch({
+          query,
+          symbols: [symbol],
+          ...params.commonParams,
+        });
+
+        results[symbol] = response.results;
+
+        // Heuristic: if execution time < 50ms, likely a cache hit
+        // This is imperfect but avoids exposing cache internals
+        if (response.metadata.executionTimeMs < 50) {
+          cachedCount++;
+        } else {
+          queriesExecuted++;
+        }
+      } catch {
+        // Error isolation - one failure doesn't fail the batch
+        results[symbol] = [];
+        queriesExecuted++;
+      }
+    });
+
+    await Promise.all(chunkPromises);
+  }
+
+  return {
+    results,
+    metadata: {
+      symbolsSearched: params.symbols.length,
+      totalResults: Object.values(results).flat().length,
+      queriesExecuted,
+      cachedCount,
+      executionTimeMs: Date.now() - startTime,
+    },
+  };
+}

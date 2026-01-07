@@ -22,6 +22,7 @@ import {
 } from "bun:test";
 import * as domain from "@cream/domain";
 import {
+  batchSearch,
   clearWebSearchCache,
   getWebSearchCacheSize,
   getWebSearchMetrics,
@@ -1252,5 +1253,296 @@ describe("webSearch metrics integration", () => {
 
     const metrics = getWebSearchMetrics();
     expect(metrics.failedRequests).toBe(1);
+  });
+});
+
+// ============================================
+// Batch Search Tests
+// ============================================
+
+describe("batchSearch", () => {
+  let originalFetch: typeof globalThis.fetch;
+  let isBacktestSpy: ReturnType<typeof spyOn>;
+  const now = new Date();
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    isBacktestSpy = spyOn(domain, "isBacktest").mockReturnValue(false);
+    metricsCollector.reset();
+    rateLimiter.reset();
+    clearWebSearchCache();
+    resetTavilyClient();
+
+    // Mock fetch to return results based on query
+    globalThis.fetch = createMockFetch((url, options) => {
+      const body = options?.body ? JSON.parse(options.body as string) : {};
+      const query = body.query || "";
+
+      // Create different results based on symbol in query
+      const symbol = query.includes("NVDA")
+        ? "NVDA"
+        : query.includes("AAPL")
+          ? "AAPL"
+          : query.includes("MSFT")
+            ? "MSFT"
+            : "UNKNOWN";
+
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            query,
+            results: [
+              {
+                title: `${symbol} News Article`,
+                url: `https://example.com/${symbol.toLowerCase()}-news`,
+                content: `News about ${symbol}`,
+                score: 0.9,
+                published_date: now.toISOString(),
+              },
+            ],
+            response_time: 1.0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    });
+  });
+
+  afterEach(() => {
+    isBacktestSpy.mockRestore();
+    globalThis.fetch = originalFetch;
+    resetTavilyClient();
+    clearWebSearchCache();
+    rateLimiter.reset();
+    metricsCollector.reset();
+  });
+
+  test("returns empty results for empty symbols array", async () => {
+    const result = await batchSearch({
+      queryTemplate: "{SYMBOL} stock news",
+      symbols: [],
+    });
+
+    expect(result.results).toEqual({});
+    expect(result.metadata.symbolsSearched).toBe(0);
+    expect(result.metadata.totalResults).toBe(0);
+    expect(result.metadata.queriesExecuted).toBe(0);
+  });
+
+  test("searches single symbol correctly", async () => {
+    const result = await batchSearch({
+      queryTemplate: "{SYMBOL} stock news",
+      symbols: ["NVDA"],
+    });
+
+    expect(result.results.NVDA).toBeDefined();
+    expect(result.results.NVDA!.length).toBeGreaterThan(0);
+    expect(result.metadata.symbolsSearched).toBe(1);
+    expect(result.metadata.totalResults).toBe(1);
+  });
+
+  test("searches multiple symbols with correct mapping", async () => {
+    const result = await batchSearch({
+      queryTemplate: "{SYMBOL} stock sentiment",
+      symbols: ["NVDA", "AAPL", "MSFT"],
+    });
+
+    expect(result.results.NVDA).toBeDefined();
+    expect(result.results.AAPL).toBeDefined();
+    expect(result.results.MSFT).toBeDefined();
+    expect(result.metadata.symbolsSearched).toBe(3);
+    expect(result.metadata.totalResults).toBe(3);
+  });
+
+  test("replaces all {SYMBOL} occurrences in template", async () => {
+    let capturedQuery = "";
+    globalThis.fetch = createMockFetch((url, options) => {
+      const body = options?.body ? JSON.parse(options.body as string) : {};
+      capturedQuery = body.query || "";
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            query: capturedQuery,
+            results: [],
+            response_time: 1.0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    });
+    resetTavilyClient();
+
+    await batchSearch({
+      queryTemplate: "{SYMBOL} vs {SYMBOL} comparison",
+      symbols: ["NVDA"],
+    });
+
+    expect(capturedQuery).toContain("NVDA vs NVDA comparison");
+  });
+
+  test("passes common params to each search", async () => {
+    let capturedBody: Record<string, unknown> = {};
+    globalThis.fetch = createMockFetch((url, options) => {
+      capturedBody = options?.body ? JSON.parse(options.body as string) : {};
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            query: capturedBody.query || "",
+            results: [],
+            response_time: 1.0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    });
+    resetTavilyClient();
+
+    await batchSearch({
+      queryTemplate: "{SYMBOL} news",
+      symbols: ["NVDA"],
+      commonParams: {
+        topic: "finance",
+        maxAgeHours: 48,
+        maxResults: 5,
+      },
+    });
+
+    expect(capturedBody.topic).toBe("finance");
+    expect(capturedBody.time_range).toBe("week"); // 48 hours maps to week
+  });
+
+  test("counts cache hits separately from queries", async () => {
+    // Mock with delay to simulate real API call timing
+    globalThis.fetch = createMockFetch(() => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            new Response(
+              JSON.stringify({
+                query: "test",
+                results: [
+                  {
+                    title: "Test",
+                    url: "https://example.com",
+                    content: "Test",
+                    score: 0.9,
+                    published_date: now.toISOString(),
+                  },
+                ],
+                response_time: 1.0,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }, 100); // 100ms delay to ensure > 50ms threshold
+      });
+    });
+    resetTavilyClient();
+
+    // First search - will be API calls (> 50ms)
+    const result1 = await batchSearch({
+      queryTemplate: "{SYMBOL} sentiment",
+      symbols: ["NVDA", "AAPL"],
+    });
+
+    // Queries were executed (not cached because > 50ms)
+    expect(result1.metadata.queriesExecuted).toBe(2);
+
+    // Clear rate limiter but keep cache
+    rateLimiter.reset();
+
+    // Second search - should be cache hits (< 50ms because from cache)
+    const result2 = await batchSearch({
+      queryTemplate: "{SYMBOL} sentiment",
+      symbols: ["NVDA", "AAPL"],
+    });
+
+    // Should have cache hits now
+    expect(result2.metadata.cachedCount).toBe(2);
+  });
+
+  test("isolates errors - one failure doesn't fail batch", async () => {
+    let callCount = 0;
+    globalThis.fetch = createMockFetch(() => {
+      callCount++;
+      // Fail on second call with network error that webSearch will catch
+      if (callCount === 2) {
+        return Promise.reject(new Error("Network error"));
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            query: "test",
+            results: [
+              {
+                title: "Test",
+                url: "https://example.com",
+                content: "Test",
+                score: 0.9,
+                published_date: now.toISOString(),
+              },
+            ],
+            response_time: 1.0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    });
+    resetTavilyClient();
+
+    const result = await batchSearch({
+      queryTemplate: "{SYMBOL} news",
+      symbols: ["NVDA", "AAPL", "MSFT"],
+    });
+
+    // All three symbols should be searched
+    expect(result.metadata.symbolsSearched).toBe(3);
+
+    // All symbols should have entries (webSearch returns empty array on error, not throw)
+    expect(result.results.NVDA).toBeDefined();
+    expect(result.results.AAPL).toBeDefined();
+    expect(result.results.MSFT).toBeDefined();
+
+    // Two should succeed with 1 result each, one should have empty results
+    // webSearch handles errors internally and returns empty results
+    expect(result.metadata.totalResults).toBe(2);
+  });
+
+  test("respects concurrency limit with many symbols", async () => {
+    const callTimes: number[] = [];
+
+    globalThis.fetch = createMockFetch(() => {
+      callTimes.push(Date.now());
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            new Response(
+              JSON.stringify({
+                query: "test",
+                results: [],
+                response_time: 1.0,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }, 50); // 50ms delay per call
+      });
+    });
+    resetTavilyClient();
+
+    await batchSearch({
+      queryTemplate: "{SYMBOL} news",
+      symbols: ["A", "B", "C", "D", "E", "F"], // 6 symbols, should be 2 chunks of 3
+    });
+
+    // With concurrency of 3 and 6 symbols, we expect 2 batches
+    // The first batch of 3 should start nearly simultaneously
+    // The second batch should start after the first completes
+    expect(callTimes.length).toBe(6);
+
+    // Check that first 3 calls were nearly simultaneous
+    const firstBatchSpread =
+      Math.max(...callTimes.slice(0, 3)) - Math.min(...callTimes.slice(0, 3));
+    expect(firstBatchSpread).toBeLessThan(20); // Should all start within 20ms
   });
 });
