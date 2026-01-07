@@ -6,6 +6,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
+import { LiveDataIndicator, StreamingBadge } from "@/components/ui/RefreshIndicator";
 import {
   usePauseSystem,
   usePortfolioSummary,
@@ -14,11 +15,21 @@ import {
   useStopSystem,
   useSystemStatus,
 } from "@/hooks/queries";
+import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
 export default function DashboardPage() {
-  const { data: status, isLoading: statusLoading } = useSystemStatus();
-  const { data: portfolio, isLoading: portfolioLoading } = usePortfolioSummary();
-  const { data: decisions, isLoading: decisionsLoading } = useRecentDecisions(5);
+  const { connected } = useWebSocketContext();
+  const { data: status, isLoading: statusLoading, isFetching: statusFetching } = useSystemStatus();
+  const {
+    data: portfolio,
+    isLoading: portfolioLoading,
+    isFetching: portfolioFetching,
+  } = usePortfolioSummary();
+  const {
+    data: decisions,
+    isLoading: decisionsLoading,
+    isFetching: decisionsFetching,
+  } = useRecentDecisions(5);
 
   const startSystem = useStartSystem();
   const stopSystem = useStopSystem();
@@ -52,7 +63,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Dashboard</h1>
+          <StreamingBadge isConnected={connected} isRefreshing={statusFetching} />
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-cream-600 dark:text-cream-400">
             Next cycle in: {getNextCycleDisplay()}
@@ -122,21 +136,25 @@ export default function DashboardPage() {
             phase="Observe"
             status={getOODAPhaseStatus("observe", status?.lastCycleId)}
             isLoading={statusLoading}
+            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Orient"
             status={getOODAPhaseStatus("orient", status?.lastCycleId)}
             isLoading={statusLoading}
+            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Decide"
             status={getOODAPhaseStatus("decide", status?.lastCycleId)}
             isLoading={statusLoading}
+            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Act"
             status={getOODAPhaseStatus("act", status?.lastCycleId)}
             isLoading={statusLoading}
+            isFetching={statusFetching}
           />
         </div>
       </QueryErrorBoundary>
@@ -146,20 +164,23 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           <MetricCard
             label="NAV"
-            value={portfolioLoading ? "--" : formatCurrency(portfolio?.nav ?? 0)}
+            value={formatCurrency(portfolio?.nav ?? 0)}
             isLoading={portfolioLoading}
+            isFetching={portfolioFetching}
           />
           <MetricCard
             label="Day P&L"
-            value={portfolioLoading ? "--" : formatCurrency(portfolio?.todayPnl ?? 0)}
-            subValue={portfolioLoading ? "" : formatPct(portfolio?.todayPnlPct ?? 0)}
+            value={formatCurrency(portfolio?.todayPnl ?? 0)}
+            subValue={formatPct(portfolio?.todayPnlPct ?? 0)}
             valueColor={(portfolio?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
             isLoading={portfolioLoading}
+            isFetching={portfolioFetching}
           />
           <MetricCard
             label="Open Positions"
-            value={portfolioLoading ? "--" : String(portfolio?.positionCount ?? 0)}
+            value={String(portfolio?.positionCount ?? 0)}
             isLoading={portfolioLoading}
+            isFetching={portfolioFetching}
           />
         </div>
       </QueryErrorBoundary>
@@ -195,9 +216,16 @@ export default function DashboardPage() {
       {/* Recent Decisions */}
       <QueryErrorBoundary title="Failed to load decisions">
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-            Recent Decisions
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+              Recent Decisions
+            </h2>
+            <LiveDataIndicator
+              isRefreshing={decisionsFetching}
+              lastUpdated={decisions?.items?.[0]?.createdAt}
+              className="text-cream-500 dark:text-cream-400"
+            />
+          </div>
           {decisionsLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -335,11 +363,14 @@ function OODAPhaseCard({
   phase,
   status,
   isLoading,
+  isFetching,
 }: {
   phase: string;
   status: "idle" | "active" | "complete";
   isLoading: boolean;
+  isFetching?: boolean;
 }) {
+  // Only show skeleton on initial load
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
@@ -362,7 +393,11 @@ function OODAPhaseCard({
   };
 
   return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative">
+      {/* Subtle refresh indicator in corner */}
+      {isFetching && (
+        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+      )}
       <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
       <div className={`mt-1 text-lg font-medium flex items-center gap-2 ${statusColors[status]}`}>
         <span>{statusIcons[status]}</span>
@@ -378,13 +413,16 @@ function MetricCard({
   subValue,
   valueColor,
   isLoading,
+  isFetching,
 }: {
   label: string;
   value: string;
   subValue?: string;
   valueColor?: string;
   isLoading: boolean;
+  isFetching?: boolean;
 }) {
+  // Only show skeleton on initial load (no data)
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
@@ -395,7 +433,11 @@ function MetricCard({
   }
 
   return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative">
+      {/* Subtle refresh indicator in corner */}
+      {isFetching && (
+        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+      )}
       <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
       <div className="flex items-baseline gap-2">
         <div
