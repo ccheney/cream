@@ -23,8 +23,10 @@ import {
   type RiskManagerOutput,
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
+  webSearchTool,
 } from "@cream/mastra-kit";
 import { Agent } from "@mastra/core/agent";
+import type { Tool } from "@mastra/core/tools";
 import { z } from "zod";
 
 // Re-export types for convenience
@@ -58,6 +60,25 @@ function getModelId(internalModel: string): string {
       return "google/gemini-2.0-flash";
   }
 }
+
+// ============================================
+// Tool Registry
+// ============================================
+
+/**
+ * Maps config tool names to actual Mastra tool instances.
+ * Tools not in this registry will be logged as warnings but won't fail agent creation.
+ * Using Tool<any, any> to allow heterogeneous tool types in the registry.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
+const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
+  web_search: webSearchTool,
+  // Future tools will be added here as they get Mastra definitions:
+  // get_quotes: getQuotesTool,
+  // helix_query: helixQueryTool,
+  // news_search: newsSearchTool,
+  // etc.
+};
 
 // ============================================
 // Zod Schemas for Structured Output
@@ -262,16 +283,33 @@ const CriticOutputSchema = z.object({
 
 /**
  * Create a Mastra Agent from our config.
+ * Resolves tool instances from TOOL_INSTANCES registry based on config.tools.
  */
 function createAgent(agentType: AgentType): Agent {
   const config = AGENT_CONFIGS[agentType];
   const systemPrompt = AGENT_PROMPTS[agentType];
+
+  // Resolve tool instances from config
+  // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
+  const tools: Record<string, Tool<any, any>> = {};
+  for (const toolName of config.tools) {
+    const tool = TOOL_INSTANCES[toolName];
+    if (tool) {
+      tools[toolName] = tool;
+    } else {
+      // Log warning for unmapped tools - don't fail agent creation
+      console.warn(
+        `[createAgent] Tool '${toolName}' not found in TOOL_INSTANCES for agent '${agentType}'`
+      );
+    }
+  }
 
   return new Agent({
     id: config.type,
     name: config.name,
     instructions: systemPrompt,
     model: getModelId(config.model),
+    tools: Object.keys(tools).length > 0 ? tools : undefined,
   });
 }
 

@@ -28,7 +28,7 @@ export const TECHNICAL_ANALYST_CONFIG: AgentConfig = {
     "Objective without directional bias",
     "Precise about price levels and invalidation points",
   ],
-  tools: ["get_quotes", "recalc_indicator", "helix_query"],
+  tools: ["get_quotes", "recalc_indicator", "helix_query", "web_search"],
 };
 
 export const NEWS_ANALYST_CONFIG: AgentConfig = {
@@ -42,7 +42,7 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
     "Aware of sentiment duration dynamics",
     "Cross-references multiple sources",
   ],
-  tools: ["news_search", "helix_query"],
+  tools: ["news_search", "helix_query", "web_search"],
 };
 
 export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
@@ -56,7 +56,7 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
     "Sector-aware analysis",
     "Forward-looking on event risks",
   ],
-  tools: ["economic_calendar", "helix_query"],
+  tools: ["economic_calendar", "helix_query", "web_search"],
 };
 
 export const BULLISH_RESEARCHER_CONFIG: AgentConfig = {
@@ -70,7 +70,7 @@ export const BULLISH_RESEARCHER_CONFIG: AgentConfig = {
     "Grounds arguments in evidence",
     "Acknowledges counterarguments honestly",
   ],
-  tools: ["helix_query"],
+  tools: ["helix_query", "web_search"],
 };
 
 export const BEARISH_RESEARCHER_CONFIG: AgentConfig = {
@@ -84,7 +84,7 @@ export const BEARISH_RESEARCHER_CONFIG: AgentConfig = {
     "Grounds arguments in evidence",
     "Acknowledges counterarguments honestly",
   ],
-  tools: ["helix_query"],
+  tools: ["helix_query", "web_search"],
 };
 
 export const TRADER_CONFIG: AgentConfig = {
@@ -98,7 +98,14 @@ export const TRADER_CONFIG: AgentConfig = {
     "Disciplined about position sizing",
     "Clear rationale for every decision",
   ],
-  tools: ["get_quotes", "get_portfolio_state", "option_chain", "get_greeks", "helix_query"],
+  tools: [
+    "get_quotes",
+    "get_portfolio_state",
+    "option_chain",
+    "get_greeks",
+    "helix_query",
+    "web_search",
+  ],
 };
 
 export const RISK_MANAGER_CONFIG: AgentConfig = {
@@ -112,7 +119,7 @@ export const RISK_MANAGER_CONFIG: AgentConfig = {
     "Systematic constraint checker",
     "Clear about violations and required changes",
   ],
-  tools: ["get_portfolio_state"],
+  tools: ["get_portfolio_state", "web_search"],
 };
 
 export const CRITIC_CONFIG: AgentConfig = {
@@ -126,7 +133,7 @@ export const CRITIC_CONFIG: AgentConfig = {
     "Logic consistency checker",
     "Anti-hallucination focused",
   ],
-  tools: [],
+  tools: ["web_search"],
 };
 
 // ============================================
