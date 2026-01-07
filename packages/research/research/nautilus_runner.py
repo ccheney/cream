@@ -4,12 +4,21 @@ NautilusTrader Runner Module
 High-fidelity event-driven backtesting using NautilusTrader.
 Provides realistic execution modeling with slippage, commissions, and partial fills.
 
+Features:
+- Single and multi-asset backtesting
+- Equity and options support
+- Walk-forward optimization
+- Arrow Flight data integration
+
 See: docs/plans/10-research.md - High-Fidelity Validation
+See: docs/plans/12-backtest.md - Backtest Configuration
 """
 
 import logging
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -542,3 +551,327 @@ def quick_backtest(
 
     runner = NautilusRunner(config=config)
     return runner.run_backtest(prices, signals, symbol)
+
+
+# ============================================
+# Multi-Asset Backtest
+# ============================================
+
+
+@dataclass
+class MultiAssetBacktestResult:
+    """Result of a multi-asset NautilusTrader backtest."""
+
+    result_id: str
+    """Unique identifier for this result."""
+
+    strategy_name: str
+    """Name of the strategy tested."""
+
+    metrics: PerformanceMetrics
+    """Combined performance metrics."""
+
+    start_date: str
+    """Start date of backtest (ISO-8601)."""
+
+    end_date: str
+    """End date of backtest (ISO-8601)."""
+
+    symbols: list[str]
+    """Symbols tested."""
+
+    config: NautilusConfig
+    """Configuration used."""
+
+    per_symbol_results: dict[str, BacktestResult]
+    """Individual results per symbol."""
+
+    total_trades: int
+    """Total number of trades across all symbols."""
+
+    run_duration_seconds: float
+    """Time taken to run backtest."""
+
+
+def run_multi_asset_backtest(
+    prices_by_symbol: dict[str, pd.DataFrame],
+    signals_by_symbol: dict[str, pd.DataFrame],
+    config: NautilusConfig | None = None,
+) -> MultiAssetBacktestResult:
+    """
+    Run a multi-asset backtest across multiple symbols.
+
+    Args:
+        prices_by_symbol: Dict mapping symbol to OHLCV DataFrame
+        signals_by_symbol: Dict mapping symbol to signals DataFrame
+        config: Optional NautilusConfig
+
+    Returns:
+        MultiAssetBacktestResult with combined metrics
+    """
+    import time
+
+    start_time = time.time()
+    runner = NautilusRunner(config=config)
+
+    # Run individual backtests
+    per_symbol_results: dict[str, BacktestResult] = {}
+    for symbol in prices_by_symbol:
+        if symbol not in signals_by_symbol:
+            continue
+        result = runner.run_backtest(
+            prices_by_symbol[symbol],
+            signals_by_symbol[symbol],
+            symbol,
+        )
+        per_symbol_results[symbol] = result
+
+    # Combine metrics
+    combined_metrics = _combine_metrics(list(per_symbol_results.values()))
+
+    # Determine date range
+    all_starts = [r.start_date for r in per_symbol_results.values()]
+    all_ends = [r.end_date for r in per_symbol_results.values()]
+
+    return MultiAssetBacktestResult(
+        result_id=str(uuid.uuid4()),
+        strategy_name="MultiAssetStrategy",
+        metrics=combined_metrics,
+        start_date=min(all_starts) if all_starts else "",
+        end_date=max(all_ends) if all_ends else "",
+        symbols=list(prices_by_symbol.keys()),
+        config=config or NautilusConfig(),
+        per_symbol_results=per_symbol_results,
+        total_trades=sum(r.total_trades for r in per_symbol_results.values()),
+        run_duration_seconds=time.time() - start_time,
+    )
+
+
+def _combine_metrics(results: list[BacktestResult]) -> PerformanceMetrics:
+    """Combine metrics from multiple backtest results."""
+    if not results:
+        return PerformanceMetrics(
+            sharpe=0.0,
+            sortino=0.0,
+            max_drawdown=0.0,
+            win_rate=0.0,
+            avg_return=0.0,
+            total_return=0.0,
+            profit_factor=0.0,
+        )
+
+    # Weight by number of trades
+    total_trades = sum(r.total_trades for r in results)
+    if total_trades == 0:
+        total_trades = len(results)
+
+    def weighted_avg(attr: str) -> float:
+        total = sum(getattr(r.metrics, attr) * r.total_trades for r in results)
+        return total / total_trades if total_trades > 0 else 0.0
+
+    return PerformanceMetrics(
+        sharpe=weighted_avg("sharpe"),
+        sortino=weighted_avg("sortino"),
+        max_drawdown=max(r.metrics.max_drawdown for r in results),
+        win_rate=weighted_avg("win_rate"),
+        avg_return=weighted_avg("avg_return"),
+        total_return=sum(r.metrics.total_return for r in results) / len(results),
+        profit_factor=weighted_avg("profit_factor"),
+    )
+
+
+# ============================================
+# Walk-Forward Optimization
+# ============================================
+
+
+@dataclass
+class WalkForwardWindow:
+    """A single window in walk-forward optimization."""
+
+    train_start: str
+    train_end: str
+    test_start: str
+    test_end: str
+    in_sample_result: BacktestResult | None = None
+    out_of_sample_result: BacktestResult | None = None
+    optimized_params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class WalkForwardResult:
+    """Result of walk-forward optimization."""
+
+    result_id: str
+    strategy_name: str
+    windows: list[WalkForwardWindow]
+    combined_oos_metrics: PerformanceMetrics
+    """Combined out-of-sample metrics (the "true" performance)."""
+    combined_is_metrics: PerformanceMetrics
+    """Combined in-sample metrics (for comparison)."""
+    overfitting_ratio: float
+    """Ratio of OOS to IS performance. < 1.0 indicates overfitting."""
+
+
+def generate_walk_forward_windows(
+    start_date: str,
+    end_date: str,
+    train_months: int = 12,
+    test_months: int = 3,
+    step_months: int = 3,
+) -> list[WalkForwardWindow]:
+    """
+    Generate walk-forward windows for optimization.
+
+    Args:
+        start_date: Start date (ISO-8601)
+        end_date: End date (ISO-8601)
+        train_months: Number of months for training window
+        test_months: Number of months for testing window
+        step_months: Number of months to step forward
+
+    Returns:
+        List of WalkForwardWindow objects
+    """
+    from dateutil.relativedelta import relativedelta
+
+    windows = []
+    current_start = datetime.fromisoformat(start_date)
+    end_dt = datetime.fromisoformat(end_date)
+
+    while True:
+        train_end = current_start + relativedelta(months=train_months)
+        test_start = train_end
+        test_end = test_start + relativedelta(months=test_months)
+
+        if test_end > end_dt:
+            break
+
+        windows.append(
+            WalkForwardWindow(
+                train_start=current_start.isoformat(),
+                train_end=train_end.isoformat(),
+                test_start=test_start.isoformat(),
+                test_end=test_end.isoformat(),
+            )
+        )
+
+        current_start += relativedelta(months=step_months)
+
+    return windows
+
+
+def run_walk_forward_optimization(
+    prices: pd.DataFrame,
+    signals_generator: Callable[[pd.DataFrame, dict[str, Any]], pd.DataFrame],
+    symbol: str,
+    param_grid: list[dict[str, Any]],
+    windows: list[WalkForwardWindow],
+    config: NautilusConfig | None = None,
+    metric_to_optimize: str = "sharpe",
+) -> WalkForwardResult:
+    """
+    Run walk-forward optimization.
+
+    For each window:
+    1. Optimize parameters on in-sample data
+    2. Test with optimized parameters on out-of-sample data
+
+    Args:
+        prices: Full OHLCV DataFrame
+        signals_generator: Function(prices, params) -> signals DataFrame
+        symbol: Ticker symbol
+        param_grid: List of parameter combinations to test
+        windows: Walk-forward windows
+        config: Optional NautilusConfig
+        metric_to_optimize: Metric to maximize ('sharpe', 'sortino', 'total_return')
+
+    Returns:
+        WalkForwardResult with combined OOS metrics
+    """
+    runner = NautilusRunner(config=config)
+
+    for window in windows:
+        # Filter data for in-sample period
+        is_mask = (prices.index >= window.train_start) & (prices.index < window.train_end)
+        is_prices = prices[is_mask]
+
+        # Optimize on in-sample
+        best_params = {}
+        best_metric = float("-inf")
+        best_is_result = None
+
+        for params in param_grid:
+            signals = signals_generator(is_prices, params)
+            result = runner.run_backtest(
+                is_prices,
+                signals,
+                symbol,
+                start_date=window.train_start,
+                end_date=window.train_end,
+            )
+            metric_value = getattr(result.metrics, metric_to_optimize)
+            if metric_value > best_metric:
+                best_metric = metric_value
+                best_params = params
+                best_is_result = result
+
+        window.optimized_params = best_params
+        window.in_sample_result = best_is_result
+
+        # Test on out-of-sample with optimized params
+        oos_mask = (prices.index >= window.test_start) & (prices.index < window.test_end)
+        oos_prices = prices[oos_mask]
+
+        if len(oos_prices) > 0:
+            oos_signals = signals_generator(oos_prices, best_params)
+            window.out_of_sample_result = runner.run_backtest(
+                oos_prices,
+                oos_signals,
+                symbol,
+                start_date=window.test_start,
+                end_date=window.test_end,
+            )
+
+    # Combine metrics
+    is_results = [w.in_sample_result for w in windows if w.in_sample_result]
+    oos_results = [w.out_of_sample_result for w in windows if w.out_of_sample_result]
+
+    combined_is = (
+        _combine_metrics(is_results)
+        if is_results
+        else PerformanceMetrics(
+            sharpe=0.0,
+            sortino=0.0,
+            max_drawdown=0.0,
+            win_rate=0.0,
+            avg_return=0.0,
+            total_return=0.0,
+            profit_factor=0.0,
+        )
+    )
+    combined_oos = (
+        _combine_metrics(oos_results)
+        if oos_results
+        else PerformanceMetrics(
+            sharpe=0.0,
+            sortino=0.0,
+            max_drawdown=0.0,
+            win_rate=0.0,
+            avg_return=0.0,
+            total_return=0.0,
+            profit_factor=0.0,
+        )
+    )
+
+    # Calculate overfitting ratio (OOS Sharpe / IS Sharpe)
+    overfitting_ratio = combined_oos.sharpe / combined_is.sharpe if combined_is.sharpe != 0 else 0.0
+
+    return WalkForwardResult(
+        result_id=str(uuid.uuid4()),
+        strategy_name=f"WalkForward-{symbol}",
+        windows=windows,
+        combined_oos_metrics=combined_oos,
+        combined_is_metrics=combined_is,
+        overfitting_ratio=overfitting_ratio,
+    )
