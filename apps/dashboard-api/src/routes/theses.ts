@@ -2,19 +2,18 @@
  * Theses API Routes
  *
  * Routes for managing trading theses and convictions.
- * Returns real data from HelixDB or error responses - NO mock data.
- *
- * Data Sources:
- * - Thesis storage: HelixDB graph + vector database
- * - Semantic search: HelixDB embeddings (gemini-embedding-001)
- * - Position linking: Graph edges to TradeDecision nodes
+ * Data is stored in Turso (SQLite) via ThesisStateRepository.
  *
  * @see docs/plans/ui/05-api-endpoints.md Theses section
- * @see docs/plans/04-memory-helixdb.md HelixDB schema
+ * @see packages/storage/src/repositories/thesis-state.ts
+ * @see bead cream-9s0n8
  */
 
+import type { Thesis, ThesisState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
+import { getThesesRepo } from "../db.js";
+import { systemState } from "./system.js";
 
 // ============================================
 // App Setup
@@ -79,30 +78,72 @@ const ThesisHistoryEntrySchema = z.object({
   timestamp: z.string(),
 });
 
-const ErrorSchema = z.object({
+// ErrorSchema available for future 4xx/5xx response definitions
+const _ErrorSchema = z.object({
   error: z.string(),
   message: z.string(),
 });
 
 // ============================================
-// Service Availability Check
+// Type Mapping Helpers
 // ============================================
 
 /**
- * Stub function - theses endpoints not yet implemented.
- *
- * Required integrations:
- * - HelixDB client connection (packages/helix)
- * - Thesis node schema in HelixDB
- * - Embedding generation for semantic search
- * - Graph edges linking theses to decisions/positions
- *
- * @see bead: cream-9s0n8 (Theses Dashboard API: HelixDB Integration)
+ * Map internal thesis state to API status
  */
-function requireThesesService(): never {
-  throw new HTTPException(503, {
-    message: "Theses endpoints not yet implemented. Requires: HelixDB graph database integration.",
-  });
+function mapStateToStatus(state: ThesisState): "ACTIVE" | "INVALIDATED" | "REALIZED" | "EXPIRED" {
+  if (state === "CLOSED") {
+    return "REALIZED";
+  }
+  return "ACTIVE";
+}
+
+/**
+ * Infer direction from thesis text (basic heuristic)
+ */
+function inferDirection(thesis: Thesis): "BULLISH" | "BEARISH" | "NEUTRAL" {
+  const thesisText = (thesis.entryThesis ?? "").toLowerCase();
+  if (thesisText.includes("bullish") || thesisText.includes("long") || thesisText.includes("buy")) {
+    return "BULLISH";
+  }
+  if (
+    thesisText.includes("bearish") ||
+    thesisText.includes("short") ||
+    thesisText.includes("sell")
+  ) {
+    return "BEARISH";
+  }
+  return "NEUTRAL";
+}
+
+/**
+ * Map repository thesis to API response format
+ */
+function mapThesisToResponse(thesis: Thesis): z.infer<typeof ThesisSchema> {
+  const notes = thesis.notes as Record<string, unknown>;
+
+  return {
+    id: thesis.thesisId,
+    symbol: thesis.instrumentId,
+    direction: inferDirection(thesis),
+    thesis: thesis.entryThesis ?? "",
+    catalysts: (notes.catalysts as string[]) ?? [],
+    invalidationConditions: thesis.invalidationConditions ? [thesis.invalidationConditions] : [],
+    targetPrice: thesis.currentTarget,
+    stopPrice: thesis.currentStop,
+    timeHorizon: (notes.timeHorizon as "INTRADAY" | "SWING" | "POSITION" | "LONG_TERM") ?? "SWING",
+    confidence: thesis.conviction ?? 0.5,
+    status: mapStateToStatus(thesis.state),
+    entryPrice: thesis.entryPrice,
+    currentPrice: null, // Would need market data to populate
+    pnlPct: thesis.realizedPnlPct,
+    createdAt: thesis.createdAt,
+    updatedAt: thesis.lastUpdated,
+    expiresAt: (notes.expiresAt as string) ?? null,
+    agentSource: (notes.agentSource as string) ?? "manual",
+    supportingEvidence:
+      (notes.supportingEvidence as z.infer<typeof ThesisSchema>["supportingEvidence"]) ?? [],
+  };
 }
 
 // ============================================
@@ -129,16 +170,30 @@ const listRoute = createRoute({
       },
       description: "List of theses",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(listRoute, () => {
-  requireThesesService();
+app.openapi(listRoute, async (c) => {
+  const { status, symbol } = c.req.valid("query");
+  const repo = await getThesesRepo();
+
+  // Map API status to internal states
+  let states: ThesisState[] | undefined;
+  if (status === "ACTIVE") {
+    states = ["WATCHING", "ENTERED", "ADDING", "MANAGING", "EXITING"];
+  } else if (status === "REALIZED" || status === "INVALIDATED" || status === "EXPIRED") {
+    states = ["CLOSED"];
+  }
+
+  const result = await repo.findMany({
+    instrumentId: symbol,
+    states,
+    environment: systemState.environment,
+  });
+
+  const theses = result.data.map(mapThesisToResponse);
+  return c.json(theses);
 });
 
 // POST / - Create thesis
@@ -163,16 +218,36 @@ const createThesisRoute = createRoute({
       },
       description: "Created thesis",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(createThesisRoute, () => {
-  requireThesesService();
+app.openapi(createThesisRoute, async (c) => {
+  const body = c.req.valid("json");
+  const repo = await getThesesRepo();
+
+  const thesisId = `thesis_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  const thesis = await repo.create({
+    thesisId,
+    instrumentId: body.symbol,
+    state: "WATCHING",
+    entryThesis: body.thesis,
+    invalidationConditions: body.invalidationConditions.join("; "),
+    conviction: body.confidence,
+    currentStop: body.stopPrice ?? undefined,
+    currentTarget: body.targetPrice ?? undefined,
+    environment: systemState.environment,
+    notes: {
+      direction: body.direction,
+      catalysts: body.catalysts,
+      timeHorizon: body.timeHorizon,
+      expiresAt: body.expiresAt,
+      agentSource: "dashboard-api",
+    },
+  });
+
+  return c.json(mapThesisToResponse(thesis), 201);
 });
 
 // GET /:id - Get thesis
@@ -196,16 +271,20 @@ const getRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(getRoute, () => {
-  requireThesesService();
+app.openapi(getRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const repo = await getThesesRepo();
+
+  const thesis = await repo.findById(id);
+  if (!thesis) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  return c.json(mapThesisToResponse(thesis));
 });
 
 // PUT /:id - Update thesis
@@ -236,16 +315,59 @@ const updateRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(updateRoute, () => {
-  requireThesesService();
+app.openapi(updateRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const body = c.req.valid("json");
+  const repo = await getThesesRepo();
+
+  const existing = await repo.findById(id);
+  if (!existing) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  // Update conviction if provided
+  if (body.confidence !== undefined) {
+    await repo.updateConviction(id, body.confidence);
+  }
+
+  // Update stop/target if provided
+  if (body.stopPrice !== undefined || body.targetPrice !== undefined) {
+    await repo.updateLevels(id, body.stopPrice ?? undefined, body.targetPrice ?? undefined);
+  }
+
+  // Update notes with any new fields
+  const existingNotes = existing.notes as Record<string, unknown>;
+  const updatedNotes: Record<string, unknown> = { ...existingNotes };
+
+  if (body.direction !== undefined) {
+    updatedNotes.direction = body.direction;
+  }
+  if (body.catalysts !== undefined) {
+    updatedNotes.catalysts = body.catalysts;
+  }
+  if (body.timeHorizon !== undefined) {
+    updatedNotes.timeHorizon = body.timeHorizon;
+  }
+  if (body.expiresAt !== undefined) {
+    updatedNotes.expiresAt = body.expiresAt;
+  }
+
+  // Add notes one at a time (repository pattern)
+  for (const [key, value] of Object.entries(updatedNotes)) {
+    if (value !== existingNotes[key]) {
+      await repo.addNotes(id, key, value);
+    }
+  }
+
+  const updated = await repo.findById(id);
+  if (!updated) {
+    throw new HTTPException(404, { message: "Thesis not found after update" });
+  }
+  return c.json(mapThesisToResponse(updated));
 });
 
 // POST /:id/invalidate - Invalidate thesis
@@ -278,16 +400,28 @@ const invalidateRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(invalidateRoute, () => {
-  requireThesesService();
+app.openapi(invalidateRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const { reason } = c.req.valid("json");
+  const repo = await getThesesRepo();
+
+  const existing = await repo.findById(id);
+  if (!existing) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  await repo.close(id, "INVALIDATED", undefined, undefined);
+  await repo.addNotes(id, "invalidationReason", reason);
+
+  const updated = await repo.findById(id);
+  if (!updated) {
+    throw new HTTPException(404, { message: "Thesis not found after invalidation" });
+  }
+  return c.json(mapThesisToResponse(updated));
 });
 
 // POST /:id/realize - Mark thesis as realized
@@ -321,16 +455,42 @@ const realizeRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(realizeRoute, () => {
-  requireThesesService();
+app.openapi(realizeRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const { exitPrice, notes } = c.req.valid("json");
+  const repo = await getThesesRepo();
+
+  const existing = await repo.findById(id);
+  if (!existing) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  // Calculate realized P&L if entry price exists
+  const realizedPnl = existing.entryPrice ? exitPrice - existing.entryPrice : undefined;
+
+  // Determine close reason based on price vs target/stop
+  let closeReason: "TARGET_HIT" | "STOP_HIT" | "MANUAL" = "MANUAL";
+  if (existing.currentTarget && exitPrice >= existing.currentTarget) {
+    closeReason = "TARGET_HIT";
+  } else if (existing.currentStop && exitPrice <= existing.currentStop) {
+    closeReason = "STOP_HIT";
+  }
+
+  await repo.close(id, closeReason, exitPrice, realizedPnl);
+
+  if (notes) {
+    await repo.addNotes(id, "realizationNotes", notes);
+  }
+
+  const updated = await repo.findById(id);
+  if (!updated) {
+    throw new HTTPException(404, { message: "Thesis not found after realization" });
+  }
+  return c.json(mapThesisToResponse(updated));
 });
 
 // GET /:id/history - Get thesis history
@@ -354,16 +514,33 @@ const historyRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(historyRoute, () => {
-  requireThesesService();
+app.openapi(historyRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const repo = await getThesesRepo();
+
+  const thesis = await repo.findById(id);
+  if (!thesis) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  const history = await repo.getHistory(id);
+
+  // Map state history to API format
+  const historyEntries = history.map((entry) => ({
+    id: String(entry.id),
+    thesisId: entry.thesisId,
+    field: "state",
+    oldValue: entry.fromState,
+    newValue: entry.toState,
+    reason: entry.triggerReason,
+    timestamp: entry.createdAt,
+  }));
+
+  return c.json(historyEntries);
 });
 
 // DELETE /:id - Delete thesis
@@ -382,16 +559,20 @@ const deleteRoute = createRoute({
     404: {
       description: "Thesis not found",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Theses service unavailable",
-    },
   },
   tags: ["Theses"],
 });
 
-app.openapi(deleteRoute, () => {
-  requireThesesService();
+app.openapi(deleteRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const repo = await getThesesRepo();
+
+  const deleted = await repo.delete(id);
+  if (!deleted) {
+    throw new HTTPException(404, { message: "Thesis not found" });
+  }
+
+  return c.body(null, 204);
 });
 
 // ============================================

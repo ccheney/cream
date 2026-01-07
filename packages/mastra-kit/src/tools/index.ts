@@ -1200,5 +1200,28 @@ export {
   implementIndicator,
 } from "./claudeCodeIndicator.js";
 // Mastra tool definitions
-export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./definitions/index.js";
+// Research trigger tools (require FactorZooRepository dependency injection)
+export {
+  type CheckResearchStatusInput,
+  CheckResearchStatusInputSchema,
+  type CheckResearchStatusOutput,
+  CheckResearchStatusOutputSchema,
+  type CheckTriggerConditionsInput,
+  CheckTriggerConditionsInputSchema,
+  type CheckTriggerConditionsOutput,
+  CheckTriggerConditionsOutputSchema,
+  createCheckResearchStatusTool,
+  createCheckTriggerConditionsTool,
+  // Tool factories
+  createTriggerResearchTool,
+  // Input/Output types
+  type TriggerResearchInput,
+  // Schemas for validation
+  TriggerResearchInputSchema,
+  type TriggerResearchOutput,
+  TriggerResearchOutputSchema,
+  WebSearchInputSchema,
+  WebSearchOutputSchema,
+  webSearchTool,
+} from "./definitions/index.js";
 export type { WebSearchResult } from "./webSearch.js";

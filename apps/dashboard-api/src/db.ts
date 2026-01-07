@@ -17,6 +17,7 @@ import {
   PortfolioSnapshotsRepository,
   PositionsRepository,
   runMigrations,
+  ThesisStateRepository,
   type TursoClient,
 } from "@cream/storage";
 
@@ -166,4 +167,12 @@ export async function getBacktestsRepo(): Promise<BacktestsRepository> {
 export async function getConfigVersionsRepo(): Promise<ConfigVersionsRepository> {
   const client = await getDbClient();
   return new ConfigVersionsRepository(client);
+}
+
+/**
+ * Get thesis state repository
+ */
+export async function getThesesRepo(): Promise<ThesisStateRepository> {
+  const client = await getDbClient();
+  return new ThesisStateRepository(client);
 }
