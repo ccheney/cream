@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "CREAM_ENV=${CREAM_ENV:-BACKTEST} turbo run dev",
     "build": "turbo run build",
     "test": "CREAM_ENV=BACKTEST turbo run test",
     "typecheck": "turbo run typecheck",

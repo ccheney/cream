@@ -22,7 +22,8 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["CREAM_ENV", "TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "HELIX_URL", "ALPACA_KEY", "ALPACA_SECRET", "POLYGON_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"]
     },
     "clean": {
       "cache": false,

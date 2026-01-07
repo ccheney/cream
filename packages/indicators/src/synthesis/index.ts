@@ -41,6 +41,28 @@ export {
   ReturnStatisticsSchema,
   sharpeStandardError,
 } from "./dsr.js";
+// Information Coefficient (IC)
+export {
+  analyzeIC,
+  analyzeICDecay,
+  calculateICStats,
+  computeRanks,
+  crossSectionalIC,
+  evaluateIC,
+  IC_DEFAULTS,
+  type ICAnalysisResult,
+  ICAnalysisResultSchema,
+  type ICDecayResult,
+  ICDecayResultSchema,
+  type ICStats,
+  ICStatsSchema,
+  type ICValue,
+  ICValueSchema,
+  isICSignificant,
+  pearsonCorrelation,
+  spearmanCorrelation,
+  timeSeriesIC,
+} from "./ic.js";
 // Probability of Backtest Overfitting (PBO)
 export {
   type CSCVCombinationResult,
