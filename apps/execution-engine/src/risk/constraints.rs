@@ -40,6 +40,29 @@ pub struct BuyingPowerInfo {
 
 impl Default for BuyingPowerInfo {
     fn default() -> Self {
+        // Default to zero available buying power to enforce explicit provision
+        // of buying power info. Using MAX would bypass all buying power checks.
+        Self {
+            available: Decimal::ZERO,
+            required_margin: Decimal::ZERO,
+        }
+    }
+}
+
+impl BuyingPowerInfo {
+    /// Create a new BuyingPowerInfo with specified available buying power.
+    #[must_use]
+    pub const fn new(available: Decimal, required_margin: Decimal) -> Self {
+        Self {
+            available,
+            required_margin,
+        }
+    }
+
+    /// Create BuyingPowerInfo with unlimited buying power (for testing only).
+    #[cfg(test)]
+    #[must_use]
+    pub fn unlimited() -> Self {
         Self {
             available: Decimal::MAX,
             required_margin: Decimal::ZERO,
@@ -1103,7 +1126,12 @@ mod tests {
             plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
         };
 
-        let response = validator.validate(&request);
+        let context = ExtendedConstraintContext {
+            buying_power: BuyingPowerInfo::unlimited(),
+            ..Default::default()
+        };
+
+        let response = validator.validate_with_context(&request, &context);
         assert!(response.ok);
         assert!(response.violations.is_empty());
     }
@@ -1204,7 +1232,12 @@ mod tests {
             plan: make_plan(vec![long_decision, short_decision]),
         };
 
-        let response = validator.validate(&request);
+        let context = ExtendedConstraintContext {
+            buying_power: BuyingPowerInfo::unlimited(),
+            ..Default::default()
+        };
+
+        let response = validator.validate_with_context(&request, &context);
         assert!(response.ok, "Violations: {:?}", response.violations);
     }
 
@@ -1446,6 +1479,7 @@ mod tests {
                 vega: Decimal::new(2000, 0),            // Under 5000 limit
                 theta: Decimal::new(-200, 0),           // Above -500 limit
             }),
+            buying_power: BuyingPowerInfo::unlimited(),
             ..Default::default()
         };
 

@@ -201,10 +201,26 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
         }
     }
 
-    /// Check constraints for a decision plan.
+    /// Check constraints for a decision plan using default context.
+    ///
+    /// Note: This uses zero buying power by default. For production use,
+    /// prefer `check_constraints_with_context` with actual buying power info.
     #[must_use]
     pub fn check_constraints(&self, request: &ConstraintCheckRequest) -> ConstraintCheckResponse {
         self.validator.validate(request)
+    }
+
+    /// Check constraints for a decision plan with extended context.
+    ///
+    /// Use this method to provide buying power information and Greeks for
+    /// more accurate constraint validation.
+    #[must_use]
+    pub fn check_constraints_with_context(
+        &self,
+        request: &ConstraintCheckRequest,
+        context: &crate::risk::ExtendedConstraintContext,
+    ) -> ConstraintCheckResponse {
+        self.validator.validate_with_context(request, context)
     }
 
     /// Submit orders from a decision plan.
@@ -567,10 +583,17 @@ mod tests {
 
     #[test]
     fn test_check_constraints_valid() {
+        use crate::risk::{BuyingPowerInfo, ExtendedConstraintContext};
+
         let gateway = make_gateway();
         let request = make_valid_request();
 
-        let response = gateway.check_constraints(&request);
+        let context = ExtendedConstraintContext {
+            buying_power: BuyingPowerInfo::unlimited(),
+            ..Default::default()
+        };
+
+        let response = gateway.check_constraints_with_context(&request, &context);
         assert!(response.ok);
     }
 
