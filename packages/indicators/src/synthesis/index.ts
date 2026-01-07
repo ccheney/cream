@@ -23,6 +23,24 @@ export {
   normalizeCode,
   parseToSignature,
 } from "./astSimilarity.js";
+// Deflated Sharpe Ratio
+export {
+  calculateDSR,
+  calculateDSRFromReturns,
+  calculateReturnStatistics,
+  DSR_DEFAULTS,
+  type DSRInput,
+  DSRInputSchema,
+  type DSRResult,
+  DSRResultSchema,
+  evaluateDSR,
+  expectedMaxSharpe,
+  isDSRSignificant,
+  minimumRequiredSharpe,
+  type ReturnStatistics,
+  ReturnStatisticsSchema,
+  sharpeStandardError,
+} from "./dsr.js";
 // Security Scanning
 export {
   getCriticalIssues,

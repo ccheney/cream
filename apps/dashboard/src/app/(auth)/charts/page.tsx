@@ -16,7 +16,8 @@ export default function ChartsPage() {
   const { data: quote, isLoading: quoteLoading } = useQuote(symbol);
   const { data: regime } = useRegime();
 
-  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+  const formatPrice = (price: number | null | undefined) =>
+    price != null ? `$${price.toFixed(2)}` : "--";
 
   return (
     <div className="space-y-6">
@@ -132,9 +133,9 @@ export default function ChartsPage() {
       <div className="grid grid-cols-4 gap-4">
         <IndicatorCard
           name="RSI(14)"
-          value={indicatorsLoading ? "--" : (indicators?.rsi14.toFixed(1) ?? "--")}
+          value={indicatorsLoading ? "--" : (indicators?.rsi14?.toFixed(1) ?? "--")}
           status={
-            indicators
+            indicators?.rsi14 != null
               ? indicators.rsi14 > 70
                 ? "overbought"
                 : indicators.rsi14 < 30
@@ -146,18 +147,18 @@ export default function ChartsPage() {
         />
         <IndicatorCard
           name="ATR(14)"
-          value={indicatorsLoading ? "--" : `$${indicators?.atr14.toFixed(2) ?? "--"}`}
+          value={indicatorsLoading ? "--" : (indicators?.atr14 != null ? `$${indicators.atr14.toFixed(2)}` : "--")}
           isLoading={indicatorsLoading}
         />
         <IndicatorCard
           name="SMA(20)"
-          value={indicatorsLoading ? "--" : formatPrice(indicators?.sma20 ?? 0)}
+          value={indicatorsLoading ? "--" : (indicators?.sma20 != null ? formatPrice(indicators.sma20) : "--")}
           isLoading={indicatorsLoading}
         />
         <IndicatorCard
           name="MACD"
-          value={indicatorsLoading ? "--" : (indicators?.macdHist.toFixed(2) ?? "--")}
-          status={indicators ? (indicators.macdHist > 0 ? "bullish" : "bearish") : "neutral"}
+          value={indicatorsLoading ? "--" : (indicators?.macdHist?.toFixed(2) ?? "--")}
+          status={indicators?.macdHist != null ? (indicators.macdHist > 0 ? "bullish" : "bearish") : "neutral"}
           isLoading={indicatorsLoading}
         />
       </div>
@@ -200,9 +201,9 @@ export default function ChartsPage() {
               </div>
             </div>
             <div>
-              <span className="text-cream-500 dark:text-cream-400">BB Middle</span>
+              <span className="text-cream-500 dark:text-cream-400">MACD</span>
               <div className="font-mono text-cream-900 dark:text-cream-100">
-                {formatPrice(indicators.bbMiddle)}
+                {indicators.macdLine?.toFixed(2) ?? "--"}
               </div>
             </div>
           </div>
