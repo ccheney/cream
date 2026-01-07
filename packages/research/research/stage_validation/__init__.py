@@ -22,6 +22,14 @@ from .dsr import (
     compute_full_statistical_validation,
 )
 from .stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
+from .stage2_nautilus import (
+    MonteCarloResults,
+    Stage2Gates,
+    Stage2Results,
+    Stage2Validator,
+    WalkForwardResults,
+    run_full_stage2_validation,
+)
 
 __all__ = [
     # CPCV validation
@@ -39,4 +47,11 @@ __all__ = [
     "Stage1Gates",
     "Stage1Results",
     "Stage1Validator",
+    # Stage 2 validation
+    "MonteCarloResults",
+    "Stage2Gates",
+    "Stage2Results",
+    "Stage2Validator",
+    "WalkForwardResults",
+    "run_full_stage2_validation",
 ]
