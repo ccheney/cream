@@ -21,12 +21,13 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
-    "@cream/storage": "workspace:*",
+    "@cream/dashboard-types": "workspace:*",
+    "@cream/helix": "workspace:*",
     "@cream/marketdata": "workspace:*",
+    "@cream/storage": "workspace:*",
     "@hono/zod-openapi": "^0.19.0",
     "hono": "^4.7.0",
-    "zod": "^4.0.0-beta.20",
-    "@cream/dashboard-types": "workspace:*"
+    "zod": "^4.0.0-beta.20"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

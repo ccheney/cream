@@ -62,10 +62,13 @@ export {
 
 // Graph traversal
 export {
+  type Citation,
+  type CitationSourceType,
   type GraphEdge,
   type GraphNode,
   type GraphPath,
   getCompanyNodes,
+  getDecisionCitations,
   getInfluencedDecisions,
   getInfluencingEvents,
   getLifecycleEvents,

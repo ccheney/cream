@@ -6,6 +6,7 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
+import { createHelixClientFromEnv, getDecisionCitations } from "@cream/helix";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAgentOutputsRepo, getDecisionsRepo, getOrdersRepo } from "../db.js";
 
@@ -205,6 +206,33 @@ app.openapi(detailRoute, async (c) => {
   const orders = await ordersRepo.findByDecision(id);
   const order = orders[0]; // Primary order
 
+  // Fetch citations from HelixDB (non-blocking - empty array if unavailable)
+  let citations: Array<{
+    id: string;
+    url: string;
+    title: string;
+    source: string;
+    snippet: string;
+    relevanceScore: number;
+    fetchedAt: string;
+  }> = [];
+
+  try {
+    const helixClient = createHelixClientFromEnv();
+    const rawCitations = await getDecisionCitations(helixClient, id);
+    citations = rawCitations.map((citation) => ({
+      id: citation.id,
+      url: citation.url ?? "",
+      title: citation.title,
+      source: citation.source,
+      snippet: citation.snippet,
+      relevanceScore: citation.relevanceScore,
+      fetchedAt: citation.fetchedAt,
+    }));
+  } catch {
+    // HelixDB unavailable - continue with empty citations
+  }
+
   return c.json({
     id: decision.id,
     cycleId: decision.cycleId,
@@ -232,7 +260,7 @@ app.openapi(detailRoute, async (c) => {
       processingTimeMs: ao.latencyMs ?? 0,
       createdAt: ao.createdAt,
     })),
-    citations: [],
+    citations,
     execution: order
       ? {
           orderId: order.id,
@@ -338,8 +366,26 @@ app.openapi(citationsRoute, async (c) => {
     return c.json({ error: "Decision not found" }, 404);
   }
 
-  // TODO: Fetch citations from HelixDB
-  return c.json([]);
+  // Fetch citations from HelixDB
+  try {
+    const helixClient = createHelixClientFromEnv();
+    const citations = await getDecisionCitations(helixClient, id);
+
+    return c.json(
+      citations.map((citation) => ({
+        id: citation.id,
+        url: citation.url ?? "",
+        title: citation.title,
+        source: citation.source,
+        snippet: citation.snippet,
+        relevanceScore: citation.relevanceScore,
+        fetchedAt: citation.fetchedAt,
+      }))
+    );
+  } catch {
+    // If HelixDB is unavailable, return empty array gracefully
+    return c.json([]);
+  }
 });
 
 // GET /api/decisions/:id/execution

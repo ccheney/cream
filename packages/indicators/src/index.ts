@@ -46,3 +46,11 @@ export * from "./types";
 export * from "./volatility/index";
 // Volume Indicators
 export * from "./volume/index";
+// Storage Integration
+export {
+  persistHistoricalIndicators,
+  persistIndicators,
+  persistMultipleIndicators,
+  type PersistIndicatorsOptions,
+  type PersistResult,
+} from "./storage";

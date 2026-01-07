@@ -103,13 +103,15 @@ const agentConfigs = new Map<string, z.infer<typeof AgentConfigSchema>>(
 // Helper Functions
 // ============================================
 
-function getAgentStatus(type: string): z.infer<typeof AgentStatusSchema> | null {
+async function getAgentStatus(type: string): Promise<z.infer<typeof AgentStatusSchema> | null> {
   const definition = AGENT_DEFINITIONS.find((a) => a.type === type);
   if (!definition) {
     return null;
   }
 
-  const outputs = agentOutputs.filter((o) => o.agentType === type);
+  const repo = await getAgentOutputsRepo();
+  const outputs = await repo.findByAgentType(type, 100);
+
   const today = new Date().toISOString().slice(0, 10);
   const todayOutputs = outputs.filter((o) => o.createdAt.startsWith(today));
 
@@ -118,9 +120,7 @@ function getAgentStatus(type: string): z.infer<typeof AgentStatusSchema> | null 
   const avgConfidence =
     outputs.length > 0 ? outputs.reduce((sum, o) => sum + o.confidence, 0) / outputs.length : 0;
 
-  const lastOutput = outputs.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )[0];
+  const lastOutput = outputs[0]; // Already sorted DESC by findByAgentType
 
   return {
     type: definition.type,
@@ -154,9 +154,9 @@ const statusRoute = createRoute({
   tags: ["Agents"],
 });
 
-app.openapi(statusRoute, (c) => {
-  const statuses = AGENT_DEFINITIONS.map((a) => getAgentStatus(a.type)!);
-  return c.json(statuses);
+app.openapi(statusRoute, async (c) => {
+  const statuses = await Promise.all(AGENT_DEFINITIONS.map((a) => getAgentStatus(a.type)));
+  return c.json(statuses.filter((s): s is NonNullable<typeof s> => s !== null));
 });
 
 // GET /:type/outputs - Get agent outputs
@@ -188,7 +188,7 @@ const outputsRoute = createRoute({
   tags: ["Agents"],
 });
 
-app.openapi(outputsRoute, (c) => {
+app.openapi(outputsRoute, async (c) => {
   const { type } = c.req.valid("param");
   const { limit, offset } = c.req.valid("query");
 
@@ -196,15 +196,26 @@ app.openapi(outputsRoute, (c) => {
     throw new HTTPException(404, { message: "Agent not found" });
   }
 
-  const typeOutputs = agentOutputs
-    .filter((o) => o.agentType === type)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const repo = await getAgentOutputsRepo();
+  // Fetch more than needed to handle offset (repository doesn't support offset directly)
+  const allOutputs = await repo.findByAgentType(type, offset + limit);
+  const paginatedOutputs = allOutputs.slice(offset, offset + limit);
 
-  const paginated = typeOutputs.slice(offset, offset + limit);
+  // Map DB schema to API schema
+  const outputs = paginatedOutputs.map((o) => ({
+    id: String(o.id),
+    agentType: o.agentType,
+    decisionId: o.decisionId,
+    vote: o.vote === "ABSTAIN" ? "REJECT" : o.vote, // API doesn't support ABSTAIN
+    confidence: o.confidence,
+    reasoning: o.reasoningSummary ?? o.fullReasoning ?? "",
+    processingTimeMs: o.latencyMs ?? 0,
+    createdAt: o.createdAt,
+  }));
 
   return c.json({
-    outputs: paginated,
-    total: typeOutputs.length,
+    outputs,
+    total: allOutputs.length,
     offset,
     limit,
   });
