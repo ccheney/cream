@@ -110,6 +110,25 @@ export {
   UniverseSnapshotSchema,
   UniverseSnapshotsRepository,
 } from "./historical-universe.js";
+// Indicator synthesis (migration 008)
+export {
+  type CreateIndicatorICHistoryInput,
+  type CreateIndicatorInput,
+  type CreateIndicatorTrialInput,
+  type ICHistoryFilters,
+  type Indicator,
+  type IndicatorCategory,
+  type IndicatorFilters,
+  type IndicatorICHistory,
+  type IndicatorStatus,
+  IndicatorsRepository,
+  type IndicatorTrial,
+  type PaperTradingReport,
+  type TrialFilters,
+  type TrialParameters,
+  type ValidationReport,
+  type WalkForwardPeriod,
+} from "./indicators.js";
 export {
   type CreateOrderInput,
   type Order as OrderEntity,

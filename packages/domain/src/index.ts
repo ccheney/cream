@@ -398,6 +398,33 @@ export {
   type ValuationMetrics,
   ValuationMetricsSchema,
 } from "./external-context";
+// Indicator synthesis types
+export {
+  type CreateIndicatorICHistoryInput,
+  CreateIndicatorICHistoryInputSchema,
+  type CreateIndicatorInput,
+  CreateIndicatorInputSchema,
+  type CreateIndicatorTrialInput,
+  CreateIndicatorTrialInputSchema,
+  type Indicator,
+  IndicatorCategory,
+  type IndicatorFilters,
+  IndicatorFiltersSchema,
+  type IndicatorICHistory,
+  IndicatorICHistorySchema,
+  IndicatorSchema,
+  IndicatorStatus,
+  type IndicatorTrial,
+  IndicatorTrialSchema,
+  type PaperTradingReport,
+  PaperTradingReportSchema,
+  type TrialParameters,
+  TrialParametersSchema,
+  type ValidationReport,
+  ValidationReportSchema,
+  type WalkForwardPeriod,
+  WalkForwardPeriodSchema,
+} from "./indicator-synthesis";
 // LLM parsing with retry logic
 export {
   type AgentType,
