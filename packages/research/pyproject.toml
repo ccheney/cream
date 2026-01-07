@@ -209,6 +209,7 @@ module = [
     "research.equivalence",
     "research.feedback",
     "research.translation",
+    "research.paper_validation.*",
     "research.greeks.*",
     "research.flight_client",
     "research.__init__",

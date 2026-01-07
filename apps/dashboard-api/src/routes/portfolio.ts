@@ -6,6 +6,7 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
+import { calculateReturns, calculateSharpe, calculateSortino } from "@cream/metrics";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
   getDecisionsRepo,
@@ -148,13 +149,26 @@ app.openapi(summaryRoute, async (c) => {
 
   const totalPnlPct = firstSnapshot?.nav ? (totalPnl / firstSnapshot.nav) * 100 : 0;
 
+  // Calculate net exposure from positions (long value - short value)
+  const positions = await positionsRepo.findMany({
+    environment: systemState.environment,
+    status: "open",
+  });
+  const longValue = positions.data
+    .filter((p) => p.side === "LONG")
+    .reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+  const shortValue = positions.data
+    .filter((p) => p.side === "SHORT")
+    .reduce((sum, p) => sum + Math.abs(p.marketValue ?? 0), 0);
+  const netExposure = longValue - shortValue;
+
   return c.json({
     nav: latestSnapshot?.nav ?? 100000,
     cash: latestSnapshot?.cash ?? 100000,
     equity: summary.totalMarketValue,
     buyingPower: (latestSnapshot?.cash ?? 100000) * 4, // Assuming 4x margin
     grossExposure: summary.totalMarketValue,
-    netExposure: 0, // TODO: Calculate from long/short positions
+    netExposure,
     positionCount: summary.totalPositions,
     todayPnl,
     todayPnlPct,
@@ -318,9 +332,10 @@ const performanceRoute = createRoute({
 });
 
 app.openapi(performanceRoute, async (c) => {
-  const [snapshotsRepo, decisionsRepo] = await Promise.all([
+  const [snapshotsRepo, decisionsRepo, ordersRepo] = await Promise.all([
     getPortfolioSnapshotsRepo(),
     getDecisionsRepo(),
+    getOrdersRepo(),
   ]);
 
   // Get all snapshots for calculations
@@ -329,9 +344,15 @@ app.openapi(performanceRoute, async (c) => {
     { page: 1, pageSize: 1000 }
   );
 
-  // Get executed decisions for trade statistics
-  const decisions = await decisionsRepo.findMany(
+  // Get executed decisions for trade statistics (kept for potential future use)
+  const _decisions = await decisionsRepo.findMany(
     { status: "executed" },
+    { page: 1, pageSize: 1000 }
+  );
+
+  // Get filled orders for P&L calculations
+  const orders = await ordersRepo.findMany(
+    { status: "filled", environment: systemState.environment },
     { page: 1, pageSize: 1000 }
   );
 
@@ -348,7 +369,57 @@ app.openapi(performanceRoute, async (c) => {
 
   const ytdStart = new Date(now.getFullYear(), 0, 1);
 
-  // Helper to calculate period metrics
+  // Calculate P&L from filled orders (BUY is entry, SELL is exit)
+  // Group orders by symbol to calculate realized P&L per trade
+  interface TradePnL {
+    pnl: number;
+    timestamp: string;
+  }
+  const tradePnLs: TradePnL[] = [];
+  const positionCosts = new Map<string, { qty: number; avgCost: number }>();
+
+  // Process orders chronologically to track position costs
+  const sortedOrders = [...orders.data].sort(
+    (a, b) =>
+      new Date(a.filledAt ?? a.createdAt).getTime() - new Date(b.filledAt ?? b.createdAt).getTime()
+  );
+
+  for (const order of sortedOrders) {
+    const symbol = order.symbol;
+    const qty = order.filledQuantity ?? order.quantity;
+    const price = order.avgFillPrice ?? order.limitPrice ?? 0;
+
+    if (order.side === "BUY") {
+      // Opening or adding to position
+      const existing = positionCosts.get(symbol);
+      if (existing) {
+        // Average in
+        const newQty = existing.qty + qty;
+        const newCost = (existing.qty * existing.avgCost + qty * price) / newQty;
+        positionCosts.set(symbol, { qty: newQty, avgCost: newCost });
+      } else {
+        positionCosts.set(symbol, { qty, avgCost: price });
+      }
+    } else if (order.side === "SELL") {
+      // Closing position - calculate P&L
+      const existing = positionCosts.get(symbol);
+      if (existing && existing.qty > 0) {
+        const sellQty = Math.min(qty, existing.qty);
+        const pnl = sellQty * (price - existing.avgCost);
+        tradePnLs.push({ pnl, timestamp: order.filledAt ?? order.createdAt });
+
+        // Update remaining position
+        const remainingQty = existing.qty - sellQty;
+        if (remainingQty > 0) {
+          positionCosts.set(symbol, { qty: remainingQty, avgCost: existing.avgCost });
+        } else {
+          positionCosts.delete(symbol);
+        }
+      }
+    }
+  }
+
+  // Helper to calculate period metrics with P&L data
   const calcPeriodMetrics = (
     startDate: Date
   ): {
@@ -364,12 +435,11 @@ app.openapi(performanceRoute, async (c) => {
     const periodReturn = lastNav - firstNav;
     const returnPct = firstNav > 0 ? (periodReturn / firstNav) * 100 : 0;
 
-    const periodDecisions = decisions.data.filter((d) => new Date(d.createdAt) >= startDate);
-
-    // TODO: Calculate wins from execution results when available
-    const wins = 0;
-    const trades = periodDecisions.length;
-    const winRate = trades > 0 ? (wins / trades) * 100 : 0;
+    // Filter trades in this period
+    const periodTrades = tradePnLs.filter((t) => new Date(t.timestamp) >= startDate);
+    const periodWins = periodTrades.filter((t) => t.pnl > 0).length;
+    const trades = periodTrades.length;
+    const winRate = trades > 0 ? (periodWins / trades) * 100 : 0;
 
     return { return: periodReturn, returnPct, trades, winRate };
   };
@@ -386,22 +456,34 @@ app.openapi(performanceRoute, async (c) => {
 
   const maxDrawdownPct = peak > 0 ? (maxDrawdown / peak) * 100 : 0;
 
-  // Calculate overall statistics
-  // TODO: Calculate wins/losses from execution results when available
-  const wins: typeof decisions.data = [];
-  const losses: typeof decisions.data = [];
+  // Calculate overall win/loss statistics from trade P&Ls
+  const wins = tradePnLs.filter((t) => t.pnl > 0);
+  const losses = tradePnLs.filter((t) => t.pnl < 0);
 
-  const totalWins = 0;
-  const totalLosses = 0;
+  const totalWins = wins.reduce((sum, t) => sum + t.pnl, 0);
+  const totalLosses = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
 
   const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
   const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
-  const winRate = decisions.data.length > 0 ? (wins.length / decisions.data.length) * 100 : 0;
+  const winRate = tradePnLs.length > 0 ? (wins.length / tradePnLs.length) * 100 : 0;
   const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
 
-  // Simplified Sharpe/Sortino (would need daily returns for proper calculation)
-  const sharpeRatio = 0; // TODO: Calculate from daily returns
-  const sortinoRatio = 0; // TODO: Calculate from daily returns
+  // Calculate Sharpe and Sortino from daily returns
+  // Extract NAV values and calculate daily returns
+  const navValues = snapshots.data.map((s) => s.nav);
+  const dailyReturns = calculateReturns(navValues);
+
+  // Use daily config (252 trading days per year)
+  const dailyConfig = {
+    riskFreeRate: 0.05, // 5% annual risk-free rate
+    targetReturn: 0,
+    periodsPerYear: 252, // Daily data
+  };
+
+  const sharpeRatio =
+    dailyReturns.length >= 2 ? (calculateSharpe(dailyReturns, dailyConfig) ?? 0) : 0;
+  const sortinoRatio =
+    dailyReturns.length >= 2 ? (calculateSortino(dailyReturns, dailyConfig) ?? 0) : 0;
 
   return c.json({
     periods: {
@@ -419,7 +501,7 @@ app.openapi(performanceRoute, async (c) => {
     profitFactor,
     avgWin,
     avgLoss,
-    totalTrades: decisions.data.length,
+    totalTrades: tradePnLs.length,
   });
 });
 

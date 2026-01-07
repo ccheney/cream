@@ -73,6 +73,12 @@ __all__ = [
     "TranslationConfig",
     "TranslationOrchestrator",
     "generate_typescript_template",
+    # Paper Validation (requires polars, numpy, httpx)
+    "PaperValidationConfig",
+    "DailyComparison",
+    "PaperValidationResult",
+    "PaperValidationService",
+    "PaperValidationWorker",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -364,6 +370,30 @@ def __getattr__(name: str) -> Any:
             "TranslationConfig": TranslationConfig,
             "TranslationOrchestrator": TranslationOrchestrator,
             "generate_typescript_template": generate_typescript_template,
+        }[name]
+
+    # Paper Validation
+    if name in (
+        "PaperValidationConfig",
+        "DailyComparison",
+        "PaperValidationResult",
+        "PaperValidationService",
+        "PaperValidationWorker",
+    ):
+        from research.paper_validation import (
+            DailyComparison,
+            PaperValidationConfig,
+            PaperValidationResult,
+            PaperValidationService,
+            PaperValidationWorker,
+        )
+
+        return {
+            "PaperValidationConfig": PaperValidationConfig,
+            "DailyComparison": DailyComparison,
+            "PaperValidationResult": PaperValidationResult,
+            "PaperValidationService": PaperValidationService,
+            "PaperValidationWorker": PaperValidationWorker,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
