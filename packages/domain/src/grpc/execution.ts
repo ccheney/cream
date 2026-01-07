@@ -5,10 +5,10 @@
  * Uses Connect-ES with gRPC transport for communication.
  */
 
-import type { Client, Transport } from "@connectrpc/connect";
+// biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
+
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { ExecutionService } from "@cream/schema-gen/cream/v1/execution_connect";
 import type {
   CancelOrderRequest,
   CancelOrderResponse,
@@ -20,11 +20,11 @@ import type {
   GetOrderStateResponse,
   GetPositionsRequest,
   GetPositionsResponse,
-  StreamExecutionsRequest,
   StreamExecutionsResponse,
   SubmitOrderRequest,
   SubmitOrderResponse,
 } from "@cream/schema-gen/cream/v1/execution";
+import { ExecutionService } from "@cream/schema-gen/cream/v1/execution_connect";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -39,8 +39,7 @@ import {
  */
 export class ExecutionServiceClient {
   private readonly config: Required<GrpcClientConfig>;
-  private readonly transport: Transport;
-  private readonly client: Client<typeof ExecutionService>;
+  private readonly client: ReturnType<typeof createClient<typeof ExecutionService>>;
 
   constructor(config: GrpcClientConfig) {
     this.config = {
@@ -48,14 +47,14 @@ export class ExecutionServiceClient {
       ...config,
     };
 
-    // Create gRPC transport
-    this.transport = createGrpcTransport({
+    // Create gRPC transport (httpVersion "2" is required for gRPC)
+    const transport = createGrpcTransport({
       baseUrl: this.config.baseUrl,
       httpVersion: "2",
     });
 
     // Create Connect client
-    this.client = createClient(ExecutionService, this.transport);
+    this.client = createClient(ExecutionService, transport);
   }
 
   /**
@@ -92,9 +91,7 @@ export class ExecutionServiceClient {
         const durationMs = Date.now() - metadata.startTime;
 
         if (this.config.enableLogging) {
-          console.log(
-            `[gRPC] ${metadata.requestId} completed in ${durationMs}ms`
-          );
+          console.log(`[gRPC] ${metadata.requestId} completed in ${durationMs}ms`);
         }
 
         return { data, metadata, durationMs };
@@ -136,10 +133,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} checkConstraints`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.checkConstraints(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.checkConstraints(request), metadata);
   }
 
   /**
@@ -155,10 +149,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} submitOrder`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.submitOrder(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.submitOrder(request), metadata);
   }
 
   /**
@@ -174,10 +165,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} getOrderState`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.getOrderState(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.getOrderState(request), metadata);
   }
 
   /**
@@ -193,10 +181,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} cancelOrder`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.cancelOrder(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.cancelOrder(request), metadata);
   }
 
   /**
@@ -212,10 +197,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} getAccountState`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.getAccountState(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.getAccountState(request), metadata);
   }
 
   /**
@@ -231,10 +213,7 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} getPositions`);
     }
 
-    return this.executeWithRetry(
-      () => this.client.getPositions(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.getPositions(request), metadata);
   }
 
   /**
@@ -253,10 +232,10 @@ export class ExecutionServiceClient {
       console.log(`[gRPC] ${metadata.requestId} streamExecutions`);
     }
 
-    const request: StreamExecutionsRequest = {
+    const request = {
       cycleId,
       orderIds: orderIds ?? [],
-    } as StreamExecutionsRequest;
+    };
 
     try {
       for await (const response of this.client.streamExecutions(request)) {

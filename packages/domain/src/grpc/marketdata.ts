@@ -5,10 +5,10 @@
  * Uses Connect-ES with gRPC transport for communication.
  */
 
-import type { Client, Transport } from "@connectrpc/connect";
+// biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
+
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { MarketDataService } from "@cream/schema-gen/cream/v1/market_snapshot_connect";
 import {
   GetOptionChainRequest,
   type GetOptionChainResponse,
@@ -17,6 +17,7 @@ import {
   SubscribeMarketDataRequest,
   type SubscribeMarketDataResponse,
 } from "@cream/schema-gen/cream/v1/market_snapshot";
+import { MarketDataService } from "@cream/schema-gen/cream/v1/market_snapshot_connect";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -59,8 +60,7 @@ export interface SubscribeMarketDataInput {
  */
 export class MarketDataServiceClient {
   private readonly config: Required<GrpcClientConfig>;
-  private readonly transport: Transport;
-  private readonly client: Client<typeof MarketDataService>;
+  private readonly client: ReturnType<typeof createClient<typeof MarketDataService>>;
 
   constructor(config: GrpcClientConfig) {
     this.config = {
@@ -68,14 +68,14 @@ export class MarketDataServiceClient {
       ...config,
     };
 
-    // Create gRPC transport
-    this.transport = createGrpcTransport({
+    // Create gRPC transport (httpVersion "2" is required for gRPC)
+    const transport = createGrpcTransport({
       baseUrl: this.config.baseUrl,
       httpVersion: "2",
     });
 
     // Create Connect client
-    this.client = createClient(MarketDataService, this.transport);
+    this.client = createClient(MarketDataService, transport);
   }
 
   /**
@@ -112,9 +112,7 @@ export class MarketDataServiceClient {
         const durationMs = Date.now() - metadata.startTime;
 
         if (this.config.enableLogging) {
-          console.log(
-            `[gRPC] ${metadata.requestId} completed in ${durationMs}ms`
-          );
+          console.log(`[gRPC] ${metadata.requestId} completed in ${durationMs}ms`);
         }
 
         return { data, metadata, durationMs };
@@ -163,10 +161,7 @@ export class MarketDataServiceClient {
       barTimeframes: input.barTimeframes ?? [],
     });
 
-    return this.executeWithRetry(
-      () => this.client.getSnapshot(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.getSnapshot(request), metadata);
   }
 
   /**
@@ -190,10 +185,7 @@ export class MarketDataServiceClient {
       maxStrike: input.maxStrike,
     });
 
-    return this.executeWithRetry(
-      () => this.client.getOptionChain(request),
-      metadata
-    );
+    return this.executeWithRetry(() => this.client.getOptionChain(request), metadata);
   }
 
   /**

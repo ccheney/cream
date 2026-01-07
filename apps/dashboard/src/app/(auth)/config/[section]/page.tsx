@@ -148,72 +148,84 @@ function UniverseEditor() {
           <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">Filters</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
               <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
                 Optionable Only
+                {editing ? (
+                  <select
+                    value={String(formData.filters?.optionableOnly ?? false)}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        filters: {
+                          ...(formData.filters ?? universe.filters),
+                          optionableOnly: e.target.value === "true",
+                        },
+                      })
+                    }
+                    className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                  >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                ) : (
+                  <div className="text-cream-900 dark:text-cream-100">
+                    {universe.filters.optionableOnly ? "Yes" : "No"}
+                  </div>
+                )}
               </label>
-              {editing ? (
-                <select
-                  value={String(formData.filters?.optionableOnly ?? false)}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      filters: { ...formData.filters!, optionableOnly: e.target.value === "true" },
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                >
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-              ) : (
-                <div className="text-cream-900 dark:text-cream-100">
-                  {universe.filters.optionableOnly ? "Yes" : "No"}
-                </div>
-              )}
             </div>
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
               <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
                 Min Avg Volume
+                {editing ? (
+                  <input
+                    type="number"
+                    value={formData.filters?.minAvgVolume ?? 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        filters: {
+                          ...(formData.filters ?? universe.filters),
+                          minAvgVolume: parseInt(e.target.value, 10),
+                        },
+                      })
+                    }
+                    className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                  />
+                ) : (
+                  <div className="text-cream-900 dark:text-cream-100">
+                    {universe.filters.minAvgVolume.toLocaleString()}
+                  </div>
+                )}
               </label>
-              {editing ? (
-                <input
-                  type="number"
-                  value={formData.filters?.minAvgVolume ?? 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      filters: { ...formData.filters!, minAvgVolume: parseInt(e.target.value, 10) },
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                />
-              ) : (
-                <div className="text-cream-900 dark:text-cream-100">
-                  {universe.filters.minAvgVolume.toLocaleString()}
-                </div>
-              )}
             </div>
             <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
               <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
                 Min Market Cap
+                {editing ? (
+                  <input
+                    type="number"
+                    value={formData.filters?.minMarketCap ?? 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        filters: {
+                          ...(formData.filters ?? universe.filters),
+                          minMarketCap: parseInt(e.target.value, 10),
+                        },
+                      })
+                    }
+                    className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                  />
+                ) : (
+                  <div className="text-cream-900 dark:text-cream-100">
+                    ${(universe.filters.minMarketCap / 1e9).toFixed(1)}B
+                  </div>
+                )}
               </label>
-              {editing ? (
-                <input
-                  type="number"
-                  value={formData.filters?.minMarketCap ?? 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      filters: { ...formData.filters!, minMarketCap: parseInt(e.target.value, 10) },
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                />
-              ) : (
-                <div className="text-cream-900 dark:text-cream-100">
-                  ${(universe.filters.minMarketCap / 1e9).toFixed(1)}B
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -320,7 +332,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                perInstrument: { ...formData.perInstrument!, maxShares: val },
+                perInstrument: {
+                  ...(formData.perInstrument ?? constraints.perInstrument),
+                  maxShares: val,
+                },
               })
             }
           />
@@ -331,7 +346,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                perInstrument: { ...formData.perInstrument!, maxContracts: val },
+                perInstrument: {
+                  ...(formData.perInstrument ?? constraints.perInstrument),
+                  maxContracts: val,
+                },
               })
             }
           />
@@ -342,7 +360,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                perInstrument: { ...formData.perInstrument!, maxNotional: val },
+                perInstrument: {
+                  ...(formData.perInstrument ?? constraints.perInstrument),
+                  maxNotional: val,
+                },
               })
             }
           />
@@ -354,7 +375,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                perInstrument: { ...formData.perInstrument!, maxPctEquity: val / 100 },
+                perInstrument: {
+                  ...(formData.perInstrument ?? constraints.perInstrument),
+                  maxPctEquity: val / 100,
+                },
               })
             }
           />
@@ -375,7 +399,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                portfolio: { ...formData.portfolio!, maxGrossExposure: val / 100 },
+                portfolio: {
+                  ...(formData.portfolio ?? constraints.portfolio),
+                  maxGrossExposure: val / 100,
+                },
               })
             }
           />
@@ -387,7 +414,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                portfolio: { ...formData.portfolio!, maxNetExposure: val / 100 },
+                portfolio: {
+                  ...(formData.portfolio ?? constraints.portfolio),
+                  maxNetExposure: val / 100,
+                },
               })
             }
           />
@@ -399,7 +429,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                portfolio: { ...formData.portfolio!, maxConcentration: val / 100 },
+                portfolio: {
+                  ...(formData.portfolio ?? constraints.portfolio),
+                  maxConcentration: val / 100,
+                },
               })
             }
           />
@@ -411,7 +444,10 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                portfolio: { ...formData.portfolio!, maxDrawdown: val / 100 },
+                portfolio: {
+                  ...(formData.portfolio ?? constraints.portfolio),
+                  maxDrawdown: val / 100,
+                },
               })
             }
           />
@@ -431,7 +467,7 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                options: { ...formData.options!, maxDelta: val },
+                options: { ...(formData.options ?? constraints.options), maxDelta: val },
               })
             }
           />
@@ -442,7 +478,7 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                options: { ...formData.options!, maxGamma: val },
+                options: { ...(formData.options ?? constraints.options), maxGamma: val },
               })
             }
           />
@@ -453,7 +489,7 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                options: { ...formData.options!, maxVega: val },
+                options: { ...(formData.options ?? constraints.options), maxVega: val },
               })
             }
           />
@@ -464,7 +500,7 @@ function ConstraintsEditor() {
             onChange={(val) =>
               setFormData({
                 ...formData,
-                options: { ...formData.options!, maxTheta: val },
+                options: { ...(formData.options ?? constraints.options), maxTheta: val },
               })
             }
           />
@@ -489,20 +525,23 @@ function ConstraintField({
 }) {
   return (
     <div>
-      <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">{label}</label>
-      {editing ? (
-        <input
-          type="number"
-          defaultValue={value}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-        />
-      ) : (
-        <div className="text-cream-900 dark:text-cream-100">
-          {value.toLocaleString()}
-          {suffix}
-        </div>
-      )}
+      {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
+      <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+        {label}
+        {editing ? (
+          <input
+            type="number"
+            defaultValue={value}
+            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+            className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          />
+        ) : (
+          <div className="text-cream-900 dark:text-cream-100">
+            {value.toLocaleString()}
+            {suffix}
+          </div>
+        )}
+      </label>
     </div>
   );
 }
