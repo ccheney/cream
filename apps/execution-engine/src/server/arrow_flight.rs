@@ -230,13 +230,26 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
     }
 
     /// List available flights.
+    ///
+    /// Returns metadata for all available data streams:
+    /// - market_data: Real-time market data snapshots (quotes, last price, volume)
     async fn list_flights(
         &self,
         _request: tonic::Request<arrow_flight::Criteria>,
     ) -> Result<tonic::Response<Self::ListFlightsStream>, tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "list_flights not yet implemented",
-        ))
+        let schema = Self::market_data_schema();
+
+        // Create FlightInfo for market_data stream
+        let market_data_flight = FlightInfo::new()
+            .try_with_schema(&schema)
+            .map_err(|e| tonic::Status::internal(format!("Failed to set schema: {e}")))?
+            .with_descriptor(arrow_flight::FlightDescriptor::new_path(vec![
+                "market_data".to_string(),
+            ]));
+
+        let flights = vec![Ok(market_data_flight)];
+        let output = stream::iter(flights);
+        Ok(tonic::Response::new(Box::pin(output)))
     }
 
     /// Get flight info (schema and metadata).
@@ -265,14 +278,26 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         }
     }
 
-    /// Poll for flight info (not implemented).
+    /// Poll for flight info.
+    ///
+    /// Returns status of a flight request. Since our data is always ready
+    /// (no async preparation needed), this returns the flight info immediately.
     async fn poll_flight_info(
         &self,
-        _request: tonic::Request<arrow_flight::FlightDescriptor>,
+        request: tonic::Request<arrow_flight::FlightDescriptor>,
     ) -> Result<tonic::Response<PollInfo>, tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "poll_flight_info not yet implemented",
-        ))
+        // Get the flight info (reuse existing logic)
+        let flight_info = self.get_flight_info(request).await?.into_inner();
+
+        // Return PollInfo indicating data is ready
+        let poll_info = PollInfo {
+            info: Some(flight_info),
+            flight_descriptor: None,
+            progress: None,
+            expiration_time: None,
+        };
+
+        Ok(tonic::Response::new(poll_info))
     }
 
     /// Get schema for a flight.
@@ -399,13 +424,62 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
     }
 
     /// DoAction: Perform an action.
+    ///
+    /// Available actions:
+    /// - `clear_cache`: Clear the market data cache
+    /// - `health_check`: Return service health status
+    /// - `get_cache_stats`: Return cache statistics
     async fn do_action(
         &self,
-        _request: tonic::Request<arrow_flight::Action>,
+        request: tonic::Request<arrow_flight::Action>,
     ) -> Result<tonic::Response<Self::DoActionStream>, tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "do_action not yet implemented",
-        ))
+        let action = request.into_inner();
+        let action_type = action.r#type.as_str();
+
+        tracing::info!(action = %action_type, "DoAction request");
+
+        match action_type {
+            "clear_cache" => {
+                let mut data = self.market_data.write().await;
+                let count = data.len();
+                data.clear();
+                drop(data);
+
+                let result = arrow_flight::Result {
+                    body: format!("Cleared {} cached entries", count).into(),
+                };
+                let output = stream::iter(vec![Ok(result)]);
+                Ok(tonic::Response::new(Box::pin(output)))
+            }
+            "health_check" => {
+                let data = self.market_data.read().await;
+                let cache_size = data.len();
+                drop(data);
+
+                let result = arrow_flight::Result {
+                    body: format!(r#"{{"status":"healthy","cache_size":{}}}"#, cache_size).into(),
+                };
+                let output = stream::iter(vec![Ok(result)]);
+                Ok(tonic::Response::new(Box::pin(output)))
+            }
+            "get_cache_stats" => {
+                let data = self.market_data.read().await;
+                let symbols: Vec<String> = data.keys().cloned().collect();
+                let cache_size = data.len();
+                drop(data);
+
+                let result = arrow_flight::Result {
+                    body: format!(r#"{{"cache_size":{},"symbols":{:?}}}"#, cache_size, symbols)
+                        .into(),
+                };
+                let output = stream::iter(vec![Ok(result)]);
+                Ok(tonic::Response::new(Box::pin(output)))
+            }
+            _ => Err(tonic::Status::invalid_argument(format!(
+                "Unknown action: {}",
+                action_type
+            ))),
+        }
     }
 
     /// ListActions: List available actions.
@@ -413,9 +487,23 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         &self,
         _request: tonic::Request<arrow_flight::Empty>,
     ) -> Result<tonic::Response<Self::ListActionsStream>, tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "list_actions not yet implemented",
-        ))
+        let actions = vec![
+            Ok(arrow_flight::ActionType {
+                r#type: "clear_cache".to_string(),
+                description: "Clear the market data cache".to_string(),
+            }),
+            Ok(arrow_flight::ActionType {
+                r#type: "health_check".to_string(),
+                description: "Return service health status".to_string(),
+            }),
+            Ok(arrow_flight::ActionType {
+                r#type: "get_cache_stats".to_string(),
+                description: "Return cache statistics including symbols".to_string(),
+            }),
+        ];
+
+        let output = stream::iter(actions);
+        Ok(tonic::Response::new(Box::pin(output)))
     }
 }
 
@@ -561,5 +649,138 @@ mod tests {
         let aapl = data.get("AAPL").unwrap();
         assert_eq!(aapl.bid_price, 150.0);
         assert_eq!(aapl.volume, 1000);
+    }
+
+    #[tokio::test]
+    async fn test_list_flights() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+        let request = tonic::Request::new(arrow_flight::Criteria::default());
+
+        let response = service.list_flights(request).await.unwrap();
+        let mut stream = response.into_inner();
+
+        // Should have at least market_data flight
+        let flight = stream.next().await.unwrap().unwrap();
+        assert!(flight.flight_descriptor.is_some());
+
+        let descriptor = flight.flight_descriptor.unwrap();
+        assert_eq!(descriptor.path.first().unwrap(), "market_data");
+    }
+
+    #[tokio::test]
+    async fn test_list_actions() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+        let request = tonic::Request::new(arrow_flight::Empty::default());
+
+        let response = service.list_actions(request).await.unwrap();
+        let mut stream = response.into_inner();
+
+        // Collect all actions
+        let mut action_types = Vec::new();
+        while let Some(action) = stream.next().await {
+            action_types.push(action.unwrap().r#type);
+        }
+
+        assert!(action_types.contains(&"clear_cache".to_string()));
+        assert!(action_types.contains(&"health_check".to_string()));
+        assert!(action_types.contains(&"get_cache_stats".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_do_action_health_check() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+        let action = arrow_flight::Action {
+            r#type: "health_check".to_string(),
+            body: vec![].into(),
+        };
+        let request = tonic::Request::new(action);
+
+        let response = service.do_action(request).await.unwrap();
+        let mut stream = response.into_inner();
+
+        let result = stream.next().await.unwrap().unwrap();
+        let body = String::from_utf8(result.body.to_vec()).unwrap();
+
+        assert!(body.contains("healthy"));
+        assert!(body.contains("cache_size"));
+    }
+
+    #[tokio::test]
+    async fn test_do_action_clear_cache() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+
+        // Add some data first
+        {
+            let mut data = service.market_data.write().await;
+            data.insert(
+                "AAPL".to_string(),
+                MarketDataSnapshot {
+                    symbol: "AAPL".to_string(),
+                    bid_price: 150.0,
+                    ask_price: 150.5,
+                    last_price: 150.25,
+                    volume: 1000,
+                    timestamp: 1234567890,
+                },
+            );
+        }
+
+        // Verify data is present
+        assert_eq!(service.market_data.read().await.len(), 1);
+
+        // Clear cache
+        let action = arrow_flight::Action {
+            r#type: "clear_cache".to_string(),
+            body: vec![].into(),
+        };
+        let request = tonic::Request::new(action);
+
+        let response = service.do_action(request).await.unwrap();
+        let mut stream = response.into_inner();
+        let _ = stream.next().await.unwrap().unwrap();
+
+        // Verify cache is cleared
+        assert_eq!(service.market_data.read().await.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_do_action_unknown() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+        let action = arrow_flight::Action {
+            r#type: "unknown_action".to_string(),
+            body: vec![].into(),
+        };
+        let request = tonic::Request::new(action);
+
+        let result = service.do_action(request).await;
+        assert!(result.is_err());
+
+        let status = result.err().unwrap();
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn test_poll_flight_info() {
+        use arrow_flight::flight_service_server::FlightService;
+
+        let service = CreamFlightService::new();
+        let descriptor = arrow_flight::FlightDescriptor::new_path(vec!["market_data".to_string()]);
+        let request = tonic::Request::new(descriptor);
+
+        let response = service.poll_flight_info(request).await.unwrap();
+        let poll_info = response.into_inner();
+
+        // poll_info should contain flight info
+        assert!(poll_info.info.is_some());
     }
 }
