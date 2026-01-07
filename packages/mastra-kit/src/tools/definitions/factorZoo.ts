@@ -12,6 +12,13 @@ import type { FactorZooRepository } from "@cream/storage";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
+  createDecayMonitorService,
+  DecayAlertSchema,
+  type DecayAlertService,
+  type DecayMonitorConfig,
+  type MarketDataProvider,
+} from "../../services/decay-monitor.js";
+import {
   createFactorZooService,
   type FactorZooConfig,
   type FactorZooDependencies,
@@ -573,6 +580,368 @@ Weights sum to 1.0 for non-zero factors.`,
           totalFactors: 0,
           nonZeroFactors: 0,
           message: `Failed to get weights: ${errorMessage}`,
+        };
+      }
+    },
+  });
+}
+
+// ============================================
+// Get Factor Context Tool
+// ============================================
+
+/**
+ * Input schema for getting factor context
+ */
+export const GetFactorContextInputSchema = z.object({
+  factorId: z.string().describe("The factor ID to get context for"),
+});
+
+export type GetFactorContextInput = z.infer<typeof GetFactorContextInputSchema>;
+
+/**
+ * Output schema for factor context
+ */
+export const GetFactorContextOutputSchema = z.object({
+  factorId: z.string(),
+  name: z.string(),
+  hypothesisId: z.string().nullable(),
+  status: z.string(),
+  currentWeight: z.number(),
+  performance: z.object({
+    recentIC: z.number().describe("Average IC over last 5 days"),
+    rolling30IC: z.number().describe("Average IC over 30 days"),
+    icTrend: z.enum(["improving", "stable", "declining"]),
+    isDecaying: z.boolean(),
+    decayRate: z.number().nullable(),
+  }),
+  validation: z.object({
+    stage1Sharpe: z.number().nullable(),
+    stage2PBO: z.number().nullable().describe("Probability of Backtest Overfitting"),
+    stage2WFE: z.number().nullable().describe("Walk-Forward Efficiency"),
+    paperValidationPassed: z.boolean(),
+  }),
+  found: z.boolean(),
+  message: z.string(),
+});
+
+export type GetFactorContextOutput = z.infer<typeof GetFactorContextOutputSchema>;
+
+/**
+ * Factory function to create the get factor context tool
+ */
+export function createGetFactorContextTool(factorZoo: FactorZooRepository) {
+  const deps: FactorZooDependencies = { factorZoo };
+  const service = createFactorZooService(deps);
+
+  return createTool({
+    id: "get_factor_context",
+    description: `Get detailed context about a specific factor.
+
+Returns hypothesis background, validation scores, and performance metrics.
+Use this tool when you need to understand why a factor signal should be trusted
+or when evaluating factor-based recommendations.`,
+    inputSchema: GetFactorContextInputSchema,
+    outputSchema: GetFactorContextOutputSchema,
+    execute: async ({ context }) => {
+      const { factorId } = context;
+
+      try {
+        const factor = await factorZoo.findFactorById(factorId);
+
+        if (!factor) {
+          return {
+            factorId,
+            name: "",
+            hypothesisId: null,
+            status: "unknown",
+            currentWeight: 0,
+            performance: {
+              recentIC: 0,
+              rolling30IC: 0,
+              icTrend: "stable" as const,
+              isDecaying: false,
+              decayRate: null,
+            },
+            validation: {
+              stage1Sharpe: null,
+              stage2PBO: null,
+              stage2WFE: null,
+              paperValidationPassed: false,
+            },
+            found: false,
+            message: `Factor ${factorId} not found`,
+          };
+        }
+
+        // Get performance history for trend calculation
+        const history = await factorZoo.getPerformanceHistory(factorId, 30);
+        const recent5 = history.slice(0, 5);
+        const older = history.slice(5, 15);
+
+        const recentIC =
+          recent5.length > 0 ? recent5.reduce((sum, h) => sum + h.ic, 0) / recent5.length : 0;
+        const rolling30IC =
+          history.length > 0 ? history.reduce((sum, h) => sum + h.ic, 0) / history.length : 0;
+        const olderIC =
+          older.length > 0 ? older.reduce((sum, h) => sum + h.ic, 0) / older.length : 0;
+
+        // Determine trend
+        let icTrend: "improving" | "stable" | "declining" = "stable";
+        if (recent5.length >= 5 && older.length >= 5) {
+          const diff = recentIC - olderIC;
+          if (diff > 0.005) {
+            icTrend = "improving";
+          } else if (diff < -0.005) {
+            icTrend = "declining";
+          }
+        }
+
+        // Check decay status
+        const decayResult = await service.checkFactorDecay(factorId);
+        const isDecaying = decayResult?.isDecaying ?? false;
+
+        return {
+          factorId: factor.factorId,
+          name: factor.name,
+          hypothesisId: factor.hypothesisId,
+          status: factor.status,
+          currentWeight: factor.currentWeight,
+          performance: {
+            recentIC,
+            rolling30IC,
+            icTrend,
+            isDecaying,
+            decayRate: factor.decayRate,
+          },
+          validation: {
+            stage1Sharpe: factor.stage1Sharpe,
+            stage2PBO: factor.stage2Pbo,
+            stage2WFE: factor.stage2Wfe,
+            paperValidationPassed: factor.paperValidationPassed,
+          },
+          found: true,
+          message: `Factor ${factor.name}: ${factor.status}, weight=${factor.currentWeight.toFixed(3)}, IC trend=${icTrend}`,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          factorId,
+          name: "",
+          hypothesisId: null,
+          status: "error",
+          currentWeight: 0,
+          performance: {
+            recentIC: 0,
+            rolling30IC: 0,
+            icTrend: "stable" as const,
+            isDecaying: false,
+            decayRate: null,
+          },
+          validation: {
+            stage1Sharpe: null,
+            stage2PBO: null,
+            stage2WFE: null,
+            paperValidationPassed: false,
+          },
+          found: false,
+          message: `Failed to get factor context: ${errorMessage}`,
+        };
+      }
+    },
+  });
+}
+
+// ============================================
+// Get Active Factors Tool
+// ============================================
+
+/**
+ * Input schema for getting active factors
+ */
+export const GetActiveFactorsInputSchema = z.object({
+  includeDetails: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Include performance details for each factor"),
+});
+
+export type GetActiveFactorsInput = z.infer<typeof GetActiveFactorsInputSchema>;
+
+/**
+ * Output schema for active factors
+ */
+export const GetActiveFactorsOutputSchema = z.object({
+  factors: z.array(
+    z.object({
+      factorId: z.string(),
+      name: z.string(),
+      weight: z.number(),
+      lastIC: z.number().nullable(),
+      status: z.string(),
+    })
+  ),
+  totalActive: z.number(),
+  totalWeight: z.number(),
+  message: z.string(),
+});
+
+export type GetActiveFactorsOutput = z.infer<typeof GetActiveFactorsOutputSchema>;
+
+/**
+ * Factory function to create the get active factors tool
+ */
+export function createGetActiveFactorsTool(factorZoo: FactorZooRepository) {
+  const deps: FactorZooDependencies = { factorZoo };
+  const service = createFactorZooService(deps);
+
+  return createTool({
+    id: "get_active_factors",
+    description: `Get list of all active factors in the Factor Zoo.
+
+Returns factors currently contributing to Mega-Alpha with their weights.
+Use this to understand which factors are driving portfolio signals.`,
+    inputSchema: GetActiveFactorsInputSchema,
+    outputSchema: GetActiveFactorsOutputSchema,
+    execute: async () => {
+      try {
+        const factors = await service.getActiveFactors();
+        const weights = await service.getCurrentWeights();
+
+        let totalWeight = 0;
+        const factorList = factors.map((f) => {
+          const weight = weights.get(f.factorId) ?? 0;
+          totalWeight += weight;
+          return {
+            factorId: f.factorId,
+            name: f.name,
+            weight,
+            lastIC: f.lastIc,
+            status: f.status,
+          };
+        });
+
+        // Sort by weight descending
+        factorList.sort((a, b) => b.weight - a.weight);
+
+        return {
+          factors: factorList,
+          totalActive: factors.length,
+          totalWeight,
+          message: `${factors.length} active factors with total weight ${totalWeight.toFixed(3)}`,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          factors: [],
+          totalActive: 0,
+          totalWeight: 0,
+          message: `Failed to get active factors: ${errorMessage}`,
+        };
+      }
+    },
+  });
+}
+
+// ============================================
+// Run Decay Monitor Tool
+// ============================================
+
+/**
+ * Input schema for running decay monitor
+ */
+export const RunDecayMonitorInputSchema = z.object({
+  sendAlerts: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to send alerts via alert service"),
+});
+
+export type RunDecayMonitorInput = z.infer<typeof RunDecayMonitorInputSchema>;
+
+/**
+ * Output schema for decay monitor results
+ */
+export const RunDecayMonitorOutputSchema = z.object({
+  alerts: z.array(DecayAlertSchema),
+  factorsChecked: z.number(),
+  decayingFactors: z.array(z.string()),
+  crowdedFactors: z.array(z.string()),
+  correlatedPairs: z.array(
+    z.object({
+      factor1: z.string(),
+      factor2: z.string(),
+      correlation: z.number(),
+    })
+  ),
+  hasAlerts: z.boolean(),
+  message: z.string(),
+});
+
+export type RunDecayMonitorOutput = z.infer<typeof RunDecayMonitorOutputSchema>;
+
+/**
+ * Factory function to create the run decay monitor tool
+ */
+export function createRunDecayMonitorTool(
+  factorZoo: FactorZooRepository,
+  alertService?: DecayAlertService,
+  marketData?: MarketDataProvider,
+  config?: Partial<DecayMonitorConfig>
+) {
+  const service = createDecayMonitorService({ factorZoo, alertService, marketData }, config);
+
+  return createTool({
+    id: "run_decay_monitor",
+    description: `Run comprehensive decay monitoring for all active factors.
+
+Checks for:
+- IC decay (below 50% of peak for 20+ days)
+- Sharpe decay (below 0.5 for 10+ days)
+- Market crowding (>80% correlation to SPY)
+- Factor-factor correlation spikes (>70%)
+
+Returns alerts with recommendations for risk management.
+Run this daily after market close or on-demand for risk assessment.`,
+    inputSchema: RunDecayMonitorInputSchema,
+    outputSchema: RunDecayMonitorOutputSchema,
+    execute: async () => {
+      try {
+        const result = await service.runDailyCheck();
+
+        const hasAlerts = result.alerts.length > 0;
+        let message = `Checked ${result.factorsChecked} factors. `;
+
+        if (hasAlerts) {
+          message += `Found ${result.alerts.length} alerts: `;
+          message += `${result.decayingFactors.length} decaying, `;
+          message += `${result.crowdedFactors.length} crowded, `;
+          message += `${result.correlatedPairs.length} correlated pairs.`;
+        } else {
+          message += "All factors healthy.";
+        }
+
+        return {
+          alerts: result.alerts,
+          factorsChecked: result.factorsChecked,
+          decayingFactors: result.decayingFactors,
+          crowdedFactors: result.crowdedFactors,
+          correlatedPairs: result.correlatedPairs,
+          hasAlerts,
+          message,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          alerts: [],
+          factorsChecked: 0,
+          decayingFactors: [],
+          crowdedFactors: [],
+          correlatedPairs: [],
+          hasAlerts: false,
+          message: `Failed to run decay monitor: ${errorMessage}`,
         };
       }
     },
