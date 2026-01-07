@@ -541,10 +541,10 @@ describe("Trading Cycle State Transitions", () => {
       }
 
       expect(results).toHaveLength(3);
-      results.forEach((result) => {
+      for (const result of results) {
         expect(result.approved).toBe(true);
         expect(result.mode).toBe("STUB");
-      });
+      }
     });
 
     it("should isolate state between executions", async () => {
@@ -602,10 +602,10 @@ describe("Trading Cycle Performance", () => {
     // Should complete all 5 in parallel in < 1s
     expect(duration).toBeLessThan(1000);
     expect(results).toHaveLength(5);
-    results.forEach((result) => {
+    for (const result of results) {
       expect(result.approved).toBe(true);
       expect(result.mode).toBe("STUB");
-    });
+    }
   });
 
   it("should handle 10 sequential executions efficiently", async () => {

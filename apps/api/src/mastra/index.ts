@@ -6,6 +6,7 @@
  */
 
 import { agents } from "../agents/stub-agents.js";
+import { predictionMarketsWorkflow } from "../workflows/prediction-markets.js";
 import { tradingCycleWorkflow } from "../workflows/trading-cycle.js";
 
 /**
@@ -16,6 +17,7 @@ export const mastra = {
   agents,
   workflows: {
     tradingCycleWorkflow,
+    predictionMarketsWorkflow,
   },
 
   /**
@@ -24,6 +26,9 @@ export const mastra = {
   getWorkflow(id: string) {
     if (id === "trading-cycle-workflow") {
       return tradingCycleWorkflow;
+    }
+    if (id === "prediction-markets") {
+      return predictionMarketsWorkflow;
     }
     throw new Error(`Unknown workflow: ${id}`);
   },
@@ -40,4 +45,4 @@ export const mastra = {
   },
 };
 
-export { agents, tradingCycleWorkflow };
+export { agents, predictionMarketsWorkflow, tradingCycleWorkflow };

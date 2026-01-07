@@ -1,3 +1,4 @@
+// biome-ignore-all lint/a11y/useSemanticElements: ARIA roles required for semantic grouping
 /**
  * AggregateGreeks Component
  *

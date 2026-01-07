@@ -10,6 +10,7 @@ import {
   ExternalEventsRepository,
   OrdersRepository,
   PositionsRepository,
+  PredictionMarketsRepository,
   runMigrations,
   ThesisStateRepository,
   type TursoClient,
@@ -131,4 +132,12 @@ export async function getThesisStateRepo(): Promise<ThesisStateRepository> {
 export async function getExternalEventsRepo(): Promise<ExternalEventsRepository> {
   const client = await getDbClient();
   return new ExternalEventsRepository(client);
+}
+
+/**
+ * Get prediction markets repository
+ */
+export async function getPredictionMarketsRepo(): Promise<PredictionMarketsRepository> {
+  const client = await getDbClient();
+  return new PredictionMarketsRepository(client);
 }

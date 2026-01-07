@@ -80,7 +80,7 @@ export default function PositionDetailPage() {
 
   const handleSaveStop = () => {
     const value = parseFloat(stopValue);
-    if (!isNaN(value) && value > 0) {
+    if (!Number.isNaN(value) && value > 0) {
       modifyStop.mutate({ positionId: id, stop: value });
     }
     setEditingStop(false);
@@ -88,7 +88,7 @@ export default function PositionDetailPage() {
 
   const handleSaveTarget = () => {
     const value = parseFloat(targetValue);
-    if (!isNaN(value) && value > 0) {
+    if (!Number.isNaN(value) && value > 0) {
       modifyTarget.mutate({ positionId: id, target: value });
     }
     setEditingTarget(false);

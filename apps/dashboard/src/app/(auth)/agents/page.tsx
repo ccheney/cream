@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Skeleton loaders and stream items use stable indices
 "use client";
 
 /**
@@ -49,7 +50,7 @@ export default function AgentsPage() {
         {statusesLoading
           ? [...Array(8)].map((_, i) => (
               <div
-                key={i}
+                key={`skeleton-${i}`}
                 className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4"
               >
                 <div className="h-4 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
@@ -95,7 +96,7 @@ export default function AgentsPage() {
           ) : outputs && outputs.length > 0 ? (
             <div className="space-y-4">
               {outputs.map((output, i) => (
-                <div key={i} className="p-3 bg-cream-50 dark:bg-night-750 rounded-lg">
+                <div key={`output-${i}`} className="p-3 bg-cream-50 dark:bg-night-750 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded ${

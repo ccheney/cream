@@ -270,7 +270,6 @@ export async function implementIndicator(
     let query: QueryFunction;
     try {
       // Use dynamic require to avoid TypeScript type checking
-      // @ts-expect-error - SDK is optional and types may not be installed
       const sdk = await import("@anthropic-ai/claude-agent-sdk");
       query = sdk.query as QueryFunction;
     } catch {

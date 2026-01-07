@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Action buttons use stable static array
 /**
  * Error State Component
  *
@@ -204,7 +205,7 @@ export function ErrorState({
         <div className={`flex items-center gap-3 ${isCompact ? "mt-4" : "mt-6"}`}>
           {allActions.map((action, index) => (
             <button
-              key={index}
+              key={`action-${index}`}
               type="button"
               onClick={action.onClick}
               className={`

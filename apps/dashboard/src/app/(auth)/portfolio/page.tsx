@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Equity chart bars use time-ordered indices
 "use client";
 
 /**
@@ -188,7 +189,7 @@ export default function PortfolioPage() {
                   const height = ((point.nav - min) / range) * 100;
                   return (
                     <div
-                      key={i}
+                      key={`equity-${i}`}
                       className="flex-1 bg-blue-500 dark:bg-blue-400 rounded-t"
                       style={{ height: `${height}%` }}
                       title={`${new Date(point.timestamp).toLocaleDateString()}: ${formatCurrency(point.nav)}`}

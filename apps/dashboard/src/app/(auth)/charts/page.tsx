@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Chart candles use time-ordered indices
 "use client";
 
 /**
@@ -84,7 +85,7 @@ export default function ChartsPage() {
 
                 return (
                   <div
-                    key={i}
+                    key={`candle-${i}`}
                     className="flex-1 relative"
                     title={`O: ${candle.open.toFixed(2)} H: ${candle.high.toFixed(2)} L: ${candle.low.toFixed(2)} C: ${candle.close.toFixed(2)}`}
                   >

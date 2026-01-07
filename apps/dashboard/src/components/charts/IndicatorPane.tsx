@@ -221,6 +221,7 @@ function IndicatorPaneComponent({
 
 function initRSI(chart: IChartApi, data: RSIData[]) {
   // Add RSI line
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
   const series = chart.addSeries("line" as any, {
     color: INDICATOR_COLORS.rsi.line,
     lineWidth: 2,
@@ -264,6 +265,7 @@ function initRSI(chart: IChartApi, data: RSIData[]) {
 
 function initMACD(chart: IChartApi, data: MACDData[]) {
   // Histogram series
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
   const histogramSeries = chart.addSeries("histogram" as any, {
     priceLineVisible: false,
     priceFormat: {
@@ -284,6 +286,7 @@ function initMACD(chart: IChartApi, data: MACDData[]) {
   }
 
   // MACD line
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
   const macdSeries = chart.addSeries("line" as any, {
     color: INDICATOR_COLORS.macd.macdLine,
     lineWidth: 2,
@@ -299,6 +302,7 @@ function initMACD(chart: IChartApi, data: MACDData[]) {
   }
 
   // Signal line
+  // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
   const signalSeries = chart.addSeries("line" as any, {
     color: INDICATOR_COLORS.macd.signalLine,
     lineWidth: 2,

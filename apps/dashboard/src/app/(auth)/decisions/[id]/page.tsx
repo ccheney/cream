@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Factor lists and timeline use stable indices
 "use client";
 
 /**
@@ -84,12 +85,14 @@ export default function DecisionDetailPage() {
             type="button"
             onClick={() => router.back()}
             className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            aria-label="Go back"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
               viewBox="0 0 20 20"
               fill="currentColor"
+              aria-hidden="true"
             >
               <path
                 fillRule="evenodd"
@@ -181,7 +184,7 @@ export default function DecisionDetailPage() {
                 <ul className="space-y-1">
                   {decision.rationale.bullishFactors.map((factor, i) => (
                     <li
-                      key={i}
+                      key={`bull-${i}`}
                       className="text-sm text-cream-700 dark:text-cream-300 flex items-start gap-2"
                     >
                       <span className="text-green-500 mt-0.5">+</span>
@@ -195,7 +198,7 @@ export default function DecisionDetailPage() {
                 <ul className="space-y-1">
                   {decision.rationale.bearishFactors.map((factor, i) => (
                     <li
-                      key={i}
+                      key={`bear-${i}`}
                       className="text-sm text-cream-700 dark:text-cream-300 flex items-start gap-2"
                     >
                       <span className="text-red-500 mt-0.5">-</span>
@@ -373,7 +376,7 @@ function ExecutionTimeline({ execution }: { execution: ExecutionDetail }) {
         <div className="absolute left-3.5 top-0 bottom-0 w-0.5 bg-cream-200 dark:bg-night-600" />
         <div className="space-y-4">
           {timelineEvents.map((event, i) => (
-            <div key={i} className="relative flex items-start gap-4 pl-10">
+            <div key={`timeline-${i}`} className="relative flex items-start gap-4 pl-10">
               <div
                 className={`absolute left-0 w-7 h-7 rounded-full flex items-center justify-center ${
                   event.status === "complete"
@@ -382,7 +385,12 @@ function ExecutionTimeline({ execution }: { execution: ExecutionDetail }) {
                 }`}
               >
                 {event.status === "complete" ? (
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="w-4 h-4 text-green-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

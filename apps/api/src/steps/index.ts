@@ -6,6 +6,7 @@
 
 export * from "./buildSnapshot.js";
 export * from "./executeOrders.js";
+export * from "./fetchPredictionMarkets.js";
 export * from "./gatherExternalContext.js";
 export * from "./loadState.js";
 export * from "./persistMemory.js";

@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/useSemanticElements: CSS grid layout requires div elements with ARIA roles
+// biome-ignore-all lint/a11y/useFocusableInteractive: Headers are not interactive
 /**
  * Correlation Heat Map Component
  *

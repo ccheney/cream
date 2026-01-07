@@ -8,6 +8,9 @@
  * - Macro release processing
  * - Entity linking to symbols
  *
+ * Also includes prediction market signals from the database
+ * (populated by the separate prediction markets workflow).
+ *
  * Events are stored to the external_events table for retrieval.
  */
 
@@ -23,12 +26,30 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getExternalEventsRepo } from "../db.js";
+import { getLatestPredictionMarketSignals } from "./fetchPredictionMarkets.js";
 import { MemoryOutputSchema } from "./retrieveMemory.js";
+
+/**
+ * Prediction market signals for agent context
+ */
+export const PredictionMarketSignalsSchema = z.object({
+  fedCutProbability: z.number().optional(),
+  fedHikeProbability: z.number().optional(),
+  recessionProbability12m: z.number().optional(),
+  macroUncertaintyIndex: z.number().optional(),
+  policyEventRisk: z.number().optional(),
+  marketConfidence: z.number().optional(),
+  cpiSurpriseDirection: z.number().optional(),
+  gdpSurpriseDirection: z.number().optional(),
+  timestamp: z.string().optional(),
+  platforms: z.array(z.string()).optional(),
+});
 
 export const ExternalContextSchema = z.object({
   news: z.array(z.any()),
   sentiment: z.record(z.string(), z.number()),
   macroIndicators: z.record(z.string(), z.number()),
+  predictionMarketSignals: PredictionMarketSignalsSchema.optional(),
 });
 
 export type ExternalContext = z.infer<typeof ExternalContextSchema>;
@@ -149,17 +170,36 @@ export const gatherExternalContextStep = createStep({
         news: [],
         sentiment: {},
         macroIndicators: {},
+        predictionMarketSignals: undefined,
       };
     }
+
+    // Fetch prediction market signals from database (non-blocking for main flow)
+    const pmSignalsPromise = getLatestPredictionMarketSignals().catch(() => null);
 
     // Check if FMP API is available
     const client = getFMPClient();
     if (!client) {
-      // No API key configured - return empty context
+      // No FMP API key - still try to return prediction market signals
+      const pmContext = await pmSignalsPromise;
       return {
         news: [],
         sentiment: {},
         macroIndicators: {},
+        predictionMarketSignals: pmContext
+          ? {
+              fedCutProbability: pmContext.signals.fedCutProbability,
+              fedHikeProbability: pmContext.signals.fedHikeProbability,
+              recessionProbability12m: pmContext.signals.recessionProbability12m,
+              macroUncertaintyIndex: pmContext.signals.macroUncertaintyIndex,
+              policyEventRisk: pmContext.signals.policyEventRisk,
+              marketConfidence: pmContext.signals.marketConfidence,
+              cpiSurpriseDirection: pmContext.scores.cpiSurpriseDirection,
+              gdpSurpriseDirection: pmContext.scores.gdpSurpriseDirection,
+              timestamp: pmContext.signals.timestamp,
+              platforms: pmContext.signals.platforms,
+            }
+          : undefined,
       };
     }
 
@@ -195,7 +235,7 @@ export const gatherExternalContextStep = createStep({
         getExternalEventsRepo()
           .then((repo) => repo.createMany(allEvents.map(toStorageEvent)))
           .catch((err) => {
-            // Log but don't fail - storage is non-critical for workflow
+            // biome-ignore lint/suspicious/noConsole: Error logging is intentional
             console.warn("[gatherExternalContext] Failed to store events:", err);
           });
       }
@@ -205,6 +245,9 @@ export const gatherExternalContextStep = createStep({
 
       // Extract macro indicators
       const macroIndicators = extractMacroIndicators(macroResults.events);
+
+      // Wait for prediction market signals
+      const pmContext = await pmSignalsPromise;
 
       return {
         news: allEvents.map((event) => ({
@@ -218,6 +261,20 @@ export const gatherExternalContextStep = createStep({
         })),
         sentiment,
         macroIndicators,
+        predictionMarketSignals: pmContext
+          ? {
+              fedCutProbability: pmContext.signals.fedCutProbability,
+              fedHikeProbability: pmContext.signals.fedHikeProbability,
+              recessionProbability12m: pmContext.signals.recessionProbability12m,
+              macroUncertaintyIndex: pmContext.signals.macroUncertaintyIndex,
+              policyEventRisk: pmContext.signals.policyEventRisk,
+              marketConfidence: pmContext.signals.marketConfidence,
+              cpiSurpriseDirection: pmContext.scores.cpiSurpriseDirection,
+              gdpSurpriseDirection: pmContext.scores.gdpSurpriseDirection,
+              timestamp: pmContext.signals.timestamp,
+              platforms: pmContext.signals.platforms,
+            }
+          : undefined,
       };
     } catch (_error) {
       // Error gathering external context - return empty context to avoid blocking workflow
@@ -225,6 +282,7 @@ export const gatherExternalContextStep = createStep({
         news: [],
         sentiment: {},
         macroIndicators: {},
+        predictionMarketSignals: undefined,
       };
     }
   },
