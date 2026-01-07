@@ -355,6 +355,7 @@ function normalizeAgentOutput(
  * Normalize a system message (fallback).
  */
 function normalizeSystem(data: unknown, type: string, timestamp: Date): NormalizedEvent {
+  const jsonString = JSON.stringify(data) ?? "";
   return {
     id: crypto.randomUUID(),
     timestamp,
@@ -362,7 +363,7 @@ function normalizeSystem(data: unknown, type: string, timestamp: Date): Normaliz
     icon: EVENT_ICONS.system,
     symbol: "",
     title: type,
-    details: JSON.stringify(data).slice(0, 100),
+    details: jsonString.slice(0, 100),
     color: "neutral",
     raw: data,
   };

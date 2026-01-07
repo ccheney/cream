@@ -21,7 +21,14 @@ import {
   type TradeMemory,
   type TradeMemoryRetrievalResult,
 } from "@cream/helix";
-import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
+import {
+  createEmbeddingClient,
+  type EmbeddingClient,
+  parseLessonsLearned,
+  retrieveSimilarTheses,
+  summarizeThesisMemory,
+  type ThesisMemoryResult,
+} from "@cream/helix-schema";
 import type { ExternalEvent } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
@@ -54,17 +61,40 @@ const RecentEventSchema = z.object({
   relatedInstruments: z.array(z.string()),
 });
 
+/**
+ * Schema for thesis memory results
+ */
+const ThesisMemorySchema = z.object({
+  thesisId: z.string(),
+  instrumentId: z.string(),
+  entryThesis: z.string(),
+  outcome: z.enum(["WIN", "LOSS", "SCRATCH"]),
+  pnlPercent: z.number(),
+  holdingPeriodDays: z.number(),
+  lessonsLearned: z.array(z.string()),
+  entryRegime: z.string(),
+  exitRegime: z.string().optional(),
+  closeReason: z.string(),
+  similarityScore: z.number().optional(),
+});
+
 export const MemoryOutputSchema = z.object({
   /** Similar trade decisions per symbol */
   similarTrades: z.record(z.string(), z.array(TradeMemorySchema)),
   /** Formatted memory summaries for agent context */
   memorySummaries: z.record(z.string(), z.string()),
+  /** Similar thesis memories per symbol (for agent learning) */
+  similarTheses: z.record(z.string(), z.array(ThesisMemorySchema)),
+  /** Formatted thesis summaries for agent context */
+  thesisSummaries: z.record(z.string(), z.string()),
   /** Recent external events (news, macro, etc.) */
   recentEvents: z.array(RecentEventSchema),
   /** Aggregate statistics */
   stats: z.object({
     totalMemoriesRetrieved: z.number(),
     symbolsWithMemories: z.number(),
+    totalThesesRetrieved: z.number(),
+    symbolsWithTheses: z.number(),
     avgRetrievalTimeMs: z.number(),
     recentEventsCount: z.number(),
   }),
@@ -146,6 +176,38 @@ function formatExternalEvent(event: ExternalEvent): z.infer<typeof RecentEventSc
 }
 
 /**
+ * Convert ThesisMemoryResult to serializable format for output
+ */
+function formatThesisMemoryResult(result: ThesisMemoryResult): z.infer<typeof ThesisMemorySchema> {
+  const tm = result.memory;
+  return {
+    thesisId: tm.thesis_id,
+    instrumentId: tm.instrument_id,
+    entryThesis: tm.entry_thesis.slice(0, 500), // Truncate for context window
+    outcome: tm.outcome,
+    pnlPercent: tm.pnl_percent,
+    holdingPeriodDays: tm.holding_period_days,
+    lessonsLearned: parseLessonsLearned(tm.lessons_learned),
+    entryRegime: tm.entry_regime,
+    exitRegime: tm.exit_regime ?? undefined,
+    closeReason: tm.close_reason,
+    similarityScore: result.similarityScore,
+  };
+}
+
+/**
+ * Generate a summary of multiple thesis memory results
+ */
+function summarizeThesisMemories(results: ThesisMemoryResult[]): string {
+  if (results.length === 0) {
+    return "No similar thesis memories found.";
+  }
+
+  const summaries = results.map((r) => summarizeThesisMemory(r.memory));
+  return `Found ${results.length} similar thesis memories:\n${summaries.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+}
+
+/**
  * Retrieve recent external events for given symbols
  */
 async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]> {
@@ -159,6 +221,35 @@ async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]>
     // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
     console.warn("Failed to retrieve recent events:", error);
     return [];
+  }
+}
+
+/**
+ * Retrieve thesis memories for a single symbol
+ */
+async function retrieveThesesForSymbol(
+  symbol: string,
+  snapshot: unknown,
+  helix: HelixClient,
+  embedder: EmbeddingClient
+): Promise<ThesisMemoryResult[] | null> {
+  try {
+    const marketSnapshot = snapshotToMarketSnapshot(symbol, snapshot);
+    const situationBrief = generateSituationBrief(marketSnapshot);
+
+    // Retrieve similar theses (both winning and losing for learning)
+    // The function handles embedding generation internally
+    const results = await retrieveSimilarTheses(helix, embedder, situationBrief, {
+      filterInstrument: symbol,
+      topK: 5,
+    });
+
+    return results;
+  } catch (error) {
+    // Log but don't fail - thesis memory is optional context
+    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
+    console.warn(`Failed to retrieve thesis memories for ${symbol}:`, error);
+    return null;
   }
 }
 
@@ -211,10 +302,14 @@ export const retrieveMemoryStep = createStep({
     const emptyResult: MemoryOutput = {
       similarTrades: {},
       memorySummaries: {},
+      similarTheses: {},
+      thesisSummaries: {},
       recentEvents: [],
       stats: {
         totalMemoriesRetrieved: 0,
         symbolsWithMemories: 0,
+        totalThesesRetrieved: 0,
+        symbolsWithTheses: 0,
         avgRetrievalTimeMs: 0,
         recentEventsCount: 0,
       },
@@ -259,7 +354,8 @@ export const retrieveMemoryStep = createStep({
     // Retrieve memories and events in parallel
     const retrievalTimes: number[] = [];
 
-    const [memoryResults, recentEvents] = await Promise.all([
+    const [memoryResults, thesisResults, recentEvents] = await Promise.all([
+      // Trade memories
       Promise.all(
         symbols.map(async (symbol) => {
           const startTime = performance.now();
@@ -273,10 +369,18 @@ export const retrieveMemoryStep = createStep({
           return { symbol, result };
         })
       ),
+      // Thesis memories
+      Promise.all(
+        symbols.map(async (symbol) => {
+          const result = await retrieveThesesForSymbol(symbol, snapshots[symbol], helix, embedder);
+          return { symbol, result };
+        })
+      ),
+      // External events
       retrieveRecentEvents(symbols),
     ]);
 
-    // Aggregate memory results
+    // Aggregate trade memory results
     const similarTrades: Record<string, z.infer<typeof TradeMemorySchema>[]> = {};
     const memorySummaries: Record<string, string> = {};
     let totalMemories = 0;
@@ -291,6 +395,21 @@ export const retrieveMemoryStep = createStep({
       }
     }
 
+    // Aggregate thesis memory results
+    const similarTheses: Record<string, z.infer<typeof ThesisMemorySchema>[]> = {};
+    const thesisSummaries: Record<string, string> = {};
+    let totalTheses = 0;
+    let symbolsWithTheses = 0;
+
+    for (const { symbol, result } of thesisResults) {
+      if (result && result.length > 0) {
+        similarTheses[symbol] = result.map(formatThesisMemoryResult);
+        thesisSummaries[symbol] = summarizeThesisMemories(result);
+        totalTheses += result.length;
+        symbolsWithTheses++;
+      }
+    }
+
     const avgRetrievalTimeMs =
       retrievalTimes.length > 0
         ? retrievalTimes.reduce((a, b) => a + b, 0) / retrievalTimes.length
@@ -299,10 +418,14 @@ export const retrieveMemoryStep = createStep({
     return {
       similarTrades,
       memorySummaries,
+      similarTheses,
+      thesisSummaries,
       recentEvents: recentEvents.map(formatExternalEvent),
       stats: {
         totalMemoriesRetrieved: totalMemories,
         symbolsWithMemories,
+        totalThesesRetrieved: totalTheses,
+        symbolsWithTheses,
         avgRetrievalTimeMs,
         recentEventsCount: recentEvents.length,
       },
