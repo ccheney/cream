@@ -15,16 +15,17 @@
 # ============================================
 [alias]
 # Generate LCOV format coverage for CI integration
-cov = "llvm-cov --workspace --lcov --output-path lcov.info"
+# Note: --no-cfg-coverage required for Rust 2024 edition compatibility
+cov = "llvm-cov --workspace --no-cfg-coverage --ignore-filename-regex=schema-gen --lcov --output-path lcov.info"
 
 # Generate HTML report for local development
-cov-html = "llvm-cov --workspace --html --output-dir coverage"
+cov-html = "llvm-cov --workspace --no-cfg-coverage --ignore-filename-regex=schema-gen --html --output-dir coverage"
 
 # Run coverage with line threshold check (80% for execution-engine)
-cov-check = "llvm-cov --workspace --fail-under-lines 80"
+cov-check = "llvm-cov --workspace --no-cfg-coverage --ignore-filename-regex=schema-gen --fail-under-lines 80"
 
 # Generate both LCOV and HTML
-cov-all = "llvm-cov --workspace --lcov --output-path lcov.info --html --output-dir coverage"
+cov-all = "llvm-cov --workspace --no-cfg-coverage --ignore-filename-regex=schema-gen --lcov --output-path lcov.info --html --output-dir coverage"
 
 # Clean coverage artifacts
 cov-clean = "llvm-cov clean --workspace"

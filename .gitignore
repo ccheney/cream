@@ -70,3 +70,4 @@ file:*.db*
 docs/
 
 .playwright-mcp
+lcov.info
