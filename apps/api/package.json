@@ -27,6 +27,7 @@
     "@connectrpc/connect": "^1.6.1",
     "@connectrpc/connect-node": "^1.6.1",
     "@cream/domain": "workspace:*",
+    "@cream/external-context": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/helix-schema": "workspace:*",
     "@cream/marketdata": "workspace:*",

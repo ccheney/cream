@@ -21,29 +21,20 @@
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import { LoadStateOutputSchema, loadStateStep } from "../steps/loadState";
+// Import implemented steps
+import { buildSnapshotStep } from "../steps/buildSnapshot.js";
+import { executeOrdersStep } from "../steps/executeOrders.js";
+import {
+  ExternalContextSchema,
+  gatherExternalContextStep,
+} from "../steps/gatherExternalContext.js";
+import { loadStateStep } from "../steps/loadState.js";
+import { persistMemoryStep } from "../steps/persistMemory.js";
+import { retrieveMemoryStep } from "../steps/retrieveMemory.js";
 
 // ============================================
-// Step Schemas
+// Step Schemas (for agent steps that remain stubs)
 // ============================================
-
-const SnapshotOutputSchema = z.object({
-  snapshots: z.record(z.string(), z.any()),
-  timestamp: z.string(),
-  symbolCount: z.number(),
-});
-
-const MemoryOutputSchema = z.object({
-  similarTrades: z.array(z.any()),
-  relevantPatterns: z.array(z.any()),
-  recentDecisions: z.array(z.any()),
-});
-
-const ExternalContextSchema = z.object({
-  news: z.array(z.any()),
-  sentiment: z.record(z.string(), z.number()),
-  macroIndicators: z.record(z.string(), z.number()),
-});
 
 const AnalystOutputSchema = z.object({
   technical: z.any(),
@@ -83,66 +74,9 @@ const ValidationResultSchema = z.object({
   adjustedPlan: DecisionPlanSchema.optional(),
 });
 
-const ExecutionResultSchema = z.object({
-  ordersSubmitted: z.number(),
-  ordersRejected: z.number(),
-  orderIds: z.array(z.string()),
-});
-
 // ============================================
-// Step Definitions
+// Agent Steps (remain stubs - implemented in trading-cycle.ts)
 // ============================================
-
-const buildSnapshotStep = createStep({
-  id: "build-snapshot",
-  description: "Build feature snapshots for universe symbols",
-  inputSchema: LoadStateOutputSchema,
-  outputSchema: SnapshotOutputSchema,
-  retries: 3,
-  execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement actual snapshot building using @cream/marketdata
-    // Will use _inputData.positions, _inputData.accountBalance, etc.
-    return {
-      snapshots: {},
-      timestamp: new Date().toISOString(),
-      symbolCount: 0,
-    };
-  },
-});
-
-const retrieveMemoryStep = createStep({
-  id: "retrieve-memory",
-  description: "Fetch relevant memories from HelixDB",
-  inputSchema: SnapshotOutputSchema,
-  outputSchema: MemoryOutputSchema,
-  retries: 2,
-  execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement HelixDB retrieval using @cream/helix
-    // Will use _inputData.snapshots for similarity search
-    return {
-      similarTrades: [],
-      relevantPatterns: [],
-      recentDecisions: [],
-    };
-  },
-});
-
-const gatherExternalContextStep = createStep({
-  id: "gather-external-context",
-  description: "Get news, sentiment, macro context",
-  inputSchema: MemoryOutputSchema,
-  outputSchema: ExternalContextSchema,
-  retries: 2,
-  execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement FMP/Alpha Vantage integration
-    // Will use _inputData.similarTrades for context
-    return {
-      news: [],
-      sentiment: {},
-      macroIndicators: {},
-    };
-  },
-});
 
 const runAnalystsStep = createStep({
   id: "run-analysts",
@@ -151,8 +85,8 @@ const runAnalystsStep = createStep({
   outputSchema: AnalystOutputSchema,
   retries: 2,
   execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement Mastra agent calls
-    // Will pass _inputData.news, _inputData.sentiment to agents
+    // Agent implementation in trading-cycle.ts via Mastra agents
+    // This workflow uses the simpler createWorkflow API
     return {
       technical: { signals: [] },
       news: { summary: "" },
@@ -168,8 +102,7 @@ const runDebateStep = createStep({
   outputSchema: DebateOutputSchema,
   retries: 2,
   execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement debate agent calls
-    // Will use _inputData.technical, _inputData.news, _inputData.fundamentals
+    // Agent implementation in trading-cycle.ts via Mastra agents
     return {
       bullishCase: {},
       bearishCase: {},
@@ -185,8 +118,7 @@ const synthesizePlanStep = createStep({
   outputSchema: DecisionPlanSchema,
   retries: 2,
   execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement trader agent synthesis
-    // Will use _inputData.bullishCase, _inputData.bearishCase
+    // Agent implementation in trading-cycle.ts via Mastra agents
     return {
       cycleId: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -202,8 +134,7 @@ const validateRiskStep = createStep({
   outputSchema: ValidationResultSchema,
   retries: 1,
   execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement risk validation via Rust execution engine
-    // Will validate _inputData.decisions against risk constraints
+    // Agent implementation in trading-cycle.ts via Mastra agents
     return {
       approved: true,
       violations: [],
@@ -218,51 +149,8 @@ const criticReviewStep = createStep({
   outputSchema: ValidationResultSchema,
   retries: 1,
   execute: async ({ inputData }) => {
-    // TODO: Implement critic agent review
+    // Agent implementation in trading-cycle.ts via Mastra agents
     return inputData;
-  },
-});
-
-const executeOrdersStep = createStep({
-  id: "execute-orders",
-  description: "Send approved orders to execution engine",
-  inputSchema: ValidationResultSchema,
-  outputSchema: ExecutionResultSchema,
-  retries: 1,
-  execute: async ({ inputData }) => {
-    if (!inputData.approved) {
-      return {
-        ordersSubmitted: 0,
-        ordersRejected: 0,
-        orderIds: [],
-      };
-    }
-
-    // TODO: Implement gRPC call to Rust execution engine
-    return {
-      ordersSubmitted: 0,
-      ordersRejected: 0,
-      orderIds: [],
-    };
-  },
-});
-
-const persistMemoryStep = createStep({
-  id: "persist-memory",
-  description: "Store decision + outcome in HelixDB",
-  inputSchema: ExecutionResultSchema,
-  outputSchema: z.object({
-    persisted: z.boolean(),
-    memoryId: z.string().optional(),
-  }),
-  retries: 3,
-  execute: async ({ inputData: _inputData }) => {
-    // TODO: Implement HelixDB persistence
-    // Will persist _inputData.ordersSubmitted, _inputData.orderIds
-    return {
-      persisted: true,
-      memoryId: crypto.randomUUID(),
-    };
   },
 });
 
