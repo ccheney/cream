@@ -297,7 +297,7 @@ function createAgent(agentType: AgentType): Agent {
     if (tool) {
       tools[toolName] = tool;
     } else {
-      // Log warning for unmapped tools - don't fail agent creation
+      // biome-ignore lint/suspicious/noConsole: Intentional warning for unmapped tools during development
       console.warn(
         `[createAgent] Tool '${toolName}' not found in TOOL_INSTANCES for agent '${agentType}'`
       );

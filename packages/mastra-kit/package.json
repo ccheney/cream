@@ -24,8 +24,9 @@
   },
   "dependencies": {
     "@cream/broker": "workspace:*",
-    "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
+    "@cream/domain": "workspace:*",
+    "@cream/storage": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/universe": "workspace:*",

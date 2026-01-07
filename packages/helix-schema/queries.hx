@@ -606,3 +606,22 @@ QUERY CountDecisionsByAction(instrument_id: String, environment: String) =>
 QUERY GetCompaniesBySector(sector: String) =>
     companies <- N<Company>::WHERE(_::{sector}::EQ(sector))
     RETURN companies
+
+
+// ============================================
+// Trade Decision Update Queries
+// ============================================
+
+// Update a trade decision with realized outcome
+// Called after a trade is closed to record P&L and performance metrics
+QUERY UpdateDecisionOutcome(
+    decision_id: String,
+    realized_outcome: String,
+    closed_at: String
+) =>
+    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    decision::UPDATE({
+        realized_outcome: realized_outcome,
+        closed_at: closed_at
+    })
+    RETURN decision

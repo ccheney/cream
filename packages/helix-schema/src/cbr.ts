@@ -339,10 +339,10 @@ export async function retrieveSimilarCases(
   }
 
   // 4. Execute vector search via HelixDB
-  // Note: This calls the HelixDB SearchSimilarDecisions query
+  // Note: HelixDB generates embeddings internally, so we pass the situation brief text
   const vectorResults = await executeVectorSearch(
     client,
-    queryEmbedding,
+    situationBrief,
     opts.topK,
     opts.minSimilarity,
     filters
@@ -384,34 +384,89 @@ export async function retrieveSimilarCases(
 }
 
 /**
- * Execute vector search against HelixDB.
+ * Raw result from SearchSimilarDecisions query.
+ */
+interface SearchSimilarDecisionsResult {
+  decision_id: string;
+  instrument_id: string;
+  regime_label: string;
+  action: string;
+  rationale_text: string;
+  environment: string;
+  similarity_score: number;
+  // Additional fields that might be included
+  underlying_symbol?: string;
+  decision_json?: string;
+  realized_outcome?: string;
+  created_at?: string;
+  cycle_id?: string;
+  snapshot_reference?: string;
+  closed_at?: string;
+}
+
+/**
+ * Execute vector search against HelixDB using SearchSimilarDecisions query.
  *
- * This is a simplified version - in production, it would use the
- * full helix client query interface.
+ * Note: HelixDB generates embeddings internally using the query text,
+ * so we use the situation brief text for similarity search rather than
+ * pre-computed embeddings.
+ *
+ * @param client - HelixDB client
+ * @param queryText - Text to search for (situation brief)
+ * @param topK - Maximum results to return
+ * @param minSimilarity - Minimum similarity threshold
+ * @param filters - Optional filters (regime_label, instrument_id, environment)
+ * @returns Array of decisions with similarity scores
  */
 async function executeVectorSearch(
-  _client: HelixClient,
-  _embedding: number[],
-  _topK: number,
-  _minSimilarity: number,
-  _filters: Record<string, unknown>
+  client: HelixClient,
+  queryText: string,
+  topK: number,
+  minSimilarity: number,
+  filters: Record<string, unknown>
 ): Promise<Array<{ decision: TradeDecision; similarity: number }>> {
-  // TODO: Implement actual HelixDB vector search query
-  // This would call SearchSimilarDecisions from queries.hx
-  //
-  // Example HelixQL query:
-  // SearchSimilarDecisions(
-  //   query_embedding: $embedding,
-  //   top_k: $topK,
-  //   min_similarity: $minSimilarity,
-  //   regime_label: $filters.regime_label,
-  //   environment: $filters.environment
-  // )
+  try {
+    // Call SearchSimilarDecisions query
+    // Note: HelixDB generates embeddings internally from query_text
+    const result = await client.query<SearchSimilarDecisionsResult[]>("SearchSimilarDecisions", {
+      query_text: queryText,
+      instrument_id: filters.underlying_symbol ?? filters.instrument_id ?? null,
+      regime_label: filters.regime_label ?? null,
+      limit: topK,
+    });
 
-  // For now, return empty results
-  // The actual implementation will use client.query()
-  return [];
+    // Filter by minimum similarity and convert to TradeDecision format
+    return result.data
+      .filter((r) => r.similarity_score >= minSimilarity)
+      .map((r) => ({
+        decision: {
+          decision_id: r.decision_id,
+          cycle_id: r.cycle_id ?? "",
+          instrument_id: r.instrument_id,
+          underlying_symbol: r.underlying_symbol,
+          regime_label: r.regime_label,
+          action: r.action as TradeDecision["action"],
+          decision_json: r.decision_json ?? "{}",
+          rationale_text: r.rationale_text,
+          snapshot_reference: r.snapshot_reference ?? "",
+          realized_outcome: r.realized_outcome,
+          created_at: r.created_at ?? new Date().toISOString(),
+          closed_at: r.closed_at,
+          environment: r.environment as TradeDecision["environment"],
+        },
+        similarity: r.similarity_score,
+      }));
+  } catch (error) {
+    // Log error and return empty results on failure
+    // This allows the system to continue functioning even if HelixDB is unavailable
+    console.error("CBR vector search failed:", error);
+    return [];
+  }
 }
+
+// Note: executeVectorSearchWithEmbedding was removed as it was deprecated.
+// HelixDB generates embeddings internally via SearchSimilarDecisions query.
+// If you need to use pre-computed embeddings, implement a separate query.
 
 // ============================================
 // Memory Context Builder
@@ -467,42 +522,122 @@ export interface CaseRetentionOptions {
 }
 
 /**
+ * Result of retaining a case.
+ */
+export interface CaseRetentionResult {
+  /** Whether the case was successfully stored */
+  success: boolean;
+  /** Decision ID of the stored case */
+  decisionId: string;
+  /** Error message if storage failed */
+  error?: string;
+}
+
+/**
  * Store a new trade decision as a case for future retrieval.
  *
  * This implements the "Retain" step of the CBR cycle.
  * After a trade is closed, the decision and outcome should be
  * stored so similar situations can benefit from this experience.
  *
+ * Note: HelixDB generates embeddings internally via InsertTradeDecision query,
+ * so the embeddingClient parameter is kept for API compatibility but not used
+ * for the primary insertion path.
+ *
  * @param client - HelixDB client
- * @param embeddingClient - Embedding client
+ * @param _embeddingClient - Embedding client (kept for API compatibility)
  * @param decision - The trade decision to store
- * @param options - Storage options
+ * @param _options - Storage options (kept for API compatibility)
+ * @returns Result indicating success or failure
  */
 export async function retainCase(
-  _client: HelixClient,
-  embeddingClient: EmbeddingClient,
+  client: HelixClient,
+  _embeddingClient: EmbeddingClient,
   decision: TradeDecision,
-  options: CaseRetentionOptions = {}
-): Promise<void> {
-  const { generateEmbedding = true } = options;
+  _options: CaseRetentionOptions = {}
+): Promise<CaseRetentionResult> {
+  try {
+    // Call InsertTradeDecision query
+    // HelixDB generates embeddings internally via Embed(rationale_text, "gemini:gemini-embedding-001")
+    await client.query("InsertTradeDecision", {
+      decision_id: decision.decision_id,
+      cycle_id: decision.cycle_id,
+      instrument_id: decision.instrument_id,
+      underlying_symbol: decision.underlying_symbol ?? null,
+      regime_label: decision.regime_label,
+      action: decision.action,
+      decision_json: decision.decision_json,
+      rationale_text: decision.rationale_text,
+      snapshot_reference: decision.snapshot_reference,
+      created_at: decision.created_at,
+      environment: decision.environment,
+    });
 
-  // Generate embedding if requested
-  if (generateEmbedding && decision.rationale_text) {
-    const _embeddingResult = await embeddingClient.generateEmbedding(decision.rationale_text);
-
-    // TODO: Use client.mutate() to insert TradeDecision with embedding
-    // This would call InsertTradeDecision from queries.hx with the
-    // rationale_embedding parameter
-    //
-    // Example:
-    // await client.mutate("InsertTradeDecision", {
-    //   decision_id: decision.decision_id,
-    //   ...decision,
-    //   rationale_embedding: embeddingResult.embedding,
-    // });
+    return {
+      success: true,
+      decisionId: decision.decision_id,
+    };
+  } catch (error) {
+    console.error("CBR case retention failed:", error);
+    return {
+      success: false,
+      decisionId: decision.decision_id,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
+}
 
-  // TODO: Implement actual insertion via HelixDB mutations
+/**
+ * Update a retained case with outcome data.
+ *
+ * Called after a trade is closed to update the case with realized P&L
+ * and other outcome metrics. This enables the CBR system to learn from
+ * the success or failure of past decisions.
+ *
+ * @param client - HelixDB client
+ * @param decisionId - ID of the decision to update
+ * @param outcome - Realized outcome data
+ * @returns Whether update succeeded
+ */
+export async function updateCaseOutcome(
+  client: HelixClient,
+  decisionId: string,
+  outcome: {
+    pnl: number;
+    returnPct: number;
+    holdingHours: number;
+    entryPrice?: number;
+    exitPrice?: number;
+    mae?: number;
+    mfe?: number;
+  }
+): Promise<boolean> {
+  try {
+    // Serialize outcome to JSON for storage
+    const outcomeJson = JSON.stringify({
+      pnl: outcome.pnl,
+      return_pct: outcome.returnPct,
+      holding_hours: outcome.holdingHours,
+      entry_price: outcome.entryPrice,
+      exit_price: outcome.exitPrice,
+      mae: outcome.mae,
+      mfe: outcome.mfe,
+    });
+
+    // Note: This requires an UpdateDecisionOutcome query in queries.hx
+    // For now, we'll use a generic update pattern
+    // TODO: Add UpdateDecisionOutcome query to queries.hx
+    await client.query("UpdateDecisionOutcome", {
+      decision_id: decisionId,
+      realized_outcome: outcomeJson,
+      closed_at: new Date().toISOString(),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("CBR outcome update failed:", error);
+    return false;
+  }
 }
 
 // ============================================

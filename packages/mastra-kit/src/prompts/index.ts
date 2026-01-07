@@ -899,3 +899,15 @@ export function getAgentPrompt(agentType: AgentType): string {
 export function getAllAgentPrompts(): Record<AgentType, string> {
   return { ...AGENT_PROMPTS };
 }
+
+// ============================================
+// Research Pipeline Prompts
+// ============================================
+
+export {
+  buildFactorZooSummary,
+  buildIdeaAgentUserPrompt,
+  type HypothesisMemory,
+  IDEA_AGENT_SYSTEM_PROMPT,
+  type IdeaContext,
+} from "./idea-agent.js";
