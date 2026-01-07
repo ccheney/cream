@@ -82,6 +82,43 @@ export const UnsubscribeSymbolsMessageSchema = z.object({
 export type UnsubscribeSymbolsMessage = z.infer<typeof UnsubscribeSymbolsMessageSchema>;
 
 // ============================================
+// Subscribe Options Contracts Message
+// ============================================
+
+/**
+ * Subscribe to options data for specific contracts.
+ * Contracts use OCC format: O:{underlying}{YYMMDD}{C|P}{strike}
+ *
+ * @example
+ * { type: "subscribe_options", contracts: ["O:AAPL250117C00100000"] }
+ */
+export const SubscribeOptionsMessageSchema = z.object({
+  type: z.literal("subscribe_options"),
+  /** OCC contract symbols to subscribe to (max 50) */
+  contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
+});
+
+export type SubscribeOptionsMessage = z.infer<typeof SubscribeOptionsMessageSchema>;
+
+// ============================================
+// Unsubscribe Options Contracts Message
+// ============================================
+
+/**
+ * Unsubscribe from options data for specific contracts.
+ *
+ * @example
+ * { type: "unsubscribe_options", contracts: ["O:AAPL250117C00100000"] }
+ */
+export const UnsubscribeOptionsMessageSchema = z.object({
+  type: z.literal("unsubscribe_options"),
+  /** OCC contract symbols to unsubscribe from */
+  contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
+});
+
+export type UnsubscribeOptionsMessage = z.infer<typeof UnsubscribeOptionsMessageSchema>;
+
+// ============================================
 // Ping Message
 // ============================================
 
@@ -145,6 +182,8 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   UnsubscribeMessageSchema,
   SubscribeSymbolsMessageSchema,
   UnsubscribeSymbolsMessageSchema,
+  SubscribeOptionsMessageSchema,
+  UnsubscribeOptionsMessageSchema,
   PingMessageSchema,
   RequestStateMessageSchema,
   AcknowledgeAlertMessageSchema,

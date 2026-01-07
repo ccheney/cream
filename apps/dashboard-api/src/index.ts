@@ -30,7 +30,12 @@ import {
   systemRoutes,
   thesesRoutes,
 } from "./routes/index.js";
-import { initMarketDataStreaming, shutdownMarketDataStreaming } from "./streaming/index.js";
+import {
+  initMarketDataStreaming,
+  initOptionsDataStreaming,
+  shutdownMarketDataStreaming,
+  shutdownOptionsDataStreaming,
+} from "./streaming/index.js";
 import {
   closeAllConnections,
   createConnectionMetadata,
@@ -218,6 +223,11 @@ if (import.meta.main) {
     console.error("[server] Failed to initialize market data streaming:", error);
   });
 
+  // Initialize options data streaming (non-blocking)
+  initOptionsDataStreaming().catch((error) => {
+    console.error("[server] Failed to initialize options data streaming:", error);
+  });
+
   const server = Bun.serve({
     port,
     fetch(req, server) {
@@ -272,6 +282,7 @@ if (import.meta.main) {
   // Graceful shutdown
   process.on("SIGINT", () => {
     shutdownMarketDataStreaming();
+    shutdownOptionsDataStreaming();
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();
@@ -280,6 +291,7 @@ if (import.meta.main) {
 
   process.on("SIGTERM", () => {
     shutdownMarketDataStreaming();
+    shutdownOptionsDataStreaming();
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();

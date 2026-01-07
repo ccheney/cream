@@ -8,15 +8,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
+import { GetOptionChainRequest, GetOptionChainResponse, GetSnapshotRequest, GetSnapshotResponse, SubscribeMarketDataRequest, SubscribeMarketDataResponse } from "./market_snapshot_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import {
-  GetOptionChainRequest,
-  GetOptionChainResponse,
-  GetSnapshotRequest,
-  GetSnapshotResponse,
-  SubscribeMarketDataRequest,
-  SubscribeMarketDataResponse,
-} from "./market_snapshot_pb.js";
 
 /**
  * Market data streaming service
@@ -59,5 +52,6 @@ export const MarketDataService = {
       O: GetOptionChainResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

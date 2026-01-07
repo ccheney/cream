@@ -16,6 +16,7 @@ import { z } from "zod/v4";
  * Available WebSocket channels.
  *
  * - quotes: Real-time price quotes (bid, ask, last, volume)
+ * - options: Options contract quotes and trades
  * - orders: Order status updates (submitted, filled, cancelled)
  * - decisions: Trading decisions from agents
  * - agents: Agent output and reasoning
@@ -26,6 +27,7 @@ import { z } from "zod/v4";
  */
 export const Channel = z.enum([
   "quotes",
+  "options",
   "orders",
   "decisions",
   "agents",
@@ -51,6 +53,7 @@ export const CHANNELS = Channel.options;
  */
 export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
   quotes: "Real-time price quotes (bid, ask, last, volume)",
+  options: "Options contract quotes and trades",
   orders: "Order status updates (submitted, filled, cancelled)",
   decisions: "Trading decisions from agents",
   agents: "Agent output and reasoning",

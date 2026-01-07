@@ -37,6 +37,121 @@ export const QuoteMessageSchema = z.object({
 export type QuoteMessage = z.infer<typeof QuoteMessageSchema>;
 
 // ============================================
+// Options Quote Message
+// ============================================
+
+/**
+ * Options quote data schema.
+ */
+export const OptionsQuoteDataSchema = z.object({
+  /** OCC contract symbol */
+  contract: z.string(),
+  /** Underlying symbol */
+  underlying: z.string(),
+  /** Best bid price */
+  bid: z.number(),
+  /** Best ask price */
+  ask: z.number(),
+  /** Bid size (optional) */
+  bidSize: z.number().optional(),
+  /** Ask size (optional) */
+  askSize: z.number().optional(),
+  /** Last trade price */
+  last: z.number(),
+  /** Volume (optional) */
+  volume: z.number().optional(),
+  /** Open interest (optional) */
+  openInterest: z.number().optional(),
+  /** Timestamp */
+  timestamp: z.string(),
+});
+
+export type OptionsQuoteData = z.infer<typeof OptionsQuoteDataSchema>;
+
+/**
+ * Real-time options quote update.
+ *
+ * @example
+ * { type: "options_quote", data: { contract: "O:AAPL250117C00100000", bid: 5.00, ask: 5.10, ... } }
+ */
+export const OptionsQuoteMessageSchema = z.object({
+  type: z.literal("options_quote"),
+  data: OptionsQuoteDataSchema,
+});
+
+export type OptionsQuoteMessage = z.infer<typeof OptionsQuoteMessageSchema>;
+
+// ============================================
+// Options Aggregate Message
+// ============================================
+
+/**
+ * Options aggregate data schema.
+ */
+export const OptionsAggregateDataSchema = z.object({
+  /** OCC contract symbol */
+  contract: z.string(),
+  /** Underlying symbol */
+  underlying: z.string(),
+  /** Open price */
+  open: z.number(),
+  /** High price */
+  high: z.number(),
+  /** Low price */
+  low: z.number(),
+  /** Close price */
+  close: z.number(),
+  /** Volume */
+  volume: z.number(),
+  /** Timestamp */
+  timestamp: z.string(),
+});
+
+export type OptionsAggregateData = z.infer<typeof OptionsAggregateDataSchema>;
+
+/**
+ * Options aggregate bar update.
+ */
+export const OptionsAggregateMessageSchema = z.object({
+  type: z.literal("options_aggregate"),
+  data: OptionsAggregateDataSchema,
+});
+
+export type OptionsAggregateMessage = z.infer<typeof OptionsAggregateMessageSchema>;
+
+// ============================================
+// Options Trade Message
+// ============================================
+
+/**
+ * Options trade data schema.
+ */
+export const OptionsTradeDataSchema = z.object({
+  /** OCC contract symbol */
+  contract: z.string(),
+  /** Underlying symbol */
+  underlying: z.string(),
+  /** Trade price */
+  price: z.number(),
+  /** Trade size */
+  size: z.number(),
+  /** Timestamp */
+  timestamp: z.string(),
+});
+
+export type OptionsTradeData = z.infer<typeof OptionsTradeDataSchema>;
+
+/**
+ * Options trade execution.
+ */
+export const OptionsTradeMessageSchema = z.object({
+  type: z.literal("options_trade"),
+  data: OptionsTradeDataSchema,
+});
+
+export type OptionsTradeMessage = z.infer<typeof OptionsTradeMessageSchema>;
+
+// ============================================
 // Order Message
 // ============================================
 
@@ -260,6 +375,9 @@ export type ErrorMessage = z.infer<typeof ErrorMessageSchema>;
  */
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   QuoteMessageSchema,
+  OptionsQuoteMessageSchema,
+  OptionsAggregateMessageSchema,
+  OptionsTradeMessageSchema,
   OrderMessageSchema,
   DecisionMessageSchema,
   DecisionPlanMessageSchema,

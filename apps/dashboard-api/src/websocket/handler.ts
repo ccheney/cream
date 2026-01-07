@@ -16,14 +16,20 @@ import {
   type PingMessage,
   type ServerMessage,
   type SubscribeMessage,
+  type SubscribeOptionsMessage,
   type SubscribeSymbolsMessage,
   type UnsubscribeMessage,
+  type UnsubscribeOptionsMessage,
   type UnsubscribeSymbolsMessage,
 } from "../../../../packages/domain/src/websocket/index.js";
 import {
   getCachedQuote,
   subscribeSymbols as subscribeToStreaming,
 } from "../streaming/market-data.js";
+import {
+  getCachedOptionsQuote,
+  subscribeContracts as subscribeToOptionsStreaming,
+} from "../streaming/options-data.js";
 
 // ============================================
 // Types
@@ -50,6 +56,9 @@ export interface ConnectionMetadata {
 
   /** Subscribed symbols (for quote channel) */
   symbols: Set<string>;
+
+  /** Subscribed options contracts (for options channel) */
+  contracts: Set<string>;
 }
 
 /**
@@ -254,6 +263,77 @@ function handleUnsubscribeSymbols(
 }
 
 /**
+ * Handle subscribe options contracts message.
+ * Subscribes to the Massive WebSocket for real-time options data.
+ */
+function handleSubscribeOptions(ws: WebSocketWithMetadata, message: SubscribeOptionsMessage): void {
+  const metadata = ws.data;
+  const newContracts: string[] = [];
+
+  for (const contract of message.contracts) {
+    const upperContract = contract.toUpperCase();
+    if (!metadata.contracts.has(upperContract)) {
+      metadata.contracts.add(upperContract);
+      newContracts.push(upperContract);
+    }
+  }
+
+  // Auto-subscribe to options channel
+  metadata.channels.add("options");
+
+  // Subscribe to streaming options data for new contracts
+  if (newContracts.length > 0) {
+    subscribeToOptionsStreaming(newContracts).catch((_error) => {
+      // Silently handle subscription failures - streaming is optional enhancement
+    });
+
+    // Send cached quotes immediately for contracts we have data for
+    for (const contract of newContracts) {
+      const cached = getCachedOptionsQuote(contract);
+      if (cached) {
+        sendMessage(ws, {
+          type: "options_quote",
+          data: {
+            contract,
+            underlying: cached.underlying,
+            bid: cached.bid,
+            ask: cached.ask,
+            last: cached.last,
+            volume: cached.volume,
+            openInterest: cached.openInterest,
+            timestamp: cached.timestamp.toISOString(),
+          },
+        });
+      }
+    }
+  }
+
+  sendMessage(ws, {
+    type: "subscribed",
+    channels: ["options"],
+  });
+}
+
+/**
+ * Handle unsubscribe options contracts message.
+ */
+function handleUnsubscribeOptions(
+  ws: WebSocketWithMetadata,
+  message: UnsubscribeOptionsMessage
+): void {
+  const metadata = ws.data;
+
+  for (const contract of message.contracts) {
+    metadata.contracts.delete(contract.toUpperCase());
+  }
+
+  sendMessage(ws, {
+    type: "unsubscribed",
+    channels: [],
+  });
+}
+
+/**
  * Handle ping message.
  */
 function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
@@ -303,6 +383,12 @@ export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): vo
       break;
     case "unsubscribe_symbols":
       handleUnsubscribeSymbols(ws, message);
+      break;
+    case "subscribe_options":
+      handleSubscribeOptions(ws, message);
+      break;
+    case "unsubscribe_options":
+      handleUnsubscribeOptions(ws, message);
       break;
     case "ping":
       handlePing(ws, message);
@@ -389,6 +475,32 @@ export function broadcastQuote(symbol: string, message: ServerMessage): number {
 
   for (const [connectionId, ws] of connections) {
     if (ws.data.channels.has("quotes") && ws.data.symbols.has(upperSymbol)) {
+      if (sendMessage(ws, message)) {
+        sent++;
+      } else {
+        deadConnections.push(connectionId);
+      }
+    }
+  }
+
+  // Clean up dead connections
+  for (const connectionId of deadConnections) {
+    removeConnection(connectionId);
+  }
+
+  return sent;
+}
+
+/**
+ * Broadcast options quote message to connections subscribed to a specific contract.
+ */
+export function broadcastOptionsQuote(contract: string, message: ServerMessage): number {
+  let sent = 0;
+  const deadConnections: string[] = [];
+  const upperContract = contract.toUpperCase();
+
+  for (const [connectionId, ws] of connections) {
+    if (ws.data.channels.has("options") && ws.data.contracts.has(upperContract)) {
       if (sendMessage(ws, message)) {
         sent++;
       } else {
@@ -579,6 +691,7 @@ export function createConnectionMetadata(userId: string): ConnectionMetadata {
     lastPing: new Date(),
     channels: new Set(),
     symbols: new Set(),
+    contracts: new Set(),
   };
 }
 
@@ -609,6 +722,7 @@ export default {
   handleError,
   broadcast,
   broadcastQuote,
+  broadcastOptionsQuote,
   broadcastAll,
   sendMessage,
   sendError,

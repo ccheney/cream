@@ -145,6 +145,7 @@ export const ALLOWED_ORIGINS = [
  */
 export const CHANNEL_PERMISSIONS: Record<Channel, UserRole[]> = {
   quotes: ["user", "admin"],
+  options: ["user", "admin"],
   orders: ["user", "admin"],
   decisions: ["user", "admin"],
   agents: ["admin"],
