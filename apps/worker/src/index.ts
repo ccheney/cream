@@ -101,6 +101,7 @@ async function main() {
     // Warn if no LLM key is set (needed for real agent execution)
     const hasLlmKey = process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_API_KEY;
     if (!hasLlmKey) {
+      // biome-ignore lint/suspicious/noConsole: Startup warning is intentional
       console.warn(
         "⚠️  No LLM API key configured (ANTHROPIC_API_KEY or GOOGLE_API_KEY). " +
           "Agent execution will use stub agents."

@@ -9,13 +9,14 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'No tests yet'",
+    "test": "bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/"
   },
   "dependencies": {
     "@cream/api": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/storage": "workspace:*",
     "@mastra/core": "^0.24.9",
     "zod": "^4.0.0-beta.20"
   },
