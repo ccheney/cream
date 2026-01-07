@@ -7,15 +7,18 @@
 // @generated from file cream/v1/common.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
+import type { Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file cream/v1/common.proto.
  */
-export const file_cream_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24qcQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIYChRFTlZJUk9OTUVOVF9CQUNLVEVTVBABEhUKEUVOVklST05NRU5UX1BBUEVSEAISFAoQRU5WSVJPTk1FTlRfTElWRRADKo8BCgZBY3Rpb24SFgoSQUNUSU9OX1VOU1BFQ0lGSUVEEAASDgoKQUNUSU9OX0JVWRABEg8KC0FDVElPTl9TRUxMEAISDwoLQUNUSU9OX0hPTEQQAxITCg9BQ1RJT05fSU5DUkVBU0UQBBIRCg1BQ1RJT05fUkVEVUNFEAUSEwoPQUNUSU9OX05PX1RSQURFEAYqYwoJRGlyZWN0aW9uEhkKFURJUkVDVElPTl9VTlNQRUNJRklFRBAAEhIKDkRJUkVDVElPTl9MT05HEAESEwoPRElSRUNUSU9OX1NIT1JUEAISEgoORElSRUNUSU9OX0ZMQVQQAyppCg5JbnN0cnVtZW50VHlwZRIfChtJTlNUUlVNRU5UX1RZUEVfVU5TUEVDSUZJRUQQABIaChZJTlNUUlVNRU5UX1RZUEVfRVFVSVRZEAESGgoWSU5TVFJVTUVOVF9UWVBFX09QVElPThACKlQKCk9wdGlvblR5cGUSGwoXT1BUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIUChBPUFRJT05fVFlQRV9DQUxMEAESEwoPT1BUSU9OX1RZUEVfUFVUEAIqVAoIU2l6ZVVuaXQSGQoVU0laRV9VTklUX1VOU1BFQ0lGSUVEEAASFAoQU0laRV9VTklUX1NIQVJFUxABEhcKE1NJWkVfVU5JVF9DT05UUkFDVFMQAipUCglPcmRlclR5cGUSGgoWT1JERVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEE9SREVSX1RZUEVfTElNSVQQARIVChFPUkRFUl9UWVBFX01BUktFVBACKrYBCgtUaW1lSW5Gb3JjZRIdChlUSU1FX0lOX0ZPUkNFX1VOU1BFQ0lGSUVEEAASFQoRVElNRV9JTl9GT1JDRV9EQVkQARIVChFUSU1FX0lOX0ZPUkNFX0dUQxACEhUKEVRJTUVfSU5fRk9SQ0VfSU9DEAMSFQoRVElNRV9JTl9GT1JDRV9GT0sQBBIVChFUSU1FX0lOX0ZPUkNFX09QRxAFEhUKEVRJTUVfSU5fRk9SQ0VfQ0xTEAYqgQEKEFJpc2tEZW5vbWluYXRpb24SIQodUklTS19ERU5PTUlOQVRJT05fVU5TUEVDSUZJRUQQABImCiJSSVNLX0RFTk9NSU5BVElPTl9VTkRFUkxZSU5HX1BSSUNFEAESIgoeUklTS19ERU5PTUlOQVRJT05fT1BUSU9OX1BSSUNFEAIq1gEKDlN0cmF0ZWd5RmFtaWx5Eh8KG1NUUkFURUdZX0ZBTUlMWV9VTlNQRUNJRklFRBAAEhkKFVNUUkFURUdZX0ZBTUlMWV9UUkVORBABEiIKHlNUUkFURUdZX0ZBTUlMWV9NRUFOX1JFVkVSU0lPThACEiAKHFNUUkFURUdZX0ZBTUlMWV9FVkVOVF9EUklWRU4QAxIeChpTVFJBVEVHWV9GQU1JTFlfVk9MQVRJTElUWRAEEiIKHlNUUkFURUdZX0ZBTUlMWV9SRUxBVElWRV9WQUxVRRAFKrABCgZSZWdpbWUSFgoSUkVHSU1FX1VOU1BFQ0lGSUVEEAASFQoRUkVHSU1FX0JVTExfVFJFTkQQARIVChFSRUdJTUVfQkVBUl9UUkVORBACEhYKElJFR0lNRV9SQU5HRV9CT1VORBADEhoKFlJFR0lNRV9ISUdIX1ZPTEFUSUxJVFkQBBIZChVSRUdJTUVfTE9XX1ZPTEFUSUxJVFkQBRIRCg1SRUdJTUVfQ1JJU0lTEAYqnAEKDE1hcmtldFN0YXR1cxIdChlNQVJLRVRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYTUFSS0VUX1NUQVRVU19QUkVfTUFSS0VUEAESFgoSTUFSS0VUX1NUQVRVU19PUEVOEAISHQoZTUFSS0VUX1NUQVRVU19BRlRFUl9IT1VSUxADEhgKFE1BUktFVF9TVEFUVVNfQ0xPU0VEEARClAEKDGNvbS5jcmVhbS52MUILQ29tbW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM");
+export const file_cream_v1_common: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    "ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24qcQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIYChRFTlZJUk9OTUVOVF9CQUNLVEVTVBABEhUKEUVOVklST05NRU5UX1BBUEVSEAISFAoQRU5WSVJPTk1FTlRfTElWRRADKo8BCgZBY3Rpb24SFgoSQUNUSU9OX1VOU1BFQ0lGSUVEEAASDgoKQUNUSU9OX0JVWRABEg8KC0FDVElPTl9TRUxMEAISDwoLQUNUSU9OX0hPTEQQAxITCg9BQ1RJT05fSU5DUkVBU0UQBBIRCg1BQ1RJT05fUkVEVUNFEAUSEwoPQUNUSU9OX05PX1RSQURFEAYqYwoJRGlyZWN0aW9uEhkKFURJUkVDVElPTl9VTlNQRUNJRklFRBAAEhIKDkRJUkVDVElPTl9MT05HEAESEwoPRElSRUNUSU9OX1NIT1JUEAISEgoORElSRUNUSU9OX0ZMQVQQAyppCg5JbnN0cnVtZW50VHlwZRIfChtJTlNUUlVNRU5UX1RZUEVfVU5TUEVDSUZJRUQQABIaChZJTlNUUlVNRU5UX1RZUEVfRVFVSVRZEAESGgoWSU5TVFJVTUVOVF9UWVBFX09QVElPThACKlQKCk9wdGlvblR5cGUSGwoXT1BUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIUChBPUFRJT05fVFlQRV9DQUxMEAESEwoPT1BUSU9OX1RZUEVfUFVUEAIqVAoIU2l6ZVVuaXQSGQoVU0laRV9VTklUX1VOU1BFQ0lGSUVEEAASFAoQU0laRV9VTklUX1NIQVJFUxABEhcKE1NJWkVfVU5JVF9DT05UUkFDVFMQAipUCglPcmRlclR5cGUSGgoWT1JERVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEE9SREVSX1RZUEVfTElNSVQQARIVChFPUkRFUl9UWVBFX01BUktFVBACKrYBCgtUaW1lSW5Gb3JjZRIdChlUSU1FX0lOX0ZPUkNFX1VOU1BFQ0lGSUVEEAASFQoRVElNRV9JTl9GT1JDRV9EQVkQARIVChFUSU1FX0lOX0ZPUkNFX0dUQxACEhUKEVRJTUVfSU5fRk9SQ0VfSU9DEAMSFQoRVElNRV9JTl9GT1JDRV9GT0sQBBIVChFUSU1FX0lOX0ZPUkNFX09QRxAFEhUKEVRJTUVfSU5fRk9SQ0VfQ0xTEAYqgQEKEFJpc2tEZW5vbWluYXRpb24SIQodUklTS19ERU5PTUlOQVRJT05fVU5TUEVDSUZJRUQQABImCiJSSVNLX0RFTk9NSU5BVElPTl9VTkRFUkxZSU5HX1BSSUNFEAESIgoeUklTS19ERU5PTUlOQVRJT05fT1BUSU9OX1BSSUNFEAIq1gEKDlN0cmF0ZWd5RmFtaWx5Eh8KG1NUUkFURUdZX0ZBTUlMWV9VTlNQRUNJRklFRBAAEhkKFVNUUkFURUdZX0ZBTUlMWV9UUkVORBABEiIKHlNUUkFURUdZX0ZBTUlMWV9NRUFOX1JFVkVSU0lPThACEiAKHFNUUkFURUdZX0ZBTUlMWV9FVkVOVF9EUklWRU4QAxIeChpTVFJBVEVHWV9GQU1JTFlfVk9MQVRJTElUWRAEEiIKHlNUUkFURUdZX0ZBTUlMWV9SRUxBVElWRV9WQUxVRRAFKrABCgZSZWdpbWUSFgoSUkVHSU1FX1VOU1BFQ0lGSUVEEAASFQoRUkVHSU1FX0JVTExfVFJFTkQQARIVChFSRUdJTUVfQkVBUl9UUkVORBACEhYKElJFR0lNRV9SQU5HRV9CT1VORBADEhoKFlJFR0lNRV9ISUdIX1ZPTEFUSUxJVFkQBBIZChVSRUdJTUVfTE9XX1ZPTEFUSUxJVFkQBRIRCg1SRUdJTUVfQ1JJU0lTEAYqnAEKDE1hcmtldFN0YXR1cxIdChlNQVJLRVRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYTUFSS0VUX1NUQVRVU19QUkVfTUFSS0VUEAESFgoSTUFSS0VUX1NUQVRVU19PUEVOEAISHQoZTUFSS0VUX1NUQVRVU19BRlRFUl9IT1VSUxADEhgKFE1BUktFVF9TVEFUVVNfQ0xPU0VEEARClAEKDGNvbS5jcmVhbS52MUILQ29tbW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM"
+  );
 
 /**
  * Option contract details
@@ -56,7 +59,8 @@ export type OptionContract = Message<"cream.v1.OptionContract"> & {
  * Describes the message cream.v1.OptionContract.
  * Use `create(OptionContractSchema)` to create a new message.
  */
-export const OptionContractSchema: GenMessage<OptionContract> = /*@__PURE__*/
+export const OptionContractSchema: GenMessage<OptionContract> =
+  /*@__PURE__*/
   messageDesc(file_cream_v1_common, 0);
 
 /**
@@ -91,7 +95,8 @@ export type Instrument = Message<"cream.v1.Instrument"> & {
  * Describes the message cream.v1.Instrument.
  * Use `create(InstrumentSchema)` to create a new message.
  */
-export const InstrumentSchema: GenMessage<Instrument> = /*@__PURE__*/
+export const InstrumentSchema: GenMessage<Instrument> =
+  /*@__PURE__*/
   messageDesc(file_cream_v1_common, 1);
 
 /**
@@ -126,8 +131,7 @@ export type Size = Message<"cream.v1.Size"> & {
  * Describes the message cream.v1.Size.
  * Use `create(SizeSchema)` to create a new message.
  */
-export const SizeSchema: GenMessage<Size> = /*@__PURE__*/
-  messageDesc(file_cream_v1_common, 2);
+export const SizeSchema: GenMessage<Size> = /*@__PURE__*/ messageDesc(file_cream_v1_common, 2);
 
 /**
  * Risk levels - mandatory for all decisions
@@ -161,7 +165,8 @@ export type RiskLevels = Message<"cream.v1.RiskLevels"> & {
  * Describes the message cream.v1.RiskLevels.
  * Use `create(RiskLevelsSchema)` to create a new message.
  */
-export const RiskLevelsSchema: GenMessage<RiskLevels> = /*@__PURE__*/
+export const RiskLevelsSchema: GenMessage<RiskLevels> =
+  /*@__PURE__*/
   messageDesc(file_cream_v1_common, 3);
 
 /**
@@ -194,7 +199,8 @@ export enum Environment {
 /**
  * Describes the enum cream.v1.Environment.
  */
-export const EnvironmentSchema: GenEnum<Environment> = /*@__PURE__*/
+export const EnvironmentSchema: GenEnum<Environment> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 0);
 
 /**
@@ -254,8 +260,7 @@ export enum Action {
 /**
  * Describes the enum cream.v1.Action.
  */
-export const ActionSchema: GenEnum<Action> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 1);
+export const ActionSchema: GenEnum<Action> = /*@__PURE__*/ enumDesc(file_cream_v1_common, 1);
 
 /**
  * Direction derived from action and position
@@ -287,8 +292,7 @@ export enum Direction {
 /**
  * Describes the enum cream.v1.Direction.
  */
-export const DirectionSchema: GenEnum<Direction> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 2);
+export const DirectionSchema: GenEnum<Direction> = /*@__PURE__*/ enumDesc(file_cream_v1_common, 2);
 
 /**
  * Instrument type
@@ -315,7 +319,8 @@ export enum InstrumentType {
 /**
  * Describes the enum cream.v1.InstrumentType.
  */
-export const InstrumentTypeSchema: GenEnum<InstrumentType> = /*@__PURE__*/
+export const InstrumentTypeSchema: GenEnum<InstrumentType> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 3);
 
 /**
@@ -343,7 +348,8 @@ export enum OptionType {
 /**
  * Describes the enum cream.v1.OptionType.
  */
-export const OptionTypeSchema: GenEnum<OptionType> = /*@__PURE__*/
+export const OptionTypeSchema: GenEnum<OptionType> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 4);
 
 /**
@@ -371,8 +377,7 @@ export enum SizeUnit {
 /**
  * Describes the enum cream.v1.SizeUnit.
  */
-export const SizeUnitSchema: GenEnum<SizeUnit> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 5);
+export const SizeUnitSchema: GenEnum<SizeUnit> = /*@__PURE__*/ enumDesc(file_cream_v1_common, 5);
 
 /**
  * Order type
@@ -399,8 +404,7 @@ export enum OrderType {
 /**
  * Describes the enum cream.v1.OrderType.
  */
-export const OrderTypeSchema: GenEnum<OrderType> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 6);
+export const OrderTypeSchema: GenEnum<OrderType> = /*@__PURE__*/ enumDesc(file_cream_v1_common, 6);
 
 /**
  * Time in force for orders
@@ -457,7 +461,8 @@ export enum TimeInForce {
 /**
  * Describes the enum cream.v1.TimeInForce.
  */
-export const TimeInForceSchema: GenEnum<TimeInForce> = /*@__PURE__*/
+export const TimeInForceSchema: GenEnum<TimeInForce> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 7);
 
 /**
@@ -485,7 +490,8 @@ export enum RiskDenomination {
 /**
  * Describes the enum cream.v1.RiskDenomination.
  */
-export const RiskDenominationSchema: GenEnum<RiskDenomination> = /*@__PURE__*/
+export const RiskDenominationSchema: GenEnum<RiskDenomination> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 8);
 
 /**
@@ -528,7 +534,8 @@ export enum StrategyFamily {
 /**
  * Describes the enum cream.v1.StrategyFamily.
  */
-export const StrategyFamilySchema: GenEnum<StrategyFamily> = /*@__PURE__*/
+export const StrategyFamilySchema: GenEnum<StrategyFamily> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 9);
 
 /**
@@ -576,8 +583,7 @@ export enum Regime {
 /**
  * Describes the enum cream.v1.Regime.
  */
-export const RegimeSchema: GenEnum<Regime> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 10);
+export const RegimeSchema: GenEnum<Regime> = /*@__PURE__*/ enumDesc(file_cream_v1_common, 10);
 
 /**
  * Market hours status
@@ -614,6 +620,6 @@ export enum MarketStatus {
 /**
  * Describes the enum cream.v1.MarketStatus.
  */
-export const MarketStatusSchema: GenEnum<MarketStatus> = /*@__PURE__*/
+export const MarketStatusSchema: GenEnum<MarketStatus> =
+  /*@__PURE__*/
   enumDesc(file_cream_v1_common, 11);
-

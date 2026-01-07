@@ -594,7 +594,7 @@ class TestCalibrationDataValidation:
         )
 
         # Should detect drift if current ECE is much higher
-        drift_issues = [i for i in issues if "drift" in i.error_type.lower()]
+        _drift_issues = [i for i in issues if "drift" in i.error_type.lower()]
         # May or may not have drift depending on random data
 
 

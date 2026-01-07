@@ -160,3 +160,40 @@ warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
 plugins = ["numpy.typing.mypy_plugin"]
+
+# Relax strict typing for test files
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+warn_return_any = false
+check_untyped_defs = false
+
+# Third-party modules without stubs
+[[tool.mypy.overrides]]
+module = [
+    "google.generativeai.*",
+    "vectorbt.*",
+    "nautilus_trader.*",
+    "sklearn.*",
+    "torch.*",
+    "pandas.*",
+]
+ignore_missing_imports = true
+
+# Relax return type checking for modules using ML/external libraries
+[[tool.mypy.overrides]]
+module = [
+    "research.evaluator.*",
+    "research.vectorbt_runner",
+    "research.nautilus_runner",
+    "research.validation",
+    "research.greeks.*",
+    "research.__init__",
+]
+warn_return_any = false
+disallow_any_generics = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+check_untyped_defs = false

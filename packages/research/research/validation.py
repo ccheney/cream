@@ -44,6 +44,7 @@ from research.errors import (
     InvalidDateRangeError,
     LookAheadBiasError,
     ParameterOverfittingWarning,
+    ResearchError,
     SlippageConfigError,
     SurvivorshipBiasError,
     TimezoneError,
@@ -242,7 +243,7 @@ class DataValidator:
         prices: pd.DataFrame,
         symbols: Sequence[str],
         start_date: date,
-        end_date: date,
+        _end_date: date,
     ) -> list[ValidationIssue]:
         """Check for survivorship bias in the data."""
         issues: list[ValidationIssue] = []
@@ -1012,7 +1013,7 @@ class DataValidator:
 
         issue = critical[0]  # Raise first critical issue
 
-        error_map: dict[str, type[Exception]] = {
+        error_map: dict[str, type[ResearchError]] = {
             "SurvivorshipBias": SurvivorshipBiasError,
             "LookAheadBias": LookAheadBiasError,
             "CorporateActionError": CorporateActionError,
