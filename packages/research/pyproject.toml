@@ -32,6 +32,7 @@ dependencies = [
     # Machine Learning
     "torch>=2.0",  # PyTorch for evaluator model training
     "scikit-learn>=1.5",  # Calibration (Platt scaling, isotonic regression)
+    "skfolio>=0.9",  # CPCV and portfolio optimization
 
     # LLM Integration
     "google-generativeai>=0.8",  # Google Gemini API for LLM-as-judge
@@ -178,6 +179,7 @@ module = [
     "vectorbt.*",
     "nautilus_trader.*",
     "sklearn.*",
+    "skfolio.*",
     "torch.*",
     "pandas.*",
     "scipy.*",

@@ -25,6 +25,7 @@ import {
   calculateLimits,
   DEFAULT_EXPOSURE_LIMITS,
   getCorrelationMatrix,
+  getVaRMetrics,
   type PositionForExposure,
 } from "../services/risk/index.js";
 
@@ -256,8 +257,33 @@ const varRoute = createRoute({
   tags: ["Risk"],
 });
 
-app.openapi(varRoute, () => {
-  requireRiskService();
+app.openapi(varRoute, async (c) => {
+  // Get positions from database
+  const positionsRepo = await getPositionsRepo();
+  const snapshotsRepo = await getPortfolioSnapshotsRepo();
+  const env = process.env.CREAM_ENV ?? "PAPER";
+  const positions = await positionsRepo.findOpen(env);
+
+  // Get NAV from latest snapshot (or calculate from positions)
+  const latestSnapshot = await snapshotsRepo.getLatest(env);
+  const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+
+  // Convert positions for VaR calculation
+  const positionsForVaR: PositionForExposure[] = positions.map((p) => ({
+    symbol: p.symbol,
+    side: p.side as "LONG" | "SHORT",
+    quantity: p.quantity,
+    marketValue: p.marketValue ?? 0,
+  }));
+
+  // Calculate VaR metrics
+  const varMetrics = await getVaRMetrics({
+    positions: positionsForVaR,
+    nav,
+    lookbackDays: 252, // 1 year of data
+  });
+
+  return c.json(varMetrics, 200);
 });
 
 // GET /limits - Limit utilization
