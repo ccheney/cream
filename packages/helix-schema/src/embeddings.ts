@@ -349,6 +349,8 @@ export const EMBEDDABLE_FIELDS: Record<string, string[]> = {
   FilingChunk: ["chunk_text"],
   TranscriptChunk: ["chunk_text"],
   NewsItem: ["headline", "body_text"],
+  Indicator: ["embedding_text"],
+  ThesisMemory: ["entry_thesis"],
 };
 
 /**
