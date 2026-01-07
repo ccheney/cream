@@ -1,0 +1,144 @@
+# Research Pipeline Recording Rules - Cream Trading System
+# ========================================================
+# Precomputes research pipeline metrics for Factor Zoo health,
+# Mega-Alpha performance, and research cost tracking.
+#
+# Reference: docs/plans/20-research-to-production-pipeline.md
+
+groups:
+  - name: research_recording_rules
+    interval: 60s
+    rules:
+      # ============================================
+      # Factor Zoo Health Metrics
+      # ============================================
+
+      # Total factors in the zoo
+      - record: factor_zoo:factors:total
+        expr: |
+          sum(factor_zoo_factor_count) or vector(0)
+
+      # Active factors count (status="active")
+      - record: factor_zoo:factors:active_count
+        expr: |
+          sum(factor_zoo_factor_count{status="active"}) or vector(0)
+
+      # Decaying factors count (showing IC decay)
+      - record: factor_zoo:factors:decaying_count
+        expr: |
+          sum(factor_zoo_decay_alerts_total{alert_type="IC_DECAY"}) or vector(0)
+
+      # Average IC across active factors (5-day rolling)
+      - record: factor_zoo:factors:average_ic:5d
+        expr: |
+          avg(factor_zoo_factor_ic{status="active"}) or vector(0)
+
+      # Average weight across active factors
+      - record: factor_zoo:factors:average_weight
+        expr: |
+          avg(factor_zoo_factor_weight{status="active"}) or vector(0)
+
+      # Factor diversity (number of unique factors with weight > 1%)
+      - record: factor_zoo:factors:diversity
+        expr: |
+          count(factor_zoo_factor_weight > 0.01) or vector(0)
+
+      # ============================================
+      # Mega-Alpha Performance Metrics
+      # ============================================
+
+      # Current Mega-Alpha signal value
+      - record: mega_alpha:signal:current
+        expr: |
+          mega_alpha_signal_value or vector(0)
+
+      # Daily Mega-Alpha IC (Information Coefficient)
+      - record: mega_alpha:ic:daily
+        expr: |
+          mega_alpha_daily_ic or vector(0)
+
+      # Rolling 5-day Mega-Alpha IC average
+      - record: mega_alpha:ic:rolling_5d
+        expr: |
+          avg_over_time(mega_alpha_daily_ic[5d]) or vector(0)
+
+      # Rolling Mega-Alpha Sharpe ratio (annualized)
+      - record: mega_alpha:sharpe:rolling_30d
+        expr: |
+          mega_alpha_rolling_sharpe or vector(0)
+
+      # Mega-Alpha signal strength (absolute value)
+      - record: mega_alpha:signal:strength
+        expr: |
+          abs(mega_alpha_signal_value) or vector(0)
+
+      # ============================================
+      # Research Pipeline Metrics
+      # ============================================
+
+      # Pipeline duration by phase (seconds)
+      - record: research_pipeline:duration:by_phase
+        expr: |
+          sum by (phase) (rate(research_pipeline_duration_seconds_sum[1h])) /
+          sum by (phase) (rate(research_pipeline_duration_seconds_count[1h]))
+
+      # Pipeline success rate (5m window)
+      - record: research_pipeline:success_rate:5m
+        expr: |
+          sum(rate(research_pipeline_completed_total{status="success"}[5m])) /
+          sum(rate(research_pipeline_completed_total[5m]))
+
+      # Pipeline failure count (1h window)
+      - record: research_pipeline:failures:1h
+        expr: |
+          sum(increase(research_pipeline_completed_total{status="failure"}[1h]))
+
+      # Hypothesis pass rate (7-day window)
+      - record: research_pipeline:hypothesis_pass_rate:7d
+        expr: |
+          sum(increase(research_hypotheses_total{outcome="passed"}[7d])) /
+          sum(increase(research_hypotheses_total[7d]))
+
+      # ============================================
+      # Cost Tracking Metrics
+      # ============================================
+
+      # LLM tokens used (1h window)
+      - record: research:cost:llm_tokens:1h
+        expr: |
+          sum(increase(research_llm_tokens_total[1h]))
+
+      # LLM tokens used (24h window)
+      - record: research:cost:llm_tokens:24h
+        expr: |
+          sum(increase(research_llm_tokens_total[24h]))
+
+      # Estimated monthly LLM cost (USD)
+      # Assumes $0.00001 per token average
+      - record: research:cost:llm_estimated_monthly_usd
+        expr: |
+          sum(increase(research_llm_tokens_total[24h])) * 30 * 0.00001
+
+      # Compute hours used (1h window)
+      - record: research:cost:compute_hours:1h
+        expr: |
+          sum(increase(research_compute_seconds_total[1h])) / 3600
+
+      # ============================================
+      # Decay Alert Aggregations
+      # ============================================
+
+      # Total decay alerts (1h window)
+      - record: factor_zoo:alerts:total:1h
+        expr: |
+          sum(increase(factor_zoo_decay_alerts_total[1h]))
+
+      # Critical decay alerts count
+      - record: factor_zoo:alerts:critical
+        expr: |
+          sum(factor_zoo_decay_alerts_total{severity="CRITICAL"}) or vector(0)
+
+      # Crowding alerts (high market correlation)
+      - record: factor_zoo:alerts:crowding
+        expr: |
+          sum(factor_zoo_decay_alerts_total{alert_type="CROWDING"}) or vector(0)

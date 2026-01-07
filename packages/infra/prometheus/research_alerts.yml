@@ -1,0 +1,252 @@
+# Research Pipeline Alert Rules - Cream Trading System
+# ====================================================
+# Alerts for Research Pipeline health, Factor Zoo performance,
+# and Mega-Alpha monitoring.
+#
+# Reference: docs/plans/20-research-to-production-pipeline.md
+
+groups:
+  # ============================================
+  # Research Pipeline Health Alerts
+  # ============================================
+  - name: research_pipeline_alerts
+    rules:
+      # Pipeline stuck in a phase for too long
+      - alert: ResearchPipelineStuck
+        expr: |
+          research_pipeline_phase_duration_seconds > 7200
+        for: 5m
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Research pipeline stuck in phase {{ $labels.phase }}"
+          description: |
+            Research pipeline has been in {{ $labels.phase }} for {{ $value | humanizeDuration }}.
+            Expected maximum: 2 hours
+            Check for LLM timeouts, data fetch failures, or backtest hangs.
+          runbook_url: "https://docs.cream.dev/runbooks/pipeline-stuck"
+
+      # Pipeline failed recently
+      - alert: ResearchPipelineFailed
+        expr: |
+          sum(increase(research_pipeline_completed_total{status="failure"}[1h])) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: research
+        annotations:
+          summary: "Research pipeline failed in the last hour"
+          description: |
+            {{ $value }} pipeline failure(s) detected in the last hour.
+            Check logs for error details and root cause.
+          runbook_url: "https://docs.cream.dev/runbooks/pipeline-failure"
+
+      # Low hypothesis pass rate
+      - alert: LowHypothesisPassRate
+        expr: |
+          research_pipeline:hypothesis_pass_rate:7d < 0.15
+        for: 1h
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Hypothesis pass rate below 15% over 7 days"
+          description: |
+            Only {{ $value | humanizePercentage }} of hypotheses are passing validation.
+            This may indicate:
+            - Idea generation producing low-quality hypotheses
+            - Validation thresholds too strict
+            - Market regime making alpha discovery harder
+          runbook_url: "https://docs.cream.dev/runbooks/low-pass-rate"
+
+  # ============================================
+  # Factor Zoo Health Alerts
+  # ============================================
+  - name: factor_zoo_alerts
+    rules:
+      # Factor showing significant IC decay
+      - alert: FactorDecayDetected
+        expr: |
+          factor_zoo_factor_ic_decay_rate > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Factor {{ $labels.factor_id }} showing IC decay"
+          description: |
+            Factor {{ $labels.factor_id }} ({{ $labels.factor_name }}) is decaying.
+            IC decay rate: {{ $value | printf "%.4f" }} per day
+            Current IC: {{ printf "factor_zoo_factor_ic{factor_id=\"%s\"}" $labels.factor_id | query | first | value | printf "%.4f" }}
+            Consider reducing weight or triggering replacement research.
+          runbook_url: "https://docs.cream.dev/runbooks/factor-decay"
+
+      # Factor Zoo underpopulated
+      - alert: FactorZooUnderpopulated
+        expr: |
+          factor_zoo:factors:active_count < 3
+        for: 30m
+        labels:
+          severity: critical
+          team: research
+        annotations:
+          summary: "Factor Zoo has fewer than 3 active factors"
+          description: |
+            Only {{ $value }} active factors in the zoo.
+            Minimum recommended: 3 factors for diversification.
+            This indicates:
+            - Multiple factors have decayed
+            - Research pipeline not producing new factors
+            - Factor validation thresholds too strict
+          runbook_url: "https://docs.cream.dev/runbooks/underpopulated-zoo"
+
+      # High number of decaying factors
+      - alert: HighFactorDecayRate
+        expr: |
+          factor_zoo:factors:decaying_count / factor_zoo:factors:active_count > 0.5
+        for: 1h
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "More than 50% of factors are decaying"
+          description: |
+            {{ $value | humanizePercentage }} of active factors are showing decay signals.
+            Decaying: {{ printf "factor_zoo:factors:decaying_count" | query | first | value }}
+            Active: {{ printf "factor_zoo:factors:active_count" | query | first | value }}
+            This may indicate broad alpha decay or market regime shift.
+          runbook_url: "https://docs.cream.dev/runbooks/high-decay-rate"
+
+      # Critical decay alert triggered
+      - alert: CriticalFactorDecayAlert
+        expr: |
+          increase(factor_zoo_decay_alerts_total{severity="CRITICAL"}[1h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: research
+        annotations:
+          summary: "Critical factor decay alert triggered"
+          description: |
+            Critical decay alert for factor {{ $labels.factor_id }}.
+            Alert type: {{ $labels.alert_type }}
+            This requires immediate attention - factor reliability severely compromised.
+          runbook_url: "https://docs.cream.dev/runbooks/critical-decay"
+
+      # Factor crowding detected
+      - alert: FactorCrowdingDetected
+        expr: |
+          increase(factor_zoo_decay_alerts_total{alert_type="CROWDING"}[1h]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Factor crowding detected (high market correlation)"
+          description: |
+            Factor {{ $labels.factor_id }} is highly correlated with market (SPY).
+            Correlation: {{ $labels.current_value }}
+            This indicates the factor's alpha may be eroded due to crowding.
+            See: https://arxiv.org/html/2512.11913
+          runbook_url: "https://docs.cream.dev/runbooks/factor-crowding"
+
+  # ============================================
+  # Mega-Alpha Performance Alerts
+  # ============================================
+  - name: mega_alpha_alerts
+    rules:
+      # Mega-Alpha daily IC underperforming
+      - alert: MegaAlphaUnderperforming
+        expr: |
+          mega_alpha:ic:rolling_5d < 0.01
+        for: 1d
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Mega-Alpha rolling IC below 0.01 threshold"
+          description: |
+            Mega-Alpha rolling 5-day IC: {{ $value | printf "%.4f" }}
+            Target: >= 0.01
+            The combined factor signal is not generating sufficient alpha.
+            Consider reviewing factor weights or triggering research.
+          runbook_url: "https://docs.cream.dev/runbooks/mega-alpha-underperforming"
+
+      # Mega-Alpha negative Sharpe
+      - alert: MegaAlphaNegativeSharpe
+        expr: |
+          mega_alpha:sharpe:rolling_30d < 0
+        for: 7d
+        labels:
+          severity: critical
+          team: research
+        annotations:
+          summary: "Mega-Alpha has negative Sharpe ratio for 7+ days"
+          description: |
+            Mega-Alpha 30-day rolling Sharpe: {{ $value | printf "%.2f" }}
+            A negative Sharpe for extended period indicates:
+            - Factor signals are producing losses
+            - Market regime has shifted significantly
+            - Consider reducing exposure to factor-based signals
+          runbook_url: "https://docs.cream.dev/runbooks/negative-sharpe"
+
+      # Mega-Alpha signal extreme
+      - alert: MegaAlphaExtremeSignal
+        expr: |
+          abs(mega_alpha:signal:current) > 0.8
+        for: 5m
+        labels:
+          severity: info
+          team: research
+        annotations:
+          summary: "Mega-Alpha signal at extreme level"
+          description: |
+            Mega-Alpha signal: {{ $value | printf "%.3f" }}
+            Extreme signals may indicate:
+            - Strong factor consensus (potentially valid)
+            - Data quality issues
+            - Verify signal before acting on extreme readings
+          runbook_url: "https://docs.cream.dev/runbooks/extreme-signal"
+
+  # ============================================
+  # Research Cost Alerts
+  # ============================================
+  - name: research_cost_alerts
+    rules:
+      # Monthly research budget exceeded
+      - alert: ResearchBudgetExceeded
+        expr: |
+          research:cost:llm_estimated_monthly_usd > 500
+        for: 1h
+        labels:
+          severity: warning
+          team: research
+        annotations:
+          summary: "Estimated monthly research LLM cost exceeds $500"
+          description: |
+            Estimated monthly LLM cost: ${{ $value | printf "%.2f" }}
+            Budget: $500
+            Consider:
+            - Reducing research frequency
+            - Using smaller models for initial screening
+            - Caching LLM responses
+          runbook_url: "https://docs.cream.dev/runbooks/budget-exceeded"
+
+      # High token usage spike
+      - alert: HighTokenUsageSpike
+        expr: |
+          research:cost:llm_tokens:1h > (research:cost:llm_tokens:24h / 24) * 3
+        for: 30m
+        labels:
+          severity: info
+          team: research
+        annotations:
+          summary: "LLM token usage 3x higher than daily average"
+          description: |
+            Hourly tokens: {{ $value | humanize }}
+            This may indicate:
+            - Unusually large research batch
+            - Retry loops due to errors
+            - Inefficient prompt usage
+          runbook_url: "https://docs.cream.dev/runbooks/token-spike"

@@ -900,3 +900,82 @@ describe("validateResultUrl", () => {
     expect(validateResultUrl("")).toBe(false);
   });
 });
+
+// ============================================
+// Rate Limit Alerting Tests
+// ============================================
+
+import { rateLimitAlerter } from "./webSearch.js";
+
+describe("rateLimitAlerter", () => {
+  beforeEach(() => {
+    rateLimiter.reset();
+    rateLimitAlerter.reset();
+  });
+
+  test("returns no alerts when under thresholds", () => {
+    // Only use a few requests (under 80% of 60 per minute)
+    for (let i = 0; i < 10; i++) {
+      rateLimiter.record("tavily");
+    }
+    const alerts = rateLimitAlerter.check("tavily");
+    expect(alerts).toHaveLength(0);
+  });
+
+  test("returns warning alert at 80% minute usage", () => {
+    // Use 80% of 60 = 48 requests
+    for (let i = 0; i < 48; i++) {
+      rateLimiter.record("tavily");
+    }
+    const alerts = rateLimitAlerter.check("tavily");
+    expect(alerts.length).toBeGreaterThanOrEqual(1);
+    const minuteAlert = alerts.find((a) => a.type === "minute_limit");
+    expect(minuteAlert?.severity).toBe("warning");
+  });
+
+  test("returns critical alert at 95% minute usage", () => {
+    // Use 95% of 60 = 57 requests
+    for (let i = 0; i < 57; i++) {
+      rateLimiter.record("tavily");
+    }
+    const alerts = rateLimitAlerter.check("tavily");
+    expect(alerts.length).toBeGreaterThanOrEqual(1);
+    const minuteAlert = alerts.find((a) => a.type === "minute_limit");
+    expect(minuteAlert?.severity).toBe("critical");
+  });
+
+  test("cooldown prevents repeated alerts", () => {
+    // Use enough to trigger warning
+    for (let i = 0; i < 50; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    const alerts1 = rateLimitAlerter.check("tavily");
+    expect(alerts1.length).toBeGreaterThanOrEqual(1);
+
+    // Second check should be filtered by cooldown
+    const alerts2 = rateLimitAlerter.check("tavily");
+    expect(alerts2).toHaveLength(0);
+  });
+
+  test("alert message includes useful info", () => {
+    for (let i = 0; i < 50; i++) {
+      rateLimiter.record("tavily");
+    }
+    const alerts = rateLimitAlerter.check("tavily");
+    const alert = alerts[0];
+
+    expect(alert?.provider).toBe("tavily");
+    expect(alert?.message).toContain("tavily");
+    expect(alert?.message).toContain("minute");
+    expect(alert?.percentUsed).toBeGreaterThanOrEqual(0.8);
+    expect(alert?.current).toBeGreaterThan(0);
+    expect(alert?.limit).toBe(60);
+  });
+
+  test("returns empty array for unknown provider", () => {
+    // @ts-expect-error - testing invalid provider
+    const alerts = rateLimitAlerter.check("unknown");
+    expect(alerts).toHaveLength(0);
+  });
+});

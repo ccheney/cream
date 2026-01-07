@@ -252,6 +252,159 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter();
 
 // ============================================
+// Rate Limit Alerting
+// ============================================
+
+/**
+ * Alert thresholds as percentage of limit used
+ */
+const ALERT_THRESHOLDS = {
+  tavily: {
+    minuteWarning: 0.8, // 80% of per-minute limit
+    minuteCritical: 0.95, // 95% of per-minute limit
+    dayWarning: 0.7, // 70% of daily limit
+    dayCritical: 0.9, // 90% of daily limit
+  },
+} as const;
+
+/**
+ * Alert severity levels
+ */
+export type AlertSeverity = "warning" | "critical";
+
+/**
+ * Alert types
+ */
+export type RateLimitAlertType = "minute_limit" | "day_limit";
+
+/**
+ * Rate limit alert structure
+ */
+export interface RateLimitAlert {
+  timestamp: string;
+  provider: string;
+  severity: AlertSeverity;
+  type: RateLimitAlertType;
+  current: number;
+  limit: number;
+  percentUsed: number;
+  message: string;
+}
+
+/**
+ * Rate limit alerter with cooldown to prevent alert spam
+ */
+class RateLimitAlerter {
+  private lastAlerts = new Map<string, number>();
+  private readonly alertCooldownMs = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Check current usage and return any alerts that should be raised
+   */
+  check(provider: keyof typeof RATE_LIMITS): RateLimitAlert[] {
+    const thresholds = ALERT_THRESHOLDS[provider];
+    const limits = RATE_LIMITS[provider];
+    if (!thresholds || !limits) {
+      return [];
+    }
+
+    const remaining = rateLimiter.getRemainingQuota(provider);
+    const alerts: RateLimitAlert[] = [];
+
+    // Calculate usage percentages
+    const minuteUsed = 1 - remaining.minute / limits.perMinute;
+    const dayUsed = 1 - remaining.day / limits.perDay;
+
+    // Check minute limit
+    if (minuteUsed >= thresholds.minuteCritical) {
+      alerts.push(
+        this.createAlert(provider, "minute_limit", "critical", minuteUsed, limits.perMinute)
+      );
+    } else if (minuteUsed >= thresholds.minuteWarning) {
+      alerts.push(
+        this.createAlert(provider, "minute_limit", "warning", minuteUsed, limits.perMinute)
+      );
+    }
+
+    // Check day limit
+    if (dayUsed >= thresholds.dayCritical) {
+      alerts.push(this.createAlert(provider, "day_limit", "critical", dayUsed, limits.perDay));
+    } else if (dayUsed >= thresholds.dayWarning) {
+      alerts.push(this.createAlert(provider, "day_limit", "warning", dayUsed, limits.perDay));
+    }
+
+    return this.filterCooldown(alerts);
+  }
+
+  /**
+   * Create an alert object
+   */
+  private createAlert(
+    provider: string,
+    type: RateLimitAlertType,
+    severity: AlertSeverity,
+    percentUsed: number,
+    limit: number
+  ): RateLimitAlert {
+    const current = Math.round(percentUsed * limit);
+    const limitType = type === "minute_limit" ? "minute" : "daily";
+    return {
+      timestamp: new Date().toISOString(),
+      provider,
+      severity,
+      type,
+      current,
+      limit,
+      percentUsed,
+      message: `${provider} ${limitType} rate limit ${severity}: ${Math.round(percentUsed * 100)}% used (${current}/${limit})`,
+    };
+  }
+
+  /**
+   * Filter alerts that are still within cooldown period
+   */
+  private filterCooldown(alerts: RateLimitAlert[]): RateLimitAlert[] {
+    const now = Date.now();
+    return alerts.filter((alert) => {
+      const key = `${alert.provider}:${alert.type}:${alert.severity}`;
+      const lastAlertTime = this.lastAlerts.get(key);
+
+      if (lastAlertTime && now - lastAlertTime < this.alertCooldownMs) {
+        return false; // Still in cooldown
+      }
+
+      // Record this alert
+      this.lastAlerts.set(key, now);
+      return true;
+    });
+  }
+
+  /**
+   * Reset alerter state (for testing)
+   */
+  reset(): void {
+    this.lastAlerts.clear();
+  }
+}
+
+export const rateLimitAlerter = new RateLimitAlerter();
+
+/**
+ * Check for rate limit alerts and log them
+ * Call this after each webSearch request
+ */
+export function checkAndLogRateLimitAlerts(provider: keyof typeof RATE_LIMITS = "tavily"): void {
+  const alerts = rateLimitAlerter.check(provider);
+  for (const alert of alerts) {
+    if (alert.severity === "critical") {
+      console.error("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
+    } else {
+      console.warn("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
+    }
+  }
+}
+
+// ============================================
 // Security Configuration
 // ============================================
 
@@ -657,6 +810,9 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
 
     // 11. Record successful API call for rate limiting
     rateLimiter.record("tavily");
+
+    // 11b. Check for rate limit alerts after recording
+    checkAndLogRateLimitAlerts("tavily");
 
     // 12. Client-side time filtering with security sanitization
     const filteredResults = normalizeResults(result.data.results, cutoffTime, queryHash);

@@ -39,6 +39,12 @@ export * from "./types.js";
 export * from "./services/index.js";
 
 // ============================================
+// Observability
+// ============================================
+
+export * from "./observability/index.js";
+
+// ============================================
 // Evaluation Framework Exports
 // ============================================
 
