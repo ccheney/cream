@@ -75,9 +75,11 @@ async function initializeDb(): Promise<TursoClient> {
 
   // Run migrations on first connection
   const result = await runMigrations(client, {
+    // biome-ignore lint/suspicious/noConsole: Migration logging is intentional
     logger: (msg) => console.log(`[API DB Migration] ${msg}`),
   });
   if (result.applied.length > 0) {
+    // biome-ignore lint/suspicious/noConsole: Startup logging is intentional
     console.log(`[API DB] Applied ${result.applied.length} migration(s)`);
   }
 

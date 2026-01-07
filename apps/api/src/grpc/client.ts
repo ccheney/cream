@@ -100,6 +100,7 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string):
       }
 
       const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
+      // biome-ignore lint/suspicious/noConsole: Retry logging is intentional for debugging
       console.warn(
         `[ExecutionEngine] ${operationName} failed (attempt ${attempt + 1}/${MAX_RETRIES}), ` +
           `retrying in ${delay}ms: ${lastError.message}`
@@ -312,6 +313,7 @@ export function getExecutionEngineClient(): ExecutionEngineClient {
   if (!globalClient) {
     const address = Bun.env.EXECUTION_ENGINE_ADDRESS ?? DEFAULT_ADDRESS;
     globalClient = createExecutionEngineClient(address);
+    // biome-ignore lint/suspicious/noConsole: Startup logging is intentional
     console.log(`[ExecutionEngine] Connected to ${address}`);
   }
   return globalClient;
@@ -324,6 +326,7 @@ export function closeExecutionEngineClient(): void {
   if (globalClient) {
     globalClient.close();
     globalClient = null;
+    // biome-ignore lint/suspicious/noConsole: Shutdown logging is intentional
     console.log("[ExecutionEngine] Client closed");
   }
 }
