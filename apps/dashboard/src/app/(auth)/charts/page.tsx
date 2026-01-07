@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries";
 
 export default function ChartsPage() {
@@ -40,41 +41,29 @@ export default function ChartsPage() {
             <option value="4h">4H</option>
             <option value="1d">1D</option>
           </select>
-          {regime && (
-            <span
-              className={`px-2 py-1 text-xs font-medium rounded ${
-                regime.label.includes("BULL")
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : regime.label.includes("BEAR")
-                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                    : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-              }`}
-            >
-              {regime.label.replace("_", " ")}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Quote Header */}
+      {/* Enhanced Quote Header */}
       {!quoteLoading && quote && (
-        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-2xl font-bold text-cream-900 dark:text-cream-100">
-                {symbol}
-              </span>
-              <span className="ml-4 text-3xl font-semibold text-cream-900 dark:text-cream-100">
-                {formatPrice(quote.last)}
-              </span>
-            </div>
-            <div className="text-right text-sm text-cream-500 dark:text-cream-400">
-              <div>Bid: {formatPrice(quote.bid)}</div>
-              <div>Ask: {formatPrice(quote.ask)}</div>
-              <div>Vol: {quote.volume.toLocaleString()}</div>
-            </div>
-          </div>
-        </div>
+        <EnhancedQuoteHeader
+          symbol={symbol}
+          quote={{
+            bid: quote.bid,
+            ask: quote.ask,
+            bidSize: quote.bidSize,
+            askSize: quote.askSize,
+            last: quote.last,
+            previousClose: quote.prevClose,
+            volume: quote.volume,
+            // high, low, avgVolume derived from candles if available
+            high:
+              candles && candles.length > 0 ? Math.max(...candles.map((c) => c.high)) : undefined,
+            low: candles && candles.length > 0 ? Math.min(...candles.map((c) => c.low)) : undefined,
+          }}
+          regime={regime?.label}
+          showDepth={true}
+        />
       )}
 
       {/* Main Chart */}

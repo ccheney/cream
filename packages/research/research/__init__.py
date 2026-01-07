@@ -43,6 +43,15 @@ __all__ = [
     "CommissionConfig",
     "BacktestResult",
     "quick_backtest",
+    # Research factors (requires polars)
+    "ResearchFactor",
+    "FactorMetadata",
+    "RegularizationMetrics",
+    # Originality checking
+    "check_originality",
+    "check_originality_batch",
+    "subtree_similarity",
+    "compute_factor_hash",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -217,5 +226,40 @@ def __getattr__(name: str) -> Any:
         from research import validation
 
         return getattr(validation, name)
+
+    # Research factors (strategies)
+    if name in ("ResearchFactor", "FactorMetadata", "RegularizationMetrics"):
+        from research.strategies.base import (
+            FactorMetadata,
+            RegularizationMetrics,
+            ResearchFactor,
+        )
+
+        return {
+            "ResearchFactor": ResearchFactor,
+            "FactorMetadata": FactorMetadata,
+            "RegularizationMetrics": RegularizationMetrics,
+        }[name]
+
+    # Originality checking
+    if name in (
+        "check_originality",
+        "check_originality_batch",
+        "subtree_similarity",
+        "compute_factor_hash",
+    ):
+        from research.originality import (
+            check_originality,
+            check_originality_batch,
+            compute_factor_hash,
+            subtree_similarity,
+        )
+
+        return {
+            "check_originality": check_originality,
+            "check_originality_batch": check_originality_batch,
+            "subtree_similarity": subtree_similarity,
+            "compute_factor_hash": compute_factor_hash,
+        }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
