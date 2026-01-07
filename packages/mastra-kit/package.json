@@ -40,5 +40,8 @@
     "@cream/tsconfig": "workspace:*",
     "@types/bun": "latest",
     "@typescript/native-preview": "7.0.0-dev.20260106.1"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.0"
   }
 }

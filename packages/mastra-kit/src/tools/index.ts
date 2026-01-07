@@ -47,6 +47,7 @@ import {
   type CheckIndicatorTriggerInput,
   type CheckIndicatorTriggerOutput,
 } from "./checkIndicatorTrigger.js";
+import { implementIndicator } from "./claudeCodeIndicator.js";
 import { type WebSearchParams, type WebSearchResponse, webSearch } from "./webSearch.js";
 
 // ============================================
@@ -1155,6 +1156,7 @@ export const TOOL_REGISTRY = {
   helix_query: helixQuery,
   web_search: webSearch,
   check_indicator_trigger: checkIndicatorTrigger,
+  implement_indicator: implementIndicator,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;
@@ -1194,3 +1196,15 @@ export {
   type CheckIndicatorTriggerInput,
   type CheckIndicatorTriggerOutput,
 } from "./checkIndicatorTrigger.js";
+
+// Claude Code indicator implementation tool
+export {
+  buildImplementationPrompt,
+  claudeCodeIndicator,
+  type ClaudeCodeConfig,
+  implementIndicator,
+  type ImplementIndicatorInput,
+  ImplementIndicatorInputSchema,
+  type ImplementIndicatorOutput,
+  ImplementIndicatorOutputSchema,
+} from "./claudeCodeIndicator.js";
