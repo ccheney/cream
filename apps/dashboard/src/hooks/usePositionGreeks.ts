@@ -200,6 +200,8 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
 
   // Track previous prices for flash
   const previousPricesRef = useRef<Record<string, number>>({});
+  // Track previous underlying prices to avoid infinite loop
+  const prevUnderlyingPricesRef = useRef<string>("");
 
   // Initialize contract prices from positions
   useEffect(() => {
@@ -211,8 +213,13 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
     setContractPrices(initial);
   }, [positions]);
 
-  // Update underlying prices when they change
+  // Update underlying prices when they change (with deep comparison to avoid infinite loop)
   useEffect(() => {
+    const serialized = JSON.stringify(underlyingPrices);
+    if (serialized === prevUnderlyingPricesRef.current) {
+      return;
+    }
+    prevUnderlyingPricesRef.current = serialized;
     setLivePrices((prev) => ({ ...prev, ...underlyingPrices }));
   }, [underlyingPrices]);
 

@@ -57,7 +57,7 @@ const defaultFormatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toF
  */
 export const PositionRow = memo(function PositionRow({
   position,
-  formatCurrency = defaultFormatCurrency,
+  formatCurrency: _formatCurrency = defaultFormatCurrency,
   formatPct = defaultFormatPct,
 }: PositionRowProps) {
   const { flash } = usePriceFlash(position.livePrice, position.previousPrice);
@@ -80,6 +80,7 @@ export const PositionRow = memo(function PositionRow({
             {position.symbol}
           </Link>
           {position.isStreaming && (
+            // biome-ignore lint/a11y/useSemanticElements: role="status" for live region accessibility
             <span
               className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
               title="Live streaming"
