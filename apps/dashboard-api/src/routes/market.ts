@@ -414,12 +414,12 @@ app.openapi(indicatorsRoute, async (c) => {
   const to = new Date();
   const from = new Date();
   // Use appropriate date range based on timeframe
-  // Daily: 250+ days for SMA200
-  // Intraday: 30 days (SMA200 won't be available but shorter SMAs will work)
+  // Daily: 300+ days for SMA200
+  // Intraday: 60 days to ensure enough bars after market hours filtering
   if (tf.timespan === "day") {
     from.setDate(from.getDate() - 300); // 300 days for daily to get SMA200
   } else {
-    from.setDate(from.getDate() - 30); // 30 days for intraday timeframes
+    from.setDate(from.getDate() - 60); // 60 days for intraday timeframes
   }
 
   try {
@@ -429,7 +429,7 @@ app.openapi(indicatorsRoute, async (c) => {
       tf.timespan,
       from.toISOString().slice(0, 10),
       to.toISOString().slice(0, 10),
-      { limit: 250 }
+      { limit: 50000 } // High limit to avoid pagination for intraday data
     );
 
     if (!response.results || response.results.length === 0) {

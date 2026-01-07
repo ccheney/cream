@@ -23,7 +23,17 @@ export {
   normalizeCode,
   parseToSignature,
 } from "./astSimilarity.js";
-
+// Security Scanning
+export {
+  getCriticalIssues,
+  isCodeSafe,
+  type SecurityIssue,
+  SecurityIssueSchema,
+  type SecurityScanResult,
+  SecurityScanResultSchema,
+  scanIndicatorCode,
+  validateIndicatorFile,
+} from "./securityScan.js";
 // Trigger Detection
 export {
   calculateICDecayDays,

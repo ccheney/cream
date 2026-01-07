@@ -19,7 +19,9 @@
     "format": "biome format --write src/",
     "clean": "rm -rf dist coverage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "typescript": "5.9.3"
+  },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
     "@types/bun": "latest",
