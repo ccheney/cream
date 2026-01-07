@@ -1461,14 +1461,43 @@ describe("batchSearch", () => {
     expect(result2.metadata.cachedCount).toBe(2);
   });
 
-  test("isolates errors - one failure doesn't fail batch", async () => {
-    let callCount = 0;
+  test("handles API errors gracefully without failing batch", async () => {
+    // Mock that always fails
     globalThis.fetch = createMockFetch(() => {
-      callCount++;
-      // Fail on second call with network error that webSearch will catch
-      if (callCount === 2) {
-        return Promise.reject(new Error("Network error"));
+      return Promise.reject(new Error("Network error"));
+    });
+    resetTavilyClient();
+    clearWebSearchCache();
+
+    // Even with all API calls failing, the batch should complete
+    const result = await batchSearch({
+      queryTemplate: "{SYMBOL} news",
+      symbols: ["NVDA", "AAPL"],
+    });
+
+    // All symbols should be searched
+    expect(result.metadata.symbolsSearched).toBe(2);
+
+    // All symbols should have entries (empty arrays due to errors)
+    expect(result.results.NVDA).toBeDefined();
+    expect(result.results.AAPL).toBeDefined();
+
+    // No results because all failed
+    expect(result.metadata.totalResults).toBe(0);
+  });
+
+  test("returns results for successful searches even when some fail", async () => {
+    const currentTime = new Date();
+
+    globalThis.fetch = createMockFetch((_url, options) => {
+      const body = options?.body ? JSON.parse(options.body as string) : {};
+      const query = body.query || "";
+
+      // Fail if query contains AAPL
+      if (query.includes("AAPL") || query.includes("$AAPL")) {
+        return Promise.reject(new Error("Network error for AAPL"));
       }
+
       return Promise.resolve(
         new Response(
           JSON.stringify({
@@ -1479,7 +1508,7 @@ describe("batchSearch", () => {
                 url: "https://example.com",
                 content: "Test",
                 score: 0.9,
-                published_date: now.toISOString(),
+                published_date: currentTime.toISOString(),
               },
             ],
             response_time: 1.0,
@@ -1489,22 +1518,22 @@ describe("batchSearch", () => {
       );
     });
     resetTavilyClient();
+    clearWebSearchCache();
 
     const result = await batchSearch({
       queryTemplate: "{SYMBOL} news",
       symbols: ["NVDA", "AAPL", "MSFT"],
     });
 
-    // All three symbols should be searched
+    // All symbols searched
     expect(result.metadata.symbolsSearched).toBe(3);
 
-    // All symbols should have entries (webSearch returns empty array on error, not throw)
-    expect(result.results.NVDA).toBeDefined();
-    expect(result.results.AAPL).toBeDefined();
-    expect(result.results.MSFT).toBeDefined();
+    // NVDA and MSFT should have results, AAPL should be empty
+    expect(result.results.NVDA?.length).toBe(1);
+    expect(result.results.AAPL?.length).toBe(0); // Failed
+    expect(result.results.MSFT?.length).toBe(1);
 
-    // Two should succeed with 1 result each, one should have empty results
-    // webSearch handles errors internally and returns empty results
+    // Total should be 2 (NVDA + MSFT)
     expect(result.metadata.totalResults).toBe(2);
   });
 
