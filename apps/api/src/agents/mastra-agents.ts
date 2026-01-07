@@ -388,6 +388,35 @@ export interface AgentContext {
       reasoning?: string;
     }
   >;
+  /** Factor Zoo context - active factors and their current weights */
+  factorZoo?: {
+    /** Current Mega-Alpha signal value (normalized -1 to 1) */
+    megaAlpha: number;
+    /** Active factors with their weights and recent performance */
+    activeFactors: Array<{
+      factorId: string;
+      name: string;
+      weight: number;
+      recentIC: number;
+      isDecaying: boolean;
+    }>;
+    /** Decay alerts for factors showing degradation */
+    decayAlerts: Array<{
+      factorId: string;
+      alertType: string;
+      severity: string;
+      currentValue: number;
+      threshold: number;
+      recommendation: string;
+    }>;
+    /** Factor Zoo summary stats */
+    stats: {
+      totalFactors: number;
+      activeCount: number;
+      decayingCount: number;
+      averageIC: number;
+    };
+  };
 }
 
 /**
@@ -414,6 +443,53 @@ function buildRegimeContext(regimeLabels?: AgentContext["regimeLabels"]): string
   return `\nMarket Regime Classifications:
 ${lines.join("\n")}
 `;
+}
+
+/**
+ * Build Factor Zoo context section for prompts.
+ * Includes Mega-Alpha signal, active factors with weights, and decay alerts.
+ */
+function buildFactorZooContext(factorZoo?: AgentContext["factorZoo"]): string {
+  if (!factorZoo) {
+    return "";
+  }
+
+  const megaAlphaSignal = factorZoo.megaAlpha >= 0 ? "BULLISH" : "BEARISH";
+  const megaAlphaStrength = Math.abs(factorZoo.megaAlpha);
+
+  // Build factor lines with weight and decay status
+  const factorLines = factorZoo.activeFactors
+    .filter((f) => f.weight > 0.01) // Only show factors with meaningful weight
+    .sort((a, b) => b.weight - a.weight) // Sort by weight descending
+    .slice(0, 10) // Top 10 factors
+    .map((f) => {
+      const decayFlag = f.isDecaying ? " ⚠️ DECAYING" : "";
+      return `  - ${f.name}: ${(f.weight * 100).toFixed(1)}% weight, IC=${f.recentIC.toFixed(3)}${decayFlag}`;
+    });
+
+  // Build alert lines
+  const alertLines = factorZoo.decayAlerts
+    .filter((a) => a.severity === "CRITICAL")
+    .slice(0, 5)
+    .map((a) => `  - ${a.factorId}: ${a.alertType} (${a.recommendation})`);
+
+  let output = `
+Factor Zoo Quantitative Signals:
+- Mega-Alpha: ${factorZoo.megaAlpha.toFixed(3)} (${megaAlphaSignal}, strength: ${(megaAlphaStrength * 100).toFixed(0)}%)
+- Active Factors: ${factorZoo.stats.activeCount}/${factorZoo.stats.totalFactors} (avg IC: ${factorZoo.stats.averageIC.toFixed(3)})
+- Decaying Factors: ${factorZoo.stats.decayingCount}
+
+Top Weighted Factors:
+${factorLines.join("\n")}`;
+
+  if (alertLines.length > 0) {
+    output += `
+
+Critical Decay Alerts:
+${alertLines.join("\n")}`;
+  }
+
+  return output;
 }
 
 /**
@@ -633,6 +709,7 @@ export async function runDebateParallel(
 
 /**
  * Run Trader agent to synthesize DecisionPlan.
+ * Incorporates Factor Zoo signals (Mega-Alpha) when available.
  */
 export async function runTrader(
   context: AgentContext,
@@ -642,6 +719,8 @@ export async function runTrader(
   },
   portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
+  const factorZooContext = buildFactorZooContext(context.factorZoo);
+
   const prompt = `Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
@@ -649,12 +728,22 @@ ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
 Bearish Research:
 ${JSON.stringify(debateOutputs.bearish, null, 2)}
-
+${factorZooContext}
 Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
-Timestamp: ${new Date().toISOString()}`;
+Timestamp: ${new Date().toISOString()}
+
+${
+  context.factorZoo
+    ? `IMPORTANT: Factor Zoo signals provide quantitative evidence. The Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents the weighted combination of ${context.factorZoo.stats.activeCount} active factors.
+- Use Mega-Alpha direction to inform overall market stance
+- Weight position sizing by signal strength
+- Be cautious of factors showing decay (IC degradation)
+- Critical alerts indicate factors losing predictive power`
+    : ""
+}`;
 
   const response = await traderAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {
@@ -668,12 +757,22 @@ Timestamp: ${new Date().toISOString()}`;
 
 /**
  * Run Risk Manager agent to validate plan.
+ * Considers Factor Zoo decay alerts as risk factors.
  */
 export async function runRiskManager(
   plan: DecisionPlan,
   portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>
+  constraints?: Record<string, unknown>,
+  factorZooContext?: AgentContext["factorZoo"]
 ): Promise<RiskManagerOutput> {
+  const decayRiskSection = factorZooContext?.decayAlerts.length
+    ? `
+Factor Zoo Risk Alerts:
+${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
+
+NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
+    : "";
+
   const prompt = `Validate this trading plan against risk constraints:
 
 Decision Plan:
@@ -683,7 +782,7 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Risk Constraints:
-${JSON.stringify(constraints ?? {}, null, 2)}`;
+${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
 
   const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {
@@ -742,6 +841,7 @@ Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
 /**
  * Run both approval agents in parallel.
+ * Passes Factor Zoo context to Risk Manager for decay-aware validation.
  */
 export async function runApprovalParallel(
   plan: DecisionPlan,
@@ -755,13 +855,14 @@ export async function runApprovalParallel(
     bearish: BearishResearchOutput[];
   },
   portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>
+  constraints?: Record<string, unknown>,
+  factorZooContext?: AgentContext["factorZoo"]
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
 }> {
   const [riskManager, critic] = await Promise.all([
-    runRiskManager(plan, portfolioState, constraints),
+    runRiskManager(plan, portfolioState, constraints, factorZooContext),
     runCritic(plan, analystOutputs, debateOutputs),
   ]);
 
