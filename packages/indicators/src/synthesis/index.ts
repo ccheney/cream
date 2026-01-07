@@ -41,6 +41,26 @@ export {
   ReturnStatisticsSchema,
   sharpeStandardError,
 } from "./dsr.js";
+// Probability of Backtest Overfitting (PBO)
+export {
+  type CSCVCombinationResult,
+  CSCVCombinationResultSchema,
+  combinations,
+  computePBO,
+  computeSharpe,
+  evaluatePBO,
+  generateSyntheticReturns,
+  generateSyntheticSignals,
+  isPBOAcceptable,
+  minimumBacktestLength,
+  nCr,
+  PBO_DEFAULTS,
+  type PBOInput,
+  PBOInputSchema,
+  type PBOResult,
+  PBOResultSchema,
+  rankStrategiesByPBO,
+} from "./pbo.js";
 // Security Scanning
 export {
   getCriticalIssues,

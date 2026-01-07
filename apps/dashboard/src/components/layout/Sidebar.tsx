@@ -18,14 +18,17 @@ import {
   FlaskConical,
   Gauge,
   LineChart,
+  Moon,
   Rss,
   Settings,
   ShieldAlert,
+  Sun,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { useTheme } from "@/hooks/useTheme";
 
 // ============================================
 // Types
@@ -116,8 +119,14 @@ export const Sidebar = memo(function Sidebar({
   className = "",
 }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const { setTheme, resolvedTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
 
   const width = collapsed && !isHovered ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  const showLabel = !collapsed || isHovered;
 
   return (
     <aside
@@ -137,6 +146,26 @@ export const Sidebar = memo(function Sidebar({
           <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
         ))}
       </nav>
+
+      {/* Theme Toggle */}
+      <div className="px-2 mb-2">
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+          title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <Moon className="w-5 h-5 flex-shrink-0" />
+          )}
+          {showLabel && (
+            <span className="truncate">
+              {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* User info */}
       {userEmail && (
