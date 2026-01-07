@@ -6,4 +6,5 @@
 
 export * from "./correlation.js";
 export * from "./exposure.js";
+export * from "./limits.js";
 export * from "./types.js";

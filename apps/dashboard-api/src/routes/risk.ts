@@ -19,8 +19,14 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getPositionsRepo } from "../db.js";
-import { getCorrelationMatrix } from "../services/risk/correlation.js";
+import { getPortfolioSnapshotsRepo, getPositionsRepo } from "../db.js";
+import {
+  calculateExposure,
+  calculateLimits,
+  DEFAULT_EXPOSURE_LIMITS,
+  getCorrelationMatrix,
+  type PositionForExposure,
+} from "../services/risk/index.js";
 
 // ============================================
 // App Setup
@@ -275,8 +281,55 @@ const limitsRoute = createRoute({
   tags: ["Risk"],
 });
 
-app.openapi(limitsRoute, () => {
-  requireRiskService();
+app.openapi(limitsRoute, async (c) => {
+  // Get positions from database
+  const positionsRepo = await getPositionsRepo();
+  const snapshotsRepo = await getPortfolioSnapshotsRepo();
+  const env = process.env.CREAM_ENV ?? "PAPER";
+  const positions = await positionsRepo.findOpen(env);
+
+  // Get NAV from latest snapshot (or calculate from positions)
+  const latestSnapshot = await snapshotsRepo.getLatest(env);
+  const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+
+  // Convert positions for exposure calculation
+  const positionsForExposure: PositionForExposure[] = positions.map((p) => ({
+    symbol: p.symbol,
+    side: p.side as "LONG" | "SHORT",
+    quantity: p.quantity,
+    marketValue: p.marketValue ?? 0,
+  }));
+
+  // Calculate exposure metrics
+  const exposure = calculateExposure({
+    positions: positionsForExposure,
+    nav,
+    limits: DEFAULT_EXPOSURE_LIMITS,
+  });
+
+  // Calculate limit statuses
+  // Note: Greeks would come from options positions - not yet integrated
+  const limits = calculateLimits({
+    exposure,
+    positions: positionsForExposure,
+    nav,
+    constraints: {
+      per_instrument: {
+        max_units: 1000,
+        max_notional: 50000,
+        max_pct_equity: 0.1,
+      },
+      portfolio: {
+        max_gross_notional: 500000,
+        max_net_notional: 250000,
+        max_gross_pct_equity: 2.0,
+        max_net_pct_equity: 1.0,
+      },
+      // Options limits omitted - no Greeks data yet
+    },
+  });
+
+  return c.json(limits, 200);
 });
 
 // ============================================
