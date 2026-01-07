@@ -161,15 +161,22 @@ const DEFAULT_HEARTBEAT: HeartbeatConfig = {
 // ============================================
 
 /**
- * Calculate reconnection delay with exponential backoff and jitter.
- * Jitter prevents reconnection storms when many clients reconnect simultaneously.
+ * Calculate reconnection delay with exponential backoff.
+ * When jitter is enabled (default in production), adds randomness to prevent
+ * reconnection storms when many clients reconnect simultaneously.
  */
-export function calculateBackoffDelay(attempt: number, config: ReconnectionConfig): number {
+export function calculateBackoffDelay(
+  attempt: number,
+  config: ReconnectionConfig,
+  enableJitter = false
+): number {
   const baseDelay = config.initialDelay * config.backoffMultiplier ** attempt;
-  // Add jitter: 50% to 100% of the calculated delay
-  const jitter = 0.5 + Math.random() * 0.5;
-  const delay = baseDelay * jitter;
-  return Math.min(delay, config.maxDelay);
+  if (enableJitter) {
+    // Add jitter: 50% to 100% of the calculated delay
+    const jitter = 0.5 + Math.random() * 0.5;
+    return Math.min(baseDelay * jitter, config.maxDelay);
+  }
+  return Math.min(baseDelay, config.maxDelay);
 }
 
 /**
@@ -381,7 +388,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       // Attempt reconnection
       if (shouldReconnectRef.current && reconnectAttempts < reconnectionConfig.maxAttempts) {
         setConnectionState("reconnecting");
-        const delay = calculateBackoffDelay(reconnectAttempts, reconnectionConfig);
+        const delay = calculateBackoffDelay(reconnectAttempts, reconnectionConfig, true);
         const delaySeconds = Math.ceil(delay / 1000);
         setReconnectAttempts((prev) => prev + 1);
 
