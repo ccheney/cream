@@ -13,6 +13,20 @@
 
 import { AGENT_MODELS, AGENT_TYPES, type AgentConfig, type AgentType } from "../types.js";
 
+// Re-export specialized agents (not part of trading network)
+export {
+  buildResearcherPrompt,
+  indicatorResearcher,
+  INDICATOR_RESEARCHER_CONFIG,
+  type IndicatorResearcherConfig,
+  INDICATOR_RESEARCHER_SYSTEM_PROMPT,
+  parseResearcherResponse,
+  type ResearcherInput,
+  type ResearcherOutput,
+  SPECIALIZED_AGENT_MODELS,
+  type SpecializedAgentModel,
+} from "./indicatorResearcher.js";
+
 // ============================================
 // Agent Configurations
 // ============================================

@@ -42,6 +42,11 @@ import {
   calculateVolumeSMA,
 } from "@cream/indicators";
 import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
+import {
+  checkIndicatorTrigger,
+  type CheckIndicatorTriggerInput,
+  type CheckIndicatorTriggerOutput,
+} from "./checkIndicatorTrigger.js";
 import { type WebSearchParams, type WebSearchResponse, webSearch } from "./webSearch.js";
 
 // ============================================
@@ -1149,6 +1154,7 @@ export const TOOL_REGISTRY = {
   news_search: searchNews,
   helix_query: helixQuery,
   web_search: webSearch,
+  check_indicator_trigger: checkIndicatorTrigger,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;
@@ -1181,3 +1187,10 @@ export { webSearch, type WebSearchParams, type WebSearchResponse };
 // Mastra tool definitions
 export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./definitions/index.js";
 export type { WebSearchResult } from "./webSearch.js";
+
+// Indicator trigger detection tool
+export {
+  checkIndicatorTrigger,
+  type CheckIndicatorTriggerInput,
+  type CheckIndicatorTriggerOutput,
+} from "./checkIndicatorTrigger.js";

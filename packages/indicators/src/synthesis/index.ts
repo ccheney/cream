@@ -41,6 +41,34 @@ export {
   ReturnStatisticsSchema,
   sharpeStandardError,
 } from "./dsr.js";
+// Forward Returns Calculator
+export {
+  calculateForwardReturns,
+  calculateForwardReturnsDetailed,
+  type ForwardReturn,
+  type ForwardReturnsConfig,
+  type PriceProvider,
+  validatePriceCoverage,
+} from "./forwardReturns.js";
+// Indicator Hypothesis Schema
+export {
+  type ExpectedProperties,
+  ExpectedPropertiesSchema,
+  HYPOTHESIS_CATEGORIES,
+  HYPOTHESIS_STATUSES,
+  HYPOTHESIS_TIMEFRAMES,
+  type HypothesisCategory,
+  type HypothesisRecord,
+  HypothesisRecordSchema,
+  type HypothesisStatus,
+  type HypothesisTimeframe,
+  type IndicatorHypothesis,
+  IndicatorHypothesisSchema,
+  isValidCategory,
+  isValidHypothesisName,
+  safeValidateHypothesis,
+  validateHypothesis,
+} from "./hypothesis.js";
 // Information Coefficient (IC)
 export {
   analyzeIC,
@@ -138,6 +166,15 @@ export {
   scanIndicatorCode,
   validateIndicatorFile,
 } from "./securityScan.js";
+// Signal Recording (Paper Trading)
+export {
+  addTradingDays,
+  type PaperSignal as RecordedPaperSignal,
+  type PendingOutcome,
+  SignalRecorder,
+  type SignalRecorderConfig,
+  subtractTradingDays,
+} from "./signalRecorder.js";
 // Trigger Detection
 export {
   calculateICDecayDays,
