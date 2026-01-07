@@ -184,6 +184,7 @@ export function EmptyState({
       {(action || secondaryAction) && (
         <div style={baseStyles.actions}>
           {action && (
+            // biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
             <button
               type="button"
               onClick={action.onClick}
@@ -217,6 +218,7 @@ export function EmptyState({
             </button>
           )}
           {secondaryAction && (
+            // biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
             <button
               type="button"
               onClick={secondaryAction.onClick}

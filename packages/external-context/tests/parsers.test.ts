@@ -181,7 +181,7 @@ describe("Transcript Parser", () => {
   });
 
   it("should truncate very long content", () => {
-    const longContent = "John Smith -- CEO: " + "A".repeat(60000);
+    const longContent = `John Smith -- CEO: ${"A".repeat(60000)}`;
     const transcript: FMPTranscript = {
       symbol: "AAPL",
       quarter: 1,

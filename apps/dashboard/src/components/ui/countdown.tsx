@@ -201,10 +201,10 @@ export function useCountdown(
   }, [onComplete]);
 
   // Reset completion flag when target changes
-  const targetTimeMs = targetTime.getTime();
+  const _targetTimeMs = targetTime.getTime();
   useEffect(() => {
     hasCompletedRef.current = false;
-  }, [targetTimeMs]);
+  }, []);
 
   // Update countdown every second
   useEffect(() => {

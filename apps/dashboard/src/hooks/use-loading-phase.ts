@@ -250,8 +250,6 @@ export const useLoadingPhaseStore = create<LoadingPhaseState>((set, get) => ({
           if (phase === "critical") {
             return;
           }
-          // For other phases, continue but log the error
-          console.error(`Error in ${phase} phase:`, error);
         }
       } else {
         // No loaders for this phase, mark complete

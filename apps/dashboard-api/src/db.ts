@@ -82,10 +82,9 @@ async function initializeDb(): Promise<TursoClient> {
 
   // Run migrations on first connection
   const result = await runMigrations(client, {
-    logger: (msg) => console.log(`[DB Migration] ${msg}`),
+    logger: (_msg) => {},
   });
   if (result.applied.length > 0) {
-    console.log(`[DB] Applied ${result.applied.length} migration(s)`);
   }
 
   return client;

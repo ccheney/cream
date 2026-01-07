@@ -183,6 +183,7 @@ export function Skeleton({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       <div
         role="presentation"
@@ -223,6 +224,7 @@ export function SkeletonText({
       role="presentation"
       aria-hidden="true"
     >
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       {lineArray.map((index) => (
         <Skeleton
@@ -283,6 +285,7 @@ export function SkeletonCard({
       style={{ ...cardStyles, width: toCssValue(width), ...style }}
       {...props}
     >
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
 
       {/* Header with avatar */}
@@ -376,6 +379,7 @@ export function SkeletonTableRow({
         borderBottom: "1px solid #e7e5e4",
       }}
     >
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       {Array.from({ length: columns }, (_, i) => (
         <Skeleton key={i} width={`${100 / columns}%`} height={16} testId={`${testId}-cell-${i}`} />
@@ -409,6 +413,7 @@ export function SkeletonChart({
         borderRadius: "8px",
       }}
     >
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -440,6 +445,7 @@ export function SkeletonStat({ testId = "skeleton-stat" }: { testId?: string }) 
         borderRadius: "8px",
       }}
     >
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       <Skeleton width={100} height={14} testId={`${testId}-label`} />
       <Skeleton width={80} height={28} testId={`${testId}-value`} />

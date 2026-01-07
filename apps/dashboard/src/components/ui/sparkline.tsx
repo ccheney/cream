@@ -79,7 +79,7 @@ function generatePathData(
     .join(" ");
 
   // Build fill path (closed polygon for gradient fill)
-  const fillPath = `${linePath} L ${points[points.length - 1]!.x.toFixed(2)} ${height - padding} L ${padding} ${height - padding} Z`;
+  const fillPath = `${linePath} L ${points[points.length - 1]?.x.toFixed(2)} ${height - padding} L ${padding} ${height - padding} Z`;
 
   return { linePath, fillPath };
 }

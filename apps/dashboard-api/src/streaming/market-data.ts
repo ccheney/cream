@@ -65,7 +65,6 @@ export async function initMarketDataStreaming(): Promise<void> {
   // Check if POLYGON_KEY is available
   const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
   if (!apiKey) {
-    console.warn("[streaming] POLYGON_KEY not set, market data streaming disabled");
     return;
   }
 
@@ -79,10 +78,7 @@ export async function initMarketDataStreaming(): Promise<void> {
     await massiveClient.connect();
     isInitialized = true;
     reconnectAttempts = 0;
-
-    console.log("[streaming] Market data streaming initialized");
-  } catch (error) {
-    console.error("[streaming] Failed to initialize market data streaming:", error);
+  } catch (_error) {
     // Don't throw - allow server to start without streaming
   }
 }
@@ -98,7 +94,6 @@ export function shutdownMarketDataStreaming(): void {
   isInitialized = false;
   activeSymbols.clear();
   quoteCache.clear();
-  console.log("[streaming] Market data streaming shutdown");
 }
 
 // ============================================
@@ -111,11 +106,9 @@ export function shutdownMarketDataStreaming(): void {
 function handleMassiveEvent(event: MassiveEvent): void {
   switch (event.type) {
     case "connected":
-      console.log("[streaming] Connected to Massive WebSocket");
       break;
 
     case "authenticated":
-      console.log("[streaming] Authenticated with Massive");
       // Resubscribe to active symbols after reconnection
       if (activeSymbols.size > 0) {
         // Subscribe to both aggregates (AM) and trades (T)
@@ -125,7 +118,6 @@ function handleMassiveEvent(event: MassiveEvent): void {
       break;
 
     case "subscribed":
-      console.log("[streaming] Subscribed:", event.params);
       break;
 
     case "aggregate":
@@ -141,18 +133,14 @@ function handleMassiveEvent(event: MassiveEvent): void {
       break;
 
     case "disconnected":
-      console.warn("[streaming] Disconnected from Massive:", event.reason);
       break;
 
     case "reconnecting":
-      console.log(`[streaming] Reconnecting to Massive (attempt ${event.attempt})`);
       reconnectAttempts = event.attempt;
       break;
 
     case "error":
-      console.error("[streaming] Massive error:", event.error.message);
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error("[streaming] Max reconnection attempts reached, streaming disabled");
         isInitialized = false;
       }
       break;
@@ -282,7 +270,6 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
   if (massiveClient?.isConnected()) {
     // Subscribe to both aggregates (AM) and trades (T)
     await massiveClient.subscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
-    console.log(`[streaming] Subscribed to ${upperSymbol}`);
   }
 }
 
@@ -304,7 +291,6 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
     // Subscribe to both aggregates (AM) and trades (T) for each symbol
     const subscriptions = newSymbols.flatMap((s) => [`AM.${s}`, `T.${s}`]);
     await massiveClient.subscribe(subscriptions);
-    console.log(`[streaming] Subscribed to ${newSymbols.length} symbols`);
   }
 }
 
@@ -325,7 +311,6 @@ export async function unsubscribeSymbol(symbol: string): Promise<void> {
   if (massiveClient?.isConnected()) {
     // Unsubscribe from both aggregates (AM) and trades (T)
     await massiveClient.unsubscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
-    console.log(`[streaming] Unsubscribed from ${upperSymbol}`);
   }
 }
 

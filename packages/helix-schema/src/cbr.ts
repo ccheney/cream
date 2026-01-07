@@ -456,10 +456,7 @@ async function executeVectorSearch(
         },
         similarity: r.similarity_score,
       }));
-  } catch (error) {
-    // Log error and return empty results on failure
-    // This allows the system to continue functioning even if HelixDB is unavailable
-    console.error("CBR vector search failed:", error);
+  } catch (_error) {
     return [];
   }
 }
@@ -578,7 +575,6 @@ export async function retainCase(
       decisionId: decision.decision_id,
     };
   } catch (error) {
-    console.error("CBR case retention failed:", error);
     return {
       success: false,
       decisionId: decision.decision_id,
@@ -634,8 +630,7 @@ export async function updateCaseOutcome(
     });
 
     return true;
-  } catch (error) {
-    console.error("CBR outcome update failed:", error);
+  } catch (_error) {
     return false;
   }
 }

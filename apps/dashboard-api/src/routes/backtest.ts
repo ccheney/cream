@@ -227,7 +227,6 @@ app.openapi(listRoute, async (c) => {
     const summaries = backtests.map(mapBacktestToSummary);
     return c.json(summaries, 200);
   } catch (error) {
-    console.error("[backtest] List error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to list backtests",
     });
@@ -288,7 +287,6 @@ app.openapi(createBacktestRoute, async (c) => {
 
     return c.json(mapBacktestToSummary(backtest), 201);
   } catch (error) {
-    console.error("[backtest] Create error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to create backtest",
     });
@@ -340,7 +338,6 @@ app.openapi(getRoute, async (c) => {
     if (error instanceof HTTPException) {
       throw error;
     }
-    console.error("[backtest] Get error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to get backtest",
     });
@@ -402,7 +399,6 @@ app.openapi(tradesRoute, async (c) => {
     if (error instanceof HTTPException) {
       throw error;
     }
-    console.error("[backtest] Get trades error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to get backtest trades",
     });
@@ -458,7 +454,6 @@ app.openapi(equityRoute, async (c) => {
     if (error instanceof HTTPException) {
       throw error;
     }
-    console.error("[backtest] Get equity error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to get equity curve",
     });
@@ -505,7 +500,6 @@ app.openapi(deleteRoute, async (c) => {
     if (error instanceof HTTPException) {
       throw error;
     }
-    console.error("[backtest] Delete error:", error);
     throw new HTTPException(500, {
       message: error instanceof Error ? error.message : "Failed to delete backtest",
     });

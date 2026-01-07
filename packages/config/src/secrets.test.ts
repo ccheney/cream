@@ -155,7 +155,7 @@ describe("MemorySecretsProvider", () => {
 // ============================================
 
 describe("EncryptedFileSecretsProvider", () => {
-  const testFilePath = "/tmp/test-secrets-" + Date.now() + ".enc";
+  const testFilePath = `/tmp/test-secrets-${Date.now()}.enc`;
   const testPassword = "test-encryption-password-123";
   const testSecrets = {
     API_KEY: "secret-api-key",

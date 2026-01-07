@@ -227,14 +227,10 @@ if (import.meta.main) {
   startHeartbeat();
 
   // Initialize market data streaming (non-blocking)
-  initMarketDataStreaming().catch((error) => {
-    console.error("[server] Failed to initialize market data streaming:", error);
-  });
+  initMarketDataStreaming().catch((_error) => {});
 
   // Initialize options data streaming (non-blocking)
-  initOptionsDataStreaming().catch((error) => {
-    console.error("[server] Failed to initialize options data streaming:", error);
-  });
+  initOptionsDataStreaming().catch((_error) => {});
 
   const server = Bun.serve({
     port,

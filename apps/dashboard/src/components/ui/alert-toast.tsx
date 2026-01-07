@@ -37,6 +37,7 @@ function ToastItem({ alert, onDismiss }: ToastItemProps) {
         viewBox="0 0 24 24"
         strokeWidth={2}
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -52,6 +53,7 @@ function ToastItem({ alert, onDismiss }: ToastItemProps) {
         viewBox="0 0 24 24"
         strokeWidth={2}
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -67,6 +69,7 @@ function ToastItem({ alert, onDismiss }: ToastItemProps) {
         viewBox="0 0 24 24"
         strokeWidth={2}
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -145,6 +148,7 @@ function ToastItem({ alert, onDismiss }: ToastItemProps) {
             viewBox="0 0 24 24"
             strokeWidth={2}
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -167,8 +171,7 @@ export function AlertToastContainer() {
   }
 
   return (
-    <div
-      role="region"
+    <section
       aria-label="Notifications"
       className="
         fixed bottom-4 right-4 z-40
@@ -181,7 +184,7 @@ export function AlertToastContainer() {
           <ToastItem alert={alert} onDismiss={dismissAlert} />
         </div>
       ))}
-    </div>
+    </section>
   );
 }
 

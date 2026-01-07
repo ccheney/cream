@@ -247,6 +247,7 @@ export const PriceTicker = memo(function PriceTicker({
     <span
       className="ml-1 text-gray-400"
       title={`Last updated ${stale.secondsSinceUpdate}s ago`}
+      role="status"
       aria-label={`Data is ${stale.secondsSinceUpdate} seconds old`}
     >
       <svg
@@ -321,6 +322,7 @@ export const PriceTicker = memo(function PriceTicker({
           className={`${styles.delta} ${
             isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
           }`}
+          role="status"
           aria-label={`Change: ${isPositive ? "up" : "down"} ${Math.abs(displayDelta).toFixed(2)}`}
         >
           {formatDelta(displayDelta, displayDeltaPercent)}

@@ -66,6 +66,7 @@ const slideKeyframes = `
 function DotIndicator({ isRefreshing }: { isRefreshing: boolean }) {
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
       <span
         style={{
@@ -90,6 +91,7 @@ function DotIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function BarIndicator({ isRefreshing }: { isRefreshing: boolean }) {
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: slideKeyframes }} />
       <span
         style={{
@@ -130,6 +132,7 @@ function BarIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function PulseIndicator({ isRefreshing }: { isRefreshing: boolean }) {
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
       <span
         style={{
@@ -174,6 +177,7 @@ function PulseIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function IconIndicator({ isRefreshing }: { isRefreshing: boolean }) {
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
       <svg
         width="14"
@@ -234,6 +238,7 @@ export function RefreshIndicator({
   children,
 }: RefreshIndicatorProps) {
   const indicator = (
+    // biome-ignore lint/a11y/useSemanticElements: span with role="status" is correct for live region
     <span
       role="status"
       aria-label={isRefreshing ? label : "Data up to date"}

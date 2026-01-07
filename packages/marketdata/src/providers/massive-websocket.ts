@@ -457,7 +457,7 @@ export class MassiveWebSocketClient {
   /**
    * Handle incoming WebSocket messages.
    */
-  private handleMessage(data: Buffer, connectResolve?: (value: void) => void): void {
+  private handleMessage(data: Buffer, connectResolve?: (value: undefined) => void): void {
     try {
       const text = data.toString("utf-8");
 
@@ -499,7 +499,7 @@ export class MassiveWebSocketClient {
 
             // Resolve connect promise
             if (connectResolve) {
-              connectResolve();
+              connectResolve(undefined);
             }
           } else if (status === "auth_failed") {
             const error = new Error(`Authentication failed: ${msgObj.message ?? "Unknown error"}`);

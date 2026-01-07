@@ -1274,7 +1274,7 @@ describe("batchSearch", () => {
     resetTavilyClient();
 
     // Mock fetch to return results based on query
-    globalThis.fetch = createMockFetch((url, options) => {
+    globalThis.fetch = createMockFetch((_url, options) => {
       const body = options?.body ? JSON.parse(options.body as string) : {};
       const query = body.query || "";
 
@@ -1356,7 +1356,7 @@ describe("batchSearch", () => {
 
   test("replaces all {SYMBOL} occurrences in template", async () => {
     let capturedQuery = "";
-    globalThis.fetch = createMockFetch((url, options) => {
+    globalThis.fetch = createMockFetch((_url, options) => {
       const body = options?.body ? JSON.parse(options.body as string) : {};
       capturedQuery = body.query || "";
       return Promise.resolve(
@@ -1382,7 +1382,7 @@ describe("batchSearch", () => {
 
   test("passes common params to each search", async () => {
     let capturedBody: Record<string, unknown> = {};
-    globalThis.fetch = createMockFetch((url, options) => {
+    globalThis.fetch = createMockFetch((_url, options) => {
       capturedBody = options?.body ? JSON.parse(options.body as string) : {};
       return Promise.resolve(
         new Response(

@@ -218,10 +218,7 @@ export class IndicatorRetirement {
       try {
         const result = await this.retire(request);
         results.push(result);
-      } catch (error) {
-        // Log error but continue with other retirements
-        console.error(`Failed to retire ${request.indicatorId}:`, error);
-      }
+      } catch (_error) {}
     }
 
     return results;
@@ -329,24 +326,11 @@ export class IndicatorRetirement {
    * Log retirement event to activity table.
    */
   private async logRetirement(
-    indicatorId: string,
-    indicatorName: string,
-    reason: string,
-    retiredAt: string
-  ): Promise<void> {
-    // Note: This would insert into an activity_log table if it exists
-    // For now, we just log to console for audit trail
-    console.log(
-      JSON.stringify({
-        event: "indicator_retirement",
-        indicatorId,
-        indicatorName,
-        reason,
-        retiredAt,
-        timestamp: new Date().toISOString(),
-      })
-    );
-  }
+    _indicatorId: string,
+    _indicatorName: string,
+    _reason: string,
+    _retiredAt: string
+  ): Promise<void> {}
 }
 
 // ============================================

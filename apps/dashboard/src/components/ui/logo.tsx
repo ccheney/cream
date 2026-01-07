@@ -111,7 +111,9 @@ export function Logo({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       {pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
+      {/* biome-ignore lint/a11y/noSvgWithoutTitle: SVG has aria-label for accessibility */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${viewBoxWidth} 120`}

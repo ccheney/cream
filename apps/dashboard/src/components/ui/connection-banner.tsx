@@ -280,6 +280,7 @@ export function ConnectionBanner({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
       <div role="alert" aria-live="assertive" data-testid={testId} style={bannerStyles.container}>
         {/* Warning Icon */}
@@ -294,6 +295,7 @@ export function ConnectionBanner({
         {/* Actions */}
         <div style={bannerStyles.actions}>
           {/* Reconnect Button */}
+          {/* biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior */}
           <button
             type="button"
             onClick={onReconnect}
@@ -323,6 +325,7 @@ export function ConnectionBanner({
 
           {/* Dismiss Button */}
           {onDismiss && (
+            // biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
             <button
               type="button"
               onClick={onDismiss}

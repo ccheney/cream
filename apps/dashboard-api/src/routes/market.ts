@@ -61,10 +61,8 @@ function getPolygonClient(): PolygonClient {
     const tier =
       (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "starter";
     polygonClient = new PolygonClient({ apiKey, tier });
-    console.log(`[market] Polygon client initialized (tier: ${tier})`);
     return polygonClient;
-  } catch (error) {
-    console.error("[market] Failed to initialize Polygon client:", error);
+  } catch (_error) {
     throw new HTTPException(503, {
       message: "Market data service unavailable: Failed to initialize client",
     });
@@ -180,7 +178,6 @@ app.openapi(quotesRoute, async (c) => {
       results.push(quote);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`[market] Quote error for ${symbol}:`, message);
       results.push({ symbol, error: message });
     }
   }
@@ -256,7 +253,6 @@ app.openapi(quoteRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[market] Quote error for ${upperSymbol}:`, message);
     throw new HTTPException(503, {
       message: `Failed to fetch quote for ${upperSymbol}: ${message}`,
     });
@@ -354,7 +350,6 @@ app.openapi(candlesRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[market] Candles error for ${upperSymbol}:`, message);
     throw new HTTPException(503, {
       message: `Failed to fetch candles for ${upperSymbol}: ${message}`,
     });
@@ -440,9 +435,6 @@ app.openapi(indicatorsRoute, async (c) => {
 
     // Log warning if insufficient data for some indicators
     if (response.results.length < 14) {
-      console.warn(
-        `[market] Limited data for ${upperSymbol} (${response.results.length} bars). Some indicators will be null.`
-      );
     }
 
     const closes = response.results.map((b) => b.c);
@@ -543,7 +535,6 @@ app.openapi(indicatorsRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[market] Indicators error for ${upperSymbol}:`, message);
     throw new HTTPException(503, {
       message: `Failed to calculate indicators for ${upperSymbol}: ${message}`,
     });

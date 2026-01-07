@@ -311,6 +311,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
         <style dangerouslySetInnerHTML={{ __html: buttonKeyframes }} />
         <button
           ref={ref}
@@ -330,6 +331,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
           {/* Screen reader announcement */}
           {state === "success" && (
+            // biome-ignore lint/a11y/useSemanticElements: span with role="status" is correct for live region
             <span className="sr-only" role="status" aria-live="polite">
               Action completed successfully
             </span>

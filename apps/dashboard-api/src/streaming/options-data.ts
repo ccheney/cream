@@ -89,7 +89,6 @@ export async function initOptionsDataStreaming(): Promise<void> {
   // Check if POLYGON_KEY is available
   const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
   if (!apiKey) {
-    console.warn("[options-streaming] POLYGON_KEY not set, options data streaming disabled");
     return;
   }
 
@@ -103,10 +102,7 @@ export async function initOptionsDataStreaming(): Promise<void> {
     await massiveOptionsClient.connect();
     isInitialized = true;
     reconnectAttempts = 0;
-
-    console.log("[options-streaming] Options data streaming initialized");
-  } catch (error) {
-    console.error("[options-streaming] Failed to initialize options data streaming:", error);
+  } catch (_error) {
     // Don't throw - allow server to start without streaming
   }
 }
@@ -122,7 +118,6 @@ export function shutdownOptionsDataStreaming(): void {
   isInitialized = false;
   activeContracts.clear();
   optionsCache.clear();
-  console.log("[options-streaming] Options data streaming shutdown");
 }
 
 // ============================================
@@ -135,11 +130,9 @@ export function shutdownOptionsDataStreaming(): void {
 function handleOptionsEvent(event: MassiveEvent): void {
   switch (event.type) {
     case "connected":
-      console.log("[options-streaming] Connected to Massive Options WebSocket");
       break;
 
     case "authenticated":
-      console.log("[options-streaming] Authenticated with Massive Options");
       // Resubscribe to active contracts after reconnection
       if (activeContracts.size > 0) {
         const subscriptions = Array.from(activeContracts).map((c) => `Q.${c}`);
@@ -150,7 +143,6 @@ function handleOptionsEvent(event: MassiveEvent): void {
       break;
 
     case "subscribed":
-      console.log("[options-streaming] Subscribed:", event.params);
       break;
 
     case "aggregate":
@@ -166,18 +158,14 @@ function handleOptionsEvent(event: MassiveEvent): void {
       break;
 
     case "disconnected":
-      console.warn("[options-streaming] Disconnected from Massive:", event.reason);
       break;
 
     case "reconnecting":
-      console.log(`[options-streaming] Reconnecting to Massive (attempt ${event.attempt})`);
       reconnectAttempts = event.attempt;
       break;
 
     case "error":
-      console.error("[options-streaming] Massive error:", event.error.message);
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error("[options-streaming] Max reconnection attempts reached, streaming disabled");
         isInitialized = false;
       }
       break;
@@ -308,7 +296,6 @@ export async function subscribeContract(contract: string): Promise<void> {
   if (massiveOptionsClient?.isConnected()) {
     // Subscribe to quotes and trades for this contract
     await massiveOptionsClient.subscribe([`Q.${upperContract}`, `T.${upperContract}`]);
-    console.log(`[options-streaming] Subscribed to ${upperContract}`);
   }
 }
 
@@ -330,7 +317,6 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     // Subscribe to both quotes and trades
     const subscriptions = newContracts.flatMap((c) => [`Q.${c}`, `T.${c}`]);
     await massiveOptionsClient.subscribe(subscriptions);
-    console.log(`[options-streaming] Subscribed to ${newContracts.length} contracts`);
   }
 }
 
@@ -349,7 +335,6 @@ export async function unsubscribeContract(contract: string): Promise<void> {
 
   if (massiveOptionsClient?.isConnected()) {
     await massiveOptionsClient.unsubscribe([`Q.${upperContract}`, `T.${upperContract}`]);
-    console.log(`[options-streaming] Unsubscribed from ${upperContract}`);
   }
 }
 
