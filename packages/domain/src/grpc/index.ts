@@ -66,7 +66,10 @@ export {
 } from "./execution.js";
 export {
   createMarketDataClient,
+  type GetOptionChainInput,
+  type GetSnapshotInput,
   MarketDataServiceClient,
+  type SubscribeMarketDataInput,
 } from "./marketdata.js";
 // Types
 export {
