@@ -79,6 +79,10 @@ __all__ = [
     "PaperValidationResult",
     "PaperValidationService",
     "PaperValidationWorker",
+    # Promotion (requires subprocess)
+    "PRCreator",
+    "PRCreatorConfig",
+    "PromotionPR",
     # Errors (no external dependencies)
     "ResearchError",
     "DataQualityError",
@@ -394,6 +398,24 @@ def __getattr__(name: str) -> Any:
             "PaperValidationResult": PaperValidationResult,
             "PaperValidationService": PaperValidationService,
             "PaperValidationWorker": PaperValidationWorker,
+        }[name]
+
+    # Promotion
+    if name in (
+        "PRCreator",
+        "PRCreatorConfig",
+        "PromotionPR",
+    ):
+        from research.promotion import (
+            PRCreator,
+            PRCreatorConfig,
+            PromotionPR,
+        )
+
+        return {
+            "PRCreator": PRCreator,
+            "PRCreatorConfig": PRCreatorConfig,
+            "PromotionPR": PromotionPR,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
