@@ -7,6 +7,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import { LiveDataIndicator, StreamingBadge } from "@/components/ui/RefreshIndicator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   usePauseSystem,
   usePortfolioSummary,
@@ -65,12 +66,26 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Dashboard</h1>
-          <StreamingBadge isConnected={connected} isRefreshing={statusFetching} />
+          <Tooltip>
+            <TooltipTrigger>
+              <StreamingBadge isConnected={connected} isRefreshing={statusFetching} />
+            </TooltipTrigger>
+            <TooltipContent>
+              {connected
+                ? "WebSocket connected - receiving real-time updates"
+                : "WebSocket disconnected - data may be stale"}
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-cream-600 dark:text-cream-400">
-            Next cycle in: {getNextCycleDisplay()}
-          </span>
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="text-sm text-cream-600 dark:text-cream-400 cursor-help">
+                Next cycle in: {getNextCycleDisplay()}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Time until next OODA trading cycle starts</TooltipContent>
+          </Tooltip>
           <div className="flex items-center gap-2">
             {status?.status === "STOPPED" && (
               <button
@@ -305,6 +320,20 @@ function getOODAPhaseStatus(
   return "complete";
 }
 
+/** Environment descriptions for tooltips */
+const ENV_DESCRIPTIONS: Record<string, string> = {
+  BACKTEST: "Historical simulation mode - no real orders",
+  PAPER: "Paper trading mode - simulated orders with live data",
+  LIVE: "Live trading mode - real orders with real money",
+};
+
+/** System status descriptions for tooltips */
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+  ACTIVE: "System is running and executing OODA cycles",
+  PAUSED: "System is paused - no new cycles will start",
+  STOPPED: "System is stopped - must be started to trade",
+};
+
 function SystemStatusBanner({
   status,
   isLoading,
@@ -332,23 +361,38 @@ function SystemStatusBanner({
     STOPPED: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400",
   };
 
+  const envKey = status?.environment as keyof typeof envColors;
+  const statusKey = status?.status as keyof typeof statusColors;
+
   return (
     <div className="flex items-center justify-between bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 px-4 py-3">
       <div className="flex items-center gap-4">
-        <span
-          className={`px-3 py-1 text-sm font-medium rounded-full ${
-            envColors[status?.environment as keyof typeof envColors] ?? envColors.PAPER
-          }`}
-        >
-          {status?.environment ?? "PAPER"}
-        </span>
-        <span
-          className={`px-3 py-1 text-sm font-medium rounded-full ${
-            statusColors[status?.status as keyof typeof statusColors] ?? statusColors.STOPPED
-          }`}
-        >
-          {status?.status ?? "STOPPED"}
-        </span>
+        <Tooltip>
+          <TooltipTrigger>
+            <span
+              className={`px-3 py-1 text-sm font-medium rounded-full cursor-help ${
+                envColors[envKey] ?? envColors.PAPER
+              }`}
+            >
+              {status?.environment ?? "PAPER"}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{ENV_DESCRIPTIONS[envKey] ?? "Trading environment mode"}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger>
+            <span
+              className={`px-3 py-1 text-sm font-medium rounded-full cursor-help ${
+                statusColors[statusKey] ?? statusColors.STOPPED
+              }`}
+            >
+              {status?.status ?? "STOPPED"}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {STATUS_DESCRIPTIONS[statusKey] ?? "Current system status"}
+          </TooltipContent>
+        </Tooltip>
       </div>
       {status?.lastCycleTime && (
         <span className="text-sm text-cream-500 dark:text-cream-400">
@@ -358,6 +402,14 @@ function SystemStatusBanner({
     </div>
   );
 }
+
+/** OODA phase descriptions for tooltips */
+const OODA_DESCRIPTIONS: Record<string, string> = {
+  Observe: "Gather market data, candles, and news for analysis",
+  Orient: "Process data through indicators and regime detection",
+  Decide: "Agent network deliberates and forms consensus",
+  Act: "Execute approved orders via broker API",
+};
 
 function OODAPhaseCard({
   phase,
@@ -393,19 +445,33 @@ function OODAPhaseCard({
   };
 
   return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative">
-      {/* Subtle refresh indicator in corner */}
-      {isFetching && (
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-      )}
-      <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
-      <div className={`mt-1 text-lg font-medium flex items-center gap-2 ${statusColors[status]}`}>
-        <span>{statusIcons[status]}</span>
-        <span className="capitalize">{status}</span>
-      </div>
-    </div>
+    <Tooltip>
+      <TooltipTrigger>
+        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
+          {/* Subtle refresh indicator in corner */}
+          {isFetching && (
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+          )}
+          <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
+          <div
+            className={`mt-1 text-lg font-medium flex items-center gap-2 ${statusColors[status]}`}
+          >
+            <span>{statusIcons[status]}</span>
+            <span className="capitalize">{status}</span>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>{OODA_DESCRIPTIONS[phase] ?? phase}</TooltipContent>
+    </Tooltip>
   );
 }
+
+/** Metric descriptions for tooltips */
+const METRIC_DESCRIPTIONS: Record<string, string> = {
+  NAV: "Net Asset Value - Total portfolio value including cash and positions",
+  "Day P&L": "Today's profit and loss, both absolute and percentage",
+  "Open Positions": "Number of currently active trades in the portfolio",
+};
 
 function MetricCard({
   label,
@@ -414,6 +480,7 @@ function MetricCard({
   valueColor,
   isLoading,
   isFetching,
+  tooltip,
 }: {
   label: string;
   value: string;
@@ -421,6 +488,7 @@ function MetricCard({
   valueColor?: string;
   isLoading: boolean;
   isFetching?: boolean;
+  tooltip?: string;
 }) {
   // Only show skeleton on initial load (no data)
   if (isLoading) {
@@ -432,8 +500,10 @@ function MetricCard({
     );
   }
 
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative">
+  const tooltipText = tooltip ?? METRIC_DESCRIPTIONS[label];
+
+  const cardContent = (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
       {/* Subtle refresh indicator in corner */}
       {isFetching && (
         <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
@@ -453,4 +523,15 @@ function MetricCard({
       </div>
     </div>
   );
+
+  if (tooltipText) {
+    return (
+      <Tooltip>
+        <TooltipTrigger>{cardContent}</TooltipTrigger>
+        <TooltipContent>{tooltipText}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return cardContent;
 }
