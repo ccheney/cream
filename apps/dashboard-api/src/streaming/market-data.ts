@@ -13,9 +13,10 @@ import {
   MassiveConnectionState,
   type MassiveEvent,
   type MassiveQuoteMessage,
+  type MassiveTradeMessage,
   type MassiveWebSocketClient,
 } from "@cream/marketdata";
-import { broadcastQuote } from "../websocket/handler.js";
+import { broadcastQuote, broadcastTrade } from "../websocket/handler.js";
 
 // ============================================
 // State
@@ -117,7 +118,8 @@ function handleMassiveEvent(event: MassiveEvent): void {
       console.log("[streaming] Authenticated with Massive");
       // Resubscribe to active symbols after reconnection
       if (activeSymbols.size > 0) {
-        const subscriptions = Array.from(activeSymbols).map((s) => `AM.${s}`);
+        // Subscribe to both aggregates (AM) and trades (T)
+        const subscriptions = Array.from(activeSymbols).flatMap((s) => [`AM.${s}`, `T.${s}`]);
         massiveClient?.subscribe(subscriptions).catch(console.error);
       }
       break;
@@ -135,8 +137,7 @@ function handleMassiveEvent(event: MassiveEvent): void {
       break;
 
     case "trade":
-      // For now, we primarily use aggregates for dashboard updates
-      // Trades could be used for real-time trade feed in future
+      handleTradeMessage(event.message);
       break;
 
     case "disconnected":
@@ -238,6 +239,29 @@ function handleQuoteMessage(msg: MassiveQuoteMessage): void {
   });
 }
 
+/**
+ * Handle trade messages from Massive.
+ * These provide real-time trade executions for Time & Sales.
+ */
+function handleTradeMessage(msg: MassiveTradeMessage): void {
+  const symbol = msg.sym.toUpperCase();
+
+  // Broadcast to subscribed clients
+  broadcastTrade(symbol, {
+    type: "trade",
+    data: {
+      ev: msg.ev,
+      sym: symbol,
+      p: msg.p, // Price
+      s: msg.s, // Size
+      x: msg.x ?? 0, // Exchange ID (default to 0 if not provided)
+      c: msg.c, // Trade conditions
+      t: msg.t, // Timestamp (nanoseconds)
+      i: msg.i ?? `${symbol}-${msg.t}`, // Trade ID (generate if not provided)
+    },
+  });
+}
+
 // ============================================
 // Symbol Management
 // ============================================
@@ -256,7 +280,8 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
   activeSymbols.add(upperSymbol);
 
   if (massiveClient?.isConnected()) {
-    await massiveClient.subscribe([`AM.${upperSymbol}`]);
+    // Subscribe to both aggregates (AM) and trades (T)
+    await massiveClient.subscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
     console.log(`[streaming] Subscribed to ${upperSymbol}`);
   }
 }
@@ -276,7 +301,8 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
   }
 
   if (massiveClient?.isConnected()) {
-    const subscriptions = newSymbols.map((s) => `AM.${s}`);
+    // Subscribe to both aggregates (AM) and trades (T) for each symbol
+    const subscriptions = newSymbols.flatMap((s) => [`AM.${s}`, `T.${s}`]);
     await massiveClient.subscribe(subscriptions);
     console.log(`[streaming] Subscribed to ${newSymbols.length} symbols`);
   }
@@ -297,7 +323,8 @@ export async function unsubscribeSymbol(symbol: string): Promise<void> {
   quoteCache.delete(upperSymbol);
 
   if (massiveClient?.isConnected()) {
-    await massiveClient.unsubscribe([`AM.${upperSymbol}`]);
+    // Unsubscribe from both aggregates (AM) and trades (T)
+    await massiveClient.unsubscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
     console.log(`[streaming] Unsubscribed from ${upperSymbol}`);
   }
 }

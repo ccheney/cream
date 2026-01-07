@@ -518,6 +518,32 @@ export function broadcastOptionsQuote(contract: string, message: ServerMessage):
 }
 
 /**
+ * Broadcast trade message to connections subscribed to trades for a specific symbol.
+ */
+export function broadcastTrade(symbol: string, message: ServerMessage): number {
+  let sent = 0;
+  const deadConnections: string[] = [];
+  const upperSymbol = symbol.toUpperCase();
+
+  for (const [connectionId, ws] of connections) {
+    if (ws.data.channels.has("trades") && ws.data.symbols.has(upperSymbol)) {
+      if (sendMessage(ws, message)) {
+        sent++;
+      } else {
+        deadConnections.push(connectionId);
+      }
+    }
+  }
+
+  // Clean up dead connections
+  for (const connectionId of deadConnections) {
+    removeConnection(connectionId);
+  }
+
+  return sent;
+}
+
+/**
  * Broadcast to all connections.
  */
 export function broadcastAll(message: ServerMessage): number {
@@ -722,6 +748,7 @@ export default {
   handleError,
   broadcast,
   broadcastQuote,
+  broadcastTrade,
   broadcastOptionsQuote,
   broadcastAll,
   sendMessage,

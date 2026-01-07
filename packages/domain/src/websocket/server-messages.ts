@@ -152,6 +152,39 @@ export const OptionsTradeMessageSchema = z.object({
 export type OptionsTradeMessage = z.infer<typeof OptionsTradeMessageSchema>;
 
 // ============================================
+// Equity Trade Message (Time & Sales)
+// ============================================
+
+/**
+ * Equity trade execution data (Time & Sales).
+ */
+export const TradeDataSchema = z.object({
+  ev: z.string(),
+  sym: z.string(),
+  p: z.number(),
+  s: z.number(),
+  x: z.number().optional(),
+  c: z.array(z.number()).optional(),
+  t: z.number(),
+  i: z.string().optional(),
+});
+
+export type TradeData = z.infer<typeof TradeDataSchema>;
+
+/**
+ * Equity trade execution (Time & Sales).
+ *
+ * @example
+ * { type: "trade", data: { ev: "T", sym: "AAPL", p: 150.25, s: 100, x: 1, t: 123456789, i: "trade-id" } }
+ */
+export const TradeMessageSchema = z.object({
+  type: z.literal("trade"),
+  data: TradeDataSchema,
+});
+
+export type TradeMessage = z.infer<typeof TradeMessageSchema>;
+
+// ============================================
 // Order Message
 // ============================================
 
@@ -375,6 +408,7 @@ export type ErrorMessage = z.infer<typeof ErrorMessageSchema>;
  */
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   QuoteMessageSchema,
+  TradeMessageSchema,
   OptionsQuoteMessageSchema,
   OptionsAggregateMessageSchema,
   OptionsTradeMessageSchema,

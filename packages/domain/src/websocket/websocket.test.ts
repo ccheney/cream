@@ -41,6 +41,7 @@ import {
 describe("Channel Enum", () => {
   it("includes all expected channels", () => {
     expect(CHANNELS).toContain("quotes");
+    expect(CHANNELS).toContain("trades");
     expect(CHANNELS).toContain("orders");
     expect(CHANNELS).toContain("decisions");
     expect(CHANNELS).toContain("agents");
