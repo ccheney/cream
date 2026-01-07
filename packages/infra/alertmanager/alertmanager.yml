@@ -2,20 +2,27 @@
 # ==================================================
 # Routes alerts to appropriate receivers based on labels.
 #
-# For production, configure:
-# - Slack webhook for team notifications
-# - PagerDuty for critical alerts
-# - Email for non-urgent alerts
+# Environment variables for production deployment:
+# - SLACK_WEBHOOK_URL: Slack incoming webhook URL
+# - SLACK_CHANNEL_CRITICAL: Channel for critical alerts (default: #alerts-critical)
+# - SLACK_CHANNEL_SLO: Channel for SLO alerts (default: #alerts-slo)
+# - PAGERDUTY_SERVICE_KEY: PagerDuty integration key
+# - SMTP_SMARTHOST: SMTP server (e.g., smtp.example.com:587)
+# - SMTP_FROM: Alert sender email
+# - SMTP_USERNAME: SMTP auth username
+# - SMTP_PASSWORD: SMTP auth password
+# - ALERT_EMAIL: Team email for notifications
 
 global:
-  # Default SMTP configuration (configure for production)
-  # smtp_smarthost: 'smtp.example.com:587'
-  # smtp_from: 'alertmanager@cream.dev'
-  # smtp_auth_username: 'alertmanager'
-  # smtp_auth_password: 'password'
+  # SMTP configuration for email notifications
+  smtp_smarthost: '${SMTP_SMARTHOST:-localhost:25}'
+  smtp_from: '${SMTP_FROM:-alertmanager@cream.dev}'
+  smtp_auth_username: '${SMTP_USERNAME:-}'
+  smtp_auth_password: '${SMTP_PASSWORD:-}'
+  smtp_require_tls: true
 
-  # Default Slack API URL (configure with webhook)
-  # slack_api_url: 'https://hooks.slack.com/services/xxx/yyy/zzz'
+  # Slack webhook URL
+  slack_api_url: '${SLACK_WEBHOOK_URL:-}'
 
   # Resolve timeout (when alerts are considered resolved)
   resolve_timeout: 5m
@@ -39,20 +46,35 @@ route:
 
   # Child routes
   routes:
-    # Critical alerts: immediate notification
+    # Critical alerts: immediate notification to PagerDuty + Slack
     - match:
         severity: critical
       receiver: "critical"
       group_wait: 10s
       repeat_interval: 1h
+      continue: true
 
-    # SLO alerts: route to appropriate team
+    # SLO alerts: route to SLO channel
     - match_re:
-        slo: ".*"
+        slo: ".+"
       receiver: "slo-violations"
       group_by: ["alertname", "slo", "team"]
       group_wait: 1m
       repeat_interval: 2h
+
+    # Fast burn alerts: highest priority
+    - match:
+        burn_type: fast
+      receiver: "critical"
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # Slow burn alerts: elevated priority
+    - match:
+        burn_type: slow
+      receiver: "slo-violations"
+      group_wait: 2m
+      repeat_interval: 1h
 
     # Warning alerts: less urgent
     - match:
@@ -77,40 +99,88 @@ inhibit_rules:
       alertname: "(Order|Feed|Greeks|Grpc).*"
     equal: ["instance"]
 
+  # Fast burn inhibits slow burn for same SLO
+  - source_match:
+      burn_type: fast
+    target_match:
+      burn_type: slow
+    equal: ["slo"]
+
 # Receivers
 receivers:
-  # Default receiver (development: log to console)
+  # Default receiver (development: webhook for testing)
   - name: "default"
-    # For development, alerts are logged to container output
-    # Configure webhook for integration testing:
-    # webhook_configs:
-    #   - url: 'http://localhost:9000/webhook'
+    webhook_configs:
+      - url: '${WEBHOOK_URL:-http://localhost:9000/webhook}'
+        send_resolved: true
 
-  # Critical alerts (production: PagerDuty + Slack)
+  # Critical alerts: PagerDuty + Slack
   - name: "critical"
-    # pagerduty_configs:
-    #   - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
-    #     severity: critical
-    # slack_configs:
-    #   - channel: '#alerts-critical'
-    #     send_resolved: true
-    #     title: '{{ template "slack.critical.title" . }}'
-    #     text: '{{ template "slack.critical.text" . }}'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY:-}'
+        severity: critical
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+          num_firing: '{{ .Alerts.Firing | len }}'
+          num_resolved: '{{ .Alerts.Resolved | len }}'
+    slack_configs:
+      - channel: '${SLACK_CHANNEL_CRITICAL:-#alerts-critical}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '{{ if eq .Status "firing" }}:rotating_light:{{ else }}:white_check_mark:{{ end }} {{ .GroupLabels.alertname }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Team:* {{ .CommonLabels.team }}
+          {{ range .Alerts }}
+          *Description:* {{ .Annotations.description }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        actions:
+          - type: button
+            text: 'Runbook :book:'
+            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+          - type: button
+            text: 'Dashboard :chart_with_upwards_trend:'
+            url: 'http://grafana:3000/d/slo-overview'
 
-  # SLO violation alerts
+  # SLO violation alerts: Slack SLO channel
   - name: "slo-violations"
-    # slack_configs:
-    #   - channel: '#alerts-slo'
-    #     send_resolved: true
-    #     title: 'SLO Violation: {{ .GroupLabels.slo }}'
-    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    slack_configs:
+      - channel: '${SLACK_CHANNEL_SLO:-#alerts-slo}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        title: '{{ if eq .Status "firing" }}:warning:{{ else }}:white_check_mark:{{ end }} SLO: {{ .GroupLabels.slo }}'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *SLO:* {{ .GroupLabels.slo }}
+          *Team:* {{ .CommonLabels.team }}
+          {{ if .CommonLabels.burn_type }}*Burn Rate:* {{ .CommonLabels.burn_type }}{{ end }}
+          {{ range .Alerts }}
+          {{ .Annotations.description }}
+          {{ end }}
+        actions:
+          - type: button
+            text: 'SLO Dashboard'
+            url: 'http://grafana:3000/d/slo-overview'
 
-  # Warning alerts
+  # Warning alerts: Email
   - name: "warnings"
-    # email_configs:
-    #   - to: 'team@cream.dev'
-    #     send_resolved: true
+    email_configs:
+      - to: '${ALERT_EMAIL:-team@cream.dev}'
+        send_resolved: true
+        html: |
+          <h2>{{ .GroupLabels.alertname }}</h2>
+          <p><strong>Status:</strong> {{ .Status }}</p>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          {{ range .Alerts }}
+          <hr>
+          <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+          <p>{{ .Annotations.description }}</p>
+          {{ if .Annotations.runbook_url }}<p><a href="{{ .Annotations.runbook_url }}">Runbook</a></p>{{ end }}
+          {{ end }}
 
-# Templates (custom notification templates)
-# templates:
-#   - '/etc/alertmanager/templates/*.tmpl'
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
