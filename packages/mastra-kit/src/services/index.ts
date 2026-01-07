@@ -30,3 +30,20 @@ export {
   type ResearchTriggerDependencies,
   ResearchTriggerService,
 } from "./research-trigger";
+
+export {
+  createDecayMonitorService,
+  type DailyCheckResult,
+  type DecayAlert,
+  type DecayAlertService,
+  DecayAlertSchema,
+  DecayAlertTypeSchema,
+  type DecayAlertType,
+  type DecayMonitorConfig,
+  type DecayMonitorDependencies,
+  DecayMonitorService,
+  DecaySeveritySchema,
+  type DecaySeverity,
+  DEFAULT_DECAY_MONITOR_CONFIG,
+  type MarketDataProvider,
+} from "./decay-monitor";
