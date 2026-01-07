@@ -13,7 +13,7 @@
  * @see docs/plans/05-agents.md - Memory Integration section
  */
 
-import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
+import { createHelixClientFromEnv, createThesisIncludesEdge, type HelixClient } from "@cream/helix";
 import {
   createEmbeddingClient,
   createThesisMemory,
@@ -242,7 +242,7 @@ async function createThesisDecisionEdges(
   decisionIds: string[]
 ): Promise<void> {
   for (const decisionId of decisionIds) {
-    await client.query("CreateThesisIncludesEdge", {
+    await createThesisIncludesEdge(client, {
       source_id: thesisId,
       target_id: decisionId,
     });

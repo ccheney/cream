@@ -11,6 +11,7 @@ import type {
   ExternalEvent,
   HasEventEdge,
   InfluencedDecisionEdge,
+  ThesisIncludesEdge,
   TradeDecision,
   TradeLifecycleEvent,
 } from "@cream/helix-schema";
@@ -209,6 +210,21 @@ export async function createHasEventEdge(
     sourceId: edge.source_id,
     targetId: edge.target_id,
     edgeType: "HAS_EVENT",
+  });
+}
+
+/**
+ * Create a THESIS_INCLUDES edge.
+ * Links a ThesisMemory to related TradeDecisions.
+ */
+export async function createThesisIncludesEdge(
+  client: HelixClient,
+  edge: ThesisIncludesEdge
+): Promise<MutationResult> {
+  return createEdge(client, {
+    sourceId: edge.source_id,
+    targetId: edge.target_id,
+    edgeType: "THESIS_INCLUDES",
   });
 }
 

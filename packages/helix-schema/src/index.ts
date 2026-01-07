@@ -439,6 +439,14 @@ export interface HasEventEdge {
 }
 
 /**
+ * THESIS_INCLUDES edge - links ThesisMemory to related TradeDecisions
+ */
+export interface ThesisIncludesEdge {
+  source_id: string; // ThesisMemory.thesis_id
+  target_id: string; // TradeDecision.decision_id
+}
+
+/**
  * DEPENDS_ON edge - company supply chain and partnership dependencies
  */
 export interface DependsOnEdge {

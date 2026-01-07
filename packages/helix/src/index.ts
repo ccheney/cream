@@ -90,6 +90,7 @@ export {
   createHasEventEdge,
   createInfluencedDecisionEdge,
   createLifecycleEvent,
+  createThesisIncludesEdge,
   type EdgeInput,
   type MutationResult,
   type NodeWithEmbedding,
