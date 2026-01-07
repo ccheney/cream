@@ -24,6 +24,7 @@ import * as domain from "@cream/domain";
 import {
   clearWebSearchCache,
   getWebSearchCacheSize,
+  rateLimiter,
   resetTavilyClient,
   WebSearchParamsSchema,
   webSearch,
@@ -598,5 +599,186 @@ describe("webSearch caching", () => {
 
     expect(result.results).toHaveLength(0);
     expect(getWebSearchCacheSize()).toBe(0);
+  });
+});
+
+// ============================================
+// Rate Limiter Tests
+// ============================================
+
+describe("RateLimiter", () => {
+  beforeEach(() => {
+    rateLimiter.reset();
+  });
+
+  afterEach(() => {
+    rateLimiter.reset();
+  });
+
+  test("canProceed returns true when under limit", () => {
+    expect(rateLimiter.canProceed("tavily")).toBe(true);
+  });
+
+  test("canProceed returns false at minute limit", () => {
+    // Record 60 requests (minute limit)
+    for (let i = 0; i < 60; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    expect(rateLimiter.canProceed("tavily")).toBe(false);
+  });
+
+  test("canProceed returns false at day limit", () => {
+    // Record 1000 requests (day limit)
+    for (let i = 0; i < 1000; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    expect(rateLimiter.canProceed("tavily")).toBe(false);
+  });
+
+  test("record increments counters", () => {
+    const before = rateLimiter.getRemainingQuota("tavily");
+    rateLimiter.record("tavily");
+    const after = rateLimiter.getRemainingQuota("tavily");
+
+    expect(after.minute).toBe(before.minute - 1);
+    expect(after.day).toBe(before.day - 1);
+  });
+
+  test("getRemainingQuota returns correct values", () => {
+    const initial = rateLimiter.getRemainingQuota("tavily");
+    expect(initial.minute).toBe(60);
+    expect(initial.day).toBe(1000);
+
+    // Record 10 requests
+    for (let i = 0; i < 10; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    const after = rateLimiter.getRemainingQuota("tavily");
+    expect(after.minute).toBe(50);
+    expect(after.day).toBe(990);
+  });
+
+  test("reset clears all counts", () => {
+    // Record some requests
+    for (let i = 0; i < 10; i++) {
+      rateLimiter.record("tavily");
+    }
+    expect(rateLimiter.getRemainingQuota("tavily").minute).toBe(50);
+
+    // Reset
+    rateLimiter.reset();
+
+    // Should be back to full
+    expect(rateLimiter.getRemainingQuota("tavily").minute).toBe(60);
+    expect(rateLimiter.getRemainingQuota("tavily").day).toBe(1000);
+  });
+});
+
+// ============================================
+// Rate Limiting Integration Tests
+// ============================================
+
+describe("webSearch rate limiting", () => {
+  const originalApiKey = process.env.TAVILY_API_KEY;
+  const originalFetch = globalThis.fetch;
+  let fetchCallCount = 0;
+  let isBacktestSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    isBacktestSpy = spyOn(domain, "isBacktest").mockReturnValue(false);
+    process.env.TAVILY_API_KEY = "test-api-key";
+    fetchCallCount = 0;
+    clearWebSearchCache();
+    rateLimiter.reset();
+
+    const now = new Date();
+    globalThis.fetch = createMockFetch(() => {
+      fetchCallCount++;
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            query: "test",
+            results: [
+              {
+                title: "Test Result",
+                url: "https://example.com/article",
+                content: "Test content",
+                score: 0.9,
+                published_date: now.toISOString(),
+              },
+            ],
+            response_time: 1.0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    });
+    resetTavilyClient();
+  });
+
+  afterEach(() => {
+    isBacktestSpy.mockRestore();
+    if (originalApiKey) {
+      process.env.TAVILY_API_KEY = originalApiKey;
+    } else {
+      delete process.env.TAVILY_API_KEY;
+    }
+    globalThis.fetch = originalFetch;
+    resetTavilyClient();
+    clearWebSearchCache();
+    rateLimiter.reset();
+  });
+
+  test("records API call on successful search", async () => {
+    const before = rateLimiter.getRemainingQuota("tavily");
+    await webSearch({ query: "test query" });
+    const after = rateLimiter.getRemainingQuota("tavily");
+
+    expect(after.minute).toBe(before.minute - 1);
+    expect(after.day).toBe(before.day - 1);
+  });
+
+  test("returns empty results when rate limited", async () => {
+    // Exhaust minute limit
+    for (let i = 0; i < 60; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    const result = await webSearch({ query: "test query" });
+
+    expect(result.results).toHaveLength(0);
+    expect(fetchCallCount).toBe(0); // No API call made
+  });
+
+  test("does not record when rate limited", async () => {
+    // Exhaust minute limit
+    for (let i = 0; i < 60; i++) {
+      rateLimiter.record("tavily");
+    }
+
+    const before = rateLimiter.getRemainingQuota("tavily");
+    await webSearch({ query: "test query" });
+    const after = rateLimiter.getRemainingQuota("tavily");
+
+    // Should not have recorded additional call
+    expect(after.minute).toBe(before.minute);
+    expect(after.day).toBe(before.day);
+  });
+
+  test("cache hit does not consume rate limit", async () => {
+    // First call - API call made
+    await webSearch({ query: "cached query" });
+    const afterFirst = rateLimiter.getRemainingQuota("tavily");
+
+    // Second call - cache hit, no API call
+    await webSearch({ query: "cached query" });
+    const afterSecond = rateLimiter.getRemainingQuota("tavily");
+
+    expect(fetchCallCount).toBe(1);
+    expect(afterSecond.minute).toBe(afterFirst.minute);
+    expect(afterSecond.day).toBe(afterFirst.day);
   });
 });

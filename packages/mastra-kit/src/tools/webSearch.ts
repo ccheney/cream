@@ -142,6 +142,116 @@ export function getWebSearchCacheSize(): number {
 }
 
 // ============================================
+// Rate Limiting
+// ============================================
+
+/**
+ * Rate limits by provider
+ * Tavily free tier: 1000 requests/month, ~33/day, but we allow bursts
+ */
+const RATE_LIMITS = {
+  tavily: {
+    perMinute: 60,
+    perDay: 1000,
+  },
+} as const;
+
+interface RateLimitState {
+  minute: number;
+  day: number;
+  minuteReset: number;
+  dayReset: number;
+}
+
+/**
+ * Rate limiter for API providers
+ * Uses sliding window counters with automatic reset
+ */
+class RateLimiter {
+  private counts = new Map<string, RateLimitState>();
+
+  /**
+   * Check if we can proceed with a request
+   */
+  canProceed(provider: keyof typeof RATE_LIMITS): boolean {
+    const limits = RATE_LIMITS[provider];
+    if (!limits) {
+      return true;
+    }
+
+    const now = Date.now();
+    const state = this.getState(provider, now);
+
+    return state.minute < limits.perMinute && state.day < limits.perDay;
+  }
+
+  /**
+   * Record a successful API call
+   */
+  record(provider: keyof typeof RATE_LIMITS): void {
+    const now = Date.now();
+    const state = this.getState(provider, now);
+    state.minute++;
+    state.day++;
+    this.counts.set(provider, state);
+  }
+
+  /**
+   * Get remaining quota for monitoring
+   */
+  getRemainingQuota(provider: keyof typeof RATE_LIMITS): { minute: number; day: number } {
+    const limits = RATE_LIMITS[provider];
+    if (!limits) {
+      return { minute: Infinity, day: Infinity };
+    }
+
+    const state = this.getState(provider, Date.now());
+    return {
+      minute: Math.max(0, limits.perMinute - state.minute),
+      day: Math.max(0, limits.perDay - state.day),
+    };
+  }
+
+  /**
+   * Reset rate limiter state (for testing)
+   */
+  reset(): void {
+    this.counts.clear();
+  }
+
+  private getState(provider: string, now: number): RateLimitState {
+    let state = this.counts.get(provider);
+
+    if (!state) {
+      state = {
+        minute: 0,
+        day: 0,
+        minuteReset: now + 60000,
+        dayReset: now + 86400000,
+      };
+      this.counts.set(provider, state);
+      return state;
+    }
+
+    // Reset minute counter if window expired
+    if (now >= state.minuteReset) {
+      state.minute = 0;
+      state.minuteReset = now + 60000;
+    }
+
+    // Reset day counter if window expired
+    if (now >= state.dayReset) {
+      state.day = 0;
+      state.dayReset = now + 86400000;
+    }
+
+    return state;
+  }
+}
+
+export const rateLimiter = new RateLimiter();
+
+// ============================================
 // Domain Mapping
 // ============================================
 
@@ -330,28 +440,34 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
     };
   }
 
-  // 4. Check for Tavily client
+  // 4. Check rate limit before API call
+  if (!rateLimiter.canProceed("tavily")) {
+    console.warn("[webSearch] Rate limited, returning empty response");
+    return createEmptyResponse(query, startTime);
+  }
+
+  // 5. Check for Tavily client
   const client = getTavilyClient();
   if (!client) {
     console.warn("[webSearch] TAVILY_API_KEY not configured");
     return createEmptyResponse(query, startTime);
   }
 
-  // 5. Build domain filters from sources
+  // 6. Build domain filters from sources
   const includeDomains = buildDomainFilter(sources);
 
-  // 6. Calculate time bounds (hybrid filtering strategy)
+  // 7. Calculate time bounds (hybrid filtering strategy)
   const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
   const timeRange = calculateTimeRange(maxAgeHours);
 
-  // 7. Build enhanced query with symbols if provided
+  // 8. Build enhanced query with symbols if provided
   let enhancedQuery = query;
   if (symbols && symbols.length > 0) {
     enhancedQuery = `${query} ${symbols.map((s) => `$${s}`).join(" ")}`;
   }
 
   try {
-    // 8. Execute Tavily search
+    // 9. Execute Tavily search
     const result = await client.search({
       query: enhancedQuery,
       topic,
@@ -367,7 +483,10 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
       return createEmptyResponse(query, startTime);
     }
 
-    // 9. Client-side time filtering for precise hour-level window
+    // 10. Record successful API call for rate limiting
+    rateLimiter.record("tavily");
+
+    // 11. Client-side time filtering for precise hour-level window
     const filteredResults = normalizeResults(result.data.results, cutoffTime);
     const resultsFiltered = result.data.results.length - filteredResults.length;
 
@@ -381,7 +500,7 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
       },
     };
 
-    // 10. Cache successful results (store full result set for reuse with different maxResults)
+    // 12. Cache successful results (store full result set for reuse with different maxResults)
     const responseToCache: WebSearchResponse = {
       results: filteredResults,
       metadata: response.metadata,
