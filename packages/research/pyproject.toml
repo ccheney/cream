@@ -147,6 +147,9 @@ ignore = [
 "research/vectorbt_runner.py" = [
     "ARG002",  # Abstract base class stub methods
 ]
+"research/stage_validation/*" = [
+    "ARG002",  # VectorBT/skfolio methods require specific signatures
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["research"]

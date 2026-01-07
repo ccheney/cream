@@ -10,9 +10,17 @@ Stages:
 
 Additional validation:
 - CPCV - Combinatorial Purged Cross-Validation for PBO calculation
+- DSR - Deflated Sharpe Ratio for multiple testing correction
 """
 
 from .cpcv import CPCVConfig, CPCVResults, CPCVValidator, compute_optimal_folds
+from .dsr import (
+    CombinedStatisticalResults,
+    DSRConfig,
+    DSRResults,
+    DSRValidator,
+    compute_full_statistical_validation,
+)
 from .stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
 
 __all__ = [
@@ -21,6 +29,12 @@ __all__ = [
     "CPCVResults",
     "CPCVValidator",
     "compute_optimal_folds",
+    # DSR validation
+    "CombinedStatisticalResults",
+    "DSRConfig",
+    "DSRResults",
+    "DSRValidator",
+    "compute_full_statistical_validation",
     # Stage 1 validation
     "Stage1Gates",
     "Stage1Results",
