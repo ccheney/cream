@@ -91,6 +91,19 @@ export {
   spearmanCorrelation,
   timeSeriesIC,
 } from "./ic.js";
+// Production Monitoring
+export {
+  type DailyICMetrics,
+  DailyICMetricsSchema,
+  type DecisionAttribution,
+  DecisionAttributionSchema,
+  IndicatorMonitor,
+  MONITORING_DEFAULTS,
+  type RetirementCheck,
+  RetirementCheckSchema,
+  type RollingMetrics,
+  RollingMetricsSchema,
+} from "./monitoring.js";
 // Orthogonality Checker (Correlation + VIF)
 export {
   type CorrelationResult,
