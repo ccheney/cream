@@ -6,6 +6,7 @@
  */
 
 import { tradingCycleWorkflow } from "@cream/api";
+import { isBacktest, validateEnvironmentOrExit } from "@cream/domain";
 
 // ============================================
 // Configuration
@@ -92,6 +93,21 @@ function startScheduler(): NodeJS.Timeout {
 // ============================================
 
 async function main() {
+  // Validate environment at startup
+  // In non-backtest mode, require FMP_KEY for external context and at least one LLM key
+  if (!isBacktest()) {
+    validateEnvironmentOrExit("worker", ["FMP_KEY"]);
+
+    // Warn if no LLM key is set (needed for real agent execution)
+    const hasLlmKey = process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!hasLlmKey) {
+      console.warn(
+        "⚠️  No LLM API key configured (ANTHROPIC_API_KEY or GOOGLE_API_KEY). " +
+          "Agent execution will use stub agents."
+      );
+    }
+  }
+
   // Run immediately if configured
   if (CONFIG.runOnStartup) {
     await runTradingCycle();

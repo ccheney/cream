@@ -330,6 +330,17 @@ export interface AgentContext {
   snapshots: Record<string, unknown>;
   memory?: Record<string, unknown>;
   externalContext?: Record<string, unknown>;
+  /** Recent external events from database (news, macro, transcripts) */
+  recentEvents?: Array<{
+    id: string;
+    sourceType: string;
+    eventType: string;
+    eventTime: string;
+    sentiment: string;
+    summary: string;
+    importanceScore: number;
+    relatedInstruments: string[];
+  }>;
 }
 
 /**
@@ -366,8 +377,18 @@ Cycle ID: ${context.cycleId}`;
  * Run News & Sentiment Analyst agent.
  */
 export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAnalysisOutput[]> {
+  // Filter recent events relevant to news/sentiment (news, press_release types)
+  const newsEvents = (context.recentEvents ?? []).filter(
+    (e) => e.sourceType === "news" || e.sourceType === "press_release"
+  );
+
   const prompt = `Analyze news and sentiment for the following instruments:
+
+Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
+
+Recent Historical Events (from database):
+${JSON.stringify(newsEvents, null, 2)}
 
 Symbols to analyze: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}`;
@@ -388,8 +409,23 @@ Cycle ID: ${context.cycleId}`;
 export async function runFundamentalsAnalyst(
   context: AgentContext
 ): Promise<FundamentalsAnalysisOutput[]> {
+  // Filter recent events relevant to fundamentals (macro, earnings, transcripts)
+  const fundamentalEvents = (context.recentEvents ?? []).filter(
+    (e) =>
+      e.sourceType === "macro" ||
+      e.sourceType === "transcript" ||
+      e.eventType === "earnings" ||
+      e.eventType === "guidance" ||
+      e.eventType === "macro_release"
+  );
+
   const prompt = `Analyze fundamentals and macro context for the following instruments:
+
+Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
+
+Recent Fundamental/Macro Events (from database):
+${JSON.stringify(fundamentalEvents, null, 2)}
 
 Symbols to analyze: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}`;
