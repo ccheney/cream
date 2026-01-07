@@ -19,23 +19,21 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import {
+  AGENT_CONFIGS,
+  AGENT_PROMPTS,
+  AGENT_TYPES,
+  type AgentType,
+  type BearishResearchOutput,
+  type BullishResearchOutput,
+  type CriticOutput,
+  type DecisionPlan,
+  type FundamentalsAnalysisOutput,
+  type RiskManagerOutput,
+  type SentimentAnalysisOutput,
+  type TechnicalAnalysisOutput,
+} from "@cream/mastra-kit";
 import { z } from "zod";
-
-// Import from source files directly to avoid requiring built package in CI
-import { AGENT_CONFIGS } from "../../../packages/mastra-kit/src/agents/index.js";
-import { AGENT_TYPES } from "../../../packages/mastra-kit/src/index.js";
-import { AGENT_PROMPTS } from "../../../packages/mastra-kit/src/prompts/index.js";
-import type {
-  AgentType,
-  BearishResearchOutput,
-  BullishResearchOutput,
-  CriticOutput,
-  DecisionPlan,
-  FundamentalsAnalysisOutput,
-  RiskManagerOutput,
-  SentimentAnalysisOutput,
-  TechnicalAnalysisOutput,
-} from "../../../packages/mastra-kit/src/types.js";
 
 import {
   type AgentContext,
