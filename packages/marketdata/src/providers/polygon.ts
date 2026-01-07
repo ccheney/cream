@@ -92,6 +92,93 @@ export const OptionChainResponseSchema = z.object({
 export type OptionChainResponse = z.infer<typeof OptionChainResponseSchema>;
 
 /**
+ * Option snapshot day data.
+ */
+export const OptionSnapshotDaySchema = z.object({
+  change: z.number().optional(),
+  change_percent: z.number().optional(),
+  close: z.number().optional(),
+  high: z.number().optional(),
+  last_updated: z.number().optional(),
+  low: z.number().optional(),
+  open: z.number().optional(),
+  previous_close: z.number().optional(),
+  volume: z.number().optional(),
+  vwap: z.number().optional(),
+});
+
+/**
+ * Option snapshot greeks.
+ */
+export const OptionSnapshotGreeksSchema = z.object({
+  delta: z.number().optional(),
+  gamma: z.number().optional(),
+  theta: z.number().optional(),
+  vega: z.number().optional(),
+});
+
+/**
+ * Option snapshot quote.
+ */
+export const OptionSnapshotQuoteSchema = z.object({
+  ask: z.number().optional(),
+  ask_size: z.number().optional(),
+  bid: z.number().optional(),
+  bid_size: z.number().optional(),
+  last_updated: z.number().optional(),
+  midpoint: z.number().optional(),
+});
+
+/**
+ * Option snapshot underlying asset.
+ */
+export const OptionSnapshotUnderlyingSchema = z.object({
+  change_to_break_even: z.number().optional(),
+  last_updated: z.number().optional(),
+  price: z.number().optional(),
+  ticker: z.string().optional(),
+  timeframe: z.string().optional(),
+});
+
+/**
+ * Option contract snapshot details.
+ */
+export const OptionContractDetailsSchema = z.object({
+  contract_type: z.enum(["call", "put"]),
+  exercise_style: z.string().optional(),
+  expiration_date: z.string(),
+  shares_per_contract: z.number().optional(),
+  strike_price: z.number(),
+  ticker: z.string(),
+});
+
+/**
+ * Option snapshot result.
+ */
+export const OptionSnapshotResultSchema = z.object({
+  break_even_price: z.number().optional(),
+  day: OptionSnapshotDaySchema.optional(),
+  details: OptionContractDetailsSchema.optional(),
+  greeks: OptionSnapshotGreeksSchema.optional(),
+  implied_volatility: z.number().optional(),
+  last_quote: OptionSnapshotQuoteSchema.optional(),
+  open_interest: z.number().optional(),
+  underlying_asset: OptionSnapshotUnderlyingSchema.optional(),
+});
+export type OptionSnapshotResult = z.infer<typeof OptionSnapshotResultSchema>;
+
+/**
+ * Option chain snapshot response.
+ */
+export const OptionChainSnapshotResponseSchema = z.object({
+  results: z.array(OptionSnapshotResultSchema).optional(),
+  status: z.string(),
+  request_id: z.string().optional(),
+  next_url: z.string().optional(),
+});
+export type OptionChainSnapshotResponse = z.infer<typeof OptionChainSnapshotResponseSchema>;
+
+/**
  * Snapshot schema.
  */
 export const SnapshotSchema = z.object({
@@ -294,6 +381,37 @@ export class PolygonClient {
         apiKey: this.apiKey,
       },
       OptionChainResponseSchema
+    );
+  }
+
+  /**
+   * Get options chain snapshot with quotes, greeks, and market data.
+   *
+   * @see https://polygon.io/docs/options/get_v3_snapshot_options__underlyingasset
+   */
+  async getOptionChainSnapshot(
+    underlyingTicker: string,
+    options: {
+      contractType?: "call" | "put";
+      expirationDateGte?: string; // YYYY-MM-DD
+      expirationDateLte?: string;
+      strikePriceGte?: number;
+      strikePriceLte?: number;
+      limit?: number;
+    } = {}
+  ): Promise<OptionChainSnapshotResponse> {
+    return this.client.get(
+      `/v3/snapshot/options/${underlyingTicker}`,
+      {
+        contract_type: options.contractType,
+        "expiration_date.gte": options.expirationDateGte,
+        "expiration_date.lte": options.expirationDateLte,
+        "strike_price.gte": options.strikePriceGte,
+        "strike_price.lte": options.strikePriceLte,
+        limit: options.limit ?? 250,
+        apiKey: this.apiKey,
+      },
+      OptionChainSnapshotResponseSchema
     );
   }
 
