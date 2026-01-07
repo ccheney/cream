@@ -9,12 +9,7 @@
  * Real agents will be integrated in Phase 8.
  */
 
-// Use relative imports from source to avoid requiring package build
-import {
-  AGENT_CONFIGS,
-  AGENT_PROMPTS,
-  type AgentType,
-} from "../../../../packages/mastra-kit/src/index.js";
+import { AGENT_CONFIGS, AGENT_PROMPTS, type AgentType } from "@cream/mastra-kit";
 
 // ============================================
 // Stub Agent Configuration
