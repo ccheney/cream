@@ -101,6 +101,8 @@ export {
   MONITORING_DEFAULTS,
   type RetirementCheck,
   RetirementCheckSchema,
+  type RetirementReason,
+  RetirementReasonSchema,
   type RollingMetrics,
   RollingMetricsSchema,
 } from "./monitoring.js";

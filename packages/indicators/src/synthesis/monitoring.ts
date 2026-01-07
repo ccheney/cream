@@ -71,15 +71,25 @@ export const RollingMetricsSchema = z.object({
 export type RollingMetrics = z.infer<typeof RollingMetricsSchema>;
 
 /**
+ * Retirement reason enumeration
+ */
+export const RetirementReasonSchema = z.enum(["ic_decay", "crowding", "capacity", "manual"]);
+
+export type RetirementReason = z.infer<typeof RetirementReasonSchema>;
+
+/**
  * Retirement check result schema
  */
 export const RetirementCheckSchema = z.object({
   indicatorId: z.string(),
   shouldRetire: z.boolean(),
   reason: z.string().optional(),
+  retirementReason: RetirementReasonSchema.optional(),
   consecutiveLowICDays: z.number().int(),
   avgIC30Day: z.number(),
   hitRate: z.number(),
+  isCrowded: z.boolean(),
+  activeIndicatorCount: z.number().int(),
   recommendedAction: z.enum(["none", "monitor", "retire"]),
 });
 
@@ -383,10 +393,28 @@ export class IndicatorMonitor {
   /**
    * Check whether an indicator should be considered for retirement.
    *
+   * Checks three retirement conditions:
+   * 1. IC Decay - Rolling IC below threshold for extended period
+   * 2. Crowding - Signal became public knowledge (requires external detection)
+   * 3. Capacity - Too many active indicators
+   *
    * @param indicatorId - The indicator ID
+   * @param options - Optional parameters for capacity checking
    * @returns Retirement check result
    */
-  async checkRetirementConditions(indicatorId: string): Promise<RetirementCheck> {
+  async checkRetirementConditions(
+    indicatorId: string,
+    options: {
+      /** Check for signal crowding (placeholder - requires external service) */
+      checkCrowding?: boolean;
+      /** Current count of active indicators (for capacity checking) */
+      activeIndicatorCount?: number;
+      /** Maximum allowed active indicators (default: 20) */
+      maxCapacity?: number;
+    } = {}
+  ): Promise<RetirementCheck> {
+    const { checkCrowding = false, activeIndicatorCount = 0, maxCapacity = 20 } = options;
+
     const history = await this.getICHistory(
       indicatorId,
       MONITORING_DEFAULTS.retirementThresholdDays
@@ -399,6 +427,8 @@ export class IndicatorMonitor {
         consecutiveLowICDays: 0,
         avgIC30Day: 0,
         hitRate: 0,
+        isCrowded: false,
+        activeIndicatorCount,
         recommendedAction: "monitor",
         reason: "Insufficient data for retirement evaluation",
       };
@@ -421,17 +451,34 @@ export class IndicatorMonitor {
     const decisionsCorrect = sum(history.map((h) => h.decisionsCorrect));
     const hitRate = decisionsTotal > 0 ? decisionsCorrect / decisionsTotal : 0;
 
-    // Determine if should retire
-    const shouldRetire =
+    // Check for crowding (placeholder - would use external service)
+    const isCrowded = checkCrowding ? await this.detectCrowding(indicatorId) : false;
+
+    // Check retirement conditions
+    const icDecayRetire =
       consecutiveLowICDays >= MONITORING_DEFAULTS.retirementThresholdDays &&
       avgIC30Day < MONITORING_DEFAULTS.minHealthyIC;
+    const capacityRetire = activeIndicatorCount > maxCapacity;
 
+    const shouldRetire = icDecayRetire || isCrowded || capacityRetire;
+
+    // Determine reason and action
     let recommendedAction: "none" | "monitor" | "retire";
     let reason: string | undefined;
+    let retirementReason: RetirementReason | undefined;
 
     if (shouldRetire) {
       recommendedAction = "retire";
-      reason = `IC below ${MONITORING_DEFAULTS.minHealthyIC} for ${consecutiveLowICDays} consecutive days`;
+      if (isCrowded) {
+        retirementReason = "crowding";
+        reason = "Signal detected as crowded (public knowledge)";
+      } else if (capacityRetire) {
+        retirementReason = "capacity";
+        reason = `Capacity exceeded: ${activeIndicatorCount} indicators (max: ${maxCapacity})`;
+      } else {
+        retirementReason = "ic_decay";
+        reason = `IC below ${MONITORING_DEFAULTS.minHealthyIC} for ${consecutiveLowICDays} consecutive days`;
+      }
     } else if (consecutiveLowICDays >= MONITORING_DEFAULTS.retirementThresholdDays / 2) {
       recommendedAction = "monitor";
       reason = `IC showing sustained weakness (${consecutiveLowICDays} days below threshold)`;
@@ -443,11 +490,33 @@ export class IndicatorMonitor {
       indicatorId,
       shouldRetire,
       reason,
+      retirementReason,
       consecutiveLowICDays,
       avgIC30Day,
       hitRate,
+      isCrowded,
+      activeIndicatorCount,
       recommendedAction,
     };
+  }
+
+  /**
+   * Detect if an indicator signal has become crowded (public knowledge).
+   *
+   * This is a placeholder that returns false. In production, this would:
+   * 1. Search news for similar indicators/factors
+   * 2. Query HelixDB for semantically similar public indicators
+   * 3. Check if signal appears in competitor research
+   *
+   * @param _indicatorId - The indicator ID to check
+   * @returns Whether the signal appears crowded
+   */
+  private async detectCrowding(_indicatorId: string): Promise<boolean> {
+    // Placeholder - would integrate with:
+    // - News API to search for similar factors
+    // - HelixDB semantic search for similar public indicators
+    // - Competitor research monitoring
+    return false;
   }
 
   // ============================================
