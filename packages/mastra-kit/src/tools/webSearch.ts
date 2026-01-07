@@ -397,11 +397,227 @@ export function checkAndLogRateLimitAlerts(provider: keyof typeof RATE_LIMITS = 
   const alerts = rateLimitAlerter.check(provider);
   for (const alert of alerts) {
     if (alert.severity === "critical") {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for rate limit alerts
       console.error("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
     } else {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for rate limit alerts
       console.warn("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
     }
   }
+}
+
+// ============================================
+// Usage Metrics & Logging
+// ============================================
+
+/**
+ * Request count aggregates for time windows
+ */
+export interface RequestCount {
+  total: number;
+  successful: number;
+  cached: number;
+}
+
+/**
+ * Aggregated web search metrics for monitoring and dashboards
+ */
+export interface WebSearchMetrics {
+  // Request counts
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  cacheHits: number;
+  rateLimitedRequests: number;
+
+  // Latency (in milliseconds)
+  averageLatencyMs: number;
+  p95LatencyMs: number;
+  p99LatencyMs: number;
+
+  // Results
+  averageResultCount: number;
+  emptyResultCount: number;
+
+  // Cost tracking
+  apiCallsUsed: number;
+
+  // Time windows
+  lastHour: RequestCount;
+  lastDay: RequestCount;
+}
+
+/**
+ * Individual request record for metrics collection
+ */
+interface RequestRecord {
+  timestamp: number;
+  type: "success" | "cache_hit" | "rate_limited" | "error" | "backtest";
+  latencyMs: number;
+  resultCount: number;
+}
+
+/**
+ * Metrics collector with memory-bounded storage
+ */
+class MetricsCollector {
+  private requests: RequestRecord[] = [];
+  private readonly maxRecords = 10000;
+
+  /**
+   * Record a request for metrics
+   */
+  record(record: RequestRecord): void {
+    this.requests.push(record);
+
+    // Prune old records (older than 24 hours)
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    this.requests = this.requests.filter((r) => r.timestamp > cutoff);
+
+    // Limit memory
+    if (this.requests.length > this.maxRecords) {
+      this.requests = this.requests.slice(-this.maxRecords);
+    }
+  }
+
+  /**
+   * Get aggregated metrics
+   */
+  getMetrics(): WebSearchMetrics {
+    const now = Date.now();
+    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+
+    // Filter by time windows
+    const lastHourRequests = this.requests.filter((r) => r.timestamp > oneHourAgo);
+    const lastDayRequests = this.requests.filter((r) => r.timestamp > oneDayAgo);
+
+    // Calculate counts
+    const successRequests = lastDayRequests.filter((r) => r.type === "success");
+    const cacheHits = lastDayRequests.filter((r) => r.type === "cache_hit");
+    const rateLimited = lastDayRequests.filter((r) => r.type === "rate_limited");
+    const errors = lastDayRequests.filter((r) => r.type === "error");
+
+    // Calculate latency percentiles from successful API calls (not cache hits)
+    const latencies = successRequests.map((r) => r.latencyMs).sort((a, b) => a - b);
+    const p95Index = Math.floor(latencies.length * 0.95);
+    const p99Index = Math.floor(latencies.length * 0.99);
+
+    // Calculate averages
+    const avgLatency =
+      latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+
+    const resultCounts = lastDayRequests.map((r) => r.resultCount);
+    const avgResults =
+      resultCounts.length > 0 ? resultCounts.reduce((a, b) => a + b, 0) / resultCounts.length : 0;
+
+    const emptyResults = lastDayRequests.filter((r) => r.resultCount === 0).length;
+
+    // Time window aggregates
+    const lastHourStats = this.aggregateWindow(lastHourRequests);
+    const lastDayStats = this.aggregateWindow(lastDayRequests);
+
+    return {
+      totalRequests: lastDayRequests.length,
+      successfulRequests: successRequests.length,
+      failedRequests: errors.length,
+      cacheHits: cacheHits.length,
+      rateLimitedRequests: rateLimited.length,
+
+      averageLatencyMs: Math.round(avgLatency),
+      p95LatencyMs: latencies[p95Index] ?? 0,
+      p99LatencyMs: latencies[p99Index] ?? 0,
+
+      averageResultCount: Math.round(avgResults * 10) / 10,
+      emptyResultCount: emptyResults,
+
+      apiCallsUsed: successRequests.length,
+
+      lastHour: lastHourStats,
+      lastDay: lastDayStats,
+    };
+  }
+
+  /**
+   * Aggregate stats for a time window
+   */
+  private aggregateWindow(requests: RequestRecord[]): RequestCount {
+    return {
+      total: requests.length,
+      successful: requests.filter((r) => r.type === "success").length,
+      cached: requests.filter((r) => r.type === "cache_hit").length,
+    };
+  }
+
+  /**
+   * Reset collector (for testing)
+   */
+  reset(): void {
+    this.requests = [];
+  }
+
+  /**
+   * Get record count (for testing)
+   */
+  getRecordCount(): number {
+    return this.requests.length;
+  }
+}
+
+export const metricsCollector = new MetricsCollector();
+
+/**
+ * Get current web search metrics (for dashboard integration)
+ */
+export function getWebSearchMetrics(): WebSearchMetrics {
+  return metricsCollector.getMetrics();
+}
+
+/**
+ * Structured log entry for web search operations
+ */
+export interface WebSearchLogEntry {
+  timestamp: string;
+  level: "info" | "warn" | "error";
+  event: "request" | "cache_hit" | "rate_limited" | "api_error" | "success" | "backtest";
+  queryHash: string;
+  provider: "tavily";
+  cached: boolean;
+  executionTimeMs: number;
+  resultCount?: number;
+  sources?: string[];
+  topic?: string;
+  maxAgeHours?: number;
+  error?: string;
+}
+
+/**
+ * Log a structured web search entry
+ * Uses JSON format for log aggregation systems
+ */
+function logWebSearch(
+  entry: Partial<WebSearchLogEntry> & { event: WebSearchLogEntry["event"] }
+): void {
+  const fullEntry: WebSearchLogEntry = {
+    timestamp: new Date().toISOString(),
+    level: "info",
+    provider: "tavily",
+    cached: false,
+    executionTimeMs: 0,
+    queryHash: "",
+    ...entry,
+  };
+
+  // Choose console method based on level
+  // biome-ignore lint/suspicious/noConsole: Intentional structured logging
+  const logFn =
+    fullEntry.level === "error"
+      ? console.error
+      : fullEntry.level === "warn"
+        ? console.warn
+        : console.log;
+
+  logFn("[WEB_SEARCH]", JSON.stringify(fullEntry));
 }
 
 // ============================================
@@ -537,6 +753,7 @@ function logAudit(entry: Omit<AuditLogEntry, "timestamp">): void {
     ...entry,
   };
   // In production, this would go to a dedicated audit log system
+  // biome-ignore lint/suspicious/noConsole: Intentional audit logging
   console.log("[AUDIT]", JSON.stringify(fullEntry));
 }
 
@@ -725,6 +942,7 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
   // 1. Validate and parse params
   const parsed = WebSearchParamsSchema.safeParse(params);
   if (!parsed.success) {
+    // biome-ignore lint/suspicious/noConsole: Intentional warning log for invalid params
     console.warn("[webSearch] Invalid params:", parsed.error.message);
     return createEmptyResponse(params.query ?? "", startTime);
   }
@@ -736,6 +954,22 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
 
   // 3. Backtest mode → empty results (don't cache)
   if (isBacktest()) {
+    const executionTimeMs = Date.now() - startTime;
+    logWebSearch({
+      event: "backtest",
+      queryHash,
+      executionTimeMs,
+      resultCount: 0,
+      sources,
+      topic,
+      maxAgeHours,
+    });
+    metricsCollector.record({
+      timestamp: Date.now(),
+      type: "backtest",
+      latencyMs: executionTimeMs,
+      resultCount: 0,
+    });
     return createEmptyResponse(query, startTime);
   }
 
@@ -743,25 +977,70 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
   const cacheKey = getCacheKey({ ...parsed.data, query });
   const cached = getCached(cacheKey);
   if (cached) {
+    const executionTimeMs = Date.now() - startTime;
+    const resultCount = Math.min(cached.results.length, maxResults);
+
+    // Log cache hit
+    logWebSearch({
+      event: "cache_hit",
+      queryHash,
+      executionTimeMs,
+      resultCount,
+      sources,
+      topic,
+      maxAgeHours,
+      cached: true,
+    });
+
+    // Record cache hit metric
+    metricsCollector.record({
+      timestamp: Date.now(),
+      type: "cache_hit",
+      latencyMs: executionTimeMs,
+      resultCount,
+    });
+
     // Return cached result with updated execution time, sliced to requested maxResults
     return {
       results: cached.results.slice(0, maxResults),
       metadata: {
         ...cached.metadata,
-        executionTimeMs: Date.now() - startTime,
+        executionTimeMs,
       },
     };
   }
 
   // 5. Check rate limit before API call
   if (!rateLimiter.canProceed("tavily")) {
-    console.warn("[webSearch] Rate limited, returning empty response");
+    const executionTimeMs = Date.now() - startTime;
+
+    // Log rate limited request
+    logWebSearch({
+      level: "warn",
+      event: "rate_limited",
+      queryHash,
+      executionTimeMs,
+      resultCount: 0,
+      sources,
+      topic,
+      maxAgeHours,
+    });
+
+    // Record rate limited metric
+    metricsCollector.record({
+      timestamp: Date.now(),
+      type: "rate_limited",
+      latencyMs: executionTimeMs,
+      resultCount: 0,
+    });
+
     return createEmptyResponse(query, startTime);
   }
 
   // 6. Check for Tavily client
   const client = getTavilyClient();
   if (!client) {
+    // biome-ignore lint/suspicious/noConsole: Intentional warning log for missing API key
     console.warn("[webSearch] TAVILY_API_KEY not configured");
     return createEmptyResponse(query, startTime);
   }
@@ -792,7 +1071,7 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
   });
 
   try {
-    // 9. Execute Tavily search
+    // 10. Execute Tavily search
     const result = await client.search({
       query: enhancedQuery,
       topic,
@@ -804,7 +1083,29 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
 
     // Handle search failure
     if (!result.success) {
-      console.warn("[webSearch] Search failed:", result.error);
+      const executionTimeMs = Date.now() - startTime;
+
+      // Log API error
+      logWebSearch({
+        level: "error",
+        event: "api_error",
+        queryHash,
+        executionTimeMs,
+        resultCount: 0,
+        sources,
+        topic,
+        maxAgeHours,
+        error: result.error,
+      });
+
+      // Record error metric
+      metricsCollector.record({
+        timestamp: Date.now(),
+        type: "error",
+        latencyMs: executionTimeMs,
+        resultCount: 0,
+      });
+
       return createEmptyResponse(query, startTime);
     }
 
@@ -817,13 +1118,34 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
     // 12. Client-side time filtering with security sanitization
     const filteredResults = normalizeResults(result.data.results, cutoffTime, queryHash);
     const resultsFiltered = result.data.results.length - filteredResults.length;
+    const executionTimeMs = Date.now() - startTime;
+    const resultCount = Math.min(filteredResults.length, maxResults);
+
+    // Log successful search
+    logWebSearch({
+      event: "success",
+      queryHash,
+      executionTimeMs,
+      resultCount,
+      sources,
+      topic,
+      maxAgeHours,
+    });
+
+    // Record success metric
+    metricsCollector.record({
+      timestamp: Date.now(),
+      type: "success",
+      latencyMs: executionTimeMs,
+      resultCount,
+    });
 
     const response: WebSearchResponse = {
       results: filteredResults.slice(0, maxResults),
       metadata: {
         query,
         provider: "tavily",
-        executionTimeMs: Date.now() - startTime,
+        executionTimeMs,
         resultsFiltered,
       },
     };
@@ -837,7 +1159,29 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
 
     return response;
   } catch (error) {
-    console.warn("[webSearch] Search failed:", error);
+    const executionTimeMs = Date.now() - startTime;
+
+    // Log exception
+    logWebSearch({
+      level: "error",
+      event: "api_error",
+      queryHash,
+      executionTimeMs,
+      resultCount: 0,
+      sources,
+      topic,
+      maxAgeHours,
+      error: String(error),
+    });
+
+    // Record error metric
+    metricsCollector.record({
+      timestamp: Date.now(),
+      type: "error",
+      latencyMs: executionTimeMs,
+      resultCount: 0,
+    });
+
     return createEmptyResponse(query, startTime);
   }
 }

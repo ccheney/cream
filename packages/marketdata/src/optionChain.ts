@@ -11,6 +11,7 @@
  */
 
 import { z } from "zod";
+import type { IVPercentileCalculator } from "./options/ivPercentile";
 import type { PolygonClient } from "./providers/polygon";
 
 // ============================================
@@ -50,6 +51,19 @@ export const OptionWithMarketDataSchema = z.object({
   lastPrice: z.number().optional(),
   volume: z.number().optional(),
   openInterest: z.number().optional(),
+
+  // IV Percentile (0-100)
+  ivPercentile: z.number().optional(),
+  ivPercentileData: z
+    .object({
+      currentIV: z.number(),
+      percentile: z.number(),
+      observationCount: z.number(),
+      high52Week: z.number(),
+      low52Week: z.number(),
+      averageIV: z.number(),
+    })
+    .optional(),
 
   // Scoring
   liquidityScore: z.number().optional(),
@@ -204,6 +218,7 @@ export class OptionChainScanner {
   private cache: Map<string, CacheEntry> = new Map();
   private cacheTtlMs: number;
   private priceInvalidationPct: number;
+  private ivPercentileCalculator?: IVPercentileCalculator;
 
   /**
    * Create a new scanner.
@@ -211,15 +226,26 @@ export class OptionChainScanner {
    * @param client - Polygon API client
    * @param cacheTtlMs - Cache TTL in milliseconds (default: 5 minutes)
    * @param priceInvalidationPct - Invalidate cache on this % price move (default: 1%)
+   * @param ivPercentileCalculator - Optional IV percentile calculator for filtering by IV rank
    */
   constructor(
     client: PolygonClient,
     cacheTtlMs = 5 * 60 * 1000, // 5 minutes
-    priceInvalidationPct = 0.01 // 1%
+    priceInvalidationPct = 0.01, // 1%
+    ivPercentileCalculator?: IVPercentileCalculator
   ) {
     this.client = client;
     this.cacheTtlMs = cacheTtlMs;
     this.priceInvalidationPct = priceInvalidationPct;
+    this.ivPercentileCalculator = ivPercentileCalculator;
+  }
+
+  /**
+   * Set the IV percentile calculator.
+   * Allows adding calculator after construction.
+   */
+  setIVPercentileCalculator(calculator: IVPercentileCalculator): void {
+    this.ivPercentileCalculator = calculator;
   }
 
   /**
@@ -238,6 +264,10 @@ export class OptionChainScanner {
     // Check cache
     const cached = this.getCached(underlying);
     if (cached) {
+      // Still need to enrich with IV percentile if filter requires it
+      if (this.needsIVPercentile(filter)) {
+        await this.enrichWithIVPercentile(cached, underlying);
+      }
       return this.filterAndRank(cached, filter);
     }
 
@@ -249,11 +279,68 @@ export class OptionChainScanner {
       await this.enrichWithGreeks(chain, greeksProvider);
     }
 
+    // Enrich with IV percentile if calculator available and filter requires it
+    if (this.needsIVPercentile(filter)) {
+      await this.enrichWithIVPercentile(chain, underlying);
+    }
+
     // Cache the results
     const underlyingPrice = await this.getUnderlyingPrice(underlying);
     this.setCache(underlying, chain, underlyingPrice);
 
     return this.filterAndRank(chain, filter);
+  }
+
+  /**
+   * Check if filter requires IV percentile calculation.
+   */
+  private needsIVPercentile(filter: OptionFilterCriteria): boolean {
+    return (
+      this.ivPercentileCalculator !== undefined &&
+      (filter.minIvPercentile !== undefined || filter.maxIvPercentile !== undefined)
+    );
+  }
+
+  /**
+   * Enrich options with IV percentile data.
+   */
+  private async enrichWithIVPercentile(
+    options: OptionWithMarketData[],
+    underlying: string
+  ): Promise<void> {
+    if (!this.ivPercentileCalculator) {
+      return;
+    }
+
+    // Get options with IV values
+    const optionsWithIV = options.filter((opt) => opt.iv !== undefined);
+    if (optionsWithIV.length === 0) {
+      return;
+    }
+
+    // Calculate IV percentile once per underlying (uses underlying's historical IV)
+    // We use the average IV of current options as the "current IV" for the underlying
+    const avgIV = optionsWithIV.reduce((sum, opt) => sum + (opt.iv ?? 0), 0) / optionsWithIV.length;
+
+    const result = await this.ivPercentileCalculator.calculate(underlying, avgIV);
+
+    if (!result) {
+      return;
+    }
+
+    // Apply percentile to all options (they share the underlying's IV history)
+    // Each option gets its own percentile based on its specific IV
+    for (const option of options) {
+      if (option.iv !== undefined) {
+        // Calculate this option's percentile using the same historical data
+        const optionResult = await this.ivPercentileCalculator.calculate(underlying, option.iv);
+
+        if (optionResult) {
+          option.ivPercentile = optionResult.percentile;
+          option.ivPercentileData = optionResult;
+        }
+      }
+    }
   }
 
   /**
@@ -483,8 +570,19 @@ export class OptionChainScanner {
       }
     }
 
-    // IV percentile filter (requires external IV ranking)
-    // TODO: Implement IV percentile calculation
+    // IV percentile filter
+    if (option.ivPercentile !== undefined) {
+      if (filter.minIvPercentile !== undefined && option.ivPercentile < filter.minIvPercentile) {
+        return false;
+      }
+      if (filter.maxIvPercentile !== undefined && option.ivPercentile > filter.maxIvPercentile) {
+        return false;
+      }
+    } else if (filter.minIvPercentile !== undefined || filter.maxIvPercentile !== undefined) {
+      // If IV percentile filter is set but option doesn't have percentile data,
+      // skip the option (can't determine if it passes)
+      return false;
+    }
 
     return true;
   }

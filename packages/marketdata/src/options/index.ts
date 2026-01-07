@@ -1,7 +1,8 @@
 /**
  * Options Module
  *
- * Provides options pricing, Greeks calculation, and portfolio exposure analysis.
+ * Provides options pricing, Greeks calculation, portfolio exposure analysis,
+ * and IV percentile calculation.
  */
 
 export {
@@ -20,3 +21,16 @@ export {
   type OptionType,
   type SymbolExposure,
 } from "./greeks";
+
+export {
+  calculateIVPercentile,
+  calculateIVRank,
+  createVixProxyProvider,
+  DEFAULT_IV_PERCENTILE_CONFIG,
+  InMemoryIVHistoryStore,
+  type IVHistoryProvider,
+  type IVObservation,
+  IVPercentileCalculator,
+  type IVPercentileConfig,
+  type IVPercentileResult,
+} from "./ivPercentile";
