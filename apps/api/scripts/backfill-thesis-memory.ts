@@ -21,8 +21,7 @@
 
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
-import { createTursoClient, ThesisStateRepository } from "@cream/storage";
-import { createClient } from "@libsql/client";
+import { createTursoClient, ThesisStateRepository, type TursoClient } from "@cream/storage";
 import {
   batchIngestClosedTheses,
   type ThesisIngestionInput,
@@ -73,22 +72,18 @@ function parseArgs(): BackfillOptions {
  * Get the market regime for a specific date.
  * Falls back to "UNKNOWN" if no regime data is available.
  */
-async function getRegimeForDate(
-  client: ReturnType<typeof createClient>,
-  date: string
-): Promise<string> {
+async function getRegimeForDate(client: TursoClient, date: string): Promise<string> {
   try {
     // Look for the closest regime label before or at the given date
-    const result = await client.execute({
-      sql: `SELECT regime FROM regime_labels
-            WHERE symbol = '_MARKET' AND timeframe = '1d'
-            AND timestamp <= ?
-            ORDER BY timestamp DESC
-            LIMIT 1`,
-      args: [date],
-    });
+    const row = await client.get<{ regime: string }>(
+      `SELECT regime FROM regime_labels
+       WHERE symbol = '_MARKET' AND timeframe = '1d'
+       AND timestamp <= ?
+       ORDER BY timestamp DESC
+       LIMIT 1`,
+      [date]
+    );
 
-    const row = result.rows[0];
     if (row?.regime) {
       return String(row.regime).toUpperCase();
     }
@@ -118,11 +113,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
     console.error("❌ TURSO_DATABASE_URL environment variable not set");
     process.exit(1);
   }
-
-  const tursoClient = createClient({
-    url: databaseUrl,
-    authToken,
-  });
 
   const storageClient = await createTursoClient({
     syncUrl: databaseUrl,
@@ -155,7 +145,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
   if (closedTheses.length === 0) {
     console.log("\n✅ No closed theses found to backfill.");
-    tursoClient.close();
+    storageClient.close();
     return;
   }
 
@@ -169,8 +159,8 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
     const entryDate = thesis.entryDate ?? thesis.createdAt;
     const exitDate = thesis.closedAt ?? new Date().toISOString();
 
-    const entryRegime = await getRegimeForDate(tursoClient, entryDate);
-    const exitRegime = await getRegimeForDate(tursoClient, exitDate);
+    const entryRegime = await getRegimeForDate(storageClient, entryDate);
+    const exitRegime = await getRegimeForDate(storageClient, exitDate);
 
     inputs.push({
       thesis,
@@ -191,7 +181,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
   if (options.dryRun) {
     console.log(`\n✅ Dry run complete. Would ingest ${inputs.length} theses.`);
-    tursoClient.close();
+    storageClient.close();
     storageClient.close();
     return;
   }
@@ -206,7 +196,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
   } catch (error) {
     console.error("❌ Failed to create HelixDB or embedding client:", error);
     console.log("\nSkipping ingestion - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set.");
-    tursoClient.close();
+    storageClient.close();
     storageClient.close();
     return;
   }
@@ -239,7 +229,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
   // Cleanup
   helixClient.close();
-  tursoClient.close();
+  storageClient.close();
   storageClient.close();
 
   console.log("\n✅ Backfill complete!");
