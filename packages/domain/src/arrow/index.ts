@@ -23,8 +23,16 @@
  * ```
  */
 
-// Client
+// High-level client (convenience wrapper)
 export { ArrowFlightClient, createFlightClient } from "./client.js";
+
+// Low-level gRPC client (direct Flight protocol access)
+export {
+  createFlightServiceClient,
+  FlightServiceClient,
+  type FlightTableResult,
+} from "./flight-client.js";
+
 // Types
 export {
   type CandleRow,

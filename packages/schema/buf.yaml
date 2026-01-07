@@ -18,6 +18,9 @@ lint:
   except:
     # Allow shorter package names during development
     - PACKAGE_VERSION_SUFFIX
+  ignore:
+    # Arrow Flight proto is an official Apache standard that doesn't follow buf conventions
+    - arrow/flight/protocol
 
 # Breaking change detection (greenfield - no backwards compat needed)
 breaking:

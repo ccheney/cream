@@ -48,6 +48,7 @@
     "@connectrpc/connect": "^1.6.1",
     "@connectrpc/connect-node": "^1.6.1",
     "@cream/schema-gen": "workspace:*",
+    "apache-arrow": "21.1.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
