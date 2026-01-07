@@ -7,11 +7,34 @@
  * - Decide: Run agents and generate plan
  * - Act: Submit orders via Rust execution engine
  *
- * For Phase 4, this is a simplified implementation without full Mastra integration.
- * Full Mastra workflow will be added in Phase 8 when real LLM agents are integrated.
+ * Mode selection:
+ * - BACKTEST: Uses stub agents (no LLM calls)
+ * - PAPER/LIVE: Uses real Mastra agents with Gemini LLM
  *
  * @see docs/plans/05-agents.md
  */
+
+import { isBacktest } from "@cream/domain";
+import {
+  ConsensusGate,
+  type DecisionPlan,
+  runConsensusLoop,
+  withAgentTimeout,
+} from "@cream/mastra-kit";
+
+import {
+  type AgentContext,
+  type BearishResearchOutput,
+  type BullishResearchOutput,
+  type FundamentalsAnalysisOutput,
+  revisePlan,
+  runAnalystsParallel,
+  runApprovalParallel,
+  runDebateParallel,
+  runTrader,
+  type SentimentAnalysisOutput,
+  type TechnicalAnalysisOutput,
+} from "../agents/mastra-agents.js";
 
 // ============================================
 // Types
@@ -20,6 +43,8 @@
 export interface WorkflowInput {
   cycleId: string;
   instruments?: string[];
+  /** Force stub mode even in PAPER/LIVE (for testing) */
+  forceStub?: boolean;
 }
 
 export interface MarketSnapshot {
@@ -91,7 +116,7 @@ export interface Decision {
   thesisState: string;
 }
 
-export interface DecisionPlan {
+export interface WorkflowDecisionPlan {
   cycleId: string;
   timestamp: string;
   decisions: Decision[];
@@ -115,7 +140,7 @@ export interface WorkflowState {
   fundamentalsAnalysis?: FundamentalsAnalysis[];
   bullishResearch?: Research[];
   bearishResearch?: Research[];
-  decisionPlan?: DecisionPlan;
+  decisionPlan?: WorkflowDecisionPlan;
   riskApproval?: Approval;
   criticApproval?: Approval;
   constraintCheck?: { passed: boolean; violations: string[] };
@@ -125,11 +150,20 @@ export interface WorkflowState {
 export interface WorkflowResult {
   cycleId: string;
   approved: boolean;
+  iterations: number;
   orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
+  mode: "STUB" | "LLM";
 }
 
 // ============================================
-// Workflow Steps (Stub Implementations)
+// Timeout Configuration
+// ============================================
+
+const AGENT_TIMEOUT_MS = 30_000; // 30 seconds per agent
+const TOTAL_CONSENSUS_TIMEOUT_MS = 300_000; // 5 minutes total
+
+// ============================================
+// Stub Implementations (for BACKTEST mode)
 // ============================================
 
 async function fetchMarketSnapshot(instruments: string[]): Promise<MarketSnapshot> {
@@ -149,7 +183,7 @@ async function loadMemoryContext(snapshot: MarketSnapshot): Promise<MemoryContex
   };
 }
 
-async function runTechnicalAnalyst(instruments: string[]): Promise<TechnicalAnalysis[]> {
+async function runTechnicalAnalystStub(instruments: string[]): Promise<TechnicalAnalysis[]> {
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     setup_classification: "NO_SETUP",
@@ -162,7 +196,7 @@ async function runTechnicalAnalyst(instruments: string[]): Promise<TechnicalAnal
   }));
 }
 
-async function runNewsAnalyst(instruments: string[]): Promise<SentimentAnalysis[]> {
+async function runNewsAnalystStub(instruments: string[]): Promise<SentimentAnalysis[]> {
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     event_impacts: [],
@@ -173,7 +207,7 @@ async function runNewsAnalyst(instruments: string[]): Promise<SentimentAnalysis[
   }));
 }
 
-async function runFundamentalsAnalyst(instruments: string[]): Promise<FundamentalsAnalysis[]> {
+async function runFundamentalsAnalystStub(instruments: string[]): Promise<FundamentalsAnalysis[]> {
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     fundamental_drivers: ["Strong earnings growth"],
@@ -186,7 +220,7 @@ async function runFundamentalsAnalyst(instruments: string[]): Promise<Fundamenta
   }));
 }
 
-async function runBullishResearcher(instruments: string[]): Promise<Research[]> {
+async function runBullishResearcherStub(instruments: string[]): Promise<Research[]> {
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     thesis: "Potential for breakout if resistance breaks.",
@@ -199,7 +233,7 @@ async function runBullishResearcher(instruments: string[]): Promise<Research[]> 
   }));
 }
 
-async function runBearishResearcher(instruments: string[]): Promise<Research[]> {
+async function runBearishResearcherStub(instruments: string[]): Promise<Research[]> {
   return instruments.map((instrument) => ({
     instrument_id: instrument,
     thesis: "Elevated valuation creates downside risk.",
@@ -210,11 +244,11 @@ async function runBearishResearcher(instruments: string[]): Promise<Research[]> 
   }));
 }
 
-async function runTraderAgent(
+async function runTraderAgentStub(
   cycleId: string,
   bullish: Research[],
   _bearish: Research[]
-): Promise<DecisionPlan> {
+): Promise<WorkflowDecisionPlan> {
   return {
     cycleId,
     timestamp: new Date().toISOString(),
@@ -239,7 +273,7 @@ async function runTraderAgent(
   };
 }
 
-async function runRiskManager(_plan: DecisionPlan): Promise<Approval> {
+async function runRiskManagerStub(_plan: WorkflowDecisionPlan): Promise<Approval> {
   return {
     verdict: "APPROVE",
     violations: [],
@@ -248,7 +282,7 @@ async function runRiskManager(_plan: DecisionPlan): Promise<Approval> {
   };
 }
 
-async function runCritic(_plan: DecisionPlan): Promise<Approval> {
+async function runCriticStub(_plan: WorkflowDecisionPlan): Promise<Approval> {
   return {
     verdict: "APPROVE",
     violations: [],
@@ -279,76 +313,219 @@ async function submitOrders(
 }
 
 // ============================================
-// Main Workflow Execution
+// Stub Mode Execution
 // ============================================
 
-/**
- * Execute the trading cycle workflow.
- *
- * @param input - Workflow input containing cycleId and optional instruments
- * @returns Workflow result with approval status and order submission details
- */
-export async function executeTradingCycle(input: WorkflowInput): Promise<WorkflowResult> {
+async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowResult> {
   const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"] } = input;
 
-  // ============================================
   // Observe Phase
-  // ============================================
   const marketSnapshot = await fetchMarketSnapshot(instruments);
 
-  // ============================================
   // Orient Phase
-  // ============================================
   const _memoryContext = await loadMemoryContext(marketSnapshot);
 
-  // ============================================
   // Decide Phase - Analysts (Parallel)
-  // ============================================
   const [_technicalAnalysis, _sentimentAnalysis, _fundamentalsAnalysis] = await Promise.all([
-    runTechnicalAnalyst(instruments),
-    runNewsAnalyst(instruments),
-    runFundamentalsAnalyst(instruments),
+    runTechnicalAnalystStub(instruments),
+    runNewsAnalystStub(instruments),
+    runFundamentalsAnalystStub(instruments),
   ]);
 
-  // ============================================
   // Decide Phase - Researchers (Parallel)
-  // ============================================
   const [bullishResearch, bearishResearch] = await Promise.all([
-    runBullishResearcher(instruments),
-    runBearishResearcher(instruments),
+    runBullishResearcherStub(instruments),
+    runBearishResearcherStub(instruments),
   ]);
 
-  // ============================================
   // Decide Phase - Trader
-  // ============================================
-  const decisionPlan = await runTraderAgent(cycleId, bullishResearch, bearishResearch);
+  const decisionPlan = await runTraderAgentStub(cycleId, bullishResearch, bearishResearch);
 
-  // ============================================
   // Decide Phase - Approvers (Parallel)
-  // ============================================
   const [riskApproval, criticApproval] = await Promise.all([
-    runRiskManager(decisionPlan),
-    runCritic(decisionPlan),
+    runRiskManagerStub(decisionPlan),
+    runCriticStub(decisionPlan),
   ]);
 
   const approved = riskApproval.verdict === "APPROVE" && criticApproval.verdict === "APPROVE";
 
-  // ============================================
   // Act Phase - Constraints and Orders
-  // ============================================
   const constraintCheck = await checkConstraints(approved);
   const orderSubmission = await submitOrders(constraintCheck.passed);
 
   return {
     cycleId,
     approved,
+    iterations: 1,
     orderSubmission,
+    mode: "STUB",
   };
+}
+
+// ============================================
+// LLM Mode Execution (Real Mastra Agents)
+// ============================================
+
+async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowResult> {
+  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"] } = input;
+
+  // Observe Phase
+  const marketSnapshot = await fetchMarketSnapshot(instruments);
+
+  // Orient Phase
+  const memoryContext = await loadMemoryContext(marketSnapshot);
+
+  // Build agent context
+  const agentContext: AgentContext = {
+    cycleId,
+    symbols: instruments,
+    snapshots: marketSnapshot.candles,
+    memory: { relevantCases: memoryContext.relevantCases },
+    externalContext: { news: [], macroIndicators: {} },
+  };
+
+  // ============================================
+  // Phase 1: Analysts (Parallel with timeout)
+  // ============================================
+  const analystsResult = await withAgentTimeout(
+    runAnalystsParallel(agentContext),
+    AGENT_TIMEOUT_MS * 3, // 3 agents running
+    "analysts"
+  );
+
+  let analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  };
+
+  if (analystsResult.timedOut) {
+    // Return no-trade on analyst timeout
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: { submitted: false, orderIds: [], errors: ["Analyst agents timed out"] },
+      mode: "LLM",
+    };
+  }
+  analystOutputs = analystsResult.result;
+
+  // ============================================
+  // Phase 2: Debate (Parallel with timeout)
+  // ============================================
+  const debateResult = await withAgentTimeout(
+    runDebateParallel(agentContext, analystOutputs),
+    AGENT_TIMEOUT_MS * 2, // 2 agents running
+    "debate"
+  );
+
+  let debateOutputs: {
+    bullish: BullishResearchOutput[];
+    bearish: BearishResearchOutput[];
+  };
+
+  if (debateResult.timedOut) {
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: { submitted: false, orderIds: [], errors: ["Research agents timed out"] },
+      mode: "LLM",
+    };
+  }
+  debateOutputs = debateResult.result;
+
+  // ============================================
+  // Phase 3: Trader synthesizes plan
+  // ============================================
+  const traderResult = await withAgentTimeout(
+    runTrader(agentContext, debateOutputs),
+    AGENT_TIMEOUT_MS,
+    "trader"
+  );
+
+  if (traderResult.timedOut) {
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: { submitted: false, orderIds: [], errors: ["Trader agent timed out"] },
+      mode: "LLM",
+    };
+  }
+  const initialPlan = traderResult.result;
+
+  // ============================================
+  // Phase 4: Consensus Loop (Risk Manager + Critic)
+  // ============================================
+  const gate = new ConsensusGate({
+    maxIterations: 3,
+    logRejections: true,
+    timeout: {
+      perAgentMs: AGENT_TIMEOUT_MS,
+      totalMs: TOTAL_CONSENSUS_TIMEOUT_MS,
+    },
+    escalation: {
+      enabled: !isBacktest(),
+    },
+  });
+
+  const consensusResult = await runConsensusLoop(
+    gate,
+    initialPlan,
+    // getApproval function
+    async (plan: DecisionPlan) => {
+      const result = await runApprovalParallel(plan, analystOutputs, debateOutputs);
+      return result;
+    },
+    // revisePlan function
+    async (plan: DecisionPlan, rejectionReasons: string[]) => {
+      return revisePlan(plan, rejectionReasons, analystOutputs, debateOutputs);
+    }
+  );
+
+  // ============================================
+  // Act Phase - Constraints and Orders
+  // ============================================
+  const constraintCheck = await checkConstraints(consensusResult.approved);
+  const orderSubmission = await submitOrders(constraintCheck.passed);
+
+  return {
+    cycleId,
+    approved: consensusResult.approved,
+    iterations: consensusResult.iterations,
+    orderSubmission,
+    mode: "LLM",
+  };
+}
+
+// ============================================
+// Main Workflow Execution
+// ============================================
+
+/**
+ * Execute the trading cycle workflow.
+ *
+ * Mode selection:
+ * - BACKTEST: Uses stub agents (no LLM calls)
+ * - PAPER/LIVE: Uses real Mastra agents with Gemini LLM
+ *
+ * @param input - Workflow input containing cycleId and optional instruments
+ * @returns Workflow result with approval status and order submission details
+ */
+export async function executeTradingCycle(input: WorkflowInput): Promise<WorkflowResult> {
+  const useStub = input.forceStub || isBacktest();
+
+  if (useStub) {
+    return executeTradingCycleStub(input);
+  }
+
+  return executeTradingCycleLLM(input);
 }
 
 /**
  * Workflow object for Mastra-like interface.
- * This will be replaced with real Mastra workflow in Phase 8.
  */
 export const tradingCycleWorkflow = {
   id: "trading-cycle-workflow",
