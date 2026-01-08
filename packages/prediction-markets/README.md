@@ -226,15 +226,18 @@ bun test src/providers/kalshi/client.test.ts
 
 ## Configuration
 
-See `@cream/config` for full configuration options:
+Configuration uses Zod schemas with sensible defaults. API keys come from environment variables:
 
 ```typescript
-import { loadConfig } from "@cream/config";
+import { createDefaultPredictionMarketsConfig } from "@cream/config/schemas/prediction_markets";
 
-const config = await loadConfig();
-const pmConfig = config.predictionMarkets;
-// { kalshi: {...}, polymarket: {...}, cache: {...}, ... }
+const config = createDefaultPredictionMarketsConfig();
+// { kalshi: {...}, polymarket: {...}, caching: {...}, ... }
 ```
+
+Required environment variables:
+- `KALSHI_API_KEY_ID` - Kalshi API key ID
+- `KALSHI_PRIVATE_KEY_PATH` - Path to RSA private key
 
 ## Rate Limits
 

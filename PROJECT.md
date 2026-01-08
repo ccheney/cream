@@ -82,7 +82,7 @@ cream/
 │
 ├── packages/                       # Shared libraries (20 packages)
 │   ├── domain/                     # Zod schemas, environment, time utilities
-│   ├── config/                     # YAML config loading with Zod validation
+│   ├── config/                     # Runtime config service, Zod schemas, secrets
 │   ├── schema/                     # Protobuf definitions (.proto files)
 │   ├── schema-gen/                 # Generated Protobuf stubs (TS/Rust/Python)
 │   ├── storage/                    # Turso client, repositories, migrations
@@ -178,7 +178,7 @@ DeepEval agent evaluation framework with LLM-as-Judge.
 | Package | Purpose |
 |---------|---------|
 | `@cream/domain` | Zod schemas, calendar, clock validation, decision types |
-| `@cream/config` | YAML loading, feature flags, secrets management |
+| `@cream/config` | Runtime config service, feature flags, secrets management |
 | `@cream/schema` | Protobuf definitions (common, decision, execution, events) |
 | `@cream/schema-gen` | Generated stubs for TS, Rust, Python |
 

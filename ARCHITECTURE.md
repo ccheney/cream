@@ -107,7 +107,7 @@ cream/
 │
 ├── packages/
 │   ├── domain/                 # Core types, Zod schemas, env handling
-│   ├── config/                 # YAML config loading with validation
+│   ├── config/                 # Runtime config service, Zod schemas, secrets
 │   ├── schema/                 # Protobuf definitions (.proto)
 │   ├── schema-gen/             # Generated stubs (TS/Rust/Python)
 │   ├── storage/                # Turso client wrapper

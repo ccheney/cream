@@ -32,7 +32,7 @@ apps/
 
 packages/
   domain/               # Zod schemas, environment, time utilities
-  config/               # YAML config loading with Zod validation
+  config/               # Runtime config service, Zod schemas, secrets
   schema/               # Protobuf definitions (.proto files)
   schema-gen/           # Generated Protobuf stubs (TS/Rust)
   storage/              # Turso client wrapper
@@ -85,6 +85,10 @@ buf generate                        # Protobuf → TS + Rust stubs
 
 # Type Checking
 bun run typecheck                   # All TS packages
+
+# Database
+bun run db:migrate                  # Run Turso migrations
+bun run db:status                   # Show migration status
 ```
 
 ## Environment
@@ -146,11 +150,27 @@ ALLOWED_ORIGINS=             # Comma-separated CORS origins (default: localhost:
 
 All runtime config is stored in the database (no YAML files):
 
-- `trading_config` - Consensus thresholds, position sizing, risk/reward
-- `agent_configs` - Model selection, temperature, prompt overrides
-- `universe_configs` - Symbol sources, filters, include/exclude lists
+| Table | Purpose |
+|-------|---------|
+| `trading_config` | Consensus thresholds, position sizing, risk/reward |
+| `agent_configs` | Model selection, temperature, prompt overrides per agent |
+| `universe_configs` | Symbol sources, filters, include/exclude lists |
 
-Config promotion workflow: **DRAFT → PAPER → LIVE** (via dashboard UI)
+**Loading config:**
+```typescript
+import { createRuntimeConfigService } from "@cream/config";
+
+const service = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+const config = await service.getActiveConfig("PAPER");
+```
+
+**Config promotion workflow:** DRAFT → TEST → ACTIVE (via dashboard UI at `/config`)
+
+**Dashboard config pages:**
+- `/config` - Overview of current active configuration
+- `/config/edit` - Edit draft configuration
+- `/config/promote` - Test draft in sandbox and promote to active
+- `/config/history` - Version history and rollback
 
 ### Startup Validation
 
