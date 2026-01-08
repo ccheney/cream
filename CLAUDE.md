@@ -153,6 +153,42 @@ BETTER_AUTH_URL=             # Better Auth base URL for OAuth callbacks
 ALLOWED_ORIGINS=             # Comma-separated CORS origins (default: localhost:3000,3001)
 ```
 
+## Authentication
+
+Dashboard uses **better-auth** with Google OAuth for authentication:
+
+- **Google OAuth**: Single sign-on via Google accounts
+- **Session-based**: Cookies, not JWTs (sessions stored in Turso)
+- **No RBAC**: All authenticated users have full access
+- **MFA required for LIVE**: Two-factor authentication enforced in production
+
+### Environment Requirements
+
+| Environment | Auth Required | MFA Required |
+|-------------|---------------|--------------|
+| BACKTEST | No | No |
+| PAPER | Yes | No |
+| LIVE | Yes | Yes |
+
+### OAuth Callback Flow
+
+1. User clicks "Sign in with Google" on dashboard
+2. Redirected to Google OAuth consent screen
+3. Google redirects to `{BETTER_AUTH_URL}/api/auth/callback/google`
+4. Session created and user redirected to dashboard
+
+### Protected Routes
+
+```typescript
+import { requireAuth, liveProtection } from "./auth/session.js";
+
+// Require authentication
+app.use("/api/*", sessionMiddleware(), requireAuth());
+
+// LIVE environment: require MFA + confirmation header
+app.post("/api/orders", liveProtection({ requireMFA: true, requireConfirmation: true }));
+```
+
 ## Runtime Configuration
 
 All runtime config is stored in the database (no YAML files):
