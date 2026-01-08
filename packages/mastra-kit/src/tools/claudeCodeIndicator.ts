@@ -1,10 +1,11 @@
 /**
  * Claude Code Indicator Implementation Tool
  *
- * Uses Claude Agent SDK to implement indicators from hypotheses.
+ * Uses Claude Agent SDK V2 to implement indicators from hypotheses.
  * Claude Code runs as a subprocess with restricted paths and tools.
  *
  * @see docs/plans/19-dynamic-indicator-synthesis.md (lines 347-473)
+ * @see https://docs.anthropic.com/en/docs/agent-sdk/typescript-v2
  */
 
 import {
@@ -14,22 +15,38 @@ import {
 } from "@cream/indicators";
 import { z } from "zod";
 
-// Type definition for the Claude Agent SDK query function
+// Type definitions for the Claude Agent SDK V2 interface
 // Used when SDK is not installed - we handle this gracefully at runtime
-type QueryFunction = (args: {
-  prompt: string;
-  options?: {
-    model?: string;
-    maxTurns?: number;
-    cwd?: string;
-    allowedTools?: string[];
-    additionalDirectories?: string[];
-    canUseTool?: (
-      toolName: string,
-      toolInput: unknown
-    ) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
+
+interface SDKMessage {
+  type: string;
+  session_id: string;
+  message?: {
+    role: string;
+    content: Array<{ type: string; text?: string }>;
   };
-}) => AsyncIterable<{ type: string; message?: string }>;
+}
+
+interface SessionOptions {
+  model?: string;
+  maxTurns?: number;
+  cwd?: string;
+  allowedTools?: string[];
+  additionalDirectories?: string[];
+  canUseTool?: (
+    toolName: string,
+    toolInput: unknown
+  ) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
+}
+
+interface Session {
+  send(message: string): Promise<void>;
+  stream(): AsyncGenerator<SDKMessage>;
+  close(): void;
+  [Symbol.asyncDispose]?: () => Promise<void>;
+}
+
+type CreateSessionFunction = (options: SessionOptions) => Session;
 
 // ============================================
 // Configuration
@@ -265,13 +282,13 @@ export async function implementIndicator(
   const testPath = `packages/indicators/src/custom/${input.hypothesis.name}.test.ts`;
 
   try {
-    // Import the Claude Agent SDK dynamically to avoid hard dependency
+    // Import the Claude Agent SDK V2 dynamically to avoid hard dependency
     // The SDK is optional and may not be installed
-    let query: QueryFunction;
+    let createSession: CreateSessionFunction;
     try {
-      // Use dynamic require to avoid TypeScript type checking
+      // Use dynamic import to avoid TypeScript type checking
       const sdk = await import("@anthropic-ai/claude-agent-sdk");
-      query = sdk.query as QueryFunction;
+      createSession = sdk.unstable_v2_createSession as CreateSessionFunction;
     } catch {
       return {
         success: false,
@@ -279,67 +296,71 @@ export async function implementIndicator(
       };
     }
 
-    // Execute Claude Code with restrictions
-    const result = query({
-      prompt,
-      options: {
-        model: config.model,
-        maxTurns: config.maxTurns,
-        cwd: config.workingDirectory,
+    // Create session with restrictions
+    const session = createSession({
+      model: config.model,
+      maxTurns: config.maxTurns,
+      cwd: config.workingDirectory,
 
-        // Restrict tools to safe operations
-        allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      // Restrict tools to safe operations
+      allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
 
-        // Restrict paths to custom indicators directory
-        additionalDirectories: [
-          "packages/indicators/src/custom",
-          "packages/indicators/src/types.ts",
-          "packages/indicators/src/momentum", // Pattern reference
-        ],
+      // Restrict paths to custom indicators directory
+      additionalDirectories: [
+        "packages/indicators/src/custom",
+        "packages/indicators/src/types.ts",
+        "packages/indicators/src/momentum", // Pattern reference
+      ],
 
-        // Custom permission handler for additional safety
-        canUseTool: async (toolName: string, toolInput: unknown) => {
-          // Allow all whitelisted tools
-          if (["Read", "Grep", "Glob"].includes(toolName)) {
-            return { behavior: "allow" as const };
-          }
+      // Custom permission handler for additional safety
+      canUseTool: async (toolName: string, toolInput: unknown) => {
+        // Allow all whitelisted tools
+        if (["Read", "Grep", "Glob"].includes(toolName)) {
+          return { behavior: "allow" as const };
+        }
 
-          // For Write/Edit, ensure it's in the custom directory
-          if (toolName === "Write" || toolName === "Edit") {
-            const path = (toolInput as { file_path?: string })?.file_path ?? "";
-            if (!path.includes("/custom/") && !path.includes("\\custom\\")) {
-              return {
-                behavior: "deny" as const,
-                message: "Write operations restricted to packages/indicators/src/custom/",
-              };
-            }
-            return { behavior: "allow" as const };
-          }
-
-          // For Bash, only allow test commands
-          if (toolName === "Bash") {
-            const command = (toolInput as { command?: string })?.command ?? "";
-            if (command.startsWith("bun test") || command.startsWith("ls")) {
-              return { behavior: "allow" as const };
-            }
+        // For Write/Edit, ensure it's in the custom directory
+        if (toolName === "Write" || toolName === "Edit") {
+          const path = (toolInput as { file_path?: string })?.file_path ?? "";
+          if (!path.includes("/custom/") && !path.includes("\\custom\\")) {
             return {
               behavior: "deny" as const,
-              message: "Only test and list commands allowed",
+              message: "Write operations restricted to packages/indicators/src/custom/",
             };
           }
-
           return { behavior: "allow" as const };
-        },
+        }
+
+        // For Bash, only allow test commands
+        if (toolName === "Bash") {
+          const command = (toolInput as { command?: string })?.command ?? "";
+          if (command.startsWith("bun test") || command.startsWith("ls")) {
+            return { behavior: "allow" as const };
+          }
+          return {
+            behavior: "deny" as const,
+            message: "Only test and list commands allowed",
+          };
+        }
+
+        return { behavior: "allow" as const };
       },
     });
 
-    // Process the streaming result
+    // Send prompt and process the streaming response
     let turnsUsed = 0;
 
-    for await (const message of result) {
-      if (message.type === "assistant") {
-        turnsUsed++;
+    try {
+      await session.send(prompt);
+
+      for await (const message of session.stream()) {
+        if (message.type === "assistant") {
+          turnsUsed++;
+        }
       }
+    } finally {
+      // Ensure session is closed even if an error occurs
+      session.close();
     }
 
     // Verify files were created by checking filesystem
