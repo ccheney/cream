@@ -9,15 +9,42 @@
     "test": "echo 'No tests for generated files'"
   },
   "exports": {
-    "./cream/v1/common": "./ts/cream/v1/common_pb.ts",
-    "./cream/v1/decision": "./ts/cream/v1/decision_pb.ts",
-    "./cream/v1/events": "./ts/cream/v1/events_pb.ts",
-    "./cream/v1/execution": "./ts/cream/v1/execution_pb.ts",
-    "./cream/v1/execution_connect": "./ts/cream/v1/execution_connect.ts",
-    "./cream/v1/market_snapshot": "./ts/cream/v1/market_snapshot_pb.ts",
-    "./cream/v1/market_snapshot_connect": "./ts/cream/v1/market_snapshot_connect.ts",
-    "./arrow/flight/protocol": "./ts/arrow/flight/protocol/flight_pb.ts",
-    "./arrow/flight/protocol_connect": "./ts/arrow/flight/protocol/flight_connect.ts"
+    "./cream/v1/common": {
+      "types": "./ts/cream/v1/common_pb.ts",
+      "import": "./ts/cream/v1/common_pb.ts"
+    },
+    "./cream/v1/decision": {
+      "types": "./ts/cream/v1/decision_pb.ts",
+      "import": "./ts/cream/v1/decision_pb.ts"
+    },
+    "./cream/v1/events": {
+      "types": "./ts/cream/v1/events_pb.ts",
+      "import": "./ts/cream/v1/events_pb.ts"
+    },
+    "./cream/v1/execution": {
+      "types": "./ts/cream/v1/execution_pb.ts",
+      "import": "./ts/cream/v1/execution_pb.ts"
+    },
+    "./cream/v1/execution_connect": {
+      "types": "./ts/cream/v1/execution_connect.ts",
+      "import": "./ts/cream/v1/execution_connect.ts"
+    },
+    "./cream/v1/market_snapshot": {
+      "types": "./ts/cream/v1/market_snapshot_pb.ts",
+      "import": "./ts/cream/v1/market_snapshot_pb.ts"
+    },
+    "./cream/v1/market_snapshot_connect": {
+      "types": "./ts/cream/v1/market_snapshot_connect.ts",
+      "import": "./ts/cream/v1/market_snapshot_connect.ts"
+    },
+    "./arrow/flight/protocol": {
+      "types": "./ts/arrow/flight/protocol/flight_pb.ts",
+      "import": "./ts/arrow/flight/protocol/flight_pb.ts"
+    },
+    "./arrow/flight/protocol_connect": {
+      "types": "./ts/arrow/flight/protocol/flight_connect.ts",
+      "import": "./ts/arrow/flight/protocol/flight_connect.ts"
+    }
   },
   "dependencies": {
     "@bufbuild/protobuf": "^1.10.0",
