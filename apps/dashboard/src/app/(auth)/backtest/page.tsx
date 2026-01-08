@@ -4,10 +4,8 @@
  * Backtest Page - Historical strategy testing
  */
 
-import { formatDistanceToNow } from "date-fns";
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import { BacktestListItem, BacktestProgressBar } from "@/components/backtest";
 import {
   useBacktest,
   useBacktestEquity,
@@ -15,6 +13,7 @@ import {
   useBacktestTrades,
   useCreateBacktest,
 } from "@/hooks/queries";
+import { useBacktestProgress } from "@/hooks/useBacktestProgress";
 
 export default function BacktestPage() {
   const [selectedBacktest, setSelectedBacktest] = useState<string | null>(null);
@@ -24,12 +23,17 @@ export default function BacktestPage() {
     endDate: "",
     initialCapital: 100000,
   });
+  const [createdBacktestId, setCreatedBacktestId] = useState<string | null>(null);
 
   const { data: backtests, isLoading: backtestsLoading } = useBacktests();
   const { data: backtest } = useBacktest(selectedBacktest ?? "");
   const { data: trades } = useBacktestTrades(selectedBacktest ?? "");
   const { data: equity } = useBacktestEquity(selectedBacktest ?? "");
   const createBacktest = useCreateBacktest();
+
+  // Track progress of newly created backtest
+  const { status: newBacktestStatus, progress: newBacktestProgress } =
+    useBacktestProgress(createdBacktestId);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -41,12 +45,19 @@ export default function BacktestPage() {
 
   const formatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 
-  const handleCreateBacktest = () => {
+  const handleCreateBacktest = async () => {
     if (newBacktest.name && newBacktest.startDate && newBacktest.endDate) {
-      createBacktest.mutate(newBacktest);
+      const result = await createBacktest.mutateAsync(newBacktest);
+      setCreatedBacktestId(result.id);
       setNewBacktest({ name: "", startDate: "", endDate: "", initialCapital: 100000 });
     }
   };
+
+  // Clear created backtest ID when it completes
+  if (createdBacktestId && (newBacktestStatus === "completed" || newBacktestStatus === "error")) {
+    // Give user a moment to see the final state before clearing
+    setTimeout(() => setCreatedBacktestId(null), 2000);
+  }
 
   return (
     <div className="space-y-6">
@@ -127,13 +138,26 @@ export default function BacktestPage() {
             <button
               type="button"
               onClick={handleCreateBacktest}
-              disabled={createBacktest.isPending}
+              disabled={createBacktest.isPending || newBacktestStatus === "running"}
               className="w-full px-4 py-1.5 bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {createBacktest.isPending ? "Creating..." : "Run Backtest"}
             </button>
           </div>
         </div>
+
+        {/* Progress bar for newly created backtest */}
+        {createdBacktestId && newBacktestStatus !== "idle" && (
+          <div className="mt-4 pt-4 border-t border-cream-200 dark:border-night-700">
+            <BacktestProgressBar
+              progressPct={newBacktestProgress?.progress ?? 0}
+              status={newBacktestStatus}
+              showPhase
+              showValue
+              size="md"
+            />
+          </div>
+        )}
       </div>
 
       {/* Backtest List */}
@@ -150,52 +174,13 @@ export default function BacktestPage() {
         ) : backtests && backtests.length > 0 ? (
           <div className="divide-y divide-cream-100 dark:divide-night-700">
             {backtests.map((bt) => (
-              <div
+              <BacktestListItem
                 key={bt.id}
-                className={`flex items-center p-4 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors ${
-                  selectedBacktest === bt.id ? "bg-cream-50 dark:bg-night-750" : ""
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedBacktest(bt.id)}
-                  className="flex-1 text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-cream-900 dark:text-cream-100">
-                        {bt.name}
-                      </span>
-                      <span
-                        className={`ml-2 px-2 py-0.5 text-xs font-medium rounded ${
-                          bt.status === "completed"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : bt.status === "running"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                              : bt.status === "failed"
-                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400"
-                        }`}
-                      >
-                        {bt.status}
-                      </span>
-                    </div>
-                    <span className="text-sm text-cream-500 dark:text-cream-400">
-                      {formatDistanceToNow(new Date(bt.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
-                    {bt.startDate} to {bt.endDate} | {formatCurrency(bt.initialCapital)}
-                  </div>
-                </button>
-                <Link
-                  href={`/backtest/${bt.id}`}
-                  className="ml-4 p-2 rounded-md text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
-                  title="View details"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </Link>
-              </div>
+                backtest={bt}
+                isSelected={selectedBacktest === bt.id}
+                onSelect={setSelectedBacktest}
+                formatCurrency={formatCurrency}
+              />
             ))}
           </div>
         ) : (

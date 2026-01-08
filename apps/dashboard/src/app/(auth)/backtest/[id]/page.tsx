@@ -18,6 +18,7 @@ import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { BacktestProgressBar } from "@/components/backtest";
 import { EquityCurve, type EquityDataPoint } from "@/components/charts/EquityCurve";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import {
   useBacktestTrades,
   useDeleteBacktest,
 } from "@/hooks/queries";
+import { useBacktestProgress } from "@/hooks/useBacktestProgress";
 
 export default function BacktestDetailPage() {
   const params = useParams();
@@ -38,6 +40,10 @@ export default function BacktestDetailPage() {
   const deleteBacktest = useDeleteBacktest();
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  // Subscribe to progress for running backtests
+  const isRunning = backtest?.status === "running" || backtest?.status === "pending";
+  const { status: wsStatus, progress } = useBacktestProgress(isRunning ? id : null);
 
   // Transform equity data for chart
   const equityChartData: EquityDataPoint[] = useMemo(() => {
@@ -222,6 +228,27 @@ export default function BacktestDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Progress bar for running backtests */}
+      {isRunning && wsStatus === "running" && progress && (
+        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">
+            Backtest Progress
+          </h2>
+          <BacktestProgressBar
+            progressPct={progress.progress}
+            status="running"
+            showPhase
+            showValue
+            size="lg"
+          />
+          {progress.barsProcessed !== undefined && progress.totalBars !== undefined && (
+            <p className="mt-2 text-sm text-cream-500 dark:text-cream-400">
+              Processing bar {progress.barsProcessed} of {progress.totalBars}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Parameters Summary */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
