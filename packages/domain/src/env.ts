@@ -90,6 +90,11 @@ const envSchema = z
 
     // Web Search
     TAVILY_API_KEY: z.string().optional().describe("Tavily API key for web search"),
+
+    // Authentication (OAuth)
+    GOOGLE_CLIENT_ID: z.string().optional().describe("Google OAuth client ID"),
+    GOOGLE_CLIENT_SECRET: z.string().optional().describe("Google OAuth client secret"),
+    BETTER_AUTH_URL: urlSchema.optional().describe("Better Auth base URL for OAuth callbacks"),
   })
   .superRefine((data, ctx) => {
     const env = data.CREAM_ENV;
@@ -108,6 +113,21 @@ const envSchema = z
           code: z.ZodIssueCode.custom,
           message: "ALPACA_SECRET is required for PAPER environment",
           path: ["ALPACA_SECRET"],
+        });
+      }
+      // OAuth required for dashboard authentication
+      if (!data.GOOGLE_CLIENT_ID) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "GOOGLE_CLIENT_ID is required for PAPER environment",
+          path: ["GOOGLE_CLIENT_ID"],
+        });
+      }
+      if (!data.GOOGLE_CLIENT_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "GOOGLE_CLIENT_SECRET is required for PAPER environment",
+          path: ["GOOGLE_CLIENT_SECRET"],
         });
       }
     }
@@ -154,6 +174,22 @@ const envSchema = z
           path: ["ANTHROPIC_API_KEY"],
         });
       }
+
+      // OAuth required for dashboard authentication
+      if (!data.GOOGLE_CLIENT_ID) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "GOOGLE_CLIENT_ID is required for LIVE environment",
+          path: ["GOOGLE_CLIENT_ID"],
+        });
+      }
+      if (!data.GOOGLE_CLIENT_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "GOOGLE_CLIENT_SECRET is required for LIVE environment",
+          path: ["GOOGLE_CLIENT_SECRET"],
+        });
+      }
     }
   });
 
@@ -186,6 +222,9 @@ function parseEnv(): EnvConfig {
     KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,
     KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH ?? process.env.KALSHI_PRIVATE_KEY_PATH,
     TAVILY_API_KEY: Bun.env.TAVILY_API_KEY ?? process.env.TAVILY_API_KEY,
+    GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: Bun.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET,
+    BETTER_AUTH_URL: Bun.env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL,
   };
 
   const result = envSchema.safeParse(rawEnv);
@@ -443,6 +482,21 @@ export function getEnvVarDocumentation(): Array<{
       name: "TAVILY_API_KEY",
       required: false,
       description: "Tavily API key for web search",
+    },
+    {
+      name: "GOOGLE_CLIENT_ID",
+      required: false,
+      description: "Google OAuth client ID (required for PAPER/LIVE)",
+    },
+    {
+      name: "GOOGLE_CLIENT_SECRET",
+      required: false,
+      description: "Google OAuth client secret (required for PAPER/LIVE)",
+    },
+    {
+      name: "BETTER_AUTH_URL",
+      required: false,
+      description: "Better Auth base URL for OAuth callbacks",
     },
   ];
 }

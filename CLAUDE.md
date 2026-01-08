@@ -105,6 +105,8 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 | `POLYGON_KEY` | - | - | ✓ | Polygon/Massive API key |
 | `DATABENTO_KEY` | - | - | ✓ | Databento API key |
 | `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` | - | - | ✓ | LLM API key |
+| `GOOGLE_CLIENT_ID` | - | ✓ | ✓ | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | - | ✓ | ✓ | Google OAuth client secret |
 
 ### All Environment Variables
 
@@ -141,6 +143,11 @@ KALSHI_PRIVATE_KEY_PATH=     # Path to Kalshi private key
 
 # Web Search
 TAVILY_API_KEY=              # Tavily API key for web search
+
+# Authentication (OAuth)
+GOOGLE_CLIENT_ID=            # Google OAuth client ID
+GOOGLE_CLIENT_SECRET=        # Google OAuth client secret
+BETTER_AUTH_URL=             # Better Auth base URL for OAuth callbacks
 
 # Dashboard API
 ALLOWED_ORIGINS=             # Comma-separated CORS origins (default: localhost:3000,3001)
