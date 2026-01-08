@@ -319,30 +319,28 @@ app.openapi(candlesRoute, async (c) => {
 
   const tf = timespanMap[timeframe] ?? { multiplier: 1, timespan: "hour" as const };
 
-  const to = new Date();
-  const from = new Date();
-
-  // Calculate start date based on limit and timeframe
-  // We add a buffer factor to account for weekends/holidays (market closed days)
-  const bufferFactor = 2.5;
+  let fromStr: string;
+  let toStr: string;
 
   if (tf.timespan === "day") {
-    // For daily, we need limit * days
-    from.setDate(from.getDate() - Math.ceil(limit * bufferFactor));
-  } else if (tf.timespan === "hour") {
-    // For hourly, we need limit * hours
-    // But we use setTime/getTime for precision or just approximate with days
-    // limit hours * multiplier
-    const hoursNeeded = limit * tf.multiplier;
-    from.setTime(from.getTime() - hoursNeeded * 60 * 60 * 1000 * bufferFactor);
-  } else if (tf.timespan === "minute") {
-    // limit minutes * multiplier
-    const minutesNeeded = limit * tf.multiplier;
-    from.setTime(from.getTime() - minutesNeeded * 60 * 1000 * bufferFactor);
+    // For daily charts, we want history
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 365); // Last 1 year
+    toStr = to.toISOString().slice(0, 10);
+    fromStr = from.toISOString().slice(0, 10);
+  } else {
+    // Intraday: Strict "Today" Window (NY Time)
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const todayNY = formatter.format(new Date());
+    fromStr = todayNY;
+    toStr = todayNY;
   }
-
-  const fromStr = from.toISOString().slice(0, 10);
-  const toStr = to.toISOString().slice(0, 10);
 
   const fetchLimit = Math.min(limit + 100, 5000);
 

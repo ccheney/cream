@@ -15,7 +15,7 @@ import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries"
 export default function ChartsPage() {
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState(searchParams.get("symbol")?.toUpperCase() || "AAPL");
-  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "1d">("1d");
+  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "1d">("5m");
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
   // Increase limit for lower timeframes to fill the chart
