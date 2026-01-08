@@ -139,6 +139,9 @@ KALSHI_PRIVATE_KEY_PATH=     # Path to Kalshi private key
 
 # Web Search
 TAVILY_API_KEY=              # Tavily API key for web search
+
+# Dashboard API
+ALLOWED_ORIGINS=             # Comma-separated CORS origins (default: localhost:3000,3001)
 ```
 
 ### Startup Validation

@@ -55,6 +55,28 @@ import {
 const app = new OpenAPIHono();
 
 // ============================================
+// CORS Configuration
+// ============================================
+
+// Parse allowed origins from environment variable or use defaults
+const DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => {
+        // Validate each origin is a valid URL
+        try {
+          new URL(origin);
+          return true;
+        } catch {
+          // biome-ignore lint/suspicious/noConsole: startup validation logging
+          console.warn(`[CORS] Invalid origin in ALLOWED_ORIGINS: ${origin}`);
+          return false;
+        }
+      })
+  : DEFAULT_ORIGINS;
+
+// ============================================
 // Middleware
 // ============================================
 
@@ -62,7 +84,7 @@ const app = new OpenAPIHono();
 app.use(
   "/*",
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: allowedOrigins,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
