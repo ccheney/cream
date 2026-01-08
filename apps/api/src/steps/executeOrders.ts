@@ -16,9 +16,18 @@ import {
   type OrderSide,
   type OrderType,
 } from "@cream/broker";
-import { isBacktest } from "@cream/domain";
+import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 export const ValidationResultSchema = z.object({
   approved: z.boolean(),
@@ -53,9 +62,11 @@ interface Decision {
 
 // Singleton broker client
 let brokerClient: AlpacaClient | null = null;
+let brokerClientEnvironment: string | null = null;
 
-function getBrokerClient(): AlpacaClient | null {
-  if (brokerClient) {
+function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
+  // Re-create client if environment changed
+  if (brokerClient && brokerClientEnvironment === ctx.environment) {
     return brokerClient;
   }
 
@@ -67,7 +78,8 @@ function getBrokerClient(): AlpacaClient | null {
     return null;
   }
 
-  brokerClient = createBrokerClient();
+  brokerClient = createBrokerClient(ctx);
+  brokerClientEnvironment = ctx.environment;
   return brokerClient;
 }
 
@@ -133,8 +145,11 @@ export const executeOrdersStep = createStep({
     const decisions = (adjustedPlan?.decisions ?? []) as Decision[];
     const tradableDecisions = decisions.filter((d) => d.action !== "HOLD");
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode, simulate order execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       const orderIds = tradableDecisions.map(
         (_: unknown, i: number) => `backtest-order-${Date.now()}-${i}`
       );
@@ -148,7 +163,7 @@ export const executeOrdersStep = createStep({
     }
 
     // In PAPER/LIVE mode, submit orders via broker client
-    const client = getBrokerClient();
+    const client = getBrokerClient(ctx);
     if (!client) {
       // No broker credentials - return mock order IDs for dev/testing
       const orderIds = tradableDecisions.map(

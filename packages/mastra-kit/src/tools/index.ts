@@ -175,13 +175,15 @@ function getHelixClient(): HelixClient {
 }
 
 let brokerClient: AlpacaClient | null = null;
+let brokerClientEnvironment: string | null = null;
 
 /**
  * Get broker client for Alpaca API access.
  * Returns null if credentials are not configured.
  */
-function getBrokerClient(): AlpacaClient | null {
-  if (brokerClient) {
+function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
+  // Re-create client if environment changed
+  if (brokerClient && brokerClientEnvironment === ctx.environment) {
     return brokerClient;
   }
 
@@ -193,7 +195,8 @@ function getBrokerClient(): AlpacaClient | null {
     return null;
   }
 
-  brokerClient = createBrokerClient();
+  brokerClient = createBrokerClient(ctx);
+  brokerClientEnvironment = ctx.environment;
   return brokerClient;
 }
 
@@ -341,18 +344,18 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
   } catch (error) {
     // gRPC failed - try broker client
     if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
-      return getPortfolioStateFromBroker();
+      return getPortfolioStateFromBroker(ctx);
     }
     // Other gRPC errors - also try broker
-    return getPortfolioStateFromBroker();
+    return getPortfolioStateFromBroker(ctx);
   }
 }
 
 /**
  * Get portfolio state directly from Alpaca broker API
  */
-async function getPortfolioStateFromBroker(): Promise<PortfolioStateResponse> {
-  const client = getBrokerClient();
+async function getPortfolioStateFromBroker(ctx: ExecutionContext): Promise<PortfolioStateResponse> {
+  const client = getBrokerClient(ctx);
   if (!client) {
     // No broker credentials - fall back to mock data
     return createMockPortfolioState();

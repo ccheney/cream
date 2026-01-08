@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { createAlpacaClient, createAlpacaClientFromEnv } from "../src/client.js";
+import { createAlpacaClient } from "../src/client.js";
 import { BrokerError } from "../src/types.js";
 
 describe("createAlpacaClient", () => {
@@ -71,42 +71,6 @@ describe("createAlpacaClient", () => {
       environment: "BACKTEST",
     });
     expect(backtestClient.getEnvironment()).toBe("BACKTEST");
-  });
-});
-
-describe("createAlpacaClientFromEnv", () => {
-  it("creates client from environment variables", () => {
-    // This test validates the function exists and handles missing env vars
-    // In practice, it would throw if ALPACA_KEY/SECRET aren't set
-    const originalKey = process.env.ALPACA_KEY;
-    const originalSecret = process.env.ALPACA_SECRET;
-    const originalEnv = process.env.CREAM_ENV;
-
-    try {
-      process.env.ALPACA_KEY = "env-key";
-      process.env.ALPACA_SECRET = "env-secret";
-      process.env.CREAM_ENV = "PAPER";
-
-      const client = createAlpacaClientFromEnv();
-      expect(client.getEnvironment()).toBe("PAPER");
-    } finally {
-      // Restore
-      if (originalKey) {
-        process.env.ALPACA_KEY = originalKey;
-      } else {
-        delete process.env.ALPACA_KEY;
-      }
-      if (originalSecret) {
-        process.env.ALPACA_SECRET = originalSecret;
-      } else {
-        delete process.env.ALPACA_SECRET;
-      }
-      if (originalEnv) {
-        process.env.CREAM_ENV = originalEnv;
-      } else {
-        delete process.env.CREAM_ENV;
-      }
-    }
   });
 });
 

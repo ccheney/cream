@@ -49,14 +49,9 @@ export {
   createBacktestAdapterWithUtils,
 } from "./adapters/index.js";
 // Client
-export {
-  type AlpacaClient,
-  type AlpacaClientConfig,
-  createAlpacaClient,
-  createAlpacaClientFromEnv,
-} from "./client.js";
+export { type AlpacaClient, type AlpacaClientConfig, createAlpacaClient } from "./client.js";
 // Factory
-export { createBrokerClient } from "./factory.js";
+export { type BrokerClientConfig, createBrokerClient } from "./factory.js";
 // Types
 export {
   type Account,

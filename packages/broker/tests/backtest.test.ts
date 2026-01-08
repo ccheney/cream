@@ -2,6 +2,7 @@
  * Backtest Adapter Tests
  */
 
+import { createTestContext } from "@cream/domain";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createBacktestAdapter, createBacktestAdapterWithUtils } from "../src/adapters/backtest.js";
 import { createBrokerClient } from "../src/factory.js";
@@ -702,13 +703,14 @@ describe("createBacktestAdapterWithUtils", () => {
 
 describe("createBrokerClient factory", () => {
   test("creates backtest adapter for BACKTEST environment", () => {
-    const client = createBrokerClient({ environment: "BACKTEST" });
+    const ctx = createTestContext("BACKTEST");
+    const client = createBrokerClient(ctx);
     expect(client.getEnvironment()).toBe("BACKTEST");
   });
 
   test("creates backtest adapter with configuration", async () => {
-    const client = createBrokerClient({
-      environment: "BACKTEST",
+    const ctx = createTestContext("BACKTEST");
+    const client = createBrokerClient(ctx, {
       backtest: {
         initialCash: 50000,
       },
@@ -726,11 +728,10 @@ describe("createBrokerClient factory", () => {
     delete process.env.ALPACA_SECRET;
 
     try {
-      expect(() =>
-        createBrokerClient({
-          environment: "PAPER",
-        })
-      ).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
+      const ctx = createTestContext("PAPER");
+      expect(() => createBrokerClient(ctx)).toThrow(
+        "ALPACA_KEY and ALPACA_SECRET are required"
+      );
     } finally {
       // Restore env vars
       if (savedKey) {
@@ -743,16 +744,13 @@ describe("createBrokerClient factory", () => {
   });
 
   test("throws error for unknown environment", () => {
-    expect(() =>
-      createBrokerClient({
-        environment: "UNKNOWN" as any,
-      })
-    ).toThrow("Unknown environment");
+    const ctx = createTestContext("UNKNOWN" as any);
+    expect(() => createBrokerClient(ctx)).toThrow("Unknown environment");
   });
 
   test("creates Alpaca client for LIVE with valid credentials", () => {
-    const client = createBrokerClient({
-      environment: "LIVE",
+    const ctx = createTestContext("LIVE");
+    const client = createBrokerClient(ctx, {
       apiKey: "test-key",
       apiSecret: "test-secret",
     });
@@ -760,8 +758,8 @@ describe("createBrokerClient factory", () => {
   });
 
   test("creates Alpaca client for PAPER with valid credentials", () => {
-    const client = createBrokerClient({
-      environment: "PAPER",
+    const ctx = createTestContext("PAPER");
+    const client = createBrokerClient(ctx, {
       apiKey: "test-key",
       apiSecret: "test-secret",
     });

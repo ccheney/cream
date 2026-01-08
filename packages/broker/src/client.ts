@@ -353,21 +353,6 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
   };
 }
 
-/**
- * Create an Alpaca client from environment variables.
- *
- * Reads:
- * - ALPACA_KEY - API key
- * - ALPACA_SECRET - API secret
- * - CREAM_ENV - Trading environment (default: PAPER)
- */
-export function createAlpacaClientFromEnv(): AlpacaClient {
-  const apiKey = process.env.ALPACA_KEY ?? "";
-  const apiSecret = process.env.ALPACA_SECRET ?? "";
-  const environment = (process.env.CREAM_ENV ?? "PAPER") as TradingEnvironment;
-
-  return createAlpacaClient({ apiKey, apiSecret, environment });
-}
 
 // ============================================================================
 // Alpaca API Response Types
