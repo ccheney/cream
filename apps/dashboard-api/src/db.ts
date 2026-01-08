@@ -5,7 +5,9 @@
  * Schema version: 2 - Added status, decision_id, metadata, unrealized_pnl_pct to positions
  */
 
+import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
 import {
+  AgentConfigsRepository,
   AgentOutputsRepository,
   AlertsRepository,
   BacktestsRepository,
@@ -20,7 +22,9 @@ import {
   RegimeLabelsRepository,
   runMigrations,
   ThesisStateRepository,
+  TradingConfigRepository,
   type TursoClient,
+  UniverseConfigsRepository,
 } from "@cream/storage";
 
 // ============================================
@@ -192,4 +196,50 @@ export async function getFactorZooRepo(): Promise<FactorZooRepository> {
 export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
   const client = await getDbClient();
   return new RegimeLabelsRepository(client);
+}
+
+/**
+ * Get trading config repository
+ */
+export async function getTradingConfigRepo(): Promise<TradingConfigRepository> {
+  const client = await getDbClient();
+  return new TradingConfigRepository(client);
+}
+
+/**
+ * Get agent configs repository
+ */
+export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
+  const client = await getDbClient();
+  return new AgentConfigsRepository(client);
+}
+
+/**
+ * Get universe configs repository
+ */
+export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
+  const client = await getDbClient();
+  return new UniverseConfigsRepository(client);
+}
+
+// ============================================
+// Runtime Config Service
+// ============================================
+
+let runtimeConfigService: RuntimeConfigService | null = null;
+
+/**
+ * Get the runtime configuration service
+ */
+export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
+  if (runtimeConfigService) {
+    return runtimeConfigService;
+  }
+
+  const tradingRepo = await getTradingConfigRepo();
+  const agentRepo = await getAgentConfigsRepo();
+  const universeRepo = await getUniverseConfigsRepo();
+
+  runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+  return runtimeConfigService;
 }

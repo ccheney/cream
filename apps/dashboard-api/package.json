@@ -21,6 +21,7 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
+    "@cream/config": "workspace:*",
     "@cream/dashboard-types": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/helix": "workspace:*",

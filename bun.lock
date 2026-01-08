@@ -91,6 +91,7 @@
       "name": "@cream/dashboard-api",
       "version": "0.1.0",
       "dependencies": {
+        "@cream/config": "workspace:*",
         "@cream/dashboard-types": "workspace:*",
         "@cream/domain": "workspace:*",
         "@cream/helix": "workspace:*",

@@ -1,13 +1,21 @@
 /**
  * Configuration API Routes
  *
- * Routes for system configuration management.
+ * Database-backed configuration management with draft/promote/rollback workflows.
  *
- * @see docs/plans/ui/05-api-endpoints.md Configuration section
- * @see docs/plans/11-configuration.md
+ * @see docs/plans/22-self-service-dashboard.md (Phase 2)
  */
 
+import {
+  type RuntimeAgentConfig,
+  type RuntimeAgentType,
+  RuntimeConfigError,
+  type RuntimeTradingConfig,
+  type RuntimeUniverseConfig,
+  type TradingEnvironment,
+} from "@cream/config";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { getRuntimeConfigService } from "../db.js";
 
 // ============================================
 // App Setup
@@ -21,234 +29,432 @@ const app = new OpenAPIHono();
 
 const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 
-const UniverseSourceSchema = z.object({
-  type: z.enum(["static", "index", "etf_holdings", "screener"]),
-  symbols: z.array(z.string()).optional(),
-  index: z.string().optional(),
-  etf: z.string().optional(),
-  screenerParams: z.record(z.string(), z.unknown()).optional(),
+const TradingConfigSchema = z.object({
+  id: z.string(),
+  environment: EnvironmentSchema,
+  version: z.number(),
+  maxConsensusIterations: z.number(),
+  agentTimeoutMs: z.number(),
+  totalConsensusTimeoutMs: z.number(),
+  convictionDeltaHold: z.number(),
+  convictionDeltaAction: z.number(),
+  highConvictionPct: z.number(),
+  mediumConvictionPct: z.number(),
+  lowConvictionPct: z.number(),
+  minRiskRewardRatio: z.number(),
+  kellyFraction: z.number(),
+  tradingCycleIntervalMs: z.number(),
+  predictionMarketsIntervalMs: z.number(),
+  status: z.enum(["draft", "testing", "active", "archived"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  promotedFrom: z.string().nullable(),
 });
+
+const UniverseSourceSchema = z.enum(["static", "index", "screener"]);
 
 const UniverseConfigSchema = z.object({
-  sources: z.array(UniverseSourceSchema),
-  filters: z.object({
-    optionableOnly: z.boolean(),
-    minAvgVolume: z.number(),
-    minMarketCap: z.number(),
-    excludeSectors: z.array(z.string()),
-  }),
-  include: z.array(z.string()),
-  exclude: z.array(z.string()),
-});
-
-const ConstraintsConfigSchema = z.object({
-  perInstrument: z.object({
-    maxShares: z.number(),
-    maxContracts: z.number(),
-    maxNotional: z.number(),
-    maxPctEquity: z.number(),
-  }),
-  portfolio: z.object({
-    maxGrossExposure: z.number(),
-    maxNetExposure: z.number(),
-    maxConcentration: z.number(),
-    maxCorrelation: z.number(),
-    maxDrawdown: z.number(),
-  }),
-  options: z.object({
-    maxDelta: z.number(),
-    maxGamma: z.number(),
-    maxVega: z.number(),
-    maxTheta: z.number(),
-  }),
-});
-
-const ConfigurationSchema = z.object({
-  version: z.string(),
-  environment: EnvironmentSchema,
-  universe: UniverseConfigSchema,
-  indicators: z.record(z.string(), z.unknown()),
-  regime: z.record(z.string(), z.unknown()),
-  constraints: ConstraintsConfigSchema,
-  options: z.record(z.string(), z.unknown()),
-  memory: z.record(z.string(), z.unknown()),
-  schedule: z.record(z.string(), z.unknown()),
-});
-
-const ConfigVersionSchema = z.object({
   id: z.string(),
-  version: z.string(),
+  environment: EnvironmentSchema,
+  source: UniverseSourceSchema,
+  staticSymbols: z.array(z.string()).nullable(),
+  indexSource: z.string().nullable(),
+  minVolume: z.number().nullable(),
+  minMarketCap: z.number().nullable(),
+  optionableOnly: z.boolean(),
+  includeList: z.array(z.string()),
+  excludeList: z.array(z.string()),
+  status: z.enum(["draft", "testing", "active", "archived"]),
   createdAt: z.string(),
-  createdBy: z.string(),
-  changes: z.array(z.string()),
+  updatedAt: z.string(),
+});
+
+const AgentTypeSchema = z.enum([
+  "technical_analyst",
+  "news_analyst",
+  "fundamentals_analyst",
+  "bullish_researcher",
+  "bearish_researcher",
+  "trader",
+  "risk_manager",
+  "critic",
+]);
+
+const AgentConfigSchema = z.object({
+  id: z.string(),
+  environment: EnvironmentSchema,
+  agentType: AgentTypeSchema,
+  model: z.string(),
+  temperature: z.number(),
+  maxTokens: z.number(),
+  systemPromptOverride: z.string().nullable(),
+  enabled: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const FullConfigSchema = z.object({
+  trading: TradingConfigSchema,
+  agents: z.record(AgentTypeSchema, AgentConfigSchema),
+  universe: UniverseConfigSchema,
+});
+
+const ValidationErrorSchema = z.object({
+  field: z.string(),
+  message: z.string(),
+  value: z.unknown().optional(),
+});
+
+const ValidationResultSchema = z.object({
+  valid: z.boolean(),
+  errors: z.array(ValidationErrorSchema),
+  warnings: z.array(z.string()),
+});
+
+const ConfigHistoryEntrySchema = z.object({
+  tradingConfig: TradingConfigSchema,
+  changedAt: z.string(),
+  changedFields: z.array(z.string()),
+});
+
+const ErrorResponseSchema = z.object({
+  error: z.string(),
+  code: z.string().optional(),
+  details: z.unknown().optional(),
 });
 
 // ============================================
-// Default Configuration
+// Helper to get environment from query/header
 // ============================================
 
-const DEFAULT_CONFIG: z.infer<typeof ConfigurationSchema> = {
-  version: "1.0.0",
-  environment: "PAPER",
-  universe: {
-    sources: [{ type: "index", index: "SPY" }],
-    filters: {
-      optionableOnly: true,
-      minAvgVolume: 1000000,
-      minMarketCap: 1000000000,
-      excludeSectors: [],
-    },
-    include: [],
-    exclude: [],
-  },
-  indicators: {
-    rsi: { period: 14 },
-    sma: { periods: [20, 50, 200] },
-    atr: { period: 14 },
-  },
-  regime: {
-    vixThresholds: { low: 15, high: 25 },
-    trendStrength: 0.6,
-  },
-  constraints: {
-    perInstrument: {
-      maxShares: 1000,
-      maxContracts: 10,
-      maxNotional: 50000,
-      maxPctEquity: 0.05,
-    },
-    portfolio: {
-      maxGrossExposure: 2.0,
-      maxNetExposure: 1.0,
-      maxConcentration: 0.2,
-      maxCorrelation: 0.8,
-      maxDrawdown: 0.15,
-    },
-    options: {
-      maxDelta: 100,
-      maxGamma: 50,
-      maxVega: 1000,
-      maxTheta: -500,
-    },
-  },
-  options: {
-    minDTE: 7,
-    maxDTE: 45,
-    maxSpread: 0.1,
-  },
-  memory: {
-    decisionRetentionDays: 90,
-    priceHistoryDays: 365,
-  },
-  schedule: {
-    cycleInterval: "1h",
-    marketHoursOnly: true,
-    timezone: "America/New_York",
-  },
-};
-
-// ============================================
-// In-Memory Store (replace with DB)
-// ============================================
-
-let currentConfig = { ...DEFAULT_CONFIG };
-const configHistory: z.infer<typeof ConfigVersionSchema>[] = [
-  {
-    id: "config-001",
-    version: "1.0.0",
-    createdAt: new Date().toISOString(),
-    createdBy: "system",
-    changes: ["Initial configuration"],
-  },
-];
+function getEnvironment(c: {
+  req: { query: (key: string) => string | undefined };
+}): TradingEnvironment {
+  const env = c.req.query("env") ?? "PAPER";
+  if (env !== "BACKTEST" && env !== "PAPER" && env !== "LIVE") {
+    return "PAPER";
+  }
+  return env;
+}
 
 // ============================================
 // Routes
 // ============================================
 
-// GET / - Get current configuration
-const getConfigRoute = createRoute({
+// GET /active - Get active configuration
+const getActiveRoute = createRoute({
   method: "get",
-  path: "/",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: ConfigurationSchema,
-        },
-      },
-      description: "Current configuration",
-    },
-  },
-  tags: ["Config"],
-});
-
-app.openapi(getConfigRoute, (c) => {
-  return c.json(currentConfig);
-});
-
-// PUT / - Update configuration
-const updateConfigRoute = createRoute({
-  method: "put",
-  path: "/",
+  path: "/active",
   request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: ConfigurationSchema.partial(),
-        },
-      },
-    },
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: ConfigurationSchema,
-        },
-      },
-      description: "Updated configuration",
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Active configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration found",
     },
   },
   tags: ["Config"],
 });
 
-app.openapi(updateConfigRoute, (c) => {
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(getActiveRoute, async (c) => {
+  const environment = getEnvironment(c);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.getActiveConfig(environment);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// GET /draft - Get draft configuration
+const getDraftRoute = createRoute({
+  method: "get",
+  path: "/draft",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Draft configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No draft configuration found",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(getDraftRoute, async (c) => {
+  const environment = getEnvironment(c);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.getDraft(environment);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// PUT /draft - Save draft configuration
+const SaveDraftInputSchema = z.object({
+  trading: TradingConfigSchema.partial().optional(),
+  universe: UniverseConfigSchema.partial().optional(),
+  agents: z.record(AgentTypeSchema, AgentConfigSchema.partial()).optional(),
+});
+
+const saveDraftRoute = createRoute({
+  method: "put",
+  path: "/draft",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+    body: {
+      content: { "application/json": { schema: SaveDraftInputSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Updated draft configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration to base draft on",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(saveDraftRoute, async (c) => {
+  const environment = getEnvironment(c);
   const updates = c.req.valid("json");
 
-  // Parse version and increment major
-  const versionParts = currentConfig.version.split(".");
-  const majorVersion = parseInt(versionParts[0] ?? "0", 10);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.saveDraft(environment, {
+      trading: updates.trading as Partial<RuntimeTradingConfig>,
+      universe: updates.universe as Partial<RuntimeUniverseConfig>,
+      agents: updates.agents as Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>,
+    });
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
 
-  // Merge updates
-  currentConfig = {
-    ...currentConfig,
-    ...updates,
-    version: `${majorVersion + 1}.0.0`,
+// POST /validate - Validate configuration for promotion
+const validateRoute = createRoute({
+  method: "post",
+  path: "/validate",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ValidationResultSchema } },
+      description: "Validation result",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No configuration to validate",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(validateRoute, async (c) => {
+  const environment = getEnvironment(c);
+
+  try {
+    const service = await getRuntimeConfigService();
+    const draft = await service.getDraft(environment);
+    const result = await service.validateForPromotion(draft);
+    return c.json(result, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// POST /promote - Promote draft to active
+const promoteRoute = createRoute({
+  method: "post",
+  path: "/promote",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Promoted configuration",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Validation failed",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No draft configuration to promote",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(promoteRoute, async (c) => {
+  const environment = getEnvironment(c);
+
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.promote(environment);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError) {
+      if (err.code === "NOT_SEEDED") {
+        return c.json({ error: err.message, code: err.code }, 404);
+      }
+      if (err.code === "VALIDATION_FAILED") {
+        return c.json({ error: err.message, code: err.code, details: err.details }, 400);
+      }
+    }
+    throw err;
+  }
+});
+
+// POST /promote-to - Promote config from one environment to another
+const PromoteToInputSchema = z.object({
+  targetEnvironment: EnvironmentSchema,
+});
+
+const promoteToRoute = createRoute({
+  method: "post",
+  path: "/promote-to",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Source trading environment (default: PAPER)",
+      }),
+    }),
+    body: {
+      content: { "application/json": { schema: PromoteToInputSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Promoted configuration in target environment",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Validation failed or invalid promotion path",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration in source environment",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(promoteToRoute, async (c) => {
+  const sourceEnvironment = getEnvironment(c);
+  const { targetEnvironment } = c.req.valid("json");
+
+  // Validate promotion path: BACKTEST → PAPER → LIVE
+  const validPromotions: Record<TradingEnvironment, TradingEnvironment[]> = {
+    BACKTEST: ["PAPER"],
+    PAPER: ["LIVE"],
+    LIVE: [],
   };
 
-  // Add to history
-  configHistory.unshift({
-    id: `config-${String(configHistory.length + 1).padStart(3, "0")}`,
-    version: currentConfig.version,
-    createdAt: new Date().toISOString(),
-    createdBy: "user",
-    changes: Object.keys(updates),
-  });
+  if (!validPromotions[sourceEnvironment].includes(targetEnvironment)) {
+    return c.json(
+      {
+        error: `Cannot promote from ${sourceEnvironment} to ${targetEnvironment}. Valid paths: BACKTEST → PAPER → LIVE`,
+        code: "INVALID_PROMOTION_PATH",
+      },
+      400
+    );
+  }
 
-  return c.json(currentConfig);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.promoteToEnvironment(sourceEnvironment, targetEnvironment);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError) {
+      if (err.code === "NOT_SEEDED") {
+        return c.json({ error: err.message, code: err.code }, 404);
+      }
+      if (err.code === "VALIDATION_FAILED") {
+        return c.json({ error: err.message, code: err.code, details: err.details }, 400);
+      }
+    }
+    throw err;
+  }
 });
 
 // GET /history - Get configuration history
 const getHistoryRoute = createRoute({
   method: "get",
   path: "/history",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+      limit: z.coerce.number().optional().default(20).openapi({
+        description: "Maximum number of entries to return",
+      }),
+    }),
+  },
   responses: {
     200: {
       content: {
-        "application/json": {
-          schema: z.array(ConfigVersionSchema),
-        },
+        "application/json": { schema: z.array(ConfigHistoryEntrySchema) },
       },
       description: "Configuration history",
     },
@@ -256,145 +462,196 @@ const getHistoryRoute = createRoute({
   tags: ["Config"],
 });
 
-app.openapi(getHistoryRoute, (c) => {
-  return c.json(configHistory);
+app.openapi(getHistoryRoute, async (c) => {
+  const environment = getEnvironment(c);
+  const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string, 10) : 20;
+
+  const service = await getRuntimeConfigService();
+  const history = await service.getHistory(environment, limit);
+  return c.json(history, 200);
 });
 
-// POST /reset - Reset to defaults
-const resetConfigRoute = createRoute({
+// POST /rollback - Rollback to a previous configuration
+const RollbackInputSchema = z.object({
+  versionId: z.string().openapi({
+    description: "ID of the configuration version to rollback to",
+  }),
+});
+
+const rollbackRoute = createRoute({
   method: "post",
-  path: "/reset",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: ConfigurationSchema,
-        },
-      },
-      description: "Reset configuration",
-    },
-  },
-  tags: ["Config"],
-});
-
-app.openapi(resetConfigRoute, (c) => {
-  currentConfig = { ...DEFAULT_CONFIG };
-
-  configHistory.unshift({
-    id: `config-${String(configHistory.length + 1).padStart(3, "0")}`,
-    version: "1.0.0",
-    createdAt: new Date().toISOString(),
-    createdBy: "system",
-    changes: ["Reset to defaults"],
-  });
-
-  return c.json(currentConfig);
-});
-
-// GET /universe - Get universe configuration
-const getUniverseRoute = createRoute({
-  method: "get",
-  path: "/universe",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: UniverseConfigSchema,
-        },
-      },
-      description: "Universe configuration",
-    },
-  },
-  tags: ["Config"],
-});
-
-app.openapi(getUniverseRoute, (c) => {
-  return c.json(currentConfig.universe);
-});
-
-// PUT /universe - Update universe configuration
-const updateUniverseRoute = createRoute({
-  method: "put",
-  path: "/universe",
+  path: "/rollback",
   request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
     body: {
-      content: {
-        "application/json": {
-          schema: UniverseConfigSchema,
-        },
-      },
+      content: { "application/json": { schema: RollbackInputSchema } },
     },
   },
   responses: {
     200: {
-      content: {
-        "application/json": {
-          schema: UniverseConfigSchema,
-        },
-      },
-      description: "Updated universe configuration",
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Rolled back configuration",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Rollback failed",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Configuration version not found",
     },
   },
   tags: ["Config"],
 });
 
-app.openapi(updateUniverseRoute, (c) => {
-  const universe = c.req.valid("json");
-  currentConfig.universe = universe;
-  return c.json(currentConfig.universe);
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(rollbackRoute, async (c) => {
+  const environment = getEnvironment(c);
+  const { versionId } = c.req.valid("json");
+
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.rollback(environment, versionId);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError) {
+      if (err.code === "ROLLBACK_FAILED") {
+        if (err.message.includes("not found")) {
+          return c.json({ error: err.message, code: err.code }, 404);
+        }
+        return c.json({ error: err.message, code: err.code }, 400);
+      }
+    }
+    throw err;
+  }
 });
 
-// GET /constraints - Get constraints configuration
-const getConstraintsRoute = createRoute({
+// GET /compare/:id1/:id2 - Compare two configuration versions
+const compareRoute = createRoute({
   method: "get",
-  path: "/constraints",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: ConstraintsConfigSchema,
-        },
-      },
-      description: "Constraints configuration",
-    },
-  },
-  tags: ["Config"],
-});
-
-app.openapi(getConstraintsRoute, (c) => {
-  return c.json(currentConfig.constraints);
-});
-
-// PUT /constraints - Update constraints configuration
-const updateConstraintsRoute = createRoute({
-  method: "put",
-  path: "/constraints",
+  path: "/compare/{id1}/{id2}",
   request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: ConstraintsConfigSchema,
-        },
-      },
-    },
+    params: z.object({
+      id1: z.string().openapi({ description: "First configuration version ID" }),
+      id2: z.string().openapi({ description: "Second configuration version ID" }),
+    }),
   },
   responses: {
     200: {
       content: {
         "application/json": {
-          schema: ConstraintsConfigSchema,
+          schema: z.object({
+            config1: TradingConfigSchema,
+            config2: TradingConfigSchema,
+            differences: z.array(
+              z.object({
+                field: z.string(),
+                value1: z.unknown(),
+                value2: z.unknown(),
+              })
+            ),
+          }),
         },
       },
-      description: "Updated constraints configuration",
+      description: "Configuration comparison",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "One or both configuration versions not found",
     },
   },
   tags: ["Config"],
 });
 
-app.openapi(updateConstraintsRoute, (c) => {
-  const constraints = c.req.valid("json");
-  currentConfig.constraints = constraints;
-  return c.json(currentConfig.constraints);
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(compareRoute, async (c) => {
+  const { id1, id2 } = c.req.valid("param");
+
+  const tradingRepo = await (await import("../db.js")).getTradingConfigRepo();
+
+  const config1 = await tradingRepo.findById(id1);
+  const config2 = await tradingRepo.findById(id2);
+
+  if (!config1) {
+    return c.json({ error: `Configuration ${id1} not found` }, 404);
+  }
+  if (!config2) {
+    return c.json({ error: `Configuration ${id2} not found` }, 404);
+  }
+
+  // Find differences
+  const differences: { field: string; value1: unknown; value2: unknown }[] = [];
+  const fieldsToCompare = [
+    "maxConsensusIterations",
+    "agentTimeoutMs",
+    "totalConsensusTimeoutMs",
+    "convictionDeltaHold",
+    "convictionDeltaAction",
+    "highConvictionPct",
+    "mediumConvictionPct",
+    "lowConvictionPct",
+    "minRiskRewardRatio",
+    "kellyFraction",
+    "tradingCycleIntervalMs",
+    "predictionMarketsIntervalMs",
+  ] as const;
+
+  for (const field of fieldsToCompare) {
+    if (config1[field] !== config2[field]) {
+      differences.push({
+        field,
+        value1: config1[field],
+        value2: config2[field],
+      });
+    }
+  }
+
+  return c.json({ config1, config2, differences }, 200);
+});
+
+// ============================================
+// Legacy Routes (Backwards Compatibility)
+// ============================================
+
+// GET / - Redirect to /active
+const getLegacyRoute = createRoute({
+  method: "get",
+  path: "/",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional(),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullConfigSchema } },
+      description: "Current configuration (alias for /active)",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration found",
+    },
+  },
+  tags: ["Config"],
+});
+
+// @ts-expect-error - Hono OpenAPI response type inference limitation
+app.openapi(getLegacyRoute, async (c) => {
+  const environment = getEnvironment(c);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.getActiveConfig(environment);
+    return c.json(config, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
 });
 
 // ============================================
