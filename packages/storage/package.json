@@ -17,7 +17,8 @@
     "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "clean": "rm -rf dist coverage"
+    "clean": "rm -rf dist coverage",
+    "db:seed": "bun run src/seed-config.ts"
   },
   "dependencies": {
     "@cream/config": "workspace:*",
