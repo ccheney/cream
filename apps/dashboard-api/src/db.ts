@@ -17,6 +17,7 @@ import {
   OrdersRepository,
   PortfolioSnapshotsRepository,
   PositionsRepository,
+  RegimeLabelsRepository,
   runMigrations,
   ThesisStateRepository,
   type TursoClient,
@@ -183,4 +184,12 @@ export async function getThesesRepo(): Promise<ThesisStateRepository> {
 export async function getFactorZooRepo(): Promise<FactorZooRepository> {
   const client = await getDbClient();
   return new FactorZooRepository(client);
+}
+
+/**
+ * Get regime labels repository
+ */
+export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
+  const client = await getDbClient();
+  return new RegimeLabelsRepository(client);
 }

@@ -544,6 +544,34 @@ export function broadcastTrade(symbol: string, message: ServerMessage): number {
 }
 
 /**
+ * Broadcast aggregate message to connections subscribed to quotes for a specific symbol.
+ * Note: reusing 'quotes' channel for now as charts subscribe to symbols via quotes channel logic.
+ */
+export function broadcastAggregate(symbol: string, message: ServerMessage): number {
+  let sent = 0;
+  const deadConnections: string[] = [];
+  const upperSymbol = symbol.toUpperCase();
+
+  for (const [connectionId, ws] of connections) {
+    // Clients subscribed to "quotes" for a symbol likely want the charts too
+    if (ws.data.channels.has("quotes") && ws.data.symbols.has(upperSymbol)) {
+      if (sendMessage(ws, message)) {
+        sent++;
+      } else {
+        deadConnections.push(connectionId);
+      }
+    }
+  }
+
+  // Clean up dead connections
+  for (const connectionId of deadConnections) {
+    removeConnection(connectionId);
+  }
+
+  return sent;
+}
+
+/**
  * Broadcast to all connections.
  */
 export function broadcastAll(message: ServerMessage): number {
@@ -748,6 +776,7 @@ export default {
   handleError,
   broadcast,
   broadcastQuote,
+  broadcastAggregate,
   broadcastTrade,
   broadcastOptionsQuote,
   broadcastAll,

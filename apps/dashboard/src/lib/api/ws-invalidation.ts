@@ -19,6 +19,7 @@ import { getQueryClient, queryKeys } from "./query-client";
  */
 export type WSMessageType =
   | "quote"
+  | "aggregate"
   | "order"
   | "decision"
   | "agent_output"

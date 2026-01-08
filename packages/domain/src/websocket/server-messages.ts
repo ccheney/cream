@@ -11,6 +11,7 @@ import { DecisionPlanSchema, DecisionSchema } from "../decision.js";
 import { Channel } from "./channel.js";
 import {
   AgentOutputDataSchema,
+  AggregateDataSchema,
   AlertDataSchema,
   CycleProgressDataSchema,
   OrderDataSchema,
@@ -35,6 +36,23 @@ export const QuoteMessageSchema = z.object({
 });
 
 export type QuoteMessage = z.infer<typeof QuoteMessageSchema>;
+
+// ============================================
+// Aggregate Message
+// ============================================
+
+/**
+ * Real-time aggregate bar update.
+ *
+ * @example
+ * { type: "aggregate", data: { symbol: "AAPL", open: 185.00, high: 185.50, ... } }
+ */
+export const AggregateMessageSchema = z.object({
+  type: z.literal("aggregate"),
+  data: AggregateDataSchema,
+});
+
+export type AggregateMessage = z.infer<typeof AggregateMessageSchema>;
 
 // ============================================
 // Options Quote Message
@@ -408,6 +426,7 @@ export type ErrorMessage = z.infer<typeof ErrorMessageSchema>;
  */
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   QuoteMessageSchema,
+  AggregateMessageSchema,
   TradeMessageSchema,
   OptionsQuoteMessageSchema,
   OptionsAggregateMessageSchema,

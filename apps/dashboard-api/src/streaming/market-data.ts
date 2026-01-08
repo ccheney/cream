@@ -16,7 +16,7 @@ import {
   type MassiveTradeMessage,
   type MassiveWebSocketClient,
 } from "@cream/marketdata";
-import { broadcastQuote, broadcastTrade } from "../websocket/handler.js";
+import { broadcastAggregate, broadcastQuote, broadcastTrade } from "../websocket/handler.js";
 
 // ============================================
 // State
@@ -181,6 +181,22 @@ function handleAggregateMessage(msg: MassiveAggregateMessage): void {
       prevClose,
       changePercent,
       timestamp: new Date(msg.e).toISOString(),
+    },
+  });
+
+  // Broadcast aggregate candle
+  broadcastAggregate(symbol, {
+    type: "aggregate",
+    data: {
+      symbol,
+      open: msg.o,
+      high: msg.h,
+      low: msg.l,
+      close: msg.c,
+      volume: msg.v,
+      vwap: msg.vw,
+      timestamp: new Date(msg.s).toISOString(), // Start time
+      endTimestamp: new Date(msg.e).toISOString(), // End time
     },
   });
 }

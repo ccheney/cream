@@ -58,6 +58,44 @@ export const QuoteDataSchema = z.object({
 export type QuoteData = z.infer<typeof QuoteDataSchema>;
 
 // ============================================
+// Aggregate Data (Candles)
+// ============================================
+
+/**
+ * Real-time aggregate bar (candle) data.
+ */
+export const AggregateDataSchema = z.object({
+  /** Ticker symbol */
+  symbol: z.string().min(1).max(20),
+
+  /** Open price */
+  open: z.number(),
+
+  /** High price */
+  high: z.number(),
+
+  /** Low price */
+  low: z.number(),
+
+  /** Close price */
+  close: z.number(),
+
+  /** Volume */
+  volume: z.number(),
+
+  /** VWAP */
+  vwap: z.number().optional(),
+
+  /** Start timestamp */
+  timestamp: z.string().datetime(),
+
+  /** End timestamp */
+  endTimestamp: z.string().datetime().optional(),
+});
+
+export type AggregateData = z.infer<typeof AggregateDataSchema>;
+
+// ============================================
 // Order Data
 // ============================================
 

@@ -10,7 +10,10 @@
 
 import {
   type CandlestickData,
+  CandlestickSeries,
+  HistogramSeries,
   createChart,
+  createSeriesMarkers,
   type IChartApi,
   type ISeriesApi,
   type LineWidth,
@@ -79,6 +82,8 @@ function TradingViewChartComponent({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const markersRef = useRef<ReturnType<typeof createSeriesMarkers<Time>> | null>(null);
   // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts IPriceLine type
   const priceLineRefs = useRef<Map<string, any>>(new Map());
 
@@ -98,12 +103,31 @@ function TradingViewChartComponent({
     chartRef.current = chart;
 
     // Add candlestick series
-    const series = chart.addSeries(
-      // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
-      "candlestick" as any,
-      DEFAULT_CANDLESTICK_OPTIONS
-    ) as ISeriesApi<"Candlestick">;
+    const series = chart.addSeries(CandlestickSeries, DEFAULT_CANDLESTICK_OPTIONS) as ISeriesApi<"Candlestick">;
     seriesRef.current = series;
+
+    // Add markers primitive
+    const seriesMarkers = createSeriesMarkers(series, []);
+    markersRef.current = seriesMarkers;
+
+    // Add volume series
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: "#26a69a",
+      priceFormat: {
+        type: "volume",
+      },
+      priceScaleId: "volume",
+    }) as ISeriesApi<"Histogram">;
+    volumeSeriesRef.current = volumeSeries;
+
+    // Configure volume scale to sit at the bottom
+    chart.priceScale("volume").applyOptions({
+      scaleMargins: {
+        top: 0.8, // Highest volume bar will be 80% down
+        bottom: 0,
+      },
+      visible: false,
+    });
 
     // Set data
     if (data.length > 0) {
@@ -115,6 +139,16 @@ function TradingViewChartComponent({
         close: d.close,
       }));
       series.setData(formattedData);
+
+      const volumeData = data.map((d) => ({
+        time: d.time as Time,
+        value: d.volume || 0,
+        color:
+          d.close >= d.open
+            ? "rgba(34, 197, 94, 0.3)" // profit/green with opacity
+            : "rgba(239, 68, 68, 0.3)", // loss/red with opacity
+      }));
+      volumeSeries.setData(volumeData);
     }
 
     // Subscribe to crosshair move
@@ -141,13 +175,15 @@ function TradingViewChartComponent({
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      volumeSeriesRef.current = null;
+      markersRef.current = null;
       priceLineRefs.current.clear();
     };
   }, [height, onCrosshairMove, onReady, width, data.length, data.map]);
 
   // Update data
   useEffect(() => {
-    if (!seriesRef.current || data.length === 0) {
+    if (!seriesRef.current || !volumeSeriesRef.current || data.length === 0) {
       return;
     }
 
@@ -160,12 +196,23 @@ function TradingViewChartComponent({
     }));
 
     seriesRef.current.setData(formattedData);
+
+    const volumeData = data.map((d) => ({
+      time: d.time as Time,
+      value: d.volume || 0,
+      color:
+        d.close >= d.open
+          ? "rgba(34, 197, 94, 0.3)" // profit/green with opacity
+          : "rgba(239, 68, 68, 0.3)", // loss/red with opacity
+    }));
+    volumeSeriesRef.current.setData(volumeData);
+
     chartRef.current?.timeScale().fitContent();
   }, [data]);
 
   // Update markers
   useEffect(() => {
-    if (!seriesRef.current) {
+    if (!markersRef.current) {
       return;
     }
 
@@ -177,9 +224,7 @@ function TradingViewChartComponent({
       text: m.text,
     }));
 
-    // Type assertion for setMarkers which exists on candlestick series
-    // biome-ignore lint/suspicious/noExplicitAny: setMarkers exists on candlestick series
-    (seriesRef.current as any).setMarkers(formattedMarkers);
+    markersRef.current.setMarkers(formattedMarkers);
   }, [markers]);
 
   // Update price lines

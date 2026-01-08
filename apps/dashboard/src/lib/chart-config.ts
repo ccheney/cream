@@ -53,6 +53,7 @@ export const DEFAULT_CHART_OPTIONS: DeepPartial<ChartOptions> = {
     textColor: CHART_COLORS.text,
     fontSize: 11,
     fontFamily: "Geist Mono, monospace",
+    attributionLogo: false,
   },
   grid: {
     vertLines: { color: CHART_COLORS.grid },
