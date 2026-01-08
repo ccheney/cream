@@ -137,7 +137,9 @@ export function useCandles(
 
   // Handle WebSocket updates
   useEffect(() => {
-    if (!lastMessage || lastMessage.type !== "aggregate") return;
+    if (!lastMessage || lastMessage.type !== "aggregate") {
+      return;
+    }
 
     const data = lastMessage.data as {
       symbol: string;
@@ -149,16 +151,22 @@ export function useCandles(
       timestamp: string;
     };
 
-    if (data.symbol !== symbol) return;
+    if (data.symbol !== symbol) {
+      return;
+    }
 
     // Update query cache
     queryClient.setQueryData<Candle[]>(
       [...queryKeys.market.all, "candles", symbol, timeframe, limit],
       (oldData) => {
-        if (!oldData) return oldData;
+        if (!oldData) {
+          return oldData;
+        }
 
         const lastCandle = oldData[oldData.length - 1];
-        if (!lastCandle) return oldData;
+        if (!lastCandle) {
+          return oldData;
+        }
 
         const updateTime = new Date(data.timestamp).getTime();
         const lastCandleTime = new Date(lastCandle.timestamp).getTime();

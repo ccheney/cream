@@ -11,9 +11,9 @@
 import {
   type CandlestickData,
   CandlestickSeries,
-  HistogramSeries,
   createChart,
   createSeriesMarkers,
+  HistogramSeries,
   type IChartApi,
   type ISeriesApi,
   type LineWidth,
@@ -103,7 +103,10 @@ function TradingViewChartComponent({
     chartRef.current = chart;
 
     // Add candlestick series
-    const series = chart.addSeries(CandlestickSeries, DEFAULT_CANDLESTICK_OPTIONS) as ISeriesApi<"Candlestick">;
+    const series = chart.addSeries(
+      CandlestickSeries,
+      DEFAULT_CANDLESTICK_OPTIONS
+    ) as ISeriesApi<"Candlestick">;
     seriesRef.current = series;
 
     // Add markers primitive

@@ -1,5 +1,9 @@
-import { describe, expect, test, mock } from "bun:test";
+import { beforeAll, describe, expect, mock, test } from "bun:test";
 import marketRoutes from "./market";
+
+beforeAll(() => {
+  process.env.POLYGON_KEY = "test";
+});
 
 // Mock database
 mock.module("../db", () => ({
@@ -22,11 +26,10 @@ mock.module("../db", () => ({
 // Mock market data
 mock.module("@cream/marketdata", () => ({
   PolygonClient: class {
-    constructor() {}
-     getPreviousClose() {
-         return Promise.resolve({ results: [{ c: 20 }] });
-     }
-  }
+    getPreviousClose() {
+      return Promise.resolve({ results: [{ c: 20 }] });
+    }
+  },
 }));
 
 describe("Market Routes", () => {
