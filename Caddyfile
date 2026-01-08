@@ -1,0 +1,163 @@
+# Cream Trading Dashboard - Caddy Configuration
+#
+# Provides automatic HTTPS via Let's Encrypt, reverse proxy to services,
+# WebSocket support, and security headers.
+#
+# Usage:
+#   Production: caddy run --config Caddyfile
+#   Docker:     Use caddy:2-alpine image with this file mounted
+#
+# Environment Variables:
+#   DASHBOARD_HOST:     Frontend hostname (default: cream.broker)
+#   API_HOST:           API hostname (default: api.cream.broker)
+#   DASHBOARD_UPSTREAM: Dashboard container/host (default: dashboard:3000)
+#   API_UPSTREAM:       API container/host (default: dashboard-api:3001)
+
+# ============================================
+# Global Options
+# ============================================
+{
+	# Email for Let's Encrypt certificate notifications
+	email admin@cream.broker
+
+	# Enable HTTP/3 (QUIC) support
+	servers {
+		protocol {
+			experimental_http3
+		}
+	}
+}
+
+# ============================================
+# Dashboard (Next.js Frontend)
+# ============================================
+{$DASHBOARD_HOST:cream.broker} {
+	# Reverse proxy to Next.js dashboard
+	reverse_proxy {$DASHBOARD_UPSTREAM:dashboard:3000} {
+		# Health check
+		health_uri /
+		health_interval 30s
+		health_timeout 10s
+		health_status 200
+
+		# Flush immediately for SSR streaming
+		flush_interval -1
+	}
+
+	# Compression
+	encode gzip zstd
+
+	# Security headers
+	header {
+		# Prevent clickjacking
+		X-Frame-Options "DENY"
+		# Prevent MIME sniffing
+		X-Content-Type-Options "nosniff"
+		# XSS protection
+		X-XSS-Protection "1; mode=block"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Content Security Policy (adjust as needed)
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss://{$API_HOST:api.cream.broker} https://{$API_HOST:api.cream.broker};"
+		# Remove server header
+		-Server
+	}
+
+	# Logging
+	log {
+		output file /var/log/caddy/dashboard.log {
+			roll_size 100mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
+# ============================================
+# API (Hono REST + WebSocket)
+# ============================================
+{$API_HOST:api.cream.broker} {
+	# WebSocket matcher for /ws endpoint
+	@websockets {
+		path /ws
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+
+	# WebSocket reverse proxy with special handling
+	reverse_proxy @websockets {$API_UPSTREAM:dashboard-api:3001} {
+		# Preserve WebSocket headers
+		header_up Host {host}
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-For {remote}
+		header_up X-Forwarded-Proto {scheme}
+
+		# Disable buffering for WebSocket
+		flush_interval -1
+
+		# Long timeout for WebSocket connections
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+
+	# Regular HTTP reverse proxy
+	reverse_proxy {$API_UPSTREAM:dashboard-api:3001} {
+		# Health check
+		health_uri /health
+		health_interval 30s
+		health_timeout 10s
+		health_status 200
+
+		# Pass real IP to backend
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-For {remote}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Compression for API responses
+	encode gzip
+
+	# Security headers (CORS handled by Hono)
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		# Allow WebSocket connections
+		Access-Control-Allow-Origin "{$DASHBOARD_HOST:https://cream.broker}"
+		-Server
+	}
+
+	# Logging
+	log {
+		output file /var/log/caddy/api.log {
+			roll_size 100mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
+# ============================================
+# Local Development (HTTP only)
+# ============================================
+:8080 {
+	reverse_proxy localhost:3000 {
+		flush_interval -1
+	}
+}
+
+:8081 {
+	# WebSocket matcher
+	@websockets {
+		path /ws
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+
+	reverse_proxy @websockets localhost:3001 {
+		flush_interval -1
+	}
+
+	reverse_proxy localhost:3001
+}

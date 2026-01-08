@@ -14,6 +14,7 @@
  * @see docs/plans/05-agents.md
  */
 
+import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
 import { isBacktest } from "@cream/domain";
 import {
   ConsensusGate,
@@ -22,8 +23,6 @@ import {
   withAgentTimeout,
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
-
-import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
 
 import {
   type AgentContext,
