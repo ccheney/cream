@@ -13,13 +13,18 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
-import { liveProtection, requireAuth } from "./auth/index.js";
+import { auth } from "./auth/better-auth.js";
+import {
+  liveProtection,
+  requireAuth,
+  type SessionVariables,
+  sessionMiddleware,
+} from "./auth/session.js";
 import { closeDb } from "./db.js";
 import { AUTH_CONFIG, rateLimit } from "./middleware/index.js";
 import {
   agentsRoutes,
   alertsRoutes,
-  authRoutes,
   backtestRoutes,
   configRoutes,
   decisionsRoutes,
@@ -44,7 +49,7 @@ import {
   createConnectionMetadata,
   getConnectionCount,
   startHeartbeat,
-  validateAuthToken,
+  validateAuthTokenAsync,
   websocketHandler,
 } from "./websocket/handler.js";
 
@@ -52,7 +57,7 @@ import {
 // App Setup
 // ============================================
 
-const app = new OpenAPIHono();
+const app = new OpenAPIHono<{ Variables: SessionVariables }>();
 
 // ============================================
 // CORS Configuration
@@ -108,6 +113,18 @@ app.use("/api/*", rateLimit());
 // Stricter rate limiting for auth endpoints (10 req/min)
 app.use("/api/auth/*", rateLimit(AUTH_CONFIG));
 
+// Session middleware (extracts session from better-auth cookies)
+app.use("/*", sessionMiddleware());
+
+// ============================================
+// Better Auth Handler
+// ============================================
+
+// Mount better-auth handler for all auth routes
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  return auth.handler(c.req.raw);
+});
+
 // ============================================
 // Health Check Route
 // ============================================
@@ -147,29 +164,23 @@ app.openapi(healthRoute, (c) => {
 });
 
 // ============================================
-// Auth Routes (public)
-// ============================================
-
-app.route("/api/auth", authRoutes);
-
-// ============================================
 // API Routes (protected)
 // ============================================
 
 // Apply authentication to all /api routes except /api/auth
-app.use("/api/system/*", requireAuth);
-app.use("/api/decisions/*", requireAuth);
-app.use("/api/portfolio/*", requireAuth);
-app.use("/api/alerts/*", requireAuth);
-app.use("/api/agents/*", requireAuth);
-app.use("/api/config/*", requireAuth);
-app.use("/api/market/*", requireAuth);
-app.use("/api/risk/*", requireAuth);
-app.use("/api/backtests/*", requireAuth);
-app.use("/api/theses/*", requireAuth);
-app.use("/api/preferences/*", requireAuth);
-app.use("/api/indicators/*", requireAuth);
-app.use("/api/research/*", requireAuth);
+app.use("/api/system/*", requireAuth());
+app.use("/api/decisions/*", requireAuth());
+app.use("/api/portfolio/*", requireAuth());
+app.use("/api/alerts/*", requireAuth());
+app.use("/api/agents/*", requireAuth());
+app.use("/api/config/*", requireAuth());
+app.use("/api/market/*", requireAuth());
+app.use("/api/risk/*", requireAuth());
+app.use("/api/backtests/*", requireAuth());
+app.use("/api/theses/*", requireAuth());
+app.use("/api/preferences/*", requireAuth());
+app.use("/api/indicators/*", requireAuth());
+app.use("/api/research/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -256,40 +267,19 @@ if (import.meta.main) {
 
   const server = Bun.serve({
     port,
-    fetch(req, server) {
+    async fetch(req, server) {
       const url = new URL(req.url);
 
       // WebSocket upgrade on /ws path
       if (url.pathname === "/ws") {
-        // Try multiple auth sources: Authorization header, query param, or cookie
-        let token: string | null = req.headers.get("Authorization");
+        // Use better-auth session validation via cookies
+        const authResult = await validateAuthTokenAsync(req.headers);
 
-        // Check query parameter if no Authorization header
-        if (!token) {
-          token = url.searchParams.get("token");
-        }
-
-        // Check cookie if still no token
-        if (!token) {
-          const cookieHeader = req.headers.get("Cookie");
-          if (cookieHeader) {
-            const cookies = Object.fromEntries(
-              cookieHeader.split(";").map((c) => {
-                const [key, ...rest] = c.trim().split("=");
-                return [key, rest.join("=")];
-              })
-            );
-            token = cookies.cream_access ?? null;
-          }
-        }
-
-        const authResult = validateAuthToken(token);
-
-        if (!authResult.valid) {
+        if (!authResult.valid || !authResult.userId) {
           return new Response(authResult.error ?? "Unauthorized", { status: 401 });
         }
 
-        const metadata = createConnectionMetadata(authResult.userId!);
+        const metadata = createConnectionMetadata(authResult.userId);
         const success = server.upgrade(req, { data: metadata });
 
         if (success) {
