@@ -5,31 +5,156 @@
  * Runs the OODA loop: Observe -> Orient -> Decide -> Act
  *
  * Also runs the prediction markets workflow every 15 minutes.
+ *
+ * Configuration is loaded from the database via RuntimeConfigService.
+ * Supports config reload on SIGHUP signal.
  */
 
 import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
+import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
 import { isBacktest, validateEnvironmentOrExit } from "@cream/domain";
+import { getRuntimeConfigService, resetRuntimeConfigService } from "./db";
 
 // ============================================
-// Configuration
+// Default Configuration (fallback if DB not seeded)
 // ============================================
 
-const CONFIG = {
-  /** Interval in milliseconds (1 hour) for trading cycle */
-  tradingCycleIntervalMs: 60 * 60 * 1000,
-
-  /** Interval in milliseconds (15 minutes) for prediction markets */
-  predictionMarketsIntervalMs: 15 * 60 * 1000,
-
-  /** Trading universe (default instruments) */
+const DEFAULT_CONFIG = {
+  tradingCycleIntervalMs: 60 * 60 * 1000, // 1 hour
+  predictionMarketsIntervalMs: 15 * 60 * 1000, // 15 minutes
   defaultInstruments: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-
-  /** Whether to run immediately on startup */
-  runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
-
-  /** Environment */
-  env: Bun.env.CREAM_ENV ?? "PAPER",
 };
+
+// ============================================
+// Worker State
+// ============================================
+
+interface WorkerState {
+  /** Current runtime config (null if using defaults) */
+  config: FullRuntimeConfig | null;
+  /** Environment */
+  environment: RuntimeEnvironment;
+  /** Whether to run on startup */
+  runOnStartup: boolean;
+  /** Active timer handles */
+  timers: {
+    tradingCycle: ReturnType<typeof setTimeout> | null;
+    predictionMarkets: ReturnType<typeof setTimeout> | null;
+  };
+  /** Last run timestamps */
+  lastRun: {
+    tradingCycle: Date | null;
+    predictionMarkets: Date | null;
+  };
+  /** Startup time */
+  startedAt: Date;
+  /** Whether currently running a cycle */
+  running: {
+    tradingCycle: boolean;
+    predictionMarkets: boolean;
+  };
+}
+
+const state: WorkerState = {
+  config: null,
+  environment: (Bun.env.CREAM_ENV ?? "PAPER") as RuntimeEnvironment,
+  runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
+  timers: {
+    tradingCycle: null,
+    predictionMarkets: null,
+  },
+  lastRun: {
+    tradingCycle: null,
+    predictionMarkets: null,
+  },
+  startedAt: new Date(),
+  running: {
+    tradingCycle: false,
+    predictionMarkets: false,
+  },
+};
+
+// ============================================
+// Config Loading
+// ============================================
+
+/**
+ * Get interval values from config or defaults
+ */
+function getIntervals(): {
+  tradingCycleIntervalMs: number;
+  predictionMarketsIntervalMs: number;
+} {
+  if (state.config?.trading) {
+    return {
+      tradingCycleIntervalMs: state.config.trading.tradingCycleIntervalMs,
+      predictionMarketsIntervalMs: state.config.trading.predictionMarketsIntervalMs,
+    };
+  }
+  return {
+    tradingCycleIntervalMs: DEFAULT_CONFIG.tradingCycleIntervalMs,
+    predictionMarketsIntervalMs: DEFAULT_CONFIG.predictionMarketsIntervalMs,
+  };
+}
+
+/**
+ * Get instruments from universe config or defaults
+ */
+function getInstruments(): string[] {
+  if (state.config?.universe?.staticSymbols) {
+    return state.config.universe.staticSymbols;
+  }
+  return DEFAULT_CONFIG.defaultInstruments;
+}
+
+/**
+ * Load configuration from database
+ */
+async function loadConfig(): Promise<void> {
+  try {
+    const configService = await getRuntimeConfigService();
+    state.config = await configService.getActiveConfig(state.environment);
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Config loading warning is intentional
+    console.warn(
+      `⚠️  Could not load config from DB: ${error instanceof Error ? error.message : "Unknown error"}. Using defaults.`
+    );
+    state.config = null;
+  }
+}
+
+/**
+ * Reload configuration (called on SIGHUP)
+ */
+async function reloadConfig(): Promise<void> {
+  // biome-ignore lint/suspicious/noConsole: Config reload notification is intentional
+  console.log("🔄 Reloading configuration...");
+
+  // Reset the service to force fresh load
+  resetRuntimeConfigService();
+
+  const oldIntervals = getIntervals();
+  await loadConfig();
+  const newIntervals = getIntervals();
+
+  // Check if intervals changed
+  const tradingIntervalChanged =
+    oldIntervals.tradingCycleIntervalMs !== newIntervals.tradingCycleIntervalMs;
+  const predictionIntervalChanged =
+    oldIntervals.predictionMarketsIntervalMs !== newIntervals.predictionMarketsIntervalMs;
+
+  if (tradingIntervalChanged || predictionIntervalChanged) {
+    // biome-ignore lint/suspicious/noConsole: Interval change notification is intentional
+    console.log("📊 Intervals changed, rescheduling...");
+
+    // Cancel existing timers and reschedule
+    stopScheduler();
+    startScheduler();
+  }
+
+  // biome-ignore lint/suspicious/noConsole: Config reload confirmation is intentional
+  console.log("✅ Configuration reloaded");
+}
 
 // ============================================
 // Cycle ID Generation
@@ -47,20 +172,29 @@ function generateCycleId(): string {
 // ============================================
 
 async function runTradingCycle(): Promise<void> {
+  if (state.running.tradingCycle) {
+    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
+    console.log("⏭️  Skipping trading cycle - previous run still in progress");
+    return;
+  }
+
+  state.running.tradingCycle = true;
   const cycleId = generateCycleId();
-  const startTime = Date.now();
+  state.lastRun.tradingCycle = new Date();
 
   try {
-    // Execute the trading cycle workflow (custom workflow object)
-    const _result = await tradingCycleWorkflow.execute({
+    const instruments = getInstruments();
+    await tradingCycleWorkflow.execute({
       triggerData: {
         cycleId,
-        instruments: CONFIG.defaultInstruments,
+        instruments,
       },
     });
-
-    const _duration = Date.now() - startTime;
-  } catch (_error) {}
+  } catch (_error) {
+    // Error handling done in workflow
+  } finally {
+    state.running.tradingCycle = false;
+  }
 }
 
 /**
@@ -68,19 +202,27 @@ async function runTradingCycle(): Promise<void> {
  * Fetches data from Kalshi/Polymarket and stores computed signals.
  */
 async function runPredictionMarkets(): Promise<void> {
-  const startTime = Date.now();
+  if (state.running.predictionMarkets) {
+    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
+    console.log("⏭️  Skipping prediction markets - previous run still in progress");
+    return;
+  }
+
+  state.running.predictionMarkets = true;
+  state.lastRun.predictionMarkets = new Date();
 
   try {
-    // Create a run instance and execute the prediction markets workflow
     const run = await predictionMarketsWorkflow.createRun();
-    const _result = await run.start({
+    await run.start({
       inputData: {
         marketTypes: ["FED_RATE", "ECONOMIC_DATA", "RECESSION"] as const,
       },
     });
-
-    const _duration = Date.now() - startTime;
-  } catch (_error) {}
+  } catch (_error) {
+    // Error handling done in workflow
+  } finally {
+    state.running.predictionMarkets = false;
+  }
 }
 
 // ============================================
@@ -111,31 +253,106 @@ function calculateNext15MinMs(): number {
   return next15Min.getTime() - now.getTime();
 }
 
-interface SchedulerIntervals {
-  tradingCycle: NodeJS.Timeout;
-  predictionMarkets: NodeJS.Timeout;
+function scheduleTradingCycle(): void {
+  const intervals = getIntervals();
+
+  // Schedule at next hour boundary, then repeat at configured interval
+  const msUntilNextHour = calculateNextHourMs();
+  state.timers.tradingCycle = setTimeout(() => {
+    runTradingCycle();
+    state.timers.tradingCycle = setInterval(runTradingCycle, intervals.tradingCycleIntervalMs);
+  }, msUntilNextHour);
 }
 
-function startScheduler(): SchedulerIntervals {
-  // Schedule trading cycle at next hour boundary
-  const msUntilNextHour = calculateNextHourMs();
-  setTimeout(() => {
-    runTradingCycle();
-    setInterval(runTradingCycle, CONFIG.tradingCycleIntervalMs);
-  }, msUntilNextHour);
+function schedulePredictionMarkets(): void {
+  const intervals = getIntervals();
 
-  // Schedule prediction markets at next 15-minute boundary
+  // Schedule at next 15-minute boundary, then repeat at configured interval
   const msUntilNext15Min = calculateNext15MinMs();
-  setTimeout(() => {
+  state.timers.predictionMarkets = setTimeout(() => {
     runPredictionMarkets();
-    setInterval(runPredictionMarkets, CONFIG.predictionMarketsIntervalMs);
+    state.timers.predictionMarkets = setInterval(
+      runPredictionMarkets,
+      intervals.predictionMarketsIntervalMs
+    );
   }, msUntilNext15Min);
+}
 
-  // Return intervals for cleanup (dummy intervals since we use nested setIntervals)
-  return {
-    tradingCycle: setInterval(() => {}, CONFIG.tradingCycleIntervalMs),
-    predictionMarkets: setInterval(() => {}, CONFIG.predictionMarketsIntervalMs),
-  };
+function startScheduler(): void {
+  scheduleTradingCycle();
+  schedulePredictionMarkets();
+}
+
+function stopScheduler(): void {
+  if (state.timers.tradingCycle) {
+    clearTimeout(state.timers.tradingCycle);
+    clearInterval(state.timers.tradingCycle);
+    state.timers.tradingCycle = null;
+  }
+  if (state.timers.predictionMarkets) {
+    clearTimeout(state.timers.predictionMarkets);
+    clearInterval(state.timers.predictionMarkets);
+    state.timers.predictionMarkets = null;
+  }
+}
+
+// ============================================
+// Health Endpoint
+// ============================================
+
+const HEALTH_PORT = Number(Bun.env.HEALTH_PORT ?? 3002);
+
+function startHealthServer(): void {
+  Bun.serve({
+    port: HEALTH_PORT,
+    fetch(req) {
+      const url = new URL(req.url);
+
+      if (url.pathname === "/health" || url.pathname === "/") {
+        const intervals = getIntervals();
+        const uptime = Date.now() - state.startedAt.getTime();
+
+        const health = {
+          status: "ok",
+          uptime_ms: uptime,
+          environment: state.environment,
+          config_loaded: state.config !== null,
+          intervals: {
+            trading_cycle_ms: intervals.tradingCycleIntervalMs,
+            prediction_markets_ms: intervals.predictionMarketsIntervalMs,
+          },
+          instruments: getInstruments(),
+          last_run: {
+            trading_cycle: state.lastRun.tradingCycle?.toISOString() ?? null,
+            prediction_markets: state.lastRun.predictionMarkets?.toISOString() ?? null,
+          },
+          running: {
+            trading_cycle: state.running.tradingCycle,
+            prediction_markets: state.running.predictionMarkets,
+          },
+          started_at: state.startedAt.toISOString(),
+        };
+
+        return new Response(JSON.stringify(health, null, 2), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url.pathname === "/reload") {
+        if (req.method === "POST") {
+          reloadConfig().catch(() => {});
+          return new Response(JSON.stringify({ status: "reloading" }), {
+            status: 202,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response("Method not allowed", { status: 405 });
+      }
+
+      return new Response("Not found", { status: 404 });
+    },
+  });
 }
 
 // ============================================
@@ -159,24 +376,52 @@ async function main() {
     }
   }
 
+  // Load configuration from database
+  await loadConfig();
+
+  const intervals = getIntervals();
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(
+    `🚀 Worker starting [env=${state.environment}, config=${state.config ? "DB" : "defaults"}]`
+  );
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(
+    `📊 Intervals: trading=${intervals.tradingCycleIntervalMs}ms, predictions=${intervals.predictionMarketsIntervalMs}ms`
+  );
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(`📈 Instruments: ${getInstruments().join(", ")}`);
+
+  // Start health server
+  startHealthServer();
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(`🏥 Health endpoint listening on port ${HEALTH_PORT}`);
+
   // Run immediately if configured
-  if (CONFIG.runOnStartup) {
+  if (state.runOnStartup) {
+    // biome-ignore lint/suspicious/noConsole: Startup run notification is intentional
+    console.log("▶️  Running cycles on startup...");
     await Promise.all([runTradingCycle(), runPredictionMarkets()]);
   }
 
   // Start the schedulers
-  const intervals = startScheduler();
+  startScheduler();
+
+  // Handle config reload on SIGHUP
+  process.on("SIGHUP", () => {
+    reloadConfig().catch((error) => {
+      // biome-ignore lint/suspicious/noConsole: Error is intentional
+      console.error("❌ Config reload failed:", error);
+    });
+  });
 
   // Handle shutdown
   process.on("SIGINT", () => {
-    clearInterval(intervals.tradingCycle);
-    clearInterval(intervals.predictionMarkets);
+    stopScheduler();
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
-    clearInterval(intervals.tradingCycle);
-    clearInterval(intervals.predictionMarkets);
+    stopScheduler();
     process.exit(0);
   });
 }

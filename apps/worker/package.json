@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@cream/api": "workspace:*",
+    "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "^0.24.9",
