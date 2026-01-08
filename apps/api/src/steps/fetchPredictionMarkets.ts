@@ -8,7 +8,13 @@
  */
 
 import { createDefaultPredictionMarketsConfig, type PredictionMarketsConfig } from "@cream/config";
-import { isBacktest, type PredictionMarketScores } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+  type PredictionMarketScores,
+} from "@cream/domain";
 import {
   createUnifiedClient,
   type MacroRiskSignals,
@@ -21,6 +27,15 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getPredictionMarketsRepo } from "../db.js";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 // ============================================
 // Types
@@ -202,8 +217,11 @@ export const fetchPredictionMarketsStep = createStep({
   execute: async ({ inputData }) => {
     const fetchedAt = new Date().toISOString();
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode, return empty context
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return {
         signals: {
           platforms: [],
@@ -287,7 +305,10 @@ export const fetchPredictionMarketsStep = createStep({
  * Used by gatherExternalContext to include PM signals without re-fetching.
  */
 export async function getLatestPredictionMarketSignals(): Promise<PredictionMarketContext | null> {
-  if (isBacktest()) {
+  // Create context to check environment
+  const ctx = createStepContext();
+
+  if (isBacktest(ctx)) {
     return null;
   }
 

@@ -4,9 +4,18 @@
  * Step 2: Build feature snapshots for universe symbols using market data providers.
  */
 
-import { isBacktest } from "@cream/domain";
+import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 import { LoadStateOutputSchema } from "./loadState.js";
 
@@ -80,9 +89,12 @@ export const buildSnapshotStep = createStep({
     const positionSymbols = positions.map((p) => p.symbol);
     const allSymbols = [...new Set([...positionSymbols, ...DEFAULT_UNIVERSE])];
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode or when data sources are not configured,
     // return mock snapshots for faster execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       const snapshotMap: Record<string, unknown> = {};
       for (const symbol of allSymbols) {
         snapshotMap[symbol] = createMockSnapshot(symbol, timestamp);

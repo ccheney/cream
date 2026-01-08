@@ -14,12 +14,21 @@
  * Events are stored to the external_events table for retrieval.
  */
 
-import { isBacktest } from "@cream/domain";
+import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
 import {
   createExtractionPipeline,
   type ExtractedEvent,
   type FMPNewsArticle,
 } from "@cream/external-context";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 import type { CreateExternalEventInput } from "@cream/storage";
 import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
 import { createStep } from "@mastra/core/workflows";
@@ -164,8 +173,11 @@ export const gatherExternalContextStep = createStep({
   outputSchema: ExternalContextSchema,
   retries: 2,
   execute: async ({ inputData: _inputData }) => {
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode, return empty context for faster execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return {
         news: [],
         sentiment: {},

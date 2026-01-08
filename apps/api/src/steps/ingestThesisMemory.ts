@@ -15,10 +15,25 @@
  * @see apps/api/workflows/steps/thesisMemoryIngestion.ts - Core ingestion logic
  */
 
-import { env, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  env,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import type { Thesis, ThesisStateRepository } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 import {
   ingestClosedThesis,
   type ThesisIngestionInput,
@@ -131,11 +146,14 @@ export const ingestThesisMemoryStep = createStep({
   outputSchema: IngestThesisMemoryOutputSchema,
   retries: 2,
   execute: async ({ inputData }) => {
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     const {
       cycleId = `cycle-${Date.now()}`,
       decisions = [],
       regimeLabel = "UNKNOWN",
-      environment = env.CREAM_ENV,
+      environment = ctx.environment,
     } = inputData;
 
     // Filter for decisions that close theses
@@ -155,7 +173,7 @@ export const ingestThesisMemoryStep = createStep({
 
     // In backtest mode, skip memory ingestion for performance
     // (can be backfilled later via batch ingestion)
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return {
         processed: closingDecisions.length,
         ingested: 0,

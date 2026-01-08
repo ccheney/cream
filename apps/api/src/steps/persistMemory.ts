@@ -9,13 +9,28 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import { env, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  env,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import {
   batchUpsertTradeDecisions,
   createHelixClientFromEnv,
   type HelixClient,
   type NodeWithEmbedding,
 } from "@cream/helix";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 import type { Action, Environment, TradeDecision } from "@cream/helix-schema";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
 import { createStep } from "@mastra/core/workflows";
@@ -139,10 +154,10 @@ function mapAction(action: string): Action {
 }
 
 /**
- * Map CREAM_ENV to HelixDB Environment
+ * Map ExecutionContext environment to HelixDB Environment
  */
-function mapEnvironment(): Environment {
-  switch (env.CREAM_ENV) {
+function mapEnvironment(ctx: ExecutionContext): Environment {
+  switch (ctx.environment) {
     case "BACKTEST":
       return "BACKTEST";
     case "PAPER":
@@ -157,7 +172,12 @@ function mapEnvironment(): Environment {
 /**
  * Convert workflow Decision to HelixDB TradeDecision node
  */
-function toTradeDecision(decision: Decision, cycleId: string, regimeLabel: string): TradeDecision {
+function toTradeDecision(
+  ctx: ExecutionContext,
+  decision: Decision,
+  cycleId: string,
+  regimeLabel: string
+): TradeDecision {
   return {
     decision_id: decision.decisionId,
     cycle_id: cycleId,
@@ -178,7 +198,7 @@ function toTradeDecision(decision: Decision, cycleId: string, regimeLabel: strin
     rationale_text: decision.rationale.summary,
     snapshot_reference: `snapshot-${cycleId}`,
     created_at: new Date().toISOString(),
-    environment: mapEnvironment(),
+    environment: mapEnvironment(ctx),
   };
 }
 
@@ -226,8 +246,11 @@ export const persistMemoryStep = createStep({
       regimeLabel = "UNKNOWN",
     } = inputData;
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode, skip memory persistence for faster execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return {
         persisted: true,
         memoryId: `backtest-memory-${Date.now()}`,
@@ -276,7 +299,7 @@ export const persistMemoryStep = createStep({
     // Convert decisions to TradeDecision nodes with embeddings
     const nodesWithEmbeddings: NodeWithEmbedding<TradeDecision>[] = await Promise.all(
       decisions.map(async (decision) => {
-        const node = toTradeDecision(decision, cycleId, regimeLabel);
+        const node = toTradeDecision(ctx, decision, cycleId, regimeLabel);
         const embedding = embedder
           ? await generateDecisionEmbedding(decision, embedder)
           : undefined;

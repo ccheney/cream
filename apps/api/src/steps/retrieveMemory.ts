@@ -10,7 +10,7 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import { isBacktest } from "@cream/domain";
+import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
 import {
   createHelixClientFromEnv,
   formatTradeMemorySummary,
@@ -21,6 +21,15 @@ import {
   type TradeMemory,
   type TradeMemoryRetrievalResult,
 } from "@cream/helix";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 import {
   createEmbeddingClient,
   type EmbeddingClient,
@@ -298,6 +307,9 @@ export const retrieveMemoryStep = createStep({
   execute: async ({ inputData }) => {
     const { snapshots, symbolCount } = inputData;
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // Empty result structure
     const emptyResult: MemoryOutput = {
       similarTrades: {},
@@ -316,7 +328,7 @@ export const retrieveMemoryStep = createStep({
     };
 
     // In backtest mode, return empty memories for faster execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return emptyResult;
     }
 

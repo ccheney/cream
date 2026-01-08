@@ -15,7 +15,7 @@
  */
 
 import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
-import { isBacktest } from "@cream/domain";
+import { type ExecutionContext, isBacktest } from "@cream/domain";
 import {
   ConsensusGate,
   type DecisionPlan,
@@ -60,6 +60,8 @@ export interface ExternalContext {
 
 export interface WorkflowInput {
   cycleId: string;
+  /** ExecutionContext with environment and source */
+  context: ExecutionContext;
   instruments?: string[];
   /** Force stub mode even in PAPER/LIVE (for testing) */
   forceStub?: boolean;
@@ -198,24 +200,16 @@ const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
 // ============================================
 
 /**
- * Get runtime environment from CREAM_ENV
- */
-function getRuntimeEnvironment(): RuntimeEnvironment {
-  const env = process.env.CREAM_ENV ?? "BACKTEST";
-  if (env === "BACKTEST" || env === "PAPER" || env === "LIVE") {
-    return env;
-  }
-  return "BACKTEST";
-}
-
-/**
  * Load runtime config from database.
  * Returns null if config not available (will use defaults).
  */
-async function loadRuntimeConfig(useDraft: boolean): Promise<FullRuntimeConfig | null> {
+async function loadRuntimeConfig(
+  ctx: ExecutionContext,
+  useDraft: boolean
+): Promise<FullRuntimeConfig | null> {
   try {
     const service = await getRuntimeConfigService();
-    const environment = getRuntimeEnvironment();
+    const environment = ctx.environment as RuntimeEnvironment;
 
     if (useDraft) {
       return await service.getDraft(environment);
@@ -517,10 +511,10 @@ async function submitOrders(
 // ============================================
 
 async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowResult> {
-  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"], useDraftConfig = false } = input;
+  const { cycleId, context, instruments = ["AAPL", "MSFT", "GOOGL"], useDraftConfig = false } = input;
 
   // Load config (optional for stub mode, used for audit trail)
-  const runtimeConfig = await loadRuntimeConfig(useDraftConfig);
+  const runtimeConfig = await loadRuntimeConfig(context, useDraftConfig);
   const configVersion = runtimeConfig?.trading.id ?? null;
 
   // Observe Phase
@@ -574,6 +568,7 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
 async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowResult> {
   const {
     cycleId,
+    context,
     instruments = ["AAPL", "MSFT", "GOOGL"],
     externalContext,
     useDraftConfig = false,
@@ -582,7 +577,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   // Load runtime config from DB
   // ============================================
-  const runtimeConfig = await loadRuntimeConfig(useDraftConfig);
+  const runtimeConfig = await loadRuntimeConfig(context, useDraftConfig);
   const configVersion = runtimeConfig?.trading.id ?? null;
 
   // Extract timeout values from config (or use defaults)
@@ -706,7 +701,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       totalMs: totalConsensusTimeoutMs,
     },
     escalation: {
-      enabled: !isBacktest(),
+      enabled: !isBacktest(input.context),
     },
   });
 
@@ -763,7 +758,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
  * @returns Workflow result with approval status and order submission details
  */
 export async function executeTradingCycle(input: WorkflowInput): Promise<WorkflowResult> {
-  const useStub = input.forceStub || isBacktest();
+  const useStub = input.forceStub || isBacktest(input.context);
 
   if (useStub) {
     return executeTradingCycleStub(input);

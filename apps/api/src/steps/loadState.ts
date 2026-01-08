@@ -4,9 +4,18 @@
  * Step 1: Load portfolio positions, open orders, and thesis states from Turso.
  */
 
-import { isBacktest } from "@cream/domain";
+import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+
+/**
+ * Create ExecutionContext for step invocation.
+ * Steps are invoked by the Mastra workflow during scheduled runs.
+ */
+function createStepContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 import { getOrdersRepo, getPositionsRepo, getThesisStateRepo } from "../db.js";
 
@@ -97,8 +106,11 @@ export const loadStateStep = createStep({
   execute: async ({ inputData }) => {
     const { environment } = inputData;
 
+    // Create context at step boundary
+    const ctx = createStepContext();
+
     // In backtest mode, return empty state for faster execution
-    if (isBacktest()) {
+    if (isBacktest(ctx)) {
       return {
         positions: [],
         openOrders: [],

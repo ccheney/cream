@@ -19,6 +19,7 @@
  * @see cream-bhghv
  */
 
+import { type CreamEnvironment, createContext } from "@cream/domain";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
 import { createTursoClient, ThesisStateRepository, type TursoClient } from "@cream/storage";
@@ -114,7 +115,11 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
     process.exit(1);
   }
 
-  const storageClient = await createTursoClient({
+  // Create context for CLI invocation (use environment from options or default to BACKTEST)
+  const envValue = (options.environment || "BACKTEST") as CreamEnvironment;
+  const ctx = createContext(envValue, "manual");
+
+  const storageClient = await createTursoClient(ctx, {
     syncUrl: databaseUrl,
     authToken,
   });
