@@ -25,6 +25,7 @@ import {
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
 import {
+  type AgentConfigEntry,
   type AgentContext,
   type BearishResearchOutput,
   type BullishResearchOutput,
@@ -228,6 +229,39 @@ async function loadRuntimeConfig(useDraft: boolean): Promise<FullRuntimeConfig |
     // Re-throw other errors
     throw error;
   }
+}
+
+/**
+ * Build agent configs from runtime config for AgentContext.
+ * Returns undefined if no config available.
+ */
+type AgentType =
+  | "technical_analyst"
+  | "news_analyst"
+  | "fundamentals_analyst"
+  | "bullish_researcher"
+  | "bearish_researcher"
+  | "trader"
+  | "risk_manager"
+  | "critic";
+
+function buildAgentConfigs(
+  runtimeConfig: FullRuntimeConfig | null
+): Record<AgentType, AgentConfigEntry> | undefined {
+  if (!runtimeConfig?.agents) {
+    return undefined;
+  }
+
+  const result: Partial<Record<AgentType, AgentConfigEntry>> = {};
+  for (const [agentType, config] of Object.entries(runtimeConfig.agents)) {
+    result[agentType as AgentType] = {
+      model: config.model,
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      enabled: config.enabled,
+    };
+  }
+  return result as Record<AgentType, AgentConfigEntry>;
 }
 
 // ============================================
@@ -557,6 +591,9 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   const maxConsensusIterations =
     runtimeConfig?.trading.maxConsensusIterations ?? DEFAULT_MAX_CONSENSUS_ITERATIONS;
 
+  // Build agent configs from runtime config (model, temperature, maxTokens per agent)
+  const agentConfigs = buildAgentConfigs(runtimeConfig);
+
   // Observe Phase
   const marketSnapshot = await fetchMarketSnapshot(instruments);
 
@@ -566,7 +603,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     computeAndStoreRegimes(marketSnapshot),
   ]);
 
-  // Build agent context with external news, macro data, and regime classifications
+  // Build agent context with external news, macro data, regime classifications, and agent configs
   const agentContext: AgentContext = {
     cycleId,
     symbols: instruments,
@@ -578,6 +615,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       sentiment: externalContext?.sentiment ?? {},
     },
     regimeLabels,
+    agentConfigs,
   };
 
   // ============================================
@@ -674,14 +712,22 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   const consensusResult = await runConsensusLoop(
     gate,
     initialPlan,
-    // getApproval function
+    // getApproval function (passes agent configs for model settings)
     async (plan: DecisionPlan) => {
-      const result = await runApprovalParallel(plan, analystOutputs, debateOutputs);
+      const result = await runApprovalParallel(
+        plan,
+        analystOutputs,
+        debateOutputs,
+        undefined, // portfolioState
+        undefined, // constraints
+        undefined, // factorZooContext
+        agentConfigs
+      );
       return result;
     },
-    // revisePlan function
+    // revisePlan function (passes agent configs for model settings)
     async (plan: DecisionPlan, rejectionReasons: string[]) => {
-      return revisePlan(plan, rejectionReasons, analystOutputs, debateOutputs);
+      return revisePlan(plan, rejectionReasons, analystOutputs, debateOutputs, agentConfigs);
     }
   );
 

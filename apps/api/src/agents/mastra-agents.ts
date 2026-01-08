@@ -375,6 +375,16 @@ export type MastraAgentRegistry = typeof mastraAgents;
 // Agent Execution Functions
 // ============================================
 
+/**
+ * Agent configuration from runtime config
+ */
+export interface AgentConfigEntry {
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  enabled: boolean;
+}
+
 export interface AgentContext {
   cycleId: string;
   symbols: string[];
@@ -430,6 +440,8 @@ export interface AgentContext {
       averageIC: number;
     };
   };
+  /** Agent configurations from runtime config (from database) */
+  agentConfigs?: Record<AgentType, AgentConfigEntry>;
 }
 
 /**
@@ -439,6 +451,24 @@ const DEFAULT_MODEL_SETTINGS = {
   temperature: 0.3, // Lower temperature for more deterministic outputs
   maxTokens: 4096,
 };
+
+/**
+ * Get model settings for an agent from context config.
+ * Falls back to defaults if no config provided.
+ */
+function getModelSettings(
+  agentType: AgentType,
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
+): { temperature: number; maxTokens: number } {
+  const config = agentConfigs?.[agentType];
+  if (config) {
+    return {
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+    };
+  }
+  return DEFAULT_MODEL_SETTINGS;
+}
 
 /**
  * Build regime context section for prompts.
@@ -526,7 +556,7 @@ Regime context should inform your setup classification and technical thesis.`;
     structuredOutput: {
       schema: z.array(TechnicalAnalysisSchema),
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("technical_analyst", context.agentConfigs),
   });
 
   return response.object as TechnicalAnalysisOutput[];
@@ -556,7 +586,7 @@ Cycle ID: ${context.cycleId}`;
     structuredOutput: {
       schema: z.array(SentimentAnalysisSchema),
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("news_analyst", context.agentConfigs),
   });
 
   return response.object as SentimentAnalysisOutput[];
@@ -599,7 +629,7 @@ HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports 
     structuredOutput: {
       schema: z.array(FundamentalsAnalysisSchema),
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("fundamentals_analyst", context.agentConfigs),
   });
 
   return response.object as FundamentalsAnalysisOutput[];
@@ -654,7 +684,7 @@ Cycle ID: ${context.cycleId}`;
     structuredOutput: {
       schema: z.array(BullishResearchSchema),
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("bullish_researcher", context.agentConfigs),
   });
 
   return response.object as BullishResearchOutput[];
@@ -692,7 +722,7 @@ Cycle ID: ${context.cycleId}`;
     structuredOutput: {
       schema: z.array(BearishResearchSchema),
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("bearish_researcher", context.agentConfigs),
   });
 
   return response.object as BearishResearchOutput[];
@@ -762,7 +792,7 @@ ${
     structuredOutput: {
       schema: DecisionPlanSchema,
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("trader", context.agentConfigs),
   });
 
   return response.object as DecisionPlan;
@@ -776,7 +806,8 @@ export async function runRiskManager(
   plan: DecisionPlan,
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"]
+  factorZooContext?: AgentContext["factorZoo"],
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -797,13 +828,14 @@ ${JSON.stringify(portfolioState ?? {}, null, 2)}
 Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
 
+  const settings = getModelSettings("risk_manager", agentConfigs);
   const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {
       schema: RiskManagerOutputSchema,
     },
     modelSettings: {
-      ...DEFAULT_MODEL_SETTINGS,
-      temperature: 0.1, // Very low temperature for validation
+      ...settings,
+      temperature: Math.min(settings.temperature, 0.1), // Cap at 0.1 for validation
     },
   });
 
@@ -823,7 +855,8 @@ export async function runCritic(
   debateOutputs: {
     bullish: BullishResearchOutput[];
     bearish: BearishResearchOutput[];
-  }
+  },
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
 ): Promise<CriticOutput> {
   const prompt = `Validate the logical consistency of this trading plan:
 
@@ -839,13 +872,14 @@ Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
 Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
+  const settings = getModelSettings("critic", agentConfigs);
   const response = await criticAgent.generate([{ role: "user", content: prompt }], {
     structuredOutput: {
       schema: CriticOutputSchema,
     },
     modelSettings: {
-      ...DEFAULT_MODEL_SETTINGS,
-      temperature: 0.1, // Very low temperature for validation
+      ...settings,
+      temperature: Math.min(settings.temperature, 0.1), // Cap at 0.1 for validation
     },
   });
 
@@ -869,14 +903,15 @@ export async function runApprovalParallel(
   },
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"]
+  factorZooContext?: AgentContext["factorZoo"],
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
 }> {
   const [riskManager, critic] = await Promise.all([
-    runRiskManager(plan, portfolioState, constraints, factorZooContext),
-    runCritic(plan, analystOutputs, debateOutputs),
+    runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs),
+    runCritic(plan, analystOutputs, debateOutputs, agentConfigs),
   ]);
 
   return { riskManager, critic };
@@ -896,7 +931,8 @@ export async function revisePlan(
   debateOutputs: {
     bullish: BullishResearchOutput[];
     bearish: BearishResearchOutput[];
-  }
+  },
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
 ): Promise<DecisionPlan> {
   const prompt = `Revise the following trading plan based on the rejection feedback:
 
@@ -920,7 +956,7 @@ Please address ALL rejection reasons and produce a revised plan that:
     structuredOutput: {
       schema: DecisionPlanSchema,
     },
-    modelSettings: DEFAULT_MODEL_SETTINGS,
+    modelSettings: getModelSettings("trader", agentConfigs),
   });
 
   return response.object as DecisionPlan;
