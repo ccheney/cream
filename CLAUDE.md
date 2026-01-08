@@ -15,6 +15,8 @@ Cream is an agentic trading system for US equities and options combining LLM rea
 | Monorepo | Turborepo v2.7+ |
 | Linting | Biome (TS), Clippy (Rust), Ruff (Python) |
 
+**Tooling**: asdf manages versions via `.tool-versions` (bun 1.3.5, rust 1.92.0). Python uses `uv` (not pip/venv directly).
+
 ## Structure
 
 ```

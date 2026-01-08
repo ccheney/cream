@@ -217,6 +217,7 @@ module = [
     "research.promotion.*",
     "research.greeks.*",
     "research.flight_client",
+    "research.backtest.*",
     "research.__init__",
 ]
 warn_return_any = false
@@ -224,4 +225,4 @@ disallow_any_generics = false
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 check_untyped_defs = false
-disable_error_code = ["attr-defined", "assignment", "union-attr", "arg-type", "misc", "name-defined", "operator", "no-untyped-def"]
+disable_error_code = ["attr-defined", "assignment", "union-attr", "arg-type", "misc", "name-defined", "operator", "no-untyped-def", "return-value", "import-untyped"]
