@@ -807,6 +807,8 @@ export {
   type SnapshotLogEntry,
   type SnapshotLogger,
 } from "./snapshot-logging";
+// Test utilities for ExecutionContext
+export { createTestContext, createTestContextWithConfig } from "./test-utils";
 // Time utilities
 export {
   addDays,
