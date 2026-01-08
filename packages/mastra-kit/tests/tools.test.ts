@@ -5,27 +5,29 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { createTestContext } from "@cream/domain";
 import { type NewsItem, searchNews } from "../src/tools/index.js";
 
 // ============================================
 // searchNews Tests
 // ============================================
 
+const ctx = createTestContext("BACKTEST");
+
 describe("searchNews", () => {
   describe("in backtest mode", () => {
     it("should return empty array in backtest mode", async () => {
-      // CREAM_ENV is set to BACKTEST in test runner
-      const result = await searchNews("", []);
+      const result = await searchNews(ctx, "", []);
       expect(result).toEqual([]);
     });
 
     it("should return empty array with symbols in backtest mode", async () => {
-      const result = await searchNews("earnings", ["AAPL", "MSFT"]);
+      const result = await searchNews(ctx, "earnings", ["AAPL", "MSFT"]);
       expect(result).toEqual([]);
     });
 
     it("should return empty array with query in backtest mode", async () => {
-      const result = await searchNews("tech stocks rally");
+      const result = await searchNews(ctx, "tech stocks rally");
       expect(result).toEqual([]);
     });
   });
@@ -91,27 +93,27 @@ describe("searchNews", () => {
 
   describe("function signature", () => {
     it("should accept query string", async () => {
-      const result = await searchNews("test query");
+      const result = await searchNews(ctx, "test query");
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should accept query with symbols array", async () => {
-      const result = await searchNews("test", ["AAPL", "GOOGL"]);
+      const result = await searchNews(ctx, "test", ["AAPL", "GOOGL"]);
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should accept query with symbols and limit", async () => {
-      const result = await searchNews("test", ["AAPL"], 10);
+      const result = await searchNews(ctx, "test", ["AAPL"], 10);
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should accept empty query", async () => {
-      const result = await searchNews("");
+      const result = await searchNews(ctx, "");
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should accept empty symbols array", async () => {
-      const result = await searchNews("test", []);
+      const result = await searchNews(ctx, "test", []);
       expect(Array.isArray(result)).toBe(true);
     });
   });

@@ -13,7 +13,8 @@
  * @see docs/plans/11-configuration.md
  */
 
-import { type EnvConfig, env, isLive } from "@cream/domain/env";
+import type { ExecutionContext } from "@cream/domain";
+import { type EnvConfig, env, isLive, validateEnvironment } from "@cream/domain/env";
 
 // ============================================
 // Sensitive Key Patterns
@@ -88,7 +89,6 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 
   // Include all known env fields for consistent output
   const allFields = [
-    "CREAM_ENV",
     "CREAM_BROKER",
     "TURSO_DATABASE_URL",
     "TURSO_AUTH_TOKEN",
@@ -166,23 +166,30 @@ export function validateLiveTradingSafety(): {
  * Validate startup environment
  *
  * Performs environment validation:
- * 1. Environment variables are valid
+ * 1. Environment variables are valid for the target environment
  * 2. LIVE trading safety checks (if applicable)
  *
  * Note: Configuration is now loaded from database via RuntimeConfigService.
  * Call this function for environment validation only.
  *
+ * @param ctx - ExecutionContext containing target environment info
  * @returns Validation result with diagnostics
  */
-export async function validateStartup(): Promise<StartupResult> {
+export async function validateStartup(ctx: ExecutionContext): Promise<StartupResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Step 1: Environment variables are already validated at import
-  // If we got here, env is valid (parseEnv() would have thrown)
+  // Step 1: Validate environment variables for the target environment
+  const envValidation = validateEnvironment(ctx, "startup");
+  if (!envValidation.valid) {
+    errors.push(...envValidation.errors);
+  }
+  if (envValidation.warnings.length > 0) {
+    warnings.push(...envValidation.warnings);
+  }
 
   // Step 2: LIVE trading safety checks
-  if (isLive()) {
+  if (isLive(ctx)) {
     const liveCheck = validateLiveTradingSafety();
     if (!liveCheck.approved) {
       errors.push(...liveCheck.errors);
@@ -208,6 +215,7 @@ export interface StartupAuditLog {
   timestamp: string;
   service: string;
   environment: string;
+  traceId: string;
   env: Record<string, string>;
   errors: string[];
   warnings: string[];
@@ -217,14 +225,20 @@ export interface StartupAuditLog {
  * Create a startup audit log entry
  *
  * @param service - Name of the service starting up
+ * @param ctx - ExecutionContext containing environment info
  * @param result - Startup validation result
  * @returns Audit log entry (sanitized)
  */
-export function createAuditLog(service: string, result: StartupResult): StartupAuditLog {
+export function createAuditLog(
+  service: string,
+  ctx: ExecutionContext,
+  result: StartupResult
+): StartupAuditLog {
   return {
     timestamp: new Date().toISOString(),
     service,
-    environment: result.env.CREAM_ENV,
+    environment: ctx.environment,
+    traceId: ctx.traceId,
     env: sanitizeEnv(result.env),
     errors: result.errors,
     warnings: result.warnings,
@@ -258,15 +272,18 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  * This function only validates environment variables.
  *
  * @param service - Name of the service (for audit logging)
+ * @param ctx - ExecutionContext containing target environment info
  * @returns Validated env
  *
  * @example
  * ```ts
  * // apps/api/src/main.ts
  * import { runStartupValidation } from "@cream/config/startup";
+ * import { createContext } from "@cream/domain";
  *
  * async function main() {
- *   const { env } = await runStartupValidation("api-server");
+ *   const ctx = createContext("PAPER", "scheduled");
+ *   const { env } = await runStartupValidation("api-server", ctx);
  *
  *   // Now safe to start services and load config from DB
  *   await startServer();
@@ -275,11 +292,14 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  * main();
  * ```
  */
-export async function runStartupValidation(service: string): Promise<{ env: EnvConfig }> {
-  const result = await validateStartup();
+export async function runStartupValidation(
+  service: string,
+  ctx: ExecutionContext
+): Promise<{ env: EnvConfig }> {
+  const result = await validateStartup(ctx);
 
   // Create and log audit entry
-  const audit = createAuditLog(service, result);
+  const audit = createAuditLog(service, ctx, result);
 
   if (!result.success) {
     for (const _error of result.errors) {
@@ -311,9 +331,10 @@ export async function runStartupValidation(service: string): Promise<{ env: EnvC
  * Same as runStartupValidation but returns result instead of exiting.
  */
 export async function validateStartupNoExit(
-  service: string
+  service: string,
+  ctx: ExecutionContext
 ): Promise<StartupResult & { audit: StartupAuditLog }> {
-  const result = await validateStartup();
-  const audit = createAuditLog(service, result);
+  const result = await validateStartup(ctx);
+  const audit = createAuditLog(service, ctx, result);
   return { ...result, audit };
 }

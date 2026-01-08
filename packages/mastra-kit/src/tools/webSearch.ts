@@ -7,7 +7,7 @@
  * @see docs/plans/21-web-search-tool.md
  */
 
-import { isBacktest } from "@cream/domain";
+import { type ExecutionContext, isBacktest } from "@cream/domain";
 import { z } from "zod";
 import { createTavilyClientFromEnv, type TavilyClient } from "./providers/tavily.js";
 
@@ -933,10 +933,14 @@ function getTavilyClient(): TavilyClient | null {
  * In backtest mode, returns empty results for consistent execution.
  * Never throws - always returns a valid response.
  *
+ * @param ctx - ExecutionContext
  * @param params - Search parameters
  * @returns Search results with metadata
  */
-export async function webSearch(params: WebSearchParams): Promise<WebSearchResponse> {
+export async function webSearch(
+  ctx: ExecutionContext,
+  params: WebSearchParams
+): Promise<WebSearchResponse> {
   const startTime = Date.now();
 
   // 1. Validate and parse params
@@ -953,7 +957,7 @@ export async function webSearch(params: WebSearchParams): Promise<WebSearchRespo
   const queryHash = hashQueryForAudit(query);
 
   // 3. Backtest mode → empty results (don't cache)
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     const executionTimeMs = Date.now() - startTime;
     logWebSearch({
       event: "backtest",
@@ -1246,12 +1250,13 @@ function chunkArray<T>(array: T[], size: number): T[][] {
  * tracking cache hits separately from API calls. Each symbol gets its own
  * search query generated from the template.
  *
+ * @param ctx - ExecutionContext
  * @param params - Batch search parameters
  * @returns Results keyed by symbol with aggregate metadata
  *
  * @example
  * ```typescript
- * const batch = await batchSearch({
+ * const batch = await batchSearch(ctx, {
  *   queryTemplate: "{SYMBOL} stock sentiment Reddit",
  *   symbols: ["NVDA", "AAPL", "MSFT"],
  *   commonParams: {
@@ -1265,7 +1270,10 @@ function chunkArray<T>(array: T[], size: number): T[][] {
  * const nvdaResults = batch.results["NVDA"];
  * ```
  */
-export async function batchSearch(params: BatchSearchParams): Promise<BatchSearchResponse> {
+export async function batchSearch(
+  ctx: ExecutionContext,
+  params: BatchSearchParams
+): Promise<BatchSearchResponse> {
   const startTime = Date.now();
   const results: Record<string, WebSearchResult[]> = {};
   let cachedCount = 0;
@@ -1293,7 +1301,7 @@ export async function batchSearch(params: BatchSearchParams): Promise<BatchSearc
       const query = params.queryTemplate.replace(/\{SYMBOL\}/g, symbol);
 
       try {
-        const response = await webSearch({
+        const response = await webSearch(ctx, {
           query,
           symbols: [symbol],
           ...params.commonParams,

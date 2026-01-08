@@ -9,7 +9,7 @@
  * @see https://github.com/tursodatabase/turso
  */
 
-import { env, getEnvDatabaseSuffix, isBacktest } from "@cream/domain";
+import { type ExecutionContext, env, getEnvDatabaseSuffix, isBacktest } from "@cream/domain";
 import { connect } from "@tursodatabase/database";
 import { connect as connectSync } from "@tursodatabase/sync";
 
@@ -100,12 +100,15 @@ export interface TursoClient {
  * client.close();
  * ```
  */
-export async function createTursoClient(config: TursoConfig = {}): Promise<TursoClient> {
-  const suffix = getEnvDatabaseSuffix();
+export async function createTursoClient(
+  ctx: ExecutionContext,
+  config: TursoConfig = {}
+): Promise<TursoClient> {
+  const suffix = getEnvDatabaseSuffix(ctx);
   const defaultPath = `cream${suffix}.db`;
 
   // Determine connection mode based on environment
-  if (isBacktest() || !config.syncUrl) {
+  if (isBacktest(ctx) || !config.syncUrl) {
     // Local mode: use embedded database
     return createLocalClient(config.path ?? defaultPath);
   }
@@ -316,7 +319,7 @@ export async function createInMemoryClient(): Promise<TursoClient> {
 /**
  * Get the default database path based on environment
  */
-export function getDefaultDatabasePath(): string {
-  const suffix = getEnvDatabaseSuffix();
+export function getDefaultDatabasePath(ctx: ExecutionContext): string {
+  const suffix = getEnvDatabaseSuffix(ctx);
   return `cream${suffix}.db`;
 }

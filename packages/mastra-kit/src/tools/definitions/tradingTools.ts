@@ -5,6 +5,7 @@
  * These tools wrap the core implementations from tools/index.ts.
  */
 
+import { type CreamEnvironment, createContext } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
@@ -17,6 +18,15 @@ import {
   type PortfolioStateResponse,
   type Quote,
 } from "../index.js";
+
+/**
+ * Create ExecutionContext for tool invocation.
+ * Tools are invoked by the agent framework during scheduled runs.
+ */
+function createToolContext() {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 // ============================================
 // Get Quotes Tool
@@ -50,7 +60,8 @@ Returns mock data in backtest mode for consistent execution.`,
   inputSchema: GetQuotesInputSchema,
   outputSchema: GetQuotesOutputSchema,
   execute: async ({ context }): Promise<{ quotes: Quote[] }> => {
-    const quotes = await getQuotes(context.instruments);
+    const ctx = createToolContext();
+    const quotes = await getQuotes(ctx, context.instruments);
     return { quotes };
   },
 });
@@ -90,7 +101,8 @@ Returns mock data in backtest mode for consistent execution.`,
   inputSchema: GetPortfolioStateInputSchema,
   outputSchema: GetPortfolioStateOutputSchema,
   execute: async (): Promise<PortfolioStateResponse> => {
-    return getPortfolioState();
+    const ctx = createToolContext();
+    return getPortfolioState(ctx);
   },
 });
 
@@ -137,7 +149,8 @@ Returns mock data in backtest mode for consistent execution.`,
   inputSchema: GetOptionChainInputSchema,
   outputSchema: GetOptionChainOutputSchema,
   execute: async ({ context }): Promise<OptionChainResponse> => {
-    return getOptionChain(context.underlying);
+    const ctx = createToolContext();
+    return getOptionChain(ctx, context.underlying);
   },
 });
 
@@ -174,7 +187,8 @@ Returns mock data in backtest mode for consistent execution.`,
   inputSchema: GetGreeksInputSchema,
   outputSchema: GetGreeksOutputSchema,
   execute: async ({ context }): Promise<Greeks> => {
-    return getGreeks(context.contractSymbol);
+    const ctx = createToolContext();
+    return getGreeks(ctx, context.contractSymbol);
   },
 });
 

@@ -19,6 +19,7 @@ import {
   validateTimestamp,
   validateTimestampConsistency,
 } from "./clock";
+import { createTestContext } from "./test-utils";
 
 // ============================================
 // Configuration Tests
@@ -315,8 +316,9 @@ describe("Clock Monitoring", () => {
   });
 
   it("resetClockMonitorState clears state", () => {
+    const ctx = createTestContext("BACKTEST");
     // Manually mutate state first
-    periodicClockCheck().catch(() => {}); // Ignore result
+    periodicClockCheck(ctx).catch(() => {}); // Ignore result
 
     resetClockMonitorState();
     const state = getClockMonitorState();
@@ -330,37 +332,33 @@ describe("Clock Monitoring", () => {
 // ============================================
 
 describe("checkClockSkew", () => {
-  // Note: The env module parses CREAM_ENV at import time, so we cannot
-  // dynamically change the environment in tests. The current tests verify
-  // the function works correctly in the current environment (PAPER).
-
   it("returns result with required fields", async () => {
-    const result = await checkClockSkew();
+    const ctx = createTestContext("BACKTEST");
+    const result = await checkClockSkew(ctx);
 
     expect(result.ok).toBeDefined();
     expect(result.skewMs).toBeDefined();
     expect(result.checkedAt).toBeDefined();
-    // In non-BACKTEST mode, it makes HTTP calls
-    // Result will have referenceTime on success, or warning on network failure
-    expect(result.referenceTime !== undefined || result.warning !== undefined).toBe(true);
+    // In BACKTEST mode, it skips the HTTP call and returns a warning
+    expect(result.warning).toContain("BACKTEST");
   });
 
   it("respects custom thresholds", async () => {
-    // Test that custom thresholds are used (we can't control the skew value)
-    const result = await checkClockSkew({
-      warnThresholdMs: 1000000, // Very high - unlikely to warn
-      errorThresholdMs: 2000000, // Very high - unlikely to error
+    const ctx = createTestContext("BACKTEST");
+    // In BACKTEST mode, thresholds don't apply (always skipped)
+    const result = await checkClockSkew(ctx, {
+      warnThresholdMs: 1000000,
+      errorThresholdMs: 2000000,
       componentSkewWarnMs: 10,
     });
 
-    // With very high thresholds, should be ok unless network fails
-    if (!result.warning?.includes("Unable to verify")) {
-      expect(result.ok).toBe(true);
-    }
+    expect(result.ok).toBe(true);
+    expect(result.skewMs).toBe(0);
   });
 
   it("includes checkedAt timestamp in ISO format", async () => {
-    const result = await checkClockSkew();
+    const ctx = createTestContext("BACKTEST");
+    const result = await checkClockSkew(ctx);
 
     expect(result.checkedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
@@ -372,7 +370,8 @@ describe("periodicClockCheck", () => {
   });
 
   it("updates monitor state after check", async () => {
-    await periodicClockCheck();
+    const ctx = createTestContext("BACKTEST");
+    await periodicClockCheck(ctx);
 
     const state = getClockMonitorState();
     expect(state.checkCount).toBe(1);
@@ -381,18 +380,20 @@ describe("periodicClockCheck", () => {
   });
 
   it("increments counters on multiple checks", async () => {
-    await periodicClockCheck();
-    await periodicClockCheck();
+    const ctx = createTestContext("BACKTEST");
+    await periodicClockCheck(ctx);
+    await periodicClockCheck(ctx);
 
     const state = getClockMonitorState();
     expect(state.checkCount).toBe(2);
   });
 
   it("tracks warning and error counts", async () => {
-    await periodicClockCheck();
+    const ctx = createTestContext("BACKTEST");
+    await periodicClockCheck(ctx);
 
     const state = getClockMonitorState();
-    // Sum of warning and error counts should be non-negative
-    expect(state.warningCount + state.errorCount).toBeGreaterThanOrEqual(0);
+    // In BACKTEST mode, there's always a warning about skipped check
+    expect(state.warningCount).toBeGreaterThanOrEqual(1);
   });
 });

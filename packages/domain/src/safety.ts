@@ -4,16 +4,19 @@
  * Critical safety controls to prevent accidental LIVE trading execution.
  * This module implements multi-layer safety checks:
  *
- * Layer 1: Environment variable validation (CREAM_ENV=LIVE)
+ * Layer 1: ExecutionContext validation (explicit environment)
  * Layer 2: Separate API credentials for LIVE
  * Layer 3: Explicit confirmation before LIVE execution
  * Layer 4: Order ID namespacing (prevent collision)
  * Layer 5: Broker endpoint validation
  *
- * ⚠️ SECURITY CRITICAL: Do not modify without thorough review
+ * SECURITY CRITICAL: Do not modify without thorough review
+ *
+ * All functions require ExecutionContext - no ambient state is used.
  */
 
-import { env, getAlpacaBaseUrl, isBacktest, isLive } from "./env";
+import type { ExecutionContext } from "./context";
+import { env, isBacktest, isLive } from "./env";
 
 // ============================================
 // Order ID Namespacing
@@ -29,25 +32,30 @@ import { env, getAlpacaBaseUrl, isBacktest, isLive } from "./env";
  * 1. Orders are clearly identifiable by environment
  * 2. No accidental confusion between PAPER and LIVE orders
  * 3. Unique across all systems and restarts
+ *
+ * @param ctx - ExecutionContext containing environment info
  */
-export function generateOrderId(): string {
-  const prefix = env.CREAM_ENV;
+export function generateOrderId(ctx: ExecutionContext): string {
+  const prefix = ctx.environment;
   const timestamp = Date.now().toString(16);
   const random = Math.random().toString(16).slice(2, 10);
   return `${prefix}-${timestamp}-${random}`;
 }
 
 /**
- * Validate that an order ID belongs to the current environment
+ * Validate that an order ID belongs to the given execution context's environment
  *
+ * @param orderId - Order ID to validate
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If order ID is from a different environment
  */
-export function validateOrderIdEnvironment(orderId: string): void {
-  const expectedPrefix = env.CREAM_ENV;
+export function validateOrderIdEnvironment(orderId: string, ctx: ExecutionContext): void {
+  const expectedPrefix = ctx.environment;
   if (!orderId.startsWith(`${expectedPrefix}-`)) {
     throw new SafetyError(
       `Order ID ${orderId} does not belong to ${expectedPrefix} environment`,
-      "ORDER_ID_ENVIRONMENT_MISMATCH"
+      "ORDER_ID_ENVIRONMENT_MISMATCH",
+      ctx.traceId
     );
   }
 }
@@ -57,29 +65,29 @@ export function validateOrderIdEnvironment(orderId: string): void {
 // ============================================
 
 /**
- * Validate that the broker endpoint matches the current environment
+ * Validate that the broker endpoint matches the execution context's environment
  *
  * LIVE: https://api.alpaca.markets
- * PAPER: https://paper-api.alpaca.markets
+ * PAPER/BACKTEST: https://paper-api.alpaca.markets
  *
+ * @param endpoint - Broker API endpoint to validate
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If endpoint doesn't match environment
  */
-export function validateBrokerEndpoint(endpoint: string): void {
-  // Expected endpoint based on current environment (for reference/logging)
-  const _expectedEndpoint = getAlpacaBaseUrl();
-  void _expectedEndpoint; // Acknowledge intentionally unused
-
-  if (isLive() && !endpoint.includes("api.alpaca.markets")) {
+export function validateBrokerEndpoint(endpoint: string, ctx: ExecutionContext): void {
+  if (isLive(ctx) && !endpoint.includes("api.alpaca.markets")) {
     throw new SafetyError(
       `LIVE environment requires production broker endpoint, got: ${endpoint}`,
-      "BROKER_ENDPOINT_MISMATCH"
+      "BROKER_ENDPOINT_MISMATCH",
+      ctx.traceId
     );
   }
 
-  if (!isLive() && endpoint.includes("api.alpaca.markets") && !endpoint.includes("paper-api")) {
+  if (!isLive(ctx) && endpoint.includes("api.alpaca.markets") && !endpoint.includes("paper-api")) {
     throw new SafetyError(
-      `${env.CREAM_ENV} environment should not use production broker endpoint: ${endpoint}`,
-      "BROKER_ENDPOINT_MISMATCH"
+      `${ctx.environment} environment should not use production broker endpoint: ${endpoint}`,
+      "BROKER_ENDPOINT_MISMATCH",
+      ctx.traceId
     );
   }
 }
@@ -101,10 +109,11 @@ const LIVE_CONFIRMATION_TOKEN = "I_UNDERSTAND_THIS_IS_REAL_MONEY";
  * In automated systems, this should be confirmed during startup.
  *
  * @param confirmationToken - Must exactly match "I_UNDERSTAND_THIS_IS_REAL_MONEY"
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If not in LIVE environment or token doesn't match
  */
-export function requireLiveConfirmation(confirmationToken: string): void {
-  if (!isLive()) {
+export function requireLiveConfirmation(confirmationToken: string, ctx: ExecutionContext): void {
+  if (!isLive(ctx)) {
     // No confirmation needed for non-LIVE environments
     return;
   }
@@ -112,22 +121,30 @@ export function requireLiveConfirmation(confirmationToken: string): void {
   if (confirmationToken !== LIVE_CONFIRMATION_TOKEN) {
     throw new SafetyError(
       "LIVE environment requires confirmation token: I_UNDERSTAND_THIS_IS_REAL_MONEY",
-      "LIVE_CONFIRMATION_REQUIRED"
+      "LIVE_CONFIRMATION_REQUIRED",
+      ctx.traceId
     );
   }
 
   liveConfirmationGranted = true;
-  auditLog("LIVE_CONFIRMATION_GRANTED", {
-    timestamp: new Date().toISOString(),
-    environment: env.CREAM_ENV,
-  });
+  auditLog(
+    "LIVE_CONFIRMATION_GRANTED",
+    {
+      timestamp: new Date().toISOString(),
+      environment: ctx.environment,
+      traceId: ctx.traceId,
+    },
+    ctx
+  );
 }
 
 /**
  * Check if LIVE confirmation has been granted
+ *
+ * @param ctx - ExecutionContext containing environment info
  */
-export function isLiveConfirmed(): boolean {
-  if (!isLive()) {
+export function isLiveConfirmed(ctx: ExecutionContext): boolean {
+  if (!isLive(ctx)) {
     return true; // Non-LIVE doesn't need confirmation
   }
   return liveConfirmationGranted;
@@ -138,13 +155,15 @@ export function isLiveConfirmed(): boolean {
  *
  * Call this before any operation that could affect real money.
  *
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If in LIVE environment without confirmation
  */
-export function preventAccidentalLiveExecution(): void {
-  if (isLive() && !liveConfirmationGranted) {
+export function preventAccidentalLiveExecution(ctx: ExecutionContext): void {
+  if (isLive(ctx) && !liveConfirmationGranted) {
     throw new SafetyError(
       "LIVE execution blocked: Call requireLiveConfirmation() first",
-      "LIVE_CONFIRMATION_NOT_GRANTED"
+      "LIVE_CONFIRMATION_NOT_GRANTED",
+      ctx.traceId
     );
   }
 }
@@ -157,31 +176,31 @@ export function preventAccidentalLiveExecution(): void {
  * Comprehensive environment consistency check
  *
  * Validates:
- * 1. CREAM_ENV is set and valid
- * 2. Required credentials are present
- * 3. Broker endpoint matches environment
- * 4. Database URLs are properly isolated
+ * 1. Broker endpoint matches environment (if configured)
+ * 2. LIVE confirmation state is logged for audit
  *
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If any consistency check fails
  */
-export function validateEnvironmentConsistency(): void {
+export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
   // Validate broker endpoint if configured
   if (env.ALPACA_BASE_URL) {
-    validateBrokerEndpoint(env.ALPACA_BASE_URL);
+    validateBrokerEndpoint(env.ALPACA_BASE_URL, ctx);
   }
 
-  // LIVE-specific checks
-  if (isLive()) {
-    // Ensure LIVE confirmation is required (not bypassed)
-    if (!liveConfirmationGranted) {
-    }
-
-    // Log LIVE activation for audit trail
-    auditLog("ENVIRONMENT_VALIDATION", {
-      environment: env.CREAM_ENV,
-      broker: env.CREAM_BROKER,
-      liveConfirmed: liveConfirmationGranted,
-    });
+  // LIVE-specific checks - log for audit trail
+  if (isLive(ctx)) {
+    auditLog(
+      "ENVIRONMENT_VALIDATION",
+      {
+        environment: ctx.environment,
+        source: ctx.source,
+        configId: ctx.configId,
+        broker: env.CREAM_BROKER,
+        liveConfirmed: liveConfirmationGranted,
+      },
+      ctx
+    );
   }
 }
 
@@ -190,31 +209,37 @@ export function validateEnvironmentConsistency(): void {
 // ============================================
 
 /**
- * Get the database name suffix for the current environment
+ * Get the database name suffix for the given execution context's environment
  *
  * This ensures complete isolation between environments:
  * - BACKTEST uses: cream_backtest.db
  * - PAPER uses: cream_paper.db
  * - LIVE uses: cream_live.db
+ *
+ * @param baseName - Base database name
+ * @param ctx - ExecutionContext containing environment info
  */
-export function getIsolatedDatabaseName(baseName: string): string {
-  return `${baseName}_${env.CREAM_ENV.toLowerCase()}`;
+export function getIsolatedDatabaseName(baseName: string, ctx: ExecutionContext): string {
+  return `${baseName}_${ctx.environment.toLowerCase()}`;
 }
 
 /**
  * Validate that a database connection is for the correct environment
  *
+ * @param dbUrl - Database URL to validate
+ * @param ctx - ExecutionContext containing environment info
  * @throws {SafetyError} If database name suggests wrong environment
  */
-export function validateDatabaseIsolation(dbUrl: string): void {
+export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext): void {
   // Check for cross-environment database access
   const environments = ["backtest", "paper", "live"];
   for (const otherEnv of environments) {
-    if (otherEnv !== env.CREAM_ENV.toLowerCase()) {
+    if (otherEnv !== ctx.environment.toLowerCase()) {
       if (dbUrl.includes(`_${otherEnv}`)) {
         throw new SafetyError(
-          `Database isolation violation: ${env.CREAM_ENV} environment accessing ${otherEnv} database`,
-          "DATABASE_ISOLATION_VIOLATION"
+          `Database isolation violation: ${ctx.environment} environment accessing ${otherEnv} database`,
+          "DATABASE_ISOLATION_VIOLATION",
+          ctx.traceId
         );
       }
     }
@@ -225,7 +250,7 @@ export function validateDatabaseIsolation(dbUrl: string): void {
 // Audit Logging
 // ============================================
 
-/** Audit log entries for LIVE operations */
+/** Audit log entries for operations */
 const auditLogEntries: AuditLogEntry[] = [];
 
 interface AuditLogEntry {
@@ -233,26 +258,32 @@ interface AuditLogEntry {
   operation: string;
   details: Record<string, unknown>;
   environment: string;
+  traceId: string;
 }
 
 /**
  * Log an operation for audit purposes
  *
  * In LIVE environment, all significant operations are logged for compliance.
+ *
+ * @param operation - Operation name
+ * @param details - Operation details
+ * @param ctx - ExecutionContext containing environment info
  */
-export function auditLog(operation: string, details: Record<string, unknown>): void {
+export function auditLog(
+  operation: string,
+  details: Record<string, unknown>,
+  ctx: ExecutionContext
+): void {
   const entry: AuditLogEntry = {
     timestamp: new Date().toISOString(),
     operation,
     details,
-    environment: env.CREAM_ENV,
+    environment: ctx.environment,
+    traceId: ctx.traceId,
   };
 
   auditLogEntries.push(entry);
-
-  // In LIVE, also log to console for immediate visibility
-  if (isLive()) {
-  }
 }
 
 /**
@@ -264,10 +295,17 @@ export function getAuditLog(): readonly AuditLogEntry[] {
 
 /**
  * Clear audit log (for testing only)
+ *
+ * @param ctx - ExecutionContext containing environment info
+ * @throws {SafetyError} If called in LIVE environment
  */
-export function clearAuditLog(): void {
-  if (isLive()) {
-    throw new SafetyError("Cannot clear audit log in LIVE environment", "AUDIT_LOG_PROTECTED");
+export function clearAuditLog(ctx: ExecutionContext): void {
+  if (isLive(ctx)) {
+    throw new SafetyError(
+      "Cannot clear audit log in LIVE environment",
+      "AUDIT_LOG_PROTECTED",
+      ctx.traceId
+    );
   }
   auditLogEntries.length = 0;
 }
@@ -292,10 +330,16 @@ const DEFAULT_RESET_TIMEOUT_MS = 60000; // 1 minute
  * Record a failure for the circuit breaker
  *
  * After threshold failures, the circuit opens and blocks operations.
+ *
+ * @param circuitName - Name of the circuit
+ * @param error - Error that caused the failure
+ * @param ctx - ExecutionContext containing environment info
+ * @param threshold - Number of failures before opening circuit
  */
 export function recordCircuitFailure(
   circuitName: string,
   error: Error,
+  ctx: ExecutionContext,
   threshold = DEFAULT_FAILURE_THRESHOLD
 ): void {
   let state = circuitBreakers.get(circuitName);
@@ -312,29 +356,37 @@ export function recordCircuitFailure(
   state.failureCount++;
   state.lastFailureTime = Date.now();
 
-  auditLog("CIRCUIT_FAILURE", {
-    circuit: circuitName,
-    failureCount: state.failureCount,
-    threshold,
-    error: error.message,
-  });
+  auditLog(
+    "CIRCUIT_FAILURE",
+    {
+      circuit: circuitName,
+      failureCount: state.failureCount,
+      threshold,
+      error: error.message,
+    },
+    ctx
+  );
 
   if (state.failureCount >= threshold) {
     state.isOpen = true;
     state.openedAt = Date.now();
 
-    auditLog("CIRCUIT_OPENED", {
-      circuit: circuitName,
-      failureCount: state.failureCount,
-    });
-
-    if (isLive()) {
-    }
+    auditLog(
+      "CIRCUIT_OPENED",
+      {
+        circuit: circuitName,
+        failureCount: state.failureCount,
+      },
+      ctx
+    );
   }
 }
 
 /**
  * Check if a circuit is open (blocking operations)
+ *
+ * @param circuitName - Name of the circuit
+ * @param resetTimeoutMs - Time after which to try again (half-open state)
  */
 export function isCircuitOpen(
   circuitName: string,
@@ -355,8 +407,11 @@ export function isCircuitOpen(
 
 /**
  * Reset a circuit breaker (on successful operation)
+ *
+ * @param circuitName - Name of the circuit
+ * @param ctx - ExecutionContext containing environment info
  */
-export function resetCircuit(circuitName: string): void {
+export function resetCircuit(circuitName: string, ctx: ExecutionContext): void {
   const state = circuitBreakers.get(circuitName);
   if (state) {
     state.isOpen = false;
@@ -364,18 +419,23 @@ export function resetCircuit(circuitName: string): void {
     state.lastFailureTime = null;
     state.openedAt = null;
 
-    auditLog("CIRCUIT_RESET", { circuit: circuitName });
+    auditLog("CIRCUIT_RESET", { circuit: circuitName }, ctx);
   }
 }
 
 /**
  * Guard function that throws if circuit is open
+ *
+ * @param circuitName - Name of the circuit
+ * @param ctx - ExecutionContext containing environment info
+ * @throws {SafetyError} If circuit is open
  */
-export function requireCircuitClosed(circuitName: string): void {
+export function requireCircuitClosed(circuitName: string, ctx: ExecutionContext): void {
   if (isCircuitOpen(circuitName)) {
     throw new SafetyError(
       `Circuit breaker '${circuitName}' is open - operations blocked`,
-      "CIRCUIT_BREAKER_OPEN"
+      "CIRCUIT_BREAKER_OPEN",
+      ctx.traceId
     );
   }
 }
@@ -395,21 +455,17 @@ export type SafetyErrorCode =
 
 /**
  * Custom error for safety-related failures
+ *
+ * Includes traceId from ExecutionContext for debugging.
  */
 export class SafetyError extends Error {
   constructor(
     message: string,
-    public readonly code: SafetyErrorCode
+    public readonly code: SafetyErrorCode,
+    public readonly traceId?: string
   ) {
     super(message);
     this.name = "SafetyError";
-
-    // Log all safety errors
-    auditLog("SAFETY_ERROR", {
-      code,
-      message,
-      stack: this.stack,
-    });
   }
 }
 
@@ -420,13 +476,17 @@ export class SafetyError extends Error {
 /**
  * Reset safety state for testing
  *
- * ⚠️ Only works in BACKTEST environment
+ * Only works in BACKTEST environment
+ *
+ * @param ctx - ExecutionContext containing environment info
+ * @throws {SafetyError} If not in BACKTEST environment
  */
-export function resetSafetyState(): void {
-  if (!isBacktest()) {
+export function resetSafetyState(ctx: ExecutionContext): void {
+  if (!isBacktest(ctx)) {
     throw new SafetyError(
       "Safety state can only be reset in BACKTEST environment",
-      "AUDIT_LOG_PROTECTED"
+      "AUDIT_LOG_PROTECTED",
+      ctx.traceId
     );
   }
 

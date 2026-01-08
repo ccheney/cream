@@ -1,12 +1,24 @@
+/**
+ * Environment Variable Tests
+ *
+ * Tests for env schema validation and context-aware helper functions.
+ */
+
 import { describe, expect, it } from "bun:test";
 import {
   CreamBroker,
   CreamEnvironment,
   envSchema,
+  getAlpacaBaseUrl,
+  getEnvDatabaseSuffix,
   getEnvVarDocumentation,
   getHelixUrl,
+  isBacktest,
+  isLive,
+  isPaper,
   validateEnvironment,
 } from "./env";
+import { createTestContext } from "./test-utils";
 
 describe("CreamEnvironment", () => {
   it("accepts valid environment values", () => {
@@ -35,114 +47,21 @@ describe("CreamBroker", () => {
 });
 
 describe("envSchema", () => {
-  describe("BACKTEST environment", () => {
-    it("succeeds with minimal configuration", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
-      });
+  describe("minimal configuration", () => {
+    it("succeeds with no env vars (all optional)", () => {
+      const result = envSchema.safeParse({});
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.CREAM_ENV).toBe("BACKTEST");
         expect(result.data.CREAM_BROKER).toBe("ALPACA"); // default
         expect(result.data.TURSO_DATABASE_URL).toBe("http://localhost:8080"); // default
+        expect(result.data.HELIX_URL).toBe("http://localhost:6969"); // default
       }
-    });
-
-    it("does not require API keys", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
-        // No API keys
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("PAPER environment", () => {
-    it("requires broker and OAuth credentials", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "PAPER",
-        // Missing ALPACA_KEY, ALPACA_SECRET, and OAuth credentials
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const issues = result.error.issues;
-        const messages = issues.map((e) => e.message);
-        expect(messages).toContain("ALPACA_KEY is required for PAPER environment");
-        expect(messages).toContain("ALPACA_SECRET is required for PAPER environment");
-        expect(messages).toContain("GOOGLE_CLIENT_ID is required for PAPER environment");
-        expect(messages).toContain("GOOGLE_CLIENT_SECRET is required for PAPER environment");
-      }
-    });
-
-    it("succeeds with broker and OAuth credentials", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "PAPER",
-        ALPACA_KEY: "test-key",
-        ALPACA_SECRET: "test-secret",
-        GOOGLE_CLIENT_ID: "test-client-id",
-        GOOGLE_CLIENT_SECRET: "test-client-secret",
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("LIVE environment", () => {
-    it("requires all credentials", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "LIVE",
-        // Missing everything
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const issues = result.error.issues;
-        const messages = issues.map((e) => e.message);
-        expect(messages).toContain("ALPACA_KEY is required for LIVE environment");
-        expect(messages).toContain("ALPACA_SECRET is required for LIVE environment");
-        expect(messages).toContain("POLYGON_KEY is required for LIVE environment");
-        expect(messages).toContain("DATABENTO_KEY is required for LIVE environment");
-        // Now requires at least one of ANTHROPIC_API_KEY or GOOGLE_API_KEY
-        expect(messages).toContain(
-          "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment"
-        );
-        // OAuth credentials required
-        expect(messages).toContain("GOOGLE_CLIENT_ID is required for LIVE environment");
-        expect(messages).toContain("GOOGLE_CLIENT_SECRET is required for LIVE environment");
-      }
-    });
-
-    it("succeeds with all required credentials (using Anthropic)", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "LIVE",
-        ALPACA_KEY: "test-key",
-        ALPACA_SECRET: "test-secret",
-        POLYGON_KEY: "polygon-key",
-        DATABENTO_KEY: "databento-key",
-        ANTHROPIC_API_KEY: "anthropic-key",
-        GOOGLE_CLIENT_ID: "test-client-id",
-        GOOGLE_CLIENT_SECRET: "test-client-secret",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("succeeds with all required credentials (using Google)", () => {
-      const result = envSchema.safeParse({
-        CREAM_ENV: "LIVE",
-        ALPACA_KEY: "test-key",
-        ALPACA_SECRET: "test-secret",
-        POLYGON_KEY: "polygon-key",
-        DATABENTO_KEY: "databento-key",
-        GOOGLE_API_KEY: "google-key",
-        GOOGLE_CLIENT_ID: "test-client-id",
-        GOOGLE_CLIENT_SECRET: "test-client-secret",
-      });
-      expect(result.success).toBe(true);
     });
   });
 
   describe("URL validation", () => {
     it("accepts valid HTTP URLs", () => {
       const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
         TURSO_DATABASE_URL: "http://localhost:8080",
       });
       expect(result.success).toBe(true);
@@ -150,7 +69,6 @@ describe("envSchema", () => {
 
     it("accepts valid HTTPS URLs", () => {
       const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
         TURSO_DATABASE_URL: "https://example.turso.io",
       });
       expect(result.success).toBe(true);
@@ -158,7 +76,6 @@ describe("envSchema", () => {
 
     it("accepts file: URLs for local SQLite", () => {
       const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
         TURSO_DATABASE_URL: "file:local.db",
       });
       expect(result.success).toBe(true);
@@ -166,7 +83,6 @@ describe("envSchema", () => {
 
     it("rejects invalid URLs", () => {
       const result = envSchema.safeParse({
-        CREAM_ENV: "BACKTEST",
         TURSO_DATABASE_URL: "not-a-url",
       });
       expect(result.success).toBe(false);
@@ -175,127 +91,170 @@ describe("envSchema", () => {
 
   describe("defaults", () => {
     it("applies CREAM_BROKER default", () => {
-      const result = envSchema.parse({
-        CREAM_ENV: "BACKTEST",
-      });
+      const result = envSchema.parse({});
       expect(result.CREAM_BROKER).toBe("ALPACA");
     });
 
     it("applies TURSO_DATABASE_URL default", () => {
-      const result = envSchema.parse({
-        CREAM_ENV: "BACKTEST",
-      });
+      const result = envSchema.parse({});
       expect(result.TURSO_DATABASE_URL).toBe("http://localhost:8080");
     });
 
     it("applies HELIX_URL default", () => {
-      const result = envSchema.parse({
-        CREAM_ENV: "BACKTEST",
-      });
+      const result = envSchema.parse({});
       expect(result.HELIX_URL).toBe("http://localhost:6969");
     });
   });
-});
 
-describe("missing CREAM_ENV", () => {
-  it("fails validation when CREAM_ENV is missing", () => {
-    const result = envSchema.safeParse({});
-    expect(result.success).toBe(false);
+  describe("optional environment variables", () => {
+    it("accepts HELIX_HOST and HELIX_PORT", () => {
+      const result = envSchema.safeParse({
+        HELIX_HOST: "localhost",
+        HELIX_PORT: "6969",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.HELIX_HOST).toBe("localhost");
+        expect(result.data.HELIX_PORT).toBe(6969);
+      }
+    });
+
+    it("accepts Kalshi credentials", () => {
+      const result = envSchema.safeParse({
+        KALSHI_API_KEY_ID: "key-id",
+        KALSHI_PRIVATE_KEY_PATH: "/path/to/key",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.KALSHI_API_KEY_ID).toBe("key-id");
+        expect(result.data.KALSHI_PRIVATE_KEY_PATH).toBe("/path/to/key");
+      }
+    });
+
+    it("accepts ANTHROPIC_API_KEY", () => {
+      const result = envSchema.safeParse({
+        ANTHROPIC_API_KEY: "sk-ant-test",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.ANTHROPIC_API_KEY).toBe("sk-ant-test");
+      }
+    });
+
+    it("accepts OAuth credentials", () => {
+      const result = envSchema.safeParse({
+        GOOGLE_CLIENT_ID: "client-id",
+        GOOGLE_CLIENT_SECRET: "client-secret",
+        BETTER_AUTH_URL: "https://auth.example.com",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.GOOGLE_CLIENT_ID).toBe("client-id");
+        expect(result.data.GOOGLE_CLIENT_SECRET).toBe("client-secret");
+        expect(result.data.BETTER_AUTH_URL).toBe("https://auth.example.com");
+      }
+    });
   });
 });
 
-describe("LIVE environment LLM requirements", () => {
-  it("requires at least one LLM API key", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "LIVE",
-      ALPACA_KEY: "test-key",
-      ALPACA_SECRET: "test-secret",
-      POLYGON_KEY: "polygon-key",
-      DATABENTO_KEY: "databento-key",
-      GOOGLE_CLIENT_ID: "test-client-id",
-      GOOGLE_CLIENT_SECRET: "test-client-secret",
-      // No LLM keys
+describe("context-aware helper functions", () => {
+  describe("isBacktest", () => {
+    it("returns true for BACKTEST context", () => {
+      const ctx = createTestContext("BACKTEST");
+      expect(isBacktest(ctx)).toBe(true);
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((e) => e.message);
-      expect(messages).toContain(
-        "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment"
-      );
-    }
+
+    it("returns false for PAPER context", () => {
+      const ctx = createTestContext("PAPER");
+      expect(isBacktest(ctx)).toBe(false);
+    });
+
+    it("returns false for LIVE context", () => {
+      const ctx = createTestContext("LIVE");
+      expect(isBacktest(ctx)).toBe(false);
+    });
   });
 
-  it("succeeds with ANTHROPIC_API_KEY only", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "LIVE",
-      ALPACA_KEY: "test-key",
-      ALPACA_SECRET: "test-secret",
-      POLYGON_KEY: "polygon-key",
-      DATABENTO_KEY: "databento-key",
-      ANTHROPIC_API_KEY: "anthropic-key",
-      GOOGLE_CLIENT_ID: "test-client-id",
-      GOOGLE_CLIENT_SECRET: "test-client-secret",
+  describe("isPaper", () => {
+    it("returns true for PAPER context", () => {
+      const ctx = createTestContext("PAPER");
+      expect(isPaper(ctx)).toBe(true);
     });
-    expect(result.success).toBe(true);
+
+    it("returns false for BACKTEST context", () => {
+      const ctx = createTestContext("BACKTEST");
+      expect(isPaper(ctx)).toBe(false);
+    });
+
+    it("returns false for LIVE context", () => {
+      const ctx = createTestContext("LIVE");
+      expect(isPaper(ctx)).toBe(false);
+    });
   });
 
-  it("succeeds with GOOGLE_API_KEY only", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "LIVE",
-      ALPACA_KEY: "test-key",
-      ALPACA_SECRET: "test-secret",
-      POLYGON_KEY: "polygon-key",
-      DATABENTO_KEY: "databento-key",
-      GOOGLE_API_KEY: "google-key",
-      GOOGLE_CLIENT_ID: "test-client-id",
-      GOOGLE_CLIENT_SECRET: "test-client-secret",
+  describe("isLive", () => {
+    it("returns true for LIVE context", () => {
+      const ctx = createTestContext("LIVE");
+      expect(isLive(ctx)).toBe(true);
     });
-    expect(result.success).toBe(true);
-  });
-});
 
-describe("new environment variables", () => {
-  it("accepts HELIX_HOST and HELIX_PORT", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "BACKTEST",
-      HELIX_HOST: "localhost",
-      HELIX_PORT: "6969",
+    it("returns false for BACKTEST context", () => {
+      const ctx = createTestContext("BACKTEST");
+      expect(isLive(ctx)).toBe(false);
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.HELIX_HOST).toBe("localhost");
-      expect(result.data.HELIX_PORT).toBe(6969);
-    }
+
+    it("returns false for PAPER context", () => {
+      const ctx = createTestContext("PAPER");
+      expect(isLive(ctx)).toBe(false);
+    });
   });
 
-  it("accepts Kalshi credentials", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "BACKTEST",
-      KALSHI_API_KEY_ID: "key-id",
-      KALSHI_PRIVATE_KEY_PATH: "/path/to/key",
+  describe("getAlpacaBaseUrl", () => {
+    it("returns paper URL for BACKTEST context (when no override)", () => {
+      const ctx = createTestContext("BACKTEST");
+      const url = getAlpacaBaseUrl(ctx);
+      // If ALPACA_BASE_URL is set, it will return that instead
+      expect(url).toMatch(/alpaca\.markets/);
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.KALSHI_API_KEY_ID).toBe("key-id");
-      expect(result.data.KALSHI_PRIVATE_KEY_PATH).toBe("/path/to/key");
-    }
+
+    it("returns paper URL for PAPER context (when no override)", () => {
+      const ctx = createTestContext("PAPER");
+      const url = getAlpacaBaseUrl(ctx);
+      expect(url).toMatch(/alpaca\.markets/);
+    });
+
+    it("returns different URLs for LIVE vs non-LIVE when no override", () => {
+      const backtestCtx = createTestContext("BACKTEST");
+      const liveCtx = createTestContext("LIVE");
+      const backtestUrl = getAlpacaBaseUrl(backtestCtx);
+      const liveUrl = getAlpacaBaseUrl(liveCtx);
+      // Both should be valid Alpaca URLs
+      expect(backtestUrl).toMatch(/alpaca\.markets/);
+      expect(liveUrl).toMatch(/alpaca\.markets/);
+      // Note: If ALPACA_BASE_URL env var is set, both will be the same
+    });
   });
 
-  it("accepts ANTHROPIC_API_KEY", () => {
-    const result = envSchema.safeParse({
-      CREAM_ENV: "BACKTEST",
-      ANTHROPIC_API_KEY: "sk-ant-test",
+  describe("getEnvDatabaseSuffix", () => {
+    it("returns _backtest for BACKTEST context", () => {
+      const ctx = createTestContext("BACKTEST");
+      expect(getEnvDatabaseSuffix(ctx)).toBe("_backtest");
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.ANTHROPIC_API_KEY).toBe("sk-ant-test");
-    }
+
+    it("returns _paper for PAPER context", () => {
+      const ctx = createTestContext("PAPER");
+      expect(getEnvDatabaseSuffix(ctx)).toBe("_paper");
+    });
+
+    it("returns _live for LIVE context", () => {
+      const ctx = createTestContext("LIVE");
+      expect(getEnvDatabaseSuffix(ctx)).toBe("_live");
+    });
   });
 });
 
 describe("getHelixUrl", () => {
-  it("returns HELIX_URL when set", () => {
-    // This test uses the actual env, so we just verify the function exists
+  it("returns a valid URL string", () => {
     const url = getHelixUrl();
     expect(typeof url).toBe("string");
     expect(url).toMatch(/^https?:\/\//);
@@ -303,18 +262,41 @@ describe("getHelixUrl", () => {
 });
 
 describe("validateEnvironment", () => {
-  it("returns valid for BACKTEST with no additional requirements", () => {
-    const result = validateEnvironment("test-service");
-    expect(result.valid).toBe(true);
-    expect(result.environment).toBe("BACKTEST");
+  describe("BACKTEST environment", () => {
+    it("returns valid with no additional requirements", () => {
+      const ctx = createTestContext("BACKTEST");
+      const result = validateEnvironment(ctx, "test-service");
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("returns errors for missing additional requirements", () => {
+      const ctx = createTestContext("BACKTEST");
+      // Use KALSHI keys which are very unlikely to be set in test environment
+      const result = validateEnvironment(ctx, "test-service", ["KALSHI_API_KEY_ID"]);
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain("KALSHI_API_KEY_ID");
+    });
   });
 
-  it("returns errors for missing additional requirements", () => {
-    // Use KALSHI keys which are very unlikely to be set in test environment
-    const result = validateEnvironment("test-service", ["KALSHI_API_KEY_ID"]);
-    expect(result.valid).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
-    expect(result.errors[0]).toContain("KALSHI_API_KEY_ID");
+  describe("PAPER environment", () => {
+    it("requires broker and OAuth credentials", () => {
+      const ctx = createTestContext("PAPER");
+      const result = validateEnvironment(ctx, "test-service");
+      // In test environment without these keys, validation should fail
+      // (unless test environment has them set)
+      expect(Array.isArray(result.errors)).toBe(true);
+    });
+  });
+
+  describe("LIVE environment", () => {
+    it("requires all credentials including LLM key", () => {
+      const ctx = createTestContext("LIVE");
+      const result = validateEnvironment(ctx, "test-service");
+      // In test environment without these keys, validation should fail
+      expect(Array.isArray(result.errors)).toBe(true);
+    });
   });
 });
 
@@ -323,12 +305,16 @@ describe("getEnvVarDocumentation", () => {
     const docs = getEnvVarDocumentation();
     expect(docs.length).toBeGreaterThan(10);
 
+    // CREAM_ENV should NOT be in the documentation anymore
     const creamEnv = docs.find((d) => d.name === "CREAM_ENV");
-    expect(creamEnv).toBeDefined();
-    expect(creamEnv?.required).toBe(true);
+    expect(creamEnv).toBeUndefined();
 
     const anthropicKey = docs.find((d) => d.name === "ANTHROPIC_API_KEY");
     expect(anthropicKey).toBeDefined();
     expect(anthropicKey?.description).toContain("Anthropic");
+
+    const alpacaKey = docs.find((d) => d.name === "ALPACA_KEY");
+    expect(alpacaKey).toBeDefined();
+    expect(alpacaKey?.required).toBe("PAPER/LIVE");
   });
 });

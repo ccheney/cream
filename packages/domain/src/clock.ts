@@ -18,6 +18,7 @@
  * @see docs/plans/00-overview.md for clock sync requirements
  */
 
+import type { ExecutionContext } from "./context";
 import { isBacktest } from "./env";
 
 // ============================================
@@ -97,16 +98,18 @@ export interface TimestampValidationResult {
  *
  * In backtest mode, always returns ok (historical data doesn't need clock sync).
  *
+ * @param ctx - ExecutionContext containing environment info
  * @param thresholds - Optional custom thresholds
  * @returns Clock check result
  */
 export async function checkClockSkew(
+  ctx: ExecutionContext,
   thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
   const checkedAt = new Date().toISOString();
 
   // Skip in backtest mode
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return {
       ok: true,
       skewMs: 0,
@@ -511,13 +514,15 @@ let monitorState: ClockMonitorState = {
 /**
  * Perform periodic clock check and update monitoring state
  *
+ * @param ctx - ExecutionContext containing environment info
  * @param thresholds - Clock skew thresholds
  * @returns Check result
  */
 export async function periodicClockCheck(
+  ctx: ExecutionContext,
   thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
-  const result = await checkClockSkew(thresholds);
+  const result = await checkClockSkew(ctx, thresholds);
 
   monitorState.lastCheck = result.checkedAt;
   monitorState.lastSkewMs = result.skewMs;

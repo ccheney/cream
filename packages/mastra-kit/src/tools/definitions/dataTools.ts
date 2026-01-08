@@ -5,6 +5,7 @@
  * These tools wrap the core implementations from tools/index.ts.
  */
 
+import { type CreamEnvironment, createContext } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
@@ -17,6 +18,15 @@ import {
   recalcIndicator,
   searchNews,
 } from "../index.js";
+
+/**
+ * Create ExecutionContext for tool invocation.
+ * Tools are invoked by the agent framework during scheduled runs.
+ */
+function createToolContext() {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 // ============================================
 // Recalc Indicator Tool
@@ -65,7 +75,8 @@ Returns mock data in backtest mode for consistent execution.`,
   inputSchema: RecalcIndicatorInputSchema,
   outputSchema: RecalcIndicatorOutputSchema,
   execute: async ({ context }): Promise<IndicatorResult> => {
-    return recalcIndicator(context.indicator, context.symbol, context.params);
+    const ctx = createToolContext();
+    return recalcIndicator(ctx, context.indicator, context.symbol, context.params);
   },
 });
 
@@ -107,7 +118,8 @@ Requires FMP_KEY environment variable.`,
   inputSchema: EconomicCalendarInputSchema,
   outputSchema: EconomicCalendarOutputSchema,
   execute: async ({ context }): Promise<{ events: EconomicEvent[] }> => {
-    const events = await getEconomicCalendar(context.startDate, context.endDate);
+    const ctx = createToolContext();
+    const events = await getEconomicCalendar(ctx, context.startDate, context.endDate);
     return { events };
   },
 });
@@ -151,7 +163,8 @@ Requires FMP_KEY environment variable.`,
   inputSchema: NewsSearchInputSchema,
   outputSchema: NewsSearchOutputSchema,
   execute: async ({ context }): Promise<{ news: NewsItem[] }> => {
-    const news = await searchNews(context.query, context.symbols, context.limit);
+    const ctx = createToolContext();
+    const news = await searchNews(ctx, context.query, context.symbols, context.limit);
     return { news };
   },
 });
@@ -188,7 +201,8 @@ Returns empty results in backtest mode for consistent execution.`,
   inputSchema: HelixQueryInputSchema,
   outputSchema: HelixQueryOutputSchema,
   execute: async ({ context }): Promise<HelixQueryResult> => {
-    return helixQuery(context.queryName, context.params as Record<string, unknown>);
+    const ctx = createToolContext();
+    return helixQuery(ctx, context.queryName, context.params as Record<string, unknown>);
   },
 });
 

@@ -21,6 +21,12 @@ import {
   test,
 } from "bun:test";
 import * as domain from "@cream/domain";
+import { createTestContext } from "@cream/domain";
+
+// Test context - use PAPER for actual API tests, BACKTEST for mocked tests
+const paperCtx = createTestContext("PAPER");
+const backtestCtx = createTestContext("BACKTEST");
+
 import {
   batchSearch,
   clearWebSearchCache,
@@ -132,7 +138,7 @@ describe("webSearch in backtest mode", () => {
     const isBacktestSpy = spyOn(domain, "isBacktest").mockReturnValue(true);
 
     try {
-      const result = await webSearch({ query: "test query" });
+      const result = await webSearch(paperCtx, { query: "test query" });
 
       expect(result.results).toHaveLength(0);
       expect(result.metadata.query).toBe("test query");
@@ -168,7 +174,7 @@ describe("webSearch without API key", () => {
   });
 
   test("returns empty results without API key", async () => {
-    const result = await webSearch({ query: "test query" });
+    const result = await webSearch(paperCtx, { query: "test query" });
 
     expect(result.results).toHaveLength(0);
     expect(result.metadata.query).toBe("test query");
@@ -236,7 +242,7 @@ describe("webSearch with mocked API", () => {
     );
     resetTavilyClient();
 
-    const result = await webSearch({ query: "test query" });
+    const result = await webSearch(paperCtx, { query: "test query" });
 
     expect(result.results).toHaveLength(2);
     expect(result.results[0]?.title).toBe("Test Result 1");
@@ -288,7 +294,7 @@ describe("webSearch with mocked API", () => {
     );
     resetTavilyClient();
 
-    const result = await webSearch({ query: "test query", maxAgeHours: 24 });
+    const result = await webSearch(paperCtx, { query: "test query", maxAgeHours: 24 });
 
     expect(result.results).toHaveLength(1);
     expect(result.results[0]?.title).toBe("Recent Result");
@@ -319,7 +325,7 @@ describe("webSearch with mocked API", () => {
     );
     resetTavilyClient();
 
-    const result = await webSearch({ query: "test query", maxResults: 5 });
+    const result = await webSearch(paperCtx, { query: "test query", maxResults: 5 });
 
     expect(result.results).toHaveLength(5);
     expect(result.results[0]?.title).toBe("Result 1");
@@ -337,7 +343,7 @@ describe("webSearch with mocked API", () => {
     );
     resetTavilyClient();
 
-    const result = await webSearch({ query: "test query" });
+    const result = await webSearch(paperCtx, { query: "test query" });
 
     expect(result.results).toHaveLength(0);
     expect(result.metadata.query).toBe("test query");
@@ -347,14 +353,14 @@ describe("webSearch with mocked API", () => {
     globalThis.fetch = createMockFetch(() => Promise.reject(new Error("Network error")));
     resetTavilyClient();
 
-    const result = await webSearch({ query: "test query" });
+    const result = await webSearch(paperCtx, { query: "test query" });
 
     expect(result.results).toHaveLength(0);
     expect(result.metadata.query).toBe("test query");
   });
 
   test("handles invalid params gracefully", async () => {
-    const result = await webSearch({ query: "" });
+    const result = await webSearch(paperCtx, { query: "" });
 
     expect(result.results).toHaveLength(0);
   });
@@ -408,7 +414,7 @@ describe("webSearch request building", () => {
   });
 
   test("builds domain filter for news source", async () => {
-    await webSearch({ query: "test", sources: ["news"] });
+    await webSearch(paperCtx, { query: "test", sources: ["news"] });
 
     expect(capturedBody?.include_domains).toEqual(
       expect.arrayContaining(["reuters.com", "bloomberg.com", "cnbc.com"])
@@ -416,49 +422,49 @@ describe("webSearch request building", () => {
   });
 
   test("builds domain filter for multiple sources", async () => {
-    await webSearch({ query: "test", sources: ["reddit", "x"] });
+    await webSearch(paperCtx, { query: "test", sources: ["reddit", "x"] });
 
     expect(capturedBody?.include_domains).toEqual(expect.arrayContaining(["reddit.com", "x.com"]));
   });
 
   test("no domain filter for 'all' source", async () => {
-    await webSearch({ query: "test", sources: ["all"] });
+    await webSearch(paperCtx, { query: "test", sources: ["all"] });
 
     expect(capturedBody?.include_domains).toBeUndefined();
   });
 
   test("includes symbols in query", async () => {
-    await webSearch({ query: "earnings report", symbols: ["AAPL", "MSFT"] });
+    await webSearch(paperCtx, { query: "earnings report", symbols: ["AAPL", "MSFT"] });
 
     expect(capturedBody?.query).toBe("earnings report $AAPL $MSFT");
   });
 
   test("sets topic parameter", async () => {
-    await webSearch({ query: "test", topic: "finance" });
+    await webSearch(paperCtx, { query: "test", topic: "finance" });
 
     expect(capturedBody?.topic).toBe("finance");
   });
 
   test("calculates day time range for <= 24 hours", async () => {
-    await webSearch({ query: "test", maxAgeHours: 12 });
+    await webSearch(paperCtx, { query: "test", maxAgeHours: 12 });
 
     expect(capturedBody?.time_range).toBe("day");
   });
 
   test("calculates week time range for 24-168 hours", async () => {
-    await webSearch({ query: "test", maxAgeHours: 72 });
+    await webSearch(paperCtx, { query: "test", maxAgeHours: 72 });
 
     expect(capturedBody?.time_range).toBe("week");
   });
 
   test("requests 2x maxResults for filtering headroom", async () => {
-    await webSearch({ query: "test", maxResults: 5 });
+    await webSearch(paperCtx, { query: "test", maxResults: 5 });
 
     expect(capturedBody?.max_results).toBe(10);
   });
 
   test("caps max_results at 20", async () => {
-    await webSearch({ query: "test", maxResults: 15 });
+    await webSearch(paperCtx, { query: "test", maxResults: 15 });
 
     expect(capturedBody?.max_results).toBe(20);
   });
@@ -519,19 +525,19 @@ describe("webSearch caching", () => {
 
   test("cache hit returns cached result without API call", async () => {
     // First call - cache miss
-    const result1 = await webSearch({ query: "test query" });
+    const result1 = await webSearch(paperCtx, { query: "test query" });
     expect(fetchCallCount).toBe(1);
     expect(result1.results).toHaveLength(1);
 
     // Second call - cache hit
-    const result2 = await webSearch({ query: "test query" });
+    const result2 = await webSearch(paperCtx, { query: "test query" });
     expect(fetchCallCount).toBe(1); // No additional API call
     expect(result2.results).toHaveLength(1);
     expect(result2.results[0]?.title).toBe(result1.results[0]?.title);
   });
 
   test("cache miss executes search", async () => {
-    const result = await webSearch({ query: "new query" });
+    const result = await webSearch(paperCtx, { query: "new query" });
 
     expect(fetchCallCount).toBe(1);
     expect(result.results).toHaveLength(1);
@@ -539,8 +545,8 @@ describe("webSearch caching", () => {
   });
 
   test("different queries result in different cache entries", async () => {
-    await webSearch({ query: "query one" });
-    await webSearch({ query: "query two" });
+    await webSearch(paperCtx, { query: "query one" });
+    await webSearch(paperCtx, { query: "query two" });
 
     expect(fetchCallCount).toBe(2);
     expect(getWebSearchCacheSize()).toBe(2);
@@ -548,35 +554,35 @@ describe("webSearch caching", () => {
 
   test("cache key normalizes query case", async () => {
     // First call with lowercase
-    await webSearch({ query: "test query" });
+    await webSearch(paperCtx, { query: "test query" });
     expect(fetchCallCount).toBe(1);
 
     // Second call with mixed case - should be cache hit
-    await webSearch({ query: "TEST QUERY" });
+    await webSearch(paperCtx, { query: "TEST QUERY" });
     expect(fetchCallCount).toBe(1);
 
     // Third call with uppercase - should be cache hit
-    await webSearch({ query: "Test Query" });
+    await webSearch(paperCtx, { query: "Test Query" });
     expect(fetchCallCount).toBe(1);
   });
 
   test("cache key normalizes query whitespace", async () => {
     // First call with extra whitespace
-    await webSearch({ query: "  test query  " });
+    await webSearch(paperCtx, { query: "  test query  " });
     expect(fetchCallCount).toBe(1);
 
     // Second call with no extra whitespace - should be cache hit
-    await webSearch({ query: "test query" });
+    await webSearch(paperCtx, { query: "test query" });
     expect(fetchCallCount).toBe(1);
   });
 
   test("different maxResults can serve from same cache", async () => {
     // First call with maxResults 5
-    const result1 = await webSearch({ query: "test", maxResults: 5 });
+    const result1 = await webSearch(paperCtx, { query: "test", maxResults: 5 });
     expect(fetchCallCount).toBe(1);
 
     // Second call with maxResults 3 - should use cached result
-    const result2 = await webSearch({ query: "test", maxResults: 3 });
+    const result2 = await webSearch(paperCtx, { query: "test", maxResults: 3 });
     expect(fetchCallCount).toBe(1); // No additional API call
 
     // Results should be sliced appropriately
@@ -585,22 +591,22 @@ describe("webSearch caching", () => {
   });
 
   test("clearWebSearchCache clears all entries", async () => {
-    await webSearch({ query: "query one" });
-    await webSearch({ query: "query two" });
+    await webSearch(paperCtx, { query: "query one" });
+    await webSearch(paperCtx, { query: "query two" });
     expect(getWebSearchCacheSize()).toBe(2);
 
     clearWebSearchCache();
     expect(getWebSearchCacheSize()).toBe(0);
 
     // After clear, next call should be cache miss
-    await webSearch({ query: "query one" });
+    await webSearch(paperCtx, { query: "query one" });
     expect(fetchCallCount).toBe(3);
   });
 
   test("backtest mode does not cache results", async () => {
     isBacktestSpy.mockReturnValue(true);
 
-    const result = await webSearch({ query: "test" });
+    const result = await webSearch(paperCtx, { query: "test" });
 
     expect(result.results).toHaveLength(0);
     expect(getWebSearchCacheSize()).toBe(0);
@@ -739,7 +745,7 @@ describe("webSearch rate limiting", () => {
 
   test("records API call on successful search", async () => {
     const before = rateLimiter.getRemainingQuota("tavily");
-    await webSearch({ query: "test query" });
+    await webSearch(paperCtx, { query: "test query" });
     const after = rateLimiter.getRemainingQuota("tavily");
 
     expect(after.minute).toBe(before.minute - 1);
@@ -752,7 +758,7 @@ describe("webSearch rate limiting", () => {
       rateLimiter.record("tavily");
     }
 
-    const result = await webSearch({ query: "test query" });
+    const result = await webSearch(paperCtx, { query: "test query" });
 
     expect(result.results).toHaveLength(0);
     expect(fetchCallCount).toBe(0); // No API call made
@@ -765,7 +771,7 @@ describe("webSearch rate limiting", () => {
     }
 
     const before = rateLimiter.getRemainingQuota("tavily");
-    await webSearch({ query: "test query" });
+    await webSearch(paperCtx, { query: "test query" });
     const after = rateLimiter.getRemainingQuota("tavily");
 
     // Should not have recorded additional call
@@ -775,11 +781,11 @@ describe("webSearch rate limiting", () => {
 
   test("cache hit does not consume rate limit", async () => {
     // First call - API call made
-    await webSearch({ query: "cached query" });
+    await webSearch(paperCtx, { query: "cached query" });
     const afterFirst = rateLimiter.getRemainingQuota("tavily");
 
     // Second call - cache hit, no API call
-    await webSearch({ query: "cached query" });
+    await webSearch(paperCtx, { query: "cached query" });
     const afterSecond = rateLimiter.getRemainingQuota("tavily");
 
     expect(fetchCallCount).toBe(1);
@@ -1202,7 +1208,7 @@ describe("webSearch metrics integration", () => {
   });
 
   test("webSearch records success metric on API call", async () => {
-    await webSearch({ query: "test query" });
+    await webSearch(paperCtx, { query: "test query" });
 
     const metrics = getWebSearchMetrics();
     expect(metrics.successfulRequests).toBe(1);
@@ -1211,9 +1217,9 @@ describe("webSearch metrics integration", () => {
 
   test("webSearch records cache hit metric", async () => {
     // First call - API call
-    await webSearch({ query: "cached test" });
+    await webSearch(paperCtx, { query: "cached test" });
     // Second call - cache hit
-    await webSearch({ query: "cached test" });
+    await webSearch(paperCtx, { query: "cached test" });
 
     const metrics = getWebSearchMetrics();
     expect(metrics.successfulRequests).toBe(1); // Only 1 API call
@@ -1227,7 +1233,7 @@ describe("webSearch metrics integration", () => {
       rateLimiter.record("tavily");
     }
 
-    await webSearch({ query: "rate limited query" });
+    await webSearch(paperCtx, { query: "rate limited query" });
 
     const metrics = getWebSearchMetrics();
     expect(metrics.rateLimitedRequests).toBe(1);
@@ -1236,7 +1242,7 @@ describe("webSearch metrics integration", () => {
   test("webSearch records backtest metric", async () => {
     isBacktestSpy.mockReturnValue(true);
 
-    await webSearch({ query: "backtest query" });
+    await webSearch(paperCtx, { query: "backtest query" });
 
     const metrics = getWebSearchMetrics();
     expect(metrics.totalRequests).toBe(1);
@@ -1249,7 +1255,7 @@ describe("webSearch metrics integration", () => {
     globalThis.fetch = createMockFetch(() => Promise.reject(new Error("Network error")));
     resetTavilyClient();
 
-    await webSearch({ query: "error query" });
+    await webSearch(paperCtx, { query: "error query" });
 
     const metrics = getWebSearchMetrics();
     expect(metrics.failedRequests).toBe(1);
@@ -1318,7 +1324,7 @@ describe("batchSearch", () => {
   });
 
   test("returns empty results for empty symbols array", async () => {
-    const result = await batchSearch({
+    const result = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} stock news",
       symbols: [],
     });
@@ -1330,7 +1336,7 @@ describe("batchSearch", () => {
   });
 
   test("searches single symbol correctly", async () => {
-    const result = await batchSearch({
+    const result = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} stock news",
       symbols: ["NVDA"],
     });
@@ -1342,7 +1348,7 @@ describe("batchSearch", () => {
   });
 
   test("searches multiple symbols with correct mapping", async () => {
-    const result = await batchSearch({
+    const result = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} stock sentiment",
       symbols: ["NVDA", "AAPL", "MSFT"],
     });
@@ -1372,7 +1378,7 @@ describe("batchSearch", () => {
     });
     resetTavilyClient();
 
-    await batchSearch({
+    await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} vs {SYMBOL} comparison",
       symbols: ["NVDA"],
     });
@@ -1397,7 +1403,7 @@ describe("batchSearch", () => {
     });
     resetTavilyClient();
 
-    await batchSearch({
+    await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} news",
       symbols: ["NVDA"],
       commonParams: {
@@ -1440,7 +1446,7 @@ describe("batchSearch", () => {
     resetTavilyClient();
 
     // First search - will be API calls (> 50ms)
-    const result1 = await batchSearch({
+    const result1 = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} sentiment",
       symbols: ["NVDA", "AAPL"],
     });
@@ -1452,7 +1458,7 @@ describe("batchSearch", () => {
     rateLimiter.reset();
 
     // Second search - should be cache hits (< 50ms because from cache)
-    const result2 = await batchSearch({
+    const result2 = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} sentiment",
       symbols: ["NVDA", "AAPL"],
     });
@@ -1470,7 +1476,7 @@ describe("batchSearch", () => {
     clearWebSearchCache();
 
     // Even with all API calls failing, the batch should complete
-    const result = await batchSearch({
+    const result = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} news",
       symbols: ["NVDA", "AAPL"],
     });
@@ -1520,7 +1526,7 @@ describe("batchSearch", () => {
     resetTavilyClient();
     clearWebSearchCache();
 
-    const result = await batchSearch({
+    const result = await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} news",
       symbols: ["NVDA", "AAPL", "MSFT"],
     });
@@ -1559,7 +1565,7 @@ describe("batchSearch", () => {
     });
     resetTavilyClient();
 
-    await batchSearch({
+    await batchSearch(paperCtx, {
       queryTemplate: "{SYMBOL} news",
       symbols: ["A", "B", "C", "D", "E", "F"], // 6 symbols, should be 2 chunks of 3
     });

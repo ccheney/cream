@@ -13,6 +13,7 @@
 
 // biome-ignore lint/suspicious/noConsole: CLI script requires console output
 
+import { type CreamEnvironment, createContext } from "@cream/domain";
 import { getMigrationStatus, rollbackMigrations, runMigrations } from "./migrations.js";
 import { createInMemoryClient, createTursoClient } from "./turso.js";
 
@@ -23,9 +24,14 @@ async function main() {
   const isRollback = args.includes("--rollback");
   const useInMemory = args.includes("--in-memory");
 
-  console.log(`Environment: ${process.env.CREAM_ENV || "BACKTEST"}`);
+  // Create ExecutionContext from environment (CLI is a system boundary)
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  const environment = envValue as CreamEnvironment;
+  const ctx = createContext(environment, "manual");
 
-  const client = useInMemory ? await createInMemoryClient() : await createTursoClient();
+  console.log(`Environment: ${environment}`);
+
+  const client = useInMemory ? await createInMemoryClient() : await createTursoClient(ctx);
 
   try {
     if (isStatus) {

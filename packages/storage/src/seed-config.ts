@@ -14,6 +14,7 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
+import { createContext } from "@cream/domain";
 import {
   AGENT_TYPES,
   AgentConfigsRepository,
@@ -262,8 +263,9 @@ async function main() {
     console.log("⚠️  Force mode enabled - existing configs will be replaced\n");
   }
 
-  // Initialize database connection
-  const client = await createTursoClient();
+  // Initialize database connection (use BACKTEST context for seeding - safe for all environments)
+  const ctx = createContext("BACKTEST", "manual");
+  const client = await createTursoClient(ctx);
 
   // Initialize repositories
   const tradingRepo = new TradingConfigRepository(client);

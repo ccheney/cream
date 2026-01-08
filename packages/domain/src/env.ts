@@ -4,16 +4,21 @@
  * This module provides type-safe environment variable access with runtime validation.
  * All environment variables are validated at import time.
  *
- * Environments:
- * - BACKTEST: Historical simulation, minimal API keys required
- * - PAPER: Paper trading with real market data, broker credentials required
- * - LIVE: Real money trading, ALL credentials required + safety confirmations
+ * IMPORTANT: Trading environment (BACKTEST/PAPER/LIVE) is NOT determined by environment
+ * variables. Instead, use ExecutionContext which is created at system boundaries
+ * (HTTP handlers, worker entrypoints, test setup) and threaded through all operations.
+ *
+ * @see packages/domain/src/context.ts for ExecutionContext
  */
 
 import { z } from "zod";
+import type { ExecutionContext } from "./context";
 
 /**
  * Environment type - controls trading behavior and safety checks
+ *
+ * This is a pure type definition. The actual environment is determined
+ * by ExecutionContext, not by environment variables.
  */
 export const CreamEnvironment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
@@ -44,154 +49,53 @@ const urlSchema = z.string().refine(
 );
 
 /**
- * Environment variable schema with conditional validation
+ * Environment variable schema
  *
- * BACKTEST: Only CREAM_ENV required (uses mocks/fixtures)
- * PAPER: Requires broker credentials and market data keys
- * LIVE: Requires ALL credentials + additional safety confirmations
+ * Note: CREAM_ENV is no longer part of the schema. Environment is determined
+ * by ExecutionContext, not by environment variables.
  */
-const envSchema = z
-  .object({
-    // Core Configuration
-    CREAM_ENV: CreamEnvironment.describe("Trading environment: BACKTEST | PAPER | LIVE"),
-    CREAM_BROKER: CreamBroker.default("ALPACA").describe("Broker to use for trading"),
+const envSchema = z.object({
+  // Core Configuration
+  CREAM_BROKER: CreamBroker.default("ALPACA").describe("Broker to use for trading"),
 
-    // Database URLs
-    TURSO_DATABASE_URL: urlSchema
-      .optional()
-      .default("http://localhost:8080")
-      .describe("Turso/libsql database URL"),
-    TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
-    HELIX_URL: urlSchema.optional().default("http://localhost:6969").describe("HelixDB server URL"),
-    // Alternative HelixDB config (host:port vs URL)
-    HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
-    HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
+  // Database URLs
+  TURSO_DATABASE_URL: urlSchema
+    .optional()
+    .default("http://localhost:8080")
+    .describe("Turso/libsql database URL"),
+  TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
+  HELIX_URL: urlSchema.optional().default("http://localhost:6969").describe("HelixDB server URL"),
+  // Alternative HelixDB config (host:port vs URL)
+  HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
+  HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
 
-    // Market Data Providers
-    DATABENTO_KEY: z.string().optional().describe("Databento API key for execution-grade data"),
-    POLYGON_KEY: z.string().optional().describe("Polygon/Massive API key for candles and options"),
-    FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
-    ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
+  // Market Data Providers
+  DATABENTO_KEY: z.string().optional().describe("Databento API key for execution-grade data"),
+  POLYGON_KEY: z.string().optional().describe("Polygon/Massive API key for candles and options"),
+  FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
+  ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
 
-    // Broker Credentials
-    ALPACA_KEY: z.string().optional().describe("Alpaca API key"),
-    ALPACA_SECRET: z.string().optional().describe("Alpaca API secret"),
-    ALPACA_BASE_URL: urlSchema
-      .optional()
-      .describe("Alpaca API base URL (auto-set based on environment)"),
+  // Broker Credentials
+  ALPACA_KEY: z.string().optional().describe("Alpaca API key"),
+  ALPACA_SECRET: z.string().optional().describe("Alpaca API secret"),
+  ALPACA_BASE_URL: urlSchema.optional().describe("Alpaca API base URL (override for testing)"),
 
-    // LLM Configuration
-    ANTHROPIC_API_KEY: z.string().optional().describe("Anthropic API key for Claude"),
-    GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key"),
+  // LLM Configuration
+  ANTHROPIC_API_KEY: z.string().optional().describe("Anthropic API key for Claude"),
+  GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key"),
 
-    // Prediction Markets
-    KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
-    KALSHI_PRIVATE_KEY_PATH: z.string().optional().describe("Path to Kalshi private key file"),
+  // Prediction Markets
+  KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
+  KALSHI_PRIVATE_KEY_PATH: z.string().optional().describe("Path to Kalshi private key file"),
 
-    // Web Search
-    TAVILY_API_KEY: z.string().optional().describe("Tavily API key for web search"),
+  // Web Search
+  TAVILY_API_KEY: z.string().optional().describe("Tavily API key for web search"),
 
-    // Authentication (OAuth)
-    GOOGLE_CLIENT_ID: z.string().optional().describe("Google OAuth client ID"),
-    GOOGLE_CLIENT_SECRET: z.string().optional().describe("Google OAuth client secret"),
-    BETTER_AUTH_URL: urlSchema.optional().describe("Better Auth base URL for OAuth callbacks"),
-  })
-  .superRefine((data, ctx) => {
-    const env = data.CREAM_ENV;
-
-    // PAPER environment requires broker credentials and at least one market data source
-    if (env === "PAPER") {
-      if (!data.ALPACA_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "ALPACA_KEY is required for PAPER environment",
-          path: ["ALPACA_KEY"],
-        });
-      }
-      if (!data.ALPACA_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "ALPACA_SECRET is required for PAPER environment",
-          path: ["ALPACA_SECRET"],
-        });
-      }
-      // OAuth required for dashboard authentication
-      if (!data.GOOGLE_CLIENT_ID) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "GOOGLE_CLIENT_ID is required for PAPER environment",
-          path: ["GOOGLE_CLIENT_ID"],
-        });
-      }
-      if (!data.GOOGLE_CLIENT_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "GOOGLE_CLIENT_SECRET is required for PAPER environment",
-          path: ["GOOGLE_CLIENT_SECRET"],
-        });
-      }
-    }
-
-    // LIVE environment requires ALL credentials
-    if (env === "LIVE") {
-      // Broker credentials
-      if (!data.ALPACA_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "ALPACA_KEY is required for LIVE environment",
-          path: ["ALPACA_KEY"],
-        });
-      }
-      if (!data.ALPACA_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "ALPACA_SECRET is required for LIVE environment",
-          path: ["ALPACA_SECRET"],
-        });
-      }
-
-      // Market data providers
-      if (!data.POLYGON_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "POLYGON_KEY is required for LIVE environment",
-          path: ["POLYGON_KEY"],
-        });
-      }
-      if (!data.DATABENTO_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "DATABENTO_KEY is required for LIVE environment",
-          path: ["DATABENTO_KEY"],
-        });
-      }
-
-      // LLM for agent network (require at least one)
-      if (!data.ANTHROPIC_API_KEY && !data.GOOGLE_API_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment",
-          path: ["ANTHROPIC_API_KEY"],
-        });
-      }
-
-      // OAuth required for dashboard authentication
-      if (!data.GOOGLE_CLIENT_ID) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "GOOGLE_CLIENT_ID is required for LIVE environment",
-          path: ["GOOGLE_CLIENT_ID"],
-        });
-      }
-      if (!data.GOOGLE_CLIENT_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "GOOGLE_CLIENT_SECRET is required for LIVE environment",
-          path: ["GOOGLE_CLIENT_SECRET"],
-        });
-      }
-    }
-  });
+  // Authentication (OAuth)
+  GOOGLE_CLIENT_ID: z.string().optional().describe("Google OAuth client ID"),
+  GOOGLE_CLIENT_SECRET: z.string().optional().describe("Google OAuth client secret"),
+  BETTER_AUTH_URL: urlSchema.optional().describe("Better Auth base URL for OAuth callbacks"),
+});
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
@@ -203,7 +107,6 @@ export type EnvConfig = z.infer<typeof envSchema>;
 function parseEnv(): EnvConfig {
   // Access environment variables using Bun.env or process.env
   const rawEnv = {
-    CREAM_ENV: Bun.env.CREAM_ENV ?? process.env.CREAM_ENV,
     CREAM_BROKER: Bun.env.CREAM_BROKER ?? process.env.CREAM_BROKER,
     TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL ?? process.env.TURSO_DATABASE_URL,
     TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
@@ -239,67 +142,87 @@ function parseEnv(): EnvConfig {
 /**
  * Validated environment configuration
  *
+ * Contains API keys, database URLs, and other configuration.
+ * Does NOT contain trading environment - use ExecutionContext for that.
+ *
  * @example
  * ```ts
- * import { env, isLive } from "@cream/domain/env";
+ * import { env } from "@cream/domain/env";
+ * import { createContext, isLive } from "@cream/domain";
  *
- * if (isLive()) {
+ * // Environment comes from ExecutionContext, not env vars
+ * const ctx = createContext("PAPER", "manual");
+ * if (isLive(ctx)) {
  *   // Additional safety checks
  * }
  *
- * const dbUrl = env.TURSO_DATABASE_URL;
+ * // API keys come from env
+ * const apiKey = env.ALPACA_KEY;
  * ```
  */
 export const env: EnvConfig = parseEnv();
 
 // ============================================
-// Environment Helper Functions
+// Context-Aware Helper Functions
 // ============================================
 
 /**
- * Check if running in BACKTEST environment
- */
-export function isBacktest(): boolean {
-  return env.CREAM_ENV === "BACKTEST";
-}
-
-/**
- * Check if running in PAPER environment
- */
-export function isPaper(): boolean {
-  return env.CREAM_ENV === "PAPER";
-}
-
-/**
- * Check if running in LIVE environment
+ * Check if context is BACKTEST environment
  *
- * ⚠️ CRITICAL: LIVE environment requires additional safety confirmations
+ * @param ctx - ExecutionContext containing environment info
+ */
+export function isBacktest(ctx: ExecutionContext): boolean {
+  return ctx.environment === "BACKTEST";
+}
+
+/**
+ * Check if context is PAPER environment
+ *
+ * @param ctx - ExecutionContext containing environment info
+ */
+export function isPaper(ctx: ExecutionContext): boolean {
+  return ctx.environment === "PAPER";
+}
+
+/**
+ * Check if context is LIVE environment
+ *
+ * @param ctx - ExecutionContext containing environment info
+ *
+ * CRITICAL: LIVE environment requires additional safety confirmations
  * See packages/domain/src/safety.ts for required safety mechanisms
  */
-export function isLive(): boolean {
-  return env.CREAM_ENV === "LIVE";
+export function isLive(ctx: ExecutionContext): boolean {
+  return ctx.environment === "LIVE";
 }
 
 /**
- * Get the appropriate Alpaca base URL for the current environment
+ * Get the appropriate Alpaca base URL for the given context
  *
- * Paper: https://paper-api.alpaca.markets
+ * Paper/Backtest: https://paper-api.alpaca.markets
  * Live: https://api.alpaca.markets
+ *
+ * @param ctx - ExecutionContext containing environment info
+ * @see https://docs.alpaca.markets/docs/paper-trading
  */
-export function getAlpacaBaseUrl(): string {
+export function getAlpacaBaseUrl(ctx: ExecutionContext): string {
+  // Allow override via env var for testing
   if (env.ALPACA_BASE_URL) {
     return env.ALPACA_BASE_URL;
   }
-  return isLive() ? "https://api.alpaca.markets" : "https://paper-api.alpaca.markets";
+  return isLive(ctx) ? "https://api.alpaca.markets" : "https://paper-api.alpaca.markets";
 }
 
 /**
  * Get environment-specific database URL suffix for state isolation
  *
- * This ensures BACKTEST, PAPER, and LIVE data are never mixed
+ * This ensures BACKTEST, PAPER, and LIVE data are never mixed.
+ *
+ * @param ctx - ExecutionContext containing environment info
+ * @returns Suffix like "_backtest", "_paper", or "_live"
  */
-export function getEnvDatabaseSuffix(): string {
-  return `_${env.CREAM_ENV.toLowerCase()}`;
+export function getEnvDatabaseSuffix(ctx: ExecutionContext): string {
+  return `_${ctx.environment.toLowerCase()}`;
 }
 
 /**
@@ -331,22 +254,40 @@ export function hasWebSearchCapability(): boolean {
  */
 export interface EnvValidationResult {
   valid: boolean;
-  environment: CreamEnvironment;
   errors: string[];
   warnings: string[];
 }
 
 /**
- * Validate environment at startup with formatted error output.
- * Call this at the beginning of your service's main function.
+ * Requirements for different trading environments
+ */
+const ENVIRONMENT_REQUIREMENTS: Record<CreamEnvironment, (keyof EnvConfig)[]> = {
+  BACKTEST: [],
+  PAPER: ["ALPACA_KEY", "ALPACA_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  LIVE: [
+    "ALPACA_KEY",
+    "ALPACA_SECRET",
+    "POLYGON_KEY",
+    "DATABENTO_KEY",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+  ],
+};
+
+/**
+ * Validate environment variables for a given trading environment.
  *
+ * Call this at service startup after determining the execution context.
+ *
+ * @param ctx - ExecutionContext containing environment info
  * @param serviceName - Name of the service for logging
  * @param additionalRequirements - Additional env vars required by this service
  * @returns Validation result with errors and warnings
  *
  * @example
  * ```ts
- * const result = validateEnvironment("api", ["ANTHROPIC_API_KEY"]);
+ * const ctx = createContext("PAPER", "scheduled");
+ * const result = validateEnvironment(ctx, "api", ["ANTHROPIC_API_KEY"]);
  * if (!result.valid) {
  *   console.error("Environment validation failed:", result.errors);
  *   process.exit(1);
@@ -354,23 +295,32 @@ export interface EnvValidationResult {
  * ```
  */
 export function validateEnvironment(
+  ctx: ExecutionContext,
   serviceName: string,
   additionalRequirements: (keyof EnvConfig)[] = []
 ): EnvValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Check additional service-specific requirements
-  for (const key of additionalRequirements) {
+  // Get requirements for this environment
+  const envRequirements = ENVIRONMENT_REQUIREMENTS[ctx.environment];
+  const allRequirements = [...envRequirements, ...additionalRequirements];
+
+  // Check all requirements
+  for (const key of allRequirements) {
     const value = env[key];
     if (value === undefined || value === null || value === "") {
-      errors.push(`${key} is required for ${serviceName}`);
+      errors.push(`${key} is required for ${serviceName} in ${ctx.environment} environment`);
     }
+  }
+
+  // Check LLM key for LIVE (at least one required)
+  if (ctx.environment === "LIVE" && !env.ANTHROPIC_API_KEY && !env.GOOGLE_API_KEY) {
+    errors.push("ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment");
   }
 
   return {
     valid: errors.length === 0,
-    environment: env.CREAM_ENV,
     errors,
     warnings,
   };
@@ -378,23 +328,23 @@ export function validateEnvironment(
 
 /**
  * Validate environment and exit with error if validation fails.
- * This is a convenience wrapper that prints formatted errors and exits.
  *
+ * @param ctx - ExecutionContext containing environment info
  * @param serviceName - Name of the service for logging
  * @param additionalRequirements - Additional env vars required by this service
  *
  * @example
  * ```ts
- * // At the top of your main function:
- * validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
- * // If validation fails, process exits with code 1
+ * const ctx = createContext("PAPER", "scheduled");
+ * validateEnvironmentOrExit(ctx, "dashboard-api", ["TURSO_DATABASE_URL"]);
  * ```
  */
 export function validateEnvironmentOrExit(
+  ctx: ExecutionContext,
   serviceName: string,
   additionalRequirements: (keyof EnvConfig)[] = []
 ): void {
-  const result = validateEnvironment(serviceName, additionalRequirements);
+  const result = validateEnvironment(ctx, serviceName, additionalRequirements);
 
   if (!result.valid) {
     // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
@@ -404,7 +354,11 @@ export function validateEnvironmentOrExit(
       console.error(`   • ${error}`);
     }
     // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error(`\nEnvironment: ${result.environment}`);
+    console.error(`\nEnvironment: ${ctx.environment}`);
+    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
+    console.error(`Source: ${ctx.source}`);
+    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
+    console.error(`TraceId: ${ctx.traceId}`);
     // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
     console.error("\nPlease set the required environment variables and restart.\n");
     process.exit(1);
@@ -428,76 +382,35 @@ export function validateEnvironmentOrExit(
  */
 export function getEnvVarDocumentation(): Array<{
   name: string;
-  required: boolean;
+  required: string;
   description: string;
 }> {
   return [
-    {
-      name: "CREAM_ENV",
-      required: true,
-      description: "Trading environment: BACKTEST | PAPER | LIVE",
-    },
-    { name: "CREAM_BROKER", required: false, description: "Broker to use (default: ALPACA)" },
-    { name: "TURSO_DATABASE_URL", required: false, description: "Turso/libsql database URL" },
-    { name: "TURSO_AUTH_TOKEN", required: false, description: "Turso Cloud authentication token" },
-    { name: "HELIX_URL", required: false, description: "HelixDB server URL" },
-    { name: "HELIX_HOST", required: false, description: "HelixDB host (alternative to HELIX_URL)" },
-    { name: "HELIX_PORT", required: false, description: "HelixDB port (alternative to HELIX_URL)" },
-    {
-      name: "DATABENTO_KEY",
-      required: false,
-      description: "Databento API key (required for LIVE)",
-    },
-    {
-      name: "POLYGON_KEY",
-      required: false,
-      description: "Polygon/Massive API key (required for LIVE)",
-    },
-    { name: "FMP_KEY", required: false, description: "FMP API key for fundamentals" },
+    { name: "CREAM_BROKER", required: "no", description: "Broker to use (default: ALPACA)" },
+    { name: "TURSO_DATABASE_URL", required: "no", description: "Turso/libsql database URL" },
+    { name: "TURSO_AUTH_TOKEN", required: "no", description: "Turso Cloud authentication token" },
+    { name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
+    { name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },
+    { name: "HELIX_PORT", required: "no", description: "HelixDB port (alternative to HELIX_URL)" },
+    { name: "DATABENTO_KEY", required: "LIVE", description: "Databento API key" },
+    { name: "POLYGON_KEY", required: "LIVE", description: "Polygon/Massive API key" },
+    { name: "FMP_KEY", required: "no", description: "FMP API key for fundamentals" },
     {
       name: "ALPHAVANTAGE_KEY",
-      required: false,
+      required: "no",
       description: "Alpha Vantage API key for macro data",
     },
-    {
-      name: "ALPACA_KEY",
-      required: false,
-      description: "Alpaca API key (required for PAPER/LIVE)",
-    },
-    {
-      name: "ALPACA_SECRET",
-      required: false,
-      description: "Alpaca API secret (required for PAPER/LIVE)",
-    },
-    { name: "ALPACA_BASE_URL", required: false, description: "Alpaca API base URL (auto-set)" },
-    { name: "ANTHROPIC_API_KEY", required: false, description: "Anthropic API key for Claude" },
-    { name: "GOOGLE_API_KEY", required: false, description: "Google Gemini API key" },
-    { name: "KALSHI_API_KEY_ID", required: false, description: "Kalshi API key ID" },
-    {
-      name: "KALSHI_PRIVATE_KEY_PATH",
-      required: false,
-      description: "Path to Kalshi private key file",
-    },
-    {
-      name: "TAVILY_API_KEY",
-      required: false,
-      description: "Tavily API key for web search",
-    },
-    {
-      name: "GOOGLE_CLIENT_ID",
-      required: false,
-      description: "Google OAuth client ID (required for PAPER/LIVE)",
-    },
-    {
-      name: "GOOGLE_CLIENT_SECRET",
-      required: false,
-      description: "Google OAuth client secret (required for PAPER/LIVE)",
-    },
-    {
-      name: "BETTER_AUTH_URL",
-      required: false,
-      description: "Better Auth base URL for OAuth callbacks",
-    },
+    { name: "ALPACA_KEY", required: "PAPER/LIVE", description: "Alpaca API key" },
+    { name: "ALPACA_SECRET", required: "PAPER/LIVE", description: "Alpaca API secret" },
+    { name: "ALPACA_BASE_URL", required: "no", description: "Alpaca API base URL (override)" },
+    { name: "ANTHROPIC_API_KEY", required: "LIVE*", description: "Anthropic API key for Claude" },
+    { name: "GOOGLE_API_KEY", required: "LIVE*", description: "Google Gemini API key" },
+    { name: "KALSHI_API_KEY_ID", required: "no", description: "Kalshi API key ID" },
+    { name: "KALSHI_PRIVATE_KEY_PATH", required: "no", description: "Path to Kalshi private key" },
+    { name: "TAVILY_API_KEY", required: "no", description: "Tavily API key for web search" },
+    { name: "GOOGLE_CLIENT_ID", required: "PAPER/LIVE", description: "Google OAuth client ID" },
+    { name: "GOOGLE_CLIENT_SECRET", required: "PAPER/LIVE", description: "Google OAuth secret" },
+    { name: "BETTER_AUTH_URL", required: "no", description: "Better Auth base URL for OAuth" },
   ];
 }
 

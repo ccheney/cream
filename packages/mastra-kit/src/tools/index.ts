@@ -22,7 +22,7 @@ import {
   type Position as BrokerPosition,
   createBrokerClient,
 } from "@cream/broker";
-import { isBacktest } from "@cream/domain";
+import { type ExecutionContext, isBacktest } from "@cream/domain";
 import {
   createExecutionClient,
   createMarketDataClient,
@@ -221,12 +221,13 @@ function createMockQuote(symbol: string): Quote {
  *
  * Uses gRPC MarketDataService when available, falls back to mock data.
  *
+ * @param ctx - ExecutionContext
  * @param instruments - Array of instrument symbols
  * @returns Array of quotes
  */
-export async function getQuotes(instruments: string[]): Promise<Quote[]> {
+export async function getQuotes(ctx: ExecutionContext, instruments: string[]): Promise<Quote[]> {
   // In backtest mode, always return mock data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return instruments.map(createMockQuote);
   }
 
@@ -295,11 +296,12 @@ function createMockPortfolioState(): PortfolioStateResponse {
  * 2. Alpaca broker client (direct API access)
  * 3. Mock data (for development/testing)
  *
+ * @param ctx - ExecutionContext
  * @returns Portfolio state including positions and buying power
  */
-export async function getPortfolioState(): Promise<PortfolioStateResponse> {
+export async function getPortfolioState(ctx: ExecutionContext): Promise<PortfolioStateResponse> {
   // In backtest mode, always return mock data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return createMockPortfolioState();
   }
 
@@ -402,12 +404,16 @@ function createMockOptionChain(underlying: string): OptionChainResponse {
  *
  * Uses gRPC MarketDataService when available, falls back to mock data.
  *
+ * @param ctx - ExecutionContext
  * @param underlying - Underlying symbol
  * @returns Option chain with expirations and strikes
  */
-export async function getOptionChain(underlying: string): Promise<OptionChainResponse> {
+export async function getOptionChain(
+  ctx: ExecutionContext,
+  underlying: string
+): Promise<OptionChainResponse> {
   // In backtest mode, always return mock data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return createMockOptionChain(underlying);
   }
 
@@ -558,12 +564,13 @@ function parseOSISymbol(
  * Uses gRPC MarketDataService GetOptionChain to find the specific contract
  * and extract its Greeks. Falls back to mock data if unavailable.
  *
+ * @param ctx - ExecutionContext
  * @param contractSymbol - Option contract symbol (OSI format)
  * @returns Greeks (delta, gamma, theta, vega, rho, IV)
  */
-export async function getGreeks(contractSymbol: string): Promise<Greeks> {
+export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): Promise<Greeks> {
   // In backtest mode, always return mock data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return createMockGreeks();
   }
 
@@ -736,12 +743,14 @@ function calculateIndicatorFromCandles(
  * Uses gRPC MarketDataService to fetch bars, then calculates indicator
  * using the @cream/indicators package. Falls back to mock data if unavailable.
  *
+ * @param ctx - ExecutionContext
  * @param indicator - Indicator name (RSI, ATR, SMA, EMA, BOLLINGER, STOCHASTIC, VOLUME_SMA)
  * @param symbol - Instrument symbol
  * @param params - Indicator parameters (period, etc.)
  * @returns Indicator values with timestamps
  */
 export async function recalcIndicator(
+  ctx: ExecutionContext,
   indicator: string,
   symbol: string,
   params: Record<string, number> = {}
@@ -764,7 +773,7 @@ export async function recalcIndicator(
   }
 
   // In backtest mode, always return mock data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return createMockIndicatorResult(indicator, symbol);
   }
 
@@ -845,16 +854,18 @@ function getFMPClient(): FMPClient | null {
  * Fetches upcoming and recent economic data releases from FMP API.
  * Returns empty array in backtest mode or if FMP API is unavailable.
  *
+ * @param ctx - ExecutionContext
  * @param startDate - Start date (YYYY-MM-DD format)
  * @param endDate - End date (YYYY-MM-DD format)
  * @returns Array of economic events
  */
 export async function getEconomicCalendar(
+  ctx: ExecutionContext,
   startDate: string,
   endDate: string
 ): Promise<EconomicEvent[]> {
   // In backtest mode, return empty array for consistent/fast execution
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return [];
   }
 
@@ -1019,18 +1030,20 @@ function transformFMPNews(news: FMPStockNews): NewsItem {
  * For more sophisticated sentiment analysis with entity extraction,
  * use the @cream/external-context extraction pipeline.
  *
+ * @param ctx - ExecutionContext
  * @param query - Search query (used for filtering results)
  * @param symbols - Optional symbol filter (fetches news for these symbols)
  * @param limit - Maximum number of results (default: 20)
  * @returns Array of news items with sentiment
  */
 export async function searchNews(
+  ctx: ExecutionContext,
   query: string,
   symbols: string[] = [],
   limit = 20
 ): Promise<NewsItem[]> {
   // In backtest mode, return empty array for consistent/fast execution
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return [];
   }
 
@@ -1090,16 +1103,18 @@ function createMockHelixResult(): HelixQueryResult {
  * Uses the @cream/helix client to execute HelixQL queries.
  * Falls back to empty results in backtest mode or on errors.
  *
+ * @param ctx - ExecutionContext
  * @param queryName - HelixQL query name (registered in HelixDB)
  * @param params - Query parameters
  * @returns Query result with nodes and edges
  */
 export async function helixQuery(
+  ctx: ExecutionContext,
   queryName: string,
   params: Record<string, unknown> = {}
 ): Promise<HelixQueryResult> {
   // In backtest mode, always return empty data for performance
-  if (isBacktest()) {
+  if (isBacktest(ctx)) {
     return createMockHelixResult();
   }
 
