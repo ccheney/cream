@@ -121,6 +121,12 @@ export interface UseWebSocketReturn {
   /** Unsubscribe from options contracts */
   unsubscribeOptions: (contracts: string[]) => void;
 
+  /** Subscribe to a specific backtest for progress updates */
+  subscribeBacktest: (backtestId: string) => void;
+
+  /** Unsubscribe from backtest progress updates */
+  unsubscribeBacktest: (backtestId: string) => void;
+
   /** Connect manually */
   connect: () => void;
 
@@ -138,6 +144,9 @@ export interface UseWebSocketReturn {
 
   /** Current subscribed options contracts */
   subscribedContracts: string[];
+
+  /** Current subscribed backtests */
+  subscribedBacktests: string[];
 }
 
 // ============================================
@@ -243,6 +252,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const [subscribedChannels, setSubscribedChannels] = useState<string[]>([]);
   const [subscribedSymbols, setSubscribedSymbols] = useState<string[]>([]);
   const [subscribedContracts, setSubscribedContracts] = useState<string[]>([]);
+  const [subscribedBacktests, setSubscribedBacktests] = useState<string[]>([]);
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
@@ -257,6 +267,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const subscribedChannelsRef = useRef<Set<string>>(new Set());
   const subscribedSymbolsRef = useRef<Set<string>>(new Set());
   const subscribedContractsRef = useRef<Set<string>>(new Set());
+  const subscribedBacktestsRef = useRef<Set<string>>(new Set());
 
   // Callback refs
   const onMessageRef = useRef(onMessage);
@@ -338,6 +349,11 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     const contracts = Array.from(subscribedContractsRef.current);
     if (contracts.length > 0) {
       ws.send(JSON.stringify({ type: "subscribe_options", contracts }));
+    }
+
+    // Replay backtest subscriptions
+    for (const backtestId of subscribedBacktestsRef.current) {
+      ws.send(JSON.stringify({ type: "subscribe_backtest", backtestId }));
     }
   }, []);
 
@@ -571,6 +587,28 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     [sendMessage]
   );
 
+  // Subscribe to a backtest for progress updates
+  const subscribeBacktest = useCallback(
+    (backtestId: string) => {
+      // Track subscription for replay
+      subscribedBacktestsRef.current.add(backtestId);
+      setSubscribedBacktests(Array.from(subscribedBacktestsRef.current));
+      sendMessage("subscribe_backtest", { backtestId });
+    },
+    [sendMessage]
+  );
+
+  // Unsubscribe from a backtest
+  const unsubscribeBacktest = useCallback(
+    (backtestId: string) => {
+      // Remove from tracking
+      subscribedBacktestsRef.current.delete(backtestId);
+      setSubscribedBacktests(Array.from(subscribedBacktestsRef.current));
+      sendMessage("unsubscribe_backtest", { backtestId });
+    },
+    [sendMessage]
+  );
+
   // Visibility change handler
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -623,12 +661,15 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     unsubscribeSymbols,
     subscribeOptions,
     unsubscribeOptions,
+    subscribeBacktest,
+    unsubscribeBacktest,
     connect,
     disconnect,
     lastError,
     subscribedChannels,
     subscribedSymbols,
     subscribedContracts,
+    subscribedBacktests,
   };
 }
 
