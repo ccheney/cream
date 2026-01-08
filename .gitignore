@@ -17,7 +17,9 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.live
 !.env.example
+!.env.live.example
 
 # IDE
 .idea/

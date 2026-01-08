@@ -1,0 +1,164 @@
+# Cream Trading Dashboard - Production Docker Compose
+#
+# Deploy the full dashboard stack with automatic HTTPS.
+#
+# Usage:
+#   1. Copy .env.live.example to .env.live and fill in secrets
+#   2. docker compose -f docker-compose.prod.yml build
+#   3. docker compose -f docker-compose.prod.yml up -d
+#
+# Scaling:
+#   docker compose -f docker-compose.prod.yml up -d --scale dashboard-api=2
+#
+# Logs:
+#   docker compose -f docker-compose.prod.yml logs -f [service]
+
+services:
+  # ==========================================
+  # Caddy - Reverse Proxy with Auto-HTTPS
+  # ==========================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: cream-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    environment:
+      - DASHBOARD_HOST=${DASHBOARD_HOST:-cream.broker}
+      - API_HOST=${API_HOST:-api.cream.broker}
+      - DASHBOARD_UPSTREAM=dashboard:3000
+      - API_UPSTREAM=dashboard-api:3001
+    depends_on:
+      dashboard:
+        condition: service_healthy
+      dashboard-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cream-network
+
+  # ==========================================
+  # Dashboard - Next.js Frontend
+  # ==========================================
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: cream-dashboard
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://${API_HOST:-api.cream.broker}
+      - NEXT_PUBLIC_WS_URL=wss://${API_HOST:-api.cream.broker}/ws
+    restart: unless-stopped
+    networks:
+      - cream-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # Dashboard API - Hono REST + WebSocket
+  # ==========================================
+  dashboard-api:
+    build:
+      context: .
+      dockerfile: apps/dashboard-api/Dockerfile
+    container_name: cream-dashboard-api
+    environment:
+      - NODE_ENV=production
+      - CREAM_ENV=${CREAM_ENV:-PAPER}
+      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:-file:/data/cream.db}
+      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
+      - ALLOWED_ORIGINS=https://${DASHBOARD_HOST:-cream.broker}
+      - HELIX_URL=${HELIX_URL:-}
+      - POLYGON_KEY=${POLYGON_KEY:-}
+    volumes:
+      - turso_data:/data
+    restart: unless-stopped
+    networks:
+      - cream-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ==========================================
+  # Worker - Hourly Scheduler
+  # ==========================================
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: cream-worker
+    env_file:
+      - .env.live
+    environment:
+      - NODE_ENV=production
+      - CREAM_ENV=${CREAM_ENV:-PAPER}
+      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:-file:/data/cream.db}
+      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
+      - HELIX_URL=${HELIX_URL:-}
+    volumes:
+      - turso_data:/data
+    depends_on:
+      dashboard-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cream-network
+
+  # ==========================================
+  # Optional: libSQL Server (for multi-instance)
+  # ==========================================
+  # Uncomment to run a local libSQL server instead of file-based SQLite
+  # libsql:
+  #   image: ghcr.io/tursodatabase/libsql-server:latest
+  #   container_name: cream-libsql
+  #   volumes:
+  #     - libsql_data:/var/lib/sqld
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - SQLD_HTTP_LISTEN_ADDR=0.0.0.0:8080
+  #   restart: unless-stopped
+  #   networks:
+  #     - cream-network
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  caddy_data:
+    name: cream_caddy_data
+  caddy_config:
+    name: cream_caddy_config
+  caddy_logs:
+    name: cream_caddy_logs
+  turso_data:
+    name: cream_turso_data
+  # libsql_data:
+  #   name: cream_libsql_data
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  cream-network:
+    name: cream-network
+    driver: bridge
