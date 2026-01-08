@@ -7,6 +7,10 @@
  * @see docs/plans/30-better-auth-migration.md
  */
 
+// ============================================
+// Better Auth (primary exports)
+// ============================================
+
 // Better Auth instance and types
 export { auth, type Session, type User } from "./better-auth.js";
 
@@ -16,19 +20,20 @@ export {
   getSession,
   getUser,
   type LiveProtectionOptions,
-  liveProtection as liveProtectionNew,
-  optionalAuth as optionalAuthNew,
-  requireAuth as requireAuthNew,
+  liveProtection,
+  optionalAuth,
+  requireAuth,
   type SessionVariables,
   sessionMiddleware,
 } from "./session.js";
 
 // ============================================
-// Legacy Exports (kept for backwards compatibility during migration)
-// These will be removed after full migration to better-auth
+// Legacy Exports (deprecated)
+// Kept for backwards compatibility during migration.
+// These will be removed after full migration to better-auth.
 // ============================================
 
-// JWT utilities (legacy - better-auth handles tokens)
+// JWT utilities (deprecated - better-auth handles tokens)
 export {
   extractBearerToken,
   generateAccessToken,
@@ -40,7 +45,7 @@ export {
   verifyRefreshToken,
 } from "./jwt.js";
 
-// MFA utilities (legacy - better-auth handles 2FA)
+// MFA utilities (deprecated - better-auth handles 2FA)
 export {
   generateBackupCodes,
   generateOTPAuthURI,
@@ -50,17 +55,19 @@ export {
   verifyBackupCode,
   verifyTOTPCode,
 } from "./mfa.js";
-// Legacy middleware exports (for routes still using old patterns)
+
+// Legacy middleware (deprecated - use session.js exports instead)
 export {
   authMiddleware,
   clearAuthCookies,
-  liveProtection,
+  liveProtection as liveProtectionLegacy,
   markMFAVerified,
-  optionalAuth,
-  requireAuth,
+  optionalAuth as optionalAuthLegacy,
+  requireAuth as requireAuthLegacy,
   setAuthCookies,
 } from "./middleware.js";
-// Legacy types (kept for backwards compatibility)
+
+// Legacy types (deprecated - use better-auth types instead)
 export type {
   AccessTokenPayload,
   AuthVariables,

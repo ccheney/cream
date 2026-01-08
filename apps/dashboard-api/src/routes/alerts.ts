@@ -7,13 +7,13 @@
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { type AuthVariables, requireAuth } from "../auth/index.js";
+import { getUser, requireAuth, type SessionVariables } from "../auth/index.js";
 
 // ============================================
 // App Setup
 // ============================================
 
-const app = new OpenAPIHono<{ Variables: AuthVariables }>();
+const app = new OpenAPIHono<{ Variables: SessionVariables }>();
 
 // ============================================
 // Schema Definitions
@@ -75,7 +75,7 @@ function getOrCreateAlertSettings(userId: string): z.infer<typeof AlertSettingsS
 const getAlertSettingsRoute = createRoute({
   method: "get",
   path: "/settings",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   responses: {
     200: {
       content: {
@@ -90,8 +90,8 @@ const getAlertSettingsRoute = createRoute({
 });
 
 app.openapi(getAlertSettingsRoute, (c) => {
-  const session = c.get("session");
-  const settings = getOrCreateAlertSettings(session.userId);
+  const user = getUser(c);
+  const settings = getOrCreateAlertSettings(user.id);
   return c.json(settings);
 });
 
@@ -99,7 +99,7 @@ app.openapi(getAlertSettingsRoute, (c) => {
 const updateAlertSettingsRoute = createRoute({
   method: "put",
   path: "/settings",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   request: {
     body: {
       content: {
@@ -123,9 +123,9 @@ const updateAlertSettingsRoute = createRoute({
 });
 
 app.openapi(updateAlertSettingsRoute, async (c) => {
-  const session = c.get("session");
+  const user = getUser(c);
   const updates = c.req.valid("json");
-  const current = getOrCreateAlertSettings(session.userId);
+  const current = getOrCreateAlertSettings(user.id);
 
   // Merge updates with current settings
   const updated: z.infer<typeof AlertSettingsSchema> = {
@@ -133,7 +133,7 @@ app.openapi(updateAlertSettingsRoute, async (c) => {
     ...updates,
   };
 
-  alertSettingsStore.set(session.userId, updated);
+  alertSettingsStore.set(user.id, updated);
   return c.json(updated);
 });
 

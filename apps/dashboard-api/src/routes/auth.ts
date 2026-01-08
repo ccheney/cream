@@ -19,7 +19,7 @@ import {
   generateTokenPair,
   hashBackupCode,
   type Role,
-  requireAuth,
+  requireAuthLegacy,
   setAuthCookies,
   verifyRefreshToken,
   verifyTOTPCode,
@@ -337,7 +337,7 @@ const mfaSetupRoute = createRoute({
   tags: ["Auth", "MFA"],
 });
 
-app.use("/mfa/*", requireAuth);
+app.use("/mfa/*", requireAuthLegacy);
 
 app.openapi(mfaSetupRoute, async (c) => {
   const session = c.get("session");

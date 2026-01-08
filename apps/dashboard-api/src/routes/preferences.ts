@@ -7,13 +7,13 @@
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { type AuthVariables, requireAuth } from "../auth/index.js";
+import { getUser, requireAuth, type SessionVariables } from "../auth/index.js";
 
 // ============================================
 // App Setup
 // ============================================
 
-const app = new OpenAPIHono<{ Variables: AuthVariables }>();
+const app = new OpenAPIHono<{ Variables: SessionVariables }>();
 
 // ============================================
 // Schema Definitions
@@ -91,7 +91,7 @@ function getOrCreatePreferences(userId: string): z.infer<typeof UserPreferencesS
 const getPreferencesRoute = createRoute({
   method: "get",
   path: "/",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   responses: {
     200: {
       content: {
@@ -106,9 +106,8 @@ const getPreferencesRoute = createRoute({
 });
 
 app.openapi(getPreferencesRoute, (c) => {
-  // Session is guaranteed by requireAuth middleware
-  const session = c.get("session");
-  const preferences = getOrCreatePreferences(session.userId);
+  const user = getUser(c);
+  const preferences = getOrCreatePreferences(user.id);
   return c.json(preferences);
 });
 
@@ -116,7 +115,7 @@ app.openapi(getPreferencesRoute, (c) => {
 const updatePreferencesRoute = createRoute({
   method: "put",
   path: "/",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   request: {
     body: {
       content: {
@@ -140,10 +139,9 @@ const updatePreferencesRoute = createRoute({
 });
 
 app.openapi(updatePreferencesRoute, async (c) => {
-  // Session is guaranteed by requireAuth middleware
-  const session = c.get("session");
+  const user = getUser(c);
   const updates = c.req.valid("json");
-  const current = getOrCreatePreferences(session.userId);
+  const current = getOrCreatePreferences(user.id);
 
   // Merge updates with current preferences
   const updated: z.infer<typeof UserPreferencesSchema> = {
@@ -155,7 +153,7 @@ app.openapi(updatePreferencesRoute, async (c) => {
     },
   };
 
-  preferencesStore.set(session.userId, updated);
+  preferencesStore.set(user.id, updated);
   return c.json(updated);
 });
 
@@ -163,7 +161,7 @@ app.openapi(updatePreferencesRoute, async (c) => {
 const updateThemeRoute = createRoute({
   method: "patch",
   path: "/theme",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   request: {
     body: {
       content: {
@@ -191,12 +189,11 @@ const updateThemeRoute = createRoute({
 });
 
 app.openapi(updateThemeRoute, async (c) => {
-  // Session is guaranteed by requireAuth middleware
-  const session = c.get("session");
+  const user = getUser(c);
   const { theme } = c.req.valid("json");
-  const current = getOrCreatePreferences(session.userId);
+  const current = getOrCreatePreferences(user.id);
   current.theme = theme;
-  preferencesStore.set(session.userId, current);
+  preferencesStore.set(user.id, current);
 
   return c.json({ theme });
 });
@@ -205,7 +202,7 @@ app.openapi(updateThemeRoute, async (c) => {
 const resetPreferencesRoute = createRoute({
   method: "post",
   path: "/reset",
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   responses: {
     200: {
       content: {
@@ -220,12 +217,11 @@ const resetPreferencesRoute = createRoute({
 });
 
 app.openapi(resetPreferencesRoute, (c) => {
-  // Session is guaranteed by requireAuth middleware
-  const session = c.get("session");
+  const user = getUser(c);
 
   // Delete current and recreate with defaults
-  preferencesStore.delete(session.userId);
-  const defaults = getOrCreatePreferences(session.userId);
+  preferencesStore.delete(user.id);
+  const defaults = getOrCreatePreferences(user.id);
 
   return c.json(defaults);
 });
