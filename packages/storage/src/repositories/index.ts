@@ -4,6 +4,16 @@
  * Exports all repositories and base utilities.
  */
 
+// Agent configs (migration 011) - per-agent model/temperature overrides
+export {
+  AGENT_TYPES,
+  type AgentConfig,
+  AgentConfigsRepository,
+  type AgentEnvironment,
+  type AgentType,
+  type CreateAgentConfigInput,
+  type UpdateAgentConfigInput,
+} from "./agent-configs.js";
 export {
   type AgentOutput,
   AgentOutputsRepository,
@@ -211,3 +221,13 @@ export {
   type UniverseCacheInsert,
   UniverseCacheRepository,
 } from "./universe-cache.js";
+// Universe configs (migration 011) - trading universe configuration
+export {
+  type CreateUniverseConfigInput,
+  type UniverseConfig,
+  type UniverseConfigStatus,
+  UniverseConfigsRepository,
+  type UniverseEnvironment,
+  type UniverseSource,
+  type UpdateUniverseConfigInput,
+} from "./universe-configs.js";
