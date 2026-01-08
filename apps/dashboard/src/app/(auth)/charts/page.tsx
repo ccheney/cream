@@ -32,6 +32,14 @@ export default function ChartsPage() {
     setIsStreamOpen((prev) => !prev);
   }, []);
 
+  // Update symbol when URL search params change
+  useEffect(() => {
+    const symbolParam = searchParams.get("symbol");
+    if (symbolParam) {
+      setSymbol(symbolParam.toUpperCase());
+    }
+  }, [searchParams]);
+
   // Keyboard shortcut: Shift+E to toggle stream
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
