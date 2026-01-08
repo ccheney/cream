@@ -6,6 +6,7 @@
  */
 
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
+import { type CreamEnvironment, createContext, type ExecutionContext } from "@cream/domain";
 import {
   AgentConfigsRepository,
   AgentOutputsRepository,
@@ -26,6 +27,15 @@ import {
   type TursoClient,
   UniverseConfigsRepository,
 } from "@cream/storage";
+
+/**
+ * Create ExecutionContext for database initialization.
+ * DB client is created at API startup.
+ */
+function createDbContext(): ExecutionContext {
+  const envValue = process.env.CREAM_ENV || "BACKTEST";
+  return createContext(envValue as CreamEnvironment, "scheduled");
+}
 
 // ============================================
 // Database Client Singleton
@@ -67,11 +77,12 @@ export async function getDbClient(): Promise<TursoClient> {
  */
 async function initializeDb(): Promise<TursoClient> {
   const tursoUrl = process.env.TURSO_DATABASE_URL;
+  const ctx = createDbContext();
   let client: TursoClient;
 
   if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
     // Remote Turso server (Docker or cloud)
-    client = await createTursoClient({
+    client = await createTursoClient(ctx, {
       syncUrl: tursoUrl,
       authToken: process.env.TURSO_AUTH_TOKEN ?? undefined,
     });
@@ -80,7 +91,7 @@ async function initializeDb(): Promise<TursoClient> {
     client = await createInMemoryClient();
   } else {
     // Local file database
-    client = await createTursoClient({
+    client = await createTursoClient(ctx, {
       path: tursoUrl ?? "cream.db",
     });
   }

@@ -12,7 +12,12 @@
 
 import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
-import { isBacktest, validateEnvironmentOrExit } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  isBacktest,
+  validateEnvironmentOrExit,
+} from "@cream/domain";
 import { getRuntimeConfigService, resetRuntimeConfigService } from "./db";
 
 // ============================================
@@ -184,9 +189,17 @@ async function runTradingCycle(): Promise<void> {
 
   try {
     const instruments = getInstruments();
+
+    // Create ExecutionContext at scheduler boundary
+    // Source is "scheduled" for automated runs
+    // configId is the trading config version for traceability
+    const configId = state.config?.trading.id ?? undefined;
+    const ctx = createContext(state.environment, "scheduled", configId);
+
     await tradingCycleWorkflow.execute({
       triggerData: {
         cycleId,
+        context: ctx,
         instruments,
       },
     });
@@ -362,8 +375,9 @@ function startHealthServer(): void {
 async function main() {
   // Validate environment at startup
   // In non-backtest mode, require FMP_KEY for external context and at least one LLM key
-  if (!isBacktest()) {
-    validateEnvironmentOrExit("worker", ["FMP_KEY"]);
+  const startupCtx = createContext(state.environment as CreamEnvironment, "scheduled");
+  if (!isBacktest(startupCtx)) {
+    validateEnvironmentOrExit(startupCtx, "worker", ["FMP_KEY"]);
 
     // Warn if no LLM key is set (needed for real agent execution)
     const hasLlmKey = process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_API_KEY;

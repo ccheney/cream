@@ -13,6 +13,7 @@
  * @see docs/plans/12-backtest.md Full backtest specification
  */
 
+import { createContext, type ExecutionContext } from "@cream/domain";
 import type { Backtest, BacktestEquityPoint, BacktestTrade } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
@@ -33,6 +34,11 @@ async function runBacktestInBackground(
   backtest: Backtest,
   repo: Awaited<ReturnType<typeof getBacktestsRepo>>
 ): Promise<void> {
+  // Create ExecutionContext at backtest boundary
+  // Source is "backtest" to distinguish from unit tests or other BACKTEST uses
+  // configId is the backtest ID for traceability
+  const _ctx: ExecutionContext = createContext("BACKTEST", "backtest", backtest.id);
+
   let dataPaths: Awaited<ReturnType<typeof prepareAllBacktestData>> | null = null;
 
   try {

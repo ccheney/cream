@@ -7,6 +7,7 @@
  */
 
 import { tradingCycleWorkflow } from "@cream/api";
+import { createContext } from "@cream/domain";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getRuntimeConfigService } from "../db.js";
@@ -600,9 +601,15 @@ app.openapi(triggerCycleRoute, async (c) => {
       // Emit observe phase start
       emitProgress("observe", 10, "market_data", "Fetching market data...");
 
+      // Create ExecutionContext at API boundary
+      // Source is "dashboard-test" if testing draft config, otherwise "manual" for dashboard triggers
+      const source = useDraftConfig ? "dashboard-test" : "manual";
+      const ctx = createContext(environment, source, configVersion ?? undefined);
+
       await tradingCycleWorkflow.execute({
         triggerData: {
           cycleId,
+          context: ctx,
           instruments: symbols,
           useDraftConfig,
         },
