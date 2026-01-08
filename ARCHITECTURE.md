@@ -122,11 +122,7 @@ cream/
 │   ├── mastra-kit/             # Agent prompts, tools, evaluations
 │   ├── external-context/       # News, sentiment, fundamentals
 │   ├── prediction-markets/     # Kalshi/Polymarket integration
-│   ├── recovery/               # Checkpoint-based crash recovery
 │   ├── validation/             # Schema parity validation
-│   ├── mocks/                  # Test doubles (broker, LLM, data)
-│   ├── test-fixtures/          # Factories, golden files
-│   ├── design-system/          # Tailwind config, design tokens
 │   ├── dashboard-types/        # Shared dashboard/API types
 │   ├── tsconfig/               # Shared TypeScript configs
 │   ├── infra/                  # Prometheus/Alertmanager configs
@@ -1145,29 +1141,6 @@ class NautilusRunner:
 └──────────┘            └──────────┘            └──────────┘
 ```
 
-### Mock Infrastructure
-
-```typescript
-// packages/mocks/
-export const createMockBroker = (config?: MockBrokerConfig): MockBrokerAdapter;
-export const createMockPolygon = (config?: MockMarketDataConfig): MockPolygonAdapter;
-export const createMockLLM = (responses?: Map<string, string>): MockLLM;
-export const createMockLLMWithDefaults = (): MockLLM;
-```
-
-### Golden Dataset
-
-```
-packages/test-fixtures/golden/
-├── metadata.json              # Case catalog
-├── trader/
-│   ├── trader_input_001.json
-│   └── trader_output_001.json
-├── risk_manager/
-├── technical_analyst/
-└── ...
-```
-
 ### CI Workflows
 
 | Workflow | Trigger | Jobs |
@@ -1345,8 +1318,6 @@ cargo cov-html              # Rust → coverage/
 | Rust engine | `/apps/execution-engine/src/` |
 | Dashboard | `/apps/dashboard/src/` |
 | API routes | `/apps/dashboard-api/src/routes/` |
-| Mocks | `/packages/mocks/src/` |
-| Golden files | `/packages/test-fixtures/golden/` |
 | Alerts | `/packages/infra/prometheus/alerts.yml` |
 
 ---

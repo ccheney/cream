@@ -34,6 +34,7 @@ import {
   webSearchTool,
 } from "@cream/mastra-kit";
 import { Agent } from "@mastra/core/agent";
+import { RuntimeContext } from "@mastra/core/runtime-context";
 import type { Tool } from "@mastra/core/tools";
 import { z } from "zod";
 
@@ -54,19 +55,37 @@ export type {
 // ============================================
 
 /**
+ * Model mapping from internal names to Mastra provider/model IDs.
+ * Maps our configuration model names to the actual provider format.
+ */
+const MODEL_MAP: Record<string, string> = {
+  // Google models
+  "gemini-3-pro-preview": "google/gemini-2.5-pro",
+  "gemini-3-flash-preview": "google/gemini-2.0-flash",
+  "gemini-2.0-flash": "google/gemini-2.0-flash",
+  "gemini-2.5-pro": "google/gemini-2.5-pro",
+  // Anthropic models
+  "claude-sonnet-4": "anthropic/claude-sonnet-4-20250514",
+  "claude-opus-4": "anthropic/claude-opus-4-20250514",
+  "claude-3.5-sonnet": "anthropic/claude-3-5-sonnet-20241022",
+  "claude-3.5-haiku": "anthropic/claude-3-5-haiku-20241022",
+  // OpenAI models (for future use)
+  "gpt-4o": "openai/gpt-4o",
+  "gpt-4o-mini": "openai/gpt-4o-mini",
+};
+
+/** Default model when no mapping found */
+const DEFAULT_MODEL = "google/gemini-2.0-flash";
+
+/**
  * Map internal model names to Mastra model identifiers.
- * Using gemini-2.0-flash for all agents (best balance of speed/quality).
  */
 function getModelId(internalModel: string): string {
-  // Map our model names to Google model IDs
-  switch (internalModel) {
-    case "gemini-3-pro-preview":
-      return "google/gemini-2.0-flash"; // Use flash for cost efficiency
-    case "gemini-3-flash-preview":
-      return "google/gemini-2.0-flash";
-    default:
-      return "google/gemini-2.0-flash";
+  // If it already has a provider prefix (e.g., "google/gemini-2.0-flash"), return as-is
+  if (internalModel.includes("/")) {
+    return internalModel;
   }
+  return MODEL_MAP[internalModel] ?? DEFAULT_MODEL;
 }
 
 // ============================================
@@ -296,6 +315,7 @@ const CriticOutputSchema = z.object({
 
 /**
  * Create a Mastra Agent from our config.
+ * Uses dynamic model selection to allow runtime model override via RequestContext.
  * Resolves tool instances from TOOL_INSTANCES registry based on config.tools.
  */
 function createAgent(agentType: AgentType): Agent {
@@ -317,11 +337,21 @@ function createAgent(agentType: AgentType): Agent {
     }
   }
 
+  // Use dynamic model function to allow runtime model override via RequestContext
+  // If 'model' is set in RequestContext, use it; otherwise use the default from config
+  const dynamicModel = ({ requestContext }: { requestContext?: RequestContext }) => {
+    const runtimeModel = requestContext?.get("model") as string | undefined;
+    if (runtimeModel) {
+      return getModelId(runtimeModel);
+    }
+    return getModelId(config.model);
+  };
+
   return new Agent({
     id: config.type,
     name: config.name,
     instructions: systemPrompt,
-    model: getModelId(config.model),
+    model: dynamicModel,
     tools: Object.keys(tools).length > 0 ? tools : undefined,
   });
 }
@@ -383,6 +413,7 @@ export interface AgentConfigEntry {
   temperature: number;
   maxTokens: number;
   enabled: boolean;
+  systemPromptOverride?: string | null;
 }
 
 export interface AgentContext {
@@ -453,21 +484,78 @@ const DEFAULT_MODEL_SETTINGS = {
 };
 
 /**
- * Get model settings for an agent from context config.
+ * Runtime settings for agent execution including model, temperature, and prompt overrides.
+ */
+interface AgentRuntimeSettings {
+  model?: string;
+  temperature: number;
+  maxTokens: number;
+  systemPromptOverride?: string | null;
+}
+
+/**
+ * Get runtime settings for an agent from context config.
  * Falls back to defaults if no config provided.
  */
-function getModelSettings(
+function getAgentRuntimeSettings(
   agentType: AgentType,
   agentConfigs?: Record<AgentType, AgentConfigEntry>
-): { temperature: number; maxTokens: number } {
+): AgentRuntimeSettings {
   const config = agentConfigs?.[agentType];
   if (config) {
     return {
+      model: config.model,
       temperature: config.temperature,
       maxTokens: config.maxTokens,
+      systemPromptOverride: config.systemPromptOverride,
     };
   }
   return DEFAULT_MODEL_SETTINGS;
+}
+
+/**
+ * Create a RequestContext with model configuration for runtime model selection.
+ */
+function createRequestContext(model?: string): RequestContext {
+  const ctx = new RequestContext();
+  if (model) {
+    ctx.set("model", model);
+  }
+  return ctx;
+}
+
+/**
+ * Build generation options with model settings, request context, and optional instruction override.
+ */
+function buildGenerateOptions(
+  settings: AgentRuntimeSettings,
+  structuredOutput: { schema: z.ZodType }
+): {
+  structuredOutput: { schema: z.ZodType };
+  modelSettings: { temperature: number; maxOutputTokens: number };
+  requestContext: RequestContext;
+  instructions?: string;
+} {
+  const options: {
+    structuredOutput: { schema: z.ZodType };
+    modelSettings: { temperature: number; maxOutputTokens: number };
+    requestContext: RequestContext;
+    instructions?: string;
+  } = {
+    structuredOutput,
+    modelSettings: {
+      temperature: settings.temperature,
+      maxOutputTokens: settings.maxTokens,
+    },
+    requestContext: createRequestContext(settings.model),
+  };
+
+  // Apply system prompt override if configured
+  if (settings.systemPromptOverride) {
+    options.instructions = settings.systemPromptOverride;
+  }
+
+  return options;
 }
 
 /**
@@ -552,12 +640,10 @@ Cycle ID: ${context.cycleId}
 Consider the market regime when assessing trend, momentum, and volatility.
 Regime context should inform your setup classification and technical thesis.`;
 
-  const response = await technicalAnalystAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: z.array(TechnicalAnalysisSchema),
-    },
-    modelSettings: getModelSettings("technical_analyst", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("technical_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(TechnicalAnalysisSchema) });
+
+  const response = await technicalAnalystAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as TechnicalAnalysisOutput[];
 }
@@ -582,12 +668,10 @@ ${JSON.stringify(newsEvents, null, 2)}
 Symbols to analyze: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}`;
 
-  const response = await newsAnalystAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: z.array(SentimentAnalysisSchema),
-    },
-    modelSettings: getModelSettings("news_analyst", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
+
+  const response = await newsAnalystAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as SentimentAnalysisOutput[];
 }
@@ -625,12 +709,10 @@ The market regime classification reflects the current market environment.
 Use this context to assess whether fundamental drivers align with or diverge from the regime.
 HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.`;
 
-  const response = await fundamentalsAnalystAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: z.array(FundamentalsAnalysisSchema),
-    },
-    modelSettings: getModelSettings("fundamentals_analyst", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
+
+  const response = await fundamentalsAnalystAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as FundamentalsAnalysisOutput[];
 }
@@ -680,12 +762,10 @@ ${JSON.stringify(context.memory ?? {}, null, 2)}
 Symbols: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}`;
 
-  const response = await bullishResearcherAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: z.array(BullishResearchSchema),
-    },
-    modelSettings: getModelSettings("bullish_researcher", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
+
+  const response = await bullishResearcherAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as BullishResearchOutput[];
 }
@@ -718,12 +798,10 @@ ${JSON.stringify(context.memory ?? {}, null, 2)}
 Symbols: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}`;
 
-  const response = await bearishResearcherAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: z.array(BearishResearchSchema),
-    },
-    modelSettings: getModelSettings("bearish_researcher", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
+
+  const response = await bearishResearcherAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as BearishResearchOutput[];
 }
@@ -788,12 +866,10 @@ ${
     : ""
 }`;
 
-  const response = await traderAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: DecisionPlanSchema,
-    },
-    modelSettings: getModelSettings("trader", context.agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+
+  const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as DecisionPlan;
 }
@@ -828,16 +904,12 @@ ${JSON.stringify(portfolioState ?? {}, null, 2)}
 Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
 
-  const settings = getModelSettings("risk_manager", agentConfigs);
-  const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: RiskManagerOutputSchema,
-    },
-    modelSettings: {
-      ...settings,
-      temperature: Math.min(settings.temperature, 0.1), // Cap at 0.1 for validation
-    },
-  });
+  const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
+  // Cap temperature at 0.1 for validation agents to ensure consistent risk assessment
+  options.modelSettings.temperature = Math.min(options.modelSettings.temperature, 0.1);
+
+  const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as RiskManagerOutput;
 }
@@ -872,16 +944,12 @@ Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
 Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
-  const settings = getModelSettings("critic", agentConfigs);
-  const response = await criticAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: CriticOutputSchema,
-    },
-    modelSettings: {
-      ...settings,
-      temperature: Math.min(settings.temperature, 0.1), // Cap at 0.1 for validation
-    },
-  });
+  const settings = getAgentRuntimeSettings("critic", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
+  // Cap temperature at 0.1 for validation agents to ensure consistent critique
+  options.modelSettings.temperature = Math.min(options.modelSettings.temperature, 0.1);
+
+  const response = await criticAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as CriticOutput;
 }
@@ -952,12 +1020,10 @@ Please address ALL rejection reasons and produce a revised plan that:
 3. Removes any unsupported claims
 4. Maintains proper stop-loss and take-profit levels`;
 
-  const response = await traderAgent.generate([{ role: "user", content: prompt }], {
-    structuredOutput: {
-      schema: DecisionPlanSchema,
-    },
-    modelSettings: getModelSettings("trader", agentConfigs),
-  });
+  const settings = getAgentRuntimeSettings("trader", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+
+  const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as DecisionPlan;
 }

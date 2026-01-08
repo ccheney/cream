@@ -45,11 +45,7 @@ packages/
   mastra-kit/           # Agent prompts, tools, evaluations
   external-context/     # News, sentiment, fundamentals extraction
   prediction-markets/   # Kalshi integration
-  recovery/             # State recovery utilities
   validation/           # Schema parity validation
-  mocks/                # Test mocks for broker, marketdata, LLM
-  test-fixtures/        # Factories, golden files, testcontainers
-  design-system/        # Tailwind config, design tokens
   dashboard-types/      # Shared dashboard/API types
   tsconfig/             # Shared TypeScript configs
   infra/                # Prometheus, Alertmanager configs
@@ -161,7 +157,6 @@ validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
 - TS tests use `bun:test` (not Jest/Vitest)
 - Rust tests use `cargo test` with `mockall` for mocking
 - Python tests use `pytest` with `pytest-asyncio`
-- Use `@cream/test-fixtures` for factories and golden files
 - Use dependency injection patterns for external services (see `setSDKProvider` in claudeCodeIndicator.ts)
 
 ### Integration Tests with Testcontainers

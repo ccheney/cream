@@ -80,7 +80,7 @@ cream/
 │   ├── filings-service/            # Python SEC filings ingestion
 │   └── vision-service/             # Python chart analysis
 │
-├── packages/                       # Shared libraries (24 packages)
+├── packages/                       # Shared libraries (20 packages)
 │   ├── domain/                     # Zod schemas, environment, time utilities
 │   ├── config/                     # YAML config loading with Zod validation
 │   ├── schema/                     # Protobuf definitions (.proto files)
@@ -97,11 +97,7 @@ cream/
 │   ├── mastra-kit/                 # Agent prompts, tools, evaluations
 │   ├── external-context/           # News, sentiment, fundamentals extraction
 │   ├── prediction-markets/         # Kalshi integration
-│   ├── recovery/                   # State recovery utilities
 │   ├── validation/                 # Schema parity validation
-│   ├── mocks/                      # Test mocks for broker, marketdata, LLM
-│   ├── test-fixtures/              # Factories, golden files, testcontainers
-│   ├── design-system/              # Tailwind config, design tokens
 │   ├── dashboard-types/            # Shared dashboard/API types
 │   ├── tsconfig/                   # Shared TypeScript configs
 │   ├── infra/                      # Prometheus, Alertmanager configs
@@ -203,8 +199,6 @@ DeepEval agent evaluation framework with LLM-as-Judge.
 ### Testing
 | Package | Purpose |
 |---------|---------|
-| `@cream/test-fixtures` | Factories, golden datasets, testcontainers |
-| `@cream/mocks` | Mock broker, marketdata, HelixDB, LLM |
 | `@cream/validation` | Research→production parity checks |
 
 ---
@@ -348,12 +342,10 @@ MASTRA_API_URL=http://localhost:4111
 |------|----------|---------------------|
 | Critical | execution-engine, broker, domain | 90/85/90% |
 | Core | indicators, helix, schema | 80/75/80% |
-| Standard | api, research, test-fixtures | 70/65/70% |
+| Standard | api, research | 70/65/70% |
 | Agent | mastra-kit | 60/50/60% |
 
 ### Test Data
-- **Factories**: `@cream/test-fixtures` with deep merge support
-- **Mocks**: `@cream/mocks` for broker, marketdata, HelixDB, LLM
 - **Golden datasets**: Snapshot-based regression testing
 - **Testcontainers**: Docker-based integration tests
 
