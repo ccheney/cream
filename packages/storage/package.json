@@ -18,6 +18,9 @@
     "lint": "biome check src/",
     "format": "biome format --write src/",
     "clean": "rm -rf dist coverage",
+    "db:migrate": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts",
+    "db:status": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts --status",
+    "db:rollback": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts --rollback",
     "db:seed": "bun run src/seed-config.ts"
   },
   "dependencies": {
