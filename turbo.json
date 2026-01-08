@@ -8,7 +8,7 @@
       "env": ["CREAM_ENV"]
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build", "build"],
       "outputs": ["coverage/**"],
       "env": ["CREAM_ENV"],
       "passThroughEnv": ["CREAM_ENV"]

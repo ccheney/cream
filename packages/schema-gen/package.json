@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Generated code from Protobuf schemas",
   "scripts": {
-    "build": "echo 'Schema-gen contains pre-generated files'",
+    "build": "test -f ts/cream/v1/execution_pb.ts || (echo 'Missing generated files!' && exit 1)",
     "test": "echo 'No tests for generated files'"
   },
   "exports": {
