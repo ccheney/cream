@@ -71,6 +71,11 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Buf CLI
+        uses: bufbuild/buf-setup-action@v1.50.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
@@ -233,6 +238,11 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Setup Buf CLI
+        uses: bufbuild/buf-setup-action@v1.50.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
