@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "bun build src/index.ts --outdir dist --target bun --external @cream/schema-gen/*",
     "test": "CREAM_ENV=BACKTEST bun test",
     "test:evals": "CREAM_ENV=BACKTEST bun test tests/evals",
     "evals:agents": "bun run tests/evals/run-evals.ts",

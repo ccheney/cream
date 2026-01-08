@@ -16,7 +16,7 @@
   },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --external @libsql/client --external libsql --external better-sqlite3 --external @tursodatabase/*",
+    "build": "bun build src/index.ts --outdir dist --target bun --external @libsql/client --external libsql --external better-sqlite3 --external @tursodatabase/* --external @cream/schema-gen/*",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "CREAM_ENV=BACKTEST bun test",
