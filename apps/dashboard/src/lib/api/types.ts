@@ -783,3 +783,69 @@ export interface AlertSettings {
   criticalOnly: boolean;
   quietHours: { start: string; end: string } | null;
 }
+
+// ============================================
+// Cycle Trigger Types
+// ============================================
+
+export interface TriggerCycleRequest {
+  environment: Environment;
+  useDraftConfig?: boolean;
+  symbols?: string[];
+  confirmLive?: boolean;
+}
+
+export interface TriggerCycleResponse {
+  cycleId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  environment: Environment;
+  configVersion: string;
+  startedAt: string;
+}
+
+export type CyclePhase = "OBSERVE" | "ORIENT" | "DECIDE" | "ACT" | "COMPLETE";
+
+export interface CycleProgress {
+  cycleId: string;
+  phase: CyclePhase;
+  step: string;
+  progress: number;
+  message: string;
+  activeSymbol?: string;
+  totalSymbols?: number;
+  completedSymbols?: number;
+  startedAt?: string;
+  estimatedCompletion?: string;
+  timestamp: string;
+}
+
+export interface DecisionSummaryBrief {
+  symbol: string;
+  action: "BUY" | "SELL" | "HOLD";
+  direction: "LONG" | "SHORT" | "FLAT";
+  confidence: number;
+}
+
+export interface OrderSummaryBrief {
+  orderId: string;
+  symbol: string;
+  side: "buy" | "sell";
+  quantity: number;
+  status: "submitted" | "filled" | "rejected";
+}
+
+export interface CycleResult {
+  cycleId: string;
+  environment: Environment;
+  status: "completed" | "failed";
+  result?: {
+    approved: boolean;
+    iterations: number;
+    decisions: DecisionSummaryBrief[];
+    orders: OrderSummaryBrief[];
+  };
+  error?: string;
+  durationMs: number;
+  configVersion?: string;
+  timestamp: string;
+}

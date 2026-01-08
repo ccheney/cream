@@ -15,6 +15,8 @@ import type {
   StartRequest,
   StopRequest,
   SystemStatus,
+  TriggerCycleRequest,
+  TriggerCycleResponse,
 } from "@/lib/api/types";
 
 // ============================================
@@ -178,6 +180,37 @@ export function useChangeEnvironment() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.system.status(), data);
+      queryClient.invalidateQueries({ queryKey: queryKeys.system.all });
+    },
+  });
+}
+
+/**
+ * Trigger an on-demand trading cycle.
+ *
+ * @example
+ * ```tsx
+ * const { mutate, isPending } = useTriggerCycle();
+ * return (
+ *   <button
+ *     onClick={() => mutate({ environment: 'PAPER', useDraftConfig: false })}
+ *     disabled={isPending}
+ *   >
+ *     Trigger Cycle
+ *   </button>
+ * );
+ * ```
+ */
+export function useTriggerCycle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (request: TriggerCycleRequest) => {
+      const { data } = await post<TriggerCycleResponse>("/api/system/trigger-cycle", request);
+      return data;
+    },
+    onSuccess: () => {
+      // Invalidate system status to reflect the new cycle
       queryClient.invalidateQueries({ queryKey: queryKeys.system.all });
     },
   });

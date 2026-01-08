@@ -122,6 +122,7 @@ export {
   useStopSystem,
   useSystemHealth,
   useSystemStatus,
+  useTriggerCycle,
 } from "./useSystem";
 // Theses
 export {

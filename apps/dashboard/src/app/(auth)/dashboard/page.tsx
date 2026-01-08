@@ -5,6 +5,8 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { CycleProgress } from "@/components/dashboard/CycleProgress";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import { LiveDataIndicator, StreamingBadge } from "@/components/ui/RefreshIndicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,6 +17,7 @@ import {
   useStartSystem,
   useStopSystem,
   useSystemStatus,
+  useTriggerCycle,
 } from "@/hooks/queries";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
@@ -35,6 +38,40 @@ export default function DashboardPage() {
   const startSystem = useStartSystem();
   const stopSystem = useStopSystem();
   const pauseSystem = usePauseSystem();
+  const triggerCycle = useTriggerCycle();
+
+  // Active cycle state
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  const [useDraftConfig, setUseDraftConfig] = useState(false);
+
+  const handleTriggerCycle = () => {
+    if (!status?.environment) {
+      return;
+    }
+
+    triggerCycle.mutate(
+      {
+        environment: status.environment,
+        useDraftConfig,
+      },
+      {
+        onSuccess: (data) => {
+          setActiveCycleId(data.cycleId);
+        },
+      }
+    );
+  };
+
+  const handleCycleComplete = () => {
+    setActiveCycleId(null);
+  };
+
+  const handleCycleError = () => {
+    // Keep showing the error in the CycleProgress component
+    // User can dismiss by triggering another cycle
+  };
+
+  const cycleInProgress = triggerCycle.isPending || activeCycleId !== null;
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -144,6 +181,66 @@ export default function DashboardPage() {
       {/* System Status Banner */}
       <QueryErrorBoundary title="Failed to load system status">
         <SystemStatusBanner status={status} isLoading={statusLoading} />
+
+        {/* Trigger Cycle Section */}
+        <div className="mt-6 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+                Trading Cycle
+              </h2>
+              <p className="text-sm text-cream-500 dark:text-cream-400">
+                Manually trigger an OODA trading cycle
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              {status?.environment === "PAPER" && (
+                <label className="flex items-center gap-2 text-sm text-cream-600 dark:text-cream-400">
+                  <input
+                    type="checkbox"
+                    checked={useDraftConfig}
+                    onChange={(e) => setUseDraftConfig(e.target.checked)}
+                    disabled={cycleInProgress}
+                    className="rounded border-cream-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Use draft config
+                </label>
+              )}
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    type="button"
+                    onClick={handleTriggerCycle}
+                    disabled={cycleInProgress || status?.environment === "LIVE"}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {triggerCycle.isPending
+                      ? "Triggering..."
+                      : activeCycleId
+                        ? "Cycle Running..."
+                        : "Trigger Cycle"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {status?.environment === "LIVE"
+                    ? "Manual triggers disabled in LIVE mode"
+                    : "Start an on-demand OODA trading cycle"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* Cycle Progress */}
+          {activeCycleId && (
+            <div className="mt-4 pt-4 border-t border-cream-100 dark:border-night-700">
+              <CycleProgress
+                cycleId={activeCycleId}
+                onComplete={handleCycleComplete}
+                onError={handleCycleError}
+              />
+            </div>
+          )}
+        </div>
 
         {/* OODA Cycle Status */}
         <div className="grid grid-cols-4 gap-4 mt-6">
