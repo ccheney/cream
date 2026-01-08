@@ -5,17 +5,22 @@
  * Charts Page - Market context with candle charts and indicators
  */
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { StreamPanel, StreamToggleButton } from "@/components/charts/StreamPanel";
+import { TradingViewChart } from "@/components/charts/TradingViewChart";
 import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries";
 
 export default function ChartsPage() {
-  const [symbol, setSymbol] = useState("AAPL");
-  const [timeframe, setTimeframe] = useState<"1h" | "4h" | "1d">("1h");
+  const searchParams = useSearchParams();
+  const [symbol, setSymbol] = useState(searchParams.get("symbol")?.toUpperCase() || "AAPL");
+  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "1d">("1d");
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
-  const { data: candles, isLoading: candlesLoading } = useCandles(symbol, timeframe, 100);
+  // Increase limit for lower timeframes to fill the chart
+  const limit = timeframe === "1m" || timeframe === "5m" ? 500 : 100;
+  const { data: candles, isLoading: candlesLoading } = useCandles(symbol, timeframe, limit);
   const { data: indicators, isLoading: indicatorsLoading } = useIndicators(symbol, timeframe);
   const { data: quote, isLoading: quoteLoading } = useQuote(symbol);
   const { data: regime } = useRegime();
@@ -54,11 +59,11 @@ export default function ChartsPage() {
           />
           <select
             value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value as "1h" | "4h" | "1d")}
+            onChange={(e) => setTimeframe(e.target.value as "1m" | "5m" | "1d")}
             className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
           >
-            <option value="1h">1H</option>
-            <option value="4h">4H</option>
+            <option value="1m">1M</option>
+            <option value="5m">5M</option>
             <option value="1d">1D</option>
           </select>
           <StreamToggleButton isOpen={isStreamOpen} onClick={toggleStream} />
@@ -91,50 +96,21 @@ export default function ChartsPage() {
       )}
 
       {/* Main Chart */}
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 h-[416px]">
         {candlesLoading ? (
           <div className="h-96 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
         ) : candles && candles.length > 0 ? (
-          <div className="h-96 relative">
-            {/* Simple candlestick visualization */}
-            <div className="absolute inset-0 flex items-end gap-px p-4">
-              {candles.slice(-60).map((candle, i) => {
-                const min = Math.min(...candles.slice(-60).map((c) => c.low));
-                const max = Math.max(...candles.slice(-60).map((c) => c.high));
-                const range = max - min || 1;
-                const isGreen = candle.close >= candle.open;
-                const bodyTop = ((max - Math.max(candle.open, candle.close)) / range) * 100;
-                const bodyHeight = (Math.abs(candle.close - candle.open) / range) * 100 || 0.5;
-
-                return (
-                  <div
-                    key={`candle-${i}`}
-                    className="flex-1 relative"
-                    title={`O: ${candle.open.toFixed(2)} H: ${candle.high.toFixed(2)} L: ${candle.low.toFixed(2)} C: ${candle.close.toFixed(2)}`}
-                  >
-                    {/* Wick */}
-                    <div
-                      className="absolute left-1/2 w-px bg-cream-400 dark:bg-cream-600 -translate-x-1/2"
-                      style={{
-                        top: `${((max - candle.high) / range) * 100}%`,
-                        height: `${((candle.high - candle.low) / range) * 100}%`,
-                      }}
-                    />
-                    {/* Body */}
-                    <div
-                      className={`absolute left-0 right-0 mx-0.5 rounded-sm ${
-                        isGreen ? "bg-green-500 dark:bg-green-400" : "bg-red-500 dark:bg-red-400"
-                      }`}
-                      style={{
-                        top: `${bodyTop}%`,
-                        height: `${Math.max(bodyHeight, 1)}%`,
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <TradingViewChart
+            data={candles.map((c) => ({
+              time: new Date(c.timestamp).getTime() / 1000,
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+              volume: c.volume,
+            }))}
+            height={384}
+          />
         ) : (
           <div className="h-96 flex items-center justify-center text-cream-400">
             No chart data available

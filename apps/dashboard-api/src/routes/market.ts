@@ -10,6 +10,7 @@
 import { PolygonClient } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
+import { getRegimeLabelsRepo } from "../db.js";
 
 // ============================================
 // Polygon Client (singleton)
@@ -110,6 +111,14 @@ const IndicatorsSchema = z.object({
   macdLine: z.number().nullable(),
   macdSignal: z.number().nullable(),
   macdHist: z.number().nullable(),
+});
+
+const RegimeStatusSchema = z.object({
+  label: z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
+  confidence: z.number(),
+  vix: z.number(),
+  sectorRotation: z.record(z.string(), z.number()),
+  updatedAt: z.string(),
 });
 
 const ErrorSchema = z.object({
@@ -312,29 +321,59 @@ app.openapi(candlesRoute, async (c) => {
 
   const to = new Date();
   const from = new Date();
+
+  // Calculate start date based on limit and timeframe
+  // We add a buffer factor to account for weekends/holidays (market closed days)
+  const bufferFactor = 2.5;
+
   if (tf.timespan === "day") {
-    from.setFullYear(from.getFullYear() - 1);
-  } else {
-    from.setDate(from.getDate() - 30);
+    // For daily, we need limit * days
+    from.setDate(from.getDate() - Math.ceil(limit * bufferFactor));
+  } else if (tf.timespan === "hour") {
+    // For hourly, we need limit * hours
+    // But we use setTime/getTime for precision or just approximate with days
+    // limit hours * multiplier
+    const hoursNeeded = limit * tf.multiplier;
+    from.setTime(from.getTime() - hoursNeeded * 60 * 60 * 1000 * bufferFactor);
+  } else if (tf.timespan === "minute") {
+    // limit minutes * multiplier
+    const minutesNeeded = limit * tf.multiplier;
+    from.setTime(from.getTime() - minutesNeeded * 60 * 1000 * bufferFactor);
   }
+
+  const fromStr = from.toISOString().slice(0, 10);
+  const toStr = to.toISOString().slice(0, 10);
+
+  const fetchLimit = Math.min(limit + 100, 5000);
 
   try {
     const response = await client.getAggregates(
       upperSymbol,
       tf.multiplier,
       tf.timespan,
-      from.toISOString().slice(0, 10),
-      to.toISOString().slice(0, 10),
-      { limit }
+      fromStr,
+      toStr,
+      { limit: fetchLimit, sort: "desc" }
+    );
+
+    // biome-ignore lint/suspicious/noConsole: Debugging
+    console.log(
+      `Fetched candles for ${upperSymbol} (${timeframe}): ${response.results?.length ?? 0} bars from ${fromStr} to ${toStr}`
     );
 
     if (!response.results || response.results.length === 0) {
+      // biome-ignore lint/suspicious/noConsole: Error logging
+      console.error(`No data returned for ${upperSymbol} ${timeframe}`);
       throw new HTTPException(503, {
         message: `No candle data available for ${upperSymbol}`,
       });
     }
 
-    const candles = response.results.map((bar) => ({
+    // Reverse to get chronological order (oldest -> newest) since we fetched desc
+    // Take the last N candles based on the requested limit
+    const recentResults = response.results.slice(0, limit).reverse();
+
+    const candles = recentResults.map((bar) => ({
       timestamp: new Date(bar.t).toISOString(),
       open: bar.o,
       high: bar.h,
@@ -537,6 +576,93 @@ app.openapi(indicatorsRoute, async (c) => {
     const message = error instanceof Error ? error.message : "Unknown error";
     throw new HTTPException(503, {
       message: `Failed to calculate indicators for ${upperSymbol}: ${message}`,
+    });
+  }
+});
+
+// GET /regime - Current market regime
+const regimeRoute = createRoute({
+  method: "get",
+  path: "/regime",
+  responses: {
+    200: {
+      content: { "application/json": { schema: RegimeStatusSchema } },
+      description: "Current market regime",
+    },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Market data service unavailable",
+    },
+  },
+  tags: ["Market"],
+});
+
+app.openapi(regimeRoute, async (c) => {
+  const cacheKey = "regime:market";
+  const cached = getCached<z.infer<typeof RegimeStatusSchema>>(cacheKey);
+  if (cached) {
+    return c.json(cached, 200);
+  }
+
+  try {
+    const repo = await getRegimeLabelsRepo();
+    // Try _MARKET first, then SPY
+    let regimeData = await repo.getCurrent("_MARKET", "1d");
+    if (!regimeData) {
+      regimeData = await repo.getCurrent("SPY", "1d");
+    }
+
+    // Get VIX
+    let vix = 0;
+    try {
+      const client = getPolygonClient();
+      const response = await client.getPreviousClose("I:VIX");
+      if (response.results?.[0]) {
+        vix = response.results[0].c;
+      }
+    } catch {
+      // ignore
+    }
+
+    const mapRegime = (
+      r: string
+    ): "BULL_TREND" | "BEAR_TREND" | "RANGE" | "HIGH_VOL" | "LOW_VOL" => {
+      const upper = r.toUpperCase();
+      if (upper.includes("BULL")) {
+        return "BULL_TREND";
+      }
+      if (upper.includes("BEAR")) {
+        return "BEAR_TREND";
+      }
+      if (upper.includes("RANGE")) {
+        return "RANGE";
+      }
+      if (upper.includes("HIGH")) {
+        return "HIGH_VOL";
+      }
+      if (upper.includes("LOW")) {
+        return "LOW_VOL";
+      }
+      return "RANGE";
+    };
+
+    const status: z.infer<typeof RegimeStatusSchema> = {
+      label: regimeData ? mapRegime(regimeData.regime) : "RANGE",
+      confidence: regimeData?.confidence ?? 0,
+      vix,
+      sectorRotation: {},
+      updatedAt: regimeData?.timestamp ?? new Date().toISOString(),
+    };
+
+    setCache(cacheKey, status);
+    return c.json(status, 200);
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new HTTPException(503, {
+      message: `Failed to fetch market regime: ${message}`,
     });
   }
 });
