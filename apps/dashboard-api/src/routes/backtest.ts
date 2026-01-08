@@ -17,6 +17,63 @@ import type { Backtest, BacktestEquityPoint, BacktestTrade } from "@cream/storag
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { getBacktestsRepo } from "../db.js";
+import { cleanupBacktestData, prepareAllBacktestData } from "../services/backtest-data.js";
+import { executeBacktest } from "../services/backtest-executor.js";
+import { broadcastToBacktest } from "../websocket/handler.js";
+
+// ============================================
+// Background Execution
+// ============================================
+
+/**
+ * Run backtest execution in the background.
+ * This is fire-and-forget - errors are logged but not propagated.
+ */
+async function runBacktestInBackground(
+  backtest: Backtest,
+  repo: Awaited<ReturnType<typeof getBacktestsRepo>>
+): Promise<void> {
+  let dataPaths: Awaited<ReturnType<typeof prepareAllBacktestData>> | null = null;
+
+  try {
+    // Prepare data files (OHLCV and signals)
+    dataPaths = await prepareAllBacktestData(backtest);
+
+    // Execute backtest with WebSocket broadcasting
+    await executeBacktest(
+      {
+        backtestId: backtest.id,
+        dataPath: dataPaths.dataPath,
+        signalsPath: dataPaths.signalsPath,
+        initialCapital: backtest.initialCapital,
+        slippageBps: (backtest.config?.slippageBps as number) ?? 5,
+        symbol: backtest.universe[0] ?? "PORTFOLIO",
+      },
+      repo,
+      (backtestId, message) => {
+        broadcastToBacktest(backtestId, message as Parameters<typeof broadcastToBacktest>[1]);
+      }
+    );
+  } catch (error) {
+    // Log the error but don't rethrow - this is fire-and-forget
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Backtest ${backtest.id} failed:`, errorMessage);
+
+    // Ensure database is updated with failure
+    try {
+      await repo.fail(backtest.id, errorMessage);
+    } catch {
+      console.error(`Failed to update backtest ${backtest.id} status to failed`);
+    }
+  } finally {
+    // Clean up temp files
+    if (dataPaths) {
+      cleanupBacktestData(dataPaths).catch(() => {
+        // Ignore cleanup errors
+      });
+    }
+  }
+}
 
 // ============================================
 // App Setup
@@ -282,8 +339,11 @@ app.openapi(createBacktestRoute, async (c) => {
       config: body.config,
     });
 
-    // Note: In a full implementation, we would queue the backtest job here
-    // For now, we just create the record in pending state
+    // Fire-and-forget backtest execution
+    // Prepare data and run backtest in background, don't await
+    runBacktestInBackground(backtest, repo).catch(() => {
+      // Errors are logged inside the function, we just prevent unhandled rejection
+    });
 
     return c.json(mapBacktestToSummary(backtest), 201);
   } catch (error) {
