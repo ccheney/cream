@@ -77,6 +77,14 @@ export {
   validateTimestamp,
   validateTimestampConsistency,
 } from "./clock";
+// Execution context (replaces ambient CREAM_ENV with explicit context)
+export {
+  createContext,
+  EXECUTION_SOURCES,
+  type ExecutionContext,
+  type ExecutionSource,
+  isValidExecutionSource,
+} from "./context";
 // Contract testing
 export {
   // Types
