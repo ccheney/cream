@@ -301,7 +301,19 @@ describe("Backtest Data Service", () => {
 // Signal Generation Logic Tests
 // ============================================
 
-describe("Signal Generation", () => {
+// Check if uv is available - needed for writeParquet which spawns Python
+function isUvAvailable(): boolean {
+  try {
+    const proc = Bun.spawnSync(["which", "uv"]);
+    return proc.exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+const uvAvailable = isUvAvailable();
+
+describe.skipIf(!uvAvailable)("Signal Generation", () => {
   beforeEach(() => {
     // Provide enough data for SMA calculations (need at least 30 bars)
     const bars = Array.from({ length: 50 }, (_, i) => ({
