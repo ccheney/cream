@@ -443,25 +443,12 @@ export {
   type TargetRegime,
   TargetRegimeSchema,
 } from "./factor-zoo";
-// gRPC client exports
-// Note: GrpcError class from ./grpc conflicts with GrpcError interface from ./errors
-// Import directly from "@cream/domain/grpc" if you need the gRPC error class
-export {
-  createExecutionClient,
-  createMarketDataClient,
-  DEFAULT_GRPC_CONFIG,
-  ExecutionServiceClient,
-  type GetOptionChainInput,
-  type GetSnapshotInput,
-  type GrpcCallMetadata,
-  type GrpcCallResult,
-  type GrpcClientConfig,
-  isRetryableErrorCode,
-  MarketDataServiceClient,
-  RetryBackoff,
-  type SubscribeMarketDataInput,
-  sleep,
-} from "./grpc/index.js";
+// gRPC client exports - NOT re-exported from main index to avoid build-time
+// dependency on @cream/schema-gen subpath exports which have CI issues.
+// Import directly from "@cream/domain/grpc" instead:
+//
+//   import { createExecutionClient, GrpcError } from "@cream/domain/grpc";
+//
 // Indicator synthesis types
 export {
   type CreateIndicatorICHistoryInput,

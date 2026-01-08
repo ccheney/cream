@@ -18,8 +18,6 @@
 
 import type { Position } from "@cream/broker";
 import {
-  createExecutionClient,
-  type ExecutionServiceClient,
   env,
   type MarketSnapshot,
   type MarketStatus,
@@ -27,6 +25,7 @@ import {
   type SymbolSnapshot,
   type UniverseConfig,
 } from "@cream/domain";
+import { createExecutionClient, type ExecutionServiceClient } from "@cream/domain/grpc";
 import type { Candle } from "@cream/indicators";
 import { createPolygonClientFromEnv, type PolygonClient, type Snapshot } from "@cream/marketdata";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
