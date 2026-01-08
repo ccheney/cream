@@ -497,6 +497,37 @@ service MarketDataService {
 **Key Tables:**
 
 ```sql
+-- Runtime configuration (Plan 22)
+CREATE TABLE trading_config (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  max_consensus_iterations INTEGER DEFAULT 3,
+  conviction_delta_hold REAL DEFAULT 0.2,
+  conviction_delta_action REAL DEFAULT 0.3,
+  min_risk_reward_ratio REAL DEFAULT 1.5,
+  status TEXT DEFAULT 'draft',  -- draft | testing | active | archived
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE agent_configs (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,
+  agent_type TEXT NOT NULL,
+  model TEXT NOT NULL,
+  temperature REAL NOT NULL,
+  system_prompt_override TEXT,
+  enabled INTEGER DEFAULT 1
+);
+
+CREATE TABLE universe_configs (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,
+  source TEXT NOT NULL,  -- static | index | screener
+  static_symbols TEXT,   -- JSON array
+  status TEXT DEFAULT 'draft'
+);
+
 -- Cycle tracking
 CREATE TABLE cycles (
   id TEXT PRIMARY KEY,
@@ -1030,10 +1061,31 @@ class MarketDataStreamer {
 | `/api/decisions/:cycleId` | GET | Specific cycle |
 | `/api/agents/status` | GET | Agent health |
 | `/api/settings` | GET/PUT | Configuration |
+| `/api/config/draft` | GET/PUT | Draft config editing |
+| `/api/config/promote` | POST | Promote config (PAPER → LIVE) |
+| `/api/system/trigger-cycle` | POST | On-demand OODA cycle |
+| `/api/backtest` | POST | Create & execute backtest |
 
 ---
 
 ## 11. Python Services
+
+### packages/research/ - Backtesting
+
+**VectorBT Runner** (`cream/backtest/runner.py`):
+- Standalone Python script spawned as subprocess
+- Streams JSON events over stdout (progress, trades, equity, completion)
+- No gRPC required - works in docker-compose
+
+```python
+# Usage (called from dashboard-api)
+python -m cream.backtest.runner --config '{"backtestId": "...", "dataPath": "..."}'
+
+# Output: One JSON object per line
+{"type": "progress", "pct": 30, "phase": "running_simulation"}
+{"type": "trade", "timestamp": "...", "symbol": "AAPL", ...}
+{"type": "completed", "metrics": {"sharpeRatio": 1.2, ...}}
+```
 
 ### apps/evals/ - Agent Evaluations
 
@@ -1319,7 +1371,11 @@ cargo cov-html              # Rust → coverage/
 | Dashboard | `/apps/dashboard/src/` |
 | API routes | `/apps/dashboard-api/src/routes/` |
 | Alerts | `/packages/infra/prometheus/alerts.yml` |
+| Runtime config service | `/packages/config/src/runtime-config.ts` |
+| Backtest runner | `/packages/research/cream/backtest/runner.py` |
+| Config editor | `/apps/dashboard/src/app/(auth)/config/edit/` |
+| Config promotion | `/apps/dashboard/src/app/(auth)/config/promote/` |
 
 ---
 
-*This document is auto-maintained. Last generated: 2026-01-06*
+*This document is auto-maintained. Last generated: 2026-01-08*

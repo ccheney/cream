@@ -51,7 +51,7 @@ packages/
   dashboard-types/      # Shared dashboard/API types
   tsconfig/             # Shared TypeScript configs
   infra/                # Prometheus, Alertmanager configs
-  research/             # Python backtesting (VectorBT, NautilusTrader)
+  research/             # Python backtesting (VectorBT subprocess runner)
 ```
 
 ## Commands
@@ -141,6 +141,16 @@ TAVILY_API_KEY=              # Tavily API key for web search
 # Dashboard API
 ALLOWED_ORIGINS=             # Comma-separated CORS origins (default: localhost:3000,3001)
 ```
+
+## Runtime Configuration
+
+All runtime config is stored in the database (no YAML files):
+
+- `trading_config` - Consensus thresholds, position sizing, risk/reward
+- `agent_configs` - Model selection, temperature, prompt overrides
+- `universe_configs` - Symbol sources, filters, include/exclude lists
+
+Config promotion workflow: **DRAFT → PAPER → LIVE** (via dashboard UI)
 
 ### Startup Validation
 

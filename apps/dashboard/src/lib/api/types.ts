@@ -549,9 +549,22 @@ export interface ValidationResult {
 }
 
 export interface ConfigHistoryEntry {
-  tradingConfig: RuntimeTradingConfig;
-  changedAt: string;
+  /** Unique version identifier */
+  id: string;
+  /** Version number (sequential) */
+  version: number;
+  /** Full configuration snapshot */
+  config: FullRuntimeConfig;
+  /** When this version was created */
+  createdAt: string;
+  /** Who created this version */
+  createdBy?: string;
+  /** Whether this is the active version */
+  isActive: boolean;
+  /** Changed fields from previous version */
   changedFields: string[];
+  /** Optional description of the change */
+  description?: string;
 }
 
 export interface SaveDraftInput {

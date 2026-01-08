@@ -129,11 +129,21 @@ Next.js 16 React 19 frontend with Turbopack HMR.
 **Entry**: `bun run dev`
 **Port**: 3000
 
+**Key Pages**:
+- `/config/edit` - Edit draft configuration
+- `/config/promote` - Test-and-promote workflow (PAPER → LIVE)
+- `/backtest` - Self-service backtesting with real-time progress
+
 ### Dashboard API (`apps/dashboard-api`)
 Hono REST + WebSocket API with JWT auth and OpenAPI docs.
 
 **Entry**: `PORT=3001 bun run --watch src/index.ts`
 **Endpoints**: `/health`, `/api/*`, `/ws`, `/docs`
+
+**Key Services**:
+- Runtime config management (draft → paper → live promotion)
+- Backtest execution via Python subprocess (VectorBT)
+- WebSocket streaming for real-time progress updates
 
 ### Execution Engine (`apps/execution-engine`)
 Rust gRPC server for deterministic order validation and routing (~36,115 lines).
@@ -200,6 +210,7 @@ DeepEval agent evaluation framework with LLM-as-Judge.
 | Package | Purpose |
 |---------|---------|
 | `@cream/validation` | Research→production parity checks |
+| `@cream/research` | Python backtesting (VectorBT runner, subprocess execution) |
 
 ---
 
@@ -235,6 +246,8 @@ DeepEval agent evaluation framework with LLM-as-Judge.
 **Migration 005**: index_constituents, ticker_changes, universe_snapshots
 
 **Migration 006**: prediction_market_snapshots, prediction_market_signals, prediction_market_arbitrage
+
+**Migration 011**: trading_config, agent_configs, universe_configs (runtime config)
 
 ---
 
@@ -469,6 +482,38 @@ cargo build --release
 # Python
 uv pip install -e "."
 ```
+
+---
+
+## Configuration System
+
+Runtime configuration is stored in the database (no YAML files):
+
+### Config Promotion Workflow
+```
+DRAFT (editing) → PAPER (testing) → LIVE (production)
+```
+
+- Edit configs in DRAFT state via dashboard
+- "Test in Paper" triggers on-demand OODA cycle
+- "Promote to Live" publishes tested config
+- Rollback to previous versions supported
+
+### Config Tables
+- `trading_config` - Consensus thresholds, position sizing, risk/reward
+- `agent_configs` - Model selection, temperature, prompt overrides
+- `universe_configs` - Symbol sources, filters, include/exclude lists
+
+---
+
+## Backtesting
+
+Self-service backtesting from dashboard:
+
+- **Engine**: VectorBT via Python subprocess
+- **Progress**: Real-time WebSocket updates
+- **Data**: Historical OHLCV via @cream/marketdata → Parquet
+- **Results**: Stored in Turso (trades, equity curve, metrics)
 
 ---
 
