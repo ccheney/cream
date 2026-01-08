@@ -1,34 +1,74 @@
 /**
  * Auth Context
  *
- * Provides authentication state and methods to the app.
- * Uses httpOnly cookies for secure token storage.
+ * Provides authentication state and methods using better-auth.
+ * Simplified to authentication-only (no role-based access control).
  *
- * @see docs/plans/ui/09-security.md
+ * @see docs/plans/30-better-auth-migration.md
  */
 
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { get, post } from "@/lib/api/client";
-import type { AuthUser, LoginResponse, MFAVerifyResponse, SessionResponse } from "@/lib/api/types";
+import { createContext, useCallback, useContext, useMemo } from "react";
+import { authClient, twoFactor as twoFactorClient, useSession } from "@/lib/auth-client";
 
 // ============================================
 // Types
 // ============================================
 
-interface AuthState {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  mfaRequired: boolean;
+/**
+ * User type from better-auth session.
+ * Note: No role field - all authenticated users have full access.
+ */
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  emailVerified: boolean;
+  twoFactorEnabled?: boolean;
 }
 
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<LoginResponse>;
+interface AuthContextValue {
+  /** The authenticated user, or null if not logged in */
+  user: AuthUser | null;
+  /** Whether the user is authenticated */
+  isAuthenticated: boolean;
+  /** Whether the session is loading */
+  isLoading: boolean;
+  /** Whether 2FA is enabled for the current user */
+  twoFactorEnabled: boolean;
+  /** Authentication error, if any */
+  error: Error | null;
+  /** Sign in with Google OAuth */
+  signInWithGoogle: () => Promise<void>;
+  /** Sign out the current user */
+  signOut: () => Promise<void>;
+  /** Verify 2FA TOTP code during login */
+  verifyTwoFactor: (code: string) => Promise<boolean>;
+  /** Manually refresh the session */
+  refreshSession: () => void;
+
+  // ============================================
+  // Legacy compatibility aliases
+  // ============================================
+
+  /**
+   * @deprecated Use signInWithGoogle instead
+   */
+  login: (email: string, password: string) => Promise<void>;
+  /**
+   * @deprecated Use signOut instead
+   */
   logout: () => Promise<void>;
+  /**
+   * @deprecated Use verifyTwoFactor instead
+   */
   verifyMFA: (code: string) => Promise<void>;
-  refreshSession: () => Promise<void>;
+  /**
+   * @deprecated Roles have been removed - all users have full access
+   */
+  mfaRequired: boolean;
 }
 
 // ============================================
@@ -46,117 +86,95 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    mfaRequired: false,
-  });
+  const { data: session, isPending, error, refetch } = useSession();
 
-  const checkSession = useCallback(async () => {
-    try {
-      const { data } = await get<SessionResponse>("/api/auth/session");
-
-      if (data.authenticated && data.user) {
-        setState({
-          user: data.user,
-          isAuthenticated: true,
-          isLoading: false,
-          mfaRequired: false,
-        });
-      } else {
-        setState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          mfaRequired: false,
-        });
+  // Map better-auth user to AuthUser type
+  const user: AuthUser | null = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name ?? null,
+        image: session.user.image ?? null,
+        emailVerified: session.user.emailVerified ?? false,
+        twoFactorEnabled: (session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled,
       }
-    } catch {
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        mfaRequired: false,
-      });
-    }
+    : null;
+
+  const twoFactorEnabled = user?.twoFactorEnabled ?? false;
+
+  // Sign in with Google OAuth
+  const signInWithGoogle = useCallback(async () => {
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
   }, []);
 
-  // Check session on mount
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
-
-  const login = useCallback(async (email: string, password: string): Promise<LoginResponse> => {
-    const { data } = await post<LoginResponse>("/api/auth/login", { email, password });
-
-    if (data.mfaRequired) {
-      setState((prev) => ({
-        ...prev,
-        mfaRequired: true,
-      }));
-    } else {
-      setState({
-        user: {
-          ...data.user,
-          mfaVerified: false,
-        },
-        isAuthenticated: true,
-        isLoading: false,
-        mfaRequired: false,
-      });
-    }
-
-    return data;
+  // Sign out
+  const handleSignOut = useCallback(async () => {
+    await authClient.signOut();
+    // Redirect to login page
+    window.location.href = "/login";
   }, []);
 
-  const logout = useCallback(async () => {
+  // Verify 2FA TOTP code during login
+  const verifyTwoFactor = useCallback(async (code: string) => {
     try {
-      await post<{ success: boolean }>("/api/auth/logout");
-    } finally {
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        mfaRequired: false,
-      });
+      await twoFactorClient.verifyTotp({ code });
+      return true;
+    } catch {
+      return false;
     }
   }, []);
 
-  const verifyMFA = useCallback(
-    async (code: string) => {
-      await post<MFAVerifyResponse>("/api/auth/mfa/verify", { code });
-
-      // Refresh session to get updated user data
-      await checkSession();
+  // Legacy compatibility: login (deprecated - redirects to Google OAuth)
+  const legacyLogin = useCallback(
+    async (_email: string, _password: string) => {
+      // Email/password login is deprecated - redirect to Google OAuth
+      await signInWithGoogle();
     },
-    [checkSession]
+    [signInWithGoogle]
   );
 
-  const refreshSession = useCallback(async () => {
-    try {
-      await post<{ success: boolean }>("/api/auth/refresh");
-      await checkSession();
-    } catch {
-      // Session refresh failed, user needs to re-login
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        mfaRequired: false,
-      });
-    }
-  }, [checkSession]);
+  // Legacy compatibility: verifyMFA (deprecated - redirects to verifyTwoFactor)
+  const legacyVerifyMFA = useCallback(
+    async (code: string) => {
+      // verifyMFA is deprecated - use verifyTwoFactor
+      await verifyTwoFactor(code);
+    },
+    [verifyTwoFactor]
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      ...state,
-      login,
-      logout,
-      verifyMFA,
-      refreshSession,
+      user,
+      isAuthenticated: !!session?.user,
+      isLoading: isPending,
+      twoFactorEnabled,
+      error: error ?? null,
+      signInWithGoogle,
+      signOut: handleSignOut,
+      verifyTwoFactor,
+      refreshSession: refetch,
+      // Legacy compatibility
+      login: legacyLogin,
+      logout: handleSignOut,
+      verifyMFA: legacyVerifyMFA,
+      mfaRequired: false, // Deprecated - always false
     }),
-    [state, login, logout, verifyMFA, refreshSession]
+    [
+      user,
+      session?.user,
+      isPending,
+      twoFactorEnabled,
+      error,
+      signInWithGoogle,
+      handleSignOut,
+      verifyTwoFactor,
+      refetch,
+      legacyLogin,
+      legacyVerifyMFA,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
