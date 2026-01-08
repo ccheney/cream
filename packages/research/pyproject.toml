@@ -43,6 +43,10 @@ dependencies = [
     "optionlab>=1.5",  # Options strategy analysis and visualization
 ]
 
+[tool.setuptools.packages.find]
+include = ["research*"]
+exclude = ["apps*", "coverage*", "tests*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

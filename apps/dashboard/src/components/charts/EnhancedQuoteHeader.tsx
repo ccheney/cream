@@ -155,7 +155,7 @@ const DayRange = memo(function DayRange({ current, low, high }: DayRangeProps) {
 
         {/* Current price marker */}
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-cream-900 dark:bg-cream-100 rounded-full border-2 border-white dark:border-night-800 shadow-md"
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-stone-700 dark:bg-night-200 rounded-full border-2 border-white dark:border-night-800 shadow-md"
           initial={{ left: "50%" }}
           animate={{ left: `${Math.min(Math.max(position, 5), 95)}%` }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}

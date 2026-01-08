@@ -128,7 +128,7 @@ export default function BacktestPage() {
               type="button"
               onClick={handleCreateBacktest}
               disabled={createBacktest.isPending}
-              className="w-full px-4 py-1.5 bg-cream-900 dark:bg-cream-100 text-cream-100 dark:text-cream-900 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="w-full px-4 py-1.5 bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {createBacktest.isPending ? "Creating..." : "Run Backtest"}
             </button>
