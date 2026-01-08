@@ -1,16 +1,20 @@
 /**
  * WebSocket Security Tests
  *
- * Tests for authentication, authorization, and rate limiting.
+ * Tests for authentication and rate limiting.
+ * Role-based authorization has been removed - all authenticated users
+ * have access to all channels.
  *
  * @see docs/plans/ui/06-websocket.md
+ * @see docs/plans/30-better-auth-migration.md
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
 import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
+import type { Session } from "../auth/better-auth.js";
 import {
+  ALLOWED_ORIGINS,
   addAllowedOrigin,
-  CHANNEL_PERMISSIONS,
   CONNECTION_LIMITS,
   canAccessChannel,
   canAccessChannels,
@@ -20,14 +24,12 @@ import {
   checkSubscriptionSecurity,
   checkSymbolSubscriptionSecurity,
   clearAuditLog,
+  connectionTracker,
   createConnectionTracker,
   createRateLimiter,
   createSymbolTracker,
-  decodeTokenPayload,
   filterAccessibleChannels,
   getAuditLog,
-  isTokenExpired,
-  isTokenExpiringSoon,
   logSecurityEvent,
   messageRateLimiterMinute,
   RATE_LIMITS,
@@ -35,218 +37,112 @@ import {
   type SecurityEventType,
   subscribeRateLimiter,
   symbolTracker,
-  type TokenErrorCode,
-  type UserRole,
   validateOrigin,
-  validateToken,
 } from "./security";
 
 // ============================================
-// Token Validation Tests
+// Test Helpers
 // ============================================
 
-describe("validateToken", () => {
-  it("rejects null token", () => {
-    const result = validateToken(null);
-    expect(result.valid).toBe(false);
-    expect(result.errorCode).toBe("MISSING_TOKEN");
-  });
-
-  it("rejects empty token", () => {
-    const result = validateToken("");
-    expect(result.valid).toBe(false);
-    expect(result.errorCode).toBe("MISSING_TOKEN");
-  });
-
-  it("rejects short token", () => {
-    const result = validateToken("short");
-    expect(result.valid).toBe(false);
-    expect(result.errorCode).toBe("INVALID_FORMAT");
-  });
-
-  it("strips Bearer prefix", () => {
-    const token = "Bearer somevalidtoken123";
-    const result = validateToken(token);
-    expect(result.valid).toBe(true);
-    expect(result.userId).toBeDefined();
-  });
-
-  it("accepts token without Bearer prefix", () => {
-    const token = "somevalidtoken123";
-    const result = validateToken(token);
-    expect(result.valid).toBe(true);
-  });
-
-  it("returns userId on success", () => {
-    const token = "user123.user.9999999999";
-    const result = validateToken(token);
-    expect(result.valid).toBe(true);
-    expect(result.userId).toBe("user123");
-  });
-
-  it("returns role on success", () => {
-    const token = "user123.admin.9999999999";
-    const result = validateToken(token);
-    expect(result.valid).toBe(true);
-    expect(result.role).toBe("admin");
-  });
-
-  it("returns expiresAt on success", () => {
-    const exp = Math.floor(Date.now() / 1000) + 3600;
-    const token = `user123.user.${exp}`;
-    const result = validateToken(token);
-    expect(result.valid).toBe(true);
-    expect(result.expiresAt).toBeInstanceOf(Date);
-  });
-
-  it("rejects expired token", () => {
-    const expiredTime = Math.floor(Date.now() / 1000) - 100;
-    const token = `user123.user.${expiredTime}`;
-    const result = validateToken(token);
-    expect(result.valid).toBe(false);
-    expect(result.errorCode).toBe("EXPIRED");
-  });
-});
-
-describe("decodeTokenPayload", () => {
-  it("parses structured token", () => {
-    const exp = Math.floor(Date.now() / 1000) + 3600;
-    const payload = decodeTokenPayload(`user123.admin.${exp}`);
-    expect(payload.sub).toBe("user123");
-    expect(payload.role).toBe("admin");
-    expect(payload.exp).toBe(exp);
-  });
-
-  it("returns default payload for unstructured token", () => {
-    const payload = decodeTokenPayload("randomtoken12345");
-    expect(payload.sub).toMatch(/^user-/);
-    expect(payload.role).toBe("user");
-    expect(payload.exp).toBeGreaterThan(Date.now() / 1000);
-  });
-});
-
-describe("isTokenExpiringSoon", () => {
-  it("returns true when expiring within warning period", () => {
-    const expiresAt = new Date(Date.now() + 20000); // 20 seconds
-    expect(isTokenExpiringSoon(expiresAt)).toBe(true);
-  });
-
-  it("returns false when not expiring soon", () => {
-    const expiresAt = new Date(Date.now() + 300000); // 5 minutes
-    expect(isTokenExpiringSoon(expiresAt)).toBe(false);
-  });
-
-  it("returns false when already expired", () => {
-    const expiresAt = new Date(Date.now() - 1000);
-    expect(isTokenExpiringSoon(expiresAt)).toBe(false);
-  });
-});
-
-describe("isTokenExpired", () => {
-  it("returns true for past date", () => {
-    const expiresAt = new Date(Date.now() - 1000);
-    expect(isTokenExpired(expiresAt)).toBe(true);
-  });
-
-  it("returns false for future date", () => {
-    const expiresAt = new Date(Date.now() + 1000);
-    expect(isTokenExpired(expiresAt)).toBe(false);
-  });
-});
+/**
+ * Create a mock session for testing.
+ */
+function createMockSession(userId = "user-123"): Session {
+  return {
+    session: {
+      id: "session-123",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      userId,
+      expiresAt: new Date(Date.now() + 3600000),
+      token: "mock-token",
+    },
+    user: {
+      id: userId,
+      email: "test@example.com",
+      name: "Test User",
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      twoFactorEnabled: false,
+    },
+  };
+}
 
 // ============================================
-// Channel Authorization Tests
+// Channel Authorization Tests (Simplified)
 // ============================================
 
 describe("canAccessChannel", () => {
-  it("allows user to access quotes", () => {
-    const result = canAccessChannel("quotes", "user");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("allows user to access orders", () => {
-    const result = canAccessChannel("orders", "user");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("allows user to access decisions", () => {
-    const result = canAccessChannel("decisions", "user");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("denies user access to agents", () => {
-    const result = canAccessChannel("agents", "user");
-    expect(result.authorized).toBe(false);
-    expect(result.reason).toContain("Insufficient permissions");
-  });
-
-  it("denies user access to cycles", () => {
-    const result = canAccessChannel("cycles", "user");
-    expect(result.authorized).toBe(false);
-  });
-
-  it("denies user access to system", () => {
-    const result = canAccessChannel("system", "user");
-    expect(result.authorized).toBe(false);
-  });
-
-  it("allows admin to access agents", () => {
-    const result = canAccessChannel("agents", "admin");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("allows admin to access cycles", () => {
-    const result = canAccessChannel("cycles", "admin");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("allows admin to access system", () => {
-    const result = canAccessChannel("system", "admin");
-    expect(result.authorized).toBe(true);
-  });
-
-  it("allows admin to access all channels", () => {
+  it("allows authenticated user to access any channel", () => {
+    const session = createMockSession();
     const channels: Channel[] = [
       "quotes",
+      "trades",
+      "options",
       "orders",
       "decisions",
       "agents",
       "cycles",
+      "backtests",
       "alerts",
       "system",
       "portfolio",
     ];
+
     for (const channel of channels) {
-      const result = canAccessChannel(channel, "admin");
+      const result = canAccessChannel(channel, session);
       expect(result.authorized).toBe(true);
     }
+  });
+
+  it("denies unauthenticated user", () => {
+    const result = canAccessChannel("quotes", null);
+    expect(result.authorized).toBe(false);
+    expect(result.reason).toBe("Authentication required");
   });
 });
 
 describe("canAccessChannels", () => {
-  it("returns map of results", () => {
-    const channels: Channel[] = ["quotes", "agents"];
-    const results = canAccessChannels(channels, "user");
-    expect(results.size).toBe(2);
+  it("returns map of results for authenticated user", () => {
+    const session = createMockSession();
+    const channels: Channel[] = ["quotes", "agents", "system"];
+    const results = canAccessChannels(channels, session);
+
+    expect(results.size).toBe(3);
     expect(results.get("quotes")?.authorized).toBe(true);
+    expect(results.get("agents")?.authorized).toBe(true);
+    expect(results.get("system")?.authorized).toBe(true);
+  });
+
+  it("returns map of denied results for unauthenticated user", () => {
+    const channels: Channel[] = ["quotes", "agents"];
+    const results = canAccessChannels(channels, null);
+
+    expect(results.size).toBe(2);
+    expect(results.get("quotes")?.authorized).toBe(false);
     expect(results.get("agents")?.authorized).toBe(false);
   });
 });
 
 describe("filterAccessibleChannels", () => {
-  it("filters to accessible channels for user", () => {
+  it("returns all channels for authenticated user", () => {
+    const session = createMockSession();
     const channels: Channel[] = ["quotes", "agents", "orders", "system"];
-    const filtered = filterAccessibleChannels(channels, "user");
+    const filtered = filterAccessibleChannels(channels, session);
+
+    expect(filtered.length).toBe(4);
     expect(filtered).toContain("quotes");
+    expect(filtered).toContain("agents");
     expect(filtered).toContain("orders");
-    expect(filtered).not.toContain("agents");
-    expect(filtered).not.toContain("system");
+    expect(filtered).toContain("system");
   });
 
-  it("returns all channels for admin", () => {
+  it("returns empty array for unauthenticated user", () => {
     const channels: Channel[] = ["quotes", "agents", "orders", "system"];
-    const filtered = filterAccessibleChannels(channels, "admin");
-    expect(filtered.length).toBe(4);
+    const filtered = filterAccessibleChannels(channels, null);
+
+    expect(filtered.length).toBe(0);
   });
 });
 
@@ -479,7 +375,7 @@ describe("logSecurityEvent", () => {
       userId: "user-123",
       connectionId: "conn-456",
       success: false,
-      reason: "Invalid token",
+      reason: "No valid session",
     });
     const log = getAuditLog();
     const firstEntry = log[0];
@@ -487,7 +383,7 @@ describe("logSecurityEvent", () => {
     expect(firstEntry?.userId).toBe("user-123");
     expect(firstEntry?.connectionId).toBe("conn-456");
     expect(firstEntry?.success).toBe(false);
-    expect(firstEntry?.reason).toBe("Invalid token");
+    expect(firstEntry?.reason).toBe("No valid session");
   });
 });
 
@@ -545,34 +441,42 @@ describe("getAuditLog", () => {
 describe("checkConnectionSecurity", () => {
   beforeEach(() => {
     clearAuditLog();
+    // Reset connection tracker for the test user
+    for (let i = 0; i < 10; i++) {
+      connectionTracker.removeConnection("user-123", `conn-${i}`);
+    }
   });
 
   it("rejects invalid origin", () => {
-    const result = checkConnectionSecurity("validtoken123", "user-1", "https://evil.com");
+    const session = createMockSession();
+    const result = checkConnectionSecurity(session, "https://evil.com");
     expect(result.allowed).toBe(false);
     expect(result.error).toBe("Invalid origin");
   });
 
-  it("rejects invalid token", () => {
-    const result = checkConnectionSecurity(null, "user-1", "http://localhost:3000");
+  it("rejects null session", () => {
+    const result = checkConnectionSecurity(null, "http://localhost:3000");
     expect(result.allowed).toBe(false);
-    expect(result.error).toContain("Missing");
+    expect(result.error).toBe("Authentication required");
   });
 
   it("accepts valid connection", () => {
-    const exp = Math.floor(Date.now() / 1000) + 3600;
-    const token = `user123.user.${exp}`;
-    const result = checkConnectionSecurity(token, "user-1", "http://localhost:3000");
+    const session = createMockSession();
+    const result = checkConnectionSecurity(session, "http://localhost:3000");
     expect(result.allowed).toBe(true);
-    expect(result.tokenResult?.valid).toBe(true);
   });
 
-  it("logs audit event", () => {
-    const exp = Math.floor(Date.now() / 1000) + 3600;
-    const token = `user123.user.${exp}`;
-    checkConnectionSecurity(token, "user-1", "http://localhost:3000");
+  it("logs audit event for accepted connection", () => {
+    const session = createMockSession();
+    checkConnectionSecurity(session, "http://localhost:3000");
     const log = getAuditLog();
     expect(log.some((e) => e.eventType === "connection.accepted")).toBe(true);
+  });
+
+  it("logs audit event for rejected connection", () => {
+    checkConnectionSecurity(null, "http://localhost:3000");
+    const log = getAuditLog();
+    expect(log.some((e) => e.eventType === "auth.failure")).toBe(true);
   });
 });
 
@@ -582,30 +486,34 @@ describe("checkSubscriptionSecurity", () => {
     subscribeRateLimiter.reset("conn-test");
   });
 
-  it("filters to authorized channels", () => {
-    const result = checkSubscriptionSecurity("conn-test", "user-1", "user", [
-      "quotes",
-      "agents",
-      "orders",
-    ]);
+  it("allows all channels for authenticated user", () => {
+    const session = createMockSession();
+    const result = checkSubscriptionSecurity("conn-test", session, ["quotes", "agents", "system"]);
+
+    expect(result.allowed).toBe(true);
     expect(result.authorizedChannels).toContain("quotes");
-    expect(result.authorizedChannels).toContain("orders");
-    expect(result.authorizedChannels).not.toContain("agents");
-  });
-
-  it("returns errors for unauthorized channels", () => {
-    const result = checkSubscriptionSecurity("conn-test", "user-1", "user", ["agents", "system"]);
-    expect(result.errors.length).toBeGreaterThan(0);
-  });
-
-  it("allows admin all channels", () => {
-    const result = checkSubscriptionSecurity("conn-test", "admin-1", "admin", [
-      "quotes",
-      "agents",
-      "system",
-    ]);
-    expect(result.authorizedChannels.length).toBe(3);
+    expect(result.authorizedChannels).toContain("agents");
+    expect(result.authorizedChannels).toContain("system");
     expect(result.errors.length).toBe(0);
+  });
+
+  it("rejects unauthenticated user", () => {
+    const result = checkSubscriptionSecurity("conn-test", null, ["quotes"]);
+    expect(result.allowed).toBe(false);
+    expect(result.authorizedChannels.length).toBe(0);
+    expect(result.errors).toContain("Authentication required");
+  });
+
+  it("enforces rate limiting", () => {
+    const session = createMockSession();
+    // Exhaust rate limit
+    for (let i = 0; i < 10; i++) {
+      recordSubscribe("conn-rate-test");
+    }
+
+    const result = checkSubscriptionSecurity("conn-rate-test", session, ["quotes"]);
+    expect(result.allowed).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
   });
 });
 
@@ -656,53 +564,21 @@ describe("CONNECTION_LIMITS", () => {
   });
 });
 
-describe("CHANNEL_PERMISSIONS", () => {
-  it("has permissions for all channels", () => {
-    const channels: Channel[] = [
-      "quotes",
-      "orders",
-      "decisions",
-      "agents",
-      "cycles",
-      "alerts",
-      "system",
-      "portfolio",
-    ];
-    for (const channel of channels) {
-      expect(CHANNEL_PERMISSIONS[channel]).toBeDefined();
-      expect(Array.isArray(CHANNEL_PERMISSIONS[channel])).toBe(true);
-    }
+describe("ALLOWED_ORIGINS", () => {
+  it("includes localhost origins", () => {
+    expect(ALLOWED_ORIGINS).toContain("http://localhost:3000");
+    expect(ALLOWED_ORIGINS).toContain("http://localhost:3001");
+  });
+
+  it("includes production origins", () => {
+    expect(ALLOWED_ORIGINS).toContain("https://cream.app");
+    expect(ALLOWED_ORIGINS).toContain("https://dashboard.cream.app");
   });
 });
 
 // ============================================
 // Type Tests
 // ============================================
-
-describe("UserRole Type", () => {
-  it("includes user", () => {
-    const role: UserRole = "user";
-    expect(role).toBe("user");
-  });
-
-  it("includes admin", () => {
-    const role: UserRole = "admin";
-    expect(role).toBe("admin");
-  });
-});
-
-describe("TokenErrorCode Type", () => {
-  it("includes all error codes", () => {
-    const codes: TokenErrorCode[] = [
-      "MISSING_TOKEN",
-      "INVALID_FORMAT",
-      "EXPIRED",
-      "INVALID_SIGNATURE",
-      "MALFORMED",
-    ];
-    expect(codes.length).toBe(5);
-  });
-});
 
 describe("SecurityEventType Type", () => {
   it("includes connection events", () => {
@@ -734,11 +610,6 @@ describe("SecurityEventType Type", () => {
 // ============================================
 
 describe("Module Exports", () => {
-  it("exports validateToken", async () => {
-    const module = await import("./security");
-    expect(typeof module.validateToken).toBe("function");
-  });
-
   it("exports canAccessChannel", async () => {
     const module = await import("./security");
     expect(typeof module.canAccessChannel).toBe("function");
@@ -780,13 +651,12 @@ describe("Module Exports", () => {
     const module = await import("./security");
     expect(module.RATE_LIMITS).toBeDefined();
     expect(module.CONNECTION_LIMITS).toBeDefined();
-    expect(module.CHANNEL_PERMISSIONS).toBeDefined();
     expect(module.ALLOWED_ORIGINS).toBeDefined();
   });
 
   it("exports default object", async () => {
     const module = await import("./security");
     expect(module.default).toBeDefined();
-    expect(typeof module.default.validateToken).toBe("function");
+    expect(typeof module.default.canAccessChannel).toBe("function");
   });
 });

@@ -1,54 +1,29 @@
 /**
  * WebSocket Security Module
  *
- * Implements authentication, authorization, and rate limiting for WebSocket connections.
+ * Implements authentication and rate limiting for WebSocket connections.
+ * Role-based authorization has been removed - all authenticated users
+ * have access to all channels.
  *
  * @see docs/plans/ui/06-websocket.md lines 14-18
- * @see docs/plans/ui/09-security.md
+ * @see docs/plans/30-better-auth-migration.md
  */
 
 import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
+import type { Session } from "../auth/better-auth.js";
 
 // ============================================
 // Types
 // ============================================
 
 /**
- * User role.
+ * Authentication result.
  */
-export type UserRole = "user" | "admin";
-
-/**
- * JWT payload structure.
- */
-export interface JwtPayload {
-  sub: string; // User ID
-  role: UserRole;
-  exp: number; // Expiration timestamp (seconds)
-  iat: number; // Issued at timestamp
-}
-
-/**
- * Token validation result.
- */
-export interface TokenValidationResult {
-  valid: boolean;
+export interface AuthResult {
+  authenticated: boolean;
   userId?: string;
-  role?: UserRole;
-  expiresAt?: Date;
   error?: string;
-  errorCode?: TokenErrorCode;
 }
-
-/**
- * Token error codes.
- */
-export type TokenErrorCode =
-  | "MISSING_TOKEN"
-  | "INVALID_FORMAT"
-  | "EXPIRED"
-  | "INVALID_SIGNATURE"
-  | "MALFORMED";
 
 /**
  * Channel permission check result.
@@ -95,9 +70,7 @@ export type SecurityEventType =
   | "authorization.denied"
   | "rate_limit.exceeded"
   | "symbol_limit.exceeded"
-  | "connection_limit.exceeded"
-  | "token.expired"
-  | "token.expiring_soon";
+  | "connection_limit.exceeded";
 
 // ============================================
 // Constants
@@ -126,11 +99,6 @@ export const CONNECTION_LIMITS = {
 } as const;
 
 /**
- * Token expiration warning (seconds before expiry).
- */
-export const TOKEN_EXPIRY_WARNING_SECONDS = 30;
-
-/**
  * Allowed origins for WebSocket connections.
  */
 export const ALLOWED_ORIGINS = [
@@ -140,156 +108,19 @@ export const ALLOWED_ORIGINS = [
   "https://dashboard.cream.app",
 ];
 
-/**
- * Channel permissions by role.
- */
-export const CHANNEL_PERMISSIONS: Record<Channel, UserRole[]> = {
-  quotes: ["user", "admin"],
-  trades: ["user", "admin"],
-  options: ["user", "admin"],
-  orders: ["user", "admin"],
-  decisions: ["user", "admin"],
-  agents: ["admin"],
-  cycles: ["admin"],
-  backtests: ["user", "admin"],
-  alerts: ["user", "admin"],
-  system: ["admin"],
-  portfolio: ["user", "admin"],
-};
-
 // ============================================
-// Token Validation
+// Channel Authorization (Simplified)
 // ============================================
 
 /**
- * Validate a JWT token.
- *
- * Note: In production, use a proper JWT library (jose, jsonwebtoken).
- * This implementation provides the structure for actual JWT validation.
+ * Check if session can access channel.
+ * All authenticated users can access all channels.
  */
-export function validateToken(token: string | null): TokenValidationResult {
-  if (!token) {
-    return {
-      valid: false,
-      error: "Missing authentication token",
-      errorCode: "MISSING_TOKEN",
-    };
-  }
-
-  // Remove Bearer prefix
-  const cleanToken = token.startsWith("Bearer ") ? token.slice(7) : token;
-
-  // Check basic format
-  if (cleanToken.length < 10) {
-    return {
-      valid: false,
-      error: "Invalid token format",
-      errorCode: "INVALID_FORMAT",
-    };
-  }
-
-  // For now, use a mock implementation
-  // In production, decode and verify JWT signature
-  try {
-    const payload = decodeTokenPayload(cleanToken);
-
-    // Check expiration
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp < now) {
-      return {
-        valid: false,
-        error: "Token expired",
-        errorCode: "EXPIRED",
-      };
-    }
-
-    return {
-      valid: true,
-      userId: payload.sub,
-      role: payload.role,
-      expiresAt: new Date(payload.exp * 1000),
-    };
-  } catch {
-    return {
-      valid: false,
-      error: "Malformed token",
-      errorCode: "MALFORMED",
-    };
-  }
-}
-
-/**
- * Decode token payload (mock implementation).
- *
- * In production, use jose or jsonwebtoken to properly decode and verify.
- */
-export function decodeTokenPayload(token: string): JwtPayload {
-  // For development/testing, parse simple format: userId.role.exp
-  // e.g., "user123.user.1735999999"
-  const parts = token.split(".");
-
-  if (parts.length >= 3) {
-    const userId = parts[0];
-    const role = parts[1] as UserRole;
-    const expStr = parts[2];
-    const exp = expStr ? parseInt(expStr, 10) : NaN;
-
-    if (userId && !Number.isNaN(exp) && (role === "user" || role === "admin")) {
-      return {
-        sub: userId,
-        role,
-        exp,
-        iat: exp - 3600, // Assume 1 hour validity
-      };
-    }
-  }
-
-  // Default mock payload
-  return {
-    sub: `user-${token.slice(0, 8)}`,
-    role: "user",
-    exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-    iat: Math.floor(Date.now() / 1000),
-  };
-}
-
-/**
- * Check if token is expiring soon.
- */
-export function isTokenExpiringSoon(expiresAt: Date): boolean {
-  const now = Date.now();
-  const expiresIn = expiresAt.getTime() - now;
-  return expiresIn > 0 && expiresIn < TOKEN_EXPIRY_WARNING_SECONDS * 1000;
-}
-
-/**
- * Check if token is expired.
- */
-export function isTokenExpired(expiresAt: Date): boolean {
-  return expiresAt.getTime() < Date.now();
-}
-
-// ============================================
-// Channel Authorization
-// ============================================
-
-/**
- * Check if user role can access channel.
- */
-export function canAccessChannel(channel: Channel, role: UserRole): AuthorizationResult {
-  const allowedRoles = CHANNEL_PERMISSIONS[channel];
-
-  if (!allowedRoles) {
+export function canAccessChannel(_channel: Channel, session: Session | null): AuthorizationResult {
+  if (!session) {
     return {
       authorized: false,
-      reason: `Unknown channel: ${channel}`,
-    };
-  }
-
-  if (!allowedRoles.includes(role)) {
-    return {
-      authorized: false,
-      reason: `Insufficient permissions for channel: ${channel}`,
+      reason: "Authentication required",
     };
   }
 
@@ -297,24 +128,25 @@ export function canAccessChannel(channel: Channel, role: UserRole): Authorizatio
 }
 
 /**
- * Check if user can access multiple channels.
+ * Check if session can access multiple channels.
  */
 export function canAccessChannels(
   channels: Channel[],
-  role: UserRole
+  session: Session | null
 ): Map<Channel, AuthorizationResult> {
   const results = new Map<Channel, AuthorizationResult>();
   for (const channel of channels) {
-    results.set(channel, canAccessChannel(channel, role));
+    results.set(channel, canAccessChannel(channel, session));
   }
   return results;
 }
 
 /**
- * Filter channels to only those accessible by role.
+ * Filter channels to only those accessible by session.
+ * Returns all channels for authenticated users, empty for unauthenticated.
  */
-export function filterAccessibleChannels(channels: Channel[], role: UserRole): Channel[] {
-  return channels.filter((channel) => canAccessChannel(channel, role).authorized);
+export function filterAccessibleChannels(channels: Channel[], session: Session | null): Channel[] {
+  return session ? channels : [];
 }
 
 // ============================================
@@ -645,9 +477,6 @@ export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): 
   if (auditLog.length > MAX_AUDIT_LOG_SIZE) {
     auditLog.splice(0, auditLog.length - MAX_AUDIT_LOG_SIZE);
   }
-
-  // Note: Could log to console for immediate visibility
-  // const level = event.success ? "info" : "warn";
 }
 
 /**
@@ -703,17 +532,17 @@ export function clearAuditLog(): void {
 
 /**
  * Perform full connection security check.
+ * Simplified to authentication-only (no role checks).
  */
 export function checkConnectionSecurity(
-  token: string | null,
-  userId: string,
+  session: Session | null,
   origin: string | null
-): { allowed: boolean; error?: string; tokenResult?: TokenValidationResult } {
+): { allowed: boolean; error?: string } {
   // Validate origin
   if (!validateOrigin(origin)) {
     logSecurityEvent({
       eventType: "connection.rejected",
-      userId,
+      userId: session?.user?.id,
       success: false,
       reason: "Invalid origin",
       metadata: { origin },
@@ -721,54 +550,63 @@ export function checkConnectionSecurity(
     return { allowed: false, error: "Invalid origin" };
   }
 
-  // Validate token
-  const tokenResult = validateToken(token);
-  if (!tokenResult.valid) {
+  // Check authentication
+  if (!session) {
     logSecurityEvent({
       eventType: "auth.failure",
-      userId,
       success: false,
-      reason: tokenResult.error,
-      metadata: { errorCode: tokenResult.errorCode },
+      reason: "No valid session",
     });
-    return { allowed: false, error: tokenResult.error, tokenResult };
+    return { allowed: false, error: "Authentication required" };
   }
 
   // Check connection limit
-  const validUserId = tokenResult.userId;
-  if (validUserId && !connectionTracker.canConnect(validUserId)) {
+  const userId = session.user.id;
+  if (!connectionTracker.canConnect(userId)) {
     logSecurityEvent({
       eventType: "connection_limit.exceeded",
-      userId: validUserId,
+      userId,
       success: false,
       reason: `Max ${CONNECTION_LIMITS.MAX_CONNECTIONS_PER_USER} connections per user`,
     });
     return {
       allowed: false,
       error: "Connection limit exceeded",
-      tokenResult,
     };
   }
 
   logSecurityEvent({
     eventType: "connection.accepted",
-    userId: tokenResult.userId,
+    userId,
     success: true,
   });
 
-  return { allowed: true, tokenResult };
+  return { allowed: true };
 }
 
 /**
  * Perform channel subscription security check.
+ * Simplified to authentication-only (all channels accessible to authenticated users).
  */
 export function checkSubscriptionSecurity(
   connectionId: string,
-  userId: string,
-  role: UserRole,
+  session: Session | null,
   channels: Channel[]
 ): { allowed: boolean; authorizedChannels: Channel[]; errors: string[] } {
   const errors: string[] = [];
+
+  // Check authentication
+  if (!session) {
+    logSecurityEvent({
+      eventType: "auth.failure",
+      connectionId,
+      success: false,
+      reason: "Authentication required",
+    });
+    return { allowed: false, authorizedChannels: [], errors: ["Authentication required"] };
+  }
+
+  const userId = session.user.id;
 
   // Check rate limit
   const rateResult = checkSubscribeRateLimit(connectionId);
@@ -784,25 +622,8 @@ export function checkSubscriptionSecurity(
     return { allowed: false, authorizedChannels: [], errors: [reason] };
   }
 
-  // Filter to authorized channels
-  const authorizedChannels: Channel[] = [];
-  for (const channel of channels) {
-    const authResult = canAccessChannel(channel, role);
-    if (authResult.authorized) {
-      authorizedChannels.push(channel);
-    } else {
-      const reason = authResult.reason ?? "Unauthorized";
-      errors.push(reason);
-      logSecurityEvent({
-        eventType: "authorization.denied",
-        connectionId,
-        userId,
-        channel,
-        success: false,
-        reason,
-      });
-    }
-  }
+  // All channels are authorized for authenticated users
+  const authorizedChannels = channels;
 
   // Record rate limit
   recordSubscribe(connectionId);
@@ -845,7 +666,6 @@ export function checkSymbolSubscriptionSecurity(
 // ============================================
 
 export default {
-  validateToken,
   canAccessChannel,
   checkConnectionSecurity,
   checkSubscriptionSecurity,
