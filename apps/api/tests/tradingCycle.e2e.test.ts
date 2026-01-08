@@ -13,6 +13,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { createTestContext } from "@cream/domain";
 import { z } from "zod";
 import {
   executeTradingCycle,
@@ -41,6 +42,7 @@ function createTestCycleInput(overrides?: Partial<TradingCycleInput>): TradingCy
 function createWorkflowInput(overrides?: Partial<WorkflowInput>): WorkflowInput {
   return {
     cycleId: `test-cycle-${Date.now()}`,
+    context: createTestContext(),
     instruments: ["AAPL", "MSFT", "GOOGL"],
     forceStub: true, // Always use stub mode in tests
     ...overrides,
@@ -254,6 +256,7 @@ describe("Trading Cycle Workflow Execution", () => {
     it("should use default instruments when none provided", async () => {
       const input: WorkflowInput = {
         cycleId: `default-instruments-${Date.now()}`,
+        context: createTestContext(),
         forceStub: true,
       };
       const result = await executeTradingCycle(input);
@@ -274,6 +277,7 @@ describe("Trading Cycle Workflow Execution", () => {
       // CREAM_ENV=BACKTEST is set by test runner
       const input: WorkflowInput = {
         cycleId: `backtest-mode-${Date.now()}`,
+        context: createTestContext(),
         // forceStub not set - should still use stub due to BACKTEST env
       };
       const result = await executeTradingCycle(input);
