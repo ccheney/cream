@@ -10,40 +10,58 @@
   },
   "exports": {
     "./cream/v1/common": {
+      "bun": "./ts/cream/v1/common_pb.ts",
       "types": "./ts/cream/v1/common_pb.ts",
-      "import": "./ts/cream/v1/common_pb.ts"
+      "import": "./ts/cream/v1/common_pb.ts",
+      "default": "./ts/cream/v1/common_pb.ts"
     },
     "./cream/v1/decision": {
+      "bun": "./ts/cream/v1/decision_pb.ts",
       "types": "./ts/cream/v1/decision_pb.ts",
-      "import": "./ts/cream/v1/decision_pb.ts"
+      "import": "./ts/cream/v1/decision_pb.ts",
+      "default": "./ts/cream/v1/decision_pb.ts"
     },
     "./cream/v1/events": {
+      "bun": "./ts/cream/v1/events_pb.ts",
       "types": "./ts/cream/v1/events_pb.ts",
-      "import": "./ts/cream/v1/events_pb.ts"
+      "import": "./ts/cream/v1/events_pb.ts",
+      "default": "./ts/cream/v1/events_pb.ts"
     },
     "./cream/v1/execution": {
+      "bun": "./ts/cream/v1/execution_pb.ts",
       "types": "./ts/cream/v1/execution_pb.ts",
-      "import": "./ts/cream/v1/execution_pb.ts"
+      "import": "./ts/cream/v1/execution_pb.ts",
+      "default": "./ts/cream/v1/execution_pb.ts"
     },
     "./cream/v1/execution_connect": {
+      "bun": "./ts/cream/v1/execution_connect.ts",
       "types": "./ts/cream/v1/execution_connect.ts",
-      "import": "./ts/cream/v1/execution_connect.ts"
+      "import": "./ts/cream/v1/execution_connect.ts",
+      "default": "./ts/cream/v1/execution_connect.ts"
     },
     "./cream/v1/market_snapshot": {
+      "bun": "./ts/cream/v1/market_snapshot_pb.ts",
       "types": "./ts/cream/v1/market_snapshot_pb.ts",
-      "import": "./ts/cream/v1/market_snapshot_pb.ts"
+      "import": "./ts/cream/v1/market_snapshot_pb.ts",
+      "default": "./ts/cream/v1/market_snapshot_pb.ts"
     },
     "./cream/v1/market_snapshot_connect": {
+      "bun": "./ts/cream/v1/market_snapshot_connect.ts",
       "types": "./ts/cream/v1/market_snapshot_connect.ts",
-      "import": "./ts/cream/v1/market_snapshot_connect.ts"
+      "import": "./ts/cream/v1/market_snapshot_connect.ts",
+      "default": "./ts/cream/v1/market_snapshot_connect.ts"
     },
     "./arrow/flight/protocol": {
+      "bun": "./ts/arrow/flight/protocol/flight_pb.ts",
       "types": "./ts/arrow/flight/protocol/flight_pb.ts",
-      "import": "./ts/arrow/flight/protocol/flight_pb.ts"
+      "import": "./ts/arrow/flight/protocol/flight_pb.ts",
+      "default": "./ts/arrow/flight/protocol/flight_pb.ts"
     },
     "./arrow/flight/protocol_connect": {
+      "bun": "./ts/arrow/flight/protocol/flight_connect.ts",
       "types": "./ts/arrow/flight/protocol/flight_connect.ts",
-      "import": "./ts/arrow/flight/protocol/flight_connect.ts"
+      "import": "./ts/arrow/flight/protocol/flight_connect.ts",
+      "default": "./ts/arrow/flight/protocol/flight_connect.ts"
     }
   },
   "dependencies": {
