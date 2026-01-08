@@ -259,6 +259,7 @@ function buildAgentConfigs(
       temperature: config.temperature,
       maxTokens: config.maxTokens,
       enabled: config.enabled,
+      systemPromptOverride: config.systemPromptOverride,
     };
   }
   return result as Record<AgentType, AgentConfigEntry>;

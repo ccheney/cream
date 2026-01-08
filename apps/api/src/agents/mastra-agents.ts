@@ -337,10 +337,10 @@ function createAgent(agentType: AgentType): Agent {
     }
   }
 
-  // Use dynamic model function to allow runtime model override via RequestContext
-  // If 'model' is set in RequestContext, use it; otherwise use the default from config
-  const dynamicModel = ({ requestContext }: { requestContext?: RequestContext }) => {
-    const runtimeModel = requestContext?.get("model") as string | undefined;
+  // Use dynamic model function to allow runtime model override via RuntimeContext
+  // If 'model' is set in RuntimeContext, use it; otherwise use the default from config
+  const dynamicModel = ({ runtimeContext }: { runtimeContext: RuntimeContext }) => {
+    const runtimeModel = runtimeContext?.get("model") as string | undefined;
     if (runtimeModel) {
       return getModelId(runtimeModel);
     }
@@ -514,10 +514,10 @@ function getAgentRuntimeSettings(
 }
 
 /**
- * Create a RequestContext with model configuration for runtime model selection.
+ * Create a RuntimeContext with model configuration for runtime model selection.
  */
-function createRequestContext(model?: string): RequestContext {
-  const ctx = new RequestContext();
+function createRuntimeContext(model?: string): RuntimeContext {
+  const ctx = new RuntimeContext();
   if (model) {
     ctx.set("model", model);
   }
@@ -525,7 +525,7 @@ function createRequestContext(model?: string): RequestContext {
 }
 
 /**
- * Build generation options with model settings, request context, and optional instruction override.
+ * Build generation options with model settings, runtime context, and optional instruction override.
  */
 function buildGenerateOptions(
   settings: AgentRuntimeSettings,
@@ -533,13 +533,13 @@ function buildGenerateOptions(
 ): {
   structuredOutput: { schema: z.ZodType };
   modelSettings: { temperature: number; maxOutputTokens: number };
-  requestContext: RequestContext;
+  runtimeContext: RuntimeContext;
   instructions?: string;
 } {
   const options: {
     structuredOutput: { schema: z.ZodType };
     modelSettings: { temperature: number; maxOutputTokens: number };
-    requestContext: RequestContext;
+    runtimeContext: RuntimeContext;
     instructions?: string;
   } = {
     structuredOutput,
@@ -547,7 +547,7 @@ function buildGenerateOptions(
       temperature: settings.temperature,
       maxOutputTokens: settings.maxTokens,
     },
-    requestContext: createRequestContext(settings.model),
+    runtimeContext: createRuntimeContext(settings.model),
   };
 
   // Apply system prompt override if configured
@@ -643,7 +643,10 @@ Regime context should inform your setup classification and technical thesis.`;
   const settings = getAgentRuntimeSettings("technical_analyst", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(TechnicalAnalysisSchema) });
 
-  const response = await technicalAnalystAgent.generate([{ role: "user", content: prompt }], options);
+  const response = await technicalAnalystAgent.generate(
+    [{ role: "user", content: prompt }],
+    options
+  );
 
   return response.object as TechnicalAnalysisOutput[];
 }
@@ -712,7 +715,10 @@ HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports 
   const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
 
-  const response = await fundamentalsAnalystAgent.generate([{ role: "user", content: prompt }], options);
+  const response = await fundamentalsAnalystAgent.generate(
+    [{ role: "user", content: prompt }],
+    options
+  );
 
   return response.object as FundamentalsAnalysisOutput[];
 }
@@ -765,7 +771,10 @@ Cycle ID: ${context.cycleId}`;
   const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
 
-  const response = await bullishResearcherAgent.generate([{ role: "user", content: prompt }], options);
+  const response = await bullishResearcherAgent.generate(
+    [{ role: "user", content: prompt }],
+    options
+  );
 
   return response.object as BullishResearchOutput[];
 }
@@ -801,7 +810,10 @@ Cycle ID: ${context.cycleId}`;
   const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
 
-  const response = await bearishResearcherAgent.generate([{ role: "user", content: prompt }], options);
+  const response = await bearishResearcherAgent.generate(
+    [{ role: "user", content: prompt }],
+    options
+  );
 
   return response.object as BearishResearchOutput[];
 }
