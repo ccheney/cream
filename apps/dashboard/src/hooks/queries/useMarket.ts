@@ -43,7 +43,7 @@ export function useQuotes(symbols: string[]) {
       queryKey: queryKeys.market.quote(symbol),
       // No queryFn - data is set directly by WebSocket messages
       // Return existing cache data or undefined
-      queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)),
+      queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)) ?? null,
       staleTime: Infinity, // Never stale - WebSocket keeps it fresh
       gcTime: CACHE_TIMES.MARKET,
       refetchInterval: false, // No polling - WebSocket only
@@ -96,7 +96,7 @@ export function useQuote(symbol: string) {
   const query = useQuery({
     queryKey: queryKeys.market.quote(symbol),
     // No queryFn - data is set directly by WebSocket messages
-    queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)),
+    queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)) ?? null,
     staleTime: Infinity, // Never stale - WebSocket keeps it fresh
     gcTime: CACHE_TIMES.MARKET,
     refetchInterval: false, // No polling - WebSocket only

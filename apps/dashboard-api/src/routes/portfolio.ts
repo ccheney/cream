@@ -14,6 +14,7 @@ import {
   getPortfolioSnapshotsRepo,
   getPositionsRepo,
 } from "../db.js";
+import { portfolioService } from "../services/portfolio.js";
 import { systemState } from "./system.js";
 
 // ============================================
@@ -48,6 +49,28 @@ const PositionSchema = z.object({
   thesisId: z.string().nullable(),
   daysHeld: z.number(),
   openedAt: z.string(),
+});
+
+const OptionsPositionSchema = z.object({
+  contractSymbol: z.string(),
+  underlying: z.string(),
+  expiration: z.string(),
+  strike: z.number(),
+  right: z.enum(["CALL", "PUT"]),
+  quantity: z.number(),
+  avgCost: z.number(),
+  currentPrice: z.number(),
+  marketValue: z.number(),
+  unrealizedPnl: z.number(),
+  unrealizedPnlPct: z.number(),
+  greeks: z
+    .object({
+      delta: z.number(),
+      gamma: z.number(),
+      theta: z.number(),
+      vega: z.number(),
+    })
+    .optional(),
 });
 
 const EquityPointSchema = z.object({
@@ -135,7 +158,7 @@ app.openapi(summaryRoute, async (c) => {
 
   const yesterdaySnapshot = await snapshotsRepo.findByDate(
     systemState.environment,
-    yesterdayEnd.toISOString().split("T")[0]!
+    yesterdayEnd.toISOString().split("T")[0] ?? ""
   );
 
   const todayPnl =
@@ -176,6 +199,24 @@ app.openapi(summaryRoute, async (c) => {
     totalPnlPct,
     lastUpdated: latestSnapshot?.timestamp ?? new Date().toISOString(),
   });
+});
+
+// GET /api/portfolio/options
+const optionsRoute = createRoute({
+  method: "get",
+  path: "/options",
+  responses: {
+    200: {
+      content: { "application/json": { schema: z.array(OptionsPositionSchema) } },
+      description: "Options positions",
+    },
+  },
+  tags: ["Portfolio"],
+});
+
+app.openapi(optionsRoute, async (c) => {
+  const options = await portfolioService.getOptionsPositions();
+  return c.json(options);
 });
 
 // GET /api/portfolio/positions
