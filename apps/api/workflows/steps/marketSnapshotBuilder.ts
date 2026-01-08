@@ -17,13 +17,12 @@
  */
 
 import type { Position } from "@cream/broker";
-import {
-  env,
-  type MarketSnapshot,
-  type MarketStatus,
-  type Regime,
-  type SymbolSnapshot,
-  type UniverseConfig,
+import type {
+  MarketSnapshot,
+  MarketStatus,
+  Regime,
+  SymbolSnapshot,
+  UniverseConfig,
 } from "@cream/domain";
 import { createExecutionClient, type ExecutionServiceClient } from "@cream/domain/grpc";
 import type { Candle } from "@cream/indicators";
@@ -185,7 +184,8 @@ export async function executeMarketSnapshotBuilder(
 
     // Phase 4: Assemble final market snapshot
     const asOf = input.asOf ?? new Date().toISOString();
-    const environment = env.CREAM_ENV;
+    // Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
+    const environment = (process.env.CREAM_ENV ?? "BACKTEST") as "BACKTEST" | "PAPER" | "LIVE";
     const marketStatus = determineMarketStatus();
 
     const snapshot: MarketSnapshot = {
@@ -239,8 +239,8 @@ async function gatherSnapshotData(
 ): Promise<SnapshotData> {
   // Create Polygon client for market data
   let polygonClient: PolygonClient | null = null;
-  const creamEnv = "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
-  const polygonKey = "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
+  const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
+  const polygonKey = process.env.POLYGON_KEY;
 
   if (creamEnv !== "BACKTEST" || polygonKey) {
     try {
@@ -283,10 +283,8 @@ async function fetchMarketData(
 
   try {
     // In BACKTEST mode without API keys, use mock data
-    // Note: We read process.env directly here (not cached env) to support test isolation
-    // Use 'in' operator to check if env var was explicitly set (even to empty string)
-    const creamEnv = "CREAM_ENV" in process.env ? process.env.CREAM_ENV : env.CREAM_ENV;
-    const polygonKey = "POLYGON_KEY" in process.env ? process.env.POLYGON_KEY : env.POLYGON_KEY;
+    const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
+    const polygonKey = process.env.POLYGON_KEY;
     if (creamEnv === "BACKTEST" && !polygonKey) {
       warnings.push("BACKTEST mode without POLYGON_KEY: using mock market data");
 
@@ -483,7 +481,8 @@ function getExecutionClient(): ExecutionServiceClient {
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
   try {
     // In BACKTEST mode, positions come from backtest state
-    const environment = env.CREAM_ENV;
+    // Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
+    const environment = process.env.CREAM_ENV;
 
     if (environment === "BACKTEST") {
       warnings.push("Backtest mode: positions not fetched from broker");
