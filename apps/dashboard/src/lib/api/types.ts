@@ -33,50 +33,50 @@ export interface ApiErrorResponse {
 }
 
 // ============================================
-// Auth Types
+// Auth Types (better-auth based)
 // ============================================
 
-export type Role = "viewer" | "operator" | "admin";
-
+/**
+ * User from better-auth session.
+ * Note: Roles have been removed - all authenticated users have full access.
+ */
 export interface User {
   id: string;
   email: string;
-  role: Role;
+  name: string | null;
+  image: string | null;
+  emailVerified: boolean;
+  twoFactorEnabled?: boolean;
 }
 
-export interface AuthUser extends User {
-  mfaVerified: boolean;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  user: User;
-  mfaRequired: boolean;
-}
-
+/**
+ * Session response from better-auth.
+ */
 export interface SessionResponse {
   authenticated: boolean;
-  user?: AuthUser;
+  user?: User;
 }
 
-export interface MFASetupResponse {
-  secret: string;
-  qrCodeUri: string;
+/**
+ * Two-factor authentication setup response.
+ */
+export interface TwoFactorSetupResponse {
+  totpURI: string;
   backupCodes: string[];
 }
 
-export interface MFAVerifyRequest {
+/**
+ * Two-factor verification request.
+ */
+export interface TwoFactorVerifyRequest {
   code: string;
 }
 
-export interface MFAVerifyResponse {
+/**
+ * Two-factor verification response.
+ */
+export interface TwoFactorVerifyResponse {
   success: boolean;
-  mfaVerified: boolean;
 }
 
 // ============================================
