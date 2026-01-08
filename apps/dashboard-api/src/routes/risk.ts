@@ -18,16 +18,18 @@
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { HTTPException } from "hono/http-exception";
 import { getPortfolioSnapshotsRepo, getPositionsRepo } from "../db.js";
+import { portfolioService } from "../services/portfolio.js";
 import {
   calculateExposure,
   calculateLimits,
   DEFAULT_EXPOSURE_LIMITS,
+  DEFAULT_OPTIONS,
   getCorrelationMatrix,
   getVaRMetrics,
   type PositionForExposure,
 } from "../services/risk/index.js";
+import { systemState } from "./system.js";
 
 // ============================================
 // App Setup
@@ -109,29 +111,6 @@ const ErrorSchema = z.object({
 });
 
 // ============================================
-// Service Availability Check
-// ============================================
-
-/**
- * Stub function - risk endpoints not yet implemented.
- *
- * Required integrations:
- * - /exposure: Positions (Turso) + Massive WebSocket prices + sector mapping
- * - /greeks: Options positions + Massive Options Snapshot API (or local Black-Scholes)
- * - /correlation: Massive REST aggregates (historical prices)
- * - /var: Massive REST aggregates (historical returns)
- * - /limits: Config + above metrics
- *
- * @see beads: cream-lj151, cream-onrak, cream-eahae, cream-a4td0, cream-qubb4
- */
-function requireRiskService(): never {
-  throw new HTTPException(503, {
-    message:
-      "Risk endpoints not yet implemented. Requires: Turso positions + Massive market data integration.",
-  });
-}
-
-// ============================================
 // Routes
 // ============================================
 
@@ -148,16 +127,40 @@ const exposureRoute = createRoute({
       },
       description: "Exposure metrics",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Risk service unavailable",
-    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(exposureRoute, () => {
-  requireRiskService();
+app.openapi(exposureRoute, async (c) => {
+  const positionsRepo = await getPositionsRepo();
+  const snapshotsRepo = await getPortfolioSnapshotsRepo();
+  const env = systemState.environment;
+
+  // 1. Get Positions
+  const positions = await positionsRepo.findOpen(env);
+
+  // 2. Get NAV
+  const latestSnapshot = await snapshotsRepo.getLatest(env);
+  // Fallback NAV if no snapshot: sum of absolute market values (approximation) or just cash + equity
+  const equity = positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+  const nav = latestSnapshot?.nav ?? (equity || 100000); // Default to 100k if empty
+
+  // 3. Map to PositionForExposure
+  const positionsForExposure: PositionForExposure[] = positions.map((p) => ({
+    symbol: p.symbol,
+    side: p.side as "LONG" | "SHORT",
+    quantity: p.quantity,
+    marketValue: p.marketValue,
+  }));
+
+  // 4. Calculate Exposure
+  const metrics = calculateExposure({
+    positions: positionsForExposure,
+    nav,
+    limits: DEFAULT_EXPOSURE_LIMITS,
+  });
+
+  return c.json(metrics, 200);
 });
 
 // GET /greeks - Options Greeks summary
@@ -173,16 +176,59 @@ const greeksRoute = createRoute({
       },
       description: "Greeks summary",
     },
-    503: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Risk service unavailable",
-    },
   },
   tags: ["Risk"],
 });
 
-app.openapi(greeksRoute, () => {
-  requireRiskService();
+app.openapi(greeksRoute, async (c) => {
+  const options = await portfolioService.getOptionsPositions();
+
+  let totalDeltaNotional = 0;
+  let totalGamma = 0;
+  let totalVega = 0;
+  let totalTheta = 0;
+
+  const byPosition = options.map((opt) => {
+    const g = opt.greeks ?? { delta: 0, gamma: 0, vega: 0, theta: 0 };
+    const multiplier = 100;
+    const qty = opt.quantity; // signed (+ for long, - for short)
+
+    // Greeks aggregation
+    // Delta Notional = Delta * UnderlyingPrice * Multiplier * Quantity
+    const positionDeltaNotional = g.delta * opt.underlyingPrice * multiplier * qty;
+
+    // Gamma (Portfolio) = Gamma * Multiplier * Quantity
+    // Note: Some definitions scale Gamma by price^2/100, but standard "Position Gamma" is usually just sum of contract gammas
+    // If limit is 1000, it's likely total contract gamma units.
+    const positionGamma = g.gamma * multiplier * qty;
+
+    // Vega (Portfolio) = Vega * Multiplier * Quantity
+    const positionVega = g.vega * multiplier * qty;
+
+    // Theta (Portfolio) = Theta * Multiplier * Quantity
+    const positionTheta = g.theta * multiplier * qty;
+
+    totalDeltaNotional += positionDeltaNotional;
+    totalGamma += positionGamma;
+    totalVega += positionVega;
+    totalTheta += positionTheta;
+
+    return {
+      symbol: opt.contractSymbol,
+      delta: g.delta,
+      gamma: g.gamma,
+      vega: g.vega,
+      theta: g.theta,
+    };
+  });
+
+  return c.json({
+    delta: { current: totalDeltaNotional, limit: DEFAULT_OPTIONS.max_delta_notional },
+    gamma: { current: totalGamma, limit: DEFAULT_OPTIONS.max_gamma },
+    vega: { current: totalVega, limit: DEFAULT_OPTIONS.max_vega },
+    theta: { current: totalTheta, limit: DEFAULT_OPTIONS.max_theta },
+    byPosition,
+  });
 });
 
 // GET /correlation - Correlation matrix
@@ -209,7 +255,7 @@ const correlationRoute = createRoute({
 app.openapi(correlationRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
-  const env = process.env.CREAM_ENV ?? "PAPER";
+  const env = systemState.environment;
   const positions = await positionsRepo.findOpen(env);
 
   // Extract unique symbols
@@ -261,7 +307,7 @@ app.openapi(varRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
   const snapshotsRepo = await getPortfolioSnapshotsRepo();
-  const env = process.env.CREAM_ENV ?? "PAPER";
+  const env = systemState.environment;
   const positions = await positionsRepo.findOpen(env);
 
   // Get NAV from latest snapshot (or calculate from positions)
@@ -311,7 +357,7 @@ app.openapi(limitsRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
   const snapshotsRepo = await getPortfolioSnapshotsRepo();
-  const env = process.env.CREAM_ENV ?? "PAPER";
+  const env = systemState.environment;
   const positions = await positionsRepo.findOpen(env);
 
   // Get NAV from latest snapshot (or calculate from positions)

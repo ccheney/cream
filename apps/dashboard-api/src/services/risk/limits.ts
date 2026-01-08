@@ -98,7 +98,7 @@ const DEFAULT_PORTFOLIO: PortfolioConstraints = {
   max_net_pct_equity: 1.0,
 };
 
-const DEFAULT_OPTIONS: OptionsGreeksConstraints = {
+export const DEFAULT_OPTIONS: OptionsGreeksConstraints = {
   max_delta_notional: 100000,
   max_gamma: 1000,
   max_vega: 5000,

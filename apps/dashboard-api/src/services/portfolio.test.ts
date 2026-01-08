@@ -10,6 +10,7 @@ mock.module("@cream/marketdata", () => ({
           {
             details: { ticker: "AAPL240119C00150000" },
             last_quote: { midpoint: 5.5 },
+            underlying_asset: { price: 155 },
             greeks: { delta: 0.5, gamma: 0.05, theta: -0.01, vega: 0.1 },
           },
         ],
@@ -69,6 +70,7 @@ describe("PortfolioService", () => {
     expect(results[0]).toEqual({
       contractSymbol: "AAPL240119C00150000",
       underlying: "AAPL",
+      underlyingPrice: 155,
       expiration: "2024-01-19",
       strike: 150,
       right: "CALL",

@@ -54,6 +54,7 @@ const PositionSchema = z.object({
 const OptionsPositionSchema = z.object({
   contractSymbol: z.string(),
   underlying: z.string(),
+  underlyingPrice: z.number(),
   expiration: z.string(),
   strike: z.number(),
   right: z.enum(["CALL", "PUT"]),

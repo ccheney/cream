@@ -16,6 +16,7 @@ import { systemState } from "../routes/system.js";
 export interface OptionsPosition {
   contractSymbol: string;
   underlying: string;
+  underlyingPrice: number;
   expiration: string;
   strike: number;
   right: "CALL" | "PUT";
@@ -149,6 +150,7 @@ export class PortfolioService {
           }
 
           const marketData = snapshotMap.get(item.pos.symbol);
+          const underlyingPrice = marketData?.underlying_asset?.price ?? 0;
 
           // Fallback values if market data missing
           const currentPrice =
@@ -170,6 +172,7 @@ export class PortfolioService {
           results.push({
             contractSymbol: item.pos.symbol,
             underlying: item.details.underlying,
+            underlyingPrice,
             expiration: item.details.expiration,
             strike: item.details.strike,
             right: item.details.type === "call" ? "CALL" : "PUT",
@@ -201,6 +204,7 @@ export class PortfolioService {
             results.push({
               contractSymbol: item.pos.symbol,
               underlying: item.details.underlying,
+              underlyingPrice: 0,
               expiration: item.details.expiration,
               strike: item.details.strike,
               right: item.details.type === "call" ? "CALL" : "PUT",
