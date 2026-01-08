@@ -309,8 +309,8 @@ function FilterChip({
       onClick={onClick}
       className={`px-2 py-0.5 rounded-full text-xs transition-colors ${
         active
-          ? "bg-cream-900 dark:bg-cream-100 text-cream-100 dark:text-cream-900"
-          : "bg-cream-100 dark:bg-night-700 text-cream-600 dark:text-cream-400 hover:bg-cream-200 dark:hover:bg-night-600"
+          ? "bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900"
+          : "bg-cream-300 dark:bg-night-700 text-stone-600 dark:text-night-300 hover:bg-cream-200 dark:hover:bg-night-800"
       }`}
     >
       {label}

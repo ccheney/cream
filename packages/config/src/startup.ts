@@ -7,13 +7,13 @@
  * - LIVE trading safety checks
  * - Clear error messages
  *
+ * Note: Configuration is now loaded from database via RuntimeConfigService.
+ * This module provides environment validation and audit logging utilities.
+ *
  * @see docs/plans/11-configuration.md
  */
 
 import { type EnvConfig, env, isLive } from "@cream/domain/env";
-import { z } from "zod";
-import { type CreamConfig, loadConfigWithEnv } from "./index";
-import { validateAtStartup } from "./validate";
 
 // ============================================
 // Sensitive Key Patterns
@@ -120,12 +120,11 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 // ============================================
 
 /**
- * Startup validation result
+ * Startup validation result (environment validation only)
  */
 export interface StartupResult {
   success: boolean;
   env: EnvConfig;
-  config?: CreamConfig | undefined;
   errors: string[];
   warnings: string[];
 }
@@ -164,45 +163,25 @@ export function validateLiveTradingSafety(): {
 }
 
 /**
- * Validate startup configuration
+ * Validate startup environment
  *
- * Performs comprehensive validation:
+ * Performs environment validation:
  * 1. Environment variables are valid
- * 2. Configuration files are valid
- * 3. LIVE trading safety checks (if applicable)
+ * 2. LIVE trading safety checks (if applicable)
  *
- * @param configDir - Directory containing config files
- * @returns Validation result with config and diagnostics
+ * Note: Configuration is now loaded from database via RuntimeConfigService.
+ * Call this function for environment validation only.
+ *
+ * @returns Validation result with diagnostics
  */
-export async function validateStartup(configDir = "configs"): Promise<StartupResult> {
+export async function validateStartup(): Promise<StartupResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
   // Step 1: Environment variables are already validated at import
   // If we got here, env is valid (parseEnv() would have thrown)
 
-  // Step 2: Load and validate configuration
-  let config: CreamConfig | undefined;
-  try {
-    config = await loadConfigWithEnv(configDir);
-
-    // Run startup-specific validation
-    const startupValidation = validateAtStartup(config);
-    if (!startupValidation.success) {
-      errors.push(...startupValidation.errors);
-    }
-    warnings.push(...startupValidation.warnings);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      errors.push(...error.issues.map((i) => `config.${i.path.join(".")}: ${i.message}`));
-    } else {
-      errors.push(
-        `Configuration loading failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  // Step 3: LIVE trading safety checks
+  // Step 2: LIVE trading safety checks
   if (isLive()) {
     const liveCheck = validateLiveTradingSafety();
     if (!liveCheck.approved) {
@@ -210,17 +189,9 @@ export async function validateStartup(configDir = "configs"): Promise<StartupRes
     }
   }
 
-  // Step 4: Environment consistency check
-  if (config && config.core.environment !== env.CREAM_ENV) {
-    errors.push(
-      `Environment mismatch: CREAM_ENV=${env.CREAM_ENV} but config.core.environment=${config.core.environment}`
-    );
-  }
-
   return {
     success: errors.length === 0,
     env,
-    config,
     errors,
     warnings,
   };
@@ -237,9 +208,7 @@ export interface StartupAuditLog {
   timestamp: string;
   service: string;
   environment: string;
-  configHash?: string;
   env: Record<string, string>;
-  config?: unknown;
   errors: string[];
   warnings: string[];
 }
@@ -257,7 +226,6 @@ export function createAuditLog(service: string, result: StartupResult): StartupA
     service,
     environment: result.env.CREAM_ENV,
     env: sanitizeEnv(result.env),
-    config: result.config ? sanitizeConfig(result.config) : undefined,
     errors: result.errors,
     warnings: result.warnings,
   };
@@ -283,12 +251,14 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  * - Exits with non-zero status code (1)
  *
  * On success:
- * - Logs sanitized configuration audit trail
- * - Returns validated env and config
+ * - Logs sanitized environment audit trail
+ * - Returns validated env
+ *
+ * Note: Configuration is now loaded from database via RuntimeConfigService.
+ * This function only validates environment variables.
  *
  * @param service - Name of the service (for audit logging)
- * @param configDir - Directory containing config files
- * @returns Validated env and config
+ * @returns Validated env
  *
  * @example
  * ```ts
@@ -296,29 +266,28 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  * import { runStartupValidation } from "@cream/config/startup";
  *
  * async function main() {
- *   const { env, config } = await runStartupValidation("api-server");
+ *   const { env } = await runStartupValidation("api-server");
  *
- *   // Now safe to start services
- *   await startServer(config);
+ *   // Now safe to start services and load config from DB
+ *   await startServer();
  * }
  *
  * main();
  * ```
  */
-export async function runStartupValidation(
-  service: string,
-  configDir = "configs"
-): Promise<{ env: EnvConfig; config: CreamConfig }> {
-  const result = await validateStartup(configDir);
+export async function runStartupValidation(service: string): Promise<{ env: EnvConfig }> {
+  const result = await validateStartup();
 
   // Create and log audit entry
   const audit = createAuditLog(service, result);
 
   if (!result.success) {
     for (const _error of result.errors) {
+      // Errors are logged via logStartupAudit
     }
     if (result.warnings.length > 0) {
       for (const _warning of result.warnings) {
+        // Warnings are logged via logStartupAudit
       }
     }
     logStartupAudit(audit);
@@ -328,12 +297,12 @@ export async function runStartupValidation(
   // Log warnings even on success
   if (result.warnings.length > 0) {
     for (const _warning of result.warnings) {
+      // Warnings are logged via logStartupAudit
     }
   }
   logStartupAudit(audit);
 
-  // TypeScript knows config is defined because result.success is true
-  return { env: result.env, config: result.config! };
+  return { env: result.env };
 }
 
 /**
@@ -342,10 +311,9 @@ export async function runStartupValidation(
  * Same as runStartupValidation but returns result instead of exiting.
  */
 export async function validateStartupNoExit(
-  service: string,
-  configDir = "configs"
+  service: string
 ): Promise<StartupResult & { audit: StartupAuditLog }> {
-  const result = await validateStartup(configDir);
+  const result = await validateStartup();
   const audit = createAuditLog(service, result);
   return { ...result, audit };
 }

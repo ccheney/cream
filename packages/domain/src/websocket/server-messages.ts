@@ -14,6 +14,7 @@ import {
   AggregateDataSchema,
   AlertDataSchema,
   CycleProgressDataSchema,
+  CycleResultDataSchema,
   OrderDataSchema,
   PortfolioDataSchema,
   QuoteDataSchema,
@@ -291,6 +292,23 @@ export const CycleProgressMessageSchema = z.object({
 export type CycleProgressMessage = z.infer<typeof CycleProgressMessageSchema>;
 
 // ============================================
+// Cycle Result Message
+// ============================================
+
+/**
+ * Trading cycle final result.
+ *
+ * @example
+ * { type: "cycle_result", data: { cycleId: "...", status: "completed", ... } }
+ */
+export const CycleResultMessageSchema = z.object({
+  type: z.literal("cycle_result"),
+  data: CycleResultDataSchema,
+});
+
+export type CycleResultMessage = z.infer<typeof CycleResultMessageSchema>;
+
+// ============================================
 // Alert Message
 // ============================================
 
@@ -436,6 +454,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   DecisionPlanMessageSchema,
   AgentOutputMessageSchema,
   CycleProgressMessageSchema,
+  CycleResultMessageSchema,
   AlertMessageSchema,
   SystemStatusMessageSchema,
   PortfolioMessageSchema,

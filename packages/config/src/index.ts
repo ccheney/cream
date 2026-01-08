@@ -83,13 +83,6 @@ export {
   type LayerViolation,
   parseImports,
 } from "./layerValidation";
-// Loading utilities
-export {
-  type ConfigEnvironment,
-  loadConfig,
-  loadConfigFromFile,
-  loadConfigWithEnv,
-} from "./loader";
 // Runtime config service (DB-only, no YAML fallback)
 export {
   type AgentConfigsRepository,

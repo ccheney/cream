@@ -594,6 +594,20 @@ export function broadcastAll(message: ServerMessage): number {
   return sent;
 }
 
+/**
+ * Broadcast cycle progress message to connections subscribed to cycles channel.
+ */
+export function broadcastCycleProgress(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast cycle result message to connections subscribed to cycles channel.
+ */
+export function broadcastCycleResult(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
 // ============================================
 // Connection Lifecycle
 // ============================================
@@ -780,6 +794,8 @@ export default {
   broadcastTrade,
   broadcastOptionsQuote,
   broadcastAll,
+  broadcastCycleProgress,
+  broadcastCycleResult,
   sendMessage,
   sendError,
   validateAuthToken,

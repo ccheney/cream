@@ -237,6 +237,86 @@ export const CycleProgressDataSchema = z.object({
 export type CycleProgressData = z.infer<typeof CycleProgressDataSchema>;
 
 // ============================================
+// Cycle Result Data
+// ============================================
+
+/**
+ * Decision summary for cycle results.
+ */
+export const DecisionSummarySchema = z.object({
+  /** Symbol */
+  symbol: z.string(),
+  /** Action taken */
+  action: z.enum(["BUY", "SELL", "HOLD"]),
+  /** Direction */
+  direction: z.enum(["LONG", "SHORT", "FLAT"]),
+  /** Confidence score */
+  confidence: z.number().min(0).max(1),
+});
+
+export type DecisionSummary = z.infer<typeof DecisionSummarySchema>;
+
+/**
+ * Order summary for cycle results.
+ */
+export const OrderSummarySchema = z.object({
+  /** Order ID */
+  orderId: z.string(),
+  /** Symbol */
+  symbol: z.string(),
+  /** Side */
+  side: z.enum(["buy", "sell"]),
+  /** Quantity */
+  quantity: z.number(),
+  /** Status */
+  status: z.enum(["submitted", "filled", "rejected"]),
+});
+
+export type OrderSummary = z.infer<typeof OrderSummarySchema>;
+
+/**
+ * Trading cycle final result data.
+ */
+export const CycleResultDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Environment */
+  environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+
+  /** Final status */
+  status: z.enum(["completed", "failed"]),
+
+  /** Result details (if completed) */
+  result: z
+    .object({
+      /** Whether the cycle was approved by consensus */
+      approved: z.boolean(),
+      /** Number of consensus iterations */
+      iterations: z.number().int().nonnegative(),
+      /** Decision summaries */
+      decisions: z.array(DecisionSummarySchema),
+      /** Order summaries */
+      orders: z.array(OrderSummarySchema),
+    })
+    .optional(),
+
+  /** Error message (if failed) */
+  error: z.string().optional(),
+
+  /** Cycle duration in milliseconds */
+  durationMs: z.number().int().nonnegative(),
+
+  /** Config version used */
+  configVersion: z.string().optional(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type CycleResultData = z.infer<typeof CycleResultDataSchema>;
+
+// ============================================
 // Alert Data
 // ============================================
 

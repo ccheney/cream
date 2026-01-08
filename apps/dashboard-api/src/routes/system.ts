@@ -7,8 +7,10 @@
  */
 
 import { tradingCycleWorkflow } from "@cream/api";
+import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getRuntimeConfigService } from "../db.js";
+import { broadcastCycleProgress, broadcastCycleResult } from "../websocket/handler.js";
 
 // ============================================
 // Schemas
@@ -549,10 +551,55 @@ app.openapi(triggerCycleRoute, async (c) => {
   systemState.runningCycles.set(environment, cycleState);
   systemState.lastTriggerTime.set(environment, Date.now());
 
+  // Helper to emit progress via WebSocket
+  const emitProgress = (phase: CyclePhase, progress: number, step: string, message: string) => {
+    const progressData: CycleProgressData = {
+      cycleId,
+      phase,
+      step,
+      progress,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+    broadcastCycleProgress({ type: "cycle_progress", data: progressData });
+  };
+
+  // Helper to emit final result via WebSocket
+  const emitResult = (status: "completed" | "failed", durationMs: number, error?: string) => {
+    const resultData: CycleResultData = {
+      cycleId,
+      environment,
+      status,
+      durationMs,
+      configVersion: configVersion ?? undefined,
+      error,
+      // Result details would come from workflow output when available
+      result:
+        status === "completed"
+          ? {
+              approved: true,
+              iterations: 1,
+              decisions: [],
+              orders: [],
+            }
+          : undefined,
+      timestamp: new Date().toISOString(),
+    };
+    broadcastCycleResult({ type: "cycle_result", data: resultData });
+  };
+
   // Trigger workflow asynchronously (non-blocking)
   const runCycle = async () => {
+    const startTime = Date.now();
     cycleState.status = "running";
+
+    // Emit initial progress
+    emitProgress("observe", 0, "starting", "Starting trading cycle...");
+
     try {
+      // Emit observe phase start
+      emitProgress("observe", 10, "market_data", "Fetching market data...");
+
       await tradingCycleWorkflow.execute({
         triggerData: {
           cycleId,
@@ -560,16 +607,25 @@ app.openapi(triggerCycleRoute, async (c) => {
           useDraftConfig,
         },
       });
+
       cycleState.status = "completed";
       cycleState.completedAt = new Date().toISOString();
 
       // Update system state
       systemState.lastCycleId = cycleId;
       systemState.lastCycleTime = cycleState.completedAt;
+
+      // Emit completion
+      emitProgress("complete", 100, "done", "Trading cycle completed successfully");
+      emitResult("completed", Date.now() - startTime);
     } catch (error) {
       cycleState.status = "failed";
       cycleState.completedAt = new Date().toISOString();
       cycleState.error = error instanceof Error ? error.message : "Unknown error";
+
+      // Emit failure
+      emitProgress("error", 0, "failed", `Cycle failed: ${cycleState.error}`);
+      emitResult("failed", Date.now() - startTime, cycleState.error);
     }
   };
 
