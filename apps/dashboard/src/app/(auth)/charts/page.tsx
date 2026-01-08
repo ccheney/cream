@@ -15,11 +15,11 @@ import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries"
 export default function ChartsPage() {
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState(searchParams.get("symbol")?.toUpperCase() || "AAPL");
-  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "1d">("5m");
+  const timeframe = "5m";
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
   // Increase limit for lower timeframes to fill the chart
-  const limit = timeframe === "1m" || timeframe === "5m" ? 500 : 100;
+  const limit = 500;
   const { data: candles, isLoading: candlesLoading } = useCandles(symbol, timeframe, limit);
   const { data: indicators, isLoading: indicatorsLoading } = useIndicators(symbol, timeframe);
   const { data: quote, isLoading: quoteLoading } = useQuote(symbol);
@@ -57,15 +57,6 @@ export default function ChartsPage() {
             placeholder="Symbol..."
             className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100 w-24"
           />
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value as "1m" | "5m" | "1d")}
-            className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
-          >
-            <option value="1m">1M</option>
-            <option value="5m">5M</option>
-            <option value="1d">1D</option>
-          </select>
           <StreamToggleButton isOpen={isStreamOpen} onClick={toggleStream} />
         </div>
       </div>
