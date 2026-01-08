@@ -90,6 +90,28 @@ export {
   loadConfigFromFile,
   loadConfigWithEnv,
 } from "./loader";
+// Runtime config service (DB-only, no YAML fallback)
+export {
+  type AgentConfigsRepository,
+  type ConfigHistoryEntry,
+  createRuntimeConfigService,
+  type FullRuntimeConfig,
+  type RuntimeAgentConfig,
+  type RuntimeAgentType,
+  RuntimeConfigError,
+  RuntimeConfigService,
+  type RuntimeEnvironment,
+  type RuntimeTradingConfig,
+  type RuntimeTradingConfigStatus,
+  type RuntimeUniverseConfig,
+  type RuntimeUniverseConfigStatus,
+  type RuntimeUniverseSource,
+  type RuntimeValidationResult,
+  type TradingConfigRepository,
+  type TradingEnvironment,
+  type UniverseConfigsRepository,
+  type ValidationError as RuntimeValidationError,
+} from "./runtime-config";
 // All schemas and types
 export * from "./schemas";
 // Secrets Management
