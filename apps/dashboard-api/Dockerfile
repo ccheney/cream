@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Dashboard API (Hono) Dockerfile
 #
-# Multi-stage build for production Hono API deployment.
-# Uses oven/bun as the runtime for improved performance.
+# Multi-stage build for production Hono API deployment with Python backtest support.
+# Uses oven/bun as the runtime with Python 3.12 for VectorBT backtesting.
 #
 # Build: docker build -t cream-dashboard-api -f apps/dashboard-api/Dockerfile .
 # Run:   docker run -p 3001:3001 -e TURSO_DATABASE_URL=... cream-dashboard-api
@@ -86,21 +86,66 @@ ENV NODE_ENV=production
 RUN bun build src/index.ts --outdir dist --target bun
 
 # ===========================================
-# Stage 3: Production Runner
+# Stage 3: Python Dependencies
 # ===========================================
-FROM oven/bun:1.3-slim AS runner
+FROM python:3.12-slim AS python-deps
+WORKDIR /app
+
+# Install uv for faster dependency management
+RUN pip install --no-cache-dir uv
+
+# Copy Python package definition
+COPY packages/research/pyproject.toml ./packages/research/
+COPY packages/research/research/ ./packages/research/research/
+
+# Install Python dependencies into a virtual environment
+RUN python -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    cd packages/research && \
+    uv pip install -e . && \
+    # Clean up pip cache
+    rm -rf ~/.cache/pip ~/.cache/uv
+
+# ===========================================
+# Stage 4: Production Runner
+# ===========================================
+FROM oven/bun:1.3-debian AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3001
 
+# Install Python 3.12 runtime (slim version for production)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-venv \
+    libpython3.12 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 api
 
+# Copy Python virtual environment from python-deps stage
+COPY --from=python-deps /opt/venv /opt/venv
+
+# Copy Python research package
+COPY --from=python-deps /app/packages/research /app/packages/research
+
 # Copy built application and necessary node_modules
 COPY --from=builder --chown=api:nodejs /app/apps/dashboard-api/dist ./dist
 COPY --from=builder --chown=api:nodejs /app/node_modules ./node_modules
+
+# Set up Python environment
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/app/packages/research"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Create temp directory for Parquet files with proper permissions
+RUN mkdir -p /tmp/backtest && chown api:nodejs /tmp/backtest
+ENV BACKTEST_TEMP_DIR="/tmp/backtest"
 
 USER api
 

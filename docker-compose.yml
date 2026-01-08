@@ -213,6 +213,7 @@ services:
 
   # Dashboard API - Hono/Bun API Server
   # REST API and WebSocket server for dashboard
+  # Includes Python runtime for VectorBT backtest execution
   dashboard-api:
     build:
       context: .
@@ -239,6 +240,12 @@ services:
       - POLYGON_TIER=${POLYGON_TIER:-starter}
       - FMP_KEY=${FMP_KEY:-}
       - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      # Python backtest execution
+      - PYTHONPATH=/app/packages/research
+      - BACKTEST_TEMP_DIR=/tmp/backtest
+    volumes:
+      # Temp directory for Parquet files (backtest data)
+      - backtest_temp:/tmp/backtest
     depends_on:
       turso:
         condition: service_healthy
@@ -270,3 +277,5 @@ volumes:
     name: cream-alertmanager-data
   redis_data:
     name: cream-redis-data
+  backtest_temp:
+    name: cream-backtest-temp
