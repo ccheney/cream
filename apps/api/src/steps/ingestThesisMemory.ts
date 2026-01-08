@@ -18,7 +18,6 @@
 import {
   type CreamEnvironment,
   createContext,
-  env,
   type ExecutionContext,
   isBacktest,
 } from "@cream/domain";
@@ -34,6 +33,7 @@ function createStepContext(): ExecutionContext {
   const envValue = process.env.CREAM_ENV || "BACKTEST";
   return createContext(envValue as CreamEnvironment, "scheduled");
 }
+
 import {
   ingestClosedThesis,
   type ThesisIngestionInput,

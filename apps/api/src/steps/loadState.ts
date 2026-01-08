@@ -4,7 +4,12 @@
  * Step 1: Load portfolio positions, open orders, and thesis states from Turso.
  */
 
-import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

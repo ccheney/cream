@@ -16,7 +16,12 @@ import {
   type OrderSide,
   type OrderType,
 } from "@cream/broker";
-import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

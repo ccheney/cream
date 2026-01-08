@@ -4,7 +4,12 @@
  * Step 2: Build feature snapshots for universe symbols using market data providers.
  */
 
-import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

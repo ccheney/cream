@@ -12,7 +12,6 @@
 import {
   type CreamEnvironment,
   createContext,
-  env,
   type ExecutionContext,
   isBacktest,
 } from "@cream/domain";
@@ -31,6 +30,7 @@ function createStepContext(): ExecutionContext {
   const envValue = process.env.CREAM_ENV || "BACKTEST";
   return createContext(envValue as CreamEnvironment, "scheduled");
 }
+
 import type { Action, Environment, TradeDecision } from "@cream/helix-schema";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
 import { createStep } from "@mastra/core/workflows";

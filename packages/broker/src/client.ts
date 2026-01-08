@@ -353,7 +353,6 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
   };
 }
 
-
 // ============================================================================
 // Alpaca API Response Types
 // ============================================================================

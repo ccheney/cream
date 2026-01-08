@@ -25,7 +25,7 @@ import { createTestContext } from "@cream/domain";
 
 // Test context - use PAPER for actual API tests, BACKTEST for mocked tests
 const paperCtx = createTestContext("PAPER");
-const backtestCtx = createTestContext("BACKTEST");
+const _backtestCtx = createTestContext("BACKTEST");
 
 import {
   batchSearch,

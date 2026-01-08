@@ -2,8 +2,8 @@
  * Backtest Adapter Tests
  */
 
-import { createTestContext } from "@cream/domain";
 import { beforeEach, describe, expect, test } from "bun:test";
+import { createTestContext } from "@cream/domain";
 import { createBacktestAdapter, createBacktestAdapterWithUtils } from "../src/adapters/backtest.js";
 import { createBrokerClient } from "../src/factory.js";
 
@@ -729,9 +729,7 @@ describe("createBrokerClient factory", () => {
 
     try {
       const ctx = createTestContext("PAPER");
-      expect(() => createBrokerClient(ctx)).toThrow(
-        "ALPACA_KEY and ALPACA_SECRET are required"
-      );
+      expect(() => createBrokerClient(ctx)).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
     } finally {
       // Restore env vars
       if (savedKey) {

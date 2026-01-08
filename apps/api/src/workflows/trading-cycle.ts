@@ -511,7 +511,12 @@ async function submitOrders(
 // ============================================
 
 async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowResult> {
-  const { cycleId, context, instruments = ["AAPL", "MSFT", "GOOGL"], useDraftConfig = false } = input;
+  const {
+    cycleId,
+    context,
+    instruments = ["AAPL", "MSFT", "GOOGL"],
+    useDraftConfig = false,
+  } = input;
 
   // Load config (optional for stub mode, used for audit trail)
   const runtimeConfig = await loadRuntimeConfig(context, useDraftConfig);

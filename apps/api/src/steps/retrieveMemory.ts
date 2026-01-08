@@ -10,7 +10,12 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import {
   createHelixClientFromEnv,
   formatTradeMemorySummary,
@@ -30,6 +35,7 @@ function createStepContext(): ExecutionContext {
   const envValue = process.env.CREAM_ENV || "BACKTEST";
   return createContext(envValue as CreamEnvironment, "scheduled");
 }
+
 import {
   createEmbeddingClient,
   type EmbeddingClient,

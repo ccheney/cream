@@ -14,7 +14,12 @@
  * Events are stored to the external_events table for retrieval.
  */
 
-import { type CreamEnvironment, createContext, type ExecutionContext, isBacktest } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
 import {
   createExtractionPipeline,
   type ExtractedEvent,
@@ -29,6 +34,7 @@ function createStepContext(): ExecutionContext {
   const envValue = process.env.CREAM_ENV || "BACKTEST";
   return createContext(envValue as CreamEnvironment, "scheduled");
 }
+
 import type { CreateExternalEventInput } from "@cream/storage";
 import { createFMPClient, type FMPClient, type FMPStockNews } from "@cream/universe";
 import { createStep } from "@mastra/core/workflows";
