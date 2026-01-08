@@ -159,7 +159,40 @@ validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
 - Rust tests use `cargo test` with `mockall` for mocking
 - Python tests use `pytest` with `pytest-asyncio`
 - Use `@cream/test-fixtures` for factories and golden files
-- Use `testcontainers` for integration tests requiring HelixDB/Turso
+- Use dependency injection patterns for external services (see `setSDKProvider` in claudeCodeIndicator.ts)
+
+### Integration Tests with Testcontainers
+
+Use [testcontainers](https://github.com/testcontainers/testcontainers-node) for integration tests requiring real infrastructure:
+
+```typescript
+import { GenericContainer, StartedTestContainer } from "testcontainers";
+
+let container: StartedTestContainer;
+
+beforeAll(async () => {
+  container = await new GenericContainer("turso/libsql:latest")
+    .withExposedPorts(8080)
+    .start();
+
+  process.env.TURSO_DATABASE_URL = `http://localhost:${container.getMappedPort(8080)}`;
+});
+
+afterAll(async () => {
+  await container.stop();
+});
+```
+
+**When to use testcontainers:**
+- HelixDB integration tests (graph queries, vector search)
+- Turso/SQLite integration tests (migrations, complex queries)
+- Redis/caching integration tests
+- Any test requiring real database behavior vs mocks
+
+**When NOT to use testcontainers:**
+- Unit tests (use mocks/stubs)
+- External API clients (use dependency injection + mocks)
+- Tests that can run with in-memory alternatives
 
 ## Code Conventions
 

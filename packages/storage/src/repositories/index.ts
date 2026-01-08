@@ -195,6 +195,15 @@ export {
   type ThesisStateHistoryEntry,
   ThesisStateRepository,
 } from "./thesis-state.js";
+// Trading config (migration 011) - runtime configuration
+export {
+  type CreateTradingConfigInput,
+  type TradingConfig,
+  TradingConfigRepository,
+  type TradingConfigStatus,
+  type TradingEnvironment,
+  type UpdateTradingConfigInput,
+} from "./trading-config.js";
 export {
   type SourceType,
   SourceTypeSchema,

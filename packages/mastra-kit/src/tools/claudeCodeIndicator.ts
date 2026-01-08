@@ -15,10 +15,14 @@ import {
 } from "@cream/indicators";
 import { z } from "zod";
 
-// Type definitions for the Claude Agent SDK V2 interface
-// Used when SDK is not installed - we handle this gracefully at runtime
+// ============================================
+// SDK Type Definitions (exported for testing)
+// ============================================
 
-interface SDKMessage {
+/**
+ * Message from SDK stream
+ */
+export interface SDKMessage {
   type: string;
   session_id: string;
   message?: {
@@ -27,7 +31,10 @@ interface SDKMessage {
   };
 }
 
-interface SessionOptions {
+/**
+ * Options for creating a session
+ */
+export interface SessionOptions {
   model?: string;
   maxTurns?: number;
   cwd?: string;
@@ -39,14 +46,71 @@ interface SessionOptions {
   ) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
 }
 
-interface Session {
+/**
+ * Session interface for V2 SDK
+ */
+export interface Session {
   send(message: string): Promise<void>;
   stream(): AsyncGenerator<SDKMessage>;
   close(): void;
   [Symbol.asyncDispose]?: () => Promise<void>;
 }
 
-type CreateSessionFunction = (options: SessionOptions) => Session;
+/**
+ * Function to create a new session
+ */
+export type CreateSessionFunction = (options: SessionOptions) => Session;
+
+/**
+ * SDK provider interface for dependency injection
+ * Allows mocking the SDK in tests
+ */
+export interface SDKProvider {
+  createSession: CreateSessionFunction;
+}
+
+// Global SDK provider override for testing
+// Use Symbol to distinguish between "not set" and "explicitly disabled"
+const SDK_DISABLED = Symbol("SDK_DISABLED");
+let _sdkProviderOverride: SDKProvider | typeof SDK_DISABLED | null = null;
+
+/**
+ * Set SDK provider for testing
+ * @param provider - Mock SDK provider, null to reset, or 'disabled' to block SDK
+ */
+export function setSDKProvider(provider: SDKProvider | "disabled" | null): void {
+  if (provider === "disabled") {
+    _sdkProviderOverride = SDK_DISABLED;
+  } else {
+    _sdkProviderOverride = provider;
+  }
+}
+
+/**
+ * Get the current SDK provider (override or real SDK)
+ * @returns SDK provider or null if not available
+ */
+export async function getSDKProvider(): Promise<SDKProvider | null> {
+  // Return null if explicitly disabled (for testing)
+  if (_sdkProviderOverride === SDK_DISABLED) {
+    return null;
+  }
+
+  // Return override if set (for testing)
+  if (_sdkProviderOverride) {
+    return _sdkProviderOverride;
+  }
+
+  // Try to import the real SDK
+  try {
+    const sdk = await import("@anthropic-ai/claude-agent-sdk");
+    return {
+      createSession: sdk.unstable_v2_createSession as CreateSessionFunction,
+    };
+  } catch {
+    return null;
+  }
+}
 
 // ============================================
 // Configuration
@@ -282,14 +346,9 @@ export async function implementIndicator(
   const testPath = `packages/indicators/src/custom/${input.hypothesis.name}.test.ts`;
 
   try {
-    // Import the Claude Agent SDK V2 dynamically to avoid hard dependency
-    // The SDK is optional and may not be installed
-    let createSession: CreateSessionFunction;
-    try {
-      // Use dynamic import to avoid TypeScript type checking
-      const sdk = await import("@anthropic-ai/claude-agent-sdk");
-      createSession = sdk.unstable_v2_createSession as CreateSessionFunction;
-    } catch {
+    // Get SDK provider (supports dependency injection for testing)
+    const sdkProvider = await getSDKProvider();
+    if (!sdkProvider) {
       return {
         success: false,
         error: "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk",
@@ -297,7 +356,7 @@ export async function implementIndicator(
     }
 
     // Create session with restrictions
-    const session = createSession({
+    const session = sdkProvider.createSession({
       model: config.model,
       maxTurns: config.maxTurns,
       cwd: config.workingDirectory,
