@@ -151,6 +151,7 @@ export const CHANNEL_PERMISSIONS: Record<Channel, UserRole[]> = {
   decisions: ["user", "admin"],
   agents: ["admin"],
   cycles: ["admin"],
+  backtests: ["user", "admin"],
   alerts: ["user", "admin"],
   system: ["admin"],
   portfolio: ["user", "admin"],

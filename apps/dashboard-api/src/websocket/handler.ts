@@ -15,9 +15,11 @@ import {
   ClientMessageSchema,
   type PingMessage,
   type ServerMessage,
+  type SubscribeBacktestMessage,
   type SubscribeMessage,
   type SubscribeOptionsMessage,
   type SubscribeSymbolsMessage,
+  type UnsubscribeBacktestMessage,
   type UnsubscribeMessage,
   type UnsubscribeOptionsMessage,
   type UnsubscribeSymbolsMessage,
@@ -30,6 +32,15 @@ import {
   getCachedOptionsQuote,
   subscribeContracts as subscribeToOptionsStreaming,
 } from "../streaming/options-data.js";
+import {
+  broadcastToBacktest,
+  cleanupBacktestSubscriptions,
+  subscribeToBacktest,
+  unsubscribeFromBacktest,
+} from "./backtest-channel.js";
+
+// Re-export backtest channel functions for convenience
+export { broadcastToBacktest } from "./backtest-channel.js";
 
 // ============================================
 // Types
@@ -334,6 +345,43 @@ function handleUnsubscribeOptions(
 }
 
 /**
+ * Handle subscribe backtest message.
+ * Subscribes the connection to receive progress updates for a specific backtest.
+ */
+function handleSubscribeBacktest(
+  ws: WebSocketWithMetadata,
+  message: SubscribeBacktestMessage
+): void {
+  const metadata = ws.data;
+
+  // Subscribe to backtest updates
+  subscribeToBacktest(ws, message.backtestId);
+
+  // Auto-subscribe to backtests channel
+  metadata.channels.add("backtests");
+
+  sendMessage(ws, {
+    type: "subscribed",
+    channels: ["backtests"],
+  });
+}
+
+/**
+ * Handle unsubscribe backtest message.
+ */
+function handleUnsubscribeBacktest(
+  ws: WebSocketWithMetadata,
+  message: UnsubscribeBacktestMessage
+): void {
+  unsubscribeFromBacktest(ws, message.backtestId);
+
+  sendMessage(ws, {
+    type: "unsubscribed",
+    channels: [],
+  });
+}
+
+/**
  * Handle ping message.
  */
 function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
@@ -389,6 +437,12 @@ export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): vo
       break;
     case "unsubscribe_options":
       handleUnsubscribeOptions(ws, message);
+      break;
+    case "subscribe_backtest":
+      handleSubscribeBacktest(ws, message);
+      break;
+    case "unsubscribe_backtest":
+      handleUnsubscribeBacktest(ws, message);
       break;
     case "ping":
       handlePing(ws, message);
@@ -639,6 +693,8 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
 export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: string): void {
   const metadata = ws.data;
   removeConnection(metadata.connectionId);
+  // Clean up backtest subscriptions
+  cleanupBacktestSubscriptions(ws);
 }
 
 /**
@@ -647,6 +703,8 @@ export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: s
 export function handleError(ws: WebSocketWithMetadata, _error: Error): void {
   const metadata = ws.data;
   removeConnection(metadata.connectionId);
+  // Clean up backtest subscriptions
+  cleanupBacktestSubscriptions(ws);
 }
 
 /**
@@ -796,6 +854,7 @@ export default {
   broadcastAll,
   broadcastCycleProgress,
   broadcastCycleResult,
+  broadcastToBacktest,
   sendMessage,
   sendError,
   validateAuthToken,
