@@ -145,7 +145,12 @@ export default function ConfigEditPage() {
           <div className="flex items-center gap-2">
             {validationResult.valid ? (
               <>
-                <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5 text-emerald-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -158,7 +163,12 @@ export default function ConfigEditPage() {
               </>
             ) : (
               <>
-                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -173,8 +183,8 @@ export default function ConfigEditPage() {
           </div>
           {validationResult.errors.length > 0 && (
             <ul className="mt-2 space-y-1 text-sm text-red-700 dark:text-red-400">
-              {validationResult.errors.map((err, i) => (
-                <li key={i}>
+              {validationResult.errors.map((err) => (
+                <li key={`${err.field}-${err.message}`}>
                   <strong>{err.field}:</strong> {err.message}
                 </li>
               ))}
@@ -182,8 +192,8 @@ export default function ConfigEditPage() {
           )}
           {validationResult.warnings.length > 0 && (
             <ul className="mt-2 space-y-1 text-sm text-amber-700 dark:text-amber-400">
-              {validationResult.warnings.map((warning, i) => (
-                <li key={i}>{warning}</li>
+              {validationResult.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
               ))}
             </ul>
           )}
@@ -515,6 +525,7 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -530,10 +541,14 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                 <div className="p-4 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+                      <label
+                        htmlFor={`${agentType}-model`}
+                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+                      >
                         Model
                       </label>
                       <select
+                        id={`${agentType}-model`}
                         value={(formData[agentType]?.model as string) ?? agent.model}
                         onChange={(e) => handleChange(agentType, "model", e.target.value)}
                         className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
@@ -546,10 +561,14 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+                      <label
+                        htmlFor={`${agentType}-temperature`}
+                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+                      >
                         Temperature
                       </label>
                       <input
+                        id={`${agentType}-temperature`}
                         type="number"
                         step={0.1}
                         min={0}
@@ -562,10 +581,14 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+                      <label
+                        htmlFor={`${agentType}-maxTokens`}
+                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+                      >
                         Max Tokens
                       </label>
                       <input
+                        id={`${agentType}-maxTokens`}
                         type="number"
                         min={100}
                         max={32000}
@@ -592,10 +615,14 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                   </div>
 
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+                    <label
+                      htmlFor={`${agentType}-systemPrompt`}
+                      className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+                    >
                       System Prompt Override
                     </label>
                     <textarea
+                      id={`${agentType}-systemPrompt`}
                       rows={3}
                       value={
                         (formData[agentType]?.systemPromptOverride as string) ??
@@ -681,10 +708,10 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
 
       <div className="space-y-4">
         {/* Source Type */}
-        <div>
-          <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
+        <fieldset>
+          <legend className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
             Universe Source
-          </label>
+          </legend>
           <div className="flex gap-4">
             {(["static", "index", "screener"] as const).map((source) => (
               <label key={source} className="flex items-center gap-2 cursor-pointer">
@@ -702,15 +729,19 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Static Symbols */}
         {getValue("source") === "static" && (
           <div>
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+            <label
+              htmlFor="static-symbols"
+              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+            >
               Static Symbols
             </label>
             <textarea
+              id="static-symbols"
               rows={3}
               value={(getValue("staticSymbols") || []).join(", ")}
               onChange={(e) =>
@@ -731,10 +762,14 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
         {/* Index Source */}
         {getValue("source") === "index" && (
           <div>
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+            <label
+              htmlFor="index-source"
+              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+            >
               Index Source
             </label>
             <select
+              id="index-source"
               value={getValue("indexSource") || "SPY"}
               onChange={(e) => handleChange("indexSource", e.target.value)}
               className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
@@ -778,10 +813,14 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
         {/* Include/Exclude Lists */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+            <label
+              htmlFor="include-list"
+              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+            >
               Always Include
             </label>
             <textarea
+              id="include-list"
               rows={2}
               value={getValue("includeList").join(", ")}
               onChange={(e) =>
@@ -798,10 +837,14 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+            <label
+              htmlFor="exclude-list"
+              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+            >
               Always Exclude
             </label>
             <textarea
+              id="exclude-list"
               rows={2}
               value={getValue("excludeList").join(", ")}
               onChange={(e) =>
@@ -836,17 +879,34 @@ interface FormFieldProps {
   min?: number;
   max?: number;
   step?: number;
+  id?: string;
 }
 
-function FormField({ label, hint, value, onChange, suffix, min, max, step = 1 }: FormFieldProps) {
+function FormField({
+  label,
+  hint,
+  value,
+  onChange,
+  suffix,
+  min,
+  max,
+  step = 1,
+  id,
+}: FormFieldProps) {
+  // Generate a stable ID from the label if not provided
+  const inputId = id ?? `field-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
   return (
     <div>
-      <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1">
+      <label
+        htmlFor={inputId}
+        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+      >
         {label}
         {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
       </label>
       <div className="relative">
         <input
+          id={inputId}
           type="number"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
