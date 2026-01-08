@@ -15,7 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/collapsible";
-import type { Configuration } from "@/lib/api/types";
+import type { Configuration, FullRuntimeConfig } from "@/lib/api/types";
 import {
   calculateDiff,
   type DiffEntry,
@@ -29,15 +29,18 @@ import {
 // Types
 // ============================================
 
-export interface ConfigDiffProps {
+/** Accepts either Configuration or FullRuntimeConfig */
+export type ConfigType = Configuration | FullRuntimeConfig;
+
+export interface ConfigDiffProps<T extends ConfigType = ConfigType> {
   /** Configuration before changes */
-  before: Configuration;
+  before: T;
   /** Configuration after changes */
-  after: Configuration;
+  after: T;
   /** Show unchanged fields (default: false) */
   showUnchanged?: boolean;
   /** Callback to revert a specific change */
-  onRevert?: (path: string[], oldValue: unknown, newConfig: Configuration) => void;
+  onRevert?: (path: string[], oldValue: unknown, newConfig: T) => void;
   /** View mode: unified diff or tree view */
   viewMode?: "diff" | "tree";
 }
@@ -46,13 +49,13 @@ export interface ConfigDiffProps {
 // Component
 // ============================================
 
-export function ConfigDiff({
+export function ConfigDiff<T extends ConfigType>({
   before,
   after,
   showUnchanged = false,
   onRevert,
   viewMode = "diff",
-}: ConfigDiffProps) {
+}: ConfigDiffProps<T>) {
   const [mode, setMode] = useState<"diff" | "tree">(viewMode);
 
   const diffResult = useMemo(
@@ -141,7 +144,7 @@ export function ConfigDiff({
 // Diff View (using @pierre/diffs)
 // ============================================
 
-function DiffView({ before, after }: { before: Configuration; after: Configuration }) {
+function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) {
   const oldContents = JSON.stringify(before, null, 2);
   const newContents = JSON.stringify(after, null, 2);
 
@@ -165,13 +168,13 @@ function DiffView({ before, after }: { before: Configuration; after: Configurati
 // Tree View (structured config diff)
 // ============================================
 
-interface TreeViewProps {
+interface TreeViewProps<T extends ConfigType> {
   entries: DiffEntry[];
-  onRevert?: (path: string[], oldValue: unknown, newConfig: Configuration) => void;
-  after: Configuration;
+  onRevert?: (path: string[], oldValue: unknown, newConfig: T) => void;
+  after: T;
 }
 
-function TreeView({ entries, onRevert, after }: TreeViewProps) {
+function TreeView<T extends ConfigType>({ entries, onRevert, after }: TreeViewProps<T>) {
   const handleRevert = (entry: DiffEntry) => {
     if (!onRevert) {
       return;
@@ -180,7 +183,7 @@ function TreeView({ entries, onRevert, after }: TreeViewProps) {
       after as unknown as Record<string, unknown>,
       entry.path,
       entry.oldValue
-    ) as unknown as Configuration;
+    ) as unknown as T;
     onRevert(entry.path, entry.oldValue, newConfig);
   };
 

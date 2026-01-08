@@ -462,6 +462,105 @@ export interface ConfigVersion {
 }
 
 // ============================================
+// Runtime Config Types (Database-backed)
+// ============================================
+
+export type RuntimeAgentType =
+  | "technical_analyst"
+  | "news_analyst"
+  | "fundamentals_analyst"
+  | "bullish_researcher"
+  | "bearish_researcher"
+  | "trader"
+  | "risk_manager"
+  | "critic";
+
+export type ConfigStatus = "draft" | "testing" | "active" | "archived";
+
+export interface RuntimeTradingConfig {
+  id: string;
+  environment: Environment;
+  version: number;
+  maxConsensusIterations: number;
+  agentTimeoutMs: number;
+  totalConsensusTimeoutMs: number;
+  convictionDeltaHold: number;
+  convictionDeltaAction: number;
+  highConvictionPct: number;
+  mediumConvictionPct: number;
+  lowConvictionPct: number;
+  minRiskRewardRatio: number;
+  kellyFraction: number;
+  tradingCycleIntervalMs: number;
+  predictionMarketsIntervalMs: number;
+  status: ConfigStatus;
+  createdAt: string;
+  updatedAt: string;
+  promotedFrom: string | null;
+}
+
+export type UniverseSourceType = "static" | "index" | "screener";
+
+export interface RuntimeUniverseConfig {
+  id: string;
+  environment: Environment;
+  source: UniverseSourceType;
+  staticSymbols: string[] | null;
+  indexSource: string | null;
+  minVolume: number | null;
+  minMarketCap: number | null;
+  optionableOnly: boolean;
+  includeList: string[];
+  excludeList: string[];
+  status: ConfigStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RuntimeAgentConfig {
+  id: string;
+  environment: Environment;
+  agentType: RuntimeAgentType;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  systemPromptOverride: string | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FullRuntimeConfig {
+  trading: RuntimeTradingConfig;
+  agents: Record<RuntimeAgentType, RuntimeAgentConfig>;
+  universe: RuntimeUniverseConfig;
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  value?: unknown;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+  warnings: string[];
+}
+
+export interface ConfigHistoryEntry {
+  tradingConfig: RuntimeTradingConfig;
+  changedAt: string;
+  changedFields: string[];
+}
+
+export interface SaveDraftInput {
+  trading?: Partial<RuntimeTradingConfig>;
+  universe?: Partial<RuntimeUniverseConfig>;
+  agents?: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
+}
+
+// ============================================
 // Market Types
 // ============================================
 
