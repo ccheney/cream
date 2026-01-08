@@ -9,42 +9,15 @@
     "test": "echo 'No tests for generated files'"
   },
   "exports": {
-    "./cream/v1/common": {
-      "import": "./ts/cream/v1/common_pb.ts",
-      "types": "./ts/cream/v1/common_pb.ts"
-    },
-    "./cream/v1/decision": {
-      "import": "./ts/cream/v1/decision_pb.ts",
-      "types": "./ts/cream/v1/decision_pb.ts"
-    },
-    "./cream/v1/events": {
-      "import": "./ts/cream/v1/events_pb.ts",
-      "types": "./ts/cream/v1/events_pb.ts"
-    },
-    "./cream/v1/execution": {
-      "import": "./ts/cream/v1/execution_pb.ts",
-      "types": "./ts/cream/v1/execution_pb.ts"
-    },
-    "./cream/v1/execution_connect": {
-      "import": "./ts/cream/v1/execution_connect.ts",
-      "types": "./ts/cream/v1/execution_connect.ts"
-    },
-    "./cream/v1/market_snapshot": {
-      "import": "./ts/cream/v1/market_snapshot_pb.ts",
-      "types": "./ts/cream/v1/market_snapshot_pb.ts"
-    },
-    "./cream/v1/market_snapshot_connect": {
-      "import": "./ts/cream/v1/market_snapshot_connect.ts",
-      "types": "./ts/cream/v1/market_snapshot_connect.ts"
-    },
-    "./arrow/flight/protocol": {
-      "import": "./ts/arrow/flight/protocol/flight_pb.ts",
-      "types": "./ts/arrow/flight/protocol/flight_pb.ts"
-    },
-    "./arrow/flight/protocol_connect": {
-      "import": "./ts/arrow/flight/protocol/flight_connect.ts",
-      "types": "./ts/arrow/flight/protocol/flight_connect.ts"
-    }
+    "./cream/v1/common": "./ts/cream/v1/common_pb.ts",
+    "./cream/v1/decision": "./ts/cream/v1/decision_pb.ts",
+    "./cream/v1/events": "./ts/cream/v1/events_pb.ts",
+    "./cream/v1/execution": "./ts/cream/v1/execution_pb.ts",
+    "./cream/v1/execution_connect": "./ts/cream/v1/execution_connect.ts",
+    "./cream/v1/market_snapshot": "./ts/cream/v1/market_snapshot_pb.ts",
+    "./cream/v1/market_snapshot_connect": "./ts/cream/v1/market_snapshot_connect.ts",
+    "./arrow/flight/protocol": "./ts/arrow/flight/protocol/flight_pb.ts",
+    "./arrow/flight/protocol_connect": "./ts/arrow/flight/protocol/flight_connect.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^1.10.0",
