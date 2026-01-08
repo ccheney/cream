@@ -6,8 +6,9 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
+import { tradingCycleWorkflow } from "@cream/api";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getAlertsRepo, getOrdersRepo, getPositionsRepo } from "../db.js";
+import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getRuntimeConfigService } from "../db.js";
 
 // ============================================
 // Schemas
@@ -63,9 +64,45 @@ const EnvironmentRequestSchema = z.object({
   confirmLive: z.boolean().optional(),
 });
 
+// Trigger Cycle Schemas
+const TriggerCycleRequestSchema = z.object({
+  environment: EnvironmentSchema,
+  useDraftConfig: z.boolean().default(false),
+  symbols: z.array(z.string()).optional(),
+  confirmLive: z.boolean().optional(),
+});
+
+const CycleStatusValue = z.enum(["queued", "running", "completed", "failed"]);
+
+const TriggerCycleResponseSchema = z.object({
+  cycleId: z.string(),
+  status: CycleStatusValue,
+  environment: z.string(),
+  configVersion: z.string().nullable(),
+  startedAt: z.string(),
+});
+
+const CycleStatusResponseSchema = z.object({
+  cycleId: z.string(),
+  status: CycleStatusValue,
+  environment: z.string(),
+  startedAt: z.string(),
+  completedAt: z.string().nullable(),
+  error: z.string().nullable(),
+});
+
 // ============================================
 // In-Memory System State
 // ============================================
+
+interface CycleState {
+  cycleId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  environment: "BACKTEST" | "PAPER" | "LIVE";
+  startedAt: string;
+  completedAt: string | null;
+  error: string | null;
+}
 
 interface SystemState {
   status: "ACTIVE" | "PAUSED" | "STOPPED";
@@ -73,6 +110,10 @@ interface SystemState {
   lastCycleId: string | null;
   lastCycleTime: string | null;
   startedAt: Date | null;
+  /** Track running cycles per environment */
+  runningCycles: Map<string, CycleState>;
+  /** Rate limit: last trigger time per environment */
+  lastTriggerTime: Map<string, number>;
 }
 
 const systemState: SystemState = {
@@ -81,7 +122,12 @@ const systemState: SystemState = {
   lastCycleId: null,
   lastCycleTime: null,
   startedAt: null,
+  runningCycles: new Map(),
+  lastTriggerTime: new Map(),
 };
+
+/** Rate limit in milliseconds (5 minutes) */
+const TRIGGER_RATE_LIMIT_MS = 5 * 60 * 1000;
 
 // ============================================
 // Routes
@@ -395,6 +441,195 @@ app.openapi(environmentRoute, async (c) => {
       createdAt: a.createdAt,
     })),
   });
+});
+
+// POST /api/system/trigger-cycle
+const triggerCycleRoute = createRoute({
+  method: "post",
+  path: "/trigger-cycle",
+  request: {
+    body: {
+      content: { "application/json": { schema: TriggerCycleRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: TriggerCycleResponseSchema } },
+      description: "Cycle triggered successfully",
+    },
+    400: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+      description: "Invalid request",
+    },
+    409: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string(), cycleId: z.string().optional() }),
+        },
+      },
+      description: "Cycle already in progress",
+    },
+    429: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string(), retryAfterMs: z.number() }),
+        },
+      },
+      description: "Rate limited",
+    },
+  },
+  tags: ["System"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(triggerCycleRoute, async (c) => {
+  const body = c.req.valid("json");
+  const { environment, useDraftConfig, symbols, confirmLive } = body;
+
+  // Authorization: LIVE requires confirmLive
+  if (environment === "LIVE" && !confirmLive) {
+    return c.json({ error: "confirmLive required to trigger LIVE cycle" }, 400);
+  }
+
+  // Check if a cycle is already running for this environment
+  const existingCycle = systemState.runningCycles.get(environment);
+  if (existingCycle && (existingCycle.status === "queued" || existingCycle.status === "running")) {
+    return c.json(
+      { error: `Cycle already in progress for ${environment}`, cycleId: existingCycle.cycleId },
+      409
+    );
+  }
+
+  // Rate limiting
+  const lastTrigger = systemState.lastTriggerTime.get(environment) ?? 0;
+  const timeSinceLastTrigger = Date.now() - lastTrigger;
+  if (timeSinceLastTrigger < TRIGGER_RATE_LIMIT_MS) {
+    const retryAfterMs = TRIGGER_RATE_LIMIT_MS - timeSinceLastTrigger;
+    return c.json(
+      {
+        error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 1000)} seconds.`,
+        retryAfterMs,
+      },
+      429
+    );
+  }
+
+  // Generate cycle ID
+  const cycleId = `cycle_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const startedAt = new Date().toISOString();
+
+  // Get config version
+  let configVersion: string | null = null;
+  try {
+    const configService = await getRuntimeConfigService();
+    const config = useDraftConfig
+      ? await configService.getDraft(environment)
+      : await configService.getActiveConfig(environment);
+    configVersion = config.trading.id;
+  } catch {
+    // Config not found is OK for BACKTEST
+    if (environment !== "BACKTEST") {
+      return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
+    }
+  }
+
+  // Track cycle state
+  const cycleState: CycleState = {
+    cycleId,
+    status: "queued",
+    environment,
+    startedAt,
+    completedAt: null,
+    error: null,
+  };
+  systemState.runningCycles.set(environment, cycleState);
+  systemState.lastTriggerTime.set(environment, Date.now());
+
+  // Trigger workflow asynchronously (non-blocking)
+  const runCycle = async () => {
+    cycleState.status = "running";
+    try {
+      await tradingCycleWorkflow.execute({
+        triggerData: {
+          cycleId,
+          instruments: symbols,
+          useDraftConfig,
+        },
+      });
+      cycleState.status = "completed";
+      cycleState.completedAt = new Date().toISOString();
+
+      // Update system state
+      systemState.lastCycleId = cycleId;
+      systemState.lastCycleTime = cycleState.completedAt;
+    } catch (error) {
+      cycleState.status = "failed";
+      cycleState.completedAt = new Date().toISOString();
+      cycleState.error = error instanceof Error ? error.message : "Unknown error";
+    }
+  };
+
+  // Start without awaiting
+  runCycle();
+
+  return c.json({
+    cycleId,
+    status: "queued",
+    environment,
+    configVersion,
+    startedAt,
+  });
+});
+
+// GET /api/system/cycle/:cycleId
+const cycleStatusRoute = createRoute({
+  method: "get",
+  path: "/cycle/:cycleId",
+  request: {
+    params: z.object({
+      cycleId: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: CycleStatusResponseSchema } },
+      description: "Cycle status",
+    },
+    404: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+      description: "Cycle not found",
+    },
+  },
+  tags: ["System"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(cycleStatusRoute, async (c) => {
+  const { cycleId } = c.req.valid("param");
+
+  // Search all environments for the cycle
+  for (const cycleState of systemState.runningCycles.values()) {
+    if (cycleState.cycleId === cycleId) {
+      return c.json({
+        cycleId: cycleState.cycleId,
+        status: cycleState.status,
+        environment: cycleState.environment,
+        startedAt: cycleState.startedAt,
+        completedAt: cycleState.completedAt,
+        error: cycleState.error,
+      });
+    }
+  }
+
+  return c.json({ error: "Cycle not found" }, 404);
 });
 
 // GET /api/system/health
