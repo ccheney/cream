@@ -1,34 +1,40 @@
-# Sync with .gitignore
+# Docker ignore file for Cream monorepo
+# These files/folders are excluded from Docker build context
 
-# Dependencies
-node_modules/
-.bun/
+# Dependencies (installed fresh in container)
+node_modules
+**/node_modules
 
-# Build outputs
-dist/
-.next/
-out/
+# Build outputs (rebuilt in container)
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+coverage
+**/coverage
+target
 
-# Turborepo
-.turbo/
+# Version control
+.git
+.gitignore
 
-# Test coverage
-coverage/
-
-# Environment files
+# Environment files (secrets should be passed at runtime)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# IDE
-.idea/
-.vscode/
+# IDE and editor files
+.idea
+.vscode
 *.swp
 *.swo
-.DS_Store
+*~
 
-# Claude Code
-.claude/
+# OS files
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
@@ -36,45 +42,34 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Rust
-target/
-*.profraw
-*.profdata
+# Test files (not needed in production)
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__
+**/__tests__
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-.uv/
-.ruff_cache/
-.pytest_cache/
-.coverage
-htmlcov/
+# Documentation (not needed in production)
+docs
+*.md
+!README.md
 
-# Database files
-*.db
-*.db-wal
-*.db-shm
-*.db-journal
-*.sqlite
-*.sqlite3
+# Python virtual environments
+.venv
+__pycache__
+*.pyc
 
-# Docker volumes (local)
-.docker-data/
+# Rust build artifacts
+target
+Cargo.lock
 
-# Docs
-docs/
+# Development files
+.beads
+.claude
+*.local
+turbo.json
 
-# Git
-.git/
-.gitignore
-
-# Playwright
-.playwright-mcp/
-
-# Docker-specific exclusions
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+# Misc
+*.tgz
+*.tar.gz

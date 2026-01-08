@@ -1,64 +1,80 @@
-# Cream Dashboard - Next.js Frontend
-# ===================================
-# Multi-stage build for production deployment
+# syntax=docker/dockerfile:1
+# Dashboard (Next.js) Dockerfile
 #
-# Build: docker compose build dashboard
-# Run:   docker compose up dashboard
+# Multi-stage build for production Next.js deployment with standalone output.
+# Uses oven/bun as the runtime for improved performance.
+#
+# Build: docker build -t cream-dashboard -f apps/dashboard/Dockerfile .
+# Run:   docker run -p 3000:3000 cream-dashboard
 
-# Stage 1: Install dependencies
-FROM oven/bun:1 AS deps
+# ===========================================
+# Stage 1: Dependencies
+# ===========================================
+FROM oven/bun:1.3 AS deps
 WORKDIR /app
 
-# Copy package files for dependency installation
-COPY package.json bunfig.toml bun.lock ./
+# Copy workspace configuration
+COPY package.json bun.lock ./
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/dashboard-types/package.json ./packages/dashboard-types/
+
+# Copy dashboard package.json
 COPY apps/dashboard/package.json ./apps/dashboard/
-COPY packages ./packages
 
-# Install all dependencies + typescript 5.9.3 (required by Next.js type checking and ES2024 lib)
-RUN bun install --ignore-scripts && bun add typescript@5.9.3 --dev --no-save
+# Install all dependencies (including devDependencies for build)
+RUN bun install --frozen-lockfile
 
-# Stage 2: Build the application
-FROM oven/bun:1 AS builder
+# ===========================================
+# Stage 2: Builder
+# ===========================================
+FROM oven/bun:1.3 AS builder
 WORKDIR /app
 
-# NEXT_PUBLIC_* vars must be available at build time (baked into client JS)
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001
-ARG NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/tsconfig/node_modules ./packages/tsconfig/node_modules
+COPY --from=deps /app/packages/dashboard-types/node_modules ./packages/dashboard-types/node_modules
+COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 
-# Copy everything from deps (includes node_modules)
-COPY --from=deps /app ./
-
-# Copy dashboard source
+# Copy source files
+COPY package.json bun.lock ./
+COPY packages/tsconfig ./packages/tsconfig
+COPY packages/dashboard-types ./packages/dashboard-types
 COPY apps/dashboard ./apps/dashboard
 
-# Build Next.js
-WORKDIR /app/apps/dashboard
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-
+# Build dashboard-types dependency first
+WORKDIR /app/packages/dashboard-types
 RUN bun run build
 
-# Stage 3: Production image
-FROM oven/bun:1-slim AS runner
+# Build the Next.js app
+WORKDIR /app/apps/dashboard
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN bun run build
+
+# ===========================================
+# Stage 3: Production Runner
+# ===========================================
+FROM oven/bun:1.3-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Copy built application (standalone preserves monorepo structure)
-COPY --from=builder --chown=bun:bun /app/apps/dashboard/.next/standalone ./
-COPY --from=builder --chown=bun:bun /app/apps/dashboard/public ./apps/dashboard/public
-COPY --from=builder --chown=bun:bun /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
-
-# Set working directory to where server.js is located
-WORKDIR /app/apps/dashboard
-
-USER bun
-
-EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["bun", "server.js"]
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy standalone output
+COPY --from=builder --chown=nextjs:nodejs /app/apps/dashboard/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/dashboard/public ./apps/dashboard/public
+
+USER nextjs
+
+EXPOSE 3000
+
+# Start the Next.js server
+CMD ["bun", "run", "apps/dashboard/server.js"]

@@ -5,6 +5,12 @@
  */
 
 import {
+  createRuntimeConfigService,
+  type RuntimeConfigService,
+  type RuntimeEnvironment,
+} from "@cream/config";
+import {
+  AgentConfigsRepository,
   createInMemoryClient,
   createTursoClient,
   ExternalEventsRepository,
@@ -14,7 +20,9 @@ import {
   RegimeLabelsRepository,
   runMigrations,
   ThesisStateRepository,
+  TradingConfigRepository,
   type TursoClient,
+  UniverseConfigsRepository,
 } from "@cream/storage";
 
 // ============================================
@@ -150,3 +158,50 @@ export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
   const client = await getDbClient();
   return new RegimeLabelsRepository(client);
 }
+
+// ============================================
+// Runtime Config Repository Factories
+// ============================================
+
+/**
+ * Get trading config repository
+ */
+export async function getTradingConfigRepo(): Promise<TradingConfigRepository> {
+  const client = await getDbClient();
+  return new TradingConfigRepository(client);
+}
+
+/**
+ * Get agent configs repository
+ */
+export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
+  const client = await getDbClient();
+  return new AgentConfigsRepository(client);
+}
+
+/**
+ * Get universe configs repository
+ */
+export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
+  const client = await getDbClient();
+  return new UniverseConfigsRepository(client);
+}
+
+/**
+ * Get runtime config service
+ *
+ * Creates a RuntimeConfigService with all required repositories.
+ */
+export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
+  const [tradingRepo, agentRepo, universeRepo] = await Promise.all([
+    getTradingConfigRepo(),
+    getAgentConfigsRepo(),
+    getUniverseConfigsRepo(),
+  ]);
+  return createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+}
+
+/**
+ * Re-export RuntimeEnvironment type for workflow use
+ */
+export type { RuntimeEnvironment };

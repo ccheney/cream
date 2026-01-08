@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
-# Dashboard API (Hono) Dockerfile
+# Worker (Scheduler) Dockerfile
 #
-# Multi-stage build for production Hono API deployment.
+# Multi-stage build for production worker deployment.
 # Uses oven/bun as the runtime for improved performance.
 #
-# Build: docker build -t cream-dashboard-api -f apps/dashboard-api/Dockerfile .
-# Run:   docker run -p 3001:3001 -e TURSO_DATABASE_URL=... cream-dashboard-api
+# Build: docker build -t cream-worker -f apps/worker/Dockerfile .
+# Run:   docker run -e CREAM_ENV=PAPER -e TURSO_DATABASE_URL=... cream-worker
 
 # ===========================================
 # Stage 1: Dependencies
@@ -25,12 +25,20 @@ COPY packages/metrics/package.json ./packages/metrics/
 COPY packages/helix/package.json ./packages/helix/
 COPY packages/helix-schema/package.json ./packages/helix-schema/
 COPY packages/marketdata/package.json ./packages/marketdata/
-COPY packages/dashboard-types/package.json ./packages/dashboard-types/
 COPY packages/indicators/package.json ./packages/indicators/
 COPY packages/broker/package.json ./packages/broker/
+COPY packages/regime/package.json ./packages/regime/
+COPY packages/universe/package.json ./packages/universe/
+COPY packages/external-context/package.json ./packages/external-context/
+COPY packages/prediction-markets/package.json ./packages/prediction-markets/
+COPY packages/mastra-kit/package.json ./packages/mastra-kit/
+COPY packages/recovery/package.json ./packages/recovery/
+COPY packages/mocks/package.json ./packages/mocks/
+COPY packages/test-fixtures/package.json ./packages/test-fixtures/
 
-# Copy dashboard-api package.json
-COPY apps/dashboard-api/package.json ./apps/dashboard-api/
+# Copy api and worker package.json
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
 
 # Install all dependencies
 RUN bun install --frozen-lockfile
@@ -47,9 +55,10 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source files
 COPY package.json bun.lock ./
 COPY packages ./packages
-COPY apps/dashboard-api ./apps/dashboard-api
+COPY apps/api ./apps/api
+COPY apps/worker ./apps/worker
 
-# Build dependencies
+# Build dependencies in order
 WORKDIR /app/packages/domain
 RUN bun run build
 
@@ -57,9 +66,6 @@ WORKDIR /app/packages/config
 RUN bun run build
 
 WORKDIR /app/packages/metrics
-RUN bun run build
-
-WORKDIR /app/packages/dashboard-types
 RUN bun run build
 
 WORKDIR /app/packages/helix-schema
@@ -80,8 +86,27 @@ RUN bun run build
 WORKDIR /app/packages/marketdata
 RUN bun run build
 
-# Build the API
-WORKDIR /app/apps/dashboard-api
+WORKDIR /app/packages/regime
+RUN bun run build
+
+WORKDIR /app/packages/universe
+RUN bun run build
+
+WORKDIR /app/packages/external-context
+RUN bun run build
+
+WORKDIR /app/packages/prediction-markets
+RUN bun run build
+
+WORKDIR /app/packages/mastra-kit
+RUN bun run build
+
+# Build the api (dependency of worker)
+WORKDIR /app/apps/api
+RUN bun run build
+
+# Build the worker
+WORKDIR /app/apps/worker
 ENV NODE_ENV=production
 RUN bun build src/index.ts --outdir dist --target bun
 
@@ -92,22 +117,15 @@ FROM oven/bun:1.3-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3001
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 api
+    adduser --system --uid 1001 worker
 
 # Copy built application and necessary node_modules
-COPY --from=builder --chown=api:nodejs /app/apps/dashboard-api/dist ./dist
-COPY --from=builder --chown=api:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./dist
+COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
 
-USER api
-
-EXPOSE 3001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3001/health || exit 1
+USER worker
 
 CMD ["bun", "run", "dist/index.js"]

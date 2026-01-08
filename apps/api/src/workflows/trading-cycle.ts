@@ -23,6 +23,8 @@ import {
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
+import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
+
 import {
   type AgentContext,
   type BearishResearchOutput,
@@ -36,7 +38,7 @@ import {
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
-import { getRegimeLabelsRepo } from "../db.js";
+import { getRegimeLabelsRepo, getRuntimeConfigService, type RuntimeEnvironment } from "../db.js";
 
 // ============================================
 // Types
@@ -61,6 +63,8 @@ export interface WorkflowInput {
   instruments?: string[];
   /** Force stub mode even in PAPER/LIVE (for testing) */
   forceStub?: boolean;
+  /** Use draft config instead of active config (for testing new settings) */
+  useDraftConfig?: boolean;
   /** External context from gatherExternalContext step */
   externalContext?: ExternalContext;
 }
@@ -177,14 +181,55 @@ export interface WorkflowResult {
   iterations: number;
   orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
   mode: "STUB" | "LLM";
+  /** Config version ID used for this cycle (for audit trail) */
+  configVersion: string | null;
 }
 
 // ============================================
-// Timeout Configuration
+// Default Timeout Configuration (fallback if DB not available)
 // ============================================
 
-const AGENT_TIMEOUT_MS = 30_000; // 30 seconds per agent
-const TOTAL_CONSENSUS_TIMEOUT_MS = 300_000; // 5 minutes total
+const DEFAULT_AGENT_TIMEOUT_MS = 30_000; // 30 seconds per agent
+const DEFAULT_TOTAL_CONSENSUS_TIMEOUT_MS = 300_000; // 5 minutes total
+const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
+
+// ============================================
+// Config Loading
+// ============================================
+
+/**
+ * Get runtime environment from CREAM_ENV
+ */
+function getRuntimeEnvironment(): RuntimeEnvironment {
+  const env = process.env.CREAM_ENV ?? "BACKTEST";
+  if (env === "BACKTEST" || env === "PAPER" || env === "LIVE") {
+    return env;
+  }
+  return "BACKTEST";
+}
+
+/**
+ * Load runtime config from database.
+ * Returns null if config not available (will use defaults).
+ */
+async function loadRuntimeConfig(useDraft: boolean): Promise<FullRuntimeConfig | null> {
+  try {
+    const service = await getRuntimeConfigService();
+    const environment = getRuntimeEnvironment();
+
+    if (useDraft) {
+      return await service.getDraft(environment);
+    }
+    return await service.getActiveConfig(environment);
+  } catch (error) {
+    // If config not seeded, return null to use defaults
+    if (error instanceof RuntimeConfigError && error.code === "NOT_SEEDED") {
+      return null;
+    }
+    // Re-throw other errors
+    throw error;
+  }
+}
 
 // ============================================
 // Stub Implementations (for BACKTEST mode)
@@ -438,7 +483,11 @@ async function submitOrders(
 // ============================================
 
 async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowResult> {
-  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"] } = input;
+  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"], useDraftConfig = false } = input;
+
+  // Load config (optional for stub mode, used for audit trail)
+  const runtimeConfig = await loadRuntimeConfig(useDraftConfig);
+  const configVersion = runtimeConfig?.trading.id ?? null;
 
   // Observe Phase
   const marketSnapshot = await fetchMarketSnapshot(instruments);
@@ -480,6 +529,7 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
     iterations: 1,
     orderSubmission,
     mode: "STUB",
+    configVersion,
   };
 }
 
@@ -488,7 +538,25 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
 // ============================================
 
 async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowResult> {
-  const { cycleId, instruments = ["AAPL", "MSFT", "GOOGL"], externalContext } = input;
+  const {
+    cycleId,
+    instruments = ["AAPL", "MSFT", "GOOGL"],
+    externalContext,
+    useDraftConfig = false,
+  } = input;
+
+  // ============================================
+  // Load runtime config from DB
+  // ============================================
+  const runtimeConfig = await loadRuntimeConfig(useDraftConfig);
+  const configVersion = runtimeConfig?.trading.id ?? null;
+
+  // Extract timeout values from config (or use defaults)
+  const agentTimeoutMs = runtimeConfig?.trading.agentTimeoutMs ?? DEFAULT_AGENT_TIMEOUT_MS;
+  const totalConsensusTimeoutMs =
+    runtimeConfig?.trading.totalConsensusTimeoutMs ?? DEFAULT_TOTAL_CONSENSUS_TIMEOUT_MS;
+  const maxConsensusIterations =
+    runtimeConfig?.trading.maxConsensusIterations ?? DEFAULT_MAX_CONSENSUS_ITERATIONS;
 
   // Observe Phase
   const marketSnapshot = await fetchMarketSnapshot(instruments);
@@ -518,7 +586,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   const analystsResult = await withAgentTimeout(
     runAnalystsParallel(agentContext),
-    AGENT_TIMEOUT_MS * 3, // 3 agents running
+    agentTimeoutMs * 3, // 3 agents running
     "analysts"
   );
 
@@ -536,6 +604,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       iterations: 0,
       orderSubmission: { submitted: false, orderIds: [], errors: ["Analyst agents timed out"] },
       mode: "LLM",
+      configVersion,
     };
   }
   analystOutputs = analystsResult.result;
@@ -545,7 +614,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   const debateResult = await withAgentTimeout(
     runDebateParallel(agentContext, analystOutputs),
-    AGENT_TIMEOUT_MS * 2, // 2 agents running
+    agentTimeoutMs * 2, // 2 agents running
     "debate"
   );
 
@@ -561,6 +630,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       iterations: 0,
       orderSubmission: { submitted: false, orderIds: [], errors: ["Research agents timed out"] },
       mode: "LLM",
+      configVersion,
     };
   }
   debateOutputs = debateResult.result;
@@ -570,7 +640,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   const traderResult = await withAgentTimeout(
     runTrader(agentContext, debateOutputs),
-    AGENT_TIMEOUT_MS,
+    agentTimeoutMs,
     "trader"
   );
 
@@ -581,19 +651,21 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       iterations: 0,
       orderSubmission: { submitted: false, orderIds: [], errors: ["Trader agent timed out"] },
       mode: "LLM",
+      configVersion,
     };
   }
   const initialPlan = traderResult.result;
 
   // ============================================
   // Phase 4: Consensus Loop (Risk Manager + Critic)
+  // Config values used: maxConsensusIterations, agentTimeoutMs, totalConsensusTimeoutMs
   // ============================================
   const gate = new ConsensusGate({
-    maxIterations: 3,
+    maxIterations: maxConsensusIterations,
     logRejections: true,
     timeout: {
-      perAgentMs: AGENT_TIMEOUT_MS,
-      totalMs: TOTAL_CONSENSUS_TIMEOUT_MS,
+      perAgentMs: agentTimeoutMs,
+      totalMs: totalConsensusTimeoutMs,
     },
     escalation: {
       enabled: !isBacktest(),
@@ -626,6 +698,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     iterations: consensusResult.iterations,
     orderSubmission,
     mode: "LLM",
+    configVersion,
   };
 }
 

@@ -156,7 +156,10 @@ export interface AgentConfigsRepository {
       Omit<RuntimeAgentConfig, "id" | "environment" | "agentType" | "createdAt" | "updatedAt">
     >
   ): Promise<RuntimeAgentConfig>;
-  cloneToEnvironment(source: TradingEnvironment, target: TradingEnvironment): Promise<void>;
+  cloneToEnvironment(
+    source: TradingEnvironment,
+    target: TradingEnvironment
+  ): Promise<void> | Promise<unknown[]>;
 }
 
 /**
