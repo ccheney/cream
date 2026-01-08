@@ -87,10 +87,6 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Generate Protobuf code
-        run: buf generate
-        working-directory: packages/schema
-
       - name: Run tests
         run: bun run test
 
@@ -258,10 +254,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-
-      - name: Generate Protobuf code
-        run: buf generate
-        working-directory: packages/schema
 
       - name: Run Biome lint
         run: bunx biome check .

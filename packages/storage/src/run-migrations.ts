@@ -11,8 +11,6 @@
  *   bun run src/run-migrations.ts --rollback   # Rollback last migration
  */
 
-// biome-ignore lint/suspicious/noConsole: CLI script requires console output
-
 import { type CreamEnvironment, createContext } from "@cream/domain";
 import { getMigrationStatus, rollbackMigrations, runMigrations } from "./migrations.js";
 import { createInMemoryClient, createTursoClient } from "./turso.js";

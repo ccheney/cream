@@ -133,6 +133,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/src/run-*.ts", "**/src/cli.ts", "**/src/cli/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
     }
   ]
 }
