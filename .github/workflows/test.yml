@@ -83,7 +83,7 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: bun test
+        run: bun run test
 
   # ============================================
   # Rust Unit Tests

@@ -9,7 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
-    "test": "bun test",
+    "test": "bun test src/",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

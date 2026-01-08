@@ -58,10 +58,10 @@ describe("envSchema", () => {
   });
 
   describe("PAPER environment", () => {
-    it("requires broker credentials", () => {
+    it("requires broker and OAuth credentials", () => {
       const result = envSchema.safeParse({
         CREAM_ENV: "PAPER",
-        // Missing ALPACA_KEY and ALPACA_SECRET
+        // Missing ALPACA_KEY, ALPACA_SECRET, and OAuth credentials
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -69,14 +69,18 @@ describe("envSchema", () => {
         const messages = issues.map((e) => e.message);
         expect(messages).toContain("ALPACA_KEY is required for PAPER environment");
         expect(messages).toContain("ALPACA_SECRET is required for PAPER environment");
+        expect(messages).toContain("GOOGLE_CLIENT_ID is required for PAPER environment");
+        expect(messages).toContain("GOOGLE_CLIENT_SECRET is required for PAPER environment");
       }
     });
 
-    it("succeeds with broker credentials", () => {
+    it("succeeds with broker and OAuth credentials", () => {
       const result = envSchema.safeParse({
         CREAM_ENV: "PAPER",
         ALPACA_KEY: "test-key",
         ALPACA_SECRET: "test-secret",
+        GOOGLE_CLIENT_ID: "test-client-id",
+        GOOGLE_CLIENT_SECRET: "test-client-secret",
       });
       expect(result.success).toBe(true);
     });
@@ -100,6 +104,9 @@ describe("envSchema", () => {
         expect(messages).toContain(
           "ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment"
         );
+        // OAuth credentials required
+        expect(messages).toContain("GOOGLE_CLIENT_ID is required for LIVE environment");
+        expect(messages).toContain("GOOGLE_CLIENT_SECRET is required for LIVE environment");
       }
     });
 
@@ -111,6 +118,8 @@ describe("envSchema", () => {
         POLYGON_KEY: "polygon-key",
         DATABENTO_KEY: "databento-key",
         ANTHROPIC_API_KEY: "anthropic-key",
+        GOOGLE_CLIENT_ID: "test-client-id",
+        GOOGLE_CLIENT_SECRET: "test-client-secret",
       });
       expect(result.success).toBe(true);
     });
@@ -123,6 +132,8 @@ describe("envSchema", () => {
         POLYGON_KEY: "polygon-key",
         DATABENTO_KEY: "databento-key",
         GOOGLE_API_KEY: "google-key",
+        GOOGLE_CLIENT_ID: "test-client-id",
+        GOOGLE_CLIENT_SECRET: "test-client-secret",
       });
       expect(result.success).toBe(true);
     });
@@ -201,6 +212,8 @@ describe("LIVE environment LLM requirements", () => {
       ALPACA_SECRET: "test-secret",
       POLYGON_KEY: "polygon-key",
       DATABENTO_KEY: "databento-key",
+      GOOGLE_CLIENT_ID: "test-client-id",
+      GOOGLE_CLIENT_SECRET: "test-client-secret",
       // No LLM keys
     });
     expect(result.success).toBe(false);
@@ -220,6 +233,8 @@ describe("LIVE environment LLM requirements", () => {
       POLYGON_KEY: "polygon-key",
       DATABENTO_KEY: "databento-key",
       ANTHROPIC_API_KEY: "anthropic-key",
+      GOOGLE_CLIENT_ID: "test-client-id",
+      GOOGLE_CLIENT_SECRET: "test-client-secret",
     });
     expect(result.success).toBe(true);
   });
@@ -232,6 +247,8 @@ describe("LIVE environment LLM requirements", () => {
       POLYGON_KEY: "polygon-key",
       DATABENTO_KEY: "databento-key",
       GOOGLE_API_KEY: "google-key",
+      GOOGLE_CLIENT_ID: "test-client-id",
+      GOOGLE_CLIENT_SECRET: "test-client-secret",
     });
     expect(result.success).toBe(true);
   });
