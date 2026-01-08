@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Generated code from Protobuf schemas",
+  "scripts": {
+    "build": "echo 'Schema-gen contains pre-generated files'",
+    "test": "echo 'No tests for generated files'"
+  },
   "exports": {
     "./cream/v1/common": "./ts/cream/v1/common_pb.ts",
     "./cream/v1/decision": "./ts/cream/v1/decision_pb.ts",
