@@ -10,6 +10,9 @@ import {
   type RuntimeAgentConfig,
   type RuntimeAgentType,
   RuntimeConfigError,
+  type RuntimeOptionsLimits,
+  type RuntimePerInstrumentLimits,
+  type RuntimePortfolioLimits,
   type RuntimeTradingConfig,
   type RuntimeUniverseConfig,
   type TradingEnvironment,
@@ -93,10 +96,38 @@ const AgentConfigSchema = z.object({
   updatedAt: z.string(),
 });
 
+const ConstraintsConfigResponseSchema = z.object({
+  id: z.string(),
+  environment: EnvironmentSchema,
+  perInstrument: z.object({
+    maxShares: z.number(),
+    maxContracts: z.number(),
+    maxNotional: z.number(),
+    maxPctEquity: z.number(),
+  }),
+  portfolio: z.object({
+    maxGrossExposure: z.number(),
+    maxNetExposure: z.number(),
+    maxConcentration: z.number(),
+    maxCorrelation: z.number(),
+    maxDrawdown: z.number(),
+  }),
+  options: z.object({
+    maxDelta: z.number(),
+    maxGamma: z.number(),
+    maxVega: z.number(),
+    maxTheta: z.number(),
+  }),
+  status: z.enum(["draft", "testing", "active", "archived"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 const FullConfigSchema = z.object({
   trading: TradingConfigSchema,
   agents: z.record(AgentTypeSchema, AgentConfigSchema),
   universe: UniverseConfigSchema,
+  constraints: ConstraintsConfigResponseSchema,
 });
 
 const ValidationErrorSchema = z.object({
@@ -603,6 +634,119 @@ app.openapi(compareRoute, async (c) => {
   }
 
   return c.json({ config1, config2, differences }, 200);
+});
+
+// ============================================
+// Constraints Routes
+// ============================================
+
+const ConstraintsConfigInputSchema = z.object({
+  perInstrument: z.object({
+    maxShares: z.number(),
+    maxContracts: z.number(),
+    maxNotional: z.number(),
+    maxPctEquity: z.number(),
+  }),
+  portfolio: z.object({
+    maxGrossExposure: z.number(),
+    maxNetExposure: z.number(),
+    maxConcentration: z.number(),
+    maxCorrelation: z.number(),
+    maxDrawdown: z.number(),
+  }),
+  options: z.object({
+    maxDelta: z.number(),
+    maxGamma: z.number(),
+    maxVega: z.number(),
+    maxTheta: z.number(),
+  }),
+});
+
+// GET /constraints - Get constraints configuration
+const getConstraintsRoute = createRoute({
+  method: "get",
+  path: "/constraints",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ConstraintsConfigResponseSchema } },
+      description: "Constraints configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration found",
+    },
+  },
+  tags: ["Config"],
+});
+
+app.openapi(getConstraintsRoute, async (c) => {
+  const environment = getEnvironment(c);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.getActiveConfig(environment);
+    return c.json(config.constraints, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// PUT /constraints - Update constraints configuration (saves as draft)
+const updateConstraintsRoute = createRoute({
+  method: "put",
+  path: "/constraints",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+    body: {
+      content: { "application/json": { schema: ConstraintsConfigInputSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ConstraintsConfigResponseSchema } },
+      description: "Updated constraints configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration to base draft on",
+    },
+  },
+  tags: ["Config"],
+});
+
+app.openapi(updateConstraintsRoute, async (c) => {
+  const environment = getEnvironment(c);
+  const constraints = c.req.valid("json");
+
+  try {
+    const service = await getRuntimeConfigService();
+    const updated = await service.saveDraft(environment, {
+      constraints: {
+        perInstrument: constraints.perInstrument as Partial<RuntimePerInstrumentLimits>,
+        portfolio: constraints.portfolio as Partial<RuntimePortfolioLimits>,
+        options: constraints.options as Partial<RuntimeOptionsLimits>,
+      },
+    });
+    return c.json(updated.constraints, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
 });
 
 // ============================================

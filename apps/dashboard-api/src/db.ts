@@ -15,6 +15,7 @@ import {
   AuditLogRepository,
   BacktestsRepository,
   ConfigVersionsRepository,
+  ConstraintsConfigRepository,
   createInMemoryClient,
   createTursoClient,
   DecisionsRepository,
@@ -79,24 +80,15 @@ export async function getDbClient(): Promise<TursoClient> {
  * Initialize database client and run migrations.
  */
 async function initializeDb(): Promise<TursoClient> {
-  const tursoUrl = process.env.TURSO_DATABASE_URL;
   const ctx = createDbContext();
   let client: TursoClient;
 
-  if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
-    // Remote Turso server (Docker or cloud)
-    client = await createTursoClient(ctx, {
-      syncUrl: tursoUrl,
-      authToken: process.env.TURSO_AUTH_TOKEN ?? undefined,
-    });
-  } else if (tursoUrl === ":memory:" || process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV === "test") {
     // In-memory for testing
     client = await createInMemoryClient();
   } else {
-    // Local file database
-    client = await createTursoClient(ctx, {
-      path: tursoUrl ?? "cream.db",
-    });
+    // createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
+    client = await createTursoClient(ctx);
   }
 
   // Run migrations on first connection
@@ -260,6 +252,14 @@ export async function getAuditLogRepo(): Promise<AuditLogRepository> {
   return new AuditLogRepository(client);
 }
 
+/**
+ * Get constraints config repository
+ */
+export async function getConstraintsConfigRepo(): Promise<ConstraintsConfigRepository> {
+  const client = await getDbClient();
+  return new ConstraintsConfigRepository(client);
+}
+
 // ============================================
 // Runtime Config Service
 // ============================================
@@ -277,7 +277,13 @@ export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
   const tradingRepo = await getTradingConfigRepo();
   const agentRepo = await getAgentConfigsRepo();
   const universeRepo = await getUniverseConfigsRepo();
+  const constraintsRepo = await getConstraintsConfigRepo();
 
-  runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+  runtimeConfigService = createRuntimeConfigService(
+    tradingRepo,
+    agentRepo,
+    universeRepo,
+    constraintsRepo
+  );
   return runtimeConfigService;
 }

@@ -107,6 +107,56 @@ export interface RuntimeUniverseConfig {
 }
 
 /**
+ * Constraints configuration status
+ */
+export type RuntimeConstraintsConfigStatus = "draft" | "testing" | "active" | "archived";
+
+/**
+ * Per-instrument limits
+ */
+export interface RuntimePerInstrumentLimits {
+  maxShares: number;
+  maxContracts: number;
+  maxNotional: number;
+  maxPctEquity: number;
+}
+
+/**
+ * Portfolio-level limits
+ */
+export interface RuntimePortfolioLimits {
+  maxGrossExposure: number;
+  maxNetExposure: number;
+  maxConcentration: number;
+  maxCorrelation: number;
+  maxDrawdown: number;
+}
+
+/**
+ * Options greeks limits
+ */
+export interface RuntimeOptionsLimits {
+  maxDelta: number;
+  maxGamma: number;
+  maxVega: number;
+  maxTheta: number;
+}
+
+/**
+ * Constraints configuration entity
+ */
+export interface RuntimeConstraintsConfig {
+  id: string;
+  environment: TradingEnvironment;
+  perInstrument: RuntimePerInstrumentLimits;
+  portfolio: RuntimePortfolioLimits;
+  options: RuntimeOptionsLimits;
+  status: RuntimeConstraintsConfigStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * Trading config repository interface
  */
 export interface TradingConfigRepository {
@@ -177,6 +227,33 @@ export interface UniverseConfigsRepository {
   setStatus(id: string, status: RuntimeUniverseConfigStatus): Promise<RuntimeUniverseConfig>;
 }
 
+/**
+ * Constraints configs repository interface
+ */
+export interface ConstraintsConfigRepository {
+  getActive(environment: TradingEnvironment): Promise<RuntimeConstraintsConfig | null>;
+  getDraft(environment: TradingEnvironment): Promise<RuntimeConstraintsConfig | null>;
+  saveDraft(
+    environment: TradingEnvironment,
+    input: Partial<{
+      maxShares: number;
+      maxContracts: number;
+      maxNotional: number;
+      maxPctEquity: number;
+      maxGrossExposure: number;
+      maxNetExposure: number;
+      maxConcentration: number;
+      maxCorrelation: number;
+      maxDrawdown: number;
+      maxDelta: number;
+      maxGamma: number;
+      maxVega: number;
+      maxTheta: number;
+    }>
+  ): Promise<RuntimeConstraintsConfig>;
+  setStatus(id: string, status: RuntimeConstraintsConfigStatus): Promise<RuntimeConstraintsConfig>;
+}
+
 // ============================================
 // Types
 // ============================================
@@ -193,6 +270,7 @@ export interface FullRuntimeConfig {
   trading: RuntimeTradingConfig;
   agents: Record<RuntimeAgentType, RuntimeAgentConfig>;
   universe: RuntimeUniverseConfig;
+  constraints: RuntimeConstraintsConfig;
 }
 
 /**
@@ -275,7 +353,8 @@ export class RuntimeConfigService {
   constructor(
     private readonly tradingConfigRepo: TradingConfigRepository,
     private readonly agentConfigsRepo: AgentConfigsRepository,
-    private readonly universeConfigsRepo: UniverseConfigsRepository
+    private readonly universeConfigsRepo: UniverseConfigsRepository,
+    private readonly constraintsConfigRepo?: ConstraintsConfigRepository
   ) {}
 
   /**
@@ -300,7 +379,16 @@ export class RuntimeConfigService {
     const agentConfigs = await this.agentConfigsRepo.getAll(environment);
     const agents = this.buildAgentsMap(agentConfigs);
 
-    return { trading, agents, universe };
+    // Load constraints config (with defaults if not available)
+    let constraints: RuntimeConstraintsConfig;
+    if (this.constraintsConfigRepo) {
+      const constraintsConfig = await this.constraintsConfigRepo.getActive(environment);
+      constraints = constraintsConfig ?? this.getDefaultConstraints(environment);
+    } else {
+      constraints = this.getDefaultConstraints(environment);
+    }
+
+    return { trading, agents, universe, constraints };
   }
 
   /**
@@ -335,7 +423,21 @@ export class RuntimeConfigService {
     const agentConfigs = await this.agentConfigsRepo.getAll(environment);
     const agents = this.buildAgentsMap(agentConfigs);
 
-    return { trading, agents, universe };
+    // Get or use active constraints
+    let constraints: RuntimeConstraintsConfig;
+    if (this.constraintsConfigRepo) {
+      const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
+      if (constraintsDraft) {
+        constraints = constraintsDraft;
+      } else {
+        const activeConstraints = await this.constraintsConfigRepo.getActive(environment);
+        constraints = activeConstraints ?? this.getDefaultConstraints(environment);
+      }
+    } else {
+      constraints = this.getDefaultConstraints(environment);
+    }
+
+    return { trading, agents, universe, constraints };
   }
 
   /**
@@ -349,6 +451,11 @@ export class RuntimeConfigService {
       trading: Partial<RuntimeTradingConfig>;
       universe: Partial<RuntimeUniverseConfig>;
       agents: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
+      constraints: Partial<{
+        perInstrument: Partial<RuntimePerInstrumentLimits>;
+        portfolio: Partial<RuntimePortfolioLimits>;
+        options: Partial<RuntimeOptionsLimits>;
+      }>;
     }>
   ): Promise<FullRuntimeConfig> {
     // Save trading config draft
@@ -398,6 +505,25 @@ export class RuntimeConfigService {
       }
     }
 
+    // Save constraints config draft
+    if (config.constraints && this.constraintsConfigRepo) {
+      await this.constraintsConfigRepo.saveDraft(environment, {
+        maxShares: config.constraints.perInstrument?.maxShares,
+        maxContracts: config.constraints.perInstrument?.maxContracts,
+        maxNotional: config.constraints.perInstrument?.maxNotional,
+        maxPctEquity: config.constraints.perInstrument?.maxPctEquity,
+        maxGrossExposure: config.constraints.portfolio?.maxGrossExposure,
+        maxNetExposure: config.constraints.portfolio?.maxNetExposure,
+        maxConcentration: config.constraints.portfolio?.maxConcentration,
+        maxCorrelation: config.constraints.portfolio?.maxCorrelation,
+        maxDrawdown: config.constraints.portfolio?.maxDrawdown,
+        maxDelta: config.constraints.options?.maxDelta,
+        maxGamma: config.constraints.options?.maxGamma,
+        maxVega: config.constraints.options?.maxVega,
+        maxTheta: config.constraints.options?.maxTheta,
+      });
+    }
+
     return this.getDraft(environment);
   }
 
@@ -416,6 +542,9 @@ export class RuntimeConfigService {
 
     // Validate agent configs
     this.validateAgentConfigs(config.agents, errors, warnings);
+
+    // Validate constraints config
+    this.validateConstraintsConfig(config.constraints, errors, warnings);
 
     // Cross-config validation
     this.validateCrossConfig(config, errors, warnings);
@@ -452,6 +581,14 @@ export class RuntimeConfigService {
     const universeDraft = await this.universeConfigsRepo.getDraft(environment);
     if (universeDraft) {
       await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
+    }
+
+    // Promote constraints config
+    if (this.constraintsConfigRepo) {
+      const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
+      if (constraintsDraft) {
+        await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
+      }
     }
 
     return this.getActiveConfig(environment);
@@ -507,6 +644,32 @@ export class RuntimeConfigService {
       const universeDraft = await this.universeConfigsRepo.getDraft(targetEnvironment);
       if (universeDraft) {
         await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
+      }
+    }
+
+    // Get source constraints config and create in target
+    if (this.constraintsConfigRepo) {
+      const sourceConstraints = await this.constraintsConfigRepo.getActive(sourceEnvironment);
+      if (sourceConstraints) {
+        await this.constraintsConfigRepo.saveDraft(targetEnvironment, {
+          maxShares: sourceConstraints.perInstrument.maxShares,
+          maxContracts: sourceConstraints.perInstrument.maxContracts,
+          maxNotional: sourceConstraints.perInstrument.maxNotional,
+          maxPctEquity: sourceConstraints.perInstrument.maxPctEquity,
+          maxGrossExposure: sourceConstraints.portfolio.maxGrossExposure,
+          maxNetExposure: sourceConstraints.portfolio.maxNetExposure,
+          maxConcentration: sourceConstraints.portfolio.maxConcentration,
+          maxCorrelation: sourceConstraints.portfolio.maxCorrelation,
+          maxDrawdown: sourceConstraints.portfolio.maxDrawdown,
+          maxDelta: sourceConstraints.options.maxDelta,
+          maxGamma: sourceConstraints.options.maxGamma,
+          maxVega: sourceConstraints.options.maxVega,
+          maxTheta: sourceConstraints.options.maxTheta,
+        });
+        const constraintsDraft = await this.constraintsConfigRepo.getDraft(targetEnvironment);
+        if (constraintsDraft) {
+          await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
+        }
       }
     }
 
@@ -779,6 +942,85 @@ export class RuntimeConfigService {
       );
     }
   }
+
+  private validateConstraintsConfig(
+    config: RuntimeConstraintsConfig,
+    errors: ValidationError[],
+    warnings: string[]
+  ): void {
+    // Per-instrument limits validation
+    if (config.perInstrument.maxShares < 1) {
+      errors.push({
+        field: "constraints.perInstrument.maxShares",
+        message: "Must be at least 1",
+        value: config.perInstrument.maxShares,
+      });
+    }
+    if (config.perInstrument.maxPctEquity <= 0 || config.perInstrument.maxPctEquity > 1) {
+      errors.push({
+        field: "constraints.perInstrument.maxPctEquity",
+        message: "Must be between 0 and 1",
+        value: config.perInstrument.maxPctEquity,
+      });
+    }
+
+    // Portfolio limits validation
+    if (config.portfolio.maxConcentration <= 0 || config.portfolio.maxConcentration > 1) {
+      errors.push({
+        field: "constraints.portfolio.maxConcentration",
+        message: "Must be between 0 and 1",
+        value: config.portfolio.maxConcentration,
+      });
+    }
+    if (config.portfolio.maxDrawdown <= 0 || config.portfolio.maxDrawdown > 1) {
+      errors.push({
+        field: "constraints.portfolio.maxDrawdown",
+        message: "Must be between 0 and 1",
+        value: config.portfolio.maxDrawdown,
+      });
+    }
+
+    // Warnings for risky values
+    if (config.portfolio.maxGrossExposure > 3) {
+      warnings.push("Max gross exposure > 3x is considered highly leveraged");
+    }
+    if (config.portfolio.maxDrawdown > 0.25) {
+      warnings.push("Max drawdown > 25% may expose portfolio to significant losses");
+    }
+    if (config.perInstrument.maxPctEquity > 0.2) {
+      warnings.push("Position size > 20% of equity is considered concentrated");
+    }
+  }
+
+  private getDefaultConstraints(environment: RuntimeEnvironment): RuntimeConstraintsConfig {
+    const now = new Date().toISOString();
+    return {
+      id: `cc_${environment.toLowerCase()}_default`,
+      environment: environment as TradingEnvironment,
+      perInstrument: {
+        maxShares: 1000,
+        maxContracts: 10,
+        maxNotional: 50000,
+        maxPctEquity: 0.1,
+      },
+      portfolio: {
+        maxGrossExposure: 2.0,
+        maxNetExposure: 1.0,
+        maxConcentration: 0.25,
+        maxCorrelation: 0.7,
+        maxDrawdown: 0.15,
+      },
+      options: {
+        maxDelta: 100,
+        maxGamma: 50,
+        maxVega: 1000,
+        maxTheta: 500,
+      },
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
 }
 
 // ============================================
@@ -791,7 +1033,13 @@ export class RuntimeConfigService {
 export function createRuntimeConfigService(
   tradingConfigRepo: TradingConfigRepository,
   agentConfigsRepo: AgentConfigsRepository,
-  universeConfigsRepo: UniverseConfigsRepository
+  universeConfigsRepo: UniverseConfigsRepository,
+  constraintsConfigRepo?: ConstraintsConfigRepository
 ): RuntimeConfigService {
-  return new RuntimeConfigService(tradingConfigRepo, agentConfigsRepo, universeConfigsRepo);
+  return new RuntimeConfigService(
+    tradingConfigRepo,
+    agentConfigsRepo,
+    universeConfigsRepo,
+    constraintsConfigRepo
+  );
 }

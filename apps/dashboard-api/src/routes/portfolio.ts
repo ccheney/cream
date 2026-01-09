@@ -360,6 +360,58 @@ app.openapi(historyRoute, async (c) => {
   );
 });
 
+// GET /api/portfolio/equity
+const equityRoute = createRoute({
+  method: "get",
+  path: "/equity",
+  request: {
+    query: z.object({
+      days: z.coerce.number().min(1).max(365).default(30),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: z.array(EquityPointSchema) } },
+      description: "Equity curve for specified number of days",
+    },
+  },
+  tags: ["Portfolio"],
+});
+
+app.openapi(equityRoute, async (c) => {
+  const { days } = c.req.valid("query");
+  const repo = await getPortfolioSnapshotsRepo();
+
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  const snapshots = await repo.findMany(
+    {
+      environment: systemState.environment,
+      fromDate: fromDate.toISOString().split("T")[0],
+    },
+    { page: 1, pageSize: days + 1 }
+  );
+
+  // Calculate peak NAV for drawdown calculation
+  let peak = 0;
+
+  return c.json(
+    snapshots.data.map((s) => {
+      peak = Math.max(peak, s.nav);
+      const drawdown = peak - s.nav;
+      const drawdownPct = peak > 0 ? (drawdown / peak) * 100 : 0;
+
+      return {
+        timestamp: s.timestamp,
+        nav: s.nav,
+        drawdown,
+        drawdownPct,
+      };
+    })
+  );
+});
+
 // GET /api/portfolio/performance
 const performanceRoute = createRoute({
   method: "get",

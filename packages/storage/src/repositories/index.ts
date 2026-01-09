@@ -85,6 +85,18 @@ export {
   ConfigVersionsRepository,
   type CreateConfigVersionInput,
 } from "./config-versions.js";
+// Constraints config - risk limits configuration
+export {
+  type ConstraintsConfig,
+  ConstraintsConfigRepository,
+  type ConstraintsConfigStatus,
+  type ConstraintsEnvironment,
+  type CreateConstraintsConfigInput,
+  type OptionsLimits,
+  type PerInstrumentLimits,
+  type PortfolioLimits,
+  type UpdateConstraintsConfigInput,
+} from "./constraints-config.js";
 export {
   type ActionType,
   ActionTypeSchema,
