@@ -24,7 +24,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "zod": "^4.0.0"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

@@ -276,7 +276,7 @@ export class AlphaVantageClient {
   async getFederalFundsRate(
     interval: EconomicInterval = "daily"
   ): Promise<FederalFundsRateResponse> {
-    return this.client.get<FederalFundsRateResponse>(
+    return this.client.get(
       "/query",
       {
         function: "FEDERAL_FUNDS_RATE",
@@ -291,7 +291,7 @@ export class AlphaVantageClient {
    * Get Consumer Price Index (CPI) data.
    */
   async getCPI(interval: "monthly" | "semiannual" = "monthly"): Promise<EconomicIndicatorResponse> {
-    return this.client.get<EconomicIndicatorResponse>(
+    return this.client.get(
       "/query",
       {
         function: "CPI",

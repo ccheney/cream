@@ -7,27 +7,27 @@
 
 import {
   type CallOptions,
+  type Client,
   Code,
   ConnectError,
-  createPromiseClient,
-  type PromiseClient,
+  createClient,
 } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import type {
-  CancelOrderRequest,
-  CancelOrderResponse,
-  CheckConstraintsRequest,
-  CheckConstraintsResponse,
-  GetAccountStateRequest,
-  GetAccountStateResponse,
-  GetOrderStateRequest,
-  GetOrderStateResponse,
-  GetPositionsRequest,
-  GetPositionsResponse,
-  SubmitOrderRequest,
-  SubmitOrderResponse,
+import {
+  type CancelOrderRequest,
+  type CancelOrderResponse,
+  type CheckConstraintsRequest,
+  type CheckConstraintsResponse,
+  ExecutionService,
+  type GetAccountStateRequest,
+  type GetAccountStateResponse,
+  type GetOrderStateRequest,
+  type GetOrderStateResponse,
+  type GetPositionsRequest,
+  type GetPositionsResponse,
+  type SubmitOrderRequest,
+  type SubmitOrderResponse,
 } from "@cream/schema-gen/cream/v1/execution";
-import { ExecutionService } from "@cream/schema-gen/cream/v1/execution_connect";
 
 // ============================================
 // Configuration
@@ -174,23 +174,22 @@ export interface ExecutionEngineClient {
 // ============================================
 
 class ExecutionEngineClientImpl implements ExecutionEngineClient {
-  private readonly client: PromiseClient<typeof ExecutionService>;
+  private readonly client: Client<typeof ExecutionService>;
   private readonly defaultOptions: CallOptions;
 
   constructor(address: string, timeoutMs: number) {
     const transport = createGrpcTransport({
       baseUrl: address,
-      httpVersion: "2",
     });
 
-    this.client = createPromiseClient(ExecutionService, transport);
+    this.client = createClient(ExecutionService, transport);
     this.defaultOptions = {
       timeoutMs,
     };
   }
 
   async checkConstraints(
-    request: Partial<CheckConstraintsRequest>,
+    request: CheckConstraintsRequest,
     options?: CallOptions
   ): Promise<CheckConstraintsResponse> {
     return withRetry(
@@ -204,7 +203,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
   }
 
   async submitOrder(
-    request: Partial<SubmitOrderRequest>,
+    request: SubmitOrderRequest,
     options?: CallOptions
   ): Promise<SubmitOrderResponse> {
     return withRetry(
@@ -218,7 +217,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
   }
 
   async getOrderState(
-    request: Partial<GetOrderStateRequest>,
+    request: GetOrderStateRequest,
     options?: CallOptions
   ): Promise<GetOrderStateResponse> {
     return withRetry(
@@ -232,7 +231,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
   }
 
   async cancelOrder(
-    request: Partial<CancelOrderRequest>,
+    request: CancelOrderRequest,
     options?: CallOptions
   ): Promise<CancelOrderResponse> {
     return withRetry(
@@ -246,7 +245,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
   }
 
   async getAccountState(
-    request: Partial<GetAccountStateRequest> = {},
+    request: GetAccountStateRequest,
     options?: CallOptions
   ): Promise<GetAccountStateResponse> {
     return withRetry(
@@ -260,7 +259,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
   }
 
   async getPositions(
-    request: Partial<GetPositionsRequest> = {},
+    request: GetPositionsRequest,
     options?: CallOptions
   ): Promise<GetPositionsResponse> {
     return withRetry(
@@ -348,10 +347,10 @@ export type {
 
 // Also export message types that might be needed
 export {
-  AccountState,
-  ConstraintCheck,
-  ConstraintViolation,
+  type AccountState,
+  type ConstraintCheck,
+  type ConstraintViolation,
   OrderSide,
   OrderStatus,
-  Position,
+  type Position,
 } from "@cream/schema-gen/cream/v1/execution";

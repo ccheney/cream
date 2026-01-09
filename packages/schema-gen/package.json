@@ -31,35 +31,20 @@
       "import": "./dist/cream/v1/execution_pb.js",
       "default": "./dist/cream/v1/execution_pb.js"
     },
-    "./cream/v1/execution_connect": {
-      "types": "./dist/cream/v1/execution_connect.d.ts",
-      "import": "./dist/cream/v1/execution_connect.js",
-      "default": "./dist/cream/v1/execution_connect.js"
-    },
     "./cream/v1/market_snapshot": {
       "types": "./dist/cream/v1/market_snapshot_pb.d.ts",
       "import": "./dist/cream/v1/market_snapshot_pb.js",
       "default": "./dist/cream/v1/market_snapshot_pb.js"
     },
-    "./cream/v1/market_snapshot_connect": {
-      "types": "./dist/cream/v1/market_snapshot_connect.d.ts",
-      "import": "./dist/cream/v1/market_snapshot_connect.js",
-      "default": "./dist/cream/v1/market_snapshot_connect.js"
-    },
     "./arrow/flight/protocol": {
       "types": "./dist/arrow/flight/protocol/flight_pb.d.ts",
       "import": "./dist/arrow/flight/protocol/flight_pb.js",
       "default": "./dist/arrow/flight/protocol/flight_pb.js"
-    },
-    "./arrow/flight/protocol_connect": {
-      "types": "./dist/arrow/flight/protocol/flight_connect.d.ts",
-      "import": "./dist/arrow/flight/protocol/flight_connect.js",
-      "default": "./dist/arrow/flight/protocol/flight_connect.js"
     }
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^1.10.0",
-    "@connectrpc/connect": "^1.6.1"
+    "@bufbuild/protobuf": "^2.10.2",
+    "@connectrpc/connect": "^2.1.1"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

@@ -17,6 +17,7 @@
  * @see docs/plans/05-agents.md
  */
 
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import {
   type AlpacaClient,
   type Position as BrokerPosition,
@@ -237,7 +238,9 @@ export async function getQuotes(ctx: ExecutionContext, instruments: string[]): P
         ask: quote.ask,
         last: quote.last,
         volume: Number(quote.volume),
-        timestamp: quote.timestamp?.toDate?.().toISOString() ?? new Date().toISOString(),
+        timestamp: quote.timestamp
+          ? timestampDate(quote.timestamp).toISOString()
+          : new Date().toISOString(),
       });
     }
   }
@@ -698,7 +701,7 @@ export async function recalcIndicator(
 
   // Convert protobuf bars to Candle format
   const candles: Candle[] = bars.map((bar) => ({
-    timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
+    timestamp: bar.timestamp ? timestampDate(bar.timestamp).getTime() : Date.now(),
     open: bar.open,
     high: bar.high,
     low: bar.low,

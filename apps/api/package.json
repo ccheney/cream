@@ -24,9 +24,9 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^1.10.0",
-    "@connectrpc/connect": "^1.6.1",
-    "@connectrpc/connect-node": "^1.6.1",
+    "@bufbuild/protobuf": "^2.10.2",
+    "@connectrpc/connect": "^2.1.1",
+    "@connectrpc/connect-node": "^2.1.1",
     "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
@@ -42,7 +42,7 @@
     "@cream/storage": "workspace:*",
     "@cream/universe": "workspace:*",
     "@mastra/core": "^0.24.9",
-    "zod": "^4.0.0-beta.20"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

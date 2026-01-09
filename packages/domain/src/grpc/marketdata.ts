@@ -7,17 +7,18 @@
 
 // biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
 
+import { create } from "@bufbuild/protobuf";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import {
-  GetOptionChainRequest,
+  GetOptionChainRequestSchema,
   type GetOptionChainResponse,
-  GetSnapshotRequest,
+  GetSnapshotRequestSchema,
   type GetSnapshotResponse,
-  SubscribeMarketDataRequest,
+  MarketDataService,
+  SubscribeMarketDataRequestSchema,
   type SubscribeMarketDataResponse,
 } from "@cream/schema-gen/cream/v1/market_snapshot";
-import { MarketDataService } from "@cream/schema-gen/cream/v1/market_snapshot_connect";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -68,10 +69,9 @@ export class MarketDataServiceClient {
       ...config,
     };
 
-    // Create gRPC transport (httpVersion "2" is required for gRPC)
+    // Create gRPC transport (HTTP/2 is the default and required for gRPC)
     const transport = createGrpcTransport({
       baseUrl: this.config.baseUrl,
-      httpVersion: "2",
     });
 
     // Create Connect client
@@ -155,7 +155,7 @@ export class MarketDataServiceClient {
     }
 
     // Convert plain object to protobuf message
-    const request = new GetSnapshotRequest({
+    const request = create(GetSnapshotRequestSchema, {
       symbols: input.symbols,
       includeBars: input.includeBars ?? false,
       barTimeframes: input.barTimeframes ?? [],
@@ -178,7 +178,7 @@ export class MarketDataServiceClient {
     }
 
     // Convert plain object to protobuf message
-    const request = new GetOptionChainRequest({
+    const request = create(GetOptionChainRequestSchema, {
       underlying: input.underlying,
       expirations: input.expirations ?? [],
       minStrike: input.minStrike,
@@ -206,7 +206,7 @@ export class MarketDataServiceClient {
       );
     }
 
-    const request = new SubscribeMarketDataRequest({
+    const request = create(SubscribeMarketDataRequestSchema, {
       symbols: input.symbols,
       includeOptions: input.includeOptions ?? false,
       barTimeframes: input.barTimeframes ?? [],

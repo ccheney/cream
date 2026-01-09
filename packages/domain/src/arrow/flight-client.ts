@@ -7,19 +7,20 @@
 
 // biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
 
+import { create } from "@bufbuild/protobuf";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import {
-  Action,
-  Criteria,
-  Empty,
+  ActionSchema,
+  CriteriaSchema,
+  EmptySchema,
   type FlightData,
-  FlightDescriptor,
   FlightDescriptor_DescriptorType,
+  FlightDescriptorSchema,
   type FlightInfo,
-  Ticket,
+  FlightService,
+  TicketSchema,
 } from "@cream/schema-gen/arrow/flight/protocol";
-import { FlightService } from "@cream/schema-gen/arrow/flight/protocol_connect";
 import { tableFromIPC } from "apache-arrow";
 import { GrpcError, RetryBackoff, sleep } from "../grpc/errors.js";
 import {
@@ -57,10 +58,9 @@ export class FlightServiceClient {
       ...config,
     };
 
-    // Create gRPC transport (httpVersion "2" is required for gRPC)
+    // Create gRPC transport (HTTP/2 is the default and required for gRPC)
     const transport = createGrpcTransport({
       baseUrl: this.config.baseUrl,
-      httpVersion: "2",
     });
 
     // Create Connect client
@@ -142,7 +142,7 @@ export class FlightServiceClient {
       console.log(`[Flight] ${metadata.requestId} listFlights`);
     }
 
-    const request = new Criteria({
+    const request = create(CriteriaSchema, {
       expression: criteria ? new Uint8Array(criteria) : new Uint8Array(0),
     });
 
@@ -165,7 +165,7 @@ export class FlightServiceClient {
       console.log(`[Flight] ${metadata.requestId} getFlightInfo for ${path.join("/")}`);
     }
 
-    const descriptor = new FlightDescriptor({
+    const descriptor = create(FlightDescriptorSchema, {
       type: FlightDescriptor_DescriptorType.PATH,
       path,
     });
@@ -193,7 +193,7 @@ export class FlightServiceClient {
       console.log(`[Flight] ${metadata.requestId} doGet`);
     }
 
-    const ticket = new Ticket({
+    const ticket = create(TicketSchema, {
       ticket: ticketBytes,
     });
 
@@ -283,7 +283,7 @@ export class FlightServiceClient {
       console.log(`[Flight] ${metadata.requestId} doAction: ${actionType}`);
     }
 
-    const action = new Action({
+    const action = create(ActionSchema, {
       type: actionType,
       body: body ? new Uint8Array(body) : new Uint8Array(0),
     });
@@ -311,7 +311,7 @@ export class FlightServiceClient {
 
     return this.executeWithRetry(async () => {
       const actions: Array<{ type: string; description: string }> = [];
-      for await (const action of this.client.listActions(new Empty())) {
+      for await (const action of this.client.listActions(create(EmptySchema, {}))) {
         actions.push({
           type: action.type,
           description: action.description,

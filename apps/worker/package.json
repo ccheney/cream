@@ -20,7 +20,7 @@
     "@cream/helix": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "^0.24.9",
-    "zod": "^4.0.0-beta.20"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

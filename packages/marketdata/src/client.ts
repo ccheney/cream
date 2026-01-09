@@ -184,11 +184,17 @@ export class RestClient {
   /**
    * Make an HTTP request with rate limiting and retry.
    */
-  async request<T>(
+  async request<S extends z.ZodTypeAny>(
+    path: string,
+    options: RequestOptions,
+    schema: S
+  ): Promise<z.output<S>>;
+  async request(path: string, options?: RequestOptions): Promise<unknown>;
+  async request<S extends z.ZodTypeAny>(
     path: string,
     options: RequestOptions = {},
-    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
-  ): Promise<T> {
+    schema?: S
+  ): Promise<z.output<S> | unknown> {
     const url = this.buildUrl(path, options.params);
     const headers = this.buildHeaders(options.headers);
     const timeout = options.timeoutMs ?? this.config.timeoutMs;
@@ -217,7 +223,7 @@ export class RestClient {
           return schema.parse(data);
         }
 
-        return data as T;
+        return data;
       } catch (error) {
         lastError = this.classifyError(error);
 
@@ -239,25 +245,49 @@ export class RestClient {
   }
 
   /**
-   * Make a GET request.
+   * Make a GET request with schema validation.
    */
-  async get<T>(
+  async get<S extends z.ZodTypeAny>(
+    path: string,
+    params: Record<string, string | number | boolean | undefined>,
+    schema: S
+  ): Promise<z.output<S>>;
+  /**
+   * Make a GET request with explicit type hint (no validation).
+   */
+  async get<T>(path: string): Promise<T>;
+  /**
+   * Make a GET request (untyped).
+   */
+  async get(
+    path: string,
+    params?: Record<string, string | number | boolean | undefined>
+  ): Promise<unknown>;
+  async get<S extends z.ZodTypeAny>(
     path: string,
     params?: Record<string, string | number | boolean | undefined>,
-    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
-  ): Promise<T> {
-    return this.request(path, { method: "GET", params }, schema);
+    schema?: S
+  ): Promise<z.output<S> | unknown> {
+    if (schema) {
+      return this.request(path, { method: "GET", params }, schema);
+    }
+    return this.request(path, { method: "GET", params });
   }
 
   /**
    * Make a POST request.
    */
-  async post<T>(
+  async post<S extends z.ZodTypeAny>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
+  async post(path: string, body?: unknown): Promise<unknown>;
+  async post<S extends z.ZodTypeAny>(
     path: string,
     body?: unknown,
-    schema?: z.ZodType<T, z.ZodTypeDef, unknown>
-  ): Promise<T> {
-    return this.request(path, { method: "POST", body }, schema);
+    schema?: S
+  ): Promise<z.output<S> | unknown> {
+    if (schema) {
+      return this.request(path, { method: "POST", body }, schema);
+    }
+    return this.request(path, { method: "POST", body });
   }
 
   /**

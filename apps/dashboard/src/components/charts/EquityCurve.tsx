@@ -15,7 +15,6 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-  type TooltipProps,
   XAxis,
   YAxis,
 } from "recharts";
@@ -105,20 +104,22 @@ interface CustomTooltipPayload {
   drawdown?: number;
 }
 
-function CustomTooltip({
-  active,
-  payload,
-  valueFormatter,
-  timeFormatter,
-}: TooltipProps<number, string> & {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: CustomTooltipPayload }>;
   valueFormatter: (value: number) => string;
   timeFormatter: (time: string | number) => string;
-}) {
+}
+
+function CustomTooltip({ active, payload, valueFormatter, timeFormatter }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const data = payload[0]?.payload as CustomTooltipPayload;
+  const data = payload[0]?.payload;
+  if (!data) {
+    return null;
+  }
 
   return (
     <div

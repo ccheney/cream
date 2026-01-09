@@ -17,7 +17,6 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
-  type TooltipProps,
   XAxis,
   YAxis,
 } from "recharts";
@@ -54,12 +53,20 @@ interface CustomTooltipPayload extends PLDataPoint {
   name?: string;
 }
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: CustomTooltipPayload }>;
+}
+
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const data = payload[0]?.payload as CustomTooltipPayload;
+  const data = payload[0]?.payload;
+  if (!data) {
+    return null;
+  }
   const expColor = data.pnlAtExpiration >= 0 ? CHART_COLORS.profit : CHART_COLORS.loss;
   const todayColor = data.pnlToday >= 0 ? CHART_COLORS.profit : CHART_COLORS.loss;
 
@@ -181,9 +188,10 @@ function PLChartComponent({
   }, [data]);
 
   const handleMouseMove = useCallback(
-    (state: { activePayload?: Array<{ payload: PLDataPoint }> }) => {
-      if (onPriceHover && state.activePayload && state.activePayload.length > 0) {
-        const point = state.activePayload[0]?.payload;
+    (state: Record<string, unknown>) => {
+      const activePayload = state.activePayload as Array<{ payload: PLDataPoint }> | undefined;
+      if (onPriceHover && activePayload && activePayload.length > 0) {
+        const point = activePayload[0]?.payload;
         if (point) {
           onPriceHover(point.price, point.pnlAtExpiration, point.pnlToday);
         }

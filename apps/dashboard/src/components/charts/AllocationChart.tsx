@@ -9,15 +9,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import {
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  type TooltipProps,
-} from "recharts";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { CHART_COLORS } from "@/lib/chart-config";
 
 // ============================================
@@ -31,6 +23,8 @@ export interface AllocationDataPoint {
   value: number;
   /** Optional custom color */
   color?: string;
+  /** Index signature for recharts compatibility */
+  [key: string]: string | number | undefined;
 }
 
 export interface AllocationChartProps {
@@ -117,20 +111,22 @@ interface CustomTooltipPayload {
   value: number;
 }
 
-function CustomTooltip({
-  active,
-  payload,
-  total,
-  valueFormatter,
-}: TooltipProps<number, string> & {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: CustomTooltipPayload }>;
   total: number;
   valueFormatter: (value: number) => string;
-}) {
+}
+
+function CustomTooltip({ active, payload, total, valueFormatter }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const data = payload[0]?.payload as CustomTooltipPayload;
+  const data = payload[0]?.payload;
+  if (!data) {
+    return null;
+  }
   const percentage = calculatePercentage(data.value, total);
 
   return (
@@ -157,18 +153,25 @@ function CustomTooltip({
 // ============================================
 
 interface LabelProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  innerRadius: number;
-  outerRadius: number;
-  percent: number;
-  name: string;
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+  name?: string;
 }
 
 function renderCustomLabel({ cx, cy, midAngle, outerRadius, percent, name }: LabelProps) {
-  if (percent < 0.05) {
-    return null; // Skip small slices
+  if (
+    cx === undefined ||
+    cy === undefined ||
+    midAngle === undefined ||
+    outerRadius === undefined ||
+    percent === undefined ||
+    percent < 0.05
+  ) {
+    return null;
   }
 
   const RADIAN = Math.PI / 180;
@@ -186,7 +189,7 @@ function renderCustomLabel({ cx, cy, midAngle, outerRadius, percent, name }: Lab
       fontSize={10}
       fontFamily="Geist Mono, monospace"
     >
-      {name} ({(percent * 100).toFixed(0)}%)
+      {name ?? ""} ({(percent * 100).toFixed(0)}%)
     </text>
   );
 }
@@ -195,8 +198,8 @@ function renderCustomLabel({ cx, cy, midAngle, outerRadius, percent, name }: Lab
 // Custom Legend
 // ============================================
 
-interface LegendPayload {
-  value: string;
+interface LegendPayloadEntry {
+  value?: string;
   color?: string;
   payload?: {
     value?: number;
@@ -204,11 +207,13 @@ interface LegendPayload {
   };
 }
 
-function renderCustomLegend(props: {
-  payload?: LegendPayload[];
+interface CustomLegendProps {
+  payload?: readonly LegendPayloadEntry[];
   total: number;
   valueFormatter: (value: number) => string;
-}) {
+}
+
+function renderCustomLegend(props: CustomLegendProps) {
   const { payload, total, valueFormatter } = props;
 
   if (!payload) {
@@ -345,7 +350,7 @@ function AllocationChartComponent({
               verticalAlign="middle"
               content={(props) =>
                 renderCustomLegend({
-                  ...props,
+                  payload: props.payload as readonly LegendPayloadEntry[] | undefined,
                   total,
                   valueFormatter,
                 })

@@ -165,7 +165,6 @@ const getActiveRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(getActiveRoute, async (c) => {
   const environment = getEnvironment(c);
   try {
@@ -204,7 +203,6 @@ const getDraftRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(getDraftRoute, async (c) => {
   const environment = getEnvironment(c);
   try {
@@ -252,7 +250,6 @@ const saveDraftRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(saveDraftRoute, async (c) => {
   const environment = getEnvironment(c);
   const updates = c.req.valid("json");
@@ -297,7 +294,6 @@ const validateRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(validateRoute, async (c) => {
   const environment = getEnvironment(c);
 
@@ -342,7 +338,6 @@ const promoteRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(promoteRoute, async (c) => {
   const environment = getEnvironment(c);
 
@@ -398,7 +393,6 @@ const promoteToRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(promoteToRoute, async (c) => {
   const sourceEnvironment = getEnvironment(c);
   const { targetEnvironment } = c.req.valid("json");
@@ -508,7 +502,6 @@ const rollbackRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(rollbackRoute, async (c) => {
   const environment = getEnvironment(c);
   const { versionId } = c.req.valid("json");
@@ -567,7 +560,6 @@ const compareRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(compareRoute, async (c) => {
   const { id1, id2 } = c.req.valid("param");
 
@@ -639,7 +631,6 @@ const getLegacyRoute = createRoute({
   tags: ["Config"],
 });
 
-// @ts-expect-error - Hono OpenAPI response type inference limitation
 app.openapi(getLegacyRoute, async (c) => {
   const environment = getEnvironment(c);
   try {

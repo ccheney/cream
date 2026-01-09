@@ -73,3 +73,6 @@ docs/
 
 .playwright-mcp
 lcov.info
+
+# Turborepo
+.turbo

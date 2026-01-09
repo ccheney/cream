@@ -16,17 +16,14 @@ inputs:
   - directory: .
 
 plugins:
-  # TypeScript (ES modules) - Protobuf-ES v1.x for message types
-  - remote: buf.build/bufbuild/es:v1.10.0
+  # TypeScript (ES modules) - Protobuf-ES v2.x for message types and service descriptors
+  # Note: Connect v2 no longer needs a separate plugin - service descriptors are in _pb files
+  - remote: buf.build/bufbuild/es:v2.2.3
     out: ../schema-gen/ts
+    include_imports: true
     opt:
       - target=ts
-
-  # Connect-ES v1.x (gRPC client) - For Connect/gRPC service clients
-  - remote: buf.build/connectrpc/es:v1.6.1
-    out: ../schema-gen/ts
-    opt:
-      - target=ts
+      - import_extension=js
 
   # Python - Uses protoc built-in Python plugin via BSR
   - remote: buf.build/protocolbuffers/python

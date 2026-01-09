@@ -39,9 +39,10 @@ export type Candle = z.infer<typeof CandleSchema>;
 
 /**
  * Candles by timeframe.
+ * Uses string keys for flexibility since not all timeframes may have data.
  */
-export const CandlesByTimeframeSchema = z.record(TimeframeSchema, z.array(CandleSchema));
-export type CandlesByTimeframe = z.infer<typeof CandlesByTimeframeSchema>;
+export const CandlesByTimeframeSchema = z.record(z.string(), z.array(CandleSchema));
+export type CandlesByTimeframe = Partial<Record<Timeframe, Candle[]>>;
 
 // ============================================
 // Indicator Schema

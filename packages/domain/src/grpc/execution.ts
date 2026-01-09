@@ -9,22 +9,22 @@
 
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import type {
-  CancelOrderRequest,
-  CancelOrderResponse,
-  CheckConstraintsRequest,
-  CheckConstraintsResponse,
-  GetAccountStateRequest,
-  GetAccountStateResponse,
-  GetOrderStateRequest,
-  GetOrderStateResponse,
-  GetPositionsRequest,
-  GetPositionsResponse,
-  StreamExecutionsResponse,
-  SubmitOrderRequest,
-  SubmitOrderResponse,
+import {
+  type CancelOrderRequest,
+  type CancelOrderResponse,
+  type CheckConstraintsRequest,
+  type CheckConstraintsResponse,
+  ExecutionService,
+  type GetAccountStateRequest,
+  type GetAccountStateResponse,
+  type GetOrderStateRequest,
+  type GetOrderStateResponse,
+  type GetPositionsRequest,
+  type GetPositionsResponse,
+  type StreamExecutionsResponse,
+  type SubmitOrderRequest,
+  type SubmitOrderResponse,
 } from "@cream/schema-gen/cream/v1/execution";
-import { ExecutionService } from "@cream/schema-gen/cream/v1/execution_connect";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -47,10 +47,9 @@ export class ExecutionServiceClient {
       ...config,
     };
 
-    // Create gRPC transport (httpVersion "2" is required for gRPC)
+    // Create gRPC transport (HTTP/2 is the default and required for gRPC)
     const transport = createGrpcTransport({
       baseUrl: this.config.baseUrl,
-      httpVersion: "2",
     });
 
     // Create Connect client

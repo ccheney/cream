@@ -23,6 +23,7 @@
     "format": "biome format --write src/ tests/"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
     "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
