@@ -30,7 +30,7 @@ import {
   GrpcError,
   type MarketDataServiceClient,
 } from "@cream/domain/grpc";
-import { createHelixClientFromEnv, type HelixClient, HelixError } from "@cream/helix";
+import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import {
   type Candle,
   calculateATR,
@@ -640,13 +640,14 @@ function calculateIndicatorFromCandles(
  * Recalculate a technical indicator
  *
  * Uses gRPC MarketDataService to fetch bars, then calculates indicator
- * using the @cream/indicators package. Falls back to mock data if unavailable.
+ * using the @cream/indicators package.
  *
  * @param ctx - ExecutionContext
  * @param indicator - Indicator name (RSI, ATR, SMA, EMA, BOLLINGER, STOCHASTIC, VOLUME_SMA)
  * @param symbol - Instrument symbol
  * @param params - Indicator parameters (period, etc.)
  * @returns Indicator values with timestamps
+ * @throws Error if indicator not supported, no bars found, or gRPC fails
  */
 export async function recalcIndicator(
   ctx: ExecutionContext,
@@ -654,6 +655,10 @@ export async function recalcIndicator(
   symbol: string,
   params: Record<string, number> = {}
 ): Promise<IndicatorResult> {
+  if (isBacktest(ctx)) {
+    throw new Error("recalcIndicator is not available in BACKTEST mode");
+  }
+
   // Validate indicator name
   const normalizedIndicator = indicator.toUpperCase() as SupportedIndicator;
   const supportedIndicators: SupportedIndicator[] = [
@@ -667,66 +672,52 @@ export async function recalcIndicator(
   ];
 
   if (!supportedIndicators.includes(normalizedIndicator)) {
-    // Return mock for unsupported indicators
-    return createMockIndicatorResult(indicator, symbol);
+    throw new Error(
+      `Unsupported indicator: ${indicator}. Supported: ${supportedIndicators.join(", ")}`
+    );
   }
 
-  // In backtest mode, always return mock data for performance
-  if (isBacktest(ctx)) {
-    return createMockIndicatorResult(indicator, symbol);
+  const client = getMarketDataClient();
+
+  // Fetch bars from MarketDataService
+  // Request 1-hour bars (timeframe 60) for the symbol
+  const timeframe = params.timeframe ?? 60;
+  const response = await client.getSnapshot({
+    symbols: [symbol],
+    includeBars: true,
+    barTimeframes: [timeframe],
+  });
+
+  // Extract bars and convert to Candle format
+  const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
+  const bars = symbolSnapshot?.bars ?? [];
+
+  if (bars.length === 0) {
+    throw new Error(`No bars found for symbol: ${symbol}`);
   }
 
-  try {
-    const client = getMarketDataClient();
+  // Convert protobuf bars to Candle format
+  const candles: Candle[] = bars.map((bar) => ({
+    timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: Number(bar.volume),
+  }));
 
-    // Fetch bars from MarketDataService
-    // Request 1-hour bars (timeframe 60) for the symbol
-    const timeframe = params.timeframe ?? 60;
-    const response = await client.getSnapshot({
-      symbols: [symbol],
-      includeBars: true,
-      barTimeframes: [timeframe],
-    });
+  // Sort by timestamp (oldest first)
+  candles.sort((a, b) => a.timestamp - b.timestamp);
 
-    // Extract bars and convert to Candle format
-    const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
-    const bars = symbolSnapshot?.bars ?? [];
+  // Calculate the indicator
+  const result = calculateIndicatorFromCandles(normalizedIndicator, candles, params);
 
-    if (bars.length === 0) {
-      return createMockIndicatorResult(indicator, symbol);
-    }
-
-    // Convert protobuf bars to Candle format
-    const candles: Candle[] = bars.map((bar) => ({
-      timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
-      open: bar.open,
-      high: bar.high,
-      low: bar.low,
-      close: bar.close,
-      volume: Number(bar.volume),
-    }));
-
-    // Sort by timestamp (oldest first)
-    candles.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Calculate the indicator
-    const result = calculateIndicatorFromCandles(normalizedIndicator, candles, params);
-
-    return {
-      indicator: normalizedIndicator,
-      symbol,
-      values: result.values,
-      timestamps: result.timestamps.map((ts) => new Date(ts).toISOString()),
-    };
-  } catch (error) {
-    // Fall back to mock data if gRPC fails
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
-      // Expected during development - silently fall back
-      return createMockIndicatorResult(indicator, symbol);
-    }
-    // Unexpected errors - silently fall back to mock data
-    return createMockIndicatorResult(indicator, symbol);
-  }
+  return {
+    indicator: normalizedIndicator,
+    symbol,
+    values: result.values,
+    timestamps: result.timestamps.map((ts) => new Date(ts).toISOString()),
+  };
 }
 
 // FMP client singleton (lazy initialization)
@@ -986,69 +977,47 @@ export async function searchNews(
 }
 
 /**
- * Create mock helixQuery result for backtest/fallback
- */
-function createMockHelixResult(): HelixQueryResult {
-  return {
-    nodes: [],
-    edges: [],
-    metadata: {},
-  };
-}
-
-/**
  * Query HelixDB for memory/graph data
  *
  * Uses the @cream/helix client to execute HelixQL queries.
- * Falls back to empty results in backtest mode or on errors.
  *
  * @param ctx - ExecutionContext
  * @param queryName - HelixQL query name (registered in HelixDB)
  * @param params - Query parameters
  * @returns Query result with nodes and edges
+ * @throws Error if HelixDB query fails or backtest mode is used
  */
 export async function helixQuery(
   ctx: ExecutionContext,
   queryName: string,
   params: Record<string, unknown> = {}
 ): Promise<HelixQueryResult> {
-  // In backtest mode, always return empty data for performance
   if (isBacktest(ctx)) {
-    return createMockHelixResult();
+    throw new Error("helixQuery is not available in BACKTEST mode");
   }
 
-  try {
-    const client = getHelixClient();
+  const client = getHelixClient();
 
-    // Execute the HelixQL query
-    const result = await client.query(queryName, params);
+  // Execute the HelixQL query
+  const result = await client.query(queryName, params);
 
-    // Map query result to HelixQueryResult format
-    // The actual structure depends on the query, but typically includes nodes and edges
-    const data = result.data as {
-      nodes?: unknown[];
-      edges?: unknown[];
-      [key: string]: unknown;
-    };
+  // Map query result to HelixQueryResult format
+  // The actual structure depends on the query, but typically includes nodes and edges
+  const data = result.data as {
+    nodes?: unknown[];
+    edges?: unknown[];
+    [key: string]: unknown;
+  };
 
-    return {
-      nodes: data.nodes ?? [],
-      edges: data.edges ?? [],
-      metadata: {
-        executionTimeMs: result.executionTimeMs,
-        queryName,
-        ...params,
-      },
-    };
-  } catch (error) {
-    // Fall back to empty data if HelixDB fails
-    if (error instanceof HelixError && error.code === "CONNECTION_FAILED") {
-      // Expected during development - silently fall back
-      return createMockHelixResult();
-    }
-    // Unexpected errors - silently fall back to empty data
-    return createMockHelixResult();
-  }
+  return {
+    nodes: data.nodes ?? [],
+    edges: data.edges ?? [],
+    metadata: {
+      executionTimeMs: result.executionTimeMs,
+      queryName,
+      ...params,
+    },
+  };
 }
 
 // ============================================
