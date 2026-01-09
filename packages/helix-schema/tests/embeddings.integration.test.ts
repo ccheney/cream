@@ -4,7 +4,7 @@
  * These tests require GEMINI_API_KEY to run and make real API calls.
  * Run with: GEMINI_API_KEY=xxx bun test embeddings.integration.test.ts
  *
- * In CI, these run in a separate job with secrets.
+ * In CI, these are skipped unless GEMINI_API_KEY secret is configured.
  */
 
 import { describe, expect, it } from "bun:test";
@@ -15,18 +15,12 @@ import { batchEmbedWithProgress, createEmbeddingClient } from "../src/embeddings
 // ============================================
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-if (!GEMINI_API_KEY) {
-  throw new Error(
-    "GEMINI_API_KEY environment variable is required for integration tests. " +
-      "Run with: GEMINI_API_KEY=xxx bun test embeddings.integration.test.ts"
-  );
-}
 
 // ============================================
 // Integration Tests
 // ============================================
 
-describe("EmbeddingClient API Integration", () => {
+describe.skipIf(!GEMINI_API_KEY)("EmbeddingClient API Integration", () => {
   it("generates single embedding", async () => {
     const client = createEmbeddingClient();
     const result = await client.generateEmbedding("Hello, world!");
