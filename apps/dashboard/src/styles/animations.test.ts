@@ -14,7 +14,8 @@ import path from "node:path";
 // Read files for testing
 const animationsCss = fs.readFileSync(path.join(__dirname, "animations.css"), "utf-8");
 
-const tailwindConfig = fs.readFileSync(path.join(__dirname, "../../tailwind.config.ts"), "utf-8");
+// Note: Tailwind v4 uses CSS-based configuration via @tailwindcss/postcss plugin
+// The configuration is inline in CSS files, not in a separate tailwind.config.ts
 
 // ============================================
 // CSS Custom Properties Tests
@@ -292,153 +293,6 @@ describe("Animation State Modifiers", () => {
 });
 
 // ============================================
-// Tailwind Config Tests
-// ============================================
-
-describe("Tailwind Configuration", () => {
-  describe("Duration tokens", () => {
-    it("defines instant duration", () => {
-      expect(tailwindConfig).toContain('instant: "100ms"');
-    });
-
-    it("defines fast duration", () => {
-      expect(tailwindConfig).toContain('fast: "150ms"');
-    });
-
-    it("defines normal duration", () => {
-      expect(tailwindConfig).toContain('normal: "250ms"');
-    });
-
-    it("defines slow duration", () => {
-      expect(tailwindConfig).toContain('slow: "400ms"');
-    });
-
-    it("defines slower duration", () => {
-      expect(tailwindConfig).toContain('slower: "600ms"');
-    });
-  });
-
-  describe("Easing tokens", () => {
-    it("defines out-expo easing", () => {
-      expect(tailwindConfig).toContain('"out-expo"');
-      expect(tailwindConfig).toContain("cubic-bezier(0.16, 1, 0.3, 1)");
-    });
-
-    it("defines in-out-expo easing", () => {
-      expect(tailwindConfig).toContain('"in-out-expo"');
-      expect(tailwindConfig).toContain("cubic-bezier(0.65, 0, 0.35, 1)");
-    });
-
-    it("defines spring easing", () => {
-      expect(tailwindConfig).toContain("spring:");
-      expect(tailwindConfig).toContain("cubic-bezier(0.34, 1.56, 0.64, 1)");
-    });
-  });
-
-  describe("Keyframes", () => {
-    it("defines shimmer keyframes", () => {
-      expect(tailwindConfig).toContain("shimmer:");
-      expect(tailwindConfig).toContain('backgroundPosition: "-200% 0"');
-    });
-
-    it("defines pulse keyframes", () => {
-      expect(tailwindConfig).toContain("pulse:");
-    });
-
-    it("defines spin keyframes", () => {
-      expect(tailwindConfig).toContain("spin:");
-    });
-
-    it("defines flash-profit keyframes", () => {
-      expect(tailwindConfig).toContain('"flash-profit":');
-    });
-
-    it("defines flash-loss keyframes", () => {
-      expect(tailwindConfig).toContain('"flash-loss":');
-    });
-
-    it("defines fade-in keyframes", () => {
-      expect(tailwindConfig).toContain('"fade-in":');
-    });
-
-    it("defines slide-in keyframes", () => {
-      expect(tailwindConfig).toContain('"slide-in-top":');
-      expect(tailwindConfig).toContain('"slide-in-bottom":');
-      expect(tailwindConfig).toContain('"slide-in-left":');
-      expect(tailwindConfig).toContain('"slide-in-right":');
-    });
-
-    it("defines scale-in keyframes", () => {
-      expect(tailwindConfig).toContain('"scale-in":');
-    });
-
-    it("defines checkmark-draw keyframes", () => {
-      expect(tailwindConfig).toContain('"checkmark-draw":');
-    });
-  });
-
-  describe("Animation utilities", () => {
-    it("defines shimmer animation", () => {
-      expect(tailwindConfig).toContain('shimmer: "shimmer 1.5s infinite"');
-    });
-
-    it("defines pulse-slow animation", () => {
-      expect(tailwindConfig).toContain('"pulse-slow":');
-    });
-
-    it("defines spin variants", () => {
-      expect(tailwindConfig).toContain('"spin-slow":');
-      expect(tailwindConfig).toContain('"spin-fast":');
-    });
-
-    it("defines flash animations", () => {
-      expect(tailwindConfig).toContain('"flash-profit":');
-      expect(tailwindConfig).toContain('"flash-loss":');
-    });
-
-    it("defines fade animations", () => {
-      expect(tailwindConfig).toContain('"fade-in":');
-      expect(tailwindConfig).toContain('"fade-out":');
-    });
-
-    it("defines slide animations", () => {
-      expect(tailwindConfig).toContain('"slide-in-top":');
-      expect(tailwindConfig).toContain('"slide-in-bottom":');
-    });
-
-    it("defines scale animations", () => {
-      expect(tailwindConfig).toContain('"scale-in":');
-      expect(tailwindConfig).toContain('"scale-out":');
-    });
-
-    it("defines checkmark animation", () => {
-      expect(tailwindConfig).toContain("checkmark:");
-    });
-  });
-
-  describe("Animation delays", () => {
-    it("defines delay tokens", () => {
-      expect(tailwindConfig).toContain('"100": "100ms"');
-      expect(tailwindConfig).toContain('"200": "200ms"');
-      expect(tailwindConfig).toContain('"500": "500ms"');
-      expect(tailwindConfig).toContain('"1000": "1000ms"');
-    });
-  });
-
-  describe("Colors", () => {
-    it("defines profit color", () => {
-      expect(tailwindConfig).toContain("profit:");
-      expect(tailwindConfig).toContain("#22C55E");
-    });
-
-    it("defines loss color", () => {
-      expect(tailwindConfig).toContain("loss:");
-      expect(tailwindConfig).toContain("#EF4444");
-    });
-  });
-});
-
-// ============================================
 // File Structure Tests
 // ============================================
 
@@ -446,14 +300,8 @@ describe("File Structure", () => {
   it("animations.css exists", () => {
     expect(animationsCss.length).toBeGreaterThan(0);
   });
-
-  it("tailwind.config.ts exists", () => {
-    expect(tailwindConfig.length).toBeGreaterThan(0);
-  });
-
-  it("tailwind.config.ts exports Config type", () => {
-    expect(tailwindConfig).toContain('import type { Config } from "tailwindcss"');
-    expect(tailwindConfig).toContain("const config: Config");
-    expect(tailwindConfig).toContain("export default config");
-  });
 });
+
+// Note: Tailwind v4 uses CSS-based configuration via @tailwindcss/postcss plugin
+// Tests for tailwind.config.ts have been removed as Tailwind v4 does not use
+// a separate config file. Animation tokens are defined directly in CSS.
