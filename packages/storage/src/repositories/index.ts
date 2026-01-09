@@ -178,6 +178,15 @@ export {
   type OrderType,
   type TimeInForce,
 } from "./orders.js";
+// Parity validation (migration 014)
+export {
+  type CreateParityValidationInput,
+  type ParityEntityType,
+  type ParityEnvironment,
+  type ParityRecommendation,
+  type ParityValidationRecord,
+  ParityValidationRepository,
+} from "./parity-validation.js";
 export {
   type CreatePortfolioSnapshotInput,
   type PortfolioSnapshot,

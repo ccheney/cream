@@ -46,3 +46,18 @@ export {
   validateAdjustedData,
   validateDataConsistency,
 } from "./parity";
+
+// Validation service
+export {
+  type CreateParityValidationInput,
+  createParityValidationService,
+  type MetricsProvider,
+  type ParityEntityType,
+  type ParityEnvironment,
+  ParityValidationError,
+  type ParityValidationRecord,
+  type ParityValidationRepository,
+  ParityValidationService,
+  type ParityValidationServiceConfig,
+  type VersionRegistryProvider,
+} from "./service";
