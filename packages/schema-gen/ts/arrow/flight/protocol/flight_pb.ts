@@ -21,18 +21,15 @@
 // @generated from file arrow/flight/protocol/flight.proto (package arrow.flight.protocol, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv1";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv1";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file arrow/flight/protocol/flight.proto.
  */
-export const file_arrow_flight_protocol_flight: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "CiJhcnJvdy9mbGlnaHQvcHJvdG9jb2wvZmxpZ2h0LnByb3RvEhVhcnJvdy5mbGlnaHQucHJvdG9jb2wiPQoQSGFuZHNoYWtlUmVxdWVzdBIYChBwcm90b2NvbF92ZXJzaW9uGAEgASgEEg8KB3BheWxvYWQYAiABKAwiPgoRSGFuZHNoYWtlUmVzcG9uc2USGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoBBIPCgdwYXlsb2FkGAIgASgMIi8KCUJhc2ljQXV0aBIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCSIHCgVFbXB0eSIvCgpBY3Rpb25UeXBlEgwKBHR5cGUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkiHgoIQ3JpdGVyaWESEgoKZXhwcmVzc2lvbhgBIAEoDCIkCgZBY3Rpb24SDAoEdHlwZRgBIAEoCRIMCgRib2R5GAIgASgMIhYKBlJlc3VsdBIMCgRib2R5GAEgASgMIh4KDFNjaGVtYVJlc3VsdBIOCgZzY2hlbWEYASABKAwipQEKEEZsaWdodERlc2NyaXB0b3ISRAoEdHlwZRgBIAEoDjI2LmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yLkRlc2NyaXB0b3JUeXBlEgsKA2NtZBgCIAEoDBIMCgRwYXRoGAMgAygJIjAKDkRlc2NyaXB0b3JUeXBlEgsKB1VOS05PV04QABIICgRQQVRIEAESBwoDQ01EEAIi7AEKCkZsaWdodEluZm8SDgoGc2NoZW1hGAEgASgMEkIKEWZsaWdodF9kZXNjcmlwdG9yGAIgASgLMicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3ISNwoIZW5kcG9pbnQYAyADKAsyJS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RW5kcG9pbnQSFQoNdG90YWxfcmVjb3JkcxgEIAEoAxITCgt0b3RhbF9ieXRlcxgFIAEoAxIPCgdvcmRlcmVkGAYgASgIEhQKDGFwcF9tZXRhZGF0YRgHIAEoDCLVAQoIUG9sbEluZm8SLwoEaW5mbxgBIAEoCzIhLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHRJbmZvEkIKEWZsaWdodF9kZXNjcmlwdG9yGAIgASgLMicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3ISFQoIcHJvZ3Jlc3MYAyABKAFIAIgBARIcCg9leHBpcmF0aW9uX3RpbWUYBCABKANIAYgBAUILCglfcHJvZ3Jlc3NCEgoQX2V4cGlyYXRpb25fdGltZSK6AQoORmxpZ2h0RW5kcG9pbnQSLQoGdGlja2V0GAEgASgLMh0uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlRpY2tldBIxCghsb2NhdGlvbhgCIAMoCzIfLmFycm93LmZsaWdodC5wcm90b2NvbC5Mb2NhdGlvbhIcCg9leHBpcmF0aW9uX3RpbWUYAyABKANIAIgBARIUCgxhcHBfbWV0YWRhdGEYBCABKAxCEgoQX2V4cGlyYXRpb25fdGltZSIXCghMb2NhdGlvbhILCgN1cmkYASABKAkiGAoGVGlja2V0Eg4KBnRpY2tldBgBIAEoDCKPAQoKRmxpZ2h0RGF0YRJCChFmbGlnaHRfZGVzY3JpcHRvchgBIAEoCzInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yEhMKC2RhdGFfaGVhZGVyGAIgASgMEhQKDGFwcF9tZXRhZGF0YRgDIAEoDBISCglkYXRhX2JvZHkY6AcgASgMIiEKCVB1dFJlc3VsdBIUCgxhcHBfbWV0YWRhdGEYASABKAwy8QYKDUZsaWdodFNlcnZpY2USYgoJSGFuZHNoYWtlEicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkhhbmRzaGFrZVJlcXVlc3QaKC5hcnJvdy5mbGlnaHQucHJvdG9jb2wuSGFuZHNoYWtlUmVzcG9uc2UoATABElMKC0xpc3RGbGlnaHRzEh8uYXJyb3cuZmxpZ2h0LnByb3RvY29sLkNyaXRlcmlhGiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodEluZm8wARJbCg1HZXRGbGlnaHRJbmZvEicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3IaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0SW5mbxJaCg5Qb2xsRmxpZ2h0SW5mbxInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yGh8uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlBvbGxJbmZvElkKCUdldFNjaGVtYRInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yGiMuYXJyb3cuZmxpZ2h0LnByb3RvY29sLlNjaGVtYVJlc3VsdBJLCgVEb0dldBIdLmFycm93LmZsaWdodC5wcm90b2NvbC5UaWNrZXQaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RGF0YTABElAKBURvUHV0EiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERhdGEaIC5hcnJvdy5mbGlnaHQucHJvdG9jb2wuUHV0UmVzdWx0KAEwARJWCgpEb0V4Y2hhbmdlEiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERhdGEaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RGF0YSgBMAESSgoIRG9BY3Rpb24SHS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuQWN0aW9uGh0uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlJlc3VsdDABElAKC0xpc3RBY3Rpb25zEhwuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkVtcHR5GiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkFjdGlvblR5cGUwAULbAQoZY29tLmFycm93LmZsaWdodC5wcm90b2NvbEILRmxpZ2h0UHJvdG9QAVo7Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9hcnJvdy9mbGlnaHQvcHJvdG9jb2yiAgNBRlCqAhVBcnJvdy5GbGlnaHQuUHJvdG9jb2zKAhVBcnJvd1xGbGlnaHRcUHJvdG9jb2ziAiFBcnJvd1xGbGlnaHRcUHJvdG9jb2xcR1BCTWV0YWRhdGHqAhdBcnJvdzo6RmxpZ2h0OjpQcm90b2NvbGIGcHJvdG8z"
-  );
+export const file_arrow_flight_protocol_flight: GenFile = /*@__PURE__*/
+  fileDesc("CiJhcnJvdy9mbGlnaHQvcHJvdG9jb2wvZmxpZ2h0LnByb3RvEhVhcnJvdy5mbGlnaHQucHJvdG9jb2wiPQoQSGFuZHNoYWtlUmVxdWVzdBIYChBwcm90b2NvbF92ZXJzaW9uGAEgASgEEg8KB3BheWxvYWQYAiABKAwiPgoRSGFuZHNoYWtlUmVzcG9uc2USGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoBBIPCgdwYXlsb2FkGAIgASgMIi8KCUJhc2ljQXV0aBIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCSIHCgVFbXB0eSIvCgpBY3Rpb25UeXBlEgwKBHR5cGUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkiHgoIQ3JpdGVyaWESEgoKZXhwcmVzc2lvbhgBIAEoDCIkCgZBY3Rpb24SDAoEdHlwZRgBIAEoCRIMCgRib2R5GAIgASgMIhYKBlJlc3VsdBIMCgRib2R5GAEgASgMIh4KDFNjaGVtYVJlc3VsdBIOCgZzY2hlbWEYASABKAwipQEKEEZsaWdodERlc2NyaXB0b3ISRAoEdHlwZRgBIAEoDjI2LmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yLkRlc2NyaXB0b3JUeXBlEgsKA2NtZBgCIAEoDBIMCgRwYXRoGAMgAygJIjAKDkRlc2NyaXB0b3JUeXBlEgsKB1VOS05PV04QABIICgRQQVRIEAESBwoDQ01EEAIi7AEKCkZsaWdodEluZm8SDgoGc2NoZW1hGAEgASgMEkIKEWZsaWdodF9kZXNjcmlwdG9yGAIgASgLMicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3ISNwoIZW5kcG9pbnQYAyADKAsyJS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RW5kcG9pbnQSFQoNdG90YWxfcmVjb3JkcxgEIAEoAxITCgt0b3RhbF9ieXRlcxgFIAEoAxIPCgdvcmRlcmVkGAYgASgIEhQKDGFwcF9tZXRhZGF0YRgHIAEoDCLVAQoIUG9sbEluZm8SLwoEaW5mbxgBIAEoCzIhLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHRJbmZvEkIKEWZsaWdodF9kZXNjcmlwdG9yGAIgASgLMicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3ISFQoIcHJvZ3Jlc3MYAyABKAFIAIgBARIcCg9leHBpcmF0aW9uX3RpbWUYBCABKANIAYgBAUILCglfcHJvZ3Jlc3NCEgoQX2V4cGlyYXRpb25fdGltZSK6AQoORmxpZ2h0RW5kcG9pbnQSLQoGdGlja2V0GAEgASgLMh0uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlRpY2tldBIxCghsb2NhdGlvbhgCIAMoCzIfLmFycm93LmZsaWdodC5wcm90b2NvbC5Mb2NhdGlvbhIcCg9leHBpcmF0aW9uX3RpbWUYAyABKANIAIgBARIUCgxhcHBfbWV0YWRhdGEYBCABKAxCEgoQX2V4cGlyYXRpb25fdGltZSIXCghMb2NhdGlvbhILCgN1cmkYASABKAkiGAoGVGlja2V0Eg4KBnRpY2tldBgBIAEoDCKPAQoKRmxpZ2h0RGF0YRJCChFmbGlnaHRfZGVzY3JpcHRvchgBIAEoCzInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yEhMKC2RhdGFfaGVhZGVyGAIgASgMEhQKDGFwcF9tZXRhZGF0YRgDIAEoDBISCglkYXRhX2JvZHkY6AcgASgMIiEKCVB1dFJlc3VsdBIUCgxhcHBfbWV0YWRhdGEYASABKAwy8QYKDUZsaWdodFNlcnZpY2USYgoJSGFuZHNoYWtlEicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkhhbmRzaGFrZVJlcXVlc3QaKC5hcnJvdy5mbGlnaHQucHJvdG9jb2wuSGFuZHNoYWtlUmVzcG9uc2UoATABElMKC0xpc3RGbGlnaHRzEh8uYXJyb3cuZmxpZ2h0LnByb3RvY29sLkNyaXRlcmlhGiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodEluZm8wARJbCg1HZXRGbGlnaHRJbmZvEicuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERlc2NyaXB0b3IaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0SW5mbxJaCg5Qb2xsRmxpZ2h0SW5mbxInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yGh8uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlBvbGxJbmZvElkKCUdldFNjaGVtYRInLmFycm93LmZsaWdodC5wcm90b2NvbC5GbGlnaHREZXNjcmlwdG9yGiMuYXJyb3cuZmxpZ2h0LnByb3RvY29sLlNjaGVtYVJlc3VsdBJLCgVEb0dldBIdLmFycm93LmZsaWdodC5wcm90b2NvbC5UaWNrZXQaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RGF0YTABElAKBURvUHV0EiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERhdGEaIC5hcnJvdy5mbGlnaHQucHJvdG9jb2wuUHV0UmVzdWx0KAEwARJWCgpEb0V4Y2hhbmdlEiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkZsaWdodERhdGEaIS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuRmxpZ2h0RGF0YSgBMAESSgoIRG9BY3Rpb24SHS5hcnJvdy5mbGlnaHQucHJvdG9jb2wuQWN0aW9uGh0uYXJyb3cuZmxpZ2h0LnByb3RvY29sLlJlc3VsdDABElAKC0xpc3RBY3Rpb25zEhwuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkVtcHR5GiEuYXJyb3cuZmxpZ2h0LnByb3RvY29sLkFjdGlvblR5cGUwAULbAQoZY29tLmFycm93LmZsaWdodC5wcm90b2NvbEILRmxpZ2h0UHJvdG9QAVo7Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9hcnJvdy9mbGlnaHQvcHJvdG9jb2yiAgNBRlCqAhVBcnJvdy5GbGlnaHQuUHJvdG9jb2zKAhVBcnJvd1xGbGlnaHRcUHJvdG9jb2ziAiFBcnJvd1xGbGlnaHRcUHJvdG9jb2xcR1BCTWV0YWRhdGHqAhdBcnJvdzo6RmxpZ2h0OjpQcm90b2NvbGIGcHJvdG8z");
 
 /**
  * The request that a client provides to a server on handshake.
@@ -59,8 +56,7 @@ export type HandshakeRequest = Message<"arrow.flight.protocol.HandshakeRequest">
  * Describes the message arrow.flight.protocol.HandshakeRequest.
  * Use `create(HandshakeRequestSchema)` to create a new message.
  */
-export const HandshakeRequestSchema: GenMessage<HandshakeRequest> =
-  /*@__PURE__*/
+export const HandshakeRequestSchema: GenMessage<HandshakeRequest> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 0);
 
 /**
@@ -88,8 +84,7 @@ export type HandshakeResponse = Message<"arrow.flight.protocol.HandshakeResponse
  * Describes the message arrow.flight.protocol.HandshakeResponse.
  * Use `create(HandshakeResponseSchema)` to create a new message.
  */
-export const HandshakeResponseSchema: GenMessage<HandshakeResponse> =
-  /*@__PURE__*/
+export const HandshakeResponseSchema: GenMessage<HandshakeResponse> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 1);
 
 /**
@@ -113,8 +108,7 @@ export type BasicAuth = Message<"arrow.flight.protocol.BasicAuth"> & {
  * Describes the message arrow.flight.protocol.BasicAuth.
  * Use `create(BasicAuthSchema)` to create a new message.
  */
-export const BasicAuthSchema: GenMessage<BasicAuth> =
-  /*@__PURE__*/
+export const BasicAuthSchema: GenMessage<BasicAuth> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 2);
 
 /**
@@ -122,14 +116,14 @@ export const BasicAuthSchema: GenMessage<BasicAuth> =
  *
  * @generated from message arrow.flight.protocol.Empty
  */
-export type Empty = Message<"arrow.flight.protocol.Empty"> & {};
+export type Empty = Message<"arrow.flight.protocol.Empty"> & {
+};
 
 /**
  * Describes the message arrow.flight.protocol.Empty.
  * Use `create(EmptySchema)` to create a new message.
  */
-export const EmptySchema: GenMessage<Empty> =
-  /*@__PURE__*/
+export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 3);
 
 /**
@@ -154,8 +148,7 @@ export type ActionType = Message<"arrow.flight.protocol.ActionType"> & {
  * Describes the message arrow.flight.protocol.ActionType.
  * Use `create(ActionTypeSchema)` to create a new message.
  */
-export const ActionTypeSchema: GenMessage<ActionType> =
-  /*@__PURE__*/
+export const ActionTypeSchema: GenMessage<ActionType> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 4);
 
 /**
@@ -174,8 +167,7 @@ export type Criteria = Message<"arrow.flight.protocol.Criteria"> & {
  * Describes the message arrow.flight.protocol.Criteria.
  * Use `create(CriteriaSchema)` to create a new message.
  */
-export const CriteriaSchema: GenMessage<Criteria> =
-  /*@__PURE__*/
+export const CriteriaSchema: GenMessage<Criteria> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 5);
 
 /**
@@ -199,8 +191,7 @@ export type Action = Message<"arrow.flight.protocol.Action"> & {
  * Describes the message arrow.flight.protocol.Action.
  * Use `create(ActionSchema)` to create a new message.
  */
-export const ActionSchema: GenMessage<Action> =
-  /*@__PURE__*/
+export const ActionSchema: GenMessage<Action> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 6);
 
 /**
@@ -219,8 +210,7 @@ export type Result = Message<"arrow.flight.protocol.Result"> & {
  * Describes the message arrow.flight.protocol.Result.
  * Use `create(ResultSchema)` to create a new message.
  */
-export const ResultSchema: GenMessage<Result> =
-  /*@__PURE__*/
+export const ResultSchema: GenMessage<Result> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 7);
 
 /**
@@ -244,8 +234,7 @@ export type SchemaResult = Message<"arrow.flight.protocol.SchemaResult"> & {
  * Describes the message arrow.flight.protocol.SchemaResult.
  * Use `create(SchemaResultSchema)` to create a new message.
  */
-export const SchemaResultSchema: GenMessage<SchemaResult> =
-  /*@__PURE__*/
+export const SchemaResultSchema: GenMessage<SchemaResult> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 8);
 
 /**
@@ -281,8 +270,7 @@ export type FlightDescriptor = Message<"arrow.flight.protocol.FlightDescriptor">
  * Describes the message arrow.flight.protocol.FlightDescriptor.
  * Use `create(FlightDescriptorSchema)` to create a new message.
  */
-export const FlightDescriptorSchema: GenMessage<FlightDescriptor> =
-  /*@__PURE__*/
+export const FlightDescriptorSchema: GenMessage<FlightDescriptor> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 9);
 
 /**
@@ -316,8 +304,7 @@ export enum FlightDescriptor_DescriptorType {
 /**
  * Describes the enum arrow.flight.protocol.FlightDescriptor.DescriptorType.
  */
-export const FlightDescriptor_DescriptorTypeSchema: GenEnum<FlightDescriptor_DescriptorType> =
-  /*@__PURE__*/
+export const FlightDescriptor_DescriptorTypeSchema: GenEnum<FlightDescriptor_DescriptorType> = /*@__PURE__*/
   enumDesc(file_arrow_flight_protocol_flight, 9, 0);
 
 /**
@@ -409,8 +396,7 @@ export type FlightInfo = Message<"arrow.flight.protocol.FlightInfo"> & {
  * Describes the message arrow.flight.protocol.FlightInfo.
  * Use `create(FlightInfoSchema)` to create a new message.
  */
-export const FlightInfoSchema: GenMessage<FlightInfo> =
-  /*@__PURE__*/
+export const FlightInfoSchema: GenMessage<FlightInfo> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 10);
 
 /**
@@ -462,8 +448,7 @@ export type PollInfo = Message<"arrow.flight.protocol.PollInfo"> & {
  * Describes the message arrow.flight.protocol.PollInfo.
  * Use `create(PollInfoSchema)` to create a new message.
  */
-export const PollInfoSchema: GenMessage<PollInfo> =
-  /*@__PURE__*/
+export const PollInfoSchema: GenMessage<PollInfo> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 11);
 
 /**
@@ -523,8 +508,7 @@ export type FlightEndpoint = Message<"arrow.flight.protocol.FlightEndpoint"> & {
  * Describes the message arrow.flight.protocol.FlightEndpoint.
  * Use `create(FlightEndpointSchema)` to create a new message.
  */
-export const FlightEndpointSchema: GenMessage<FlightEndpoint> =
-  /*@__PURE__*/
+export const FlightEndpointSchema: GenMessage<FlightEndpoint> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 12);
 
 /**
@@ -544,8 +528,7 @@ export type Location = Message<"arrow.flight.protocol.Location"> & {
  * Describes the message arrow.flight.protocol.Location.
  * Use `create(LocationSchema)` to create a new message.
  */
-export const LocationSchema: GenMessage<Location> =
-  /*@__PURE__*/
+export const LocationSchema: GenMessage<Location> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 13);
 
 /**
@@ -568,8 +551,7 @@ export type Ticket = Message<"arrow.flight.protocol.Ticket"> & {
  * Describes the message arrow.flight.protocol.Ticket.
  * Use `create(TicketSchema)` to create a new message.
  */
-export const TicketSchema: GenMessage<Ticket> =
-  /*@__PURE__*/
+export const TicketSchema: GenMessage<Ticket> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 14);
 
 /**
@@ -615,8 +597,7 @@ export type FlightData = Message<"arrow.flight.protocol.FlightData"> & {
  * Describes the message arrow.flight.protocol.FlightData.
  * Use `create(FlightDataSchema)` to create a new message.
  */
-export const FlightDataSchema: GenMessage<FlightData> =
-  /*@__PURE__*/
+export const FlightDataSchema: GenMessage<FlightData> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 15);
 
 /**
@@ -635,8 +616,7 @@ export type PutResult = Message<"arrow.flight.protocol.PutResult"> & {
  * Describes the message arrow.flight.protocol.PutResult.
  * Use `create(PutResultSchema)` to create a new message.
  */
-export const PutResultSchema: GenMessage<PutResult> =
-  /*@__PURE__*/
+export const PutResultSchema: GenMessage<PutResult> = /*@__PURE__*/
   messageDesc(file_arrow_flight_protocol_flight, 16);
 
 /**
@@ -656,7 +636,7 @@ export const FlightService: GenService<{
     methodKind: "bidi_streaming";
     input: typeof HandshakeRequestSchema;
     output: typeof HandshakeResponseSchema;
-  };
+  },
   /**
    * Get a list of available streams given a particular criteria.
    *
@@ -666,7 +646,7 @@ export const FlightService: GenService<{
     methodKind: "server_streaming";
     input: typeof CriteriaSchema;
     output: typeof FlightInfoSchema;
-  };
+  },
   /**
    * For a given FlightDescriptor, get information about how the flight can be
    * consumed.
@@ -677,7 +657,7 @@ export const FlightService: GenService<{
     methodKind: "unary";
     input: typeof FlightDescriptorSchema;
     output: typeof FlightInfoSchema;
-  };
+  },
   /**
    * For a given FlightDescriptor, start a query and get information
    * to poll its execution status.
@@ -688,7 +668,7 @@ export const FlightService: GenService<{
     methodKind: "unary";
     input: typeof FlightDescriptorSchema;
     output: typeof PollInfoSchema;
-  };
+  },
   /**
    * For a given FlightDescriptor, get the Schema as described in Schema.fbs::Schema.
    *
@@ -698,7 +678,7 @@ export const FlightService: GenService<{
     methodKind: "unary";
     input: typeof FlightDescriptorSchema;
     output: typeof SchemaResultSchema;
-  };
+  },
   /**
    * Retrieve a single stream associated with a particular descriptor
    * associated with the referenced ticket.
@@ -709,7 +689,7 @@ export const FlightService: GenService<{
     methodKind: "server_streaming";
     input: typeof TicketSchema;
     output: typeof FlightDataSchema;
-  };
+  },
   /**
    * Push a stream to the flight service associated with a particular
    * flight stream.
@@ -720,7 +700,7 @@ export const FlightService: GenService<{
     methodKind: "bidi_streaming";
     input: typeof FlightDataSchema;
     output: typeof PutResultSchema;
-  };
+  },
   /**
    * Open a bidirectional data channel for a given descriptor.
    *
@@ -730,7 +710,7 @@ export const FlightService: GenService<{
     methodKind: "bidi_streaming";
     input: typeof FlightDataSchema;
     output: typeof FlightDataSchema;
-  };
+  },
   /**
    * Flight services can support an arbitrary number of simple actions in
    * addition to the possible ListFlights, GetFlightInfo, DoGet, DoPut
@@ -742,7 +722,7 @@ export const FlightService: GenService<{
     methodKind: "server_streaming";
     input: typeof ActionSchema;
     output: typeof ResultSchema;
-  };
+  },
   /**
    * A flight service exposes all of the available action types that it has
    * along with descriptions.
@@ -753,5 +733,7 @@ export const FlightService: GenService<{
     methodKind: "server_streaming";
     input: typeof EmptySchema;
     output: typeof ActionTypeSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_arrow_flight_protocol_flight, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_arrow_flight_protocol_flight, 0);
+
