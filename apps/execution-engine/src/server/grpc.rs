@@ -580,7 +580,7 @@ impl ExecutionService for ExecutionServiceImpl {
                     accepted: false,
                     order_id: order_id.clone(),
                     status: proto::cream::v1::OrderStatus::Unspecified.into(),
-                    error_message: Some(format!("{}", cancel_error)),
+                    error_message: Some(format!("{cancel_error}")),
                 }))
             }
         }

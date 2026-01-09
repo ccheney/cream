@@ -104,7 +104,7 @@ impl TradeUpdate {
 
     /// Create with trade side.
     #[must_use]
-    pub fn with_side(mut self, side: TradeSide) -> Self {
+    pub const fn with_side(mut self, side: TradeSide) -> Self {
         self.side = Some(side);
         self
     }
@@ -237,14 +237,14 @@ impl MicrostructureTracker {
 
     /// Create with custom window duration.
     #[must_use]
-    pub fn with_window(mut self, window: Duration) -> Self {
+    pub const fn with_window(mut self, window: Duration) -> Self {
         self.window_duration = window;
         self
     }
 
     /// Create with custom staleness threshold.
     #[must_use]
-    pub fn with_staleness_threshold(mut self, threshold: Duration) -> Self {
+    pub const fn with_staleness_threshold(mut self, threshold: Duration) -> Self {
         self.staleness_threshold = threshold;
         self
     }
@@ -745,11 +745,15 @@ mod tests {
 
         assert_eq!(manager.symbol_count(), 2);
 
-        let aapl = manager.snapshot("AAPL").unwrap();
+        let aapl = manager
+            .snapshot("AAPL")
+            .expect("AAPL snapshot should exist");
         assert_eq!(aapl.bid, Decimal::new(15000, 2));
         assert_eq!(aapl.volume, Decimal::new(100, 0));
 
-        let msft = manager.snapshot("MSFT").unwrap();
+        let msft = manager
+            .snapshot("MSFT")
+            .expect("MSFT snapshot should exist");
         assert_eq!(msft.bid, Decimal::new(40000, 2));
         assert_eq!(msft.volume, Decimal::new(50, 0));
     }

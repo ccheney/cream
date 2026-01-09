@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_config_with_addr() {
-        let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let addr: SocketAddr = "127.0.0.1:8080".parse().expect("should parse socket addr");
         let config = MetricsConfig::with_addr(addr);
         assert_eq!(config.listen_addr.port(), 8080);
     }

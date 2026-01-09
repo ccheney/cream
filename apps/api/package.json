@@ -33,6 +33,7 @@
     "@cream/external-context": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/helix-schema": "workspace:*",
+    "@cream/indicators": "workspace:*",
     "@cream/marketdata": "workspace:*",
     "@cream/mastra-kit": "workspace:*",
     "@cream/prediction-markets": "workspace:*",

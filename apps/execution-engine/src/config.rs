@@ -992,7 +992,7 @@ pub struct StartupValidation {
 impl StartupValidation {
     /// Create a successful validation result.
     #[must_use]
-    pub fn ok() -> Self {
+    pub const fn ok() -> Self {
         Self {
             valid: true,
             warnings: Vec::new(),
@@ -1001,7 +1001,7 @@ impl StartupValidation {
 
     /// Create a successful validation with warnings.
     #[must_use]
-    pub fn ok_with_warnings(warnings: Vec<String>) -> Self {
+    pub const fn ok_with_warnings(warnings: Vec<String>) -> Self {
         Self {
             valid: true,
             warnings,

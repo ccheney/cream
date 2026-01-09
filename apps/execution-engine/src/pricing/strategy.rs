@@ -964,7 +964,7 @@ mod tests {
                     Decimal::new(40, 2),  // Long call premium $0.40
                 ),
             )
-            .unwrap();
+            .expect("should build valid iron condor strategy");
 
         assert_eq!(strategy.strategy_type, StrategyType::IronCondor);
         assert_eq!(strategy.legs.len(), 4);
@@ -1015,7 +1015,7 @@ mod tests {
                 Decimal::new(200, 2), // Short premium $2.00
                 Decimal::new(450, 2), // Long premium $4.50
             )
-            .unwrap();
+            .expect("should build valid bull call spread");
 
         assert_eq!(strategy.strategy_type, StrategyType::BullCallSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1038,7 +1038,7 @@ mod tests {
                 Decimal::new(150, 2), // Short premium $1.50
                 Decimal::new(300, 2), // Long premium $3.00
             )
-            .unwrap();
+            .expect("should build valid bear put spread");
 
         assert_eq!(strategy.strategy_type, StrategyType::BearPutSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1056,7 +1056,7 @@ mod tests {
                 Decimal::new(1200, 2), // Call premium $12.00
                 Decimal::new(1100, 2), // Put premium $11.00
             )
-            .unwrap();
+            .expect("should build valid straddle strategy");
 
         assert_eq!(strategy.strategy_type, StrategyType::Straddle);
         assert_eq!(strategy.legs.len(), 2);
@@ -1081,7 +1081,7 @@ mod tests {
                 Decimal::new(800, 2), // Call premium $8.00
                 Decimal::new(750, 2), // Put premium $7.50
             )
-            .unwrap();
+            .expect("should build valid strangle strategy");
 
         assert_eq!(strategy.strategy_type, StrategyType::Strangle);
         assert_eq!(strategy.legs.len(), 2);
@@ -1162,7 +1162,7 @@ mod tests {
                 Decimal::new(300, 2), // Near premium $3.00 (received)
                 Decimal::new(500, 2), // Far premium $5.00 (paid)
             )
-            .unwrap();
+            .expect("should build valid calendar spread");
 
         assert_eq!(strategy.strategy_type, StrategyType::CalendarSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1208,7 +1208,7 @@ mod tests {
                 Decimal::new(200, 2), // Near premium $2.00 (received)
                 Decimal::new(600, 2), // Far premium $6.00 (paid)
             )
-            .unwrap();
+            .expect("should build valid diagonal spread");
 
         assert_eq!(strategy.strategy_type, StrategyType::DiagonalSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1273,7 +1273,9 @@ mod tests {
             ),
         ];
 
-        let strategy = builder.custom("SPY", "2026-01-17", legs).unwrap();
+        let strategy = builder
+            .custom("SPY", "2026-01-17", legs)
+            .expect("should build valid custom strategy");
 
         assert_eq!(strategy.strategy_type, StrategyType::Custom);
         assert_eq!(strategy.legs.len(), 2);

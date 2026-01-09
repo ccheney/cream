@@ -446,7 +446,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                 drop(data);
 
                 let result = arrow_flight::Result {
-                    body: format!("Cleared {} cached entries", count).into(),
+                    body: format!("Cleared {count} cached entries").into(),
                 };
                 let output = stream::iter(vec![Ok(result)]);
                 Ok(tonic::Response::new(Box::pin(output)))
@@ -457,7 +457,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                 drop(data);
 
                 let result = arrow_flight::Result {
-                    body: format!(r#"{{"status":"healthy","cache_size":{}}}"#, cache_size).into(),
+                    body: format!(r#"{{"status":"healthy","cache_size":{cache_size}}}"#).into(),
                 };
                 let output = stream::iter(vec![Ok(result)]);
                 Ok(tonic::Response::new(Box::pin(output)))
@@ -469,15 +469,13 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                 drop(data);
 
                 let result = arrow_flight::Result {
-                    body: format!(r#"{{"cache_size":{},"symbols":{:?}}}"#, cache_size, symbols)
-                        .into(),
+                    body: format!(r#"{{"cache_size":{cache_size},"symbols":{symbols:?}}}"#).into(),
                 };
                 let output = stream::iter(vec![Ok(result)]);
                 Ok(tonic::Response::new(Box::pin(output)))
             }
             _ => Err(tonic::Status::invalid_argument(format!(
-                "Unknown action: {}",
-                action_type
+                "Unknown action: {action_type}"
             ))),
         }
     }

@@ -1311,7 +1311,11 @@ mod tests {
         let position2 = make_test_position("P2", "AAPL");
         let result = tracker.add_position(position2);
         assert!(result.is_some());
-        assert!(result.unwrap().contains("max contracts per underlying"));
+        assert!(
+            result
+                .expect("should have error message")
+                .contains("max contracts per underlying")
+        );
     }
 
     #[test]
@@ -1326,7 +1330,11 @@ mod tests {
 
         let result = tracker.add_position(position);
         assert!(result.is_some());
-        assert!(result.unwrap().contains("max delta"));
+        assert!(
+            result
+                .expect("should have error message")
+                .contains("max delta")
+        );
     }
 
     // ============ Helper Functions ============

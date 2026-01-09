@@ -190,9 +190,8 @@ fn create_execution_server(
         // but we double-check here for safety
         if key.is_empty() || secret.is_empty() {
             return Err(format!(
-                "Alpaca credentials required for {} mode. \
-                 Set ALPACA_KEY and ALPACA_SECRET environment variables.",
-                env
+                "Alpaca credentials required for {env} mode. \
+                 Set ALPACA_KEY and ALPACA_SECRET environment variables."
             )
             .into());
         }

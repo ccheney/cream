@@ -177,7 +177,7 @@ impl Default for TwapConfig {
 impl TwapConfig {
     /// Calculate the number of slices for a TWAP execution.
     #[must_use]
-    pub fn calculate_slice_count(&self) -> u32 {
+    pub const fn calculate_slice_count(&self) -> u32 {
         let total_seconds = self.duration_minutes * 60;
         total_seconds / self.slice_interval_seconds
     }

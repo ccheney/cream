@@ -348,7 +348,7 @@ impl BracketOrderBuilder {
 
     /// Set the quantity.
     #[must_use]
-    pub fn quantity(mut self, qty: Decimal) -> Self {
+    pub const fn quantity(mut self, qty: Decimal) -> Self {
         self.quantity = Some(qty);
         self
     }
@@ -363,14 +363,14 @@ impl BracketOrderBuilder {
 
     /// Set the stop-loss price.
     #[must_use]
-    pub fn stop_loss(mut self, price: Decimal) -> Self {
+    pub const fn stop_loss(mut self, price: Decimal) -> Self {
         self.stop_loss = Some(price);
         self
     }
 
     /// Set stop-limit prices.
     #[must_use]
-    pub fn stop_limit(mut self, stop: Decimal, limit: Decimal) -> Self {
+    pub const fn stop_limit(mut self, stop: Decimal, limit: Decimal) -> Self {
         self.stop_loss = Some(stop);
         self.stop_limit = Some(limit);
         self
@@ -378,7 +378,7 @@ impl BracketOrderBuilder {
 
     /// Set the take-profit price.
     #[must_use]
-    pub fn take_profit(mut self, price: Decimal) -> Self {
+    pub const fn take_profit(mut self, price: Decimal) -> Self {
         self.take_profit = Some(price);
         self
     }
@@ -504,7 +504,7 @@ impl BacktestStopsSimulator {
 
     /// Create with custom configuration.
     #[must_use]
-    pub fn with_config(config: StopsConfig) -> Self {
+    pub const fn with_config(config: StopsConfig) -> Self {
         Self { config }
     }
 
@@ -772,7 +772,7 @@ impl PriceMonitor {
 
     /// Get the monitoring interval.
     #[must_use]
-    pub fn monitoring_interval_ms(&self) -> u64 {
+    pub const fn monitoring_interval_ms(&self) -> u64 {
         self.config.monitoring_interval_ms
     }
 
@@ -928,7 +928,7 @@ impl StopsEnforcer {
 
     /// Get the current environment.
     #[must_use]
-    pub fn environment(&self) -> Environment {
+    pub const fn environment(&self) -> Environment {
         self.environment
     }
 }
@@ -1073,7 +1073,7 @@ mod tests {
             .stop_loss(Decimal::new(14500, 2))
             .take_profit(Decimal::new(16000, 2))
             .build()
-            .unwrap();
+            .expect("should build bracket order");
 
         assert_eq!(order.instrument_id, "AAPL");
         assert_eq!(order.entry.quantity, Decimal::new(100, 0));

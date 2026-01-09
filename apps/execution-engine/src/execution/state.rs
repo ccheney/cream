@@ -308,10 +308,7 @@ mod tests {
 
         let retrieved = manager.get("ord-1");
         assert!(retrieved.is_some());
-        assert_eq!(
-            retrieved.expect("order should exist").order_id,
-            "ord-1"
-        );
+        assert_eq!(retrieved.expect("order should exist").order_id, "ord-1");
     }
 
     #[test]
@@ -391,13 +388,13 @@ mod tests {
         // Apply first fill
         let result = manager.apply_fill("ord-1", make_fill("f1", 40, 15000));
         assert!(result.is_some());
-        let state = result.unwrap();
+        let state = result.expect("apply_fill should return state");
         assert_eq!(state.cum_qty, Decimal::new(40, 0));
         assert_eq!(state.leaves_qty, Decimal::new(60, 0));
         assert!(state.verify_fix_invariant());
 
         // Verify OrderState is synchronized
-        let order = manager.get("ord-1").unwrap();
+        let order = manager.get("ord-1").expect("order should exist");
         assert_eq!(order.filled_quantity, Decimal::new(40, 0));
         assert_eq!(order.status, OrderStatus::PartiallyFilled);
     }
@@ -416,7 +413,7 @@ mod tests {
         // Fill completely
         manager.apply_fill("ord-1", make_fill("f1", 100, 15000));
 
-        let order = manager.get("ord-1").unwrap();
+        let order = manager.get("ord-1").expect("order should exist");
         assert_eq!(order.status, OrderStatus::Filled);
         assert_eq!(order.filled_quantity, Decimal::new(100, 0));
     }
@@ -439,7 +436,7 @@ mod tests {
         // VWAP = (40 * 150 + 60 * 151) / 100 = 150.60
         manager.apply_fill("ord-1", make_fill("f2", 60, 15100));
 
-        let order = manager.get("ord-1").unwrap();
+        let order = manager.get("ord-1").expect("order should exist");
         assert_eq!(order.avg_fill_price, Decimal::new(15060, 2));
     }
 

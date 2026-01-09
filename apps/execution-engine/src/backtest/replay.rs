@@ -652,7 +652,7 @@ impl SynchronizedReplay {
 
     /// Get the underlying engine's progress.
     #[must_use]
-    pub fn progress(&self) -> &ReplayProgress {
+    pub const fn progress(&self) -> &ReplayProgress {
         self.engine.progress()
     }
 }

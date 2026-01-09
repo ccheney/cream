@@ -260,8 +260,7 @@ impl PositionSizer {
             if affordable < quantity {
                 was_constrained = true;
                 constraint_reason = Some(format!(
-                    "Reduced from {} to {} due to cash constraint",
-                    quantity, affordable
+                    "Reduced from {quantity} to {affordable} due to cash constraint"
                 ));
                 quantity = affordable;
             }

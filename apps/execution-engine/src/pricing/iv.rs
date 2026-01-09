@@ -486,7 +486,7 @@ mod tests {
         let market_price = bs_call(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .unwrap();
+            .expect("IV solver should converge for ATM call");
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -506,7 +506,7 @@ mod tests {
         let market_price = bs_put(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Put)
-            .unwrap();
+            .expect("IV solver should converge for ATM put");
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -526,7 +526,7 @@ mod tests {
         let market_price = bs_call(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .unwrap();
+            .expect("IV solver should converge for OTM call");
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -546,7 +546,7 @@ mod tests {
         let market_price = bs_put(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Put)
-            .unwrap();
+            .expect("IV solver should converge for ITM put");
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -608,7 +608,7 @@ mod tests {
         let market_price = bs_call(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .unwrap();
+            .expect("IV solver should converge for high IV");
 
         assert!(approx_eq(computed_iv, true_iv, 0.02));
     }
@@ -628,7 +628,7 @@ mod tests {
         let market_price = bs_call(s, k, t, r, q, true_iv);
         let computed_iv = solver
             .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .unwrap();
+            .expect("IV solver should converge for low IV");
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }

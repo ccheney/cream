@@ -284,18 +284,18 @@ impl GapRecoveryManager {
 
     /// Get total gap count.
     #[must_use]
-    pub fn gap_count(&self) -> u64 {
+    pub const fn gap_count(&self) -> u64 {
         self.gap_count
     }
 
     /// Check if currently in recovery mode.
     #[must_use]
-    pub fn in_recovery(&self) -> bool {
+    pub const fn in_recovery(&self) -> bool {
         self.in_recovery
     }
 
     /// Reset the manager state.
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.last_sequence = None;
         self.last_message_time = None;
         self.consecutive_gaps = 0;
@@ -305,7 +305,7 @@ impl GapRecoveryManager {
 
     /// Get the configuration.
     #[must_use]
-    pub fn config(&self) -> &GapRecoveryConfig {
+    pub const fn config(&self) -> &GapRecoveryConfig {
         &self.config
     }
 }

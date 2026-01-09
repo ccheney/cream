@@ -180,7 +180,7 @@ impl FeedHealthTracker {
     }
 
     /// Record a gap event.
-    pub fn record_gap(&mut self) {
+    pub const fn record_gap(&mut self) {
         self.gap_count += 1;
         self.recent_gaps += 1;
     }
@@ -324,7 +324,7 @@ impl FeedHealthTracker {
 
     /// Get total gap count.
     #[must_use]
-    pub fn gap_count(&self) -> u64 {
+    pub const fn gap_count(&self) -> u64 {
         self.gap_count
     }
 
@@ -336,7 +336,7 @@ impl FeedHealthTracker {
 
     /// Get the configuration.
     #[must_use]
-    pub fn config(&self) -> &FeedHealthConfig {
+    pub const fn config(&self) -> &FeedHealthConfig {
         &self.config
     }
 

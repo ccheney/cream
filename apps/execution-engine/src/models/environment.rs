@@ -91,8 +91,14 @@ mod tests {
 
     #[test]
     fn test_environment_from_str() {
-        assert_eq!("LIVE".parse::<Environment>().unwrap(), Environment::Live);
-        assert_eq!("paper".parse::<Environment>().unwrap(), Environment::Paper);
+        assert_eq!(
+            "LIVE".parse::<Environment>().expect("LIVE should parse"),
+            Environment::Live
+        );
+        assert_eq!(
+            "paper".parse::<Environment>().expect("paper should parse"),
+            Environment::Paper
+        );
         assert!("invalid".parse::<Environment>().is_err());
     }
 }

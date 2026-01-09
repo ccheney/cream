@@ -478,16 +478,16 @@ impl ConstraintValidator {
                 let has_sell = actions.iter().any(|(_, a, _)| *a == Action::Sell);
 
                 if has_buy && has_sell {
+                    let num_decisions = actions.len();
                     violations.push(ConstraintViolation {
                         code: "CONFLICTING_ORDERS".to_string(),
                         severity: ViolationSeverity::Error,
                         message: format!(
-                            "Conflicting BUY and SELL orders for {} in same plan",
-                            instrument_id
+                            "Conflicting BUY and SELL orders for {instrument_id} in same plan"
                         ),
                         instrument_id: instrument_id.clone(),
                         field_path: "plan.decisions".to_string(),
-                        observed: format!("{} decisions", actions.len()),
+                        observed: format!("{num_decisions} decisions"),
                         limit: "no conflicting orders".to_string(),
                     });
                 }
@@ -501,8 +501,7 @@ impl ConstraintValidator {
                         code: "CONFLICTING_DIRECTIONS".to_string(),
                         severity: ViolationSeverity::Error,
                         message: format!(
-                            "Conflicting LONG and SHORT directions for {} in same plan",
-                            instrument_id
+                            "Conflicting LONG and SHORT directions for {instrument_id} in same plan"
                         ),
                         instrument_id: instrument_id.clone(),
                         field_path: "plan.decisions".to_string(),
@@ -528,13 +527,12 @@ impl ConstraintValidator {
                             code: "POSITION_MISMATCH".to_string(),
                             severity: ViolationSeverity::Warning,
                             message: format!(
-                                "Action {:?} conflicts with current position {} for {}",
-                                action, existing_qty, instrument_id
+                                "Action {action:?} conflicts with current position {existing_qty} for {instrument_id}"
                             ),
                             instrument_id: instrument_id.clone(),
                             field_path: format!("decisions[{idx}].action"),
-                            observed: format!("{:?}", action),
-                            limit: format!("position={}", existing_qty),
+                            observed: format!("{action:?}"),
+                            limit: format!("position={existing_qty}"),
                         });
                     }
                 }

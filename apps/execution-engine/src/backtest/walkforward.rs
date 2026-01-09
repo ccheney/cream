@@ -657,28 +657,28 @@ impl WalkForwardBuilder {
 
     /// Set in-sample window size in days.
     #[must_use]
-    pub fn in_sample_days(mut self, days: u32) -> Self {
+    pub const fn in_sample_days(mut self, days: u32) -> Self {
         self.config.in_sample_days = days;
         self
     }
 
     /// Set out-of-sample window size in days.
     #[must_use]
-    pub fn out_of_sample_days(mut self, days: u32) -> Self {
+    pub const fn out_of_sample_days(mut self, days: u32) -> Self {
         self.config.out_of_sample_days = days;
         self
     }
 
     /// Set window mode.
     #[must_use]
-    pub fn window_mode(mut self, mode: WindowMode) -> Self {
+    pub const fn window_mode(mut self, mode: WindowMode) -> Self {
         self.config.window_mode = mode;
         self
     }
 
     /// Set overfitting threshold.
     #[must_use]
-    pub fn overfitting_threshold(mut self, threshold: Decimal) -> Self {
+    pub const fn overfitting_threshold(mut self, threshold: Decimal) -> Self {
         self.config.overfitting_threshold = threshold;
         self
     }

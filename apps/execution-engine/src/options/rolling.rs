@@ -862,7 +862,7 @@ mod tests {
             })
             .reason(RollReason::CreditDteThreshold)
             .build()
-            .unwrap();
+            .expect("should build roll order");
 
         assert_eq!(order.position_id, "pos-1");
         assert_eq!(order.close_legs.len(), 1);
