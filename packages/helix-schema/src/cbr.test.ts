@@ -550,10 +550,9 @@ describe("retainCase", () => {
     ) as HelixClient["query"];
 
     const client = createMockHelixClient({ query: queryMock });
-    const embedder = createMockEmbeddingClient();
     const decision = createMockDecision({ decision_id: "dec-new" });
 
-    const result = await retainCase(client, embedder, decision);
+    const result = await retainCase(client, decision);
 
     expect(result.success).toBe(true);
     expect(result.decisionId).toBe("dec-new");
@@ -571,10 +570,9 @@ describe("retainCase", () => {
     const queryMock = mock(() => Promise.reject(new Error("Insert failed")));
 
     const client = createMockHelixClient({ query: queryMock });
-    const embedder = createMockEmbeddingClient();
     const decision = createMockDecision();
 
-    const result = await retainCase(client, embedder, decision);
+    const result = await retainCase(client, decision);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("Insert failed");

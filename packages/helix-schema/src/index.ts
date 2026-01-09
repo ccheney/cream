@@ -63,7 +63,6 @@ export type RelationshipType = "SECTOR_PEER" | "SUPPLY_CHAIN" | "COMPETITOR" | "
 
 export {
   buildMemoryContext,
-  type CaseRetentionOptions,
   type CaseRetentionResult,
   type CBRMarketSnapshot,
   type CBRQualityMetrics,

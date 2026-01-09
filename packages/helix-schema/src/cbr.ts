@@ -511,14 +511,6 @@ export async function retrieveMemoryContext(
 // ============================================
 
 /**
- * Options for storing a new case.
- */
-export interface CaseRetentionOptions {
-  /** Whether to generate embedding for the rationale */
-  generateEmbedding?: boolean;
-}
-
-/**
  * Result of retaining a case.
  */
 export interface CaseRetentionResult {
@@ -537,21 +529,15 @@ export interface CaseRetentionResult {
  * After a trade is closed, the decision and outcome should be
  * stored so similar situations can benefit from this experience.
  *
- * Note: HelixDB generates embeddings internally via InsertTradeDecision query,
- * so the embeddingClient parameter is kept for API compatibility but not used
- * for the primary insertion path.
+ * Note: HelixDB generates embeddings internally via InsertTradeDecision query.
  *
  * @param client - HelixDB client
- * @param _embeddingClient - Embedding client (kept for API compatibility)
  * @param decision - The trade decision to store
- * @param _options - Storage options (kept for API compatibility)
  * @returns Result indicating success or failure
  */
 export async function retainCase(
   client: HelixClient,
-  _embeddingClient: EmbeddingClient,
-  decision: TradeDecision,
-  _options: CaseRetentionOptions = {}
+  decision: TradeDecision
 ): Promise<CaseRetentionResult> {
   try {
     // Call InsertTradeDecision query
