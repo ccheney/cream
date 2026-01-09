@@ -13,6 +13,13 @@ import {
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
+import {
+  FIXTURE_TIMESTAMP,
+  getCandleFixtures,
+  getSnapshotFixture,
+} from "../../fixtures/market/index.js";
+import { LoadStateOutputSchema } from "./loadState.js";
+
 /**
  * Create ExecutionContext for step invocation.
  * Steps are invoked by the Mastra workflow during scheduled runs.
@@ -21,8 +28,6 @@ function createStepContext(): ExecutionContext {
   const envValue = process.env.CREAM_ENV || "BACKTEST";
   return createContext(envValue as CreamEnvironment, "scheduled");
 }
-
-import { LoadStateOutputSchema } from "./loadState.js";
 
 export const SnapshotOutputSchema = z.object({
   snapshots: z.record(z.string(), z.any()),
@@ -49,28 +54,87 @@ const DEFAULT_UNIVERSE = [
 ];
 
 /**
- * Create a minimal mock snapshot for a symbol
+ * Create a deterministic snapshot for a symbol using test fixtures.
+ * Uses pre-generated fixture data to ensure reproducible test behavior.
  */
-function createMockSnapshot(symbol: string, timestamp: number) {
+function createFixtureSnapshot(symbol: string, timestamp: number) {
+  const snapshot = getSnapshotFixture(symbol);
+  const candles = getCandleFixtures(symbol, 50);
+
+  // Calculate deterministic indicators from candles
+  const closes = candles.map((c) => c.close);
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+
+  // Calculate simple RSI (14-period)
+  const rsiPeriod = 14;
+  let gains = 0;
+  let losses = 0;
+  for (let i = closes.length - rsiPeriod; i < closes.length; i++) {
+    const current = closes[i];
+    const previous = closes[i - 1];
+    if (current !== undefined && previous !== undefined) {
+      const change = current - previous;
+      if (change > 0) {
+        gains += change;
+      } else {
+        losses += Math.abs(change);
+      }
+    }
+  }
+  const avgGain = gains / rsiPeriod;
+  const avgLoss = losses / rsiPeriod;
+  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+  const rsi = 100 - 100 / (1 + rs);
+
+  // Calculate ATR (14-period)
+  const atrPeriod = 14;
+  let atrSum = 0;
+  for (let i = closes.length - atrPeriod; i < closes.length; i++) {
+    const high = highs[i];
+    const low = lows[i];
+    const prevClose = closes[i - 1];
+    if (high !== undefined && low !== undefined && prevClose !== undefined) {
+      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+      atrSum += tr;
+    }
+  }
+  const atr = atrSum / atrPeriod;
+
+  // Calculate SMAs
+  const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
+  const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / Math.min(closes.length, 50);
+
+  // Get price and volume from snapshot
+  const latestPrice = snapshot.lastTrade?.price ?? snapshot.open;
+  const latestVolume = snapshot.volume;
+
+  // Calculate price change from previous close
+  const priceChangePercent = ((latestPrice - snapshot.prevClose) / snapshot.prevClose) * 100;
+
+  // Calculate volume ratio (current vs average from candles)
+  const avgVolume = candles.reduce((sum, c) => sum + c.volume, 0) / candles.length;
+  const volumeRatio = latestVolume / avgVolume;
+
   return {
     symbol,
     timestamp,
-    createdAt: new Date().toISOString(),
-    latestPrice: 100 + Math.random() * 50,
-    latestVolume: 1000000 + Math.random() * 500000,
+    createdAt: new Date(FIXTURE_TIMESTAMP).toISOString(),
+    latestPrice,
+    latestVolume,
     indicators: {
-      rsi: 50 + Math.random() * 20 - 10,
-      atr: 2 + Math.random(),
-      sma20: 100 + Math.random() * 10,
-      sma50: 98 + Math.random() * 10,
+      rsi: Number(rsi.toFixed(2)),
+      atr: Number(atr.toFixed(2)),
+      sma20: Number(sma20.toFixed(2)),
+      sma50: Number(sma50.toFixed(2)),
     },
     normalized: {
-      priceChangePercent: Math.random() * 4 - 2,
-      volumeRatio: 0.8 + Math.random() * 0.4,
+      priceChangePercent: Number(priceChangePercent.toFixed(2)),
+      volumeRatio: Number(volumeRatio.toFixed(2)),
     },
     regime: {
       label: "RANGE" as const,
-      confidence: 0.6 + Math.random() * 0.3,
+      confidence: 0.75, // Fixed deterministic value
     },
     metadata: {
       symbol,
@@ -98,26 +162,26 @@ export const buildSnapshotStep = createStep({
     const ctx = createStepContext();
 
     // In backtest mode or when data sources are not configured,
-    // return mock snapshots for faster execution
+    // return deterministic fixture snapshots for faster execution
     if (isBacktest(ctx)) {
       const snapshotMap: Record<string, unknown> = {};
       for (const symbol of allSymbols) {
-        snapshotMap[symbol] = createMockSnapshot(symbol, timestamp);
+        snapshotMap[symbol] = createFixtureSnapshot(symbol, timestamp);
       }
 
       return {
         snapshots: snapshotMap,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(FIXTURE_TIMESTAMP).toISOString(),
         symbolCount: allSymbols.length,
       };
     }
 
     // In PAPER/LIVE mode, create snapshots
     // TODO: Wire up real Polygon/FMP data sources when available
-    // For now, use mock snapshots as placeholder
+    // For now, use fixture snapshots as placeholder
     const snapshotMap: Record<string, unknown> = {};
     for (const symbol of allSymbols) {
-      snapshotMap[symbol] = createMockSnapshot(symbol, timestamp);
+      snapshotMap[symbol] = createFixtureSnapshot(symbol, timestamp);
     }
 
     return {

@@ -37,7 +37,23 @@ function createStepContext(): ExecutionContext {
 export const ValidationResultSchema = z.object({
   approved: z.boolean(),
   violations: z.array(z.string()),
-  adjustedPlan: z.any().optional(),
+  adjustedPlan: z
+    .object({
+      cycleId: z.string().optional(),
+      decisions: z
+        .array(
+          z
+            .object({
+              decisionId: z.string().optional(),
+              symbol: z.string().optional(),
+              instrumentId: z.string().optional(),
+            })
+            .passthrough()
+        )
+        .optional(),
+    })
+    .passthrough()
+    .optional(),
 });
 
 export const ExecutionResultSchema = z.object({
@@ -63,6 +79,31 @@ interface Decision {
   takeProfit?: { price: number };
   strategyFamily: string;
   timeHorizon: string;
+}
+
+/**
+ * Generate a deterministic mock order ID from cycle and decision IDs.
+ *
+ * Uses a simple hash function to create reproducible order IDs for
+ * backtesting and mock execution modes.
+ *
+ * @param prefix - Order ID prefix (e.g., "backtest", "mock")
+ * @param cycleId - The trading cycle identifier
+ * @param decisionId - The decision identifier
+ * @returns Deterministic order ID in format: {prefix}-{hash}
+ */
+function generateDeterministicOrderId(prefix: string, cycleId: string, decisionId: string): string {
+  // Simple hash: combine cycleId and decisionId, then create a deterministic identifier
+  const input = `${cycleId}:${decisionId}`;
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Convert to positive hex string (8 chars)
+  const hexHash = Math.abs(hash).toString(16).padStart(8, "0");
+  return `${prefix}-${hexHash}`;
 }
 
 // Singleton broker client
@@ -147,17 +188,23 @@ export const executeOrdersStep = createStep({
       };
     }
 
-    const decisions = (adjustedPlan?.decisions ?? []) as Decision[];
+    const decisions = (adjustedPlan?.decisions ?? []) as unknown as Decision[];
     const tradableDecisions = decisions.filter((d) => d.action !== "HOLD");
 
     // Create context at step boundary
     const ctx = createStepContext();
 
-    // In backtest mode, simulate order execution
+    // Extract cycleId for deterministic order ID generation
+    const cycleId = adjustedPlan?.cycleId ?? "unknown-cycle";
+
+    // In backtest mode, simulate order execution with deterministic order IDs
     if (isBacktest(ctx)) {
-      const orderIds = tradableDecisions.map(
-        (_: unknown, i: number) => `backtest-order-${Date.now()}-${i}`
-      );
+      const orderIds = tradableDecisions.map((decision: Decision, index: number) => {
+        // Use decisionId if available, otherwise fall back to symbol/instrumentId or index
+        const decisionIdentifier =
+          decision.decisionId || decision.instrumentId || `decision-${index}`;
+        return generateDeterministicOrderId("backtest", cycleId, decisionIdentifier);
+      });
 
       return {
         ordersSubmitted: orderIds.length,
@@ -170,10 +217,13 @@ export const executeOrdersStep = createStep({
     // In PAPER/LIVE mode, submit orders via broker client
     const client = getBrokerClient(ctx);
     if (!client) {
-      // No broker credentials - return mock order IDs for dev/testing
-      const orderIds = tradableDecisions.map(
-        (_: unknown, i: number) => `mock-order-${Date.now()}-${i}`
-      );
+      // No broker credentials - return deterministic mock order IDs for dev/testing
+      const orderIds = tradableDecisions.map((decision: Decision, index: number) => {
+        // Use decisionId if available, otherwise fall back to symbol/instrumentId or index
+        const decisionIdentifier =
+          decision.decisionId || decision.instrumentId || `decision-${index}`;
+        return generateDeterministicOrderId("mock", cycleId, decisionIdentifier);
+      });
       return {
         ordersSubmitted: orderIds.length,
         ordersRejected: 0,

@@ -231,8 +231,9 @@ function generateTrendingCandles(config: TrendingCandleConfig): Candle[] {
   }
 
   // Ensure the last candle's close matches the expected end price
-  if (candles.length > 0) {
-    candles[candles.length - 1].close = endPrice;
+  const lastCandle = candles[candles.length - 1];
+  if (lastCandle) {
+    lastCandle.close = endPrice;
   }
 
   return candles;

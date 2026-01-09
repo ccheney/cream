@@ -58,6 +58,7 @@ mod walkforward;
 
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
@@ -421,6 +422,29 @@ pub struct SimTrade {
     pub net_pnl: Decimal,
     /// Holding period in hours.
     pub holding_period_hours: f64,
+}
+
+/// Calculate holding period in hours between two RFC3339 timestamps.
+///
+/// Returns 0.0 if either timestamp cannot be parsed.
+#[must_use]
+fn calculate_holding_period_hours(entry_time: &str, exit_time: &str) -> f64 {
+    let entry: DateTime<Utc> = match entry_time.parse() {
+        Ok(dt) => dt,
+        Err(_) => return 0.0,
+    };
+    let exit: DateTime<Utc> = match exit_time.parse() {
+        Ok(dt) => dt,
+        Err(_) => return 0.0,
+    };
+
+    let duration = exit.signed_duration_since(entry);
+    // Convert to hours (duration.num_seconds() / 3600.0)
+    #[allow(clippy::cast_precision_loss)]
+    let hours = duration.num_seconds() as f64 / 3600.0;
+
+    // Return 0.0 for negative durations (shouldn't happen, but be safe)
+    if hours < 0.0 { 0.0 } else { hours }
 }
 
 impl SimulationEngine {
@@ -798,7 +822,10 @@ impl SimulationEngine {
                     gross_pnl: pos.realized_pnl,
                     commission: pos.commission_paid,
                     net_pnl: pos.realized_pnl - pos.commission_paid,
-                    holding_period_hours: 0.0, // TODO: Calculate actual holding period
+                    holding_period_hours: calculate_holding_period_hours(
+                        &position.opened_at,
+                        &candle.timestamp,
+                    ),
                 });
             }
         }
@@ -1024,5 +1051,57 @@ mod tests {
             OrderStatus::from(SimOrderState::Rejected),
             OrderStatus::Rejected
         );
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_valid() {
+        // Entry at 10:00, exit at 14:00 = 4 hours
+        let entry = "2026-01-05T10:00:00Z";
+        let exit = "2026-01-05T14:00:00Z";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 4.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_multi_day() {
+        // Entry on day 1 at 10:00, exit on day 2 at 10:00 = 24 hours
+        let entry = "2026-01-05T10:00:00Z";
+        let exit = "2026-01-06T10:00:00Z";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 24.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_fractional() {
+        // Entry at 10:00, exit at 10:30 = 0.5 hours
+        let entry = "2026-01-05T10:00:00Z";
+        let exit = "2026-01-05T10:30:00Z";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_invalid_entry() {
+        let entry = "not-a-valid-timestamp";
+        let exit = "2026-01-05T14:00:00Z";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 0.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_invalid_exit() {
+        let entry = "2026-01-05T10:00:00Z";
+        let exit = "invalid";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 0.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_holding_period_hours_negative_returns_zero() {
+        // Exit before entry (shouldn't happen, but should return 0)
+        let entry = "2026-01-05T14:00:00Z";
+        let exit = "2026-01-05T10:00:00Z";
+        let hours = calculate_holding_period_hours(entry, exit);
+        assert!((hours - 0.0).abs() < 0.001);
     }
 }
