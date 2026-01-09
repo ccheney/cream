@@ -12,6 +12,7 @@
     "dev": "CREAM_ENV=${CREAM_ENV:-BACKTEST} turbo run dev",
     "build": "turbo run build",
     "test": "CREAM_ENV=BACKTEST turbo run test",
+    "test:integration": "CREAM_ENV=BACKTEST bun test --filter '**/integration/*.test.ts' --timeout 120000",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "bun run format:ts && bun run format:rust && bun run format:py",

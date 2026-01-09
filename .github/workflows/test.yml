@@ -192,7 +192,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, unit-rust]
     if: ${{ needs.changes.outputs.typescript == 'true' || github.event_name == 'push' }}
 
     steps:
@@ -204,6 +204,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Rust (for execution-engine image)
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
@@ -212,14 +215,29 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/execution-engine/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install dependencies
         run: bun install
 
+      - name: Build execution-engine Docker image
+        run: |
+          docker build -t cream/execution-engine:test -f apps/execution-engine/Dockerfile .
+
       - name: Run integration tests
-        run: bun test:integration || echo "No integration tests found yet"
+        run: bun test:integration
         env:
           CREAM_ENV: BACKTEST
-          # Testcontainers will manage containers automatically
+          # Testcontainers will use the locally built image
 
   # ============================================
   # Lint and Type Check
