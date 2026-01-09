@@ -7,6 +7,7 @@
  * @see docs/plans/30-better-auth-migration.md
  */
 
+import { requireEnv } from "@cream/domain";
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { auth, type Session, type User } from "./better-auth.js";
@@ -129,7 +130,7 @@ export function liveProtection(
   options: LiveProtectionOptions = DEFAULT_LIVE_PROTECTION
 ): MiddlewareHandler<{ Variables: SessionVariables }> {
   return async (c, next) => {
-    const env = process.env.CREAM_ENV ?? "PAPER";
+    const env = requireEnv();
 
     // Skip protection for non-LIVE environments
     if (env !== "LIVE") {
@@ -198,10 +199,7 @@ export function liveProtection(
         try {
           const repo = await getAuditLogRepo();
           await repo.create(auditEntry);
-        } catch {
-          // Log error but don't block the request
-          console.error("[AuditLog] Failed to persist audit entry:", auditEntry.id);
-        }
+        } catch {}
       });
     }
 

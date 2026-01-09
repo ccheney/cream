@@ -9,11 +9,11 @@
 
 import { createDefaultPredictionMarketsConfig, type PredictionMarketsConfig } from "@cream/config";
 import {
-  type CreamEnvironment,
   createContext,
   type ExecutionContext,
   isBacktest,
   type PredictionMarketScores,
+  requireEnv,
 } from "@cream/domain";
 import {
   createUnifiedClient,
@@ -33,8 +33,7 @@ import { getPredictionMarketsRepo } from "../db.js";
  * Steps are invoked by the Mastra workflow during scheduled runs.
  */
 function createStepContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================

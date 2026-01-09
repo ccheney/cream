@@ -15,7 +15,7 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import { type CreamEnvironment, createContext, type ExecutionContext } from "@cream/domain";
+import { createContext, type ExecutionContext, requireEnv } from "@cream/domain";
 import {
   type BatchMutationResult,
   batchUpsertTradeDecisions,
@@ -28,8 +28,7 @@ import { getHelixClient } from "../db.js";
  * Steps are invoked by the Mastra workflow during scheduled runs.
  */
 function createStepContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 import type { Action, Environment, TradeDecision } from "@cream/helix-schema";

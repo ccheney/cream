@@ -7,6 +7,7 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
+import { requireEnv } from "@cream/domain";
 import type { ServerWebSocket } from "bun";
 import {
   type AcknowledgeAlertMessage,
@@ -406,7 +407,7 @@ async function handleRequestState(
             uptimeSeconds: Math.floor(process.uptime()),
             activeConnections: connections.size,
             services: {},
-            environment: (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER",
+            environment: requireEnv(),
             timestamp: new Date().toISOString(),
           },
         });
@@ -416,7 +417,7 @@ async function handleRequestState(
         // Import db functions dynamically to avoid circular deps
         const { getPositionsRepo } = await import("../db.js");
         const positionsRepo = await getPositionsRepo();
-        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const environment = requireEnv();
         const positionsResult = await positionsRepo.findMany({
           environment,
           status: "open",
@@ -452,7 +453,7 @@ async function handleRequestState(
       case "alerts": {
         const { getAlertsRepo } = await import("../db.js");
         const alertsRepo = await getAlertsRepo();
-        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const environment = requireEnv();
         const alerts = await alertsRepo.findUnacknowledged(environment, 50);
 
         for (const alert of alerts) {
@@ -481,7 +482,7 @@ async function handleRequestState(
       case "orders": {
         const { getOrdersRepo } = await import("../db.js");
         const ordersRepo = await getOrdersRepo();
-        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const environment = requireEnv();
         const ordersResult = await ordersRepo.findMany({
           environment,
           status: "pending",

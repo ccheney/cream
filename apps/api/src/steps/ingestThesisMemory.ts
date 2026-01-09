@@ -15,12 +15,7 @@
  * @see apps/api/workflows/steps/thesisMemoryIngestion.ts - Core ingestion logic
  */
 
-import {
-  type CreamEnvironment,
-  createContext,
-  type ExecutionContext,
-  isBacktest,
-} from "@cream/domain";
+import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import type { Thesis, ThesisStateRepository } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
@@ -30,8 +25,7 @@ import { z } from "zod";
  * Steps are invoked by the Mastra workflow during scheduled runs.
  */
 function createStepContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 import {

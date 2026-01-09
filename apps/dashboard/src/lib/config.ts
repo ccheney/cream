@@ -5,6 +5,23 @@
  * All values can be overridden via environment variables.
  */
 
+/**
+ * Validate and return NEXT_PUBLIC_CREAM_ENV for client-side code.
+ * Throws if not set or invalid.
+ */
+function requireClientEnv(): "BACKTEST" | "PAPER" | "LIVE" {
+  const env = process.env.NEXT_PUBLIC_CREAM_ENV;
+  if (!env) {
+    throw new Error("NEXT_PUBLIC_CREAM_ENV must be set to BACKTEST, PAPER, or LIVE");
+  }
+  if (!["BACKTEST", "PAPER", "LIVE"].includes(env)) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_CREAM_ENV value: "${env}". Must be BACKTEST, PAPER, or LIVE`
+    );
+  }
+  return env as "BACKTEST" | "PAPER" | "LIVE";
+}
+
 export const config = {
   api: {
     /** Base URL for the dashboard API */
@@ -18,7 +35,7 @@ export const config = {
     /** Maximum reconnection attempts before giving up */
     maxReconnectAttempts: 10,
   },
-  environment: (process.env.NEXT_PUBLIC_CREAM_ENV || "PAPER") as "BACKTEST" | "PAPER" | "LIVE",
+  environment: requireClientEnv(),
 } as const;
 
 /** Type-safe access to configuration */

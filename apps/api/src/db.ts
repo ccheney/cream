@@ -10,12 +10,7 @@ import {
   type RuntimeConfigService,
   type RuntimeEnvironment,
 } from "@cream/config";
-import {
-  type CreamEnvironment,
-  createContext,
-  type ExecutionContext,
-  isBacktest,
-} from "@cream/domain";
+import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
   AgentConfigsRepository,
@@ -38,8 +33,7 @@ import {
  * DB client is created at API startup.
  */
 function createDbContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================

@@ -6,7 +6,7 @@
  */
 
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
-import { type CreamEnvironment, createContext, type ExecutionContext } from "@cream/domain";
+import { createContext, type ExecutionContext, requireEnv } from "@cream/domain";
 import {
   AgentConfigsRepository,
   AgentOutputsRepository,
@@ -37,8 +37,7 @@ import {
  * DB client is created at API startup.
  */
 function createDbContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================

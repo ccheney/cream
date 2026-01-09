@@ -198,6 +198,7 @@ export {
   isBacktest,
   isLive,
   isPaper,
+  requireEnv,
   validateEnvironment,
   validateEnvironmentOrExit,
 } from "./env";

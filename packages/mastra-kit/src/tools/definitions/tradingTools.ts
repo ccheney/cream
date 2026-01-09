@@ -5,7 +5,7 @@
  * These tools wrap the core implementations from tools/index.ts.
  */
 
-import { type CreamEnvironment, createContext } from "@cream/domain";
+import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
@@ -24,8 +24,7 @@ import {
  * Tools are invoked by the agent framework during scheduled runs.
  */
 function createToolContext() {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================

@@ -14,12 +14,7 @@
  * Events are stored to the external_events table for retrieval.
  */
 
-import {
-  type CreamEnvironment,
-  createContext,
-  type ExecutionContext,
-  isBacktest,
-} from "@cream/domain";
+import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import {
   createExtractionPipeline,
   type ExtractedEvent,
@@ -31,8 +26,7 @@ import {
  * Steps are invoked by the Mastra workflow during scheduled runs.
  */
 function createStepContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 import type { CreateExternalEventInput } from "@cream/storage";

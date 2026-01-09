@@ -7,7 +7,7 @@
  * @see docs/plans/21-web-search-tool.md
  */
 
-import { type CreamEnvironment, createContext } from "@cream/domain";
+import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { webSearch } from "../webSearch.js";
@@ -17,8 +17,7 @@ import { webSearch } from "../webSearch.js";
  * Tools are invoked by the agent framework during scheduled runs.
  */
 function createToolContext() {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================

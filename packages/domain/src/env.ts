@@ -24,6 +24,44 @@ export const CreamEnvironment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
 
 /**
+ * Validates and returns CREAM_ENV from environment. Throws if not set or invalid.
+ *
+ * Use this at startup/system boundaries when transitioning from env var to ExecutionContext.
+ * This replaces fallback patterns like `process.env.CREAM_ENV || "BACKTEST"`.
+ *
+ * @throws {Error} If CREAM_ENV is not set
+ * @throws {Error} If CREAM_ENV is not one of: BACKTEST, PAPER, LIVE
+ * @returns The validated CREAM_ENV value
+ *
+ * @example
+ * ```ts
+ * // Instead of: process.env.CREAM_ENV || "BACKTEST"
+ * const env = requireEnv(); // Throws if not set
+ *
+ * // Then create context at system boundary
+ * const ctx = createContext(env, "scheduled");
+ * ```
+ */
+export function requireEnv(): CreamEnvironment {
+  const envValue = Bun.env.CREAM_ENV ?? process.env.CREAM_ENV;
+
+  if (!envValue) {
+    throw new Error(
+      "CREAM_ENV environment variable is required. " + "Set it to one of: BACKTEST, PAPER, LIVE"
+    );
+  }
+
+  const result = CreamEnvironment.safeParse(envValue);
+  if (!result.success) {
+    throw new Error(
+      `Invalid CREAM_ENV value: "${envValue}". Must be one of: BACKTEST, PAPER, LIVE`
+    );
+  }
+
+  return result.data;
+}
+
+/**
  * Broker type - currently only Alpaca supported
  */
 export const CreamBroker = z.enum(["ALPACA"]);

@@ -11,7 +11,7 @@
  *   bun run src/run-migrations.ts --rollback   # Rollback last migration
  */
 
-import { type CreamEnvironment, createContext } from "@cream/domain";
+import { createContext, requireEnv } from "@cream/domain";
 import { getMigrationStatus, rollbackMigrations, runMigrations } from "./migrations.js";
 import { createInMemoryClient, createTursoClient } from "./turso.js";
 
@@ -23,8 +23,7 @@ async function main() {
   const useInMemory = args.includes("--in-memory");
 
   // Create ExecutionContext from environment (CLI is a system boundary)
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  const environment = envValue as CreamEnvironment;
+  const environment = requireEnv();
   const ctx = createContext(environment, "manual");
 
   console.log(`Environment: ${environment}`);

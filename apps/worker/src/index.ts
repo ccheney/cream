@@ -14,12 +14,7 @@
 
 import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
-import {
-  type CreamEnvironment,
-  createContext,
-  isBacktest,
-  validateEnvironmentOrExit,
-} from "@cream/domain";
+import { createContext, isBacktest, requireEnv, validateEnvironmentOrExit } from "@cream/domain";
 import { getRuntimeConfigService, resetRuntimeConfigService, validateHelixDBOrExit } from "./db";
 
 // ============================================
@@ -335,11 +330,11 @@ function startHealthServer(): void {
 // ============================================
 
 async function main() {
-  const environment = (Bun.env.CREAM_ENV ?? "PAPER") as RuntimeEnvironment;
+  const environment = requireEnv();
 
   // Validate environment at startup
   // In non-backtest mode, require FMP_KEY for external context and at least one LLM key
-  const startupCtx = createContext(environment as CreamEnvironment, "scheduled");
+  const startupCtx = createContext(environment, "scheduled");
   if (!isBacktest(startupCtx)) {
     validateEnvironmentOrExit(startupCtx, "worker", ["FMP_KEY"]);
 

@@ -63,14 +63,11 @@ async function runBacktestInBackground(
   } catch (error) {
     // Log the error but don't rethrow - this is fire-and-forget
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Backtest ${backtest.id} failed:`, errorMessage);
 
     // Ensure database is updated with failure
     try {
       await repo.fail(backtest.id, errorMessage);
-    } catch {
-      console.error(`Failed to update backtest ${backtest.id} status to failed`);
-    }
+    } catch {}
   } finally {
     // Clean up temp files
     if (dataPaths) {

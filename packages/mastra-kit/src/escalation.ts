@@ -13,6 +13,7 @@
  * @see docs/plans/13-operations.md
  */
 
+import { requireEnv } from "@cream/domain";
 import type { EscalationEvent } from "./consensus.js";
 
 // ============================================
@@ -444,7 +445,7 @@ export class EscalationService {
  * @example
  * ```typescript
  * const service = createEscalationService({
- *   environment: process.env.CREAM_ENV ?? "development",
+ *   environment: requireEnv(),
  *   slackWebhook: process.env.SLACK_WEBHOOK_URL,
  *   dashboardUrl: process.env.DASHBOARD_URL,
  * });
@@ -498,7 +499,7 @@ export function createEscalationService(options: {
  */
 export function createEscalationServiceFromEnv(): EscalationService {
   return createEscalationService({
-    environment: process.env.CREAM_ENV ?? "development",
+    environment: requireEnv(),
     slackWebhook: process.env.SLACK_WEBHOOK_URL,
     dashboardUrl: process.env.DASHBOARD_URL,
   });

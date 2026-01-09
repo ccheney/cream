@@ -7,7 +7,7 @@
  */
 
 import { tradingCycleWorkflow } from "@cream/api";
-import { createContext } from "@cream/domain";
+import { createContext, requireEnv } from "@cream/domain";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getRuntimeConfigService } from "../db.js";
@@ -121,7 +121,7 @@ interface SystemState {
 
 const systemState: SystemState = {
   status: "STOPPED",
-  environment: (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER",
+  environment: requireEnv(),
   lastCycleId: null,
   lastCycleTime: null,
   startedAt: null,
@@ -318,10 +318,7 @@ app.openapi(stopRoute, async (c) => {
           environment: systemState.environment,
         });
       }
-    } catch (error) {
-      // Log but don't fail the stop operation
-      console.error("[System] Failed to process closeAllPositions:", error);
-    }
+    } catch (_error) {}
   }
 
   const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
