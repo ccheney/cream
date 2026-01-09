@@ -51,10 +51,10 @@ class TranslationContext:
     """List of required input features (e.g., ['close', 'volume'])."""
 
     golden_input_path: str
-    """Path to golden input parquet file."""
+    """Path to golden input JSON file (for TypeScript)."""
 
     golden_output_path: str
-    """Path to golden expected output parquet file."""
+    """Path to golden expected output JSON file (for TypeScript)."""
 
     golden_params_path: str
     """Path to golden parameters JSON file."""
@@ -223,8 +223,8 @@ class TranslationOrchestrator:
             python_source=python_source,
             parameter_dataclass=param_source,
             required_features=factor.get_required_features(),
-            golden_input_path=str(golden_dir / "input_sample.parquet"),
-            golden_output_path=str(golden_dir / "expected_output.parquet"),
+            golden_input_path=str(golden_dir / "input_sample.json"),
+            golden_output_path=str(golden_dir / "expected_output.json"),
             golden_params_path=str(golden_dir / "params.json"),
             python_module_path=module_path,
             parameter_defaults=params,
@@ -514,33 +514,41 @@ import {{ computeSignal, FactorParamsSchema, metadata }} from "./index";
 const GOLDEN_DIR = "packages/research/golden/{context.factor_id}";
 const TOLERANCE = 0.0001;
 
+/**
+ * Candle data structure for testing.
+ */
+interface TestCandle {{
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}}
+
 describe(`${{metadata.factorId}} equivalence`, () => {{
   test("TypeScript output matches Python golden file", async () => {{
-    // Load golden files
-    // TODO: Implement parquet reading
-    const inputFile = Bun.file(`${{GOLDEN_DIR}}/input_sample.parquet`);
-    const outputFile = Bun.file(`${{GOLDEN_DIR}}/expected_output.parquet`);
+    // Load golden files (JSON format for cross-language compatibility)
+    const inputFile = Bun.file(`${{GOLDEN_DIR}}/input_sample.json`);
+    const outputFile = Bun.file(`${{GOLDEN_DIR}}/expected_output.json`);
     const paramsFile = Bun.file(`${{GOLDEN_DIR}}/params.json`);
 
+    const candles = (await inputFile.json()) as TestCandle[];
+    const expectedOutput = (await outputFile.json()) as {{ signal: number }}[];
     const params = await paramsFile.json();
 
-    // Validate params
+    // Validate params against schema
     const validatedParams = FactorParamsSchema.parse(params);
 
-    // TODO: Parse parquet files and convert to candles
-    // const candles = ...;
-    // const expectedOutput = ...;
-
     // Compute TypeScript output
-    // const output = computeSignal(candles, validatedParams);
+    const output = computeSignal(candles, validatedParams);
 
     // Compare with tolerance
-    // for (let i = 0; i < output.length; i++) {{
-    //   const diff = Math.abs(output[i] - expectedOutput[i].signal);
-    //   expect(diff).toBeLessThan(TOLERANCE);
-    // }}
-
-    expect(true).toBe(true); // Placeholder
+    expect(output.length).toBe(expectedOutput.length);
+    for (let i = 0; i < output.length; i++) {{
+      const diff = Math.abs(output[i] - expectedOutput[i].signal);
+      expect(diff).toBeLessThan(TOLERANCE);
+    }}
   }});
 }});
 """

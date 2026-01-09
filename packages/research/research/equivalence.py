@@ -178,13 +178,17 @@ class EquivalenceValidator:
         self.golden_dir.mkdir(parents=True, exist_ok=True)
 
         # Save input (without timestamp for cross-platform compatibility)
+        # Save as both parquet (for Python) and JSON (for TypeScript)
         input_for_save = test_data.drop("timestamp")
         input_for_save.write_parquet(self.golden_dir / "input_sample.parquet")
+        with open(self.golden_dir / "input_sample.json", "w") as f:
+            json.dump(input_for_save.to_dicts(), f, indent=2)
 
         # Save output
-        pl.DataFrame({"signal": python_output.to_list()}).write_parquet(
-            self.golden_dir / "expected_output.parquet"
-        )
+        output_data = pl.DataFrame({"signal": python_output.to_list()})
+        output_data.write_parquet(self.golden_dir / "expected_output.parquet")
+        with open(self.golden_dir / "expected_output.json", "w") as f:
+            json.dump(output_data.to_dicts(), f, indent=2)
 
         # Save params
         with open(self.golden_dir / "params.json", "w") as f:

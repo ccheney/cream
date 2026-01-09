@@ -169,6 +169,13 @@ export const FactorSchema = z.object({
   lastIc: z.number().nullable(),
   decayRate: z.number().nullable(),
 
+  // Regime targeting
+  targetRegimes: z.array(TargetRegimeSchema).nullable(),
+
+  // Parity validation
+  parityReport: z.record(z.string(), z.unknown()).nullable(),
+  parityValidatedAt: z.string().datetime().nullable(),
+
   // Lifecycle timestamps
   createdAt: z.string().datetime(),
   promotedAt: z.string().datetime().nullable(),
@@ -184,8 +191,12 @@ export const NewFactorSchema = FactorSchema.omit({
   factorId: true,
   createdAt: true,
   lastUpdated: true,
+  targetRegimes: true,
+  parityReport: true,
+  parityValidatedAt: true,
 }).extend({
   factorId: z.string().optional(),
+  targetRegimes: z.array(TargetRegimeSchema).nullable().optional(),
 });
 export type NewFactor = z.infer<typeof NewFactorSchema>;
 

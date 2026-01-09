@@ -12,9 +12,22 @@ import {
   type WebSocketMessage,
 } from "@/lib/feed/event-normalizer";
 import { useWebSocketContext as useWebSocket } from "@/providers/WebSocketProvider";
+import { type EventType as StoreEventType, useEventFeedStore } from "@/stores/event-feed-store";
 
 const MAX_EVENTS = 500;
 const ROW_HEIGHT = 48;
+
+/** Map feed event types to store event types for cross-component unread tracking */
+const FEED_TO_STORE_TYPE: Partial<Record<EventType, StoreEventType>> = {
+  trade: "trade_executed",
+  order: "order_placed",
+  fill: "order_filled",
+  reject: "order_rejected",
+  decision: "agent_decision",
+  alert: "system_alert",
+  agent: "agent_decision",
+  system: "market_event",
+};
 
 const EVENT_TYPES: EventType[] = [
   "quote",
@@ -47,6 +60,8 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 export default function FeedPage() {
   const { connected, lastMessage } = useWebSocket();
   const { stats, recordEvent } = useFeedStats();
+  const addEventToStore = useEventFeedStore((s) => s.addEvent);
+  const resetNewEventCount = useEventFeedStore((s) => s.resetNewEventCount);
   const [events, setEvents] = useState<NormalizedEvent[]>([]);
   const [filters, setFilters] = useState<Record<EventType, boolean>>(() => {
     const initial: Record<EventType, boolean> = {} as Record<EventType, boolean>;
@@ -60,15 +75,32 @@ export default function FeedPage() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // Reset unread count when viewing feed page
+  useEffect(() => {
+    resetNewEventCount();
+  }, [resetNewEventCount]);
+
   useEffect(() => {
     if (lastMessage && !isPaused) {
       const normalized = normalizeEvent(lastMessage as WebSocketMessage);
       if (normalized) {
         recordEvent(normalized.type);
         setEvents((prev) => [normalized, ...prev.slice(0, MAX_EVENTS - 1)]);
+
+        // Also add to global store for unread badge (only for significant events)
+        const storeType = FEED_TO_STORE_TYPE[normalized.type];
+        if (storeType) {
+          addEventToStore({
+            type: storeType,
+            severity: "info",
+            title: normalized.title,
+            message: normalized.details,
+            symbol: normalized.symbol,
+          });
+        }
       }
     }
-  }, [lastMessage, isPaused, recordEvent]);
+  }, [lastMessage, isPaused, recordEvent, addEventToStore]);
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {

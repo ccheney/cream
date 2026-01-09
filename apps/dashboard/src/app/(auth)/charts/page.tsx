@@ -11,11 +11,14 @@ import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { StreamPanel, StreamToggleButton } from "@/components/charts/StreamPanel";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
 import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries";
+import { type ChartTimeframe, useChartPreferences } from "@/stores/ui-store";
+
+const TIMEFRAME_OPTIONS: ChartTimeframe[] = ["1m", "5m", "15m", "1h", "4h", "1d"];
 
 export default function ChartsPage() {
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState(searchParams.get("symbol")?.toUpperCase() || "AAPL");
-  const timeframe = "5m";
+  const { timeframe, setTimeframe } = useChartPreferences();
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
   // Increase limit for lower timeframes to fill the chart
@@ -57,7 +60,7 @@ export default function ChartsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Charts</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="text"
             value={symbol}
@@ -65,6 +68,22 @@ export default function ChartsPage() {
             placeholder="Symbol..."
             className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100 w-24"
           />
+          <div className="flex bg-cream-100 dark:bg-night-700 rounded-lg p-1">
+            {TIMEFRAME_OPTIONS.map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setTimeframe(tf)}
+                className={`px-3 py-1 text-sm font-mono rounded transition-colors ${
+                  timeframe === tf
+                    ? "bg-white dark:bg-night-600 text-cream-900 dark:text-cream-100 shadow-sm"
+                    : "text-cream-600 dark:text-cream-400 hover:text-cream-900 dark:hover:text-cream-100"
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
           <StreamToggleButton isOpen={isStreamOpen} onClick={toggleStream} />
         </div>
       </div>

@@ -15,7 +15,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 // ============================================
 
 export type Theme = "light" | "dark" | "system";
-export type ChartTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
+export type ChartTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 
 /**
  * Real-time feed filter options.

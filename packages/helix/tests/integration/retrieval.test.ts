@@ -7,7 +7,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
+import type { StartedTestContainer } from "testcontainers";
 
 // ============================================
 // Types
@@ -204,33 +204,15 @@ describe("HelixDB Integration", () => {
   let container: StartedTestContainer | null = null;
   let client: HelixClient;
 
-  // NOTE: Container-based tests are skipped until HelixDB Docker image is available.
-  // For now, we use a mock client to validate the test structure.
+  // NOTE: Container-based tests use mock client until HelixDB Docker image is available.
 
   beforeAll(async () => {
-    // TODO: Uncomment when HelixDB container is available
-    // container = await new GenericContainer("helixdb/helix:latest")
-    //   .withExposedPorts(8000)
-    //   .withWaitStrategy(Wait.forLogMessage("HelixDB ready"))
-    //   .start();
-    //
-    // client = new HelixClient(
-    //   `http://localhost:${container.getMappedPort(8000)}`
-    // );
-
-    // Reference container to avoid type narrowing to never (remove when container code is uncommented)
     void container;
-
-    // Use mock client for now
     client = createMockClient();
   });
 
   afterAll(async () => {
-    // TODO: Uncomment when container-based tests are enabled
-    // if (container !== null) {
-    //   await container.stop();
-    // }
-    void container; // Placeholder until container is used
+    void container;
   });
 
   afterEach(async () => {
@@ -420,27 +402,5 @@ describe("HelixDB Integration", () => {
   });
 });
 
-describe("HelixDB Container", () => {
-  // These tests validate the container lifecycle when the image is available
-  it.skip("starts and stops container", async () => {
-    const container = await new GenericContainer("helixdb/helix:latest")
-      .withExposedPorts(8000)
-      .withWaitStrategy(Wait.forLogMessage("HelixDB ready"))
-      .start();
-
-    expect(container.getMappedPort(8000)).toBeDefined();
-
-    await container.stop();
-  });
-
-  it.skip("exposes HTTP port", async () => {
-    const container = await new GenericContainer("helixdb/helix:latest")
-      .withExposedPorts(8000)
-      .start();
-
-    const port = container.getMappedPort(8000);
-    expect(port).toBeGreaterThan(0);
-
-    await container.stop();
-  });
-});
+// Container-based integration tests removed. When helixdb/helix Docker image
+// becomes available, add proper testcontainers-based integration tests here.

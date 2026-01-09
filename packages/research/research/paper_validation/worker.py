@@ -217,8 +217,8 @@ class PaperValidationWorker:
         Returns:
             DailyComparison if continuing, PaperValidationResult if complete
         """
-        # Get today's market data
-        data = await self.market_data_provider.get_daily_data(["SPY"])  # TODO: Configure symbols
+        # Get today's market data using symbols from config
+        data = await self.market_data_provider.get_daily_data(state.config.symbols)
 
         # Run comparison
         comparison = await state.service.run_daily_comparison(data)

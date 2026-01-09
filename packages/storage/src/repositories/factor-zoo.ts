@@ -22,6 +22,7 @@ import type {
   ResearchBudgetStatus,
   ResearchPhase,
   ResearchRun,
+  TargetRegime,
 } from "@cream/domain";
 
 import type { Row, TursoClient } from "../turso.js";
@@ -78,6 +79,9 @@ function mapFactorRow(row: Row): Factor {
     currentWeight: row.current_weight as number,
     lastIc: row.last_ic as number | null,
     decayRate: row.decay_rate as number | null,
+    targetRegimes: parseJson<TargetRegime[] | null>(row.target_regimes, null),
+    parityReport: parseJson<Record<string, unknown> | null>(row.parity_report, null),
+    parityValidatedAt: row.parity_validated_at as string | null,
     createdAt: row.created_at as string,
     promotedAt: row.promoted_at as string | null,
     retiredAt: row.retired_at as string | null,
@@ -241,9 +245,9 @@ export class FactorZooRepository {
           stage2_pbo, stage2_dsr_pvalue, stage2_wfe, stage2_completed_at,
           paper_validation_passed, paper_start_date, paper_end_date,
           paper_realized_sharpe, paper_realized_ic,
-          current_weight, last_ic, decay_rate,
+          current_weight, last_ic, decay_rate, target_regimes,
           created_at, promoted_at, retired_at, last_updated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           input.hypothesisId,
@@ -274,6 +278,7 @@ export class FactorZooRepository {
           input.currentWeight,
           input.lastIc,
           input.decayRate,
+          input.targetRegimes ? toJson(input.targetRegimes) : null,
           now,
           input.promotedAt,
           input.retiredAt,
@@ -357,9 +362,37 @@ export class FactorZooRepository {
 
   /**
    * Promote a factor to active status
+   *
+   * @param factorId - Factor ID
+   * @param parityReport - Optional parity validation report (JSON)
    */
-  async promote(factorId: string): Promise<void> {
-    await this.updateFactorStatus(factorId, "active");
+  async promote(factorId: string, parityReport?: Record<string, unknown>): Promise<void> {
+    const now = new Date().toISOString();
+    if (parityReport) {
+      await this.client.run(
+        `UPDATE factors
+         SET status = 'active', promoted_at = ?,
+             parity_report = ?, parity_validated_at = ?, last_updated = ?
+         WHERE factor_id = ?`,
+        [now, toJson(parityReport), now, now, factorId]
+      );
+    } else {
+      await this.updateFactorStatus(factorId, "active");
+    }
+  }
+
+  /**
+   * Update parity validation result for a factor.
+   */
+  async updateParityValidation(
+    factorId: string,
+    parityReport: Record<string, unknown>
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await this.client.run(
+      "UPDATE factors SET parity_report = ?, parity_validated_at = ?, last_updated = ? WHERE factor_id = ?",
+      [toJson(parityReport), now, now, factorId]
+    );
   }
 
   /**
@@ -378,6 +411,66 @@ export class FactorZooRepository {
    */
   async retire(factorId: string): Promise<void> {
     await this.updateFactorStatus(factorId, "retired");
+  }
+
+  /**
+   * Update target regimes for a factor
+   */
+  async updateTargetRegimes(factorId: string, regimes: TargetRegime[]): Promise<void> {
+    const now = new Date().toISOString();
+    await this.client.run(
+      "UPDATE factors SET target_regimes = ?, last_updated = ? WHERE factor_id = ?",
+      [toJson(regimes), now, factorId]
+    );
+  }
+
+  /**
+   * Find factors that target a specific regime
+   */
+  async findFactorsByTargetRegime(regime: TargetRegime): Promise<Factor[]> {
+    // SQLite JSON functions: use json_each to search within JSON arrays
+    const result = await this.client.execute(
+      `SELECT f.* FROM factors f
+       WHERE f.status = 'active'
+       AND (
+         f.target_regimes IS NOT NULL
+         AND (
+           json_extract(f.target_regimes, '$') LIKE ?
+           OR json_extract(f.target_regimes, '$') LIKE ?
+         )
+       )`,
+      [`%"${regime}"%`, `%"all"%`]
+    );
+    return result.map(mapFactorRow);
+  }
+
+  /**
+   * Get regime coverage map for active factors
+   */
+  async getRegimeCoverage(): Promise<Map<TargetRegime, Factor[]>> {
+    const activeFactors = await this.findActiveFactors();
+    const allRegimes: TargetRegime[] = ["bull", "bear", "sideways", "volatile"];
+    const coverage = new Map<TargetRegime, Factor[]>();
+
+    for (const regime of allRegimes) {
+      coverage.set(regime, []);
+    }
+
+    for (const factor of activeFactors) {
+      const regimes = factor.targetRegimes ?? [];
+      for (const regime of regimes) {
+        if (regime === "all") {
+          // "all" means it covers all regimes
+          for (const r of allRegimes) {
+            coverage.get(r)?.push(factor);
+          }
+        } else {
+          coverage.get(regime)?.push(factor);
+        }
+      }
+    }
+
+    return coverage;
   }
 
   // ============================================

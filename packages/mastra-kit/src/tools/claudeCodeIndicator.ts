@@ -69,39 +69,11 @@ export interface SDKProvider {
   createSession: CreateSessionFunction;
 }
 
-// Global SDK provider override for testing
-// Use Symbol to distinguish between "not set" and "explicitly disabled"
-const SDK_DISABLED = Symbol("SDK_DISABLED");
-let _sdkProviderOverride: SDKProvider | typeof SDK_DISABLED | null = null;
-
 /**
- * Set SDK provider for testing
- * @param provider - Mock SDK provider, null to reset, or 'disabled' to block SDK
- */
-export function setSDKProvider(provider: SDKProvider | "disabled" | null): void {
-  if (provider === "disabled") {
-    _sdkProviderOverride = SDK_DISABLED;
-  } else {
-    _sdkProviderOverride = provider;
-  }
-}
-
-/**
- * Get the current SDK provider (override or real SDK)
+ * Load the real SDK provider by importing the Claude Agent SDK.
  * @returns SDK provider or null if not available
  */
-export async function getSDKProvider(): Promise<SDKProvider | null> {
-  // Return null if explicitly disabled (for testing)
-  if (_sdkProviderOverride === SDK_DISABLED) {
-    return null;
-  }
-
-  // Return override if set (for testing)
-  if (_sdkProviderOverride) {
-    return _sdkProviderOverride;
-  }
-
-  // Try to import the real SDK
+export async function loadSDKProvider(): Promise<SDKProvider | null> {
   try {
     const sdk = await import("@anthropic-ai/claude-agent-sdk");
     return {
@@ -128,9 +100,11 @@ export interface ClaudeCodeConfig {
   timeout?: number;
   /** Working directory (default: process.cwd()) */
   workingDirectory?: string;
+  /** SDK provider for dependency injection (default: loads real SDK) */
+  sdkProvider?: SDKProvider | null;
 }
 
-const DEFAULT_CONFIG: Required<ClaudeCodeConfig> = {
+const DEFAULT_CONFIG: Required<Omit<ClaudeCodeConfig, "sdkProvider">> = {
   model: "claude-sonnet-4-20250514",
   maxTurns: 20,
   timeout: 5 * 60 * 1000, // 5 minutes
@@ -159,11 +133,22 @@ export const ImplementIndicatorInputSchema = z.object({
       model: z.string().optional(),
       maxTurns: z.number().min(5).max(50).optional(),
       timeout: z.number().min(30000).max(600000).optional(),
+      workingDirectory: z.string().optional(),
+      // sdkProvider is not part of schema (injected programmatically for testing)
     })
+    .passthrough() // Allow additional properties like sdkProvider
     .optional(),
 });
 
-export type ImplementIndicatorInput = z.infer<typeof ImplementIndicatorInputSchema>;
+// Extended input type that includes sdkProvider for programmatic use
+export type ImplementIndicatorInput = Omit<
+  z.infer<typeof ImplementIndicatorInputSchema>,
+  "config"
+> & {
+  config?: z.infer<typeof ImplementIndicatorInputSchema>["config"] & {
+    sdkProvider?: SDKProvider | null;
+  };
+};
 
 /**
  * Output schema for the implement-indicator tool
@@ -346,8 +331,15 @@ export async function implementIndicator(
   const testPath = `packages/indicators/src/custom/${input.hypothesis.name}.test.ts`;
 
   try {
-    // Get SDK provider (supports dependency injection for testing)
-    const sdkProvider = await getSDKProvider();
+    // Get SDK provider: use injected provider if provided, otherwise load real SDK
+    // If explicitly set to null, treat as disabled
+    let sdkProvider: SDKProvider | null;
+    if (input.config?.sdkProvider !== undefined) {
+      sdkProvider = input.config.sdkProvider;
+    } else {
+      sdkProvider = await loadSDKProvider();
+    }
+
     if (!sdkProvider) {
       return {
         success: false,

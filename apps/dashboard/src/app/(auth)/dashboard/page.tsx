@@ -5,6 +5,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
+import { Rss } from "lucide-react";
 import { useState } from "react";
 import { CycleProgress } from "@/components/dashboard/CycleProgress";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
@@ -20,9 +21,11 @@ import {
   useTriggerCycle,
 } from "@/hooks/queries";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
+import { useRealTimeFeed } from "@/stores/ui-store";
 
 export default function DashboardPage() {
   const { connected } = useWebSocketContext();
+  const { visible: feedVisible, toggle: toggleFeed } = useRealTimeFeed();
   const { data: status, isLoading: statusLoading, isFetching: statusFetching } = useSystemStatus();
   const { data: portfolio, isLoading: portfolioLoading } = usePortfolioSummary();
   const {
@@ -118,6 +121,22 @@ export default function DashboardPage() {
               </span>
             </TooltipTrigger>
             <TooltipContent>Time until next OODA trading cycle starts</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <button
+                type="button"
+                onClick={toggleFeed}
+                className={`p-2 rounded-md transition-colors ${
+                  feedVisible
+                    ? "bg-cream-100 text-cream-700 dark:bg-night-700 dark:text-cream-300"
+                    : "text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+                }`}
+              >
+                <Rss className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{feedVisible ? "Hide event feed" : "Show event feed"}</TooltipContent>
           </Tooltip>
           <div className="flex items-center gap-2">
             {status?.status === "STOPPED" && (

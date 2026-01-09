@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { AddSymbolModal } from "@/components/ui/add-symbol-modal";
+import { GlobalLoadingIndicator } from "@/components/ui/GlobalLoadingIndicator";
 import { Logo } from "@/components/ui/logo";
 import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
@@ -24,6 +25,7 @@ import { TickerStrip } from "@/components/ui/ticker-strip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
+import { useSidebar } from "@/stores/ui-store";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +33,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const { connected, connectionState } = useWebSocketContext();
   const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
+  const { setCollapsed } = useSidebar();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [isAddSymbolModalOpen, setAddSymbolModalOpen] = useState(false);
   const watchlistSymbols = useWatchlistStore((s) => s.symbols);
@@ -69,6 +72,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     }
   }, [isDesktop, isLaptop]);
 
+  // Sync sidebar collapsed state with viewport size
+  useEffect(() => {
+    setCollapsed(isLaptop);
+  }, [isLaptop, setCollapsed]);
+
   // Show loading while checking auth
   if (isLoading) {
     return (
@@ -88,6 +96,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     return (
       <div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
         <SkipLink />
+        <GlobalLoadingIndicator />
 
         {/* Mobile Header */}
         <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
@@ -153,6 +162,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     return (
       <div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
         <SkipLink />
+        <GlobalLoadingIndicator />
 
         {/* Tablet Header */}
         <header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
@@ -214,9 +224,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex h-screen bg-cream-50 dark:bg-night-900">
       <SkipLink />
+      <GlobalLoadingIndicator />
 
       {/* Sidebar */}
-      <Sidebar collapsed={isLaptop} userEmail={user?.email} onSignOut={signOut} />
+      <Sidebar userEmail={user?.email} onSignOut={signOut} />
 
       {/* Main content */}
       <main className="flex-1 overflow-auto flex flex-col">
@@ -279,7 +290,10 @@ function ConnectionBadge({ connected, state }: { connected: boolean; state: stri
 }
 
 function EnvBadge() {
-  const env = process.env.NEXT_PUBLIC_CREAM_ENV ?? "PAPER";
+  const env = process.env.NEXT_PUBLIC_CREAM_ENV;
+  if (!env || !["BACKTEST", "PAPER", "LIVE"].includes(env)) {
+    throw new Error("NEXT_PUBLIC_CREAM_ENV must be set to BACKTEST, PAPER, or LIVE");
+  }
   return (
     <span className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
       {env}

@@ -100,13 +100,14 @@ class FixedBpsSlippage(SlippageModel):
 
     def calculate(
         self,
-        _side: str | Side,
-        _price: float,
-        _size: float,
+        side: str | Side,
+        price: float,
+        size: float,
         is_exit: bool = False,
-        **_kwargs,
+        **kwargs,
     ) -> float:
         """Calculate fixed basis points slippage."""
+        del side, price, size, kwargs  # Unused
         bps = self.exit_bps if is_exit else self.entry_bps
         return bps / 10_000  # Convert bps to decimal
 
@@ -130,12 +131,12 @@ class SpreadSlippage(SlippageModel):
 
     def calculate(
         self,
-        _side: str | Side,
+        side: str | Side,
         price: float,
-        _size: float,
-        _is_exit: bool = False,
+        size: float,
+        is_exit: bool = False,
         spread: float | None = None,
-        **_kwargs,
+        **kwargs,
     ) -> float:
         """
         Calculate spread-based slippage.
@@ -143,6 +144,7 @@ class SpreadSlippage(SlippageModel):
         Args:
             spread: Bid-ask spread in dollars. If None, uses default_spread_bps.
         """
+        del side, size, is_exit, kwargs  # Unused
         spread_pct = spread / price if spread is not None else self.default_spread_bps / 10_000
 
         return spread_pct * self.spread_fraction
@@ -171,12 +173,12 @@ class VolumeImpactSlippage(SlippageModel):
 
     def calculate(
         self,
-        _side: str | Side,
-        _price: float,
+        side: str | Side,
+        price: float,
         size: float,
-        _is_exit: bool = False,
+        is_exit: bool = False,
         adv: float | None = None,
-        **_kwargs,
+        **kwargs,
     ) -> float:
         """
         Calculate volume-based market impact slippage.
@@ -184,6 +186,7 @@ class VolumeImpactSlippage(SlippageModel):
         Args:
             adv: Average daily volume. If None, assumes 100% of ADV.
         """
+        del side, price, is_exit, kwargs  # Unused
         if adv is None or adv <= 0:
             # No ADV info, use base slippage only
             return self.base_bps / 10_000
@@ -221,12 +224,12 @@ class SquareRootImpactSlippage(SlippageModel):
 
     def calculate(
         self,
-        _side: str | Side,
-        _price: float,
+        side: str | Side,
+        price: float,
         size: float,
-        _is_exit: bool = False,
+        is_exit: bool = False,
         adv: float | None = None,
-        **_kwargs,
+        **kwargs,
     ) -> float:
         """
         Calculate square-root market impact slippage.
@@ -234,6 +237,7 @@ class SquareRootImpactSlippage(SlippageModel):
         Args:
             adv: Average daily volume. If None, assumes minimal impact.
         """
+        del side, price, is_exit, kwargs  # Unused
         if adv is None or adv <= 0:
             return self.base_bps / 10_000
 
@@ -306,12 +310,13 @@ class PerShareCommission(CommissionModel):
 
     def calculate(
         self,
-        _price: float,
+        price: float,
         size: float,
-        _side: str | Side | None = None,
-        **_kwargs,
+        side: str | Side | None = None,
+        **kwargs,
     ) -> float:
         """Calculate per-share commission."""
+        del price, side, kwargs  # Unused
         commission = size * self.per_share
         return max(self.minimum, min(commission, self.maximum))
 
@@ -335,10 +340,11 @@ class PercentageCommission(CommissionModel):
         self,
         price: float,
         size: float,
-        _side: str | Side | None = None,
-        **_kwargs,
+        side: str | Side | None = None,
+        **kwargs,
     ) -> float:
         """Calculate percentage-based commission."""
+        del side, kwargs  # Unused
         trade_value = price * size
         commission = trade_value * self.percentage
         return max(self.minimum, min(commission, self.maximum))
@@ -366,12 +372,13 @@ class TieredCommission(CommissionModel):
 
     def calculate(
         self,
-        _price: float,
+        price: float,
         size: float,
-        _side: str | Side | None = None,
-        **_kwargs,
+        side: str | Side | None = None,
+        **kwargs,
     ) -> float:
         """Calculate tiered commission based on trade size."""
+        del price, side, kwargs  # Unused
         remaining = size
         total_commission = 0.0
         prev_threshold = 0.0
@@ -455,12 +462,13 @@ class OptionsCommission(CommissionModel):
 
     def calculate(
         self,
-        _price: float,
+        price: float,
         size: float,
-        _side: str | Side | None = None,
-        **_kwargs,
+        side: str | Side | None = None,
+        **kwargs,
     ) -> float:
         """Calculate options commission."""
+        del price, side, kwargs  # Unused
         base = size * self.per_contract
 
         if self.include_fees:

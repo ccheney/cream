@@ -14,6 +14,7 @@ import {
   BarChart3,
   Bot,
   Briefcase,
+  ChevronLeft,
   FileText,
   FlaskConical,
   Gauge,
@@ -29,7 +30,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { useEventFeedStore } from "@/stores/event-feed-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
+import { useSidebar } from "@/stores/ui-store";
 
 export interface NavItem {
   href: string;
@@ -38,8 +41,6 @@ export interface NavItem {
 }
 
 export interface SidebarProps {
-  /** Whether sidebar is collapsed (icons only) */
-  collapsed?: boolean;
   /** User email to display */
   userEmail?: string;
   /** Sign out handler */
@@ -75,6 +76,8 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
   const showLabel = !collapsed || isHovered;
+  const newEventCount = useEventFeedStore((s) => s.newEventCount);
+  const showFeedBadge = item.href === "/feed" && newEventCount > 0 && !isActive;
 
   return (
     <Link
@@ -86,18 +89,32 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
       }`}
       title={collapsed && !isHovered ? item.label : undefined}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      {showLabel && <span className="truncate">{item.label}</span>}
+      <div className="relative flex-shrink-0">
+        <Icon className="w-5 h-5" />
+        {showFeedBadge && collapsed && !isHovered && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
+        )}
+      </div>
+      {showLabel && (
+        <>
+          <span className="truncate">{item.label}</span>
+          {showFeedBadge && (
+            <span className="ml-auto px-1.5 py-0.5 text-xs font-mono bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+              {newEventCount > 99 ? "99+" : newEventCount}
+            </span>
+          )}
+        </>
+      )}
     </Link>
   );
 });
 
 export const Sidebar = memo(function Sidebar({
-  collapsed = false,
   userEmail,
   onSignOut,
   className = "",
 }: SidebarProps) {
+  const { collapsed, toggle: toggleSidebar } = useSidebar();
   const [isHovered, setIsHovered] = useState(false);
   const resolvedTheme = usePreferencesStore((s) => s.getComputedTheme());
   const updateDisplay = usePreferencesStore((s) => s.updateDisplay);
@@ -116,8 +133,22 @@ export const Sidebar = memo(function Sidebar({
       onMouseEnter={() => collapsed && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center gap-3 h-14">
-        <Logo className="h-8 w-8 flex-shrink-0" />
+      <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between h-14">
+        <div className="flex items-center gap-3">
+          <Logo className="h-8 w-8 flex-shrink-0" />
+        </div>
+        {showLabel && (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-md text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <ChevronLeft
+              className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
+            />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 mt-4 px-2 space-y-1 overflow-y-auto" aria-label="Main navigation">

@@ -249,15 +249,42 @@ export class IdeaAgent {
   }
 
   /**
-   * Get uncovered market regimes
+   * Get uncovered market regimes based on active factors' targetRegimes
    */
   private getUncoveredRegimes(trigger: ResearchTrigger, activeFactors: Factor[]): string[] {
-    const _allRegimes = ["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"];
-    const _coveredRegimes = new Set<string>();
-    for (const _factor of activeFactors) {
-      // TODO: Factors should track their target regime
+    // Map domain regime labels to factor target regimes
+    const regimeMap: Record<string, string> = {
+      BULL_TREND: "bull",
+      BEAR_TREND: "bear",
+      RANGE: "sideways",
+      HIGH_VOL: "volatile",
+      LOW_VOL: "sideways", // LOW_VOL is typically range/sideways behavior
+    };
+
+    const allRegimeLabels = ["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"];
+    const coveredTargetRegimes = new Set<string>();
+
+    for (const factor of activeFactors) {
+      const regimes = factor.targetRegimes ?? [];
+      for (const regime of regimes) {
+        if (regime === "all") {
+          // "all" covers everything
+          return [];
+        }
+        coveredTargetRegimes.add(regime);
+      }
     }
 
+    // Find regime labels that have no coverage
+    const uncovered: string[] = [];
+    for (const label of allRegimeLabels) {
+      const targetRegime = regimeMap[label];
+      if (targetRegime && !coveredTargetRegimes.has(targetRegime)) {
+        uncovered.push(label);
+      }
+    }
+
+    // Check if trigger metadata provides explicit uncovered regimes
     const metadata = trigger.metadata as Record<string, unknown>;
     if (metadata?.uncoveredRegimes && Array.isArray(metadata.uncoveredRegimes)) {
       return metadata.uncoveredRegimes as string[];
@@ -269,7 +296,7 @@ export class IdeaAgent {
       return [currentRegime];
     }
 
-    return [];
+    return uncovered;
   }
 
   /**

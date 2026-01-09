@@ -50,6 +50,9 @@ class PaperValidationConfig:
     typescript_api_url: str = "http://localhost:3001"
     """URL for TypeScript factor API."""
 
+    symbols: list[str] = field(default_factory=lambda: ["SPY", "QQQ", "IWM"])
+    """Symbols to fetch market data for (default: major indices)."""
+
 
 @dataclass
 class DailyComparison:

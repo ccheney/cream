@@ -8,7 +8,7 @@
 process.env.CREAM_ENV = "PAPER";
 process.env.CREAM_BROKER = "ALPACA";
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { IndicatorHypothesis } from "@cream/indicators";
 import {
   buildImplementationPrompt,
@@ -19,7 +19,6 @@ import {
   type SDKProvider,
   type Session,
   type SessionOptions,
-  setSDKProvider,
 } from "./claudeCodeIndicator.js";
 
 // ============================================
@@ -392,22 +391,16 @@ function createMockSDKProvider(options: {
 }
 
 // ============================================
-// Integration Tests with Mock SDK
+// Integration Tests with Mock SDK (Dependency Injection)
 // ============================================
 
 describe("implementIndicator with mock SDK", () => {
-  afterEach(() => {
-    // Reset SDK provider after each test
-    setSDKProvider(null);
-  });
-
-  test("returns SDK not installed error when SDK disabled", async () => {
-    // Explicitly disable SDK (prevents real SDK import attempt)
-    setSDKProvider("disabled");
-
+  test("returns SDK not installed error when SDK explicitly disabled", async () => {
+    // Pass null to disable SDK via dependency injection
     const result = await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: null },
     });
 
     expect(result.success).toBe(false);
@@ -421,11 +414,10 @@ describe("implementIndicator with mock SDK", () => {
       capturedOptions,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     expect(capturedOptions.value).not.toBeNull();
@@ -443,11 +435,10 @@ describe("implementIndicator with mock SDK", () => {
       capturedPrompt,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     expect(capturedPrompt.value).not.toBeNull();
@@ -466,11 +457,10 @@ describe("implementIndicator with mock SDK", () => {
       ],
     });
 
-    setSDKProvider(mockProvider);
-
     const result = await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     // turnsUsed should count only assistant messages (3)
@@ -484,14 +474,13 @@ describe("implementIndicator with mock SDK", () => {
       capturedOptions,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
       config: {
         model: "claude-opus-4-20250514",
         maxTurns: 30,
+        sdkProvider: mockProvider,
       },
     });
 
@@ -506,11 +495,10 @@ describe("implementIndicator with mock SDK", () => {
       capturedOptions,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     const canUseTool = capturedOptions.value?.canUseTool;
@@ -529,11 +517,10 @@ describe("implementIndicator with mock SDK", () => {
       capturedOptions,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     const canUseTool = capturedOptions.value?.canUseTool;
@@ -559,11 +546,10 @@ describe("implementIndicator with mock SDK", () => {
       capturedOptions,
     });
 
-    setSDKProvider(mockProvider);
-
     await implementIndicator({
       hypothesis: createMockHypothesis(),
       existingPatterns: mockExistingPatterns,
+      config: { sdkProvider: mockProvider },
     });
 
     const canUseTool = capturedOptions.value?.canUseTool;
