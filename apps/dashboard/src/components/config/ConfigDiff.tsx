@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/collapsible";
-import type { Configuration, FullRuntimeConfig } from "@/lib/api/types";
+import type { FullRuntimeConfig } from "@/lib/api/types";
 import {
   calculateDiff,
   type DiffEntry,
@@ -18,7 +18,7 @@ import {
   revertChange,
 } from "@/lib/config-diff";
 
-export type ConfigType = Configuration | FullRuntimeConfig;
+export type ConfigType = FullRuntimeConfig;
 
 export interface ConfigDiffProps<T extends ConfigType = ConfigType> {
   before: T;

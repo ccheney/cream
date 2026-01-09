@@ -26,6 +26,7 @@
   "dependencies": {
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@libsql/client": "0.17.0",
     "@tursodatabase/database": "^0.3.2",
     "@tursodatabase/sync": "^0.3.2"
   },

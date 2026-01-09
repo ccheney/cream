@@ -24,11 +24,7 @@ import { useWebSocketContext } from "@/providers/WebSocketProvider";
 export default function DashboardPage() {
   const { connected } = useWebSocketContext();
   const { data: status, isLoading: statusLoading, isFetching: statusFetching } = useSystemStatus();
-  const {
-    data: portfolio,
-    isLoading: portfolioLoading,
-    isFetching: portfolioFetching,
-  } = usePortfolioSummary();
+  const { data: portfolio, isLoading: portfolioLoading } = usePortfolioSummary();
   const {
     data: decisions,
     isLoading: decisionsLoading,
@@ -248,25 +244,21 @@ export default function DashboardPage() {
             phase="Observe"
             status={getOODAPhaseStatus("observe", status?.lastCycleId)}
             isLoading={statusLoading}
-            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Orient"
             status={getOODAPhaseStatus("orient", status?.lastCycleId)}
             isLoading={statusLoading}
-            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Decide"
             status={getOODAPhaseStatus("decide", status?.lastCycleId)}
             isLoading={statusLoading}
-            isFetching={statusFetching}
           />
           <OODAPhaseCard
             phase="Act"
             status={getOODAPhaseStatus("act", status?.lastCycleId)}
             isLoading={statusLoading}
-            isFetching={statusFetching}
           />
         </div>
       </QueryErrorBoundary>
@@ -278,7 +270,6 @@ export default function DashboardPage() {
             label="NAV"
             value={formatCurrency(portfolio?.nav ?? 0)}
             isLoading={portfolioLoading}
-            isFetching={portfolioFetching}
           />
           <MetricCard
             label="Day P&L"
@@ -286,13 +277,11 @@ export default function DashboardPage() {
             subValue={formatPct(portfolio?.todayPnlPct ?? 0)}
             valueColor={(portfolio?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
             isLoading={portfolioLoading}
-            isFetching={portfolioFetching}
           />
           <MetricCard
             label="Open Positions"
             value={String(portfolio?.positionCount ?? 0)}
             isLoading={portfolioLoading}
-            isFetching={portfolioFetching}
           />
         </div>
       </QueryErrorBoundary>
@@ -512,12 +501,10 @@ function OODAPhaseCard({
   phase,
   status,
   isLoading,
-  isFetching,
 }: {
   phase: string;
   status: "idle" | "active" | "complete";
   isLoading: boolean;
-  isFetching?: boolean;
 }) {
   // Only show skeleton on initial load
   if (isLoading) {
@@ -545,10 +532,8 @@ function OODAPhaseCard({
     <Tooltip>
       <TooltipTrigger>
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
-          {/* Subtle refresh indicator in corner */}
-          {isFetching && (
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-          )}
+          {/* Live data indicator - always visible */}
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
           <div
             className={`mt-1 text-lg font-medium flex items-center gap-2 ${statusColors[status]}`}
@@ -576,7 +561,6 @@ function MetricCard({
   subValue,
   valueColor,
   isLoading,
-  isFetching,
   tooltip,
 }: {
   label: string;
@@ -584,7 +568,6 @@ function MetricCard({
   subValue?: string;
   valueColor?: string;
   isLoading: boolean;
-  isFetching?: boolean;
   tooltip?: string;
 }) {
   // Only show skeleton on initial load (no data)
@@ -601,10 +584,8 @@ function MetricCard({
 
   const cardContent = (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
-      {/* Subtle refresh indicator in corner */}
-      {isFetching && (
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-      )}
+      {/* Live data indicator - always visible */}
+      <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
       <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
       <div className="flex items-baseline gap-2">
         <div

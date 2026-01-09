@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import type { TursoClient } from "./turso.js";
 
 export interface Migration {
@@ -6,6 +6,8 @@ export interface Migration {
   name: string;
   filename: string;
   sql: string;
+  /** For init/ directory migrations, lists component files */
+  sourceFiles?: string[];
 }
 
 export interface AppliedMigration {
@@ -239,6 +241,20 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
   try {
     const files = await readdir(dir);
 
+    // Check for init/ directory (version 1)
+    if (direction === "up" && files.includes("init")) {
+      const initDir = `${dir}/init`;
+      const initStat = await stat(initDir);
+
+      if (initStat.isDirectory()) {
+        const initMigration = await loadInitDirectory(initDir);
+        if (initMigration) {
+          migrations.push(initMigration);
+        }
+      }
+    }
+
+    // Load numbered migrations (002+, or 001+ if no init/ directory)
     for (const file of files) {
       const match = file.match(pattern);
       if (!match) {
@@ -250,6 +266,12 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
       }
 
       const version = parseInt(match[1]!, 10);
+
+      // Skip 001_init.sql if we have init/ directory
+      if (version === 1 && migrations.some((m) => m.version === 1)) {
+        continue;
+      }
+
       const name = match[2]?.replace(/_down$/, "") ?? "";
       const sql = await Bun.file(`${dir}/${file}`).text();
 
@@ -268,6 +290,34 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
   }
 
   return migrations.sort((a, b) => a.version - b.version);
+}
+
+/**
+ * Load all SQL files from init/ directory and combine them into a single migration.
+ * Files are sorted alphabetically (00_schema.sql, 01_core.sql, etc.)
+ */
+async function loadInitDirectory(initDir: string): Promise<Migration | null> {
+  const files = await readdir(initDir);
+  const sqlFiles = files.filter((f) => f.endsWith(".sql")).sort();
+
+  if (sqlFiles.length === 0) {
+    return null;
+  }
+
+  const sqlParts: string[] = [];
+
+  for (const file of sqlFiles) {
+    const content = await Bun.file(`${initDir}/${file}`).text();
+    sqlParts.push(`-- Source: init/${file}\n${content}`);
+  }
+
+  return {
+    version: 1,
+    name: "init",
+    filename: "init/",
+    sql: sqlParts.join("\n\n"),
+    sourceFiles: sqlFiles,
+  };
 }
 
 async function executeSqlStatements(client: TursoClient, sql: string): Promise<void> {

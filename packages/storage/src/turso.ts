@@ -1,4 +1,5 @@
-import { type ExecutionContext, env, getEnvDatabaseSuffix, isBacktest } from "@cream/domain";
+import { type ExecutionContext, env, getEnvDatabaseSuffix } from "@cream/domain";
+import { createClient } from "@libsql/client";
 import { connect } from "@tursodatabase/database";
 import { connect as connectSync } from "@tursodatabase/sync";
 
@@ -61,16 +62,66 @@ export async function createTursoClient(
   const projectRoot = await findProjectRoot();
   const defaultPath = `${projectRoot}/${dbName}`;
 
-  if (isBacktest(ctx) || !config.syncUrl) {
-    return createLocalClient(config.path ?? defaultPath);
+  // Check TURSO_DATABASE_URL environment variable first
+  const tursoUrl = env.TURSO_DATABASE_URL ?? config.syncUrl;
+
+  // HTTP URL - use HTTP client (works in any environment including BACKTEST)
+  if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
+    return createHttpClient(tursoUrl, config.authToken ?? env.TURSO_AUTH_TOKEN);
   }
 
-  return createSyncClient({
-    path: config.path ?? defaultPath,
-    syncUrl: config.syncUrl,
-    authToken: config.authToken ?? env.TURSO_AUTH_TOKEN,
-    syncInterval: config.syncInterval,
-  });
+  // Sync URL (libsql://) - use sync client with local replica
+  if (tursoUrl?.startsWith("libsql://")) {
+    return createSyncClient({
+      path: config.path ?? defaultPath,
+      syncUrl: tursoUrl,
+      authToken: config.authToken ?? env.TURSO_AUTH_TOKEN,
+      syncInterval: config.syncInterval,
+    });
+  }
+
+  // Local file database
+  return createLocalClient(config.path ?? tursoUrl ?? defaultPath);
+}
+
+/**
+ * Create HTTP client using @libsql/client for direct HTTP connections.
+ */
+function createHttpClient(url: string, authToken?: string): TursoClient {
+  const client = createClient({ url, authToken });
+
+  return {
+    async execute<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T[]> {
+      const result = await client.execute(sql, args as never);
+      return result.rows as unknown as T[];
+    },
+
+    async get<T extends Row = Row>(sql: string, args: unknown[] = []): Promise<T | undefined> {
+      const result = await client.execute(sql, args as never);
+      return result.rows[0] as unknown as T | undefined;
+    },
+
+    async batch(statements: BatchStatement[]): Promise<void> {
+      await client.batch(
+        statements.map(({ sql, args }) => [sql, args as never] as [string, never])
+      );
+    },
+
+    async run(
+      sql: string,
+      args: unknown[] = []
+    ): Promise<{ changes: number; lastInsertRowid: bigint }> {
+      const result = await client.execute(sql, args as never);
+      return {
+        changes: result.rowsAffected,
+        lastInsertRowid: result.lastInsertRowid ?? BigInt(0),
+      };
+    },
+
+    close(): void {
+      client.close();
+    },
+  };
 }
 
 async function createLocalClient(path: string): Promise<TursoClient> {

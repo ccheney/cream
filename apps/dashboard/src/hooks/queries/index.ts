@@ -40,17 +40,13 @@ export {
 // Config
 export {
   useActiveConfig,
-  useConfig,
-  useConfigHistory,
   useConstraintsConfig,
   useDraftConfig,
   usePromoteDraft,
-  useResetConfig,
   useRollbackConfig,
   useRuntimeConfigHistory,
   useSaveDraft,
   useUniverseConfig,
-  useUpdateConfig,
   useUpdateConstraintsConfig,
   useUpdateUniverseConfig,
   useValidateDraft,

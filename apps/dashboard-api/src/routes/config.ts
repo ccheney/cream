@@ -637,6 +637,104 @@ app.openapi(compareRoute, async (c) => {
 });
 
 // ============================================
+// Universe Routes
+// ============================================
+
+// GET /universe - Get universe configuration
+const getUniverseRoute = createRoute({
+  method: "get",
+  path: "/universe",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: UniverseConfigSchema } },
+      description: "Universe configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration found",
+    },
+  },
+  tags: ["Config"],
+});
+
+app.openapi(getUniverseRoute, async (c) => {
+  const environment = getEnvironment(c);
+  try {
+    const service = await getRuntimeConfigService();
+    const config = await service.getActiveConfig(environment);
+    return c.json(config.universe, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// PUT /universe - Update universe configuration (saves as draft)
+const UniverseConfigInputSchema = z.object({
+  source: UniverseSourceSchema.optional(),
+  staticSymbols: z.array(z.string()).nullable().optional(),
+  indexSource: z.string().nullable().optional(),
+  minVolume: z.number().nullable().optional(),
+  minMarketCap: z.number().nullable().optional(),
+  optionableOnly: z.boolean().optional(),
+  includeList: z.array(z.string()).optional(),
+  excludeList: z.array(z.string()).optional(),
+});
+
+const updateUniverseRoute = createRoute({
+  method: "put",
+  path: "/universe",
+  request: {
+    query: z.object({
+      env: EnvironmentSchema.optional().openapi({
+        description: "Trading environment (default: PAPER)",
+      }),
+    }),
+    body: {
+      content: { "application/json": { schema: UniverseConfigInputSchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: UniverseConfigSchema } },
+      description: "Updated universe configuration",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "No active configuration to base draft on",
+    },
+  },
+  tags: ["Config"],
+});
+
+app.openapi(updateUniverseRoute, async (c) => {
+  const environment = getEnvironment(c);
+  const universe = c.req.valid("json");
+
+  try {
+    const service = await getRuntimeConfigService();
+    const updated = await service.saveDraft(environment, {
+      universe: universe as Partial<RuntimeUniverseConfig>,
+    });
+    return c.json(updated.universe, 200);
+  } catch (err) {
+    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+      return c.json({ error: err.message, code: err.code }, 404);
+    }
+    throw err;
+  }
+});
+
+// ============================================
 // Constraints Routes
 // ============================================
 

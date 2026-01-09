@@ -29,6 +29,9 @@ const nextConfig = {
   // Strict mode for development
   reactStrictMode: true,
 
+  // Disable dev indicators (bottom-left Next.js logo)
+  devIndicators: false,
+
   // TypeScript configuration
   typescript: {
     // Enable type checking during build

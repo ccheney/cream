@@ -3,75 +3,19 @@ import { get, post, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
   ConfigHistoryEntry,
-  Configuration,
-  ConfigVersion,
   ConstraintsConfig,
   Environment,
   FullRuntimeConfig,
+  RuntimeUniverseConfig,
   SaveDraftInput,
-  UniverseConfig,
   ValidationResult,
 } from "@/lib/api/types";
-
-export function useConfig() {
-  return useQuery({
-    queryKey: queryKeys.config.all,
-    queryFn: async () => {
-      const { data } = await get<Configuration>("/api/config");
-      return data;
-    },
-    staleTime: STALE_TIMES.CONFIG,
-    gcTime: CACHE_TIMES.CONFIG,
-  });
-}
-
-export function useUpdateConfig() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (updates: Partial<Configuration>) => {
-      const { data } = await put<Configuration>("/api/config", updates);
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.config.all, data);
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.config.all, "history"] });
-    },
-  });
-}
-
-export function useConfigHistory() {
-  return useQuery({
-    queryKey: [...queryKeys.config.all, "history"] as const,
-    queryFn: async () => {
-      const { data } = await get<ConfigVersion[]>("/api/config/history");
-      return data;
-    },
-    staleTime: STALE_TIMES.CONFIG,
-    gcTime: CACHE_TIMES.CONFIG,
-  });
-}
-
-export function useResetConfig() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      const { data } = await post<Configuration>("/api/config/reset");
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.config.all, data);
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.config.all, "history"] });
-    },
-  });
-}
 
 export function useUniverseConfig() {
   return useQuery({
     queryKey: [...queryKeys.config.all, "universe"] as const,
     queryFn: async () => {
-      const { data } = await get<UniverseConfig>("/api/config/universe");
+      const { data } = await get<RuntimeUniverseConfig>("/api/config/universe");
       return data;
     },
     staleTime: STALE_TIMES.CONFIG,
@@ -83,8 +27,8 @@ export function useUpdateUniverseConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (universe: UniverseConfig) => {
-      const { data } = await put<UniverseConfig>("/api/config/universe", universe);
+    mutationFn: async (universe: RuntimeUniverseConfig) => {
+      const { data } = await put<RuntimeUniverseConfig>("/api/config/universe", universe);
       return data;
     },
     onSuccess: (data) => {

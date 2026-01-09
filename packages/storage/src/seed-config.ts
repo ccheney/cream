@@ -11,6 +11,9 @@
  *   bun run packages/storage/src/seed-config.ts --force  # Overwrite existing
  *   bun run packages/storage/src/seed-config.ts --env=PAPER  # Seed only PAPER
  *
+ * Environment:
+ *   TURSO_DATABASE_URL=http://localhost:8080  # Use HTTP connection
+ *
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
@@ -225,7 +228,7 @@ async function main(): Promise<void> {
     console.log("⚠️  Force mode enabled - existing configs will be replaced\n");
   }
 
-  // BACKTEST context is safe for seeding any environment's config
+  // createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
   const ctx = createContext("BACKTEST", "manual");
   const client = await createTursoClient(ctx);
 

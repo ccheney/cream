@@ -21,7 +21,7 @@ import {
   useUpdateConstraintsConfig,
   useUpdateUniverseConfig,
 } from "@/hooks/queries";
-import type { AlertSettings, ConstraintsConfig, UniverseConfig } from "@/lib/api/types";
+import type { AlertSettings, ConstraintsConfig, RuntimeUniverseConfig } from "@/lib/api/types";
 
 const VALID_SECTIONS = ["universe", "constraints", "agents", "risk", "notifications"] as const;
 type Section = (typeof VALID_SECTIONS)[number];
@@ -82,7 +82,7 @@ function UniverseEditor() {
   const { data: universe, isLoading } = useUniverseConfig();
   const updateUniverse = useUpdateUniverseConfig();
   const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<UniverseConfig>>({});
+  const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
 
   const handleStartEdit = () => {
     if (universe) {
@@ -93,7 +93,7 @@ function UniverseEditor() {
 
   const handleSave = () => {
     if (formData) {
-      updateUniverse.mutate(formData as UniverseConfig, {
+      updateUniverse.mutate(formData as RuntimeUniverseConfig, {
         onSuccess: () => setEditing(false),
       });
     }
@@ -143,6 +143,59 @@ function UniverseEditor() {
       </div>
 
       <div className="space-y-6">
+        {/* Source */}
+        <div>
+          <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">Source</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
+              <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+                Source Type
+                {editing ? (
+                  <select
+                    value={formData.source ?? universe.source}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        source: e.target.value as RuntimeUniverseConfig["source"],
+                      })
+                    }
+                    className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                  >
+                    <option value="static">Static</option>
+                    <option value="index">Index</option>
+                    <option value="screener">Screener</option>
+                  </select>
+                ) : (
+                  <div className="text-cream-900 dark:text-cream-100 capitalize">
+                    {universe.source}
+                  </div>
+                )}
+              </label>
+            </div>
+            {universe.source === "static" && (
+              <div>
+                <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+                  Static Symbols
+                  <div className="text-cream-900 dark:text-cream-100">
+                    {universe.staticSymbols?.join(", ") || "None"}
+                  </div>
+                </label>
+              </div>
+            )}
+            {universe.source === "index" && (
+              <div>
+                <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+                  Index Source
+                  <div className="text-cream-900 dark:text-cream-100">
+                    {universe.indexSource || "None"}
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Filters */}
         <div>
           <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">Filters</h3>
@@ -153,14 +206,11 @@ function UniverseEditor() {
                 Optionable Only
                 {editing ? (
                   <select
-                    value={String(formData.filters?.optionableOnly ?? false)}
+                    value={String(formData.optionableOnly ?? universe.optionableOnly)}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        filters: {
-                          ...(formData.filters ?? universe.filters),
-                          optionableOnly: e.target.value === "true",
-                        },
+                        optionableOnly: e.target.value === "true",
                       })
                     }
                     className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
@@ -170,7 +220,7 @@ function UniverseEditor() {
                   </select>
                 ) : (
                   <div className="text-cream-900 dark:text-cream-100">
-                    {universe.filters.optionableOnly ? "Yes" : "No"}
+                    {universe.optionableOnly ? "Yes" : "No"}
                   </div>
                 )}
               </label>
@@ -178,25 +228,22 @@ function UniverseEditor() {
             <div>
               {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
               <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
-                Min Avg Volume
+                Min Volume
                 {editing ? (
                   <input
                     type="number"
-                    value={formData.filters?.minAvgVolume ?? 0}
+                    value={formData.minVolume ?? universe.minVolume ?? 0}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        filters: {
-                          ...(formData.filters ?? universe.filters),
-                          minAvgVolume: parseInt(e.target.value, 10),
-                        },
+                        minVolume: parseInt(e.target.value, 10) || null,
                       })
                     }
                     className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
                   />
                 ) : (
                   <div className="text-cream-900 dark:text-cream-100">
-                    {universe.filters.minAvgVolume.toLocaleString()}
+                    {universe.minVolume?.toLocaleString() ?? "Not set"}
                   </div>
                 )}
               </label>
@@ -208,21 +255,20 @@ function UniverseEditor() {
                 {editing ? (
                   <input
                     type="number"
-                    value={formData.filters?.minMarketCap ?? 0}
+                    value={formData.minMarketCap ?? universe.minMarketCap ?? 0}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        filters: {
-                          ...(formData.filters ?? universe.filters),
-                          minMarketCap: parseInt(e.target.value, 10),
-                        },
+                        minMarketCap: parseInt(e.target.value, 10) || null,
                       })
                     }
                     className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
                   />
                 ) : (
                   <div className="text-cream-900 dark:text-cream-100">
-                    ${(universe.filters.minMarketCap / 1e9).toFixed(1)}B
+                    {universe.minMarketCap
+                      ? `$${(universe.minMarketCap / 1e9).toFixed(1)}B`
+                      : "Not set"}
                   </div>
                 )}
               </label>
@@ -237,7 +283,7 @@ function UniverseEditor() {
               Always Include
             </h3>
             <div className="text-sm text-cream-600 dark:text-cream-400">
-              {universe.include.length > 0 ? universe.include.join(", ") : "None"}
+              {universe.includeList.length > 0 ? universe.includeList.join(", ") : "None"}
             </div>
           </div>
           <div>
@@ -245,7 +291,7 @@ function UniverseEditor() {
               Always Exclude
             </h3>
             <div className="text-sm text-cream-600 dark:text-cream-400">
-              {universe.exclude.length > 0 ? universe.exclude.join(", ") : "None"}
+              {universe.excludeList.length > 0 ? universe.excludeList.join(", ") : "None"}
             </div>
           </div>
         </div>

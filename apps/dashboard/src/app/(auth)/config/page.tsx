@@ -6,19 +6,18 @@
 
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { useConfig, useConfigHistory, useConstraintsConfig } from "@/hooks/queries";
-
-/** Type for indicator config values */
-interface IndicatorConfig {
-  rsi?: { period?: number };
-  atr?: { period?: number };
-  sma?: { periods?: number[] };
-}
+import {
+  useActiveConfig,
+  useConstraintsConfig,
+  useRuntimeConfigHistory,
+  useUniverseConfig,
+} from "@/hooks/queries";
 
 export default function ConfigPage() {
-  const { data: config, isLoading: configLoading } = useConfig();
-  const { data: history, isLoading: historyLoading } = useConfigHistory();
+  const { data: config, isLoading: configLoading } = useActiveConfig();
+  const { data: universe } = useUniverseConfig();
   const { data: constraints } = useConstraintsConfig();
+  const { data: history, isLoading: historyLoading } = useRuntimeConfigHistory();
 
   const envColors = {
     BACKTEST: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -35,12 +34,14 @@ export default function ConfigPage() {
             <>
               <span
                 className={`px-3 py-1 text-sm font-medium rounded-full ${
-                  envColors[config.environment as keyof typeof envColors] ?? envColors.PAPER
+                  envColors[config.trading.environment as keyof typeof envColors] ?? envColors.PAPER
                 }`}
               >
-                {config.environment}
+                {config.trading.environment}
               </span>
-              <span className="text-sm text-cream-500 dark:text-cream-400">v{config.version}</span>
+              <span className="text-sm text-cream-500 dark:text-cream-400">
+                v{config.trading.version}
+              </span>
             </>
           )}
         </div>
@@ -56,43 +57,35 @@ export default function ConfigPage() {
       ) : config ? (
         <div className="grid grid-cols-2 gap-6">
           {/* Trading Config */}
-          <ConfigSection title="Trading" href="/config/universe">
-            <ConfigField label="Environment" value={config.environment} />
+          <ConfigSection title="Trading" href="/config/edit">
+            <ConfigField label="Environment" value={config.trading.environment} />
             <ConfigField
               label="Cycle Interval"
-              value={String(config.schedule?.cycleInterval ?? "1h")}
+              value={`${config.trading.tradingCycleIntervalMs / 60000}m`}
             />
+            <ConfigField label="Agent Timeout" value={`${config.trading.agentTimeoutMs / 1000}s`} />
             <ConfigField
-              label="Market Hours Only"
-              value={String(config.schedule?.marketHoursOnly ?? true)}
-            />
-            <ConfigField
-              label="Timezone"
-              value={String(config.schedule?.timezone ?? "America/New_York")}
+              label="Kelly Fraction"
+              value={`${(config.trading.kellyFraction * 100).toFixed(0)}%`}
             />
           </ConfigSection>
 
           {/* Universe Config */}
           <ConfigSection title="Universe" href="/config/universe">
-            <ConfigField
-              label="Source"
-              value={
-                config.universe.sources[0]?.type === "index"
-                  ? (config.universe.sources[0].index ?? "SPY")
-                  : (config.universe.sources[0]?.type ?? "static")
-              }
-            />
+            <ConfigField label="Source" value={universe?.source ?? "--"} />
             <ConfigField
               label="Optionable Only"
-              value={String(config.universe.filters.optionableOnly)}
+              value={String(universe?.optionableOnly ?? false)}
             />
             <ConfigField
-              label="Min Avg Volume"
-              value={config.universe.filters.minAvgVolume.toLocaleString()}
+              label="Min Volume"
+              value={universe?.minVolume?.toLocaleString() ?? "Not set"}
             />
             <ConfigField
               label="Min Market Cap"
-              value={`$${(config.universe.filters.minMarketCap / 1e9).toFixed(1)}B`}
+              value={
+                universe?.minMarketCap ? `$${(universe.minMarketCap / 1e9).toFixed(1)}B` : "Not set"
+              }
             />
           </ConfigSection>
 
@@ -144,21 +137,23 @@ export default function ConfigPage() {
             <ConfigField label="Max Theta" value={String(constraints?.options.maxTheta ?? "--")} />
           </ConfigSection>
 
-          {/* Indicators */}
-          <ConfigSection title="Indicators">
+          {/* Consensus Config */}
+          <ConfigSection title="Consensus" href="/config/edit">
             <ConfigField
-              label="RSI Period"
-              value={String((config.indicators as IndicatorConfig)?.rsi?.period ?? 14)}
+              label="Max Iterations"
+              value={String(config.trading.maxConsensusIterations)}
             />
             <ConfigField
-              label="ATR Period"
-              value={String((config.indicators as IndicatorConfig)?.atr?.period ?? 14)}
+              label="Delta Hold"
+              value={`${(config.trading.convictionDeltaHold * 100).toFixed(0)}%`}
             />
             <ConfigField
-              label="SMA Periods"
-              value={
-                (config.indicators as IndicatorConfig)?.sma?.periods?.join(", ") ?? "20, 50, 200"
-              }
+              label="Delta Action"
+              value={`${(config.trading.convictionDeltaAction * 100).toFixed(0)}%`}
+            />
+            <ConfigField
+              label="Min Risk/Reward"
+              value={`${config.trading.minRiskRewardRatio.toFixed(1)}:1`}
             />
           </ConfigSection>
         </div>
@@ -179,22 +174,26 @@ export default function ConfigPage() {
           </div>
         ) : history && history.length > 0 ? (
           <div className="divide-y divide-cream-100 dark:divide-night-700">
-            {history.map((entry) => (
-              <div key={entry.id} className="p-4 flex items-center justify-between">
+            {history.map((entry, index) => (
+              <div key={entry.id ?? index} className="p-4 flex items-center justify-between">
                 <div>
                   <span className="font-medium text-cream-900 dark:text-cream-100">
                     v{entry.version}
                   </span>
-                  <span className="ml-2 text-sm text-cream-500 dark:text-cream-400">
-                    by {entry.createdBy}
-                  </span>
+                  {entry.isActive && (
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded">
+                      Active
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-cream-500 dark:text-cream-400">
-                    {entry.changes.join(", ")}
+                    {entry.changedFields?.join(", ") ?? "Configuration updated"}
                   </span>
                   <span className="text-xs text-cream-400">
-                    {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+                    {entry.createdAt
+                      ? formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })
+                      : "Unknown"}
                   </span>
                 </div>
               </div>

@@ -71,23 +71,15 @@ export async function getDbClient(): Promise<TursoClient> {
  * Initialize database client and run migrations.
  */
 async function initializeDb(): Promise<TursoClient> {
-  const tursoUrl = process.env.TURSO_DATABASE_URL;
   const ctx = createDbContext();
   let client: TursoClient;
 
-  if (tursoUrl?.startsWith("http://") || tursoUrl?.startsWith("https://")) {
-    // Remote Turso server (Docker or cloud)
-    client = await createTursoClient(ctx, {
-      syncUrl: tursoUrl,
-      authToken: process.env.TURSO_AUTH_TOKEN ?? undefined,
-    });
-  } else if (tursoUrl === ":memory:" || process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV === "test") {
     // In-memory for testing
     client = await createInMemoryClient();
   } else {
-    // Local file database - let createTursoClient use its default path
-    // which includes the environment suffix (e.g., cream_backtest.db)
-    client = await createTursoClient(ctx, tursoUrl ? { path: tursoUrl } : {});
+    // createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
+    client = await createTursoClient(ctx);
   }
 
   // Run migrations on first connection

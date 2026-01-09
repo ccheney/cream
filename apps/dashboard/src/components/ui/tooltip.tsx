@@ -2,8 +2,10 @@
  * Tooltip Component
  *
  * Single-line hints on hover with auto-positioning.
+ * Implements Cream design system elevation and warmth.
  *
  * @see docs/plans/ui/24-components.md tooltips section
+ * @see docs/plans/ui/20-design-philosophy.md
  */
 
 "use client";
@@ -17,11 +19,12 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
-// Simple className merger utility
 function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
@@ -41,7 +44,7 @@ export interface TooltipContextValue {
 }
 
 export interface TooltipProps {
-  /** Delay before showing tooltip in ms (default: 300) */
+  /** Delay before showing tooltip in ms (default: 200) */
   delayMs?: number;
   /** Children (Trigger and Content) */
   children: ReactNode;
@@ -92,7 +95,7 @@ function useTooltipContext() {
  * </Tooltip>
  * ```
  */
-export function Tooltip({ delayMs = 300, children }: TooltipProps) {
+export function Tooltip({ delayMs = 200, children }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
   const contentId = useId();
@@ -112,7 +115,6 @@ export function Tooltip({ delayMs = 300, children }: TooltipProps) {
     setIsOpen(false);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -178,79 +180,78 @@ TooltipTrigger.displayName = "TooltipTrigger";
 
 /**
  * TooltipContent - The tooltip content.
+ *
+ * Styled with Cream design system tokens for warm, layered appearance.
  */
 export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
   ({ position = "top", children, className, style, ...props }, ref) => {
     const { isOpen, triggerRef, contentId } = useTooltipContext();
     const contentRef = useRef<HTMLDivElement | null>(null);
-    const [coords, setCoords] = useState({ top: 0, left: 0 });
     const [adjustedPosition, setAdjustedPosition] = useState(position);
 
-    // Calculate position
-    useEffect(() => {
-      if (!isOpen || !triggerRef.current || !contentRef.current) {
+    useLayoutEffect(() => {
+      const content = contentRef.current;
+      const trigger = triggerRef.current;
+
+      if (!isOpen || !trigger || !content) {
         return;
       }
 
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const contentRect = contentRef.current.getBoundingClientRect();
-      const padding = 8;
+      const triggerRect = trigger.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const gap = 6;
 
       let newPosition = position;
-      let top = 0;
-      let left = 0;
 
-      // Calculate initial position
       const calculatePosition = (pos: TooltipPosition) => {
         switch (pos) {
           case "top":
             return {
-              top: triggerRect.top - contentRect.height - padding,
+              top: triggerRect.top - contentRect.height - gap,
               left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
             };
           case "bottom":
             return {
-              top: triggerRect.bottom + padding,
+              top: triggerRect.bottom + gap,
               left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
             };
           case "left":
             return {
               top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
-              left: triggerRect.left - contentRect.width - padding,
+              left: triggerRect.left - contentRect.width - gap,
             };
           case "right":
             return {
               top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
-              left: triggerRect.right + padding,
+              left: triggerRect.right + gap,
             };
         }
       };
 
-      const pos = calculatePosition(position);
-      top = pos.top;
-      left = pos.left;
+      let { top, left } = calculatePosition(position);
 
-      // Auto-adjust if out of viewport
-      if (top < 0 && position === "top") {
+      if (top < 8 && position === "top") {
         newPosition = "bottom";
         const newPos = calculatePosition("bottom");
         top = newPos.top;
         left = newPos.left;
-      } else if (top + contentRect.height > window.innerHeight && position === "bottom") {
+      } else if (top + contentRect.height > window.innerHeight - 8 && position === "bottom") {
         newPosition = "top";
         const newPos = calculatePosition("top");
         top = newPos.top;
         left = newPos.left;
       }
 
-      // Keep within horizontal bounds
-      left = Math.max(padding, Math.min(left, window.innerWidth - contentRect.width - padding));
+      left = Math.max(8, Math.min(left, window.innerWidth - contentRect.width - 8));
 
-      setCoords({ top, left });
+      content.style.top = `${top}px`;
+      content.style.left = `${left}px`;
+      content.style.opacity = "1";
+      content.style.transform = "translateY(0)";
+
       setAdjustedPosition(newPosition);
     }, [isOpen, position, triggerRef]);
 
-    // Combine refs
     const handleRef = useCallback(
       (node: HTMLDivElement | null) => {
         contentRef.current = node;
@@ -263,43 +264,64 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
       [ref]
     );
 
-    if (!isOpen) {
+    if (!isOpen || typeof document === "undefined") {
       return null;
     }
 
-    return (
+    const tooltipContent = (
       <div
         ref={handleRef}
         id={contentId}
         role="tooltip"
         className={cn(
-          "fixed z-50 px-2.5 py-1.5 text-xs font-medium",
-          "bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900",
-          "rounded-md shadow-lg",
-          "animate-in fade-in-0 zoom-in-95 duration-150",
+          // Layout
+          "fixed px-3 py-1.5 max-w-xs",
+          // Typography - using system font for clarity
+          "text-[13px] leading-snug font-medium tracking-tight",
+          // Colors using CSS variables (warm, not stark)
+          "bg-stone-700 dark:bg-cream-100",
+          "text-cream-50 dark:text-stone-700",
+          // Border for subtle definition
+          "border border-stone-600/50 dark:border-cream-300",
+          // Layered surface with soft shadow
+          "rounded-lg",
+          // Z-index from design system
+          "z-tooltip",
+          // Transition for smooth appearance
+          "transition-[opacity,transform] duration-150 ease-out",
           className
         )}
         style={{
-          top: coords.top,
-          left: coords.left,
+          top: 0,
+          left: 0,
+          opacity: 0,
+          transform: "translateY(4px)",
+          boxShadow: "var(--shadow-tooltip), 0 0 0 1px rgba(0,0,0,0.04)",
           ...style,
         }}
         {...props}
       >
         {children}
-        {/* Arrow */}
-        <div
+        {/* Arrow - subtle pointer */}
+        <span
           className={cn(
-            "absolute w-2 h-2 bg-stone-900 dark:bg-stone-100 rotate-45",
-            adjustedPosition === "top" && "bottom-[-4px] left-1/2 -translate-x-1/2",
-            adjustedPosition === "bottom" && "top-[-4px] left-1/2 -translate-x-1/2",
-            adjustedPosition === "left" && "right-[-4px] top-1/2 -translate-y-1/2",
-            adjustedPosition === "right" && "left-[-4px] top-1/2 -translate-y-1/2"
+            "absolute w-2 h-2 rotate-45",
+            "bg-stone-700 dark:bg-cream-100",
+            "border-stone-600/50 dark:border-cream-300",
+            adjustedPosition === "top" &&
+              "bottom-[-5px] left-1/2 -translate-x-1/2 border-b border-r",
+            adjustedPosition === "bottom" &&
+              "top-[-5px] left-1/2 -translate-x-1/2 border-t border-l",
+            adjustedPosition === "left" &&
+              "right-[-5px] top-1/2 -translate-y-1/2 border-t border-r",
+            adjustedPosition === "right" && "left-[-5px] top-1/2 -translate-y-1/2 border-b border-l"
           )}
           aria-hidden="true"
         />
       </div>
     );
+
+    return createPortal(tooltipContent, document.body);
   }
 );
 

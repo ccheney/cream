@@ -10,10 +10,7 @@ export interface QueryProviderProps {
   showDevtools?: boolean;
 }
 
-export function QueryProvider({
-  children,
-  showDevtools = process.env.NODE_ENV === "development",
-}: QueryProviderProps) {
+export function QueryProvider({ children, showDevtools = false }: QueryProviderProps) {
   // useState ensures stable client across re-renders while allowing SSR to create fresh instances
   const [queryClient] = useState(() => getQueryClient());
 

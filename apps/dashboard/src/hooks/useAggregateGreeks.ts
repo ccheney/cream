@@ -77,7 +77,9 @@ export function useAggregateGreeks(
     // Override with streaming prices if available
     if (quotesData.length > 0) {
       for (const quote of quotesData) {
-        prices[quote.symbol] = quote.last ?? quote.bid ?? quote.ask ?? 0;
+        if (quote?.symbol) {
+          prices[quote.symbol] = quote.last ?? quote.bid ?? quote.ask ?? 0;
+        }
       }
     }
     return prices;

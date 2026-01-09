@@ -399,26 +399,6 @@ export interface AgentConfig {
 // Config Types
 // ============================================
 
-export interface UniverseSource {
-  type: "static" | "index" | "etf_holdings" | "screener";
-  symbols?: string[];
-  index?: string;
-  etf?: string;
-  screenerParams?: Record<string, unknown>;
-}
-
-export interface UniverseConfig {
-  sources: UniverseSource[];
-  filters: {
-    optionableOnly: boolean;
-    minAvgVolume: number;
-    minMarketCap: number;
-    excludeSectors: string[];
-  };
-  include: string[];
-  exclude: string[];
-}
-
 export interface ConstraintsConfig {
   perInstrument: {
     maxShares: number;
@@ -439,26 +419,6 @@ export interface ConstraintsConfig {
     maxVega: number;
     maxTheta: number;
   };
-}
-
-export interface Configuration {
-  version: string;
-  environment: Environment;
-  universe: UniverseConfig;
-  indicators: Record<string, unknown>;
-  regime: Record<string, unknown>;
-  constraints: ConstraintsConfig;
-  options: Record<string, unknown>;
-  memory: Record<string, unknown>;
-  schedule: Record<string, unknown>;
-}
-
-export interface ConfigVersion {
-  id: string;
-  version: string;
-  createdAt: string;
-  createdBy: string;
-  changes: string[];
 }
 
 // ============================================
@@ -792,7 +752,7 @@ export interface BacktestSummary {
 }
 
 export interface BacktestDetail extends BacktestSummary {
-  config: Configuration;
+  config: FullRuntimeConfig;
   errorMessage: string | null;
 }
 
@@ -813,7 +773,7 @@ export interface CreateBacktestRequest {
   startDate: string;
   endDate: string;
   initialCapital: number;
-  config?: Partial<Configuration>;
+  config?: Partial<FullRuntimeConfig>;
 }
 
 // ============================================
