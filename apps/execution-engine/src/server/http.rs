@@ -1,7 +1,9 @@
 //! HTTP/JSON API server implementation.
 //!
-//! This provides a simple REST API for the execution engine endpoints.
-//! Once proper gRPC is set up via buf generate, this will be deprecated.
+//! Primary REST API for the execution engine, providing:
+//! - Constraint checking endpoints
+//! - Order submission and execution
+//! - Health check endpoints
 
 use std::sync::Arc;
 
