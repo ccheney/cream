@@ -24,12 +24,7 @@ function checkUvAvailable(): boolean {
   }
 }
 
-if (!checkUvAvailable()) {
-  throw new Error(
-    "Integration tests require 'uv' to be installed. " +
-      "Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
-  );
-}
+const UV_AVAILABLE = checkUvAvailable();
 
 // ============================================
 // Mock Setup
@@ -82,7 +77,7 @@ function createTestBacktest(overrides?: Partial<Backtest>): Backtest {
 // Integration Tests
 // ============================================
 
-describe("Signal Generation Integration", () => {
+describe.skipIf(!UV_AVAILABLE)("Signal Generation Integration", () => {
   beforeEach(() => {
     mockGetAggregates.mockClear();
   });
