@@ -3,7 +3,7 @@
 //! This module provides HTTP/JSON, gRPC, and Arrow Flight API servers for the execution engine.
 //!
 //! - **HTTP/JSON**: REST API for basic operations (port 50051)
-//! - **gRPC**: ExecutionService and MarketDataService (port 50051)
+//! - **gRPC**: `ExecutionService` and `MarketDataService` (port 50051)
 //! - **Arrow Flight**: High-performance data transport (port 50052)
 //!
 //! # TLS Support

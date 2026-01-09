@@ -430,8 +430,8 @@ pub fn create_order_submitted_event(
     OrderSubmittedEvent {
         order_id: order_id.into(),
         symbol: symbol.into(),
-        side: format!("{:?}", side),
-        order_type: format!("{:?}", order_type),
+        side: format!("{side:?}"),
+        order_type: format!("{order_type:?}"),
         quantity,
         limit_price,
         stop_price,
@@ -449,7 +449,7 @@ pub fn create_data_gap_event(
 ) -> DataGapDetectedEvent {
     DataGapDetectedEvent {
         symbol: symbol.into(),
-        gap_type: format!("{}", gap_type),
+        gap_type: format!("{gap_type}"),
         timestamp: timestamp.into(),
         details,
         action: action.into(),
@@ -486,7 +486,7 @@ pub struct BacktestLogger {
 
 impl BacktestLogger {
     /// Create a new backtest logger.
-    pub fn new(log_to_tracing: bool) -> Self {
+    pub const fn new(log_to_tracing: bool) -> Self {
         Self {
             events: Vec::new(),
             log_to_tracing,
@@ -523,7 +523,7 @@ impl BacktestLogger {
     }
 
     /// Get event count.
-    pub fn event_count(&self) -> usize {
+    pub const fn event_count(&self) -> usize {
         self.events.len()
     }
 
@@ -693,7 +693,7 @@ mod tests {
             timestamp: "2025-06-01T10:00:00Z".to_string(),
         }));
 
-        let json = logger.to_json().unwrap();
+        let json = logger.to_json().expect("should serialize logger to JSON");
         assert!(json.contains("order_rejected"));
         assert!(json.contains("AAPL"));
         assert!(json.contains("Insufficient funds"));

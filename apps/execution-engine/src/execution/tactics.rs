@@ -1,6 +1,6 @@
 //! Execution tactics for order submission.
 //!
-//! This module implements various execution tactics (PASSIVE_LIMIT, TWAP, VWAP)
+//! This module implements various execution tactics (`PASSIVE_LIMIT`, `TWAP`, `VWAP`)
 //! to optimize order fills while minimizing market impact.
 //!
 //! See docs/plans/07-execution.md for detailed documentation on each tactic.
@@ -27,7 +27,7 @@ pub enum TacticType {
     Adaptive,
 }
 
-/// Configuration for PASSIVE_LIMIT tactic.
+/// Configuration for `PASSIVE_LIMIT` tactic.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PassiveLimitConfig {
     /// Basis points inside NBBO (1 BPS = 0.01% = 0.0001).
@@ -51,7 +51,7 @@ impl Default for PassiveLimitConfig {
 impl PassiveLimitConfig {
     /// Calculate the limit price for a buy order.
     ///
-    /// Returns bid price + offset_bps.
+    /// Returns bid price + `offset_bps`.
     #[must_use]
     pub fn calculate_buy_price(&self, bid: Decimal, ask: Decimal) -> Decimal {
         let offset = Decimal::from(self.offset_bps) / Decimal::from(10000);
@@ -61,7 +61,7 @@ impl PassiveLimitConfig {
 
     /// Calculate the limit price for a sell order.
     ///
-    /// Returns ask price - offset_bps.
+    /// Returns ask price - `offset_bps`.
     #[must_use]
     pub fn calculate_sell_price(&self, bid: Decimal, ask: Decimal) -> Decimal {
         let offset = Decimal::from(self.offset_bps) / Decimal::from(10000);
@@ -82,7 +82,7 @@ impl PassiveLimitConfig {
     }
 }
 
-/// Configuration for AGGRESSIVE_LIMIT tactic.
+/// Configuration for `AGGRESSIVE_LIMIT` tactic.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AggressiveLimitConfig {
     /// Basis points past NBBO.
@@ -103,7 +103,7 @@ impl Default for AggressiveLimitConfig {
 impl AggressiveLimitConfig {
     /// Calculate the limit price for a buy order (crosses the spread).
     ///
-    /// Returns ask price + cross_bps.
+    /// Returns ask price + `cross_bps`.
     #[must_use]
     pub fn calculate_buy_price(&self, ask: Decimal) -> Decimal {
         let offset = Decimal::from(self.cross_bps) / Decimal::from(10000);
@@ -112,7 +112,7 @@ impl AggressiveLimitConfig {
 
     /// Calculate the limit price for a sell order (crosses the spread).
     ///
-    /// Returns bid price - cross_bps.
+    /// Returns bid price - `cross_bps`.
     #[must_use]
     pub fn calculate_sell_price(&self, bid: Decimal) -> Decimal {
         let offset = Decimal::from(self.cross_bps) / Decimal::from(10000);
@@ -308,10 +308,10 @@ pub enum SliceType {
 pub struct TacticConfig {
     /// Tactic type.
     pub tactic: TacticType,
-    /// PASSIVE_LIMIT configuration.
+    /// `PASSIVE_LIMIT` configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub passive_limit: Option<PassiveLimitConfig>,
-    /// AGGRESSIVE_LIMIT configuration.
+    /// `AGGRESSIVE_LIMIT` configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aggressive_limit: Option<AggressiveLimitConfig>,
     /// ICEBERG configuration.
@@ -329,7 +329,7 @@ pub struct TacticConfig {
 }
 
 impl TacticConfig {
-    /// Create a PASSIVE_LIMIT tactic configuration.
+    /// Create a `PASSIVE_LIMIT` tactic configuration.
     #[must_use]
     pub fn passive_limit(config: PassiveLimitConfig) -> Self {
         Self {
@@ -343,7 +343,7 @@ impl TacticConfig {
         }
     }
 
-    /// Create an AGGRESSIVE_LIMIT tactic configuration.
+    /// Create an `AGGRESSIVE_LIMIT` tactic configuration.
     #[must_use]
     pub fn aggressive_limit(config: AggressiveLimitConfig) -> Self {
         Self {

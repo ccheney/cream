@@ -274,6 +274,8 @@ afterAll(async () => {
 - Financial calculations use `rust_decimal` (Rust) or handle precision carefully (TS)
 - All trading decisions flow through the 8-agent consensus network
 - DecisionPlans require: action, direction, size with unit, stop-loss, take-profit
+- **Do NOT modify linting rules** (Biome, Clippy, Ruff configs) without explicit approval
+- **Do NOT modify code coverage requirements** or thresholds without explicit approval
 
 ## Database Limitations (Turso)
 

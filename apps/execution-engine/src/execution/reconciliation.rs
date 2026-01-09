@@ -716,7 +716,7 @@ impl ReconciliationManager {
     /// Reconcile with resolution execution.
     ///
     /// This is the main entry point that both detects discrepancies AND executes
-    /// resolutions when auto_resolve_orphans is enabled.
+    /// resolutions when `auto_resolve_orphans` is enabled.
     pub async fn reconcile_with_execution(
         &self,
         broker_state: BrokerStateSnapshot,

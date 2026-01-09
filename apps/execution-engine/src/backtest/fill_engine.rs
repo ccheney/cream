@@ -27,7 +27,7 @@ pub struct Candle {
 impl Candle {
     /// Create a new candle.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         open: Decimal,
         high: Decimal,
         low: Decimal,
@@ -448,7 +448,7 @@ mod tests {
         assert!(result.filled);
         assert!(result.price.is_some());
         // Buy should have slippage applied (price > candle.open)
-        let fill_price = result.price.unwrap();
+        let fill_price = result.price.expect("filled order should have price");
         assert!(fill_price >= candle.open);
     }
 
@@ -468,7 +468,7 @@ mod tests {
 
         assert!(result.filled);
         // Sell should have slippage applied (price < candle.open)
-        let fill_price = result.price.unwrap();
+        let fill_price = result.price.expect("filled order should have price");
         assert!(fill_price <= candle.open);
     }
 
@@ -583,7 +583,7 @@ mod tests {
 
         assert!(result.filled);
         // Price should have slippage applied
-        assert!(result.price.unwrap() < Decimal::new(9900, 2));
+        assert!(result.price.expect("filled order should have price") < Decimal::new(9900, 2));
     }
 
     #[test]
@@ -603,7 +603,7 @@ mod tests {
         );
 
         assert!(result.filled);
-        assert!(result.price.unwrap() > Decimal::new(10100, 2));
+        assert!(result.price.expect("filled order should have price") > Decimal::new(10100, 2));
     }
 
     #[test]

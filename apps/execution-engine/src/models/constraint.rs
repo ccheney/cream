@@ -78,7 +78,7 @@ impl Default for OptionsLimits {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SizingLimits {
     /// Multiplier for flagging unusually large positions.
-    /// Positions > multiplier * typical_size trigger warnings.
+    /// Positions > multiplier * `typical_size` trigger warnings.
     pub sanity_threshold_multiplier: Decimal,
 }
 
@@ -116,7 +116,7 @@ pub enum ViolationSeverity {
 /// A single constraint violation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintViolation {
-    /// Violation code (e.g., "PER_INSTRUMENT_NOTIONAL_EXCEEDED").
+    /// Violation code (e.g., `"PER_INSTRUMENT_NOTIONAL_EXCEEDED"`).
     pub code: String,
     /// Violation severity.
     pub severity: ViolationSeverity,

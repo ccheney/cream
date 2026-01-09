@@ -81,7 +81,7 @@ impl BrokerRetryPolicy {
 
     /// Create an aggressive retry policy (more attempts, shorter backoff).
     #[must_use]
-    pub fn aggressive() -> Self {
+    pub const fn aggressive() -> Self {
         Self {
             max_attempts: 10,
             initial_backoff: Duration::from_millis(50),
@@ -93,7 +93,7 @@ impl BrokerRetryPolicy {
 
     /// Create a conservative retry policy (fewer attempts, longer backoff).
     #[must_use]
-    pub fn conservative() -> Self {
+    pub const fn conservative() -> Self {
         Self {
             max_attempts: 3,
             initial_backoff: Duration::from_millis(500),
@@ -118,7 +118,7 @@ pub struct ExponentialBackoffCalculator {
 impl ExponentialBackoffCalculator {
     /// Create a new backoff calculator from a retry policy.
     #[must_use]
-    pub fn new(policy: &BrokerRetryPolicy) -> Self {
+    pub const fn new(policy: &BrokerRetryPolicy) -> Self {
         Self {
             current_attempt: 0,
             max_attempts: policy.max_attempts,
@@ -181,7 +181,7 @@ impl ExponentialBackoffCalculator {
     }
 
     /// Reset the calculator for a new request.
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.current_attempt = 0;
     }
 }
@@ -340,7 +340,7 @@ impl AlpacaErrorHandler {
 
     /// Categorize an HTTP response status for retry decision.
     #[must_use]
-    pub fn categorize_status(status_code: u16) -> ErrorCategory {
+    pub const fn categorize_status(status_code: u16) -> ErrorCategory {
         match status_code {
             429 => ErrorCategory::RateLimited,
             400..=499 => ErrorCategory::NonRetryable,
@@ -410,13 +410,14 @@ mod tests {
         // Run multiple times to verify jitter is within range
         for _ in 0..100 {
             let mut backoff = ExponentialBackoffCalculator::new(&policy);
-            let duration = backoff.next_backoff().unwrap();
+            let duration = backoff
+                .next_backoff()
+                .expect("first backoff should always succeed");
 
             // Base is 100ms, jitter is ±20%, so range is 80-120ms
             assert!(
                 duration >= Duration::from_millis(80) && duration <= Duration::from_millis(120),
-                "Duration {:?} not in expected range 80-120ms",
-                duration
+                "Duration {duration:?} not in expected range 80-120ms"
             );
         }
     }

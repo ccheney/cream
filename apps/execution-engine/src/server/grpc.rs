@@ -1,6 +1,6 @@
 //! gRPC service implementation for the execution engine.
 //!
-//! Implements the ExecutionService and MarketDataService gRPC services
+//! Implements the `ExecutionService` and `MarketDataService` gRPC services
 //! defined in the protobuf schema.
 
 use std::pin::Pin;
@@ -664,7 +664,7 @@ impl MarketDataService for MarketDataServiceImpl {
 // Helper Functions
 // ============================================
 
-/// Convert proto DecisionPlan to internal format.
+/// Convert proto `DecisionPlan` to internal format.
 fn convert_decision_plan(
     proto: &proto::cream::v1::DecisionPlan,
 ) -> Result<crate::models::DecisionPlan, Status> {
@@ -784,7 +784,7 @@ fn convert_decision_plan(
     })
 }
 
-/// Convert internal OrderStatus to proto OrderStatus.
+/// Convert internal `OrderStatus` to proto `OrderStatus`.
 fn convert_order_status(status: crate::models::OrderStatus) -> i32 {
     use crate::models::OrderStatus;
     match status {
@@ -798,7 +798,7 @@ fn convert_order_status(status: crate::models::OrderStatus) -> i32 {
     }
 }
 
-/// Convert internal OrderSide to proto OrderSide.
+/// Convert internal `OrderSide` to proto `OrderSide`.
 fn convert_order_side(side: crate::models::OrderSide) -> i32 {
     use crate::models::OrderSide;
     match side {
@@ -807,7 +807,7 @@ fn convert_order_side(side: crate::models::OrderSide) -> i32 {
     }
 }
 
-/// Convert internal OrderType to proto OrderType.
+/// Convert internal `OrderType` to proto `OrderType`.
 fn convert_order_type(order_type: crate::models::OrderType) -> i32 {
     use crate::models::OrderType;
     match order_type {

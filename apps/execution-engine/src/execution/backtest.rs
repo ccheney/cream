@@ -64,7 +64,7 @@ pub struct BacktestAdapter {
 pub struct RecordedOrder {
     /// Order ID assigned by the adapter.
     pub order_id: String,
-    /// Broker order ID (same as order_id in backtest).
+    /// Broker order ID (same as `order_id` in backtest).
     pub broker_order_id: String,
     /// Original decision ID from the plan.
     pub decision_id: String,
@@ -440,7 +440,7 @@ mod tests {
         let result = adapter.submit_orders(&request).await;
 
         assert!(result.is_ok());
-        let ack = result.unwrap();
+        let ack = result.expect("submit_orders should succeed");
 
         assert_eq!(ack.cycle_id, "test-cycle-1");
         assert_eq!(ack.environment, Environment::Backtest);
@@ -460,7 +460,10 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter.submit_orders(&request).await.unwrap();
+        adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         let recorded = adapter.submitted_orders();
         assert_eq!(recorded.len(), 1);
@@ -498,13 +501,16 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        let ack = adapter.submit_orders(&request).await.unwrap();
+        let ack = adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         let broker_order_id = &ack.orders[0].broker_order_id;
         let status = adapter.get_order_status(broker_order_id).await;
 
         assert!(status.is_ok());
-        let order = status.unwrap();
+        let order = status.expect("get_order_status should succeed");
         assert_eq!(order.status, OrderStatus::Filled);
     }
 
@@ -526,7 +532,10 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        let ack = adapter.submit_orders(&request).await.unwrap();
+        let ack = adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         let broker_order_id = &ack.orders[0].broker_order_id;
         let result = adapter.cancel_order(broker_order_id).await;
@@ -540,7 +549,7 @@ mod tests {
         let result = adapter.cancel_order("nonexistent").await;
 
         assert!(result.is_err());
-        match result.unwrap_err() {
+        match result.expect_err("cancel_order should fail for nonexistent order") {
             BrokerError::OrderNotFound(id) => assert_eq!(id, "nonexistent"),
             _ => panic!("Expected OrderNotFound error"),
         }
@@ -552,7 +561,10 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter.submit_orders(&request).await.unwrap();
+        adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         assert_eq!(adapter.order_count(), 1);
 
@@ -596,7 +608,10 @@ mod tests {
             },
         };
 
-        let ack = adapter.submit_orders(&request).await.unwrap();
+        let ack = adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         // Hold action should not produce an order
         assert!(ack.orders.is_empty());
@@ -610,7 +625,10 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter.submit_orders(&request).await.unwrap();
+        adapter
+            .submit_orders(&request)
+            .await
+            .expect("submit_orders should succeed");
 
         let cloned = adapter.clone();
 

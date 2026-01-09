@@ -3,7 +3,7 @@
 //! Provides database integration for persisting order and portfolio state,
 //! enabling recovery after system crashes.
 //!
-//! Uses Turso (Rust rewrite of SQLite) for durable state storage.
+//! Uses Turso (Rust rewrite of `SQLite`) for durable state storage.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -98,7 +98,7 @@ pub struct OrderSnapshot {
 }
 
 impl OrderSnapshot {
-    /// Create snapshot from OrderState.
+    /// Create snapshot from `OrderState`.
     pub fn from_order_state(order: &OrderState) -> Self {
         Self {
             order_id: order.order_id.clone(),
@@ -120,7 +120,7 @@ impl OrderSnapshot {
         }
     }
 
-    /// Convert snapshot back to OrderState.
+    /// Convert snapshot back to `OrderState`.
     pub fn to_order_state(&self) -> OrderState {
         OrderState {
             order_id: self.order_id.clone(),
@@ -358,53 +358,53 @@ impl StatePersistence {
         Ok(count)
     }
 
-    /// Convert database row to OrderSnapshot.
+    /// Convert database row to `OrderSnapshot`.
     fn row_to_order_snapshot(&self, row: &Row) -> Result<OrderSnapshot, PersistenceError> {
         Ok(OrderSnapshot {
             order_id: row
                 .get::<String>(0)
-                .map_err(|e| PersistenceError::MissingField(format!("order_id: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("order_id: {e}")))?,
             broker_order_id: row
                 .get::<String>(1)
-                .map_err(|e| PersistenceError::MissingField(format!("broker_order_id: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("broker_order_id: {e}")))?,
             instrument_id: row
                 .get::<String>(2)
-                .map_err(|e| PersistenceError::MissingField(format!("instrument_id: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("instrument_id: {e}")))?,
             status: row
                 .get::<String>(3)
-                .map_err(|e| PersistenceError::MissingField(format!("status: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("status: {e}")))?,
             side: row
                 .get::<String>(4)
-                .map_err(|e| PersistenceError::MissingField(format!("side: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("side: {e}")))?,
             order_type: row
                 .get::<String>(5)
-                .map_err(|e| PersistenceError::MissingField(format!("order_type: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("order_type: {e}")))?,
             time_in_force: row
                 .get::<String>(6)
-                .map_err(|e| PersistenceError::MissingField(format!("time_in_force: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("time_in_force: {e}")))?,
             requested_quantity: row
                 .get::<String>(7)
-                .map_err(|e| PersistenceError::MissingField(format!("requested_quantity: {}", e)))?
+                .map_err(|e| PersistenceError::MissingField(format!("requested_quantity: {e}")))?
                 .parse()
                 .unwrap_or(Decimal::ZERO),
             filled_quantity: row
                 .get::<String>(8)
-                .map_err(|e| PersistenceError::MissingField(format!("filled_quantity: {}", e)))?
+                .map_err(|e| PersistenceError::MissingField(format!("filled_quantity: {e}")))?
                 .parse()
                 .unwrap_or(Decimal::ZERO),
             avg_fill_price: row
                 .get::<String>(9)
-                .map_err(|e| PersistenceError::MissingField(format!("avg_fill_price: {}", e)))?
+                .map_err(|e| PersistenceError::MissingField(format!("avg_fill_price: {e}")))?
                 .parse()
                 .unwrap_or(Decimal::ZERO),
             limit_price: row.get::<String>(10).ok().and_then(|s| s.parse().ok()),
             stop_price: row.get::<String>(11).ok().and_then(|s| s.parse().ok()),
             submitted_at: row
                 .get::<String>(12)
-                .map_err(|e| PersistenceError::MissingField(format!("submitted_at: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("submitted_at: {e}")))?,
             last_update_at: row
                 .get::<String>(13)
-                .map_err(|e| PersistenceError::MissingField(format!("last_update_at: {}", e)))?,
+                .map_err(|e| PersistenceError::MissingField(format!("last_update_at: {e}")))?,
             status_message: row.get::<String>(14).unwrap_or_default(),
             is_multi_leg: row.get::<i64>(15).unwrap_or(0) != 0,
         })
@@ -461,15 +461,15 @@ impl StatePersistence {
         {
             let symbol: String = row
                 .get(0)
-                .map_err(|e| PersistenceError::MissingField(format!("symbol: {}", e)))?;
+                .map_err(|e| PersistenceError::MissingField(format!("symbol: {e}")))?;
             let qty: Decimal = row
                 .get::<String>(1)
-                .map_err(|e| PersistenceError::MissingField(format!("quantity: {}", e)))?
+                .map_err(|e| PersistenceError::MissingField(format!("quantity: {e}")))?
                 .parse()
                 .unwrap_or(Decimal::ZERO);
             let avg_entry_price: Decimal = row
                 .get::<String>(2)
-                .map_err(|e| PersistenceError::MissingField(format!("avg_entry_price: {}", e)))?
+                .map_err(|e| PersistenceError::MissingField(format!("avg_entry_price: {e}")))?
                 .parse()
                 .unwrap_or(Decimal::ZERO);
 

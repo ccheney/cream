@@ -78,9 +78,9 @@ pub struct CircuitBreakerConfig {
     pub sliding_window_size: u32,
     /// Minimum calls before evaluating failure rate.
     pub minimum_calls: u32,
-    /// Duration to stay in OPEN state.
+    /// Duration to stay in `OPEN` state.
     pub wait_duration_in_open: Duration,
-    /// Permitted test calls in HALF_OPEN state.
+    /// Permitted test calls in `HALF_OPEN` state.
     pub permitted_calls_in_half_open: u32,
     /// Maximum call duration before timeout.
     pub call_timeout: Duration,
@@ -157,9 +157,9 @@ pub struct CircuitBreaker {
     sliding_window: RwLock<VecDeque<CallOutcome>>,
     /// Timestamp when circuit opened (for wait duration).
     opened_at: RwLock<Option<Instant>>,
-    /// Calls made in HALF_OPEN state.
+    /// Calls made in `HALF_OPEN` state.
     half_open_calls: AtomicU32,
-    /// Successes in HALF_OPEN state.
+    /// Successes in `HALF_OPEN` state.
     half_open_successes: AtomicU32,
     /// Total calls counter (for metrics).
     total_calls: AtomicU64,
@@ -296,7 +296,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// Evaluate HALF_OPEN state and transition accordingly.
+    /// Evaluate `HALF_OPEN` state and transition accordingly.
     fn evaluate_half_open_state(&self, outcome: CallOutcome) {
         if outcome == CallOutcome::Failure {
             // Any failure in HALF_OPEN → OPEN
@@ -312,7 +312,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// Check for time-based state transitions (OPEN → HALF_OPEN).
+    /// Check for time-based state transitions (`OPEN` -> `HALF_OPEN`).
     fn check_state_transition(&self) {
         let state = *self.state.read().unwrap_or_else(|e| e.into_inner());
 
@@ -327,7 +327,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// Transition to OPEN state.
+    /// Transition to `OPEN` state.
     fn transition_to_open(&self) {
         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
         let previous = *state;
@@ -351,7 +351,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// Transition to HALF_OPEN state.
+    /// Transition to `HALF_OPEN` state.
     fn transition_to_half_open(&self) {
         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
         let previous = *state;

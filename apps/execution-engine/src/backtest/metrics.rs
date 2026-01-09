@@ -237,7 +237,7 @@ impl PerformanceCalculator {
     }
 
     /// Set the risk-free rate for Sharpe/Sortino calculations.
-    pub fn set_risk_free_rate(&mut self, rate: Decimal) {
+    pub const fn set_risk_free_rate(&mut self, rate: Decimal) {
         self.risk_free_rate = rate;
     }
 
@@ -692,14 +692,14 @@ pub fn format_pct(value: Decimal) -> String {
 /// Format a decimal with 2 decimal places.
 #[must_use]
 pub fn format_decimal(value: Decimal) -> String {
-    format!("{:.2}", value)
+    format!("{value:.2}")
 }
 
 /// Format an optional decimal ratio.
 #[must_use]
 pub fn format_ratio(value: Option<Decimal>) -> String {
     match value {
-        Some(v) => format!("{:.2}", v),
+        Some(v) => format!("{v:.2}"),
         None => "N/A".to_string(),
     }
 }
@@ -794,7 +794,9 @@ mod tests {
         // 2 losers * $301 = $602 total loss
         assert_eq!(summary.gross_loss, Decimal::new(602, 0));
         // Profit factor = 998/602 ≈ 1.658
-        let pf = summary.profit_factor.unwrap();
+        let pf = summary
+            .profit_factor
+            .expect("profit factor should be calculated");
         assert!(pf > Decimal::new(165, 2) && pf < Decimal::new(166, 2));
     }
 
@@ -884,17 +886,17 @@ mod tests {
             Decimal::new(30, 0),
             Decimal::new(40, 0),
         ];
-        let std = std_dev(&values).unwrap();
+        let std = std_dev(&values).expect("std_dev should succeed for non-empty values");
         // Expected std dev ~ 12.9
         assert!(std > Decimal::new(12, 0) && std < Decimal::new(14, 0));
     }
 
     #[test]
     fn test_sqrt() {
-        let sqrt4 = sqrt_decimal(Decimal::new(4, 0)).unwrap();
+        let sqrt4 = sqrt_decimal(Decimal::new(4, 0)).expect("sqrt of 4 should succeed");
         assert!((sqrt4 - Decimal::new(2, 0)).abs() < Decimal::new(1, 3));
 
-        let sqrt9 = sqrt_decimal(Decimal::new(9, 0)).unwrap();
+        let sqrt9 = sqrt_decimal(Decimal::new(9, 0)).expect("sqrt of 9 should succeed");
         assert!((sqrt9 - Decimal::new(3, 0)).abs() < Decimal::new(1, 3));
     }
 
@@ -940,7 +942,9 @@ mod tests {
         let summary = calc.calculate();
 
         // Payoff ratio = avg_win / avg_loss = 599 / 301 ≈ 1.99
-        let pr = summary.payoff_ratio.unwrap();
+        let pr = summary
+            .payoff_ratio
+            .expect("payoff ratio should be calculated");
         assert!(pr > Decimal::new(198, 2) && pr < Decimal::new(200, 2));
     }
 }

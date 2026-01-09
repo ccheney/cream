@@ -180,7 +180,7 @@ pub enum ParamValue {
 impl ParamValue {
     /// Get as integer if applicable.
     #[must_use]
-    pub fn as_int(&self) -> Option<i64> {
+    pub const fn as_int(&self) -> Option<i64> {
         match self {
             Self::Int(v) => Some(*v),
             Self::Float(v) => Some(*v as i64),
@@ -190,7 +190,7 @@ impl ParamValue {
 
     /// Get as float if applicable.
     #[must_use]
-    pub fn as_float(&self) -> Option<f64> {
+    pub const fn as_float(&self) -> Option<f64> {
         match self {
             Self::Int(v) => Some(*v as f64),
             Self::Float(v) => Some(*v),
@@ -485,7 +485,7 @@ pub struct ParallelBacktester {
 impl ParallelBacktester {
     /// Create a new parallel backtester.
     #[must_use]
-    pub fn new(config: ParallelConfig) -> Self {
+    pub const fn new(config: ParallelConfig) -> Self {
         Self { config }
     }
 
@@ -688,7 +688,7 @@ impl ParallelBacktester {
                 strategy.parameters = params;
 
                 BacktestJob {
-                    job_id: format!("grid_{}", i),
+                    job_id: format!("grid_{i}"),
                     strategy,
                     backtest_config: backtest_config.clone(),
                     priority: 0,
@@ -1042,7 +1042,10 @@ mod tests {
 
         assert!(grid_result.optimal_parameters().is_some());
         assert_eq!(
-            grid_result.optimal_parameters().unwrap().get("period"),
+            grid_result
+                .optimal_parameters()
+                .expect("optimal parameters should exist")
+                .get("period"),
             Some(&ParamValue::Int(20))
         );
     }

@@ -113,7 +113,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Create a passing validation result.
-    pub fn pass() -> Self {
+    pub const fn pass() -> Self {
         Self {
             valid: true,
             errors: Vec::new(),
@@ -137,7 +137,7 @@ impl ValidationResult {
     }
 
     /// Check if there are any warnings.
-    pub fn has_warnings(&self) -> bool {
+    pub const fn has_warnings(&self) -> bool {
         !self.warnings.is_empty()
     }
 }
@@ -173,7 +173,7 @@ pub enum EarningsReleaseTiming {
 pub struct FundamentalDataAvailability {
     /// Symbol.
     pub symbol: String,
-    /// Metric name (e.g., "revenue", "eps", "book_value").
+    /// Metric name (e.g., `"revenue"`, `"eps"`, `"book_value"`).
     pub metric: String,
     /// Period end date.
     pub period_end: NaiveDate,
@@ -430,8 +430,7 @@ pub fn validate_universe_constituents(
         if let Some(added_date) = actual_constituents.get(symbol) {
             if as_of_date < *added_date {
                 let warning = format!(
-                    "{} was not in {} until {} but used for {}",
-                    symbol, index, added_date, as_of_date
+                    "{symbol} was not in {index} until {added_date} but used for {as_of_date}"
                 );
 
                 warn!(
@@ -446,10 +445,8 @@ pub fn validate_universe_constituents(
             }
         } else {
             // Symbol not found in historical constituents
-            let warning = format!(
-                "{} not found in historical {} constituents for {}",
-                symbol, index, as_of_date
-            );
+            let warning =
+                format!("{symbol} not found in historical {index} constituents for {as_of_date}");
             result = result.with_warning(warning);
         }
     }
@@ -461,14 +458,17 @@ pub fn validate_universe_constituents(
 // Helper Functions
 // ============================================
 
-/// Parse a timestamp string to DateTime<Utc>.
+/// Parse a timestamp string to `DateTime<Utc>`.
 fn parse_timestamp(timestamp: &str) -> Result<DateTime<Utc>, LookAheadError> {
     DateTime::parse_from_rfc3339(timestamp)
         .map(|dt| dt.with_timezone(&Utc))
         .or_else(|_| {
             // Try parsing as just a date
-            NaiveDate::parse_from_str(timestamp, "%Y-%m-%d")
-                .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc())
+            NaiveDate::parse_from_str(timestamp, "%Y-%m-%d").map(|d| {
+                d.and_hms_opt(0, 0, 0)
+                    .expect("midnight is always valid for any date")
+                    .and_utc()
+            })
         })
         .map_err(|e| LookAheadError::InvalidTimestamp {
             timestamp: timestamp.to_string(),
@@ -480,7 +480,7 @@ fn parse_timestamp(timestamp: &str) -> Result<DateTime<Utc>, LookAheadError> {
 fn format_duration(duration: Duration) -> String {
     let total_seconds = duration.num_seconds();
     if total_seconds < 60 {
-        format!("{}s", total_seconds)
+        format!("{total_seconds}s")
     } else if total_seconds < 3600 {
         format!("{}m", total_seconds / 60)
     } else if total_seconds < 86400 {
@@ -529,7 +529,7 @@ pub struct DataAccessRecord {
 
 impl LookAheadChecker {
     /// Create a new look-ahead bias checker.
-    pub fn new(config: LookAheadConfig) -> Self {
+    pub const fn new(config: LookAheadConfig) -> Self {
         Self {
             config,
             access_log: Vec::new(),
@@ -612,17 +612,17 @@ impl LookAheadChecker {
     }
 
     /// Get the number of warnings issued.
-    pub fn warnings_issued(&self) -> usize {
+    pub const fn warnings_issued(&self) -> usize {
         self.warnings_issued
     }
 
     /// Get the number of violations found.
-    pub fn violations_found(&self) -> usize {
+    pub const fn violations_found(&self) -> usize {
         self.violations_found
     }
 
     /// Check if any violations were found.
-    pub fn has_violations(&self) -> bool {
+    pub const fn has_violations(&self) -> bool {
         self.violations_found > 0
     }
 
@@ -721,9 +721,10 @@ mod tests {
     fn test_check_earnings_availability_valid() {
         let earnings = EarningsRelease {
             symbol: "AAPL".to_string(),
-            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31).unwrap(),
+            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31)
+                .expect("valid fiscal quarter end date"),
             release_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .unwrap()
+                .expect("valid release timestamp")
                 .with_timezone(&Utc),
             release_timing: EarningsReleaseTiming::AfterMarketClose,
         };
@@ -736,9 +737,10 @@ mod tests {
     fn test_check_earnings_availability_before_release() {
         let earnings = EarningsRelease {
             symbol: "AAPL".to_string(),
-            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31).unwrap(),
+            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31)
+                .expect("valid fiscal quarter end date"),
             release_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .unwrap()
+                .expect("valid release timestamp")
                 .with_timezone(&Utc),
             release_timing: EarningsReleaseTiming::AfterMarketClose,
         };
@@ -756,9 +758,9 @@ mod tests {
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).unwrap(),
+            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
             available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .unwrap()
+                .expect("valid available timestamp")
                 .with_timezone(&Utc),
             is_original: true,
         };
@@ -773,9 +775,9 @@ mod tests {
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).unwrap(),
+            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
             available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .unwrap()
+                .expect("valid available timestamp")
                 .with_timezone(&Utc),
             is_original: true,
         };
@@ -794,9 +796,9 @@ mod tests {
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).unwrap(),
+            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
             available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .unwrap()
+                .expect("valid available timestamp")
                 .with_timezone(&Utc),
             is_original: false, // Restated
         };
@@ -815,15 +817,15 @@ mod tests {
         let mut actual = HashMap::new();
         actual.insert(
             "AAPL".to_string(),
-            NaiveDate::from_ymd_opt(2010, 1, 1).unwrap(),
+            NaiveDate::from_ymd_opt(2010, 1, 1).expect("valid AAPL add date"),
         );
         actual.insert(
             "TSLA".to_string(),
-            NaiveDate::from_ymd_opt(2020, 12, 21).unwrap(),
+            NaiveDate::from_ymd_opt(2020, 12, 21).expect("valid TSLA add date"),
         );
 
         let symbols = vec!["AAPL".to_string(), "TSLA".to_string()];
-        let as_of = NaiveDate::from_ymd_opt(2019, 1, 1).unwrap();
+        let as_of = NaiveDate::from_ymd_opt(2019, 1, 1).expect("valid as_of date");
 
         let result = validate_universe_constituents("SPX", &symbols, as_of, &actual);
         assert!(result.valid); // No errors, just warnings
@@ -866,7 +868,7 @@ mod tests {
             decision_timestamp: "2025-06-01T10:00:00Z".to_string(),
             data_type: "candle".to_string(),
         };
-        let display = format!("{}", error);
+        let display = format!("{error}");
         assert!(display.contains("FUTURE_DATA"));
         assert!(display.contains("12:00:00"));
     }
@@ -887,7 +889,7 @@ mod tests {
             violations: 2,
             warnings: 5,
         };
-        let display = format!("{}", summary);
+        let display = format!("{summary}");
         assert!(display.contains("98/100"));
         assert!(display.contains("2 violations"));
         assert!(display.contains("5 warnings"));

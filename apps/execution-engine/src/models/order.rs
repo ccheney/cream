@@ -185,7 +185,7 @@ pub struct ExecutionError {
 // FIX Protocol Partial Fill Types
 // ============================================================================
 
-/// Individual execution fill (FIX ExecutionReport).
+/// Individual execution fill (FIX `ExecutionReport`).
 ///
 /// Each fill represents a single execution event from the venue.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,22 +208,22 @@ pub struct ExecutionFill {
 
 /// FIX protocol-compliant partial fill state.
 ///
-/// Implements the fundamental FIX rule: OrderQty = CumQty + LeavesQty
-/// - OrderQty: Original requested quantity
-/// - CumQty: Cumulative quantity filled across all executions
-/// - LeavesQty: Remaining quantity open for execution
-/// - AvgPx: Volume-weighted average fill price
+/// Implements the fundamental FIX rule: `OrderQty` = `CumQty` + `LeavesQty`
+/// - `OrderQty`: Original requested quantity
+/// - `CumQty`: Cumulative quantity filled across all executions
+/// - `LeavesQty`: Remaining quantity open for execution
+/// - `AvgPx`: Volume-weighted average fill price
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialFillState {
     /// Order ID this state belongs to.
     pub order_id: String,
-    /// Original requested quantity (FIX tag 38: OrderQty).
+    /// Original requested quantity (FIX tag 38: `OrderQty`).
     pub order_qty: Decimal,
-    /// Cumulative quantity filled (FIX tag 14: CumQty).
+    /// Cumulative quantity filled (FIX tag 14: `CumQty`).
     pub cum_qty: Decimal,
-    /// Remaining quantity to fill (FIX tag 151: LeavesQty).
+    /// Remaining quantity to fill (FIX tag 151: `LeavesQty`).
     pub leaves_qty: Decimal,
-    /// Volume-weighted average fill price (FIX tag 6: AvgPx).
+    /// Volume-weighted average fill price (FIX tag 6: `AvgPx`).
     pub avg_px: Decimal,
     /// Individual fills for this order.
     pub fills: Vec<ExecutionFill>,
@@ -254,7 +254,7 @@ impl PartialFillState {
 
     /// Apply an execution fill to this state.
     ///
-    /// Updates CumQty, LeavesQty, and recalculates AvgPx using VWAP.
+    /// Updates `CumQty`, `LeavesQty`, and recalculates `AvgPx` using VWAP.
     pub fn apply_fill(&mut self, fill: ExecutionFill) {
         // VWAP calculation: new_avg = (old_avg * old_cum + fill_price * fill_qty) / new_cum
         let new_cum_qty = self.cum_qty + fill.quantity;
@@ -291,7 +291,7 @@ impl PartialFillState {
         }
     }
 
-    /// Verify FIX protocol invariant: OrderQty = CumQty + LeavesQty.
+    /// Verify FIX protocol invariant: `OrderQty` = `CumQty` + `LeavesQty`.
     #[must_use]
     pub fn verify_fix_invariant(&self) -> bool {
         self.order_qty == self.cum_qty + self.leaves_qty

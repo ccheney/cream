@@ -5,8 +5,8 @@
 //!
 //! - Missing candles for requested timestamp
 //! - Incomplete OHLC data (null/zero values)
-//! - Missing bid/ask spread data (required for SPREAD_BASED slippage)
-//! - Missing volume data (required for VOLUME_IMPACT slippage)
+//! - Missing bid/ask spread data (required for `SPREAD_BASED` slippage)
+//! - Missing volume data (required for `VOLUME_IMPACT` slippage)
 //!
 //! # Gap Handling Strategies
 //!
@@ -37,11 +37,11 @@ pub enum DataGapType {
     InvalidLow,
     /// Close price is zero or invalid.
     InvalidClose,
-    /// Volume is zero or missing (required for VOLUME_IMPACT).
+    /// Volume is zero or missing (required for `VOLUME_IMPACT`).
     MissingVolume,
-    /// Bid price missing (required for SPREAD_BASED).
+    /// Bid price missing (required for `SPREAD_BASED`).
     MissingBid,
-    /// Ask price missing (required for SPREAD_BASED).
+    /// Ask price missing (required for `SPREAD_BASED`).
     MissingAsk,
     /// Spread is invalid (ask <= bid).
     InvalidSpread,
@@ -119,7 +119,7 @@ pub struct GapValidationResult {
 
 impl GapValidationResult {
     /// Create a valid result.
-    pub fn valid() -> Self {
+    pub const fn valid() -> Self {
         Self {
             valid: true,
             gaps: Vec::new(),
@@ -143,13 +143,13 @@ impl GapValidationResult {
     }
 
     /// Add a warning (non-fatal issue).
-    pub fn add_warning(&mut self) {
+    pub const fn add_warning(&mut self) {
         self.warnings += 1;
     }
 
     /// Check if result is valid.
     #[must_use]
-    pub fn is_valid(&self) -> bool {
+    pub const fn is_valid(&self) -> bool {
         self.valid
     }
 
@@ -264,7 +264,7 @@ pub fn validate_candle_data(candle: &Candle, symbol: &str, timestamp: &str) -> G
 
 /// Validate volume data availability.
 ///
-/// Volume is required for VOLUME_IMPACT slippage model.
+/// Volume is required for `VOLUME_IMPACT` slippage model.
 ///
 /// # Arguments
 /// * `volume` - Volume value
@@ -286,11 +286,9 @@ pub fn validate_volume_data(
     }
 
     if volume <= Decimal::ZERO {
-        let error =
-            DataGapError::new(DataGapType::MissingVolume, symbol, timestamp).with_details(format!(
-                "Volume ({}) required for VOLUME_IMPACT slippage model",
-                volume
-            ));
+        let error = DataGapError::new(DataGapType::MissingVolume, symbol, timestamp).with_details(
+            format!("Volume ({volume}) required for VOLUME_IMPACT slippage model"),
+        );
 
         warn!(
             symbol = symbol,
@@ -307,7 +305,7 @@ pub fn validate_volume_data(
 
 /// Validate bid/ask spread data availability.
 ///
-/// Bid/ask data is required for SPREAD_BASED slippage model.
+/// Bid/ask data is required for `SPREAD_BASED` slippage model.
 ///
 /// # Arguments
 /// * `bid` - Bid price (optional)
@@ -350,7 +348,7 @@ pub fn validate_spread_data(
             if a <= b {
                 result.add_gap(
                     DataGapError::new(DataGapType::InvalidSpread, symbol, timestamp)
-                        .with_details(format!("Ask ({}) <= Bid ({})", a, b)),
+                        .with_details(format!("Ask ({a}) <= Bid ({b})")),
                 );
             }
         }
@@ -433,7 +431,7 @@ impl GapStatistics {
     }
 
     /// Record a processed candle.
-    pub fn record_candle(&mut self) {
+    pub const fn record_candle(&mut self) {
         self.total_candles += 1;
     }
 
@@ -625,14 +623,20 @@ mod tests {
         assert_eq!(stats.total_candles, 3);
         assert_eq!(stats.gaps_detected, 1);
         assert!((stats.gap_percentage - 33.33).abs() < 1.0);
-        assert_eq!(*stats.by_symbol.get("AAPL").unwrap(), 1);
+        assert_eq!(
+            *stats
+                .by_symbol
+                .get("AAPL")
+                .expect("AAPL should be in gap statistics"),
+            1
+        );
     }
 
     #[test]
     fn test_data_gap_error_display() {
         let error = DataGapError::new(DataGapType::MissingCandle, "AAPL", "2026-01-05T10:00:00Z");
 
-        let display = format!("{}", error);
+        let display = format!("{error}");
         assert!(display.contains("MISSING_CANDLE"));
         assert!(display.contains("AAPL"));
     }

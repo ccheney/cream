@@ -156,7 +156,10 @@ pub fn simulate_multi_leg_order(
     let mut leg_results: Vec<(OrderLeg, FillResult)> = Vec::new();
 
     for leg in legs {
-        let candle = candles.get(&leg.instrument_id).unwrap();
+        // Safety: we validated all instruments have candle data above
+        let candle = candles
+            .get(&leg.instrument_id)
+            .expect("candle data validated to exist for all legs");
         let avg_volume = avg_volumes.and_then(|v| v.get(&leg.instrument_id).copied());
 
         let fill = simulate_order(
@@ -203,7 +206,7 @@ pub fn simulate_multi_leg_order(
 
 /// Calculate the net price for a multi-leg fill.
 ///
-/// Net price = sum of (fill_price * ratio * side_multiplier) for all legs
+/// Net price = sum of (`fill_price` * `ratio` * `side_multiplier`) for all legs
 /// - Positive = net debit (money paid)
 /// - Negative = net credit (money received)
 fn calculate_net_price(leg_fills: &[LegFillResult]) -> Decimal {

@@ -1,6 +1,6 @@
 //! Constraint validation logic.
 //!
-//! Provides deterministic constraint validation for DecisionPlans including:
+//! Provides deterministic constraint validation for `DecisionPlans` including:
 //! - Per-instrument limits (notional, units, equity %)
 //! - Portfolio-level limits (gross/net exposure)
 //! - Options-specific limits (delta, gamma, vega, theta)
@@ -50,7 +50,7 @@ impl Default for BuyingPowerInfo {
 }
 
 impl BuyingPowerInfo {
-    /// Create a new BuyingPowerInfo with specified available buying power.
+    /// Create a new `BuyingPowerInfo` with specified available buying power.
     #[must_use]
     pub const fn new(available: Decimal, required_margin: Decimal) -> Self {
         Self {
@@ -59,7 +59,7 @@ impl BuyingPowerInfo {
         }
     }
 
-    /// Create BuyingPowerInfo with unlimited buying power (for testing only).
+    /// Create `BuyingPowerInfo` with unlimited buying power (for testing only).
     #[cfg(test)]
     #[must_use]
     pub fn unlimited() -> Self {
@@ -128,7 +128,7 @@ fn calculate_median(values: &[Decimal]) -> Option<Decimal> {
 /// Check if a position size is unusually large.
 ///
 /// Returns a warning if the proposed notional exceeds
-/// threshold_multiplier * median of historical sizes.
+/// `threshold_multiplier` * median of historical sizes.
 #[must_use]
 pub fn check_sizing_sanity(
     proposed_notional: Decimal,
@@ -336,7 +336,7 @@ impl ConstraintValidator {
                         ),
                         instrument_id: decision.instrument_id.clone(),
                         field_path: format!("decisions[{idx}].size"),
-                        observed: format!("{:.4}", pct_equity),
+                        observed: format!("{pct_equity:.4}"),
                         limit: self.limits.per_instrument.max_pct_equity.to_string(),
                     });
                 }
@@ -426,23 +426,23 @@ impl ConstraintValidator {
                     ),
                     instrument_id: String::new(),
                     field_path: "plan.decisions".to_string(),
-                    observed: format!("{:.4}", gross_pct),
+                    observed: format!("{gross_pct:.4}"),
                     limit: self.limits.portfolio.max_pct_equity_gross.to_string(),
                 });
             }
 
             if net_pct > self.limits.portfolio.max_pct_equity_net {
+                let net_pct_display = net_pct * Decimal::new(100, 0);
+                let limit_display = self.limits.portfolio.max_pct_equity_net * Decimal::new(100, 0);
                 violations.push(ConstraintViolation {
                     code: "PORTFOLIO_NET_PCT_EXCEEDED".to_string(),
                     severity: ViolationSeverity::Error,
                     message: format!(
-                        "Portfolio net exposure {:.1}% exceeds limit {:.1}%",
-                        net_pct * Decimal::new(100, 0),
-                        self.limits.portfolio.max_pct_equity_net * Decimal::new(100, 0)
+                        "Portfolio net exposure {net_pct_display:.1}% exceeds limit {limit_display:.1}%"
                     ),
                     instrument_id: String::new(),
                     field_path: "plan.decisions".to_string(),
-                    observed: format!("{:.4}", net_pct),
+                    observed: format!("{net_pct:.4}"),
                     limit: self.limits.portfolio.max_pct_equity_net.to_string(),
                 });
             }
@@ -682,7 +682,7 @@ impl ConstraintValidator {
 
     /// Calculate portfolio exposure (gross and net).
     ///
-    /// Returns (gross_notional, net_notional) where:
+    /// Returns (`gross_notional`, `net_notional`) where:
     /// - gross = sum of absolute notional values
     /// - net = sum of signed notional values (long positive, short negative)
     fn calculate_portfolio_exposure(&self, request: &ConstraintCheckRequest) -> (Decimal, Decimal) {

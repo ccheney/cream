@@ -228,7 +228,7 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
                     should_roll: true,
                     reason: Some(RollReason::LossThreshold),
                     urgency: 8,
-                    context: format!("Loss threshold exceeded ({:.1}x credit)", loss_multiple),
+                    context: format!("Loss threshold exceeded ({loss_multiple:.1}x credit)"),
                 };
             }
         }

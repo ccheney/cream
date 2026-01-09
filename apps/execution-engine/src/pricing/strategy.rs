@@ -245,7 +245,7 @@ impl StrategyBuilder {
     /// * `short_put_strike` - Strike for short put
     /// * `short_call_strike` - Strike for short call
     /// * `width` - Width of wings (distance to long strikes)
-    /// * `premiums` - (short_put, long_put, short_call, long_call) premiums
+    /// * `premiums` - (`short_put`, `long_put`, `short_call`, `long_call`) premiums
     ///
     /// # Errors
     ///
@@ -372,7 +372,7 @@ impl StrategyBuilder {
     ///
     /// * `underlying` - Underlying symbol
     /// * `expiration` - Expiration date
-    /// * `strategy_type` - Type of spread (BullCallSpread, BearCallSpread, etc.)
+    /// * `strategy_type` - Type of spread (`BullCallSpread`, `BearCallSpread`, etc.)
     /// * `short_strike` - Strike to sell
     /// * `long_strike` - Strike to buy
     /// * `short_premium` - Premium received for short leg

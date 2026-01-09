@@ -153,7 +153,7 @@ pub fn record_order_fill(broker: &str, order_type: &str, latency_seconds: f64) {
 /// # Arguments
 ///
 /// * `broker` - Broker name
-/// * `reason` - Rejection reason (e.g., "insufficient_funds", "invalid_symbol")
+/// * `reason` - Rejection reason (e.g., `"insufficient_funds"`, `"invalid_symbol"`)
 pub fn record_order_rejection(broker: &str, reason: &str) {
     counter!(
         "order_rejection_total",
@@ -235,7 +235,7 @@ pub fn record_quote_staleness(symbol: &str, staleness_seconds: f64) {
 ///
 /// # Arguments
 ///
-/// * `model` - Pricing model (e.g., "black_scholes", "binomial")
+/// * `model` - Pricing model (e.g., `"black_scholes"`, `"binomial"`)
 /// * `status` - Computation status (e.g., "success", "error", "timeout")
 /// * `duration_seconds` - Computation time in seconds
 /// * `iterations` - Number of iterations (for IV solver)
@@ -269,7 +269,7 @@ pub fn record_greeks_computation(
 ///
 /// # Arguments
 ///
-/// * `strategy_type` - Strategy type (e.g., "iron_condor", "vertical_spread")
+/// * `strategy_type` - Strategy type (e.g., `"iron_condor"`, `"vertical_spread"`)
 /// * `duration_seconds` - Build time in seconds
 pub fn record_strategy_build(strategy_type: &str, duration_seconds: f64) {
     histogram!(
@@ -287,8 +287,8 @@ pub fn record_strategy_build(strategy_type: &str, duration_seconds: f64) {
 ///
 /// # Arguments
 ///
-/// * `method` - RPC method name (e.g., "CheckConstraints", "SubmitOrders")
-/// * `status` - gRPC status code (e.g., "OK", "INVALID_ARGUMENT")
+/// * `method` - RPC method name (e.g., `"CheckConstraints"`, `"SubmitOrders"`)
+/// * `status` - gRPC status code (e.g., `"OK"`, `"INVALID_ARGUMENT"`)
 /// * `duration_seconds` - Request duration in seconds
 /// * `request_size` - Request message size in bytes
 /// * `response_size` - Response message size in bytes
@@ -350,7 +350,7 @@ pub mod circuit_breaker_state {
 /// # Arguments
 ///
 /// * `service` - Service name (e.g., "alpaca", "databento")
-/// * `state` - Numeric state (0=closed, 1=open, 2=half_open)
+/// * `state` - Numeric state (0=closed, 1=open, 2=`half_open`)
 pub fn record_circuit_breaker_state(service: &str, state: f64) {
     gauge!(
         "circuit_breaker_state",

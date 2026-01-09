@@ -153,7 +153,7 @@ impl CandleEvent {
     }
 }
 
-/// Wrapper for CandleEvent to use in BinaryHeap (min-heap by timestamp).
+/// Wrapper for `CandleEvent` to use in `BinaryHeap` (min-heap by timestamp).
 #[derive(Debug)]
 struct TimestampedEvent {
     event: CandleEvent,
@@ -391,13 +391,13 @@ impl ReplayEngine {
 
     /// Get the current progress.
     #[must_use]
-    pub fn progress(&self) -> &ReplayProgress {
+    pub const fn progress(&self) -> &ReplayProgress {
         &self.progress
     }
 
     /// Get the configuration.
     #[must_use]
-    pub fn config(&self) -> &ReplayConfig {
+    pub const fn config(&self) -> &ReplayConfig {
         &self.config
     }
 
@@ -481,7 +481,7 @@ impl Iterator for ReplayEngine {
     }
 }
 
-/// Builder for ReplayEngine with fluent API.
+/// Builder for `ReplayEngine` with fluent API.
 #[derive(Default)]
 pub struct ReplayEngineBuilder {
     config: ReplayConfig,
@@ -541,14 +541,14 @@ impl ReplayEngineBuilder {
 
     /// Set the missing data policy.
     #[must_use]
-    pub fn missing_data_policy(mut self, policy: MissingDataPolicy) -> Self {
+    pub const fn missing_data_policy(mut self, policy: MissingDataPolicy) -> Self {
         self.config.missing_data_policy = policy;
         self
     }
 
     /// Set progress tracking.
     #[must_use]
-    pub fn track_progress(mut self, track: bool) -> Self {
+    pub const fn track_progress(mut self, track: bool) -> Self {
         self.config.track_progress = track;
         self
     }
@@ -583,7 +583,7 @@ pub struct SynchronizedReplay {
 
 impl SynchronizedReplay {
     /// Create a new synchronized replay wrapper.
-    pub fn new(engine: ReplayEngine) -> Self {
+    pub const fn new(engine: ReplayEngine) -> Self {
         Self {
             engine,
             current_timestamp: None,
@@ -619,7 +619,11 @@ impl SynchronizedReplay {
                         }
                         Some(_) => {
                             // New timestamp - return buffered events and start new batch
-                            let result_timestamp = self.current_timestamp.take().unwrap();
+                            // Safety: current_timestamp is Some in this branch
+                            let result_timestamp = self
+                                .current_timestamp
+                                .take()
+                                .expect("current_timestamp set in this branch");
                             let result_events = std::mem::take(&mut self.buffer);
 
                             self.current_timestamp = Some(event_timestamp);
@@ -632,7 +636,11 @@ impl SynchronizedReplay {
                 None => {
                     // No more events - return any remaining buffered events
                     if !self.buffer.is_empty() {
-                        let result_timestamp = self.current_timestamp.take().unwrap();
+                        // Safety: current_timestamp is always set when buffer is non-empty
+                        let result_timestamp = self
+                            .current_timestamp
+                            .take()
+                            .expect("current_timestamp set when buffer is non-empty");
                         let result_events = std::mem::take(&mut self.buffer);
                         return Some((result_timestamp, result_events));
                     }
@@ -717,7 +725,9 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine.initialize().unwrap();
+        engine
+            .initialize()
+            .expect("replay engine should initialize");
 
         assert!(engine.initialized);
         assert_eq!(engine.progress().events_total, Some(6));
@@ -780,7 +790,9 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine.initialize().unwrap();
+        engine
+            .initialize()
+            .expect("replay engine should initialize");
 
         // Process some events
         engine.next_event();
@@ -844,14 +856,16 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine.initialize().unwrap();
+        engine
+            .initialize()
+            .expect("replay engine should initialize");
 
         // Consume some events
         engine.next_event();
         engine.next_event();
 
         // Reset
-        engine.reset().unwrap();
+        engine.reset().expect("replay engine should reset");
 
         // Should be able to iterate again
         let events: Vec<CandleEvent> = engine.collect();
@@ -885,7 +899,7 @@ mod tests {
 
         let candles = source
             .load_candles("AAPL", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
-            .unwrap();
+            .expect("should load candles from in-memory source");
 
         assert_eq!(candles.len(), 2);
     }

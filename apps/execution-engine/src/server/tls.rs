@@ -153,7 +153,7 @@ impl TlsConfig {
         })
     }
 
-    /// Build Tonic ServerTlsConfig from this configuration.
+    /// Build Tonic `ServerTlsConfig` from this configuration.
     pub fn build_server_config(&self) -> Result<ServerTlsConfig, TlsError> {
         let identity = Identity::from_pem(&self.cert, &self.key);
 
@@ -292,7 +292,7 @@ pub fn init_tls_config() -> Result<Option<Arc<TlsConfig>>, TlsError> {
 
 /// Get the cached TLS configuration.
 ///
-/// Returns `None` if TLS is disabled or not initialized.
+/// Returns [`None`] if TLS is disabled or not initialized.
 pub fn get_tls_config() -> Option<Arc<TlsConfig>> {
     TLS_CONFIG.get().and_then(|c| c.clone())
 }

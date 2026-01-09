@@ -686,7 +686,7 @@ struct AlpacaOrderRequest {
     stop_loss: Option<StopLossLeg>,
 }
 
-/// Helper to skip serializing order_class when it's simple
+/// Helper to skip serializing `order_class` when it's simple
 fn is_simple_order(class: &OrderClass) -> bool {
     *class == OrderClass::Simple
 }
@@ -1047,9 +1047,8 @@ impl OptionsOrderValidator {
             return Err(AlpacaError::Api {
                 code: "INVALID_TIF_FOR_OPTIONS".to_string(),
                 message: format!(
-                    "Options orders only support DAY time-in-force. Got: {:?}. \
-                     GTC, IOC, FOK are not allowed for options on Alpaca.",
-                    tif
+                    "Options orders only support DAY time-in-force. Got: {tif:?}. \
+                     GTC, IOC, FOK are not allowed for options on Alpaca."
                 ),
             });
         }
@@ -1243,7 +1242,7 @@ mod tests {
             "test-secret".to_string(),
             Environment::Paper,
         )
-        .unwrap();
+        .expect("should create paper adapter");
         assert!(adapter.base_url.contains("paper"));
 
         let live_adapter = AlpacaAdapter::new(
@@ -1251,7 +1250,7 @@ mod tests {
             "test-secret".to_string(),
             Environment::Live,
         )
-        .unwrap();
+        .expect("should create live adapter");
         assert!(!live_adapter.base_url.contains("paper"));
     }
 

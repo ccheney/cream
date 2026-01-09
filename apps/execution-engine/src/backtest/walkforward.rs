@@ -621,7 +621,7 @@ impl WalkForwardEngine {
         let new_month = (remaining / 30).min(12).max(1);
         let new_day = (remaining % 30).min(28).max(1);
 
-        format!("{:04}-{:02}-{:02}", new_year, new_month, new_day)
+        format!("{new_year:04}-{new_month:02}-{new_day:02}")
     }
 }
 
@@ -803,7 +803,9 @@ mod tests {
         oos_metrics.sharpe_ratio = Some(Decimal::ONE);
         window.out_of_sample_metrics = Some(oos_metrics);
 
-        let degradation = window.sharpe_degradation().unwrap();
+        let degradation = window
+            .sharpe_degradation()
+            .expect("degradation should be calculable with both metrics");
         assert_eq!(degradation, Decimal::new(5, 1)); // 0.5 = 50%
     }
 
@@ -894,7 +896,7 @@ mod tests {
             Decimal::new(30, 0),
         ];
 
-        let variance = calculate_variance(&values).unwrap();
+        let variance = calculate_variance(&values).expect("variance should be calculable");
         // Mean = 20, variance = ((10-20)^2 + (20-20)^2 + (30-20)^2) / 2 = 200/2 = 100
         assert_eq!(variance, Decimal::new(100, 0));
     }

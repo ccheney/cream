@@ -1,10 +1,10 @@
-//! Position sizing calculations for DecisionPlan execution.
+//! Position sizing calculations for `DecisionPlan` execution.
 //!
 //! Implements deterministic sizing logic supporting 4 units:
-//! - SHARES: Fixed number of shares
-//! - CONTRACTS: Fixed number of option contracts
-//! - DOLLARS: Dollar amount to allocate (convert to shares)
-//! - PCT_EQUITY: Percentage of total equity (convert to shares)
+//! - `SHARES`: Fixed number of shares
+//! - `CONTRACTS`: Fixed number of option contracts
+//! - `DOLLARS`: Dollar amount to allocate (convert to shares)
+//! - `PCT_EQUITY`: Percentage of total equity (convert to shares)
 //!
 //! # Example
 //!
@@ -74,7 +74,7 @@ pub struct SizingInput {
     pub sizing_unit: SizingUnit,
     /// Current price of the instrument.
     pub current_price: Decimal,
-    /// Total portfolio equity (required for PCT_EQUITY).
+    /// Total portfolio equity (required for `PCT_EQUITY`).
     pub total_equity: Decimal,
     /// Available cash for new positions.
     pub available_cash: Decimal,
@@ -107,7 +107,7 @@ impl Default for SizingInput {
 /// Result of position sizing calculation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SizingResult {
-    /// Calculated number of shares (or contracts if is_options).
+    /// Calculated number of shares (or contracts if `is_options`).
     pub quantity: u64,
     /// Total notional value of the position.
     pub notional_value: Decimal,
@@ -223,7 +223,7 @@ impl PositionSizer {
     /// Returns error if:
     /// - Input is invalid (zero price, negative values)
     /// - Calculated size is below minimum
-    /// - Insufficient cash (if check_cash is enabled)
+    /// - Insufficient cash (if `check_cash` is enabled)
     pub fn calculate(&self, input: &SizingInput) -> Result<SizingResult, SizingError> {
         // Validate input
         self.validate_input(input)?;
@@ -296,7 +296,7 @@ impl PositionSizer {
 
     /// Calculate position size for options with delta adjustment.
     ///
-    /// The effective exposure is: contracts * multiplier * delta * underlying_price
+    /// The effective exposure is: contracts * multiplier * `delta` * `underlying_price`
     ///
     /// # Errors
     ///

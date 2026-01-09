@@ -110,7 +110,7 @@ impl ErrorCode {
         }
     }
 
-    /// Get the error reason string (for gRPC ErrorInfo).
+    /// Get the error reason string (for gRPC `ErrorInfo`).
     #[must_use]
     pub const fn reason(&self) -> &'static str {
         match self {

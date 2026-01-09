@@ -4,7 +4,7 @@
 //! 1. Load persisted state from database
 //! 2. Reconcile with broker to detect discrepancies
 //! 3. Resolve orphaned orders and sync positions
-//! 4. Restore the OrderStateManager to a consistent state
+//! 4. Restore the `OrderStateManager` to a consistent state
 //!
 //! Reference: docs/plans/07-execution.md (Recovery on Restart)
 

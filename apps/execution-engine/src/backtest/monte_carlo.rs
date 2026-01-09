@@ -4,7 +4,7 @@
 //! - Trade sequence shuffling (removes timing luck)
 //! - Bootstrap resampling (sample with replacement)
 //! - Confidence interval calculation (percentile method)
-//! - Value at Risk (VaR) and Conditional VaR (CVaR)
+//! - Value at Risk (`VaR`) and Conditional `VaR` (`CVaR`)
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -119,7 +119,7 @@ pub struct LuckVsSkillAnalysis {
     pub original_return: Decimal,
     /// Percentile rank of original vs simulations (0-100).
     pub percentile_rank: Decimal,
-    /// Assessment: "SKILL", "POSSIBLE_SKILL", "LUCK", "UNDERPERFORMANCE".
+    /// Assessment: `"SKILL"`, `"POSSIBLE_SKILL"`, `"LUCK"`, `"UNDERPERFORMANCE"`.
     pub assessment: String,
     /// Probability of achieving original return by chance.
     pub p_value: Decimal,
@@ -129,14 +129,14 @@ pub struct LuckVsSkillAnalysis {
     pub total_simulations: u32,
 }
 
-/// Value at Risk (VaR) analysis.
+/// Value at Risk (`VaR`) analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaRAnalysis {
     /// Confidence level (e.g., 0.95).
     pub confidence_level: Decimal,
     /// Value at Risk (5th percentile return for 95% confidence).
     pub var: Decimal,
-    /// Conditional VaR (expected loss given loss exceeds VaR).
+    /// Conditional `VaR` (expected loss given loss exceeds `VaR`).
     pub cvar: Decimal,
     /// Probability of negative returns.
     pub prob_negative: Decimal,
@@ -289,7 +289,7 @@ impl MonteCarloSimulator {
     }
 
     /// Generate next random number (xorshift64).
-    fn next_random(&mut self) -> u64 {
+    const fn next_random(&mut self) -> u64 {
         let mut x = self.rng_state;
         x ^= x << 13;
         x ^= x >> 7;
@@ -379,7 +379,7 @@ impl MonteCarloSimulator {
         }
     }
 
-    /// Calculate Value at Risk and Conditional VaR.
+    /// Calculate Value at Risk and Conditional `VaR`.
     fn calculate_var(&self, returns: &[Decimal]) -> VaRAnalysis {
         if returns.is_empty() {
             return VaRAnalysis {
@@ -522,35 +522,35 @@ impl MonteCarloBuilder {
 
     /// Set number of iterations.
     #[must_use]
-    pub fn iterations(mut self, n: u32) -> Self {
+    pub const fn iterations(mut self, n: u32) -> Self {
         self.config.num_iterations = n;
         self
     }
 
     /// Set randomization method.
     #[must_use]
-    pub fn method(mut self, method: RandomizationMethod) -> Self {
+    pub const fn method(mut self, method: RandomizationMethod) -> Self {
         self.config.method = method;
         self
     }
 
     /// Set confidence level.
     #[must_use]
-    pub fn confidence_level(mut self, level: Decimal) -> Self {
+    pub const fn confidence_level(mut self, level: Decimal) -> Self {
         self.config.confidence_level = level;
         self
     }
 
     /// Set random seed for reproducibility.
     #[must_use]
-    pub fn seed(mut self, seed: u64) -> Self {
+    pub const fn seed(mut self, seed: u64) -> Self {
         self.config.seed = Some(seed);
         self
     }
 
     /// Set initial equity.
     #[must_use]
-    pub fn initial_equity(mut self, equity: Decimal) -> Self {
+    pub const fn initial_equity(mut self, equity: Decimal) -> Self {
         self.config.initial_equity = equity;
         self
     }

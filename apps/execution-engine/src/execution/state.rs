@@ -152,10 +152,10 @@ impl OrderStateManager {
 
     /// Apply an execution fill to an order.
     ///
-    /// Updates the FIX protocol fields (CumQty, LeavesQty, AvgPx) and
-    /// synchronizes with the OrderState.
+    /// Updates the FIX protocol fields (`CumQty`, `LeavesQty`, `AvgPx`) and
+    /// synchronizes with the `OrderState`.
     ///
-    /// Returns the updated PartialFillState if successful.
+    /// Returns the updated `PartialFillState` if successful.
     pub fn apply_fill(&self, order_id: &str, fill: ExecutionFill) -> Option<PartialFillState> {
         // Update partial fill state
         let updated_state = {
@@ -206,7 +206,7 @@ impl OrderStateManager {
 
     /// Check for timed-out partial fills and return actions to take.
     ///
-    /// Returns a list of TimeoutResult for each order that has timed out.
+    /// Returns a list of `TimeoutResult` for each order that has timed out.
     #[must_use]
     pub fn check_timeouts(&self) -> Vec<TimeoutResult> {
         let fills = match self.partial_fills.read() {
@@ -308,7 +308,10 @@ mod tests {
 
         let retrieved = manager.get("ord-1");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().order_id, "ord-1");
+        assert_eq!(
+            retrieved.expect("order should exist").order_id,
+            "ord-1"
+        );
     }
 
     #[test]
@@ -320,7 +323,10 @@ mod tests {
 
         let retrieved = manager.get_by_broker_id("broker-1");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().order_id, "ord-1");
+        assert_eq!(
+            retrieved.expect("order should exist by broker_id").order_id,
+            "ord-1"
+        );
     }
 
     #[test]
@@ -365,7 +371,7 @@ mod tests {
 
         let state = manager.get_partial_fill_state("ord-1");
         assert!(state.is_some());
-        let state = state.unwrap();
+        let state = state.expect("partial fill state should exist");
         assert_eq!(state.order_qty, Decimal::new(100, 0));
         assert_eq!(state.cum_qty, Decimal::ZERO);
         assert_eq!(state.leaves_qty, Decimal::new(100, 0));

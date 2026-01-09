@@ -708,7 +708,7 @@ impl PriceMonitor {
 
     /// Check a price update against all monitored positions.
     ///
-    /// Returns a list of (position_id, trigger_result) for any triggers.
+    /// Returns a list of (`position_id`, `trigger_result`) for any triggers.
     #[must_use]
     pub fn check_price(&self, instrument_id: &str, price: Decimal) -> Vec<(String, TriggerResult)> {
         let timestamp = chrono::Utc::now().to_rfc3339();

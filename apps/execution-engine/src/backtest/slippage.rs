@@ -95,7 +95,7 @@ fn apply_spread_based_slippage(
 /// Apply volume impact slippage using the square-root law.
 ///
 /// Market impact increases non-linearly with order size:
-/// impact = coefficient * (order_size / avg_volume)^exponent
+/// impact = `coefficient` * (`order_size` / `avg_volume`)^`exponent`
 fn apply_volume_impact_slippage(
     price: Decimal,
     side: OrderSide,

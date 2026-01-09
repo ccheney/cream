@@ -5,12 +5,12 @@
 //!
 //! # Endpoints
 //!
-//! ## DoGet (Data Retrieval)
-//! - `positions` - Current positions (symbol, quantity, avg_price, market_value)
+//! ## `DoGet` (Data Retrieval)
+//! - `positions` - Current positions (`symbol`, `quantity`, `avg_price`, `market_value`)
 //! - `orders` - Order history and status
 //! - `market_data/{symbol}` - Market data snapshots
 //!
-//! ## DoPut (Data Ingestion)
+//! ## `DoPut` (Data Ingestion)
 //! - `market_data` - Ingest market data updates (quotes, trades)
 //!
 //! # Usage
@@ -77,7 +77,7 @@ impl CreamFlightService {
         ]))
     }
 
-    /// Convert market data to Arrow RecordBatch.
+    /// Convert market data to Arrow `RecordBatch`.
     fn market_data_to_record_batch(
         snapshots: Vec<MarketDataSnapshot>,
     ) -> Result<RecordBatch, arrow_flight::error::FlightError> {
@@ -119,7 +119,7 @@ impl CreamFlightService {
         .map_err(|e| arrow_flight::error::FlightError::from(e))
     }
 
-    /// Parse market data from Arrow RecordBatch.
+    /// Parse market data from Arrow `RecordBatch`.
     fn parse_market_data_batch(
         batch: &RecordBatch,
     ) -> Result<Vec<MarketDataSnapshot>, arrow_flight::error::FlightError> {
@@ -232,7 +232,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
     /// List available flights.
     ///
     /// Returns metadata for all available data streams:
-    /// - market_data: Real-time market data snapshots (quotes, last price, volume)
+    /// - `market_data`: Real-time market data snapshots (quotes, last price, volume)
     async fn list_flights(
         &self,
         _request: tonic::Request<arrow_flight::Criteria>,
@@ -327,7 +327,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         }
     }
 
-    /// DoGet: Retrieve data.
+    /// `DoGet`: Retrieve data.
     async fn do_get(
         &self,
         request: tonic::Request<Ticket>,
@@ -348,7 +348,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                 let batch = Self::market_data_to_record_batch(snapshots)
                     .map_err(|e| tonic::Status::internal(format!("Failed to create batch: {e}")))?;
 
-                // Convert RecordBatch to FlightData stream using FlightDataEncoder
+                // Convert `RecordBatch` to `FlightData` stream using `FlightDataEncoder`
                 let schema = batch.schema();
                 let batches = vec![batch];
 
@@ -369,7 +369,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         }
     }
 
-    /// DoPut: Ingest data.
+    /// `DoPut`: Ingest data.
     async fn do_put(
         &self,
         request: tonic::Request<tonic::Streaming<arrow_flight::FlightData>>,
@@ -413,7 +413,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         Ok(tonic::Response::new(Box::pin(output)))
     }
 
-    /// DoExchange: Bidirectional streaming (not implemented).
+    /// `DoExchange`: Bidirectional streaming (not implemented).
     async fn do_exchange(
         &self,
         _request: tonic::Request<tonic::Streaming<arrow_flight::FlightData>>,
@@ -423,7 +423,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         ))
     }
 
-    /// DoAction: Perform an action.
+    /// `DoAction`: Perform an action.
     ///
     /// Available actions:
     /// - `clear_cache`: Clear the market data cache
@@ -482,7 +482,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
         }
     }
 
-    /// ListActions: List available actions.
+    /// `ListActions`: List available actions.
     async fn list_actions(
         &self,
         _request: tonic::Request<arrow_flight::Empty>,

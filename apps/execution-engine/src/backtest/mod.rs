@@ -240,35 +240,35 @@ impl SimOrder {
 
     /// Set limit price.
     #[must_use]
-    pub fn with_limit_price(mut self, price: Decimal) -> Self {
+    pub const fn with_limit_price(mut self, price: Decimal) -> Self {
         self.limit_price = Some(price);
         self
     }
 
     /// Set stop price.
     #[must_use]
-    pub fn with_stop_price(mut self, price: Decimal) -> Self {
+    pub const fn with_stop_price(mut self, price: Decimal) -> Self {
         self.stop_price = Some(price);
         self
     }
 
     /// Set time in force.
     #[must_use]
-    pub fn with_time_in_force(mut self, tif: TimeInForce) -> Self {
+    pub const fn with_time_in_force(mut self, tif: TimeInForce) -> Self {
         self.time_in_force = tif;
         self
     }
 
     /// Set position direction (for protective orders).
     #[must_use]
-    pub fn with_position_direction(mut self, direction: PositionDirection) -> Self {
+    pub const fn with_position_direction(mut self, direction: PositionDirection) -> Self {
         self.position_direction = Some(direction);
         self
     }
 
     /// Check if order is in terminal state.
     #[must_use]
-    pub fn is_terminal(&self) -> bool {
+    pub const fn is_terminal(&self) -> bool {
         matches!(
             self.state,
             SimOrderState::Filled
@@ -466,7 +466,7 @@ impl SimulationEngine {
 
     /// Get the current configuration.
     #[must_use]
-    pub fn config(&self) -> &BacktestConfig {
+    pub const fn config(&self) -> &BacktestConfig {
         &self.config
     }
 
@@ -537,7 +537,7 @@ impl SimulationEngine {
 
     /// Get all positions.
     #[must_use]
-    pub fn positions(&self) -> &HashMap<String, SimPosition> {
+    pub const fn positions(&self) -> &HashMap<String, SimPosition> {
         &self.positions
     }
 
@@ -549,7 +549,7 @@ impl SimulationEngine {
 
     /// Get total commission paid.
     #[must_use]
-    pub fn total_commission(&self) -> Decimal {
+    pub const fn total_commission(&self) -> Decimal {
         self.total_commission
     }
 
@@ -886,7 +886,9 @@ mod tests {
 
         let order_id = engine.submit_order(order);
 
-        let submitted = engine.get_order(&order_id).unwrap();
+        let submitted = engine
+            .get_order(&order_id)
+            .expect("submitted order should exist");
         assert_eq!(submitted.state, SimOrderState::Pending);
     }
 
@@ -909,11 +911,15 @@ mod tests {
 
         engine.process_candle("AAPL", &candle);
 
-        let filled = engine.get_order(&order_id).unwrap();
+        let filled = engine
+            .get_order(&order_id)
+            .expect("filled order should exist");
         assert_eq!(filled.state, SimOrderState::Filled);
         assert!(filled.filled_quantity() > Decimal::ZERO);
 
-        let position = engine.get_position("AAPL").unwrap();
+        let position = engine
+            .get_position("AAPL")
+            .expect("position should exist after fill");
         assert_eq!(position.quantity, Decimal::new(100, 0));
     }
 
@@ -938,14 +944,18 @@ mod tests {
         let candle1 = make_candle(15000, 15100, 14900, 15050);
         engine.process_candle("AAPL", &candle1);
 
-        let order = engine.get_order(&order_id).unwrap();
+        let order = engine
+            .get_order(&order_id)
+            .expect("pending order should exist");
         assert_eq!(order.state, SimOrderState::Pending);
 
         // Second candle fills (low = $147.00)
         let candle2 = make_candle(15000, 15100, 14700, 14900);
         engine.process_candle("AAPL", &candle2);
 
-        let filled = engine.get_order(&order_id).unwrap();
+        let filled = engine
+            .get_order(&order_id)
+            .expect("filled order should exist");
         assert_eq!(filled.state, SimOrderState::Filled);
     }
 
@@ -967,7 +977,9 @@ mod tests {
         let order_id = engine.submit_order(order);
         assert!(engine.cancel_order(&order_id));
 
-        let cancelled = engine.get_order(&order_id).unwrap();
+        let cancelled = engine
+            .get_order(&order_id)
+            .expect("cancelled order should exist");
         assert_eq!(cancelled.state, SimOrderState::Cancelled);
     }
 
@@ -990,7 +1002,9 @@ mod tests {
         let candle1 = make_candle(15000, 15100, 14900, 15050);
         engine.process_candle("AAPL", &candle1);
 
-        let position = engine.get_position("AAPL").unwrap();
+        let position = engine
+            .get_position("AAPL")
+            .expect("position should exist after buy");
         assert_eq!(position.quantity, Decimal::new(100, 0));
         assert!(position.avg_entry_price > Decimal::ZERO);
 
@@ -1008,7 +1022,9 @@ mod tests {
         let candle2 = make_candle(15100, 15200, 15000, 15150);
         engine.process_candle("AAPL", &candle2);
 
-        let position = engine.get_position("AAPL").unwrap();
+        let position = engine
+            .get_position("AAPL")
+            .expect("position should exist after partial sell");
         assert_eq!(position.quantity, Decimal::new(50, 0));
     }
 
@@ -1032,7 +1048,7 @@ mod tests {
 
         // Buy has no fees for equity (commission-free broker)
         // But position should track commission for consistency
-        let position = engine.get_position("AAPL").unwrap();
+        let position = engine.get_position("AAPL").expect("position should exist");
         assert!(position.commission_paid >= Decimal::ZERO);
     }
 

@@ -1,7 +1,7 @@
 //! Order execution gateway.
 //!
 //! This module provides the central gateway for order execution, including:
-//! - Generic BrokerAdapter trait for broker integrations
+//! - Generic `BrokerAdapter` trait for broker integrations
 //! - Order routing logic with constraint validation
 //! - Order state tracking with FIX protocol semantics
 //! - Cancel order functionality
@@ -29,11 +29,11 @@ use super::OrderStateManager;
 /// # FIX Protocol Order Lifecycle
 ///
 /// 1. **New (39=0)**: Order created but not yet submitted to broker
-/// 2. **PendingNew (39=A)**: Order submitted, awaiting broker acknowledgment
+/// 2. **`PendingNew` (39=A)**: Order submitted, awaiting broker acknowledgment
 /// 3. **Accepted (39=1)**: Broker acknowledged order (equivalent to FIX "Filled" for acknowledgment)
-/// 4. **PartiallyFilled (39=1)**: Order partially executed
+/// 4. **`PartiallyFilled` (39=1)**: Order partially executed
 /// 5. **Filled (39=2)**: Order completely executed
-/// 6. **PendingCancel (39=6)**: Cancel request submitted, awaiting confirmation
+/// 6. **`PendingCancel` (39=6)**: Cancel request submitted, awaiting confirmation
 /// 7. **Canceled (39=4)**: Order successfully canceled
 /// 8. **Rejected (39=8)**: Order rejected by broker
 /// 9. **Expired (39=C)**: Order expired (e.g., Day order at market close)
@@ -102,7 +102,7 @@ pub trait BrokerAdapter: Send + Sync {
     ///
     /// # Returns
     ///
-    /// * `Ok(())` - Cancel request accepted (order may transition to PendingCancel → Canceled)
+    /// * `Ok(())` - Cancel request accepted (order may transition to `PendingCancel` -> `Canceled`)
     /// * `Err(BrokerError)` - Failed to submit cancel request
     ///
     /// # Errors
@@ -230,8 +230,8 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     ///
     /// # Workflow
     ///
-    /// 1. Route orders to broker via BrokerAdapter
-    /// 2. Store returned order states in OrderStateManager
+    /// 1. Route orders to broker via `BrokerAdapter`
+    /// 2. Store returned order states in `OrderStateManager`
     /// 3. Return execution acknowledgment
     ///
     /// # Errors
@@ -462,8 +462,8 @@ mod tests {
                 let order_id = self.order_counter.fetch_add(1, Ordering::SeqCst);
                 let now = chrono::Utc::now().to_rfc3339();
                 orders.push(OrderState {
-                    order_id: format!("order-{}", order_id),
-                    broker_order_id: format!("broker-{}", order_id),
+                    order_id: format!("order-{order_id}"),
+                    broker_order_id: format!("broker-{order_id}"),
                     is_multi_leg: false,
                     instrument_id: decision.instrument_id.clone(),
                     status: OrderStatus::Accepted,
@@ -498,7 +498,7 @@ mod tests {
         async fn get_order_status(&self, broker_order_id: &str) -> Result<OrderState, BrokerError> {
             let now = chrono::Utc::now().to_rfc3339();
             Ok(OrderState {
-                order_id: format!("order-{}", broker_order_id),
+                order_id: format!("order-{broker_order_id}"),
                 broker_order_id: broker_order_id.to_string(),
                 is_multi_leg: false,
                 instrument_id: "AAPL".to_string(),
@@ -538,8 +538,8 @@ mod tests {
     // Keep the old function for integration tests that need real Alpaca
     #[allow(dead_code)]
     fn make_alpaca_gateway() -> ExecutionGateway<AlpacaAdapter> {
-        let alpaca =
-            AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper).unwrap();
+        let alpaca = AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper)
+            .expect("should create test alpaca adapter");
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
 
@@ -610,7 +610,7 @@ mod tests {
         let result = gateway.submit_orders(request).await;
         assert!(result.is_ok());
 
-        let ack = result.unwrap();
+        let ack = result.expect("submit_orders should succeed");
         assert_eq!(ack.cycle_id, "c1");
         assert!(!ack.orders.is_empty());
     }
@@ -626,7 +626,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        let ack = gateway.submit_orders(request).await.unwrap();
+        let ack = gateway
+            .submit_orders(request)
+            .await
+            .expect("submit_orders should succeed");
         let order = &ack.orders[0];
 
         // Now cancel it
@@ -642,7 +645,7 @@ mod tests {
         let result = gateway.cancel_order("nonexistent-order-id").await;
         assert!(result.is_err());
         assert!(matches!(
-            result.unwrap_err(),
+            result.expect_err("cancel_order should fail for nonexistent order"),
             CancelOrderError::OrderNotFound(_)
         ));
     }
@@ -658,7 +661,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        gateway.submit_orders(request).await.unwrap();
+        gateway
+            .submit_orders(request)
+            .await
+            .expect("submit_orders should succeed");
 
         // Get active orders
         let active_orders = gateway.get_active_orders();
@@ -676,7 +682,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        let ack = gateway.submit_orders(request).await.unwrap();
+        let ack = gateway
+            .submit_orders(request)
+            .await
+            .expect("submit_orders should succeed");
         let order_ids: Vec<String> = ack.orders.iter().map(|o| o.order_id.clone()).collect();
 
         // Get order states

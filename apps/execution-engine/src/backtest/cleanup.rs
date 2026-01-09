@@ -99,7 +99,7 @@ pub struct CleanupResult {
 
 impl CleanupResult {
     /// Create an empty result.
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self {
             files_deleted: 0,
             files_archived: 0,
@@ -468,7 +468,7 @@ impl std::fmt::Display for QuotaStatus {
                 usage_mb,
                 available_mb,
             } => {
-                write!(f, "OK: {} MB used, {} MB available", usage_mb, available_mb)
+                write!(f, "OK: {usage_mb} MB used, {available_mb} MB available")
             }
             Self::ApproachingLimit {
                 usage_mb,
@@ -477,22 +477,19 @@ impl std::fmt::Display for QuotaStatus {
             } => {
                 write!(
                     f,
-                    "WARNING: Approaching limit ({:.1}%): {} MB / {} MB",
-                    pct, usage_mb, limit_mb
+                    "WARNING: Approaching limit ({pct:.1}%): {usage_mb} MB / {limit_mb} MB"
                 )
             }
             Self::SoftLimitExceeded { usage_mb, limit_mb } => {
                 write!(
                     f,
-                    "SOFT LIMIT EXCEEDED: {} MB / {} MB - consider cleanup",
-                    usage_mb, limit_mb
+                    "SOFT LIMIT EXCEEDED: {usage_mb} MB / {limit_mb} MB - consider cleanup"
                 )
             }
             Self::HardLimitExceeded { usage_mb, limit_mb } => {
                 write!(
                     f,
-                    "HARD LIMIT EXCEEDED: {} MB / {} MB - cleanup required",
-                    usage_mb, limit_mb
+                    "HARD LIMIT EXCEEDED: {usage_mb} MB / {limit_mb} MB - cleanup required"
                 )
             }
         }
@@ -508,13 +505,14 @@ mod tests {
 
     fn create_test_file(dir: &Path, name: &str, age_days: u64) -> PathBuf {
         let path = dir.join(name);
-        let mut file = File::create(&path).unwrap();
-        writeln!(file, "test content").unwrap();
+        let mut file = File::create(&path).expect("should create test file");
+        writeln!(file, "test content").expect("should write test content");
 
         // Set modified time to simulate age
         if age_days > 0 {
             let mtime = SystemTime::now() - Duration::from_secs(age_days * 86_400);
-            filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(mtime)).unwrap();
+            filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(mtime))
+                .expect("should set file modification time");
         }
 
         path
@@ -540,19 +538,19 @@ mod tests {
 
     #[test]
     fn test_scan_empty_directory() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let config = CleanupConfig {
             results_dir: dir.path().to_path_buf(),
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).unwrap();
+        let files = scan_results_dir(&config).expect("should scan results directory");
         assert!(files.is_empty());
     }
 
     #[test]
     fn test_scan_with_files() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         create_test_file(dir.path(), "test1.json", 0);
         create_test_file(dir.path(), "test2.csv", 0);
 
@@ -561,13 +559,13 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).unwrap();
+        let files = scan_results_dir(&config).expect("should scan results directory");
         assert_eq!(files.len(), 2);
     }
 
     #[test]
     fn test_calculate_storage_usage() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         create_test_file(dir.path(), "test1.json", 5);
         create_test_file(dir.path(), "test2.json", 10);
 
@@ -576,7 +574,7 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).unwrap();
+        let files = scan_results_dir(&config).expect("should scan results directory");
         let usage = calculate_storage_usage(&files, &config);
 
         assert_eq!(usage.file_count, 2);
@@ -585,7 +583,7 @@ mod tests {
 
     #[test]
     fn test_identify_cleanup_candidates() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         create_test_file(dir.path(), "old.json", 60); // Old, should be deleted
         create_test_file(dir.path(), "new.json", 5); // New, should be kept
 
@@ -595,7 +593,7 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).unwrap();
+        let files = scan_results_dir(&config).expect("should scan results directory");
         let candidates = identify_cleanup_candidates(&files, &config);
 
         assert_eq!(candidates.len(), 1);
@@ -603,16 +601,16 @@ mod tests {
             candidates[0]
                 .path
                 .file_name()
-                .unwrap()
+                .expect("path should have file name")
                 .to_str()
-                .unwrap()
+                .expect("file name should be valid UTF-8")
                 .contains("old")
         );
     }
 
     #[test]
     fn test_important_file_excluded() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         create_test_file(dir.path(), "starred_result.json", 60); // Old but important
 
         let config = CleanupConfig {
@@ -622,7 +620,7 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).unwrap();
+        let files = scan_results_dir(&config).expect("should scan results directory");
         assert!(files[0].is_important);
 
         let candidates = identify_cleanup_candidates(&files, &config);
@@ -631,7 +629,7 @@ mod tests {
 
     #[test]
     fn test_dry_run_cleanup() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let path = create_test_file(dir.path(), "old.json", 60);
 
         let config = CleanupConfig {
@@ -640,7 +638,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = perform_cleanup(&config, true).unwrap();
+        let result = perform_cleanup(&config, true).expect("should perform dry run cleanup");
 
         // File should still exist (dry run)
         assert!(path.exists());
@@ -649,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_actual_cleanup() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let path = create_test_file(dir.path(), "old.json", 60);
 
         let config = CleanupConfig {
@@ -659,7 +657,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = perform_cleanup(&config, false).unwrap();
+        let result = perform_cleanup(&config, false).expect("should perform actual cleanup");
 
         // File should be deleted
         assert!(!path.exists());
@@ -673,18 +671,18 @@ mod tests {
             usage_mb: 100,
             available_mb: 924,
         };
-        assert!(format!("{}", ok).contains("OK"));
+        assert!(format!("{ok}").contains("OK"));
 
         let exceeded = QuotaStatus::HardLimitExceeded {
             usage_mb: 6000,
             limit_mb: 5120,
         };
-        assert!(format!("{}", exceeded).contains("HARD LIMIT EXCEEDED"));
+        assert!(format!("{exceeded}").contains("HARD LIMIT EXCEEDED"));
     }
 
     #[test]
     fn test_check_storage_quota() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let config = CleanupConfig {
             results_dir: dir.path().to_path_buf(),
             soft_quota_mb: 1024,
@@ -692,7 +690,7 @@ mod tests {
             ..Default::default()
         };
 
-        let status = check_storage_quota(&config).unwrap();
+        let status = check_storage_quota(&config).expect("should check storage quota");
         assert!(matches!(status, QuotaStatus::Ok { .. }));
     }
 

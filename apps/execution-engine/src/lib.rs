@@ -32,8 +32,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
-// Allow unwrap/expect in test code - panics are appropriate test failure behavior
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 pub mod backtest;
 pub mod broker;

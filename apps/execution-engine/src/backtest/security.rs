@@ -108,9 +108,8 @@ pub fn scan_config_for_secrets(config_text: &str) -> ConfigSecurityScan {
                 result = result.with_warning(SecurityWarning {
                     code: "SENSITIVE_DATA_DETECTED".to_string(),
                     message: format!(
-                        "Configuration may contain sensitive data (pattern: '{}'). \
-                         Consider using environment variables.",
-                        pattern
+                        "Configuration may contain sensitive data (pattern: '{pattern}'). \
+                         Consider using environment variables."
                     ),
                     location: Some(find_pattern_context(config_text, pattern)),
                 });
@@ -247,13 +246,12 @@ impl std::fmt::Display for PathSecurityError {
             Self::PathTraversal { attempted, root } => {
                 write!(
                     f,
-                    "Path traversal attempt: '{}' is outside allowed root '{}'",
-                    attempted, root
+                    "Path traversal attempt: '{attempted}' is outside allowed root '{root}'"
                 )
             }
-            Self::InvalidPath(p) => write!(f, "Invalid path: '{}'", p),
-            Self::InvalidRoot(r) => write!(f, "Invalid root directory: '{}'", r),
-            Self::SuspiciousPattern(p) => write!(f, "Suspicious path pattern: {}", p),
+            Self::InvalidPath(p) => write!(f, "Invalid path: '{p}'"),
+            Self::InvalidRoot(r) => write!(f, "Invalid root directory: '{r}'"),
+            Self::SuspiciousPattern(p) => write!(f, "Suspicious path pattern: {p}"),
         }
     }
 }
@@ -357,7 +355,7 @@ impl AuditLogger {
             actor: "system".to_string(),
             resource: simulation_id.to_string(),
             outcome: AuditOutcome::Success,
-            details: Some(format!("config_hash={}", config_hash)),
+            details: Some(format!("config_hash={config_hash}")),
         };
         self.log(event);
     }
@@ -436,7 +434,7 @@ fn generate_event_id() -> String {
 
     let timestamp = Utc::now().timestamp_millis();
     let counter = COUNTER.fetch_add(1, Ordering::Relaxed);
-    format!("audit-{}-{}", timestamp, counter)
+    format!("audit-{timestamp}-{counter}")
 }
 
 // ============================================
@@ -558,12 +556,12 @@ mod tests {
 
     #[test]
     fn test_validate_safe_path() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let root = dir.path();
 
         // Create a file inside the root
         let file_path = root.join("test.json");
-        std::fs::write(&file_path, "{}").unwrap();
+        std::fs::write(&file_path, "{}").expect("should write test file");
 
         // Valid path should work
         let result = validate_safe_path(&file_path, root);
@@ -572,14 +570,19 @@ mod tests {
 
     #[test]
     fn test_validate_safe_path_traversal() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should create temp directory");
         let root = dir.path();
 
         // Attempt to access parent (may not exist, but pattern should fail)
         let path = root.join("../etc/passwd");
         let result = validate_safe_path(&path, root);
         // This might fail for different reasons, but should not succeed
-        assert!(result.is_err() || !result.unwrap().starts_with(root.parent().unwrap()));
+        assert!(
+            result.is_err()
+                || !result
+                    .expect("result is Ok in this branch")
+                    .starts_with(root.parent().expect("temp dir should have parent"))
+        );
     }
 
     #[test]

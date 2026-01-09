@@ -39,7 +39,7 @@ pub enum OptionStyle {
 /// An option contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptionContract {
-    /// Unique contract identifier (e.g., "AAPL240119C00150000").
+    /// Unique contract identifier (e.g., `"AAPL240119C00150000"`).
     pub contract_id: String,
     /// Underlying symbol.
     pub underlying_symbol: String,
@@ -159,7 +159,7 @@ pub struct OptionLeg {
     pub leg_index: u32,
     /// Option contract.
     pub contract: OptionContract,
-    /// Quantity (absolute value, sign determined by is_long).
+    /// Quantity (absolute value, sign determined by `is_long`).
     pub quantity: u32,
     /// Ratio for this leg (e.g., 1 for single, 2 for butterfly wing).
     pub ratio: u32,
@@ -192,7 +192,7 @@ pub struct MultiLegOrder {
     pub order_id: String,
     /// Underlying symbol.
     pub underlying_symbol: String,
-    /// Strategy name (e.g., "iron_condor", "vertical_spread").
+    /// Strategy name (e.g., `"iron_condor"`, `"vertical_spread"`).
     pub strategy_name: String,
     /// Order legs.
     pub legs: Vec<OptionLeg>,
@@ -283,7 +283,7 @@ impl MultiLegValidationResult {
 /// * `ratios` - The leg ratios to validate
 ///
 /// # Returns
-/// Tuple of (is_valid, gcd)
+/// Tuple of (`is_valid`, `gcd`)
 #[must_use]
 pub fn validate_leg_ratios(ratios: &[u32]) -> (bool, u32) {
     if ratios.is_empty() {
@@ -350,8 +350,7 @@ pub fn validate_multi_leg_order(order: &MultiLegOrder) -> MultiLegValidationResu
     let (ratios_valid, gcd) = validate_leg_ratios(&ratios);
     if !ratios_valid && gcd > 1 {
         errors.push(format!(
-            "Leg ratios {:?} not in simplest form (GCD = {}). Divide all ratios by {}.",
-            ratios, gcd, gcd
+            "Leg ratios {ratios:?} not in simplest form (GCD = {gcd}). Divide all ratios by {gcd}."
         ));
     }
 
@@ -517,8 +516,7 @@ pub fn assess_early_exercise_risk(
         (
             EarlyExerciseRisk::Critical,
             format!(
-                "Deep ITM call ({:.1}%) near ex-dividend date - high assignment probability",
-                itm_percentage
+                "Deep ITM call ({itm_percentage:.1}%) near ex-dividend date - high assignment probability"
             ),
             "Consider closing position before ex-dividend".to_string(),
         )
@@ -526,27 +524,26 @@ pub fn assess_early_exercise_risk(
         (
             EarlyExerciseRisk::Critical,
             format!(
-                "Option expiring soon ({} days) and ITM by {:.1}%",
-                days_to_expiration, itm_percentage
+                "Option expiring soon ({days_to_expiration} days) and ITM by {itm_percentage:.1}%"
             ),
             "Close position or prepare for assignment".to_string(),
         )
     } else if itm_percentage > Decimal::new(10, 0) {
         (
             EarlyExerciseRisk::High,
-            format!("Deep in-the-money ({:.1}%)", itm_percentage),
+            format!("Deep in-the-money ({itm_percentage:.1}%)"),
             "High assignment risk - consider closing or rolling".to_string(),
         )
     } else if itm_percentage > Decimal::new(3, 0) {
         (
             EarlyExerciseRisk::Medium,
-            format!("In-the-money by {:.1}%", itm_percentage),
+            format!("In-the-money by {itm_percentage:.1}%"),
             "Monitor for potential assignment".to_string(),
         )
     } else if is_itm {
         (
             EarlyExerciseRisk::Low,
-            format!("Slightly in-the-money ({:.1}%)", itm_percentage),
+            format!("Slightly in-the-money ({itm_percentage:.1}%)"),
             "Low assignment risk - continue monitoring".to_string(),
         )
     } else {
@@ -1430,7 +1427,7 @@ mod tests {
                 OptionLeg {
                     leg_index: 0,
                     contract: OptionContract {
-                        contract_id: format!("{}240119C00150000", underlying),
+                        contract_id: format!("{underlying}240119C00150000"),
                         underlying_symbol: underlying.to_string(),
                         strike: Decimal::new(150, 0),
                         expiration: "2024-01-19".to_string(),
@@ -1446,7 +1443,7 @@ mod tests {
                 OptionLeg {
                     leg_index: 1,
                     contract: OptionContract {
-                        contract_id: format!("{}240119C00155000", underlying),
+                        contract_id: format!("{underlying}240119C00155000"),
                         underlying_symbol: underlying.to_string(),
                         strike: Decimal::new(155, 0),
                         expiration: "2024-01-19".to_string(),

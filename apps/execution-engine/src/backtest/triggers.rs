@@ -147,7 +147,8 @@ pub fn evaluate_triggers(
         (false, false) => TriggerResult::None,
 
         (true, false) => {
-            let level = stop_level.unwrap();
+            // Safety: stop_triggered is true only when stop_level.is_some()
+            let level = stop_level.expect("stop_level present when stop_triggered is true");
             let price = calculate_fill_price(level, exit_side, true, config);
             TriggerResult::Stop {
                 price,
@@ -156,7 +157,8 @@ pub fn evaluate_triggers(
         }
 
         (false, true) => {
-            let level = target_level.unwrap();
+            // Safety: target_triggered is true only when target_level.is_some()
+            let level = target_level.expect("target_level present when target_triggered is true");
             let price = calculate_fill_price(level, exit_side, false, config);
             TriggerResult::Target {
                 price,
@@ -166,10 +168,11 @@ pub fn evaluate_triggers(
 
         (true, true) => {
             // Both triggered - use priority rule
+            // Safety: both levels are Some when both triggers are true
             let (selected, level) = resolve_same_bar_conflict(
                 direction,
-                stop_level.unwrap(),
-                target_level.unwrap(),
+                stop_level.expect("stop_level present when stop_triggered is true"),
+                target_level.expect("target_level present when target_triggered is true"),
                 candle,
                 config.same_bar_priority,
             );
@@ -485,7 +488,9 @@ mod tests {
         );
 
         // Stop price should be slipped down (worse for the seller)
-        let fill_price = result.fill_price().unwrap();
+        let fill_price = result
+            .fill_price()
+            .expect("stop trigger should have fill price");
         assert!(fill_price < Decimal::new(9800, 2));
     }
 

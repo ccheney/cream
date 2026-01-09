@@ -11,7 +11,7 @@
 //! - Options Greeks validation (delta, gamma, vega, theta)
 //! - Buying power / margin checks
 //! - Conflicting order detection
-//! - Position sizing calculations (SHARES, CONTRACTS, DOLLARS, PCT_EQUITY)
+//! - Position sizing calculations (`SHARES`, `CONTRACTS`, `DOLLARS`, `PCT_EQUITY`)
 //!
 //! # Example
 //!

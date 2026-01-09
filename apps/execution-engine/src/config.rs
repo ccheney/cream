@@ -98,10 +98,10 @@ impl Default for ServerConfig {
     }
 }
 
-fn default_grpc_port() -> u16 {
+const fn default_grpc_port() -> u16 {
     50051
 }
-fn default_flight_port() -> u16 {
+const fn default_flight_port() -> u16 {
     50052
 }
 fn default_bind_address() -> String {
@@ -147,10 +147,10 @@ impl Default for DatabentoConfig {
 fn default_databento_dataset() -> String {
     "XNAS.ITCH".to_string()
 }
-fn default_reconnect_delay() -> u64 {
+const fn default_reconnect_delay() -> u64 {
     1000
 }
-fn default_max_reconnect_attempts() -> u32 {
+const fn default_max_reconnect_attempts() -> u32 {
     5
 }
 
@@ -225,13 +225,13 @@ impl Default for PricingConfig {
     }
 }
 
-fn default_risk_free_rate() -> f64 {
+const fn default_risk_free_rate() -> f64 {
     0.05
 }
-fn default_volatility_window() -> u32 {
+const fn default_volatility_window() -> u32 {
     30
 }
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
@@ -276,13 +276,13 @@ impl Default for PerInstrumentConstraints {
     }
 }
 
-fn default_max_notional() -> f64 {
+const fn default_max_notional() -> f64 {
     50000.0
 }
-fn default_max_units() -> u32 {
+const fn default_max_units() -> u32 {
     1000
 }
-fn default_max_equity_pct() -> f64 {
+const fn default_max_equity_pct() -> f64 {
     0.10
 }
 
@@ -310,13 +310,13 @@ impl Default for PortfolioConstraints {
     }
 }
 
-fn default_max_gross_notional() -> f64 {
+const fn default_max_gross_notional() -> f64 {
     500_000.0
 }
-fn default_max_net_notional() -> f64 {
+const fn default_max_net_notional() -> f64 {
     200_000.0
 }
-fn default_max_leverage() -> f64 {
+const fn default_max_leverage() -> f64 {
     2.0
 }
 
@@ -356,22 +356,22 @@ impl Default for OptionsConstraints {
     }
 }
 
-fn default_max_delta_per_underlying() -> f64 {
+const fn default_max_delta_per_underlying() -> f64 {
     100.0
 }
-fn default_max_portfolio_delta() -> f64 {
+const fn default_max_portfolio_delta() -> f64 {
     500.0
 }
-fn default_max_portfolio_gamma() -> f64 {
+const fn default_max_portfolio_gamma() -> f64 {
     50.0
 }
-fn default_max_portfolio_vega() -> f64 {
+const fn default_max_portfolio_vega() -> f64 {
     1000.0
 }
-fn default_max_portfolio_theta() -> f64 {
+const fn default_max_portfolio_theta() -> f64 {
     -500.0
 }
-fn default_max_contracts_per_underlying() -> u32 {
+const fn default_max_contracts_per_underlying() -> u32 {
     100
 }
 
@@ -395,10 +395,10 @@ impl Default for BuyingPowerConstraints {
     }
 }
 
-fn default_min_buying_power_ratio() -> f64 {
+const fn default_min_buying_power_ratio() -> f64 {
     0.20
 }
-fn default_margin_buffer() -> f64 {
+const fn default_margin_buffer() -> f64 {
     0.10
 }
 
@@ -479,13 +479,13 @@ impl Default for TracingConfig {
 fn default_otlp_endpoint() -> String {
     "http://otel-collector:4317".to_string()
 }
-fn default_sampling_ratio() -> f64 {
+const fn default_sampling_ratio() -> f64 {
     1.0
 }
-fn default_batch_size() -> usize {
+const fn default_batch_size() -> usize {
     512
 }
-fn default_batch_timeout() -> u64 {
+const fn default_batch_timeout() -> u64 {
     5000
 }
 
@@ -570,22 +570,22 @@ impl Default for CircuitBreakerSettings {
     }
 }
 
-fn default_failure_rate_threshold() -> f64 {
+const fn default_failure_rate_threshold() -> f64 {
     0.5
 }
-fn default_minimum_calls() -> u32 {
+const fn default_minimum_calls() -> u32 {
     5
 }
-fn default_wait_duration() -> u64 {
+const fn default_wait_duration() -> u64 {
     30
 }
-fn default_permitted_calls() -> u32 {
+const fn default_permitted_calls() -> u32 {
     3
 }
 fn default_sliding_window_type() -> String {
     "count".to_string()
 }
-fn default_sliding_window_size() -> u32 {
+const fn default_sliding_window_size() -> u32 {
     10
 }
 
@@ -662,11 +662,18 @@ fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
     let mut result = input.to_string();
 
     // Match ${VAR} or ${VAR:-default} patterns
-    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}").unwrap();
+    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
+        .expect("env var regex pattern is valid");
 
     for cap in re.captures_iter(input) {
-        let full_match = cap.get(0).unwrap().as_str();
-        let var_name = cap.get(1).unwrap().as_str();
+        let full_match = cap
+            .get(0)
+            .expect("group 0 always exists in captures")
+            .as_str();
+        let var_name = cap
+            .get(1)
+            .expect("group 1 is required by the pattern")
+            .as_str();
         let default_value = cap.get(2).map(|m| m.as_str());
 
         let value = match std::env::var(var_name) {
@@ -749,8 +756,7 @@ fn validate_config(config: &Config) -> Result<(), ConfigError> {
     let valid_modes = ["BACKTEST", "PAPER", "LIVE"];
     if !valid_modes.contains(&config.environment.mode.as_str()) {
         return Err(ConfigError::ValidationError(format!(
-            "environment.mode must be one of: {:?}",
-            valid_modes
+            "environment.mode must be one of: {valid_modes:?}"
         )));
     }
 
@@ -788,7 +794,7 @@ server:
   flight_port: 50052
 ";
 
-        let config = load_config_from_string(yaml).unwrap();
+        let config = load_config_from_string(yaml).expect("should load minimal config");
         assert_eq!(config.server.grpc_port, 50051);
         assert_eq!(config.pricing.risk_free_rate, 0.05); // Default value
     }
@@ -797,7 +803,7 @@ server:
     fn test_env_var_with_default_when_missing() {
         // Use a variable name unlikely to exist
         let input = "mode: ${CREAM_CONFIG_TEST_NONEXISTENT_VAR:-PAPER}";
-        let result = interpolate_env_vars(input).unwrap();
+        let result = interpolate_env_vars(input).expect("should interpolate env vars");
 
         // When env var doesn't exist, should use default value
         assert_eq!(result, "mode: PAPER");
@@ -807,7 +813,7 @@ server:
     fn test_env_var_with_default_uses_existing() {
         // PATH should always exist
         let input = "path: ${PATH:-default}";
-        let result = interpolate_env_vars(input).unwrap();
+        let result = interpolate_env_vars(input).expect("should interpolate env vars");
 
         // Should not be the default value
         assert_ne!(result, "path: default");
@@ -819,7 +825,7 @@ server:
     fn test_env_var_without_default_becomes_empty() {
         // Use a variable name unlikely to exist
         let input = "api_key: ${CREAM_CONFIG_TEST_UNLIKELY_TO_EXIST}";
-        let result = interpolate_env_vars(input).unwrap();
+        let result = interpolate_env_vars(input).expect("should interpolate env vars");
 
         // Without default, missing env var becomes empty string
         assert_eq!(result, "api_key: ");
@@ -923,7 +929,7 @@ environment:
   mode: LIVE
 "#;
 
-        let config = load_config_from_string(yaml).unwrap();
+        let config = load_config_from_string(yaml).expect("should load full config");
 
         assert_eq!(config.server.bind_address, "127.0.0.1");
         assert_eq!(config.feeds.databento.reconnect_delay_ms, 2000);
@@ -1181,7 +1187,7 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Backtest);
 
         assert!(result.is_ok());
-        let validation = result.unwrap();
+        let validation = result.expect("backtest should validate without credentials");
         assert!(validation.valid);
     }
 
@@ -1191,7 +1197,7 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Backtest);
 
         assert!(result.is_ok());
-        let validation = result.unwrap();
+        let validation = result.expect("backtest with credentials should validate");
         assert!(validation.valid);
         assert!(!validation.warnings.is_empty());
     }
@@ -1242,7 +1248,7 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Live);
 
         assert!(result.is_ok());
-        let validation = result.unwrap();
+        let validation = result.expect("live with paper URL should validate with warning");
         assert!(!validation.warnings.is_empty());
         assert!(validation.warnings[0].contains("paper"));
     }

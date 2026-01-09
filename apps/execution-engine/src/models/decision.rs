@@ -145,7 +145,7 @@ impl DecisionPlan {
         self.risk_manager_approved && self.critic_approved
     }
 
-    /// Returns the number of tradeable decisions (not HOLD or NO_TRADE).
+    /// Returns the number of tradeable decisions (not `HOLD` or `NO_TRADE`).
     #[must_use]
     pub fn tradeable_count(&self) -> usize {
         self.decisions
