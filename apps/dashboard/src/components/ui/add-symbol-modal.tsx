@@ -1,12 +1,3 @@
-/**
- * AddSymbolModal Component
- *
- * Modal dialog for adding a symbol to the watchlist.
- * Includes validation and search functionality.
- *
- * @see docs/plans/ui/24-components.md modals section
- */
-
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -22,10 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-// ============================================
-// Types
-// ============================================
-
 export interface AddSymbolModalProps {
   /** Whether the modal is open */
   isOpen: boolean;
@@ -39,35 +26,9 @@ export interface AddSymbolModalProps {
   "data-testid"?: string;
 }
 
-// ============================================
-// Constants
-// ============================================
-
-/** Common stock symbols for quick selection */
 const POPULAR_SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "SPY", "QQQ"];
-
-/** Symbol validation regex: 1-5 uppercase letters */
 const SYMBOL_REGEX = /^[A-Z]{1,5}$/;
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * AddSymbolModal - Modal for adding a symbol to the watchlist.
- *
- * @example
- * ```tsx
- * const [isOpen, setIsOpen] = useState(false);
- *
- * <AddSymbolModal
- *   isOpen={isOpen}
- *   onClose={() => setIsOpen(false)}
- *   onAdd={(symbol) => addToWatchlist(symbol)}
- *   existingSymbols={watchlist}
- * />
- * ```
- */
 export const AddSymbolModal = memo(function AddSymbolModal({
   isOpen,
   onClose,
@@ -79,10 +40,9 @@ export const AddSymbolModal = memo(function AddSymbolModal({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure modal is rendered
+      // Delay ensures modal animation completes before focus
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
@@ -91,14 +51,12 @@ export const AddSymbolModal = memo(function AddSymbolModal({
     return undefined;
   }, [isOpen]);
 
-  // Clear state when closing
   const handleClose = useCallback(() => {
     setSymbol("");
     setError(null);
     onClose();
   }, [onClose]);
 
-  // Validate symbol
   const validateSymbol = useCallback(
     (value: string): string | null => {
       const upperValue = value.toUpperCase().trim();
@@ -120,14 +78,12 @@ export const AddSymbolModal = memo(function AddSymbolModal({
     [existingSymbols]
   );
 
-  // Handle input change
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase();
     setSymbol(value);
     setError(null);
   }, []);
 
-  // Handle submit
   const handleSubmit = useCallback(() => {
     const upperSymbol = symbol.toUpperCase().trim();
     const validationError = validateSymbol(upperSymbol);
@@ -141,7 +97,6 @@ export const AddSymbolModal = memo(function AddSymbolModal({
     handleClose();
   }, [symbol, validateSymbol, onAdd, handleClose]);
 
-  // Handle keyboard submit
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
@@ -152,7 +107,6 @@ export const AddSymbolModal = memo(function AddSymbolModal({
     [handleSubmit]
   );
 
-  // Handle quick select
   const handleQuickSelect = useCallback(
     (sym: string) => {
       if (existingSymbols.includes(sym)) {
@@ -165,7 +119,6 @@ export const AddSymbolModal = memo(function AddSymbolModal({
     [existingSymbols, onAdd, handleClose]
   );
 
-  // Filter out already-added symbols from popular list
   const availablePopular = POPULAR_SYMBOLS.filter((s) => !existingSymbols.includes(s));
 
   return (
@@ -177,7 +130,6 @@ export const AddSymbolModal = memo(function AddSymbolModal({
         </DialogHeader>
 
         <DialogBody>
-          {/* Symbol Input */}
           <div className="mb-4">
             <label
               htmlFor="symbol-input"
@@ -206,7 +158,6 @@ export const AddSymbolModal = memo(function AddSymbolModal({
             )}
           </div>
 
-          {/* Quick Select */}
           {availablePopular.length > 0 && (
             <div>
               <p className="text-sm text-cream-500 dark:text-cream-400 mb-2">Popular symbols:</p>

@@ -8,10 +8,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export type StaleLevel = "fresh" | "stale" | "very-stale" | "extremely-stale";
 
 export interface StaleState {
@@ -45,10 +41,6 @@ export interface UseStaleDataReturn {
   markUpdated: () => void;
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_STALE_THRESHOLD_MS = 5000; // 5 seconds
 const DEFAULT_VERY_STALE_THRESHOLD_MS = 10000; // 10 seconds
 const DEFAULT_EXTREMELY_STALE_THRESHOLD_MS = 30000; // 30 seconds
@@ -60,10 +52,6 @@ const OPACITY_VALUES: Record<StaleLevel, number> = {
   "very-stale": 0.5,
   "extremely-stale": 0.3,
 };
-
-// ============================================
-// Hook Implementation
-// ============================================
 
 /**
  * Hook to track data freshness and provide stale state.
@@ -107,7 +95,6 @@ export function useStaleData(
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Calculate stale state from elapsed time
   const calculateStaleState = (elapsedMs: number): StaleState => {
     const secondsSinceUpdate = Math.floor(elapsedMs / 1000);
 
@@ -150,7 +137,6 @@ export function useStaleData(
     };
   };
 
-  // Mark data as updated
   const markUpdated = () => {
     setLastUpdate(new Date());
     setStale({
@@ -162,14 +148,12 @@ export function useStaleData(
     });
   };
 
-  // Update from external lastUpdatedAt
   useEffect(() => {
     if (lastUpdatedAt) {
       setLastUpdate(lastUpdatedAt);
     }
   }, [lastUpdatedAt]);
 
-  // Check staleness periodically
   useEffect(() => {
     const checkStaleness = () => {
       const elapsedMs = Date.now() - lastUpdate.getTime();
@@ -177,10 +161,7 @@ export function useStaleData(
       setStale(newState);
     };
 
-    // Initial check
     checkStaleness();
-
-    // Set up interval
     intervalRef.current = setInterval(checkStaleness, updateIntervalMs);
 
     return () => {

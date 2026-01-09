@@ -1,20 +1,8 @@
-/**
- * Streaming Status Widget
- *
- * Displays WebSocket connection health, subscription counts, and latency metrics.
- * Shows real-time streaming indicators for stocks and options WebSocket connections.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 4.1
- */
-
+/** @see docs/plans/ui/40-streaming-data-integration.md Part 4.1 */
 "use client";
 
 import { useStreamingMetrics } from "@/hooks/useStreamingMetrics";
 import type { HealthStatus } from "@/stores/streaming-metrics-store";
-
-// ============================================
-// Types
-// ============================================
 
 export interface StreamingStatusProps {
   /** Display variant */
@@ -22,10 +10,6 @@ export interface StreamingStatusProps {
   /** Show options WebSocket status */
   showOptions?: boolean;
 }
-
-// ============================================
-// Helper Components
-// ============================================
 
 interface StatusDotProps {
   status: HealthStatus | "connecting";
@@ -120,10 +104,6 @@ function formatTimeAgo(ms: number): string {
   return `${Math.round(ms / 60000)}m ago`;
 }
 
-// ============================================
-// Main Component
-// ============================================
-
 export function StreamingStatus({ variant = "full", showOptions = true }: StreamingStatusProps) {
   const {
     stocksConnected,
@@ -143,7 +123,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
   const isReconnecting = connectionState === "reconnecting";
   const displayStatus = isConnecting || isReconnecting ? "connecting" : healthStatus;
 
-  // Compact variant: just a status dot with tooltip
   if (variant === "compact") {
     const tooltipText = stocksConnected
       ? `Streaming: ${symbolCount} symbols, ${quotesPerMinute}/min, ${formatLatency(avgLatency)} avg`
@@ -165,7 +144,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
     );
   }
 
-  // Full variant
   return (
     // biome-ignore lint/a11y/useSemanticElements: role="region" for dashboard widget
     <div
@@ -173,7 +151,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
       role="region"
       aria-label="Streaming Status"
     >
-      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-text-primary">Streaming Status</h3>
         {isReconnecting && reconnectAttempts > 0 && (
@@ -183,7 +160,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
         )}
       </div>
 
-      {/* Connection Rows */}
       <div className="space-y-2">
         <ConnectionRow
           label="Stocks WebSocket"
@@ -206,7 +182,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
         )}
       </div>
 
-      {/* Metrics Row */}
       {(stocksConnected || optionsConnected) && (
         <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50 text-xs text-text-muted">
           <span>Last Message: {lastMessageAgo > 0 ? formatTimeAgo(lastMessageAgo) : "-"}</span>
@@ -216,9 +191,5 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
     </div>
   );
 }
-
-// ============================================
-// Export
-// ============================================
 
 export default StreamingStatus;

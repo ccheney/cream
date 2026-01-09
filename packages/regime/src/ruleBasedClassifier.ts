@@ -18,13 +18,6 @@
 import type { RegimeLabel, RuleBasedConfig } from "@cream/config";
 import { type Candle, calculateATR, calculateSMA } from "@cream/indicators";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Input data for regime classification.
- */
 export interface RegimeInput {
   /** Recent price candles (oldest first) */
   candles: Candle[];
@@ -32,9 +25,6 @@ export interface RegimeInput {
   historicalAtr?: number[];
 }
 
-/**
- * Regime classification result.
- */
 export interface RegimeClassification {
   /** Classified regime label */
   regime: RegimeLabel;
@@ -53,19 +43,12 @@ export interface RegimeClassification {
   };
 }
 
-/**
- * Default configuration for rule-based classifier.
- */
 export const DEFAULT_RULE_BASED_CONFIG: RuleBasedConfig = {
   trend_ma_fast: 20,
   trend_ma_slow: 50,
   volatility_percentile_high: 80,
   volatility_percentile_low: 20,
 };
-
-// ============================================
-// Thresholds
-// ============================================
 
 /**
  * Threshold for MA convergence (as % of price).
@@ -78,43 +61,27 @@ const MA_CONVERGENCE_THRESHOLD_PCT = 0.005; // 0.5%
  */
 const STRONG_TREND_THRESHOLD_PCT = 0.02; // 2%
 
-// ============================================
-// Main Classifier
-// ============================================
-
-/**
- * Classify market regime using rule-based logic.
- *
- * @param input - Candle data and historical ATR
- * @param config - Classifier configuration
- * @returns Regime classification with confidence and reasoning
- */
 export function classifyRegime(
   input: RegimeInput,
   config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
 ): RegimeClassification {
   const { candles, historicalAtr = [] } = input;
 
-  // Calculate indicators
   const fastMaResults = calculateSMA(candles, { period: config.trend_ma_fast });
   const slowMaResults = calculateSMA(candles, { period: config.trend_ma_slow });
   const atrResults = calculateATR(candles, { period: 14 });
 
-  // Get latest values
   const fastMa = fastMaResults[fastMaResults.length - 1]?.ma ?? 0;
   const slowMa = slowMaResults[slowMaResults.length - 1]?.ma ?? 0;
   const currentAtr = atrResults[atrResults.length - 1]?.atr ?? 0;
   const currentPrice = candles[candles.length - 1]?.close ?? 0;
 
-  // Calculate MA difference
   const maDiff = fastMa - slowMa;
   const maDiffPct = currentPrice > 0 ? Math.abs(maDiff) / currentPrice : 0;
 
-  // Calculate ATR percentile
   const allAtr = [...historicalAtr, currentAtr];
   const atrPercentile = calculatePercentile(allAtr, currentAtr);
 
-  // Build metrics
   const metrics = {
     fastMa,
     slowMa,
@@ -124,13 +91,9 @@ export function classifyRegime(
     atrPercentile,
   };
 
-  // Apply classification rules
   return applyRules(metrics, config);
 }
 
-/**
- * Apply classification rules based on calculated metrics.
- */
 function applyRules(
   metrics: RegimeClassification["metrics"],
   config: RuleBasedConfig
@@ -196,13 +159,6 @@ function applyRules(
   };
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Calculate percentile rank of a value in a sorted array.
- */
 function calculatePercentile(values: number[], target: number): number {
   if (values.length === 0) {
     return 50; // Default to middle
@@ -216,9 +172,6 @@ function calculatePercentile(values: number[], target: number): number {
   return (index / sorted.length) * 100;
 }
 
-/**
- * Calculate confidence score based on how far the value is from threshold.
- */
 function calculateConfidence(value: number, threshold: number, extreme: number): number {
   if (extreme === threshold) {
     return 1;
@@ -228,25 +181,12 @@ function calculateConfidence(value: number, threshold: number, extreme: number):
   return Math.min(distance / maxDistance, 1);
 }
 
-// ============================================
-// Convenience Functions
-// ============================================
-
-/**
- * Create a rule-based classifier function with bound config.
- */
 export function createRuleBasedClassifier(
   config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
 ): (input: RegimeInput) => RegimeClassification {
   return (input: RegimeInput) => classifyRegime(input, config);
 }
 
-/**
- * Get the minimum number of candles required for classification.
- *
- * @param config - Classifier configuration
- * @returns Minimum candle count
- */
 export function getRequiredCandleCount(
   config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
 ): number {
@@ -254,9 +194,6 @@ export function getRequiredCandleCount(
   return Math.max(config.trend_ma_slow, 14) + 1;
 }
 
-/**
- * Check if enough data is available for classification.
- */
 export function hasEnoughData(
   candles: Candle[],
   config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG

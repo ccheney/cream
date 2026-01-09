@@ -21,13 +21,6 @@
 
 import type { Candle } from "../types";
 
-// ============================================
-// Parameters
-// ============================================
-
-/**
- * Returns transform parameters.
- */
 export interface ReturnsParams {
   /** Periods to calculate returns for */
   periods: number[];
@@ -35,21 +28,11 @@ export interface ReturnsParams {
   logReturns?: boolean;
 }
 
-/**
- * Default returns parameters.
- */
 export const RETURNS_DEFAULTS: ReturnsParams = {
   periods: [1, 5, 20],
   logReturns: false,
 };
 
-// ============================================
-// Result Types
-// ============================================
-
-/**
- * Single return result.
- */
 export interface ReturnResult {
   /** Unix timestamp in milliseconds */
   timestamp: number;
@@ -59,9 +42,6 @@ export interface ReturnResult {
   period: number;
 }
 
-/**
- * Multi-period return results.
- */
 export interface MultiPeriodReturnResult {
   /** Unix timestamp in milliseconds */
   timestamp: number;
@@ -69,13 +49,6 @@ export interface MultiPeriodReturnResult {
   returns: Record<number, number | null>;
 }
 
-// ============================================
-// Calculation Functions
-// ============================================
-
-/**
- * Calculate simple return between two prices.
- */
 export function simpleReturn(currentPrice: number, previousPrice: number): number {
   if (previousPrice === 0) {
     return 0;
@@ -83,9 +56,6 @@ export function simpleReturn(currentPrice: number, previousPrice: number): numbe
   return (currentPrice - previousPrice) / previousPrice;
 }
 
-/**
- * Calculate log return between two prices.
- */
 export function logReturn(currentPrice: number, previousPrice: number): number {
   if (previousPrice <= 0 || currentPrice <= 0) {
     return 0;
@@ -192,9 +162,6 @@ export function calculateReturnsFromCandles(
   return calculateMultiPeriodReturns(values, timestamps, params);
 }
 
-/**
- * Get required periods for returns calculation.
- */
 export function returnsRequiredPeriods(params: ReturnsParams = RETURNS_DEFAULTS): number {
   return Math.max(...params.periods) + 1;
 }
@@ -221,10 +188,6 @@ export function generateReturnOutputNames(
 
   return names;
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   calculateReturns,

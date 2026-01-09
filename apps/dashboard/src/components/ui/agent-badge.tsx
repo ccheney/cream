@@ -9,14 +9,9 @@
 
 import { forwardRef, type HTMLAttributes } from "react";
 
-// Simple className merger utility
 function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
-
-// ============================================
-// Types
-// ============================================
 
 export type AgentType =
   | "technical"
@@ -40,10 +35,6 @@ export interface AgentBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** Additional class names */
   className?: string;
 }
-
-// ============================================
-// Agent Configuration
-// ============================================
 
 const agentConfig: Record<
   AgentType,
@@ -117,10 +108,6 @@ const sizeConfig: Record<AgentBadgeSize, { badge: string; icon: string; text: st
   },
 };
 
-// ============================================
-// Component
-// ============================================
-
 /**
  * AgentBadge - Badge for agent type identification.
  *
@@ -157,7 +144,6 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
         title={config.label}
         {...props}
       >
-        {/* Agent icon/abbreviation */}
         <span
           className={cn(
             "inline-flex items-center justify-center rounded-full font-semibold shrink-0",
@@ -167,7 +153,6 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
         >
           {config.icon}
         </span>
-        {/* Agent label */}
         {showLabel && <span className={sizeStyles.text}>{config.label}</span>}
       </span>
     );
@@ -176,20 +161,10 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
 
 AgentBadge.displayName = "AgentBadge";
 
-// ============================================
-// Utility
-// ============================================
-
-/**
- * Get agent display info without rendering a component.
- */
 export function getAgentInfo(agent: AgentType) {
   return agentConfig[agent];
 }
 
-/**
- * All agent types for iteration.
- */
 export const AGENT_TYPES: AgentType[] = [
   "technical",
   "sentiment",
@@ -200,9 +175,5 @@ export const AGENT_TYPES: AgentType[] = [
   "risk",
   "critic",
 ];
-
-// ============================================
-// Exports
-// ============================================
 
 export default AgentBadge;

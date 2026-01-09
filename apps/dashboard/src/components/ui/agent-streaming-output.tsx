@@ -12,10 +12,6 @@
 import { memo, useEffect, useState } from "react";
 import type { StreamingStatus } from "./use-streaming-text";
 
-// ============================================
-// Types
-// ============================================
-
 export interface AgentStreamingOutputProps {
   /** Name of the agent (displayed in header) */
   agentName: string;
@@ -30,10 +26,6 @@ export interface AgentStreamingOutputProps {
   /** Test ID for testing */
   "data-testid"?: string;
 }
-
-// ============================================
-// Status Badge Component
-// ============================================
 
 interface StatusBadgeProps {
   status: StreamingStatus;
@@ -82,10 +74,6 @@ const StatusBadge = memo(function StatusBadge({ status }: StatusBadgeProps) {
   );
 });
 
-// ============================================
-// Blinking Cursor Component
-// ============================================
-
 interface BlinkingCursorProps {
   visible: boolean;
 }
@@ -93,21 +81,18 @@ interface BlinkingCursorProps {
 const BlinkingCursor = memo(function BlinkingCursor({ visible }: BlinkingCursorProps) {
   const [isVisible, setIsVisible] = useState(true);
 
-  // Use CSS animation for reduced motion, JS interval for normal
   useEffect(() => {
     if (!visible) {
       return;
     }
 
-    // Check for reduced motion preference
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mediaQuery.matches) {
-      // Static cursor for reduced motion
       setIsVisible(true);
       return;
     }
 
-    // Blink at 530ms (standard terminal rate)
+    // 530ms matches standard terminal cursor blink rate
     const interval = setInterval(() => {
       setIsVisible((prev) => !prev);
     }, 530);
@@ -130,28 +115,6 @@ const BlinkingCursor = memo(function BlinkingCursor({ visible }: BlinkingCursorP
   );
 });
 
-// ============================================
-// Main Component
-// ============================================
-
-/**
- * AgentStreamingOutput displays real-time agent outputs.
- *
- * Features:
- * - Streaming text with blinking cursor
- * - Status badge with transitions (Processing → Complete)
- * - ARIA live region for accessibility
- * - Reduced motion support
- *
- * @example
- * ```tsx
- * <AgentStreamingOutput
- *   agentName="Technical Analyst"
- *   streamingText="Analyzing AAPL..."
- *   status="processing"
- * />
- * ```
- */
 export const AgentStreamingOutput = memo(function AgentStreamingOutput({
   agentName,
   streamingText,
@@ -172,7 +135,6 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
       }}
       data-testid={testId}
     >
-      {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2 border-b"
         style={{
@@ -186,7 +148,6 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
         <StatusBadge status={status} />
       </div>
 
-      {/* Content */}
       <div
         className="p-4 min-h-[100px] max-h-[400px] overflow-y-auto font-mono text-sm whitespace-pre-wrap"
         style={{ color: "var(--text-primary, #44403c)" }}
@@ -198,7 +159,6 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
         {streamingText}
         <BlinkingCursor visible={isStreaming} />
 
-        {/* Error message */}
         {hasError && error && (
           <div
             className="mt-2 p-2 rounded text-sm"
@@ -212,7 +172,6 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
           </div>
         )}
 
-        {/* Empty state for idle */}
         {status === "idle" && !streamingText && (
           <span className="text-sm italic" style={{ color: "var(--text-muted, #78716c)" }}>
             Waiting for input...
@@ -222,36 +181,6 @@ export const AgentStreamingOutput = memo(function AgentStreamingOutput({
     </div>
   );
 });
-
-// ============================================
-// CSS for Blinking Cursor Animation
-// ============================================
-
-/**
- * Add this to your global CSS for smoother cursor animation:
- *
- * ```css
- * @keyframes cursor-blink {
- *   0%, 50% { opacity: 1; }
- *   51%, 100% { opacity: 0; }
- * }
- *
- * .cursor-blink {
- *   animation: cursor-blink 1.06s step-end infinite;
- * }
- *
- * @media (prefers-reduced-motion: reduce) {
- *   .cursor-blink {
- *     animation: none;
- *     opacity: 1;
- *   }
- * }
- * ```
- */
-
-// ============================================
-// Exports
-// ============================================
 
 export type { StatusBadgeProps, BlinkingCursorProps };
 export default AgentStreamingOutput;

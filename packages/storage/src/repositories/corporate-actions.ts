@@ -10,10 +10,6 @@ import { z } from "zod";
 import type { TursoClient } from "../turso.js";
 import { parseJson, RepositoryError, toJson } from "./base.js";
 
-// ============================================
-// Zod Schemas
-// ============================================
-
 export const ActionTypeSchema = z.enum([
   "split",
   "reverse_split",
@@ -49,16 +45,9 @@ export const CorporateActionInsertSchema = CorporateActionSchema.omit({
 });
 export type CorporateActionInsert = z.infer<typeof CorporateActionInsertSchema>;
 
-// ============================================
-// Repository
-// ============================================
-
 export class CorporateActionsRepository {
   constructor(private client: TursoClient) {}
 
-  /**
-   * Insert a corporate action (upsert on symbol+type+ex_date)
-   */
   async upsert(action: CorporateActionInsert): Promise<void> {
     try {
       await this.client.run(
@@ -90,9 +79,6 @@ export class CorporateActionsRepository {
     }
   }
 
-  /**
-   * Get corporate actions for a symbol within a date range
-   */
   async getForSymbol(
     symbol: string,
     startDate?: string,
@@ -115,9 +101,7 @@ export class CorporateActionsRepository {
     return rows.map(mapRowToAction);
   }
 
-  /**
-   * Get splits and reverse splits for price adjustment
-   */
+  /** Used for historical price adjustment calculations */
   async getSplits(symbol: string, afterDate?: string): Promise<CorporateAction[]> {
     let query = `SELECT * FROM corporate_actions
                  WHERE symbol = ? AND action_type IN ('split', 'reverse_split')`;
@@ -133,9 +117,6 @@ export class CorporateActionsRepository {
     return rows.map(mapRowToAction);
   }
 
-  /**
-   * Get dividends for a symbol
-   */
   async getDividends(symbol: string, afterDate?: string): Promise<CorporateAction[]> {
     let query = `SELECT * FROM corporate_actions
                  WHERE symbol = ? AND action_type IN ('dividend', 'special_dividend')`;
@@ -151,9 +132,6 @@ export class CorporateActionsRepository {
     return rows.map(mapRowToAction);
   }
 
-  /**
-   * Get all actions on a specific date (for daily processing)
-   */
   async getByExDate(exDate: string): Promise<CorporateAction[]> {
     const rows = await this.client.execute<CorporateActionRow>(
       `SELECT * FROM corporate_actions WHERE ex_date = ? ORDER BY symbol`,
@@ -162,10 +140,6 @@ export class CorporateActionsRepository {
     return rows.map(mapRowToAction);
   }
 }
-
-// ============================================
-// Row Mapping
-// ============================================
 
 interface CorporateActionRow {
   id: number;

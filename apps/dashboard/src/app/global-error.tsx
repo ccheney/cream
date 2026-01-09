@@ -1,28 +1,11 @@
-/**
- * Next.js Global Error Page
- *
- * Root layout error boundary for errors in the root layout.
- *
- * @see https://nextjs.org/docs/app/api-reference/file-conventions/error#global-errorjs
- * @see docs/plans/ui/28-states.md lines 83-87
- */
-
 "use client";
 
 import { useEffect } from "react";
-
-// ============================================
-// Types
-// ============================================
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
-
-// ============================================
-// Styles (Inline CSS - no external dependencies)
-// ============================================
 
 const globalStyles = `
   * {
@@ -112,20 +95,10 @@ const styles = {
   },
 };
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Global error page component for root layout errors.
- *
- * This is a special error boundary that wraps the entire application.
- * It must define its own <html> and <body> tags as it replaces the root layout.
- */
+// Global error must define its own <html> and <body> tags because it replaces the root layout
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // In production, send to error tracking service with high priority
-    // Example: logCriticalErrorToService(error);
+    // TODO: Send to error tracking service (e.g., Sentry)
   }, []);
 
   const handleReset = () => {

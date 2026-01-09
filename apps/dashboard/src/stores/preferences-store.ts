@@ -1,12 +1,3 @@
-/**
- * User Preferences Store
- *
- * Manages user preferences with localStorage persistence.
- * Automatically respects system settings (prefers-reduced-motion, prefers-color-scheme).
- *
- * @see docs/plans/ui/31-realtime-patterns.md
- */
-
 import { create } from "zustand";
 import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
 
@@ -19,84 +10,55 @@ export type DateFormat = "relative" | "absolute" | "iso";
 export type NumberFormat = "short" | "full" | "compact";
 
 export interface SoundPreferences {
-  /** Master sound toggle */
   enabled: boolean;
-  /** Volume level (0-1) */
+  /** 0-1 */
   volume: number;
-  /** Sound for critical alerts */
   criticalAlerts: boolean;
-  /** Sound for trade executions */
   tradeExecutions: boolean;
-  /** Sound for order fills */
   orderFills: boolean;
 }
 
 export interface NotificationPreferences {
-  /** Browser notifications enabled */
   enabled: boolean;
-  /** Show for critical alerts */
   criticalAlerts: boolean;
-  /** Show for trade executions */
   tradeExecutions: boolean;
-  /** Show for price alerts */
   priceAlerts: boolean;
 }
 
 export interface DisplayPreferences {
-  /** Theme mode */
   theme: ThemeMode;
-  /** Animations enabled (respects prefers-reduced-motion) */
+  /** Combined with prefers-reduced-motion in shouldAnimate() */
   animationsEnabled: boolean;
-  /** Date format preference */
   dateFormat: DateFormat;
-  /** Number format preference */
   numberFormat: NumberFormat;
-  /** Show values in portfolio (privacy mode) */
+  /** Privacy mode - hides portfolio values when false */
   showValues: boolean;
-  /** Compact mode for dense information */
   compactMode: boolean;
 }
 
 export interface FeedPreferences {
-  /** Auto-scroll to new events */
   autoScroll: boolean;
-  /** Max events in feed */
   maxEvents: number;
-  /** Show timestamps in feed */
   showTimestamps: boolean;
-  /** Group similar events */
   groupSimilar: boolean;
 }
 
 export interface PreferencesState {
-  /** Sound preferences */
   sound: SoundPreferences;
-  /** Notification preferences */
   notifications: NotificationPreferences;
-  /** Display preferences */
   display: DisplayPreferences;
-  /** Feed preferences */
   feed: FeedPreferences;
-  /** Last updated timestamp */
   lastUpdated: number;
 }
 
 export interface PreferencesActions {
-  /** Update sound preferences */
   updateSound: (prefs: Partial<SoundPreferences>) => void;
-  /** Update notification preferences */
   updateNotifications: (prefs: Partial<NotificationPreferences>) => void;
-  /** Update display preferences */
   updateDisplay: (prefs: Partial<DisplayPreferences>) => void;
-  /** Update feed preferences */
   updateFeed: (prefs: Partial<FeedPreferences>) => void;
-  /** Reset all preferences to defaults */
   resetToDefaults: () => void;
-  /** Toggle a specific boolean preference */
   togglePreference: (category: "sound" | "notifications" | "display" | "feed", key: string) => void;
-  /** Get computed theme (resolves 'system') */
   getComputedTheme: () => "light" | "dark";
-  /** Check if animations should be enabled */
   shouldAnimate: () => boolean;
 }
 
@@ -149,9 +111,6 @@ const initialState: PreferencesState = {
 // Store
 // ============================================
 
-/**
- * Check if system prefers reduced motion.
- */
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -159,9 +118,6 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/**
- * Check system color scheme preference.
- */
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") {
     return "light";
@@ -238,11 +194,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
 
           shouldAnimate: () => {
             const state = get();
-            // User disabled animations
             if (!state.display.animationsEnabled) {
               return false;
             }
-            // System prefers reduced motion
             if (prefersReducedMotion()) {
               return false;
             }
@@ -253,9 +207,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
           name: "cream-preferences",
           version: 1,
           migrate: (persisted, version) => {
-            // Handle migrations from older versions
             if (version === 0) {
-              // v0 -> v1 migration
               return {
                 ...initialState,
                 ...(persisted as Partial<PreferencesState>),
@@ -274,59 +226,20 @@ export const usePreferencesStore = create<PreferencesStore>()(
 // Selectors
 // ============================================
 
-/**
- * Select sound enabled state.
- */
 export const selectSoundEnabled = (state: PreferencesStore) => state.sound.enabled;
-
-/**
- * Select sound volume.
- */
 export const selectSoundVolume = (state: PreferencesStore) => state.sound.volume;
-
-/**
- * Select notifications enabled state.
- */
 export const selectNotificationsEnabled = (state: PreferencesStore) => state.notifications.enabled;
-
-/**
- * Select theme mode.
- */
 export const selectTheme = (state: PreferencesStore) => state.display.theme;
-
-/**
- * Select compact mode.
- */
 export const selectCompactMode = (state: PreferencesStore) => state.display.compactMode;
-
-/**
- * Select privacy mode (show values).
- */
 export const selectShowValues = (state: PreferencesStore) => state.display.showValues;
-
-/**
- * Select auto-scroll enabled.
- */
 export const selectAutoScroll = (state: PreferencesStore) => state.feed.autoScroll;
-
-/**
- * Select date format.
- */
 export const selectDateFormat = (state: PreferencesStore) => state.display.dateFormat;
-
-/**
- * Select number format.
- */
 export const selectNumberFormat = (state: PreferencesStore) => state.display.numberFormat;
 
 // ============================================
-// Hooks for Theme Management
+// Theme Management
 // ============================================
 
-/**
- * Apply theme to document.
- * Call this in a useEffect in your app root.
- */
 export function applyTheme(theme: "light" | "dark"): void {
   if (typeof document === "undefined") {
     return;
@@ -334,23 +247,17 @@ export function applyTheme(theme: "light" | "dark"): void {
 
   document.documentElement.setAttribute("data-theme", theme);
 
-  // Also update meta theme-color for mobile
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
     metaThemeColor.setAttribute("content", theme === "dark" ? "#0c0a09" : "#f5f5f4");
   }
 }
 
-/**
- * Subscribe to theme changes and apply them.
- * Returns unsubscribe function.
- */
+/** Call in app root useEffect. Returns unsubscribe function. */
 export function subscribeToThemeChanges(): () => void {
-  // Apply initial theme
   const store = usePreferencesStore.getState();
   applyTheme(store.getComputedTheme());
 
-  // Subscribe to changes
   const unsubscribe = usePreferencesStore.subscribe(
     (state) => state.display.theme,
     () => {
@@ -359,7 +266,7 @@ export function subscribeToThemeChanges(): () => void {
     }
   );
 
-  // Also listen for system theme changes when using 'system' mode
+  // Re-apply when OS theme changes while in 'system' mode
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const handleChange = () => {
     const store = usePreferencesStore.getState();
@@ -375,9 +282,5 @@ export function subscribeToThemeChanges(): () => void {
     mediaQuery.removeEventListener("change", handleChange);
   };
 }
-
-// ============================================
-// Export
-// ============================================
 
 export default usePreferencesStore;

@@ -30,45 +30,25 @@ import {
 } from "@/components/ui/dialog";
 import { type KeyboardShortcut, useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 
-// ============================================
-// Types
-// ============================================
-
 export interface KeyboardShortcutsContextValue {
-  /** Register a shortcut */
   register: (shortcut: KeyboardShortcut) => void;
-  /** Unregister a shortcut */
   unregister: (id: string) => void;
-  /** Get all shortcuts */
   getShortcuts: () => KeyboardShortcut[];
-  /** Open help dialog */
   openHelp: () => void;
-  /** Close help dialog */
   closeHelp: () => void;
-  /** Whether help dialog is open */
   isHelpOpen: boolean;
-  /** Current scope */
   scope: string | undefined;
-  /** Set current scope */
   setScope: (scope: string | undefined) => void;
 }
 
 export interface KeyboardShortcutsProviderProps {
   children: ReactNode;
-  /** Initial scope */
   initialScope?: string;
 }
 
-// ============================================
-// Context
-// ============================================
-
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | null>(null);
 
-/**
- * Hook to access keyboard shortcuts context.
- */
-export function useKeyboardShortcutsContext() {
+export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
   const context = useContext(KeyboardShortcutsContext);
   if (!context) {
     throw new Error("useKeyboardShortcutsContext must be used within a KeyboardShortcutsProvider");
@@ -76,11 +56,7 @@ export function useKeyboardShortcutsContext() {
   return context;
 }
 
-// ============================================
-// Key Display Component
-// ============================================
-
-function KeyBadge({ children }: { children: string }) {
+function KeyBadge({ children }: { children: string }): ReactNode {
   return (
     <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-medium rounded bg-stone-100 dark:bg-stone-700 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-300">
       {children}
@@ -88,7 +64,7 @@ function KeyBadge({ children }: { children: string }) {
   );
 }
 
-function ShortcutKeys({ keys }: { keys: string[] }) {
+function ShortcutKeys({ keys }: { keys: string[] }): ReactNode {
   return (
     <div className="flex items-center gap-1">
       {keys.map((key) => (
@@ -98,9 +74,6 @@ function ShortcutKeys({ keys }: { keys: string[] }) {
   );
 }
 
-/**
- * Format a key for display.
- */
 function formatKeyDisplay(key: string): string {
   const isMac =
     typeof navigator !== "undefined" && navigator.platform?.toLowerCase().includes("mac");
@@ -135,18 +108,17 @@ function formatKeyDisplay(key: string): string {
   }
 }
 
-// ============================================
-// Help Dialog Component
-// ============================================
-
 interface ShortcutsHelpDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shortcuts: KeyboardShortcut[];
 }
 
-function ShortcutsHelpDialog({ open, onOpenChange, shortcuts }: ShortcutsHelpDialogProps) {
-  // Group shortcuts
+function ShortcutsHelpDialog({
+  open,
+  onOpenChange,
+  shortcuts,
+}: ShortcutsHelpDialogProps): ReactNode {
   const grouped = useMemo(() => {
     const groups: Record<string, KeyboardShortcut[]> = {};
 
@@ -158,9 +130,7 @@ function ShortcutsHelpDialog({ open, onOpenChange, shortcuts }: ShortcutsHelpDia
       groups[group].push(shortcut);
     }
 
-    // Sort groups
     const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
-      // Put "General" first
       if (a === "General") {
         return -1;
       }
@@ -211,25 +181,10 @@ function ShortcutsHelpDialog({ open, onOpenChange, shortcuts }: ShortcutsHelpDia
   );
 }
 
-// ============================================
-// Provider Component
-// ============================================
-
-/**
- * Provider for global keyboard shortcuts.
- *
- * @example
- * ```tsx
- * // In your app layout
- * <KeyboardShortcutsProvider>
- *   <App />
- * </KeyboardShortcutsProvider>
- * ```
- */
 export function KeyboardShortcutsProvider({
   children,
   initialScope,
-}: KeyboardShortcutsProviderProps) {
+}: KeyboardShortcutsProviderProps): ReactNode {
   const router = useRouter();
   const [scope, setScope] = useState<string | undefined>(initialScope);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -248,9 +203,7 @@ export function KeyboardShortcutsProvider({
     clearSequence();
   }, [clearSequence]);
 
-  // Register default shortcuts
   useEffect(() => {
-    // Show help
     register({
       id: "show-help",
       name: "Show keyboard shortcuts",
@@ -260,7 +213,6 @@ export function KeyboardShortcutsProvider({
       handler: () => openHelp(),
     });
 
-    // Close modal/drawer
     register({
       id: "close-modal",
       name: "Close",
@@ -271,11 +223,9 @@ export function KeyboardShortcutsProvider({
         if (isHelpOpen) {
           closeHelp();
         }
-        // Other modals should handle their own Escape
       },
     });
 
-    // Navigation shortcuts
     register({
       id: "go-dashboard",
       name: "Go to Dashboard",
@@ -321,7 +271,7 @@ export function KeyboardShortcutsProvider({
       handler: () => router.push("/dashboard/settings"),
     });
 
-    // List navigation
+    // List navigation uses CustomEvents so list components can handle their own selection state
     register({
       id: "prev-item",
       name: "Previous item",
@@ -329,7 +279,6 @@ export function KeyboardShortcutsProvider({
       group: "Lists",
       description: "Move to previous item in list",
       handler: () => {
-        // Dispatch custom event for list components to handle
         window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { direction: "prev" } }));
       },
     });
@@ -378,7 +327,6 @@ export function KeyboardShortcutsProvider({
       },
     });
 
-    // Cleanup on unmount
     return () => {
       unregister("show-help");
       unregister("close-modal");
@@ -420,9 +368,5 @@ export function KeyboardShortcutsProvider({
     </KeyboardShortcutsContext.Provider>
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default KeyboardShortcutsProvider;

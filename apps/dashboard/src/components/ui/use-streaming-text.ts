@@ -1,9 +1,4 @@
 /**
- * useStreamingText Hook
- *
- * Connects to a Server-Sent Events (SSE) endpoint and accumulates
- * streaming text chunks in real-time.
- *
  * @see docs/plans/ui/31-realtime-patterns.md lines 69-87
  */
 
@@ -53,14 +48,10 @@ export function useStreamingText(
   const [status, setStatus] = useState<StreamingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Refs for cleanup and debouncing
   const eventSourceRef = useRef<EventSource | null>(null);
   const pendingTextRef = useRef("");
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /**
-   * Flush pending text to state.
-   */
   const flushText = useCallback(() => {
     if (pendingTextRef.current) {
       setText((prev) => {
@@ -71,9 +62,6 @@ export function useStreamingText(
     }
   }, [maxLength]);
 
-  /**
-   * Connect to the SSE endpoint.
-   */
   const start = useCallback(() => {
     if (!url || eventSourceRef.current) {
       return;
@@ -90,10 +78,8 @@ export function useStreamingText(
     };
 
     eventSource.onmessage = (event) => {
-      // Accumulate text in pending buffer
       pendingTextRef.current += event.data;
 
-      // Debounce UI updates
       if (!debounceTimerRef.current) {
         debounceTimerRef.current = setTimeout(() => {
           flushText();
@@ -103,10 +89,9 @@ export function useStreamingText(
     };
 
     eventSource.onerror = () => {
-      // Flush any pending text
       flushText();
 
-      // Check if this is a normal close or an error
+      // SSE onerror fires for both errors and normal stream completion
       if (eventSource.readyState === EventSource.CLOSED) {
         setStatus("complete");
       } else {
@@ -117,7 +102,6 @@ export function useStreamingText(
       eventSourceRef.current = null;
     };
 
-    // Listen for explicit complete event
     eventSource.addEventListener("complete", () => {
       flushText();
       setStatus("complete");
@@ -125,7 +109,6 @@ export function useStreamingText(
       eventSourceRef.current = null;
     });
 
-    // Listen for explicit error event with message
     eventSource.addEventListener("error-message", (event) => {
       flushText();
       setError((event as MessageEvent).data || "Stream error");
@@ -135,9 +118,6 @@ export function useStreamingText(
     });
   }, [url, debounceMs, flushText]);
 
-  /**
-   * Stop the stream.
-   */
   const stop = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -149,7 +129,6 @@ export function useStreamingText(
       eventSourceRef.current = null;
     }
 
-    // Flush any remaining text
     flushText();
 
     if (status === "processing") {
@@ -157,9 +136,6 @@ export function useStreamingText(
     }
   }, [flushText, status]);
 
-  /**
-   * Reset to initial state.
-   */
   const reset = useCallback(() => {
     stop();
     setText("");
@@ -168,7 +144,6 @@ export function useStreamingText(
     pendingTextRef.current = "";
   }, [stop]);
 
-  // Auto-connect on mount if enabled
   useEffect(() => {
     if (autoConnect && url) {
       start();

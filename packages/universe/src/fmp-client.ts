@@ -8,13 +8,6 @@
 
 import type { IndexId } from "@cream/config";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * FMP API configuration
- */
 export interface FMPClientConfig {
   /** API key */
   apiKey: string;
@@ -28,9 +21,6 @@ export interface FMPClientConfig {
   retryDelay?: number;
 }
 
-/**
- * Default FMP configuration
- */
 const DEFAULT_CONFIG: Required<Omit<FMPClientConfig, "apiKey">> = {
   baseUrl: "https://financialmodelingprep.com/api/v3",
   timeout: 30000,
@@ -38,9 +28,6 @@ const DEFAULT_CONFIG: Required<Omit<FMPClientConfig, "apiKey">> = {
   retryDelay: 1000,
 };
 
-/**
- * Index constituent from FMP
- */
 export interface FMPConstituent {
   symbol: string;
   name: string;
@@ -52,9 +39,6 @@ export interface FMPConstituent {
   founded?: string;
 }
 
-/**
- * Historical index change from FMP
- */
 export interface FMPHistoricalConstituent {
   dateAdded: string;
   addedSecurity: string;
@@ -64,9 +48,6 @@ export interface FMPHistoricalConstituent {
   reason: string;
 }
 
-/**
- * ETF holding from FMP
- */
 export interface FMPETFHolding {
   asset: string;
   name: string;
@@ -77,9 +58,6 @@ export interface FMPETFHolding {
   cusip?: string;
 }
 
-/**
- * Screener filter parameters
- */
 export interface FMPScreenerFilters {
   marketCapMoreThan?: number;
   marketCapLowerThan?: number;
@@ -100,9 +78,6 @@ export interface FMPScreenerFilters {
   limit?: number;
 }
 
-/**
- * Screener result from FMP
- */
 export interface FMPScreenerResult {
   symbol: string;
   companyName: string;
@@ -120,13 +95,6 @@ export interface FMPScreenerResult {
   isEtf: boolean;
 }
 
-// ============================================
-// FMP Client Implementation
-// ============================================
-
-/**
- * FMP API Client
- */
 export class FMPClient {
   private readonly config: Required<FMPClientConfig>;
 
@@ -137,19 +105,13 @@ export class FMPClient {
     };
   }
 
-  /**
-   * Make a request to the FMP API with retries
-   */
   private async request<T>(
     endpoint: string,
     params: Record<string, string | number | boolean> = {}
   ): Promise<T> {
     const url = new URL(`${this.config.baseUrl}${endpoint}`);
-
-    // Add API key
     url.searchParams.set("apikey", this.config.apiKey);
 
-    // Add other params
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
         url.searchParams.set(key, String(value));
@@ -182,12 +144,11 @@ export class FMPClient {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        // Don't retry on 4xx errors (except 429)
+        // Don't retry on 4xx client errors (except 429 rate limiting)
         if (lastError.message.includes("4") && !lastError.message.includes("429")) {
           throw lastError;
         }
 
-        // Wait before retry
         if (attempt < this.config.retries - 1) {
           await new Promise((resolve) =>
             setTimeout(resolve, this.config.retryDelay * (attempt + 1))
@@ -199,51 +160,33 @@ export class FMPClient {
     throw lastError ?? new Error("FMP API request failed");
   }
 
-  // ============================================
-  // Index Constituents
-  // ============================================
-
-  /**
-   * Get current constituents for an index
-   */
   async getIndexConstituents(indexId: IndexId): Promise<FMPConstituent[]> {
     const endpoint = this.getIndexEndpoint(indexId);
     return this.request<FMPConstituent[]>(endpoint);
   }
 
-  /**
-   * Get historical constituent changes for an index
-   */
   async getHistoricalConstituents(indexId: IndexId): Promise<FMPHistoricalConstituent[]> {
     const endpoint = this.getHistoricalIndexEndpoint(indexId);
     return this.request<FMPHistoricalConstituent[]>(endpoint);
   }
 
   /**
-   * Get constituents as of a specific date (for survivorship-bias-free backtesting)
+   * Reconstructs index composition at a historical date for survivorship-bias-free backtesting.
+   * Works backward from current constituents, reversing additions/removals that occurred after asOfDate.
    */
   async getConstituentsAsOf(indexId: IndexId, asOfDate: Date): Promise<string[]> {
-    // Get current constituents
     const current = await this.getIndexConstituents(indexId);
     const currentSymbols = new Set(current.map((c) => c.symbol));
-
-    // Get historical changes
     const history = await this.getHistoricalConstituents(indexId);
 
-    // Apply changes in reverse chronological order
     // biome-ignore lint/style/noNonNullAssertion: split always returns array
     const asOfDateStr = asOfDate.toISOString().split("T")[0]!;
 
     for (const change of history) {
-      const changeDate = change.dateAdded;
-
-      // If change happened after our target date, reverse it
-      if (asOfDateStr && changeDate > asOfDateStr) {
-        // Remove the added ticker
+      if (asOfDateStr && change.dateAdded > asOfDateStr) {
         if (change.symbol) {
           currentSymbols.delete(change.symbol);
         }
-        // Re-add the removed ticker
         if (change.removedTicker) {
           currentSymbols.add(change.removedTicker);
         }
@@ -262,7 +205,7 @@ export class FMPClient {
       case "DOWJONES":
         return "/dowjones_constituent";
       case "RUSSELL2000":
-        // FMP doesn't have direct Russell 2000 - may need alternative
+        // FMP Russell 2000 endpoint has limited coverage; consider using screener as fallback
         return "/russell_2000_constituent";
       case "RUSSELL3000":
         return "/russell_3000_constituent";
@@ -284,24 +227,10 @@ export class FMPClient {
     }
   }
 
-  // ============================================
-  // ETF Holdings
-  // ============================================
-
-  /**
-   * Get ETF holdings
-   */
   async getETFHoldings(symbol: string): Promise<FMPETFHolding[]> {
     return this.request<FMPETFHolding[]>(`/etf-holder/${symbol}`);
   }
 
-  // ============================================
-  // Stock Screener
-  // ============================================
-
-  /**
-   * Screen stocks based on filters
-   */
   async screenStocks(filters: FMPScreenerFilters): Promise<FMPScreenerResult[]> {
     const params: Record<string, string | number | boolean> = {};
 
@@ -360,13 +289,6 @@ export class FMPClient {
     return this.request<FMPScreenerResult[]>("/stock-screener", params);
   }
 
-  // ============================================
-  // Company Profile (for metadata)
-  // ============================================
-
-  /**
-   * Get company profile for sector/industry data
-   */
   async getCompanyProfile(symbol: string): Promise<{
     symbol: string;
     companyName: string;
@@ -391,9 +313,6 @@ export class FMPClient {
     return profiles[0] ?? null;
   }
 
-  /**
-   * Get profiles for multiple symbols (batch)
-   */
   async getCompanyProfiles(symbols: string[]): Promise<
     Map<
       string,
@@ -410,7 +329,7 @@ export class FMPClient {
   > {
     const results = new Map();
 
-    // FMP allows batch requests with comma-separated symbols
+    // FMP profile endpoint accepts up to 50 comma-separated symbols per request
     const batchSize = 50;
     for (let i = 0; i < symbols.length; i += batchSize) {
       const batch = symbols.slice(i, i + batchSize);
@@ -434,17 +353,6 @@ export class FMPClient {
     return results;
   }
 
-  // ============================================
-  // Economic Calendar
-  // ============================================
-
-  /**
-   * Get economic calendar events
-   *
-   * @param from - Start date (YYYY-MM-DD format)
-   * @param to - End date (YYYY-MM-DD format)
-   * @returns Economic calendar events
-   */
   async getEconomicCalendar(from?: string, to?: string): Promise<FMPEconomicEvent[]> {
     const params: Record<string, string> = {};
     if (from) {
@@ -456,17 +364,6 @@ export class FMPClient {
     return this.request<FMPEconomicEvent[]>("/economic_calendar", params);
   }
 
-  // ============================================
-  // Stock News
-  // ============================================
-
-  /**
-   * Get stock news for specific symbols
-   *
-   * @param symbols - Array of ticker symbols (max 5 recommended)
-   * @param limit - Number of articles to return (default 50)
-   * @returns Stock news articles
-   */
   async getStockNews(symbols?: string[], limit = 50): Promise<FMPStockNews[]> {
     const params: Record<string, string | number> = { limit };
     if (symbols && symbols.length > 0) {
@@ -475,20 +372,11 @@ export class FMPClient {
     return this.request<FMPStockNews[]>("/stock_news", params);
   }
 
-  /**
-   * Get general market news (not symbol-specific)
-   *
-   * @param limit - Number of articles to return (default 50)
-   * @returns General market news articles
-   */
   async getGeneralNews(limit = 50): Promise<FMPStockNews[]> {
     return this.request<FMPStockNews[]>("/stock_news", { limit });
   }
 }
 
-/**
- * Economic calendar event from FMP
- */
 export interface FMPEconomicEvent {
   date: string;
   country: string;
@@ -502,9 +390,6 @@ export interface FMPEconomicEvent {
   impact?: "Low" | "Medium" | "High";
 }
 
-/**
- * Stock news article from FMP
- */
 export interface FMPStockNews {
   symbol: string;
   publishedDate: string;
@@ -515,9 +400,6 @@ export interface FMPStockNews {
   url: string;
 }
 
-/**
- * Create FMP client from environment
- */
 export function createFMPClient(config?: Partial<FMPClientConfig>): FMPClient {
   const apiKey = config?.apiKey ?? process.env.FMP_KEY;
 

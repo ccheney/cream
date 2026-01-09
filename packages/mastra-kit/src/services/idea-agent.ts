@@ -20,10 +20,6 @@ import {
   type IdeaContext,
 } from "../prompts/idea-agent.js";
 
-// ============================================
-// Types
-// ============================================
-
 /**
  * Dependencies for the IdeaAgent
  */
@@ -93,21 +89,15 @@ export interface IdeaGenerationResult {
   generatedAt: string;
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
 /**
  * Extract JSON from LLM output that may contain thinking tags
  */
 function extractJsonFromOutput(output: string): string {
-  // Try to find JSON in <output> tags first
   const outputMatch = output.match(/<output>\s*([\s\S]*?)\s*<\/output>/);
   if (outputMatch?.[1]) {
     return outputMatch[1].trim();
   }
 
-  // Try to find raw JSON object
   const jsonMatch = output.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return jsonMatch[0];
@@ -175,10 +165,6 @@ function _generateHypothesisId(title: string): string {
   return `hyp-${timestamp}-${shortName}`;
 }
 
-// ============================================
-// IdeaAgent Service
-// ============================================
-
 /**
  * Service for generating alpha factor hypotheses
  */
@@ -197,10 +183,8 @@ export class IdeaAgent {
    * Generate a hypothesis for a given research trigger
    */
   async generateHypothesis(trigger: ResearchTrigger): Promise<IdeaGenerationResult> {
-    // Build context
     const context = await this.buildContext(trigger);
 
-    // Generate hypothesis using LLM
     if (!this.llmProvider) {
       throw new Error("LLM provider not configured");
     }
@@ -212,14 +196,9 @@ export class IdeaAgent {
       model: "claude-sonnet-4-5-20251101",
     });
 
-    // Parse and validate output
     const jsonStr = extractJsonFromOutput(rawOutput);
     const rawHypothesis = JSON.parse(jsonStr) as RawHypothesisOutput;
-
-    // Convert to NewHypothesis format
     const newHypothesis = convertToNewHypothesis(rawHypothesis, trigger);
-
-    // Store in database
     const hypothesis = await this.factorZoo.createHypothesis(newHypothesis);
 
     return {
@@ -274,15 +253,11 @@ export class IdeaAgent {
    */
   private getUncoveredRegimes(trigger: ResearchTrigger, activeFactors: Factor[]): string[] {
     const _allRegimes = ["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"];
-
-    // Get regimes covered by active factors
     const _coveredRegimes = new Set<string>();
     for (const _factor of activeFactors) {
       // TODO: Factors should track their target regime
-      // For now, assume all active factors cover some regime
     }
 
-    // Check trigger metadata for explicit gaps
     const metadata = trigger.metadata as Record<string, unknown>;
     if (metadata?.uncoveredRegimes && Array.isArray(metadata.uncoveredRegimes)) {
       return metadata.uncoveredRegimes as string[];
@@ -306,7 +281,6 @@ export class IdeaAgent {
     }
 
     try {
-      // Query for validated and rejected hypotheses similar to the focus
       const results = await this.helixClient.query<{
         hypothesis_id: string;
         title: string;
@@ -333,7 +307,6 @@ export class IdeaAgent {
         lessonsLearned: r.lessons_learned,
       }));
     } catch {
-      // Return empty if HelixDB query fails
       return [];
     }
   }
@@ -346,8 +319,6 @@ export class IdeaAgent {
     similarFactors: Array<{ factorId: string; similarity: number }>;
   }> {
     const activeFactors = await this.factorZoo.findActiveFactors();
-
-    // Simple title-based similarity check
     const similarFactors: Array<{ factorId: string; similarity: number }> = [];
 
     for (const factor of activeFactors) {

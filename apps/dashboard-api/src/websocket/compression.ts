@@ -9,10 +9,6 @@
 
 import type { WebSocketCompressor } from "bun";
 
-// ============================================
-// Types
-// ============================================
-
 export interface CompressionConfig {
   /** Enable compression */
   enabled: boolean;
@@ -45,13 +41,6 @@ export interface CompressionMetrics {
   averageCompressionRatio: number;
 }
 
-// ============================================
-// Configuration
-// ============================================
-
-/**
- * Default compression configuration.
- */
 const DEFAULT_CONFIG: CompressionConfig = {
   enabled: true,
   threshold: 1024, // 1KB minimum
@@ -62,9 +51,6 @@ const DEFAULT_CONFIG: CompressionConfig = {
   clientNoContextTakeover: true,
 };
 
-/**
- * Production configuration (optimized for bandwidth).
- */
 const PRODUCTION_CONFIG: CompressionConfig = {
   ...DEFAULT_CONFIG,
   level: 6,
@@ -72,17 +58,11 @@ const PRODUCTION_CONFIG: CompressionConfig = {
   clientNoContextTakeover: false,
 };
 
-/**
- * Development configuration (compression disabled for debugging).
- */
 const DEVELOPMENT_CONFIG: CompressionConfig = {
   ...DEFAULT_CONFIG,
   enabled: false,
 };
 
-/**
- * Get compression configuration based on environment.
- */
 export function getCompressionConfig(): CompressionConfig {
   const env = process.env.NODE_ENV ?? "development";
 
@@ -101,13 +81,6 @@ export function getCompressionConfig(): CompressionConfig {
   return DEFAULT_CONFIG;
 }
 
-// ============================================
-// Bun WebSocket Compression Options
-// ============================================
-
-/**
- * Get Bun WebSocket compression options.
- */
 export function getBunCompressionOptions(): boolean | WebSocketCompressor | undefined {
   const config = getCompressionConfig();
 
@@ -115,14 +88,8 @@ export function getBunCompressionOptions(): boolean | WebSocketCompressor | unde
     return false;
   }
 
-  // Bun supports simplified compression options
-  // For advanced options, we use the threshold-based approach
   return "shared";
 }
-
-// ============================================
-// Metrics Tracking
-// ============================================
 
 let metrics: CompressionMetrics = {
   totalMessages: 0,
@@ -133,9 +100,6 @@ let metrics: CompressionMetrics = {
   averageCompressionRatio: 0,
 };
 
-/**
- * Record message compression stats.
- */
 export function recordCompressionStats(
   originalSize: number,
   compressedSize: number,
@@ -152,22 +116,15 @@ export function recordCompressionStats(
     metrics.totalBytesCompressed += originalSize;
   }
 
-  // Calculate average ratio
   if (metrics.totalBytesUncompressed > 0) {
     metrics.averageCompressionRatio = metrics.totalBytesCompressed / metrics.totalBytesUncompressed;
   }
 }
 
-/**
- * Get compression metrics.
- */
 export function getCompressionMetrics(): CompressionMetrics {
   return { ...metrics };
 }
 
-/**
- * Reset compression metrics.
- */
 export function resetCompressionMetrics(): void {
   metrics = {
     totalMessages: 0,
@@ -179,9 +136,6 @@ export function resetCompressionMetrics(): void {
   };
 }
 
-/**
- * Calculate bandwidth savings percentage.
- */
 export function getBandwidthSavings(): number {
   if (metrics.totalBytesUncompressed === 0) {
     return 0;
@@ -191,13 +145,6 @@ export function getBandwidthSavings(): number {
   return (saved / metrics.totalBytesUncompressed) * 100;
 }
 
-// ============================================
-// Message Size Estimation
-// ============================================
-
-/**
- * Check if message should be compressed based on size.
- */
 export function shouldCompress(message: string | Buffer): boolean {
   const config = getCompressionConfig();
 
@@ -209,22 +156,11 @@ export function shouldCompress(message: string | Buffer): boolean {
   return size >= config.threshold;
 }
 
-/**
- * Estimate compressed size (rough approximation).
- * JSON typically compresses to 30-50% of original size.
- */
+/** JSON typically compresses to 30-50% of original size; this assumes 40%. */
 export function estimateCompressedSize(originalSize: number): number {
-  // Assume 40% compression ratio for JSON
   return Math.floor(originalSize * 0.4);
 }
 
-// ============================================
-// Logging
-// ============================================
-
-/**
- * Log compression configuration at startup.
- */
 export function logCompressionConfig(): void {
   const config = getCompressionConfig();
 
@@ -232,17 +168,11 @@ export function logCompressionConfig(): void {
   }
 }
 
-/**
- * Log compression metrics summary.
- */
 export function logCompressionMetrics(): void {
   const _m = getCompressionMetrics();
   const _savings = getBandwidthSavings();
 }
 
-/**
- * Format bytes for display.
- */
 function _formatBytes(bytes: number): string {
   if (bytes === 0) {
     return "0 B";
@@ -254,10 +184,6 @@ function _formatBytes(bytes: number): string {
 
   return `${size.toFixed(2)} ${units[i]}`;
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   getCompressionConfig,

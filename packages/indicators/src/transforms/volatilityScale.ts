@@ -20,13 +20,6 @@
 
 import { calculateStdDev } from "./zscore";
 
-// ============================================
-// Parameters
-// ============================================
-
-/**
- * Volatility scale transform parameters.
- */
 export interface VolatilityScaleParams {
   /** Period for volatility calculation */
   volatilityPeriod: number;
@@ -38,9 +31,6 @@ export interface VolatilityScaleParams {
   maxScaleFactor?: number;
 }
 
-/**
- * Default volatility scale parameters.
- */
 export const VOLATILITY_SCALE_DEFAULTS: VolatilityScaleParams = {
   volatilityPeriod: 20,
   targetVolatility: 0.15,
@@ -48,13 +38,6 @@ export const VOLATILITY_SCALE_DEFAULTS: VolatilityScaleParams = {
   maxScaleFactor: 3.0,
 };
 
-// ============================================
-// Result Types
-// ============================================
-
-/**
- * Volatility scale result.
- */
 export interface VolatilityScaleResult {
   /** Unix timestamp in milliseconds */
   timestamp: number;
@@ -68,17 +51,6 @@ export interface VolatilityScaleResult {
   volatility: number;
 }
 
-// ============================================
-// Calculation Functions
-// ============================================
-
-/**
- * Calculate rolling volatility (standard deviation of returns).
- *
- * @param returns - Return values (oldest first)
- * @param period - Rolling window period
- * @returns Rolling volatility values
- */
 export function calculateRollingVolatility(returns: number[], period: number): number[] {
   const results: number[] = [];
 
@@ -91,40 +63,17 @@ export function calculateRollingVolatility(returns: number[], period: number): n
   return results;
 }
 
-/**
- * Calculate scale factor based on volatility.
- *
- * @param currentVolatility - Current volatility
- * @param targetVolatility - Target volatility
- * @param minVolatility - Minimum volatility floor
- * @param maxScaleFactor - Maximum scale factor
- * @returns Scale factor
- */
 export function calculateScaleFactor(
   currentVolatility: number,
   targetVolatility: number,
   minVolatility = 0.01,
   maxScaleFactor = 3.0
 ): number {
-  // Apply minimum volatility floor
   const adjustedVol = Math.max(currentVolatility, minVolatility);
-
-  // Calculate scale factor
   const scaleFactor = targetVolatility / adjustedVol;
-
-  // Cap scale factor
   return Math.min(scaleFactor, maxScaleFactor);
 }
 
-/**
- * Calculate volatility-scaled values.
- *
- * @param values - Input values to scale (oldest first)
- * @param returns - Return values for volatility calculation
- * @param timestamps - Corresponding timestamps
- * @param params - Volatility scale parameters
- * @returns Array of volatility scale results
- */
 export function calculateVolatilityScale(
   values: number[],
   returns: number[],
@@ -139,11 +88,9 @@ export function calculateVolatilityScale(
     return results;
   }
 
-  // Calculate rolling volatility
   const volatilities = calculateRollingVolatility(returns, volatilityPeriod);
 
-  // The first volatility corresponds to index (volatilityPeriod - 1) in returns
-  // We need to align with values/timestamps
+  // First volatility value aligns with index (volatilityPeriod - 1) in the input arrays
   const offset = volatilityPeriod - 1;
 
   for (let i = 0; i < volatilities.length; i++) {
@@ -173,15 +120,6 @@ export function calculateVolatilityScale(
   return results;
 }
 
-/**
- * Calculate volatility-scaled values for multiple inputs.
- *
- * @param inputsMap - Map of input name to values
- * @param returns - Shared returns for volatility calculation
- * @param timestamps - Shared timestamps
- * @param params - Volatility scale parameters
- * @returns Map of input name to volatility scale results
- */
 export function calculateMultipleVolatilityScales(
   inputsMap: Map<string, number[]>,
   returns: number[],
@@ -197,26 +135,12 @@ export function calculateMultipleVolatilityScales(
   return results;
 }
 
-/**
- * Get required periods for volatility scale calculation.
- */
 export function volatilityScaleRequiredPeriods(
   params: VolatilityScaleParams = VOLATILITY_SCALE_DEFAULTS
 ): number {
   return params.volatilityPeriod;
 }
 
-// ============================================
-// Volatility Analysis
-// ============================================
-
-/**
- * Get volatility regime based on current vs target.
- *
- * @param currentVolatility - Current volatility
- * @param targetVolatility - Target volatility
- * @returns Volatility regime
- */
 export function getVolatilityRegime(
   currentVolatility: number,
   targetVolatility: number
@@ -238,15 +162,6 @@ export function getVolatilityRegime(
   return "normal";
 }
 
-/**
- * Calculate position size multiplier based on volatility.
- *
- * @param currentVolatility - Current volatility
- * @param targetVolatility - Target volatility
- * @param minMultiplier - Minimum position multiplier
- * @param maxMultiplier - Maximum position multiplier
- * @returns Position size multiplier
- */
 export function calculatePositionMultiplier(
   currentVolatility: number,
   targetVolatility: number,
@@ -261,20 +176,9 @@ export function calculatePositionMultiplier(
   return Math.max(minMultiplier, Math.min(maxMultiplier, multiplier));
 }
 
-/**
- * Generate output name for volatility scale.
- *
- * @param inputName - Input feature name
- * @param suffix - Suffix for output name (default: "volscale")
- * @returns Output name
- */
 export function generateVolatilityScaleOutputName(inputName: string, suffix = "volscale"): string {
   return `${inputName}_${suffix}`;
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   calculateVolatilityScale,

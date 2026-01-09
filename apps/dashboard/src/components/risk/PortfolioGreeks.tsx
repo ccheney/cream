@@ -15,10 +15,6 @@ import { type AggregateGreeksData, useAggregateGreeks } from "@/hooks/useAggrega
 import { DeltaGauge } from "./DeltaGauge";
 import { GreekCard } from "./GreekCard";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PortfolioGreeksProps {
   /** Delta limit for gauge */
   deltaLimit?: number;
@@ -38,32 +34,6 @@ export interface PortfolioGreeksProps {
   className?: string;
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * PortfolioGreeks displays aggregated real-time options exposure.
- *
- * Features:
- * - Delta gauge with SPY equivalent
- * - Gamma, Theta, Vega, Rho cards
- * - Streaming indicator
- * - Last updated timestamp
- * - Optional limit display
- *
- * @example
- * ```tsx
- * <PortfolioGreeks
- *   deltaLimit={500000}
- *   gammaLimit={10000}
- *   thetaLimit={-100}
- *   vegaLimit={50000}
- *   showGauge
- *   showLimits
- * />
- * ```
- */
 export const PortfolioGreeks = memo(function PortfolioGreeks({
   deltaLimit = 500000,
   gammaLimit,
@@ -79,7 +49,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     enabled: true,
   });
 
-  // Format timestamp
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -88,7 +57,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     });
   };
 
-  // Calculate time since update
   const getTimeSinceUpdate = (date: Date) => {
     const ms = Date.now() - date.getTime();
     if (ms < 1000) {
@@ -97,7 +65,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     return `${(ms / 1000).toFixed(1)}s ago`;
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <div
@@ -110,7 +77,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     );
   }
 
-  // No data state
   if (!data) {
     return (
       <div
@@ -123,17 +89,14 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     );
   }
 
-  // Compact variant
   if (variant === "compact") {
     return <CompactGreeks data={data} isStreaming={isStreaming} className={className} />;
   }
 
-  // Full variant
   return (
     <div
       className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 ${className}`}
     >
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
@@ -161,9 +124,7 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4 space-y-6">
-        {/* Delta Gauge */}
         {showGauge && (
           <DeltaGauge
             deltaNotional={data.deltaNotional}
@@ -174,7 +135,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
           />
         )}
 
-        {/* Greek Cards */}
         <div className="grid grid-cols-4 gap-4">
           <GreekCard
             type="gamma"
@@ -197,7 +157,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
           <GreekCard type="rho" value={data.rhoTotal} isStreaming={isStreaming} />
         </div>
 
-        {/* Position count */}
         <div className="text-center text-xs text-cream-400 dark:text-cream-500">
           {data.positionCount} option position{data.positionCount !== 1 ? "s" : ""}
         </div>
@@ -205,10 +164,6 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     </div>
   );
 });
-
-// ============================================
-// Compact Variant
-// ============================================
 
 interface CompactGreeksProps {
   data: AggregateGreeksData;
@@ -233,7 +188,6 @@ const CompactGreeks = memo(function CompactGreeks({
     <div
       className={`flex items-center gap-6 px-4 py-3 bg-cream-50 dark:bg-night-750 rounded-lg ${className}`}
     >
-      {/* Streaming indicator */}
       {isStreaming && (
         <div className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -241,7 +195,6 @@ const CompactGreeks = memo(function CompactGreeks({
         </div>
       )}
 
-      {/* Delta */}
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Δ</span>
         <span
@@ -255,7 +208,6 @@ const CompactGreeks = memo(function CompactGreeks({
         </span>
       </div>
 
-      {/* Gamma */}
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Γ</span>
         <span className="text-sm font-mono text-cream-700 dark:text-cream-300">
@@ -263,7 +215,6 @@ const CompactGreeks = memo(function CompactGreeks({
         </span>
       </div>
 
-      {/* Theta */}
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Θ</span>
         <span
@@ -275,7 +226,6 @@ const CompactGreeks = memo(function CompactGreeks({
         </span>
       </div>
 
-      {/* Vega */}
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">V</span>
         <span className="text-sm font-mono text-cream-700 dark:text-cream-300">

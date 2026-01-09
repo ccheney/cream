@@ -12,13 +12,6 @@
 
 import type { Candle } from "@cream/indicators";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Features extracted for regime classification.
- */
 export interface RegimeFeatures {
   /** Log returns */
   returns: number;
@@ -32,9 +25,6 @@ export interface RegimeFeatures {
   timestamp: string;
 }
 
-/**
- * Feature extraction configuration.
- */
 export interface FeatureExtractionConfig {
   /** Lookback period for returns calculation */
   returnsPeriod: number;
@@ -44,18 +34,11 @@ export interface FeatureExtractionConfig {
   volumePeriod: number;
 }
 
-/**
- * Default feature extraction configuration.
- */
 export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
-  returnsPeriod: 1, // Single period returns
-  volatilityPeriod: 20, // 20-period realized vol
-  volumePeriod: 20, // 20-period volume average
+  returnsPeriod: 1,
+  volatilityPeriod: 20,
+  volumePeriod: 20,
 };
-
-// ============================================
-// Feature Extraction
-// ============================================
 
 /**
  * Extract regime classification features from candle data.
@@ -73,8 +56,6 @@ export function extractFeatures(
   }
 
   const features: RegimeFeatures[] = [];
-
-  // Calculate log returns for entire series
   const logReturns: number[] = [];
   for (let i = 1; i < candles.length; i++) {
     const prevClose = candles[i - 1]?.close ?? 0;
@@ -86,30 +67,26 @@ export function extractFeatures(
     }
   }
 
-  // Extract features starting from volatility period
   for (let i = config.volatilityPeriod; i < candles.length; i++) {
-    const returnIdx = i - 1; // Returns array is offset by 1
+    // Returns array is offset by 1 from candles array due to diff calculation
+    const returnIdx = i - 1;
     const candle = candles[i]!;
 
-    // Current return
     const returns = logReturns[returnIdx] ?? 0;
 
-    // Realized volatility (std of recent returns)
     const recentReturns = logReturns.slice(returnIdx - config.volatilityPeriod + 1, returnIdx + 1);
     const volatility = calculateStd(recentReturns);
 
-    // Volume z-score
     const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
     const volumeZScore = calculateZScore(candle.volume, recentVolumes);
 
-    // Trend strength (returns / volatility, bounded)
     const trendStrength = volatility > 0.0001 ? returns / volatility : 0;
 
     features.push({
       returns,
       volatility,
       volumeZScore,
-      trendStrength: Math.max(-3, Math.min(3, trendStrength)), // Bound to [-3, 3]
+      trendStrength: Math.max(-3, Math.min(3, trendStrength)),
       timestamp: new Date(candle.timestamp).toISOString(),
     });
   }
@@ -117,9 +94,6 @@ export function extractFeatures(
   return features;
 }
 
-/**
- * Extract features for a single candle given context.
- */
 export function extractSingleFeature(
   candles: Candle[],
   config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
@@ -128,22 +102,12 @@ export function extractSingleFeature(
   return features[features.length - 1] ?? null;
 }
 
-/**
- * Get minimum required candle count for feature extraction.
- */
 export function getMinimumCandleCount(
   config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): number {
   return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
 }
 
-// ============================================
-// Statistical Helpers
-// ============================================
-
-/**
- * Calculate standard deviation of an array.
- */
 export function calculateStd(values: number[]): number {
   if (values.length === 0) {
     return 0;
@@ -158,9 +122,6 @@ export function calculateStd(values: number[]): number {
   return Math.sqrt(variance);
 }
 
-/**
- * Calculate mean of an array.
- */
 export function calculateMean(values: number[]): number {
   if (values.length === 0) {
     return 0;
@@ -168,9 +129,6 @@ export function calculateMean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-/**
- * Calculate z-score of a value relative to a sample.
- */
 export function calculateZScore(value: number, sample: number[]): number {
   const mean = calculateMean(sample);
   const std = calculateStd(sample);
@@ -180,9 +138,6 @@ export function calculateZScore(value: number, sample: number[]): number {
   return (value - mean) / std;
 }
 
-/**
- * Normalize features to zero mean and unit variance.
- */
 export function normalizeFeatures(features: RegimeFeatures[]): {
   normalized: number[][];
   means: number[];
@@ -192,13 +147,11 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
     return { normalized: [], means: [0, 0, 0, 0], stds: [1, 1, 1, 1] };
   }
 
-  // Extract feature arrays
   const returns = features.map((f) => f.returns);
   const volatility = features.map((f) => f.volatility);
   const volumeZScore = features.map((f) => f.volumeZScore);
   const trendStrength = features.map((f) => f.trendStrength);
 
-  // Calculate means and stds
   const means = [
     calculateMean(returns),
     calculateMean(volatility),
@@ -213,7 +166,6 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
     Math.max(calculateStd(trendStrength), 0.0001),
   ];
 
-  // Normalize
   const normalized = features.map((f) => [
     (f.returns - means[0]!) / stds[0]!,
     (f.volatility - means[1]!) / stds[1]!,
@@ -224,9 +176,6 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
   return { normalized, means, stds };
 }
 
-/**
- * Apply normalization to a single feature vector.
- */
 export function normalizeFeatureVector(
   feature: RegimeFeatures,
   means: number[],

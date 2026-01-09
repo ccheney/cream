@@ -1,21 +1,9 @@
 /**
- * Indicator Configuration Schema
- *
- * Defines configuration for technical indicators used in market analysis.
- * Supports RSI, Stochastic, SMA, EMA, ATR, Bollinger Bands, and Volume SMA.
- *
  * @see docs/plans/11-configuration.md for full specification
  */
 
 import { z } from "zod";
 
-// ============================================
-// Indicator Types
-// ============================================
-
-/**
- * Supported indicator names
- */
 export const IndicatorName = z.enum([
   "rsi",
   "stochastic",
@@ -27,124 +15,51 @@ export const IndicatorName = z.enum([
 ]);
 export type IndicatorName = z.infer<typeof IndicatorName>;
 
-// ============================================
-// Indicator-Specific Parameter Schemas
-// ============================================
-
-/**
- * RSI (Relative Strength Index) parameters
- *
- * Developed by J. Welles Wilder (1978)
- * Standard: 14 period, >70 overbought, <30 oversold
- */
+/** Standard: 14 period, >70 overbought, <30 oversold */
 export const RSIParamsSchema = z.object({
   period: z.number().int().positive().default(14),
 });
 
-/**
- * Stochastic parameters
- *
- * Developed by George Lane (1950s)
- * %K = fast line, %D = signal line
- */
+/** %K = fast line, %D = signal line */
 export const StochasticParamsSchema = z.object({
   k_period: z.number().int().positive().default(14),
   d_period: z.number().int().positive().default(3),
   slow: z.boolean().default(true),
 });
 
-/**
- * SMA (Simple Moving Average) parameters
- *
- * Equal-weighted, stable, common periods: 20, 50, 200
- */
 export const SMAParamsSchema = z.object({
   periods: z.array(z.number().int().positive()).min(1).default([20, 50, 200]),
 });
 
-/**
- * EMA (Exponential Moving Average) parameters
- *
- * Recent price weighted, more responsive
- */
 export const EMAParamsSchema = z.object({
   periods: z.array(z.number().int().positive()).min(1).default([9, 21]),
 });
 
-/**
- * ATR (Average True Range) parameters
- *
- * Measures market volatility, non-directional
- */
 export const ATRParamsSchema = z.object({
   period: z.number().int().positive().default(14),
 });
 
-/**
- * Bollinger Bands parameters
- *
- * Developed by John Bollinger (1980s)
- * Standard: 20-period SMA, ±2 standard deviations
- */
+/** Standard: 20-period SMA, +/- 2 standard deviations */
 export const BollingerBandsParamsSchema = z.object({
   period: z.number().int().positive().default(20),
   std_dev: z.number().positive().default(2.0),
 });
 
-/**
- * Volume SMA parameters
- */
 export const VolumeSMAParamsSchema = z.object({
   period: z.number().int().positive().default(20),
 });
 
-// ============================================
-// Generic Indicator Configuration
-// ============================================
-
-/**
- * Generic indicator configuration
- *
- * Used for flexible indicator definitions where specific params
- * are validated at runtime based on indicator name.
- */
+/** Flexible indicator config - params validated at runtime based on name */
 export const IndicatorConfigSchema = z.object({
-  /**
-   * Indicator name
-   */
   name: z.string().min(1),
-
-  /**
-   * Indicator-specific parameters
-   *
-   * Structure depends on the indicator type.
-   */
   params: z.record(z.string(), z.unknown()),
-
-  /**
-   * Timeframes to calculate this indicator for
-   *
-   * Each indicator is calculated for each timeframe.
-   */
   timeframes: z.array(z.string()).min(1),
 });
 export type IndicatorConfig = z.infer<typeof IndicatorConfigSchema>;
 
-/**
- * Complete indicators configuration
- *
- * Array of indicator configurations.
- */
 export const IndicatorsConfigSchema = z.array(IndicatorConfigSchema);
 export type IndicatorsConfig = z.infer<typeof IndicatorsConfigSchema>;
 
-// ============================================
-// Typed Indicator Configuration
-// ============================================
-
-/**
- * RSI indicator configuration (typed)
- */
 export const RSIIndicatorConfigSchema = z.object({
   name: z.literal("rsi"),
   params: RSIParamsSchema,
@@ -152,9 +67,6 @@ export const RSIIndicatorConfigSchema = z.object({
 });
 export type RSIIndicatorConfig = z.infer<typeof RSIIndicatorConfigSchema>;
 
-/**
- * Stochastic indicator configuration (typed)
- */
 export const StochasticIndicatorConfigSchema = z.object({
   name: z.literal("stochastic"),
   params: StochasticParamsSchema,
@@ -162,9 +74,6 @@ export const StochasticIndicatorConfigSchema = z.object({
 });
 export type StochasticIndicatorConfig = z.infer<typeof StochasticIndicatorConfigSchema>;
 
-/**
- * SMA indicator configuration (typed)
- */
 export const SMAIndicatorConfigSchema = z.object({
   name: z.literal("sma"),
   params: SMAParamsSchema,
@@ -172,9 +81,6 @@ export const SMAIndicatorConfigSchema = z.object({
 });
 export type SMAIndicatorConfig = z.infer<typeof SMAIndicatorConfigSchema>;
 
-/**
- * EMA indicator configuration (typed)
- */
 export const EMAIndicatorConfigSchema = z.object({
   name: z.literal("ema"),
   params: EMAParamsSchema,
@@ -182,9 +88,6 @@ export const EMAIndicatorConfigSchema = z.object({
 });
 export type EMAIndicatorConfig = z.infer<typeof EMAIndicatorConfigSchema>;
 
-/**
- * ATR indicator configuration (typed)
- */
 export const ATRIndicatorConfigSchema = z.object({
   name: z.literal("atr"),
   params: ATRParamsSchema,
@@ -192,9 +95,6 @@ export const ATRIndicatorConfigSchema = z.object({
 });
 export type ATRIndicatorConfig = z.infer<typeof ATRIndicatorConfigSchema>;
 
-/**
- * Bollinger Bands indicator configuration (typed)
- */
 export const BollingerBandsIndicatorConfigSchema = z.object({
   name: z.literal("bollinger_bands"),
   params: BollingerBandsParamsSchema,
@@ -202,9 +102,6 @@ export const BollingerBandsIndicatorConfigSchema = z.object({
 });
 export type BollingerBandsIndicatorConfig = z.infer<typeof BollingerBandsIndicatorConfigSchema>;
 
-/**
- * Volume SMA indicator configuration (typed)
- */
 export const VolumeSMAIndicatorConfigSchema = z.object({
   name: z.literal("volume_sma"),
   params: VolumeSMAParamsSchema,
@@ -212,9 +109,6 @@ export const VolumeSMAIndicatorConfigSchema = z.object({
 });
 export type VolumeSMAIndicatorConfig = z.infer<typeof VolumeSMAIndicatorConfigSchema>;
 
-/**
- * Union of all typed indicator configurations
- */
 export const TypedIndicatorConfigSchema = z.union([
   RSIIndicatorConfigSchema,
   StochasticIndicatorConfigSchema,

@@ -1,10 +1,4 @@
-/**
- * System Query Hooks
- *
- * TanStack Query hooks for system status and control.
- *
- * @see docs/plans/ui/05-api-endpoints.md
- */
+// @see docs/plans/ui/05-api-endpoints.md
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { get, post } from "@/lib/api/client";
@@ -19,19 +13,6 @@ import type {
   TriggerCycleResponse,
 } from "@/lib/api/types";
 
-// ============================================
-// Queries
-// ============================================
-
-/**
- * Get current system status.
- *
- * @example
- * ```tsx
- * const { data, isLoading } = useSystemStatus();
- * return <div>Status: {data?.status}</div>;
- * ```
- */
 export function useSystemStatus() {
   return useQuery({
     queryKey: queryKeys.system.status(),
@@ -41,19 +22,10 @@ export function useSystemStatus() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 5000,
   });
 }
 
-/**
- * Get system health check.
- *
- * @example
- * ```tsx
- * const { data } = useSystemHealth();
- * return <div>Health: {data?.status}</div>;
- * ```
- */
 export function useSystemHealth() {
   return useQuery({
     queryKey: [...queryKeys.system.all, "health"] as const,
@@ -66,23 +38,6 @@ export function useSystemHealth() {
   });
 }
 
-// ============================================
-// Mutations
-// ============================================
-
-/**
- * Start the trading system.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useStartSystem();
- * return (
- *   <button onClick={() => mutate({ environment: 'PAPER' })} disabled={isPending}>
- *     Start
- *   </button>
- * );
- * ```
- */
 export function useStartSystem() {
   const queryClient = useQueryClient();
 
@@ -98,19 +53,6 @@ export function useStartSystem() {
   });
 }
 
-/**
- * Stop the trading system.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useStopSystem();
- * return (
- *   <button onClick={() => mutate({ closeAllPositions: true })} disabled={isPending}>
- *     Stop
- *   </button>
- * );
- * ```
- */
 export function useStopSystem() {
   const queryClient = useQueryClient();
 
@@ -126,19 +68,6 @@ export function useStopSystem() {
   });
 }
 
-/**
- * Pause the trading system.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = usePauseSystem();
- * return (
- *   <button onClick={() => mutate()} disabled={isPending}>
- *     Pause
- *   </button>
- * );
- * ```
- */
 export function usePauseSystem() {
   const queryClient = useQueryClient();
 
@@ -154,22 +83,6 @@ export function usePauseSystem() {
   });
 }
 
-/**
- * Change the trading environment.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useChangeEnvironment();
- * return (
- *   <button
- *     onClick={() => mutate({ environment: 'LIVE', confirmLive: true })}
- *     disabled={isPending}
- *   >
- *     Switch to LIVE
- *   </button>
- * );
- * ```
- */
 export function useChangeEnvironment() {
   const queryClient = useQueryClient();
 
@@ -185,22 +98,6 @@ export function useChangeEnvironment() {
   });
 }
 
-/**
- * Trigger an on-demand trading cycle.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useTriggerCycle();
- * return (
- *   <button
- *     onClick={() => mutate({ environment: 'PAPER', useDraftConfig: false })}
- *     disabled={isPending}
- *   >
- *     Trigger Cycle
- *   </button>
- * );
- * ```
- */
 export function useTriggerCycle() {
   const queryClient = useQueryClient();
 
@@ -210,7 +107,6 @@ export function useTriggerCycle() {
       return data;
     },
     onSuccess: () => {
-      // Invalidate system status to reflect the new cycle
       queryClient.invalidateQueries({ queryKey: queryKeys.system.all });
     },
   });

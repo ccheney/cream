@@ -1,11 +1,3 @@
-/**
- * Prediction Markets Types
- *
- * Re-exports from @cream/domain for prediction markets integration.
- * This package adds provider-specific types and error classes.
- */
-
-// Re-export all schemas and types from domain
 export {
   type AggregatedPredictionData,
   AggregatedPredictionDataSchema,
@@ -26,14 +18,9 @@ export {
   toNumericScores,
 } from "@cream/domain";
 
-// Alias for convenience
 export type Platform = import("@cream/domain").PredictionPlatform;
 export type MarketType = import("@cream/domain").PredictionMarketType;
 export type MarketOutcome = import("@cream/domain").PredictionOutcome;
-
-// ============================================
-// Provider Client Interface
-// ============================================
 
 import type {
   PredictionMarketEvent,
@@ -48,10 +35,6 @@ export interface PredictionMarketProvider {
   fetchMarketByTicker(ticker: string): Promise<PredictionMarketEvent | null>;
   calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores;
 }
-
-// ============================================
-// Error Types
-// ============================================
 
 export class PredictionMarketError extends Error {
   constructor(

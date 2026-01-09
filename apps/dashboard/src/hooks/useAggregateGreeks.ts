@@ -1,22 +1,9 @@
-/**
- * useAggregateGreeks Hook
- *
- * Calculates and streams portfolio-level aggregate Greeks from options positions.
- * Uses usePositionGreeks for per-position Greek calculations.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 4.3
- */
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuotes } from "@/hooks/queries/useMarket";
 import { useOptionsPositions } from "@/hooks/queries/useOptionsPositions";
 import { usePositionGreeks } from "@/hooks/usePositionGreeks";
-
-// ============================================
-// Types
-// ============================================
 
 export interface AggregateGreeksData {
   /** Delta-adjusted notional exposure in dollars */
@@ -38,60 +25,22 @@ export interface AggregateGreeksData {
 }
 
 export interface UseAggregateGreeksOptions {
-  /** Throttle updates to this interval in ms (default: 100) */
   throttleMs?: number;
-  /** SPY price for share equivalent calculation */
   spyPrice?: number;
-  /** Enable streaming updates */
   enabled?: boolean;
 }
 
 export interface UseAggregateGreeksReturn {
-  /** Aggregated greeks data */
   data: AggregateGreeksData | null;
-  /** Whether data is loading */
   isLoading: boolean;
-  /** Whether streaming is active */
   isStreaming: boolean;
-  /** Error if any */
   error: Error | null;
-  /** Force refresh */
   refresh: () => void;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_THROTTLE_MS = 100;
 const DEFAULT_SPY_PRICE = 500;
 
-// ============================================
-// Hook Implementation
-// ============================================
-
-/**
- * useAggregateGreeks provides real-time portfolio-level options Greeks.
- *
- * Features:
- * - Streams updates from options positions
- * - Calculates delta notional, gamma, theta, vega
- * - Converts delta to SPY share equivalent
- * - Throttles updates for performance
- *
- * @example
- * ```tsx
- * const { data, isLoading, isStreaming } = useAggregateGreeks({
- *   throttleMs: 100,
- *   enabled: true,
- * });
- *
- * if (data) {
- *   console.log(`Delta: $${data.deltaNotional.toFixed(0)}`);
- *   console.log(`≈ ${data.deltaSPYEquivalent.toFixed(0)} SPY shares`);
- * }
- * ```
- */
 export function useAggregateGreeks(
   options: UseAggregateGreeksOptions = {}
 ): UseAggregateGreeksReturn {

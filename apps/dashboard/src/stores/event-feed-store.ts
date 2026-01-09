@@ -1,18 +1,9 @@
 /**
- * Event Feed Store
- *
- * Manages real-time event feed with buffering, scroll state, and new event tracking.
- * Uses Zustand for efficient state management with selective subscriptions.
- *
  * @see docs/plans/ui/31-realtime-patterns.md
  */
 
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
-
-// ============================================
-// Types
-// ============================================
 
 export type EventType =
   | "trade_executed"
@@ -32,69 +23,44 @@ export type EventType =
 export type EventSeverity = "info" | "warning" | "error" | "success";
 
 export interface FeedEvent {
-  /** Unique event ID */
   id: string;
-  /** Event type */
   type: EventType;
-  /** Event severity for styling */
   severity: EventSeverity;
-  /** Event title */
   title: string;
-  /** Event description */
   message: string;
-  /** Event timestamp */
   timestamp: Date;
-  /** Related symbol (if applicable) */
   symbol?: string;
-  /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
 
 export interface EventFeedState {
-  /** Events in the feed (newest last) */
+  /** Newest events are last in array */
   events: FeedEvent[];
-  /** Maximum events to keep in buffer */
   maxEvents: number;
-  /** Whether the user is scrolled to bottom */
   isAtBottom: boolean;
-  /** Count of new events since user scrolled away from bottom */
+  /** Unread count when user scrolled away from bottom */
   newEventCount: number;
-  /** Whether the feed is paused */
   isPaused: boolean;
-  /** Filter by event types (empty = all) */
+  /** Empty array means no filter (show all) */
   typeFilter: EventType[];
-  /** Filter by severity (empty = all) */
+  /** Empty array means no filter (show all) */
   severityFilter: EventSeverity[];
 }
 
 export interface EventFeedActions {
-  /** Add an event to the feed */
   addEvent: (event: Omit<FeedEvent, "id" | "timestamp">) => void;
-  /** Add multiple events at once */
   addEvents: (events: Array<Omit<FeedEvent, "id" | "timestamp">>) => void;
-  /** Clear all events */
   clearEvents: () => void;
-  /** Set scroll position state */
   setIsAtBottom: (isAtBottom: boolean) => void;
-  /** Reset new event count (when user scrolls to bottom) */
   resetNewEventCount: () => void;
-  /** Pause/resume the feed */
   setPaused: (isPaused: boolean) => void;
-  /** Toggle pause state */
   togglePaused: () => void;
-  /** Set type filter */
   setTypeFilter: (types: EventType[]) => void;
-  /** Set severity filter */
   setSeverityFilter: (severities: EventSeverity[]) => void;
-  /** Get filtered events */
   getFilteredEvents: () => FeedEvent[];
 }
 
 export type EventFeedStore = EventFeedState & EventFeedActions;
-
-// ============================================
-// Defaults
-// ============================================
 
 const DEFAULT_MAX_EVENTS = 1000;
 
@@ -108,13 +74,6 @@ const initialState: EventFeedState = {
   severityFilter: [],
 };
 
-// ============================================
-// Store
-// ============================================
-
-/**
- * Generate unique event ID.
- */
 function generateEventId(): string {
   return `evt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
@@ -137,7 +96,6 @@ export const useEventFeedStore = create<EventFeedStore>()(
 
         set((state) => {
           const events = [...state.events, newEvent];
-          // Trim to max events
           const trimmedEvents =
             events.length > state.maxEvents
               ? events.slice(events.length - state.maxEvents)
@@ -159,8 +117,7 @@ export const useEventFeedStore = create<EventFeedStore>()(
         const newEvents: FeedEvent[] = events.map((event, index) => ({
           ...event,
           id: generateEventId(),
-          // Stagger timestamps slightly for ordering
-          timestamp: new Date(now.getTime() + index),
+          timestamp: new Date(now.getTime() + index), // Stagger for stable ordering
         }));
 
         set((state) => {
@@ -187,7 +144,6 @@ export const useEventFeedStore = create<EventFeedStore>()(
       setIsAtBottom: (isAtBottom) => {
         set({
           isAtBottom,
-          // Reset count when scrolled to bottom
           newEventCount: isAtBottom ? 0 : get().newEventCount,
         });
       },
@@ -216,12 +172,10 @@ export const useEventFeedStore = create<EventFeedStore>()(
         const state = get();
         let filtered = state.events;
 
-        // Filter by type
         if (state.typeFilter.length > 0) {
           filtered = filtered.filter((e) => state.typeFilter.includes(e.type));
         }
 
-        // Filter by severity
         if (state.severityFilter.length > 0) {
           filtered = filtered.filter((e) => state.severityFilter.includes(e.severity));
         }
@@ -233,57 +187,30 @@ export const useEventFeedStore = create<EventFeedStore>()(
   )
 );
 
-// ============================================
-// Selectors
-// ============================================
+export const selectEventCount = (state: EventFeedStore): number => state.events.length;
 
-/**
- * Select event count.
- */
-export const selectEventCount = (state: EventFeedStore) => state.events.length;
+export const selectNewEventCount = (state: EventFeedStore): number => state.newEventCount;
 
-/**
- * Select new event count (unread).
- */
-export const selectNewEventCount = (state: EventFeedStore) => state.newEventCount;
+export const selectHasNewEvents = (state: EventFeedStore): boolean => state.newEventCount > 0;
 
-/**
- * Select whether there are new events.
- */
-export const selectHasNewEvents = (state: EventFeedStore) => state.newEventCount > 0;
+export const selectLatestEvent = (state: EventFeedStore): FeedEvent | null =>
+  state.events.length > 0 ? (state.events[state.events.length - 1] ?? null) : null;
 
-/**
- * Select most recent event.
- */
-export const selectLatestEvent = (state: EventFeedStore) =>
-  state.events.length > 0 ? state.events[state.events.length - 1] : null;
+export const selectEventsByType =
+  (type: EventType) =>
+  (state: EventFeedStore): FeedEvent[] =>
+    state.events.filter((e) => e.type === type);
 
-/**
- * Select events by type.
- */
-export const selectEventsByType = (type: EventType) => (state: EventFeedStore) =>
-  state.events.filter((e) => e.type === type);
+export const selectEventsBySymbol =
+  (symbol: string) =>
+  (state: EventFeedStore): FeedEvent[] =>
+    state.events.filter((e) => e.symbol === symbol);
 
-/**
- * Select events by symbol.
- */
-export const selectEventsBySymbol = (symbol: string) => (state: EventFeedStore) =>
-  state.events.filter((e) => e.symbol === symbol);
+export const selectEventsSince =
+  (since: Date) =>
+  (state: EventFeedStore): FeedEvent[] =>
+    state.events.filter((e) => e.timestamp > since);
 
-/**
- * Select events since a timestamp.
- */
-export const selectEventsSince = (since: Date) => (state: EventFeedStore) =>
-  state.events.filter((e) => e.timestamp > since);
-
-// ============================================
-// Subscription Helpers
-// ============================================
-
-/**
- * Subscribe to new events only.
- * Returns unsubscribe function.
- */
 export function subscribeToNewEvents(callback: (event: FeedEvent) => void): () => void {
   let lastEventId: string | null = null;
 
@@ -308,9 +235,6 @@ export function subscribeToNewEvents(callback: (event: FeedEvent) => void): () =
   );
 }
 
-/**
- * Subscribe to events of a specific type.
- */
 export function subscribeToEventType(
   type: EventType,
   callback: (event: FeedEvent) => void
@@ -338,9 +262,5 @@ export function subscribeToEventType(
     }
   );
 }
-
-// ============================================
-// Export
-// ============================================
 
 export default useEventFeedStore;

@@ -1,19 +1,9 @@
 /**
  * Semantic Similarity Validation
  *
- * Validates agent outputs using semantic similarity with embeddings.
- * Uses Promptfoo's matchesSimilarity with Gemini embeddings.
- *
  * @see docs/plans/14-testing.md lines 399-424
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Similarity validation result.
- */
 export interface SimilarityResult {
   /** Actual text being compared */
   actual: string;
@@ -31,9 +21,6 @@ export interface SimilarityResult {
   threshold: number;
 }
 
-/**
- * Batch similarity results.
- */
 export interface BatchSimilarityResults {
   /** Individual results */
   results: SimilarityResult[];
@@ -55,9 +42,6 @@ export interface BatchSimilarityResults {
   };
 }
 
-/**
- * Embedding provider configuration.
- */
 export interface EmbeddingConfig {
   /** Embedding model */
   model: "gemini-embedding-001" | "text-embedding-3-small";
@@ -69,22 +53,12 @@ export interface EmbeddingConfig {
   useCache?: boolean;
 }
 
-// ============================================
-// Default Configuration
-// ============================================
-
-/**
- * Default embedding configuration.
- */
 export const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = {
   model: "gemini-embedding-001",
   threshold: 0.8,
   useCache: true,
 };
 
-/**
- * Similarity threshold interpretation.
- */
 export const SIMILARITY_LEVELS = {
   /** Near-identical */
   VERY_HIGH: 0.95,
@@ -99,32 +73,16 @@ export const SIMILARITY_LEVELS = {
   LOW: 0.6,
 } as const;
 
-// ============================================
-// Embedding Cache
-// ============================================
-
-/**
- * Simple in-memory cache for embeddings.
- */
 const embeddingCache = new Map<string, number[]>();
 
-/**
- * Get cache key for text.
- */
 function getCacheKey(text: string, model: string): string {
   return `${model}:${text}`;
 }
 
-/**
- * Clear embedding cache.
- */
 export function clearEmbeddingCache(): void {
   embeddingCache.clear();
 }
 
-/**
- * Get cache statistics.
- */
 export function getEmbeddingCacheStats(): { size: number; keys: string[] } {
   return {
     size: embeddingCache.size,
@@ -132,16 +90,8 @@ export function getEmbeddingCacheStats(): { size: number; keys: string[] } {
   };
 }
 
-// ============================================
-// Mock Embedding Functions
-// ============================================
-
-/**
- * Generate a mock embedding vector.
- * Uses deterministic hashing for reproducible results.
- */
+/** Deterministic hash-based embedding for reproducible test results. */
 function generateMockEmbedding(text: string, dimensions = 768): number[] {
-  // Simple deterministic hash-based embedding
   const embedding: number[] = [];
   let hash = 0;
 
@@ -150,19 +100,14 @@ function generateMockEmbedding(text: string, dimensions = 768): number[] {
   }
 
   for (let i = 0; i < dimensions; i++) {
-    // Use hash to generate deterministic pseudo-random values
     hash = (hash * 1103515245 + 12345) % 2147483648;
     embedding.push((hash / 2147483648) * 2 - 1);
   }
 
-  // Normalize to unit vector
   const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
   return embedding.map((v) => v / magnitude);
 }
 
-/**
- * Calculate cosine similarity between two vectors.
- */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error(`Vector dimensions must match: ${a.length} vs ${b.length}`);
@@ -181,23 +126,17 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/**
- * Get embedding for text (mock implementation).
- * In production, this would call Gemini or OpenAI API.
- */
+/** Mock implementation - in production, this would call Gemini or OpenAI API. */
 async function getEmbedding(text: string, config: EmbeddingConfig): Promise<number[]> {
   const cacheKey = getCacheKey(text, config.model);
 
-  // Check cache
   if (config.useCache && embeddingCache.has(cacheKey)) {
     return embeddingCache.get(cacheKey)!;
   }
 
-  // Generate mock embedding
   const dimensions = config.model === "gemini-embedding-001" ? 3072 : 1536;
   const embedding = generateMockEmbedding(text, dimensions);
 
-  // Cache result
   if (config.useCache) {
     embeddingCache.set(cacheKey, embedding);
   }
@@ -205,25 +144,17 @@ async function getEmbedding(text: string, config: EmbeddingConfig): Promise<numb
   return embedding;
 }
 
-// ============================================
-// Core Functions
-// ============================================
-
-/**
- * Validate semantic similarity between actual and expected text.
- */
 export async function validateSemanticSimilarity(
   actual: string,
   expected: string,
   config: EmbeddingConfig = DEFAULT_EMBEDDING_CONFIG
 ): Promise<SimilarityResult> {
-  // Get embeddings
   const [actualEmbedding, expectedEmbedding] = await Promise.all([
     getEmbedding(actual, config),
     getEmbedding(expected, config),
   ]);
 
-  // Calculate similarity (normalize from [-1, 1] to [0, 1] range)
+  // Normalize from [-1, 1] to [0, 1] range for consistent threshold comparison
   const rawSimilarity = cosineSimilarity(actualEmbedding, expectedEmbedding);
   const similarity = (rawSimilarity + 1) / 2;
   const passed = similarity >= config.threshold;
@@ -237,9 +168,6 @@ export async function validateSemanticSimilarity(
   };
 }
 
-/**
- * Validate semantic similarity for multiple pairs.
- */
 export async function validateBatchSimilarity(
   pairs: Array<{ actual: string; expected: string }>,
   config: EmbeddingConfig = DEFAULT_EMBEDDING_CONFIG
@@ -251,7 +179,6 @@ export async function validateBatchSimilarity(
     results.push(result);
   }
 
-  // Calculate statistics
   const similarities = results.map((r) => r.similarity);
   const stats = {
     total: results.length,
@@ -272,10 +199,7 @@ export async function validateBatchSimilarity(
   };
 }
 
-/**
- * Check if text matches expected semantically (Promptfoo-style).
- * Returns boolean for simple assertion.
- */
+/** Promptfoo-style assertion returning boolean for simple pass/fail checks. */
 export async function matchesSimilarity(
   actual: string,
   expected: string,
@@ -297,10 +221,6 @@ export async function matchesSimilarity(
   return result.passed;
 }
 
-/**
- * Get similarity score between texts.
- * Useful when you need the actual score, not just pass/fail.
- */
 export async function getSimilarityScore(
   actual: string,
   expected: string,
@@ -310,13 +230,6 @@ export async function getSimilarityScore(
   return result.similarity;
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Interpret similarity score.
- */
 export function interpretSimilarity(score: number): string {
   if (score >= SIMILARITY_LEVELS.VERY_HIGH) {
     return "very_high (near-identical)";
@@ -331,9 +244,6 @@ export function interpretSimilarity(score: number): string {
   }
 }
 
-/**
- * Create a semantic assertion for testing.
- */
 export function semanticAssert(threshold = 0.8) {
   return async (actual: string, expected: string): Promise<void> => {
     const result = await validateSemanticSimilarity(actual, expected, {
@@ -351,13 +261,6 @@ export function semanticAssert(threshold = 0.8) {
   };
 }
 
-// ============================================
-// Sample Test Cases
-// ============================================
-
-/**
- * Sample pairs for testing semantic similarity.
- */
 export const SAMPLE_PAIRS = {
   /** Exact match - should be very high (> 0.99) */
   exact: {

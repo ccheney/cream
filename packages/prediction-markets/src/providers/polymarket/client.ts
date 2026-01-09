@@ -20,10 +20,6 @@ import type {
 import { z } from "zod";
 import { AuthenticationError, type PredictionMarketProvider, RateLimitError } from "../../types";
 
-// ============================================
-// Rate Limit Configuration
-// ============================================
-
 /**
  * Rate limits for Polymarket APIs (requests per 10 seconds)
  * @see https://docs.polymarket.com/getting-started/rate-limits
@@ -35,10 +31,6 @@ export const POLYMARKET_RATE_LIMITS = {
   gamma_markets: 300, // 300 req/10s
   gamma_events: 500, // 500 req/10s
 };
-
-// ============================================
-// Response Schemas
-// ============================================
 
 /**
  * Polymarket market response schema (from Gamma API)
@@ -111,10 +103,6 @@ export const ClobOrderbookSchema = z.object({
 });
 export type ClobOrderbook = z.infer<typeof ClobOrderbookSchema>;
 
-// ============================================
-// Search Query Patterns
-// ============================================
-
 /**
  * Default search queries for relevant market types
  */
@@ -127,10 +115,6 @@ export const DEFAULT_SEARCH_QUERIES: Record<string, string[]> = {
   ELECTION: ["election", "president", "congress"],
 };
 
-// ============================================
-// Client Options
-// ============================================
-
 export interface PolymarketClientOptions {
   /** CLOB API base URL */
   clobEndpoint?: string;
@@ -139,10 +123,6 @@ export interface PolymarketClientOptions {
   /** Search queries to use for fetching markets */
   searchQueries?: string[];
 }
-
-// ============================================
-// Polymarket Client
-// ============================================
 
 /**
  * Client for the Polymarket prediction markets APIs
@@ -174,7 +154,6 @@ export class PolymarketClient implements PredictionMarketProvider {
   ): Promise<PredictionMarketEvent[]> {
     const events: PredictionMarketEvent[] = [];
 
-    // Build search queries from market types
     const queries = new Set<string>();
     for (const type of marketTypes) {
       const typeQueries = DEFAULT_SEARCH_QUERIES[type] ?? [];
@@ -183,14 +162,12 @@ export class PolymarketClient implements PredictionMarketProvider {
       }
     }
 
-    // If no type-specific queries, use defaults
     if (queries.size === 0) {
       for (const q of this.searchQueries) {
         queries.add(q);
       }
     }
 
-    // Search for markets matching queries
     for (const query of queries) {
       await this.enforceRateLimit();
       try {
@@ -206,7 +183,6 @@ export class PolymarketClient implements PredictionMarketProvider {
       }
     }
 
-    // Deduplicate by eventId
     const seen = new Set<string>();
     return events.filter((e) => {
       if (seen.has(e.eventId)) {
@@ -251,7 +227,6 @@ export class PolymarketClient implements PredictionMarketProvider {
   calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores {
     const scores: PredictionMarketScores = {};
 
-    // Find Fed rate markets
     const fedMarkets = events.filter((e) => e.payload.marketType === "FED_RATE");
     if (fedMarkets.length > 0) {
       for (const market of fedMarkets) {
@@ -270,7 +245,6 @@ export class PolymarketClient implements PredictionMarketProvider {
       }
     }
 
-    // Find recession markets
     const recessionMarkets = events.filter((e) =>
       e.payload.marketQuestion.toLowerCase().includes("recession")
     );
@@ -283,7 +257,6 @@ export class PolymarketClient implements PredictionMarketProvider {
       }
     }
 
-    // Calculate macro uncertainty from multiple signals
     const uncertaintySignals: number[] = [];
     if (scores.fedCutProbability !== undefined && scores.fedHikeProbability !== undefined) {
       const maxProb = Math.max(scores.fedCutProbability, scores.fedHikeProbability);
@@ -301,9 +274,6 @@ export class PolymarketClient implements PredictionMarketProvider {
     return scores;
   }
 
-  /**
-   * Search for markets by query string
-   */
   async searchMarkets(query: string): Promise<PolymarketEvent[]> {
     await this.enforceRateLimit();
 
@@ -338,9 +308,6 @@ export class PolymarketClient implements PredictionMarketProvider {
     }
   }
 
-  /**
-   * Get midpoint price for a token
-   */
   async getMidpoint(tokenId: string): Promise<number | null> {
     await this.enforceRateLimit();
 
@@ -361,9 +328,6 @@ export class PolymarketClient implements PredictionMarketProvider {
     }
   }
 
-  /**
-   * Get orderbook for a token
-   */
   async getOrderbook(tokenId: string): Promise<ClobOrderbook | null> {
     await this.enforceRateLimit();
 
@@ -381,18 +345,10 @@ export class PolymarketClient implements PredictionMarketProvider {
     }
   }
 
-  // ============================================
-  // Private Methods
-  // ============================================
-
-  /**
-   * Transform Polymarket event to PredictionMarketEvent
-   */
   private transformEvent(
     event: PolymarketEvent,
     marketType: (typeof PredictionMarketType.options)[number]
   ): PredictionMarketEvent | null {
-    // Get the first market from the event (if any)
     const market = event.markets?.[0];
     if (!market) {
       return null;
@@ -401,9 +357,6 @@ export class PolymarketClient implements PredictionMarketProvider {
     return this.transformMarket(market, marketType, event);
   }
 
-  /**
-   * Transform Polymarket market to PredictionMarketEvent
-   */
   private transformMarket(
     market: PolymarketMarket,
     marketType: (typeof PredictionMarketType.options)[number],
@@ -411,7 +364,6 @@ export class PolymarketClient implements PredictionMarketProvider {
   ): PredictionMarketEvent {
     const outcomes: PredictionMarketEvent["payload"]["outcomes"] = [];
 
-    // Parse outcomes and prices
     const outcomeNames = market.outcomes ?? ["Yes", "No"];
     const outcomePrices = market.outcomePrices ?? [];
 
@@ -463,32 +415,24 @@ export class PolymarketClient implements PredictionMarketProvider {
     return "ECONOMIC_DATA";
   }
 
-  /**
-   * Calculate liquidity score (0-1) based on volume
-   */
   private calculateLiquidityScore(market: PolymarketMarket): number {
     let score = 0;
 
-    // Volume component (normalized)
     if (market.volume24hr) {
       const volume = Number.parseFloat(market.volume24hr);
-      // Assume $100k volume is high liquidity
+      // $100k volume considered high liquidity
       score += Math.min(volume / 100000, 0.5);
     }
 
-    // Liquidity pool component
     if (market.liquidity) {
       const liquidity = Number.parseFloat(market.liquidity);
-      // Assume $50k liquidity is high
+      // $50k liquidity considered high
       score += Math.min(liquidity / 50000, 0.5);
     }
 
     return Math.min(score, 1);
   }
 
-  /**
-   * Get related instrument IDs for a market type
-   */
   private getRelatedInstruments(marketType: string): string[] {
     switch (marketType) {
       case "FED_RATE":
@@ -502,14 +446,10 @@ export class PolymarketClient implements PredictionMarketProvider {
     }
   }
 
-  /**
-   * Enforce rate limiting
-   */
   private async enforceRateLimit(): Promise<void> {
     const now = Date.now();
     const elapsed = now - this.lastRequestTime;
 
-    // Rate limit window is 10 seconds
     if (elapsed < 10000) {
       this.requestCount++;
       if (this.requestCount >= this.rateLimit) {
@@ -524,9 +464,6 @@ export class PolymarketClient implements PredictionMarketProvider {
     this.lastRequestTime = Date.now();
   }
 
-  /**
-   * Handle API errors
-   */
   private handleApiError(error: unknown): never {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
@@ -547,13 +484,6 @@ export class PolymarketClient implements PredictionMarketProvider {
   }
 }
 
-// ============================================
-// Factory Functions
-// ============================================
-
-/**
- * Create Polymarket client from config
- */
 export function createPolymarketClient(config: PolymarketConfig): PolymarketClient {
   return new PolymarketClient({
     clobEndpoint: config.clob_endpoint,
@@ -562,9 +492,6 @@ export function createPolymarketClient(config: PolymarketConfig): PolymarketClie
   });
 }
 
-/**
- * Create Polymarket client with default options
- */
 export function createPolymarketClientFromEnv(): PolymarketClient {
   const clobEndpoint =
     process.env.POLYMARKET_CLOB_ENDPOINT ??

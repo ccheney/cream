@@ -12,10 +12,6 @@ import { z } from "zod";
 import type { TursoClient } from "../turso.js";
 import { parseJson, RepositoryError, toJson } from "./base.js";
 
-// ============================================
-// Zod Schemas
-// ============================================
-
 export const IndexIdSchema = z.enum([
   "SP500",
   "NASDAQ100",
@@ -79,16 +75,9 @@ export const UniverseSnapshotSchema = z.object({
 });
 export type UniverseSnapshot = z.infer<typeof UniverseSnapshotSchema>;
 
-// ============================================
-// Index Constituents Repository
-// ============================================
-
 export class IndexConstituentsRepository {
   constructor(private client: TursoClient) {}
 
-  /**
-   * Add or update an index constituent record
-   */
   async upsert(
     constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
   ): Promise<void> {
@@ -121,9 +110,6 @@ export class IndexConstituentsRepository {
     }
   }
 
-  /**
-   * Bulk insert constituents (more efficient for initial load)
-   */
   async bulkInsert(
     constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]
   ): Promise<number> {
@@ -139,9 +125,6 @@ export class IndexConstituentsRepository {
     return inserted;
   }
 
-  /**
-   * Get constituents for an index as of a specific date
-   */
   async getConstituentsAsOf(indexId: IndexId, asOfDate: string): Promise<string[]> {
     const rows = await this.client.execute<{ symbol: string }>(
       `SELECT DISTINCT symbol FROM index_constituents
@@ -154,9 +137,6 @@ export class IndexConstituentsRepository {
     return rows.map((r) => r.symbol);
   }
 
-  /**
-   * Get current constituents (not removed)
-   */
   async getCurrentConstituents(indexId: IndexId): Promise<IndexConstituent[]> {
     const rows = await this.client.execute<IndexConstituentRow>(
       `SELECT * FROM index_constituents
@@ -167,9 +147,6 @@ export class IndexConstituentsRepository {
     return rows.map(mapRowToConstituent);
   }
 
-  /**
-   * Get constituent history for a symbol
-   */
   async getSymbolHistory(symbol: string): Promise<IndexConstituent[]> {
     const rows = await this.client.execute<IndexConstituentRow>(
       `SELECT * FROM index_constituents
@@ -180,9 +157,6 @@ export class IndexConstituentsRepository {
     return rows.map(mapRowToConstituent);
   }
 
-  /**
-   * Check if a symbol was in an index on a specific date
-   */
   async wasInIndexOnDate(indexId: IndexId, symbol: string, date: string): Promise<boolean> {
     const row = await this.client.get<{ cnt: number }>(
       `SELECT COUNT(*) as cnt FROM index_constituents
@@ -194,9 +168,6 @@ export class IndexConstituentsRepository {
     return (row?.cnt ?? 0) > 0;
   }
 
-  /**
-   * Get all index changes within a date range
-   */
   async getChangesInRange(
     indexId: IndexId,
     startDate: string,
@@ -222,9 +193,6 @@ export class IndexConstituentsRepository {
     };
   }
 
-  /**
-   * Get the count of constituents for validation
-   */
   async getConstituentCount(indexId: IndexId, asOfDate?: string): Promise<number> {
     if (asOfDate) {
       const row = await this.client.get<{ cnt: number }>(
@@ -246,16 +214,9 @@ export class IndexConstituentsRepository {
   }
 }
 
-// ============================================
-// Ticker Changes Repository
-// ============================================
-
 export class TickerChangesRepository {
   constructor(private client: TursoClient) {}
 
-  /**
-   * Add a ticker change record
-   */
   async insert(change: Omit<TickerChange, "id" | "createdAt">): Promise<void> {
     try {
       await this.client.run(
@@ -280,9 +241,6 @@ export class TickerChangesRepository {
     }
   }
 
-  /**
-   * Get all ticker changes for a symbol (find what it became)
-   */
   async getChangesFromSymbol(oldSymbol: string): Promise<TickerChange[]> {
     const rows = await this.client.execute<TickerChangeRow>(
       `SELECT * FROM ticker_changes
@@ -293,9 +251,6 @@ export class TickerChangesRepository {
     return rows.map(mapRowToTickerChange);
   }
 
-  /**
-   * Get ticker changes that resulted in a symbol (find its history)
-   */
   async getChangesToSymbol(newSymbol: string): Promise<TickerChange[]> {
     const rows = await this.client.execute<TickerChangeRow>(
       `SELECT * FROM ticker_changes
@@ -306,10 +261,7 @@ export class TickerChangesRepository {
     return rows.map(mapRowToTickerChange);
   }
 
-  /**
-   * Resolve a historical ticker to its current symbol
-   * Follows the chain of changes to find the final symbol
-   */
+  /** Follows the chain of ticker changes to find the final symbol */
   async resolveToCurrentSymbol(historicalSymbol: string): Promise<string> {
     let current = historicalSymbol;
     const visited = new Set<string>();
@@ -334,9 +286,7 @@ export class TickerChangesRepository {
     return current;
   }
 
-  /**
-   * Resolve a current ticker to what it was on a historical date
-   */
+  /** Follows the chain of ticker changes backward to find what the symbol was on a given date */
   async resolveToHistoricalSymbol(currentSymbol: string, asOfDate: string): Promise<string> {
     let historical = currentSymbol;
     const visited = new Set<string>();
@@ -361,9 +311,6 @@ export class TickerChangesRepository {
     return historical;
   }
 
-  /**
-   * Get all changes in a date range
-   */
   async getChangesInRange(startDate: string, endDate: string): Promise<TickerChange[]> {
     const rows = await this.client.execute<TickerChangeRow>(
       `SELECT * FROM ticker_changes
@@ -375,16 +322,9 @@ export class TickerChangesRepository {
   }
 }
 
-// ============================================
-// Universe Snapshots Repository
-// ============================================
-
 export class UniverseSnapshotsRepository {
   constructor(private client: TursoClient) {}
 
-  /**
-   * Save a universe snapshot
-   */
   async save(snapshot: Omit<UniverseSnapshot, "id" | "computedAt">): Promise<void> {
     const tickerCount = snapshot.tickers.length;
 
@@ -414,9 +354,6 @@ export class UniverseSnapshotsRepository {
     }
   }
 
-  /**
-   * Get universe snapshot for a specific date
-   */
   async get(indexId: IndexId, snapshotDate: string): Promise<UniverseSnapshot | null> {
     const row = await this.client.get<UniverseSnapshotRow>(
       `SELECT * FROM universe_snapshots
@@ -426,9 +363,6 @@ export class UniverseSnapshotsRepository {
     return row ? mapRowToSnapshot(row) : null;
   }
 
-  /**
-   * Get the closest snapshot on or before a date
-   */
   async getClosestBefore(indexId: IndexId, date: string): Promise<UniverseSnapshot | null> {
     const row = await this.client.get<UniverseSnapshotRow>(
       `SELECT * FROM universe_snapshots
@@ -440,9 +374,6 @@ export class UniverseSnapshotsRepository {
     return row ? mapRowToSnapshot(row) : null;
   }
 
-  /**
-   * List all snapshot dates for an index
-   */
   async listDates(indexId: IndexId): Promise<string[]> {
     const rows = await this.client.execute<{ snapshot_date: string }>(
       `SELECT snapshot_date FROM universe_snapshots
@@ -453,9 +384,6 @@ export class UniverseSnapshotsRepository {
     return rows.map((r) => r.snapshot_date);
   }
 
-  /**
-   * Delete expired snapshots
-   */
   async purgeExpired(): Promise<number> {
     const result = await this.client.run(
       `DELETE FROM universe_snapshots
@@ -464,10 +392,6 @@ export class UniverseSnapshotsRepository {
     return result.changes;
   }
 }
-
-// ============================================
-// Row Types and Mappers
-// ============================================
 
 interface IndexConstituentRow {
   id: number;

@@ -1,23 +1,9 @@
 /**
- * WebSocket Connection Monitor
- *
- * Monitors WebSocket connection state with exponential backoff reconnection.
- *
  * @see docs/plans/ui/28-states.md lines 89-96
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Connection status enum.
- */
 export type ConnectionStatus = "connected" | "disconnected" | "reconnecting" | "failed";
 
-/**
- * Connection monitor options.
- */
 export interface ConnectionMonitorOptions {
   /** Initial backoff delay in ms (default: 1000) */
   initialBackoff?: number;
@@ -35,19 +21,12 @@ export interface ConnectionMonitorOptions {
   onReconnectFailed?: () => void;
 }
 
-/**
- * Connection monitor state.
- */
 export interface ConnectionMonitorState {
   status: ConnectionStatus;
   retryCount: number;
   nextRetryIn: number;
   lastDisconnectedAt: Date | null;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 export const DEFAULT_OPTIONS: Required<
   Omit<ConnectionMonitorOptions, "onStatusChange" | "onReconnectSuccess" | "onReconnectFailed">
@@ -58,19 +37,6 @@ export const DEFAULT_OPTIONS: Required<
   maxRetries: 10,
 };
 
-// ============================================
-// Backoff Calculation
-// ============================================
-
-/**
- * Calculate exponential backoff delay.
- *
- * @param retryCount - Current retry attempt (0-indexed)
- * @param initialBackoff - Initial delay in ms
- * @param maxBackoff - Maximum delay in ms
- * @param multiplier - Backoff multiplier
- * @returns Delay in ms
- */
 export function calculateBackoff(
   retryCount: number,
   initialBackoff: number = DEFAULT_OPTIONS.initialBackoff,

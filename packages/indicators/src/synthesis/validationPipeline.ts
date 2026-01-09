@@ -18,10 +18,6 @@ import {
 import { computePBO, PBO_DEFAULTS, type PBOResult } from "./pbo.js";
 import { type WalkForwardResult, WF_DEFAULTS, walkForwardValidation } from "./walkForward.js";
 
-// ============================================
-// Constants and Defaults
-// ============================================
-
 /**
  * Default thresholds for validation gates.
  */
@@ -45,10 +41,6 @@ export const VALIDATION_DEFAULTS = {
   /** Maximum acceptable VIF */
   maxVIF: ORTHOGONALITY_DEFAULTS.maxVIF,
 } as const;
-
-// ============================================
-// Schemas
-// ============================================
 
 /**
  * Schema for DSR validation result.
@@ -199,10 +191,6 @@ export const ValidationInputSchema = z.object({
 
 export type ValidationInput = z.input<typeof ValidationInputSchema>;
 
-// ============================================
-// Gate Runner Functions
-// ============================================
-
 /**
  * Run DSR validation gate.
  */
@@ -212,13 +200,11 @@ function runDSRGate(
   nTrials: number,
   threshold: number
 ): DSRGateResult {
-  // Compute strategy returns
   const strategyReturns = signals.map((s, i) => {
     const r = returns[i] ?? 0;
     return Math.sign(s) * r;
   });
 
-  // Calculate DSR
   const dsrResult: DSRResult = calculateDSR({
     observedSharpe: computeAnnualizedSharpe(strategyReturns),
     nTrials,
@@ -243,10 +229,8 @@ function runDSRGate(
  * Run PBO validation gate.
  */
 function runPBOGate(signals: number[], returns: number[], threshold: number): PBOGateResult {
-  // Check if we have enough data for PBO calculation
   const minRequired = PBO_DEFAULTS.nSplits * PBO_DEFAULTS.minObservationsPerSplit;
   if (returns.length < minRequired) {
-    // Insufficient data - skip PBO gate and pass with warning
     return {
       value: 0,
       nSplits: PBO_DEFAULTS.nSplits,
@@ -284,11 +268,9 @@ function runICGate(
   meanThreshold: number,
   stdThreshold: number
 ): ICGateResult {
-  // Use timeSeriesIC for 1D arrays, then calculate stats
   const icSeries = timeSeriesIC(signals, forwardReturns, IC_DEFAULTS.defaultWindow);
   const stats = calculateICStats(icSeries);
 
-  // Check if IC passes thresholds
   const meanPassed = stats.mean >= meanThreshold;
   const stdPassed = stats.std <= stdThreshold;
   const passed = meanPassed && stdPassed;
@@ -324,10 +306,8 @@ function runWalkForwardGate(
   returns: number[],
   efficiencyThreshold: number
 ): WalkForwardGateResult {
-  // Check if we have enough data for walk-forward validation
   const minRequired = WF_DEFAULTS.nPeriods * WF_DEFAULTS.minObservationsPerPeriod;
   if (returns.length < minRequired) {
-    // Insufficient data - skip walk-forward gate and pass with warning
     return {
       efficiency: 1,
       consistency: 1,
@@ -369,7 +349,6 @@ function runOrthogonalityGate(
   maxCorrelation: number,
   maxVIF: number
 ): OrthogonalityGateResult {
-  // If no existing indicators, automatically pass
   const nExisting = Object.keys(existingIndicators).length;
   if (nExisting === 0) {
     return {
@@ -397,10 +376,6 @@ function runOrthogonalityGate(
     reason: orthResult.isOrthogonal ? undefined : orthResult.recommendations[0],
   };
 }
-
-// ============================================
-// Helper Functions
-// ============================================
 
 /**
  * Compute annualized Sharpe ratio from daily returns.
@@ -545,10 +520,6 @@ function generateRecommendations(results: {
   return recommendations;
 }
 
-// ============================================
-// Main Pipeline Function
-// ============================================
-
 /**
  * Run the complete validation pipeline on an indicator.
  */
@@ -557,7 +528,6 @@ export function runValidationPipeline(input: ValidationInput): ValidationResult 
   const { indicatorId, signals, returns, forwardReturns, nTrials, existingIndicators, thresholds } =
     parsed;
 
-  // Use custom thresholds or defaults
   const dsrThreshold = thresholds?.dsrPValue ?? VALIDATION_DEFAULTS.dsrPValueThreshold;
   const pboThreshold = thresholds?.pbo ?? VALIDATION_DEFAULTS.pboThreshold;
   const icMeanThreshold = thresholds?.icMean ?? VALIDATION_DEFAULTS.icMeanThreshold;
@@ -566,17 +536,14 @@ export function runValidationPipeline(input: ValidationInput): ValidationResult 
   const maxCorr = thresholds?.maxCorrelation ?? VALIDATION_DEFAULTS.maxCorrelation;
   const maxVIF = thresholds?.maxVIF ?? VALIDATION_DEFAULTS.maxVIF;
 
-  // Use forward returns if provided, otherwise compute from returns
   const fwdReturns = forwardReturns ?? returns.slice(1).concat([0]);
 
-  // Run all validation gates
   const dsrResult = runDSRGate(signals, returns, nTrials, dsrThreshold);
   const pboResult = runPBOGate(signals, returns, pboThreshold);
   const icResult = runICGate(signals, fwdReturns, icMeanThreshold, icStdThreshold);
   const wfResult = runWalkForwardGate(signals, returns, wfThreshold);
   const orthResult = runOrthogonalityGate(signals, existingIndicators ?? {}, maxCorr, maxVIF);
 
-  // Count passed gates
   const gates = [
     dsrResult.passed,
     pboResult.passed,
@@ -589,7 +556,6 @@ export function runValidationPipeline(input: ValidationInput): ValidationResult 
   const passRate = gatesPassed / totalGates;
   const overallPassed = gatesPassed === totalGates;
 
-  // Generate summary and recommendations
   const summary = generateSummary(gatesPassed, totalGates, {
     dsr: dsrResult,
     pbo: pboResult,
@@ -606,7 +572,6 @@ export function runValidationPipeline(input: ValidationInput): ValidationResult 
     orthogonality: orthResult,
   });
 
-  // Compute multiple testing penalty using expected max Sharpe
   const multipleTestingPenalty = expectedMaxSharpe(nTrials);
 
   return {
@@ -658,7 +623,6 @@ export function validateAndRank(
     }),
   }));
 
-  // Sort by pass rate descending, then by DSR p-value descending
   results.sort((a, b) => {
     if (b.result.passRate !== a.result.passRate) {
       return b.result.passRate - a.result.passRate;
@@ -690,7 +654,6 @@ export function estimateSurvivalRate(
   const wfPassRate = Math.max(0.1, 0.8 - wfEfficiencyThreshold); // ~30% at 0.5
   const orthPassRate = 1 - orthThreshold; // ~30% for low correlation
 
-  // Combined survival rate (assuming independence)
   return dsrPassRate * pboPassRate * icPassRate * wfPassRate * orthPassRate;
 }
 
@@ -710,11 +673,9 @@ export function evaluateValidation(result: ValidationResult): {
     };
   }
 
-  // Check if close to passing
   const closeToPass = result.passRate >= 0.6;
 
   if (closeToPass) {
-    // Identify which gates failed
     const minorFailures =
       (!result.dsr.passed && result.dsr.pValue > 0.9) ||
       (!result.pbo.passed && result.pbo.value < 0.55) ||
@@ -730,7 +691,6 @@ export function evaluateValidation(result: ValidationResult): {
     }
   }
 
-  // Check for critical failures
   const criticalFailure =
     result.dsr.pValue < 0.5 ||
     result.pbo.value > 0.7 ||

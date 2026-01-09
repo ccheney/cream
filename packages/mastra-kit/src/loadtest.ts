@@ -16,13 +16,6 @@
  *   console.log(results.summary);
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Load test configuration.
- */
 export interface LoadTestConfig {
   /** Name of the test scenario */
   name: string;
@@ -37,9 +30,6 @@ export interface LoadTestConfig {
   logger?: LoadTestLogger;
 }
 
-/**
- * Load test run options.
- */
 export interface LoadTestRunOptions {
   /** Duration to run in milliseconds */
   durationMs: number;
@@ -54,9 +44,6 @@ export interface LoadTestRunOptions {
   rampUpMs?: number;
 }
 
-/**
- * Single operation result.
- */
 export interface OperationResult {
   /** Whether the operation succeeded */
   success: boolean;
@@ -80,9 +67,6 @@ export interface OperationResult {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Load test results.
- */
 export interface LoadTestResults {
   /** Test name */
   name: string;
@@ -131,9 +115,6 @@ export interface LoadTestResults {
   summary: string;
 }
 
-/**
- * Logger interface.
- */
 export interface LoadTestLogger {
   info: (message: string, data?: Record<string, unknown>) => void;
   warn: (message: string, data?: Record<string, unknown>) => void;
@@ -152,13 +133,6 @@ const DEFAULT_CONFIG: LoadTestConfig = {
   collectDetailedMetrics: false,
 };
 
-// ============================================
-// Percentile Calculation
-// ============================================
-
-/**
- * Calculate percentile from sorted array.
- */
 function percentile(sortedValues: number[], p: number): number {
   if (sortedValues.length === 0) {
     return 0;
@@ -167,9 +141,6 @@ function percentile(sortedValues: number[], p: number): number {
   return sortedValues[Math.max(0, index)] ?? 0;
 }
 
-/**
- * Calculate latency statistics from operation results.
- */
 function calculateLatencyStats(durations: number[]): LoadTestResults["latency"] {
   if (durations.length === 0) {
     return { min: 0, max: 0, mean: 0, p50: 0, p95: 0, p99: 0 };
@@ -188,13 +159,6 @@ function calculateLatencyStats(durations: number[]): LoadTestResults["latency"] 
   };
 }
 
-// ============================================
-// Load Test Runner
-// ============================================
-
-/**
- * Runs load tests against a target function.
- */
 export class LoadTestRunner<T = void> {
   private readonly config: LoadTestConfig;
   private readonly logger: LoadTestLogger;
@@ -204,17 +168,9 @@ export class LoadTestRunner<T = void> {
     this.logger = config.logger ?? DEFAULT_LOGGER;
   }
 
-  /**
-   * Run a load test against the provided operation function.
-   *
-   * @param operation - Async function to test
-   * @param options - Run options
-   * @returns Test results
-   */
   async run(operation: () => Promise<T>, options: LoadTestRunOptions): Promise<LoadTestResults> {
     const { durationMs, concurrency, targetOpsPerSecond = 0, rampUpMs = 0 } = options;
 
-    // Validate concurrency
     const effectiveConcurrency = Math.min(concurrency, this.config.maxConcurrency);
     if (concurrency > this.config.maxConcurrency) {
       this.logger.warn(`Concurrency capped to ${this.config.maxConcurrency}`);
@@ -232,12 +188,9 @@ export class LoadTestRunner<T = void> {
     const endTime = startTime + durationMs;
     let running = true;
 
-    // Calculate delay between operations for rate limiting
     const delayMs = targetOpsPerSecond > 0 ? (1000 / targetOpsPerSecond) * effectiveConcurrency : 0;
 
-    // Worker function
     const worker = async (workerId: number): Promise<void> => {
-      // Ramp-up delay
       if (rampUpMs > 0) {
         const rampDelay = (workerId / effectiveConcurrency) * rampUpMs;
         await sleep(rampDelay);
@@ -271,21 +224,18 @@ export class LoadTestRunner<T = void> {
           });
         }
 
-        // Rate limiting delay
         if (delayMs > 0) {
           await sleep(delayMs);
         }
       }
     };
 
-    // Start workers
     const workers = Array.from({ length: effectiveConcurrency }, (_, i) => worker(i));
     await Promise.all(workers);
 
     running = false;
     const actualDuration = Date.now() - startTime;
 
-    // Calculate results
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.filter((r) => !r.success && !r.timedOut).length;
     const timeoutCount = results.filter((r) => r.timedOut).length;
@@ -308,7 +258,6 @@ export class LoadTestRunner<T = void> {
       summary: "",
     };
 
-    // Generate summary
     testResults.summary = this.formatSummary(testResults);
 
     this.logger.info("Load test complete", {
@@ -321,9 +270,6 @@ export class LoadTestRunner<T = void> {
     return testResults;
   }
 
-  /**
-   * Run multiple test scenarios sequentially.
-   */
   async runScenarios(
     operation: () => Promise<T>,
     scenarios: Array<{ name: string; options: LoadTestRunOptions }>
@@ -339,16 +285,13 @@ export class LoadTestRunner<T = void> {
 
       this.config.name = originalName;
 
-      // Brief pause between scenarios
+      // Allow system resources to stabilize between scenarios
       await sleep(1000);
     }
 
     return results;
   }
 
-  /**
-   * Format results as a summary string.
-   */
   private formatSummary(results: LoadTestResults): string {
     return `
 Load Test Results: ${results.name}
@@ -374,53 +317,31 @@ Latency (ms):
   }
 }
 
-// ============================================
-// Scenario Builders
-// ============================================
-
-/**
- * Standard load test scenarios.
- */
 export const LoadTestScenarios = {
-  /**
-   * Light load scenario (baseline).
-   */
   light: (durationMs = 10000): LoadTestRunOptions => ({
     durationMs,
     concurrency: 2,
     rampUpMs: 0,
   }),
 
-  /**
-   * Normal load scenario (typical production).
-   */
   normal: (durationMs = 30000): LoadTestRunOptions => ({
     durationMs,
     concurrency: 10,
     rampUpMs: 5000,
   }),
 
-  /**
-   * Heavy load scenario (stress test).
-   */
   heavy: (durationMs = 60000): LoadTestRunOptions => ({
     durationMs,
     concurrency: 50,
     rampUpMs: 10000,
   }),
 
-  /**
-   * Spike scenario (sudden burst).
-   */
   spike: (durationMs = 30000): LoadTestRunOptions => ({
     durationMs,
     concurrency: 100,
-    rampUpMs: 0, // Immediate spike
+    rampUpMs: 0,
   }),
 
-  /**
-   * Soak scenario (extended duration).
-   */
   soak: (durationMs = 300000): LoadTestRunOptions => ({
     durationMs,
     concurrency: 10,
@@ -428,13 +349,6 @@ export const LoadTestScenarios = {
   }),
 };
 
-// ============================================
-// Trading Cycle Load Test
-// ============================================
-
-/**
- * Configuration for trading cycle load test.
- */
 export interface TradingCycleLoadTestConfig {
   /** Simulated agent latency range in ms [min, max] */
   simulatedAgentLatencyMs: [number, number];
@@ -456,9 +370,6 @@ const DEFAULT_TRADING_CYCLE_CONFIG: TradingCycleLoadTestConfig = {
   simulateLLMCalls: false,
 };
 
-/**
- * Create a mock trading cycle operation for load testing.
- */
 export function createMockTradingCycle(
   config: Partial<TradingCycleLoadTestConfig> = {}
 ): () => Promise<void> {
@@ -466,30 +377,19 @@ export function createMockTradingCycle(
   const [minLatency, maxLatency] = fullConfig.simulatedAgentLatencyMs;
 
   return async () => {
-    // Simulate random latency
     const latency = minLatency + Math.random() * (maxLatency - minLatency);
     await sleep(latency);
 
-    // Simulate timeout
     if (Math.random() < fullConfig.timeoutProbability) {
       throw new Error("Operation timeout");
     }
 
-    // Simulate rejection requiring retry
     if (Math.random() < fullConfig.rejectionProbability) {
-      // Simulate retry (additional latency)
       await sleep(latency * 0.5);
     }
   };
 }
 
-// ============================================
-// Assertions
-// ============================================
-
-/**
- * Load test assertions for CI/CD pipelines.
- */
 export class LoadTestAssertions {
   private readonly results: LoadTestResults;
 
@@ -497,9 +397,6 @@ export class LoadTestAssertions {
     this.results = results;
   }
 
-  /**
-   * Assert error rate is below threshold.
-   */
   errorRateBelow(threshold: number): this {
     if (this.results.errorRate > threshold) {
       throw new Error(
@@ -510,9 +407,6 @@ export class LoadTestAssertions {
     return this;
   }
 
-  /**
-   * Assert p95 latency is below threshold.
-   */
   p95LatencyBelow(thresholdMs: number): this {
     if (this.results.latency.p95 > thresholdMs) {
       throw new Error(
@@ -523,9 +417,6 @@ export class LoadTestAssertions {
     return this;
   }
 
-  /**
-   * Assert p99 latency is below threshold.
-   */
   p99LatencyBelow(thresholdMs: number): this {
     if (this.results.latency.p99 > thresholdMs) {
       throw new Error(
@@ -536,9 +427,6 @@ export class LoadTestAssertions {
     return this;
   }
 
-  /**
-   * Assert throughput is above threshold.
-   */
   throughputAbove(opsPerSecond: number): this {
     if (this.results.throughput < opsPerSecond) {
       throw new Error(
@@ -549,9 +437,6 @@ export class LoadTestAssertions {
     return this;
   }
 
-  /**
-   * Assert timeout rate is below threshold.
-   */
   timeoutRateBelow(threshold: number): this {
     if (this.results.timeoutRate > threshold) {
       throw new Error(
@@ -562,35 +447,18 @@ export class LoadTestAssertions {
     return this;
   }
 
-  /**
-   * Get results for chaining.
-   */
   getResults(): LoadTestResults {
     return this.results;
   }
 }
 
-/**
- * Create assertions for load test results.
- */
 export function assertLoadTest(results: LoadTestResults): LoadTestAssertions {
   return new LoadTestAssertions(results);
 }
 
-// ============================================
-// Utilities
-// ============================================
-
-/**
- * Sleep for specified milliseconds.
- */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   LoadTestRunner,

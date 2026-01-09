@@ -15,10 +15,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Enums (mirroring common.proto)
-// ============================================
-
 /** Trading environment */
 export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 export type Environment = z.infer<typeof EnvironmentSchema>;
@@ -83,10 +79,6 @@ export const RegimeSchema = z.enum([
 ]);
 export type Regime = z.infer<typeof RegimeSchema>;
 
-// ============================================
-// Common Messages (mirroring common.proto)
-// ============================================
-
 /** Option contract details */
 export const OptionContractSchema = z.object({
   /** Underlying symbol (e.g., "AAPL") */
@@ -113,7 +105,6 @@ export const InstrumentSchema = z
     optionContract: OptionContractSchema.optional(),
   })
   .superRefine((data, ctx) => {
-    // Option contract required when instrumentType is OPTION
     if (data.instrumentType === "OPTION" && !data.optionContract) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -146,7 +137,6 @@ export const RiskLevelsSchema = z
     denomination: RiskDenominationSchema,
   })
   .superRefine((data, ctx) => {
-    // Stop loss and take profit must be different
     if (data.stopLossLevel === data.takeProfitLevel) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -156,10 +146,6 @@ export const RiskLevelsSchema = z
     }
   });
 export type RiskLevels = z.infer<typeof RiskLevelsSchema>;
-
-// ============================================
-// Order Planning (mirroring decision.proto)
-// ============================================
 
 /** Execution tactic for algorithmic execution */
 export const ExecutionTacticSchema = z.enum(["PASSIVE_LIMIT", "TWAP", "VWAP"]).optional();
@@ -201,7 +187,6 @@ export const OrderPlanSchema = z
     executionParams: ExecutionParamsSchema.optional().default({}),
   })
   .superRefine((data, ctx) => {
-    // Validate LIMIT order requires limit price
     if (data.entryOrderType === "LIMIT" && data.entryLimitPrice === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -210,7 +195,6 @@ export const OrderPlanSchema = z
       });
     }
 
-    // Validate executionTactic is valid
     if (
       data.executionTactic &&
       !["", "PASSIVE_LIMIT", "TWAP", "VWAP"].includes(data.executionTactic)
@@ -224,10 +208,6 @@ export const OrderPlanSchema = z
   });
 export type OrderPlan = z.infer<typeof OrderPlanSchema>;
 
-// ============================================
-// References (mirroring decision.proto)
-// ============================================
-
 /** References to supporting data */
 export const ReferencesSchema = z.object({
   /** Indicator names used in decision */
@@ -238,10 +218,6 @@ export const ReferencesSchema = z.object({
   eventIds: z.array(z.string()).default([]),
 });
 export type References = z.infer<typeof ReferencesSchema>;
-
-// ============================================
-// Decision (mirroring decision.proto)
-// ============================================
 
 /** Individual decision for an instrument */
 export const DecisionSchema = z.object({
@@ -270,10 +246,6 @@ export const DecisionSchema = z.object({
 });
 export type Decision = z.infer<typeof DecisionSchema>;
 
-// ============================================
-// DecisionPlan (mirroring decision.proto)
-// ============================================
-
 /** ISO-8601 timestamp with UTC timezone */
 export const ISO8601TimestampSchema = z
   .string()
@@ -297,10 +269,6 @@ export const DecisionPlanSchema = z.object({
   portfolioNotes: z.string().optional(),
 });
 export type DecisionPlan = z.infer<typeof DecisionPlanSchema>;
-
-// ============================================
-// Validation Results (mirroring decision.proto)
-// ============================================
 
 /** Risk validation result */
 export const RiskValidationResultSchema = z.object({
@@ -328,10 +296,6 @@ export const DecisionPlanValidationResultSchema = z.object({
 });
 export type DecisionPlanValidationResult = z.infer<typeof DecisionPlanValidationResultSchema>;
 
-// ============================================
-// Validation Utilities
-// ============================================
-
 /**
  * Validate risk-reward ratio for a decision.
  * Returns minimum 1.5:1 risk-reward ratio as per spec.
@@ -341,13 +305,10 @@ export function validateRiskReward(decision: Decision, entryPrice: number): Risk
   const warnings: string[] = [];
 
   const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
-
-  // Determine direction from action and target position
   const isLong = decision.size.targetPositionQuantity > 0;
   const isShort = decision.size.targetPositionQuantity < 0;
 
   if (isLong) {
-    // Long position: stop < entry < profit
     if (stopLossLevel >= entryPrice) {
       errors.push(
         `Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`
@@ -359,7 +320,6 @@ export function validateRiskReward(decision: Decision, entryPrice: number): Risk
       );
     }
   } else if (isShort) {
-    // Short position: profit < entry < stop
     if (stopLossLevel <= entryPrice) {
       errors.push(
         `Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`
@@ -372,17 +332,14 @@ export function validateRiskReward(decision: Decision, entryPrice: number): Risk
     }
   }
 
-  // Calculate risk-reward ratio
   const risk = Math.abs(entryPrice - stopLossLevel);
   const reward = Math.abs(takeProfitLevel - entryPrice);
   const riskRewardRatio = risk > 0 ? reward / risk : 0;
 
-  // Minimum 1.5:1 risk-reward per spec
   if (riskRewardRatio < 1.5) {
     errors.push(`Risk-reward ratio ${riskRewardRatio.toFixed(2)}:1 is below minimum 1.5:1`);
   }
 
-  // Warning for 5:1 stop distance rule
   if (risk > reward * 5) {
     warnings.push(`Stop loss distance exceeds 5x the profit target`);
   }
@@ -412,14 +369,11 @@ export function validateDecisionPlan(plan: unknown): DecisionPlanValidationResul
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Additional business logic validation
   for (const decision of parseResult.data.decisions) {
-    // Validate size consistency
     if (decision.action === "NO_TRADE" && decision.size.quantity !== 0) {
       warnings.push(`${decision.instrument.instrumentId}: NO_TRADE action should have quantity 0`);
     }
 
-    // Validate unit matches instrument type
     if (decision.instrument.instrumentType === "OPTION" && decision.size.unit !== "CONTRACTS") {
       errors.push(
         `${decision.instrument.instrumentId}: OPTIONS must use CONTRACTS unit, not ${decision.size.unit}`
@@ -440,12 +394,7 @@ export function validateDecisionPlan(plan: unknown): DecisionPlanValidationResul
   };
 }
 
-// ============================================
-// Exports
-// ============================================
-
 export {
-  // Re-export all for convenience
   ActionSchema as Action_Schema,
   DecisionPlanSchema as DecisionPlan_Schema,
   DecisionSchema as Decision_Schema,

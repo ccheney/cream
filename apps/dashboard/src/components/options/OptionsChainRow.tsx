@@ -14,34 +14,17 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { usePriceFlash } from "@/components/ui/use-price-flash";
 import type { OptionsContract } from "@/lib/api/types";
 
-// ============================================
-// Types
-// ============================================
-
 export interface OptionsChainRowProps {
-  /** Strike price */
   strike: number;
-  /** Call contract data */
   call: OptionsContract | null;
-  /** Put contract data */
   put: OptionsContract | null;
-  /** Is this the at-the-money strike */
   isAtm: boolean;
-  /** Underlying price for reference */
   underlyingPrice: number | null;
-  /** Previous call price for flash animation */
   previousCallPrice?: number;
-  /** Previous put price for flash animation */
   previousPutPrice?: number;
-  /** Click handler for contract selection */
   onContractClick?: (contract: OptionsContract, type: "call" | "put") => void;
-  /** Test ID */
   "data-testid"?: string;
 }
-
-// ============================================
-// Helper Functions
-// ============================================
 
 function formatPrice(value: number | null): string {
   if (value === null) {
@@ -69,10 +52,6 @@ function formatOI(value: number | null): string {
   }
   return value.toString();
 }
-
-// ============================================
-// Contract Cell Component
-// ============================================
 
 interface ContractCellProps {
   contract: OptionsContract | null;
@@ -143,15 +122,12 @@ const ContractCell = memo(function ContractCell({
       tabIndex={0}
       aria-label={`${type} option at strike, bid ${formatPrice(contract.bid)}, ask ${formatPrice(contract.ask)}`}
     >
-      {/* Bid */}
       <span className="text-right text-green-600 dark:text-green-400">
         {formatPrice(contract.bid)}
       </span>
 
-      {/* Ask */}
       <span className="text-right text-red-600 dark:text-red-400">{formatPrice(contract.ask)}</span>
 
-      {/* Last */}
       <span className="text-right text-cream-700 dark:text-cream-200">
         {contract.last !== null ? (
           <AnimatedNumber value={contract.last} format="decimal" decimals={2} />
@@ -160,17 +136,14 @@ const ContractCell = memo(function ContractCell({
         )}
       </span>
 
-      {/* Volume */}
       <span className="text-right text-cream-500 dark:text-cream-400">
         {formatVolume(contract.volume)}
       </span>
 
-      {/* Open Interest */}
       <span className="text-right text-cream-500 dark:text-cream-400">
         {formatOI(contract.openInterest)}
       </span>
 
-      {/* Streaming indicator */}
       {isHovered && (
         <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
       )}
@@ -178,33 +151,6 @@ const ContractCell = memo(function ContractCell({
   );
 });
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * OptionsChainRow displays a single row with call and put at same strike.
- *
- * Features:
- * - Side-by-side calls and puts
- * - Strike price in center column
- * - ATM strike highlighting
- * - Flash animation on price updates
- * - Click to open position builder
- * - Hover for greeks tooltip
- *
- * @example
- * ```tsx
- * <OptionsChainRow
- *   strike={180}
- *   call={chainData.call}
- *   put={chainData.put}
- *   isAtm={strike === atmStrike}
- *   underlyingPrice={187.52}
- *   onContractClick={handleContractClick}
- * />
- * ```
- */
 export const OptionsChainRow = memo(function OptionsChainRow({
   strike,
   call,
@@ -216,7 +162,6 @@ export const OptionsChainRow = memo(function OptionsChainRow({
   onContractClick,
   "data-testid": testId,
 }: OptionsChainRowProps) {
-  // Calculate if strike is ITM for calls or puts
   const callItm = underlyingPrice !== null && strike < underlyingPrice;
   const putItm = underlyingPrice !== null && strike > underlyingPrice;
 
@@ -229,7 +174,6 @@ export const OptionsChainRow = memo(function OptionsChainRow({
       `}
       data-testid={testId}
     >
-      {/* Calls - left side */}
       <div className={callItm && !isAtm ? "bg-green-50/30 dark:bg-green-900/10" : ""}>
         <ContractCell
           contract={call}
@@ -240,7 +184,6 @@ export const OptionsChainRow = memo(function OptionsChainRow({
         />
       </div>
 
-      {/* Strike - center */}
       <div
         className={`
           px-4 py-1.5 min-w-[80px] text-center font-mono text-sm font-semibold
@@ -256,7 +199,6 @@ export const OptionsChainRow = memo(function OptionsChainRow({
         {strike.toFixed(2)}
       </div>
 
-      {/* Puts - right side */}
       <div className={putItm && !isAtm ? "bg-red-50/30 dark:bg-red-900/10" : ""}>
         <ContractCell
           contract={put}

@@ -11,53 +11,32 @@
 import { useMemo } from "react";
 import { useMatchMedia } from "./useMediaQuery";
 
-// ============================================
-// Types
-// ============================================
-
 export interface UseStaggeredAnimationOptions {
-  /** Base delay between items in ms (default: 50) */
   staggerDelay?: number;
-  /** Maximum total delay in ms (default: 500) */
   maxDelay?: number;
-  /** Animation duration in ms (default: 300) */
   duration?: number;
-  /** Whether animations are enabled (default: true) */
   enabled?: boolean;
 }
 
 export interface StaggeredAnimationStyle {
-  /** CSS animation property */
   animation: string;
-  /** Opacity for initial state */
   opacity: number;
-  /** Transform for initial state */
   transform: string;
 }
 
 export interface UseStaggeredAnimationReturn {
-  /** Get animation style for an item at given index */
   getStyle: (index: number) => StaggeredAnimationStyle;
-  /** Get delay in ms for an item at given index */
   getDelay: (index: number) => number;
-  /** Whether reduced motion is preferred */
   prefersReducedMotion: boolean;
-  /** CSS keyframes definition (inject once) */
   keyframes: string;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_STAGGER_DELAY = 50;
 const DEFAULT_MAX_DELAY = 500;
 const DEFAULT_DURATION = 300;
 
-/** CSS easing matching design system */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-/** Keyframes for slide up animation */
 export const SLIDE_UP_KEYFRAMES = `
 @keyframes slideUp {
   from {
@@ -71,35 +50,6 @@ export const SLIDE_UP_KEYFRAMES = `
 }
 `;
 
-// ============================================
-// Hook
-// ============================================
-
-/**
- * Hook for staggered list entrance animations.
- *
- * Respects prefers-reduced-motion and provides consistent timing.
- *
- * @example
- * ```tsx
- * function ItemList({ items }: { items: string[] }) {
- *   const { getStyle, keyframes } = useStaggeredAnimation();
- *
- *   return (
- *     <>
- *       <style>{keyframes}</style>
- *       <ul>
- *         {items.map((item, index) => (
- *           <li key={item} style={getStyle(index)}>
- *             {item}
- *           </li>
- *         ))}
- *       </ul>
- *     </>
- *   );
- * }
- * ```
- */
 export function useStaggeredAnimation(
   options: UseStaggeredAnimationOptions = {}
 ): UseStaggeredAnimationReturn {
@@ -117,7 +67,6 @@ export function useStaggeredAnimation(
       if (!enabled || prefersReducedMotion) {
         return 0;
       }
-      // Clamp delay to maxDelay
       return Math.min(index * staggerDelay, maxDelay);
     };
   }, [staggerDelay, maxDelay, enabled, prefersReducedMotion]);

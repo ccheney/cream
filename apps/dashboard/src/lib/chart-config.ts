@@ -13,40 +13,15 @@ import type {
   LineSeriesOptions,
 } from "lightweight-charts";
 
-// ============================================
-// Color Constants
-// ============================================
-
-/**
- * Chart color palette matching the design system.
- */
 export const CHART_COLORS = {
-  /** Profit/up color */
   profit: "#22C55E",
-
-  /** Loss/down color */
   loss: "#EF4444",
-
-  /** Primary accent */
   primary: "#D97706",
-
-  /** Text color (stone-400) */
   text: "#78716C",
-
-  /** Grid line color */
   grid: "rgba(120, 113, 108, 0.1)",
-
-  /** Background */
   background: "transparent",
 } as const;
 
-// ============================================
-// Chart Options
-// ============================================
-
-/**
- * Default chart options.
- */
 export const DEFAULT_CHART_OPTIONS: DeepPartial<ChartOptions> = {
   layout: {
     background: { color: CHART_COLORS.background },
@@ -84,13 +59,6 @@ export const DEFAULT_CHART_OPTIONS: DeepPartial<ChartOptions> = {
   },
 };
 
-// ============================================
-// Candlestick Options
-// ============================================
-
-/**
- * Default candlestick series options.
- */
 export const DEFAULT_CANDLESTICK_OPTIONS: DeepPartial<CandlestickSeriesOptions> = {
   upColor: CHART_COLORS.profit,
   downColor: CHART_COLORS.loss,
@@ -101,13 +69,6 @@ export const DEFAULT_CANDLESTICK_OPTIONS: DeepPartial<CandlestickSeriesOptions> 
   borderDownColor: CHART_COLORS.loss,
 };
 
-// ============================================
-// Line Options
-// ============================================
-
-/**
- * Default line series options (for overlays like SMA).
- */
 export const DEFAULT_LINE_OPTIONS: DeepPartial<LineSeriesOptions> = {
   color: CHART_COLORS.primary,
   lineWidth: 2,
@@ -116,13 +77,6 @@ export const DEFAULT_LINE_OPTIONS: DeepPartial<LineSeriesOptions> = {
   priceLineVisible: false,
 };
 
-// ============================================
-// Marker Types
-// ============================================
-
-/**
- * Trade marker types.
- */
 export interface TradeMarker {
   time: number | string;
   position: "belowBar" | "aboveBar" | "inBar";
@@ -132,9 +86,6 @@ export interface TradeMarker {
   size?: number;
 }
 
-/**
- * Create entry marker (BUY).
- */
 export function createEntryMarker(time: number | string, text = "BUY"): TradeMarker {
   return {
     time,
@@ -146,9 +97,6 @@ export function createEntryMarker(time: number | string, text = "BUY"): TradeMar
   };
 }
 
-/**
- * Create exit marker (SELL).
- */
 export function createExitMarker(time: number | string, text = "SELL"): TradeMarker {
   return {
     time,
@@ -160,13 +108,6 @@ export function createExitMarker(time: number | string, text = "SELL"): TradeMar
   };
 }
 
-// ============================================
-// Price Line Types
-// ============================================
-
-/**
- * Price line configuration.
- */
 export interface PriceLineConfig {
   price: number;
   color: string;
@@ -176,9 +117,6 @@ export interface PriceLineConfig {
   axisLabelVisible: boolean;
 }
 
-/**
- * Create stop-loss price line.
- */
 export function createStopLossLine(price: number): PriceLineConfig {
   return {
     price,
@@ -190,9 +128,6 @@ export function createStopLossLine(price: number): PriceLineConfig {
   };
 }
 
-/**
- * Create take-profit price line.
- */
 export function createTakeProfitLine(price: number): PriceLineConfig {
   return {
     price,
@@ -204,13 +139,6 @@ export function createTakeProfitLine(price: number): PriceLineConfig {
   };
 }
 
-// ============================================
-// OHLCV Data Types
-// ============================================
-
-/**
- * OHLCV candlestick data.
- */
 export interface OHLCVData {
   time: number | string;
   open: number;
@@ -220,9 +148,6 @@ export interface OHLCVData {
   volume?: number;
 }
 
-/**
- * Sample OHLCV data for testing.
- */
 export const SAMPLE_OHLCV_DATA: OHLCVData[] = [
   { time: "2026-01-01", open: 145.0, high: 147.5, low: 144.0, close: 146.5 },
   { time: "2026-01-02", open: 146.5, high: 148.0, low: 145.5, close: 147.0 },

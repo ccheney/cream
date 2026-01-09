@@ -14,13 +14,6 @@
 
 import type { FactorZooStats, ResearchTrigger } from "@cream/domain";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Context provided to the Idea Agent for hypothesis generation
- */
 export interface IdeaContext {
   /** Current market regime classification */
   regime: string;
@@ -36,9 +29,6 @@ export interface IdeaContext {
   trigger: ResearchTrigger;
 }
 
-/**
- * Historical hypothesis from memory for context
- */
 export interface HypothesisMemory {
   hypothesisId: string;
   title: string;
@@ -48,10 +38,6 @@ export interface HypothesisMemory {
   sharpe?: number;
   lessonsLearned?: string;
 }
-
-// ============================================
-// System Prompt
-// ============================================
 
 export const IDEA_AGENT_SYSTEM_PROMPT = `<system>
 You are a Quantitative Research Analyst at a systematic trading firm. Your role is to generate novel alpha factor hypotheses that can be transformed into tradeable signals.
@@ -187,13 +173,6 @@ Generate a novel alpha factor hypothesis using Chain-of-Thought reasoning:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// User Prompt Template
-// ============================================
-
-/**
- * Generate the user prompt with context for hypothesis generation
- */
 export function buildIdeaAgentUserPrompt(context: IdeaContext): string {
   const { regime, gaps, decayingFactors, memoryResults, factorZooSummary, trigger } = context;
 
@@ -257,9 +236,6 @@ Output a complete hypothesis in the specified JSON format.
 </task>`;
 }
 
-/**
- * Build Factor Zoo summary string for context
- */
 export function buildFactorZooSummary(stats: FactorZooStats, activeFactorNames: string[]): string {
   return `Total Factors: ${stats.totalFactors}
 Active Factors: ${stats.activeFactors}

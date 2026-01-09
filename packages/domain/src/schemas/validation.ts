@@ -153,19 +153,19 @@ export function parseWithDefaults<T>(schema: z.ZodType<T>, data: unknown): Parse
  * Dangerous SQL characters.
  */
 const SQL_INJECTION_PATTERNS = [
-  /['"]/, // Quotes
-  /--/, // SQL comments
-  /;/, // Statement terminator
-  /\/\*/, // Block comments
-  /\*\//, // Block comments
-  /\bOR\b/i, // OR keyword
-  /\bAND\b/i, // AND keyword
-  /\bDROP\b/i, // DROP keyword
-  /\bDELETE\b/i, // DELETE keyword
-  /\bINSERT\b/i, // INSERT keyword
-  /\bUPDATE\b/i, // UPDATE keyword
-  /\bEXEC\b/i, // EXEC keyword
-  /\bUNION\b/i, // UNION keyword
+  /['"]/,
+  /--/,
+  /;/,
+  /\/\*/,
+  /\*\//,
+  /\bOR\b/i,
+  /\bAND\b/i,
+  /\bDROP\b/i,
+  /\bDELETE\b/i,
+  /\bINSERT\b/i,
+  /\bUPDATE\b/i,
+  /\bEXEC\b/i,
+  /\bUNION\b/i,
 ];
 
 /**
@@ -208,11 +208,11 @@ export function safeTickerSymbol(): z.ZodString {
  */
 export function sanitizeString(value: string): string {
   return value
-    .replace(/'/g, "''") // Escape single quotes
-    .replace(/"/g, '""') // Escape double quotes
-    .replace(/;/g, "") // Remove semicolons
-    .replace(/--/g, "") // Remove SQL comments
-    .replace(/\/\*/g, "") // Remove block comments
+    .replace(/'/g, "''")
+    .replace(/"/g, '""')
+    .replace(/;/g, "")
+    .replace(/--/g, "")
+    .replace(/\/\*/g, "")
     .replace(/\*\//g, "");
 }
 

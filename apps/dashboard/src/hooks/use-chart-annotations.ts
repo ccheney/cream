@@ -20,33 +20,16 @@ import {
   type TradeMarker,
 } from "@/lib/chart-config";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Trade annotation with both marker and metadata.
- */
 export interface TradeAnnotation {
-  /** Trade marker for chart */
   marker: TradeMarker;
-  /** Original trade data */
   trade: Trade;
 }
 
-/**
- * Position annotation for chart overlays.
- */
 export interface PositionAnnotation {
-  /** Entry marker */
   entry: TradeMarker | null;
-  /** Exit marker (if closed) */
   exit: TradeMarker | null;
-  /** Stop-loss line */
   stopLoss: PriceLineConfig | null;
-  /** Take-profit line */
   takeProfit: PriceLineConfig | null;
-  /** Position metadata */
   position: {
     symbol: string;
     side: "LONG" | "SHORT";
@@ -58,41 +41,20 @@ export interface PositionAnnotation {
   };
 }
 
-/**
- * Options for useChartAnnotations hook.
- */
 export interface UseChartAnnotationsOptions {
-  /** Trades to convert to annotations */
   trades: Trade[];
-  /** Stop-loss price (for open positions) */
   stopLoss?: number;
-  /** Take-profit price (for open positions) */
   takeProfit?: number;
-  /** Show stop/take-profit lines (default: true) */
   showPriceLines?: boolean;
 }
 
-/**
- * Return type for useChartAnnotations hook.
- */
 export interface UseChartAnnotationsReturn {
-  /** Markers for the chart */
   markers: TradeMarker[];
-  /** Price lines for stop/take-profit */
   priceLines: PriceLineConfig[];
-  /** Trade annotations with full metadata */
   annotations: TradeAnnotation[];
-  /** Get annotation by marker time */
   getAnnotation: (time: number | string) => TradeAnnotation | undefined;
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Convert trade to marker.
- */
 function tradeToMarker(trade: Trade): TradeMarker {
   const isBuy = trade.side === "BUY";
 
@@ -106,9 +68,6 @@ function tradeToMarker(trade: Trade): TradeMarker {
   };
 }
 
-/**
- * Convert backtest trade to marker.
- */
 export function backtestTradeToMarker(trade: {
   timestamp: string;
   action: "BUY" | "SELL";
@@ -126,12 +85,8 @@ export function backtestTradeToMarker(trade: {
   };
 }
 
-// ============================================
-// Main Hook
-// ============================================
-
 /**
- * Hook for converting trades to chart annotations.
+ * Converts trades to chart annotations.
  *
  * @example
  * ```tsx
@@ -165,7 +120,6 @@ export function useChartAnnotations({
   takeProfit,
   showPriceLines = true,
 }: UseChartAnnotationsOptions): UseChartAnnotationsReturn {
-  // Convert trades to annotations
   const annotations = useMemo((): TradeAnnotation[] => {
     return trades.map((trade) => ({
       marker: tradeToMarker(trade),
@@ -173,12 +127,10 @@ export function useChartAnnotations({
     }));
   }, [trades]);
 
-  // Extract markers
   const markers = useMemo((): TradeMarker[] => {
     return annotations.map((a) => a.marker);
   }, [annotations]);
 
-  // Build price lines
   const priceLines = useMemo((): PriceLineConfig[] => {
     if (!showPriceLines) {
       return [];
@@ -197,7 +149,6 @@ export function useChartAnnotations({
     return lines;
   }, [stopLoss, takeProfit, showPriceLines]);
 
-  // Lookup function for annotations
   const getAnnotation = useMemo(() => {
     const timeMap = new Map<string, TradeAnnotation>();
 
@@ -219,33 +170,15 @@ export function useChartAnnotations({
   };
 }
 
-// ============================================
-// Additional Hooks
-// ============================================
-
-/**
- * Options for usePositionAnnotations hook.
- */
 export interface UsePositionAnnotationsOptions {
-  /** Entry trades */
   entryTrades: Trade[];
-  /** Exit trades (if position is closed) */
   exitTrades?: Trade[];
-  /** Stop-loss price */
   stopPrice?: number;
-  /** Take-profit price */
   targetPrice?: number;
-  /** Average cost basis */
   avgCost: number;
-  /** Position side */
   side: "LONG" | "SHORT";
 }
 
-/**
- * Hook for creating position-specific annotations.
- *
- * Groups entry/exit trades and adds stop/target lines.
- */
 export function usePositionAnnotations({
   entryTrades,
   exitTrades = [],
@@ -255,13 +188,9 @@ export function usePositionAnnotations({
   side,
 }: UsePositionAnnotationsOptions): PositionAnnotation {
   return useMemo(() => {
-    // Create entry markers
     const entryMarkers = entryTrades.map((t) => createEntryMarker(t.timestamp, `BUY @${t.price}`));
-
-    // Create exit markers
     const exitMarkers = exitTrades.map((t) => createExitMarker(t.timestamp, `SELL @${t.price}`));
 
-    // Calculate PnL if we have exit trades
     let pnl: number | undefined;
     let pnlPct: number | undefined;
 

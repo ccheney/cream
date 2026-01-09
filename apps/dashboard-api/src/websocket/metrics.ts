@@ -7,23 +7,10 @@
  * @see docs/plans/ui/08-realtime.md lines 130-139
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Metric types.
- */
 export type MetricType = "counter" | "gauge" | "histogram";
 
-/**
- * Label set for metrics.
- */
 export type Labels = Record<string, string>;
 
-/**
- * Histogram bucket configuration.
- */
 export interface HistogramBuckets {
   boundaries: number[];
   counts: number[];
@@ -31,14 +18,8 @@ export interface HistogramBuckets {
   count: number;
 }
 
-/**
- * Metric value.
- */
 export type MetricValue = number | HistogramBuckets;
 
-/**
- * Single metric with labels.
- */
 export interface Metric {
   name: string;
   type: MetricType;
@@ -46,32 +27,22 @@ export interface Metric {
   values: Map<string, MetricValue>;
 }
 
-/**
- * Metrics registry.
- */
 export interface MetricsRegistry {
   metrics: Map<string, Metric>;
 
-  // Counter operations
   inc(name: string, labels?: Labels, value?: number): void;
 
-  // Gauge operations
   set(name: string, value: number, labels?: Labels): void;
   incGauge(name: string, labels?: Labels, value?: number): void;
   decGauge(name: string, labels?: Labels, value?: number): void;
 
-  // Histogram operations
   observe(name: string, value: number, labels?: Labels): void;
 
-  // Export
   getMetrics(): MetricOutput[];
   toPrometheus(): string;
   reset(): void;
 }
 
-/**
- * Metric output for export.
- */
 export interface MetricOutput {
   name: string;
   type: MetricType;
@@ -79,65 +50,42 @@ export interface MetricOutput {
   samples: Array<{ labels: Labels; value: number }>;
 }
 
-// ============================================
-// Constants
-// ============================================
-
-/**
- * Default histogram buckets for latency (milliseconds).
- */
+/** Default histogram buckets for latency (milliseconds). */
 export const LATENCY_BUCKETS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
 
-/**
- * Default histogram buckets for message size (bytes).
- */
+/** Default histogram buckets for message size (bytes). */
 export const SIZE_BUCKETS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
 
-/**
- * Default histogram buckets for duration (seconds).
- */
+/** Default histogram buckets for duration (seconds). */
 export const DURATION_BUCKETS = [1, 5, 15, 30, 60, 120, 300, 600, 1800, 3600];
 
-/**
- * WebSocket metric definitions.
- */
 export const WS_METRICS = {
-  // Connection metrics
   ACTIVE_CONNECTIONS: "ws_active_connections",
   TOTAL_CONNECTIONS: "ws_connections_total",
   CONNECTION_DURATION: "ws_connection_duration_seconds",
   CONNECTION_ERRORS: "ws_connection_errors_total",
 
-  // Message metrics
   MESSAGES_RECEIVED: "ws_messages_received_total",
   MESSAGES_SENT: "ws_messages_sent_total",
   MESSAGE_SIZE_RECEIVED: "ws_message_size_received_bytes",
   MESSAGE_SIZE_SENT: "ws_message_size_sent_bytes",
   MESSAGE_ERRORS: "ws_message_errors_total",
 
-  // Latency metrics
   BROADCAST_LATENCY: "ws_broadcast_latency_ms",
   ROUNDTRIP_LATENCY: "ws_roundtrip_latency_ms",
 
-  // Subscription metrics
   SUBSCRIBED_CHANNELS: "ws_subscribed_channels",
   SUBSCRIBED_SYMBOLS: "ws_subscribed_symbols",
 
-  // Rate limiting metrics
   RATE_LIMIT_VIOLATIONS: "ws_rate_limit_violations_total",
 
-  // Quote batching metrics
   QUOTE_BATCH_SIZE: "ws_quote_batch_size",
   QUOTE_THROTTLE_DISCARDS: "ws_quote_throttle_discards",
 
-  // Heartbeat metrics
   HEARTBEAT_LATENCY: "ws_heartbeat_latency_ms",
   HEARTBEAT_TIMEOUTS: "ws_heartbeat_timeouts_total",
 } as const;
 
-/**
- * Metric help text.
- */
 export const METRIC_HELP: Record<string, string> = {
   [WS_METRICS.ACTIVE_CONNECTIONS]: "Number of currently active WebSocket connections",
   [WS_METRICS.TOTAL_CONNECTIONS]: "Total number of WebSocket connections since startup",
@@ -159,21 +107,11 @@ export const METRIC_HELP: Record<string, string> = {
   [WS_METRICS.HEARTBEAT_TIMEOUTS]: "Total heartbeat timeouts",
 };
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Serialize labels to string key.
- */
 export function labelsToKey(labels: Labels = {}): string {
   const sorted = Object.entries(labels).sort(([a], [b]) => a.localeCompare(b));
   return sorted.map(([k, v]) => `${k}="${v}"`).join(",");
 }
 
-/**
- * Format labels for Prometheus output.
- */
 export function formatLabels(labels: Labels): string {
   const entries = Object.entries(labels);
   if (entries.length === 0) {
@@ -183,9 +121,6 @@ export function formatLabels(labels: Labels): string {
   return `{${formatted}}`;
 }
 
-/**
- * Create histogram buckets.
- */
 export function createHistogramBuckets(boundaries: number[]): HistogramBuckets {
   return {
     boundaries: [...boundaries],
@@ -195,9 +130,6 @@ export function createHistogramBuckets(boundaries: number[]): HistogramBuckets {
   };
 }
 
-/**
- * Update histogram with value.
- */
 export function observeHistogram(histogram: HistogramBuckets, value: number): void {
   histogram.sum += value;
   histogram.count += 1;
@@ -219,13 +151,7 @@ export function observeHistogram(histogram: HistogramBuckets, value: number): vo
   }
 }
 
-// ============================================
-// Metrics Registry
-// ============================================
-
 /**
- * Create a metrics registry.
- *
  * @example
  * ```ts
  * const registry = createMetricsRegistry();
@@ -289,7 +215,6 @@ export function createMetricsRegistry(): MetricsRegistry {
       const key = labelsToKey(labels);
       let histogram = metric.values.get(key) as HistogramBuckets | undefined;
       if (!histogram) {
-        // Use default buckets based on metric name
         const buckets =
           name.includes("latency") || name.includes("ms")
             ? LATENCY_BUCKETS
@@ -314,12 +239,12 @@ export function createMetricsRegistry(): MetricsRegistry {
           for (const [labelKey, histogram] of metric.values) {
             const baseLabels: Labels = {};
             if (labelKey) {
-              labelKey.split(",").forEach((pair) => {
+              for (const pair of labelKey.split(",")) {
                 const [k, v] = pair.split("=");
                 if (k && v) {
                   baseLabels[k] = v.replace(/"/g, "");
                 }
-              });
+              }
             }
 
             const buckets = histogram as HistogramBuckets;
@@ -348,12 +273,12 @@ export function createMetricsRegistry(): MetricsRegistry {
           for (const [labelKey, value] of metric.values) {
             const labels: Labels = {};
             if (labelKey) {
-              labelKey.split(",").forEach((pair) => {
+              for (const pair of labelKey.split(",")) {
                 const [k, v] = pair.split("=");
                 if (k && v) {
                   labels[k] = v.replace(/"/g, "");
                 }
-              });
+              }
             }
             samples.push({ labels, value: value as number });
           }
@@ -422,53 +347,35 @@ export function createMetricsRegistry(): MetricsRegistry {
   };
 }
 
-// ============================================
-// WebSocket Metrics Collector
-// ============================================
-
-/**
- * WebSocket-specific metrics collector.
- */
 export interface WebSocketMetrics {
   registry: MetricsRegistry;
 
-  // Connection metrics
   connectionOpened(userId?: string): void;
   connectionClosed(durationSeconds: number, userId?: string): void;
   connectionError(reason: string): void;
 
-  // Message metrics
   messageReceived(type: string, sizeBytes: number): void;
   messageSent(type: string, sizeBytes: number): void;
   messageError(reason: string): void;
 
-  // Latency metrics
   observeBroadcastLatency(latencyMs: number): void;
   observeRoundtripLatency(latencyMs: number): void;
 
-  // Subscription metrics
   updateChannelSubscriptions(count: number): void;
   updateSymbolSubscriptions(count: number): void;
 
-  // Rate limiting
   rateLimitViolation(reason: string): void;
 
-  // Quote batching
   observeQuoteBatchSize(size: number): void;
   observeQuoteThrottleDiscards(symbol: string, count: number): void;
 
-  // Heartbeat
   observeHeartbeatLatency(latencyMs: number): void;
   heartbeatTimeout(): void;
 
-  // Export
   toPrometheus(): string;
   getActiveConnections(): number;
 }
 
-/**
- * Create WebSocket metrics collector.
- */
 export function createWebSocketMetrics(): WebSocketMetrics {
   const registry = createMetricsRegistry();
   let activeConnections = 0;
@@ -551,9 +458,5 @@ export function createWebSocketMetrics(): WebSocketMetrics {
     },
   };
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default createWebSocketMetrics;

@@ -1,9 +1,3 @@
-/**
- * Portfolio Query Hooks
- *
- * TanStack Query hooks for portfolio data.
- */
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { del, get, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
@@ -15,9 +9,6 @@ import type {
   PositionDetail,
 } from "@/lib/api/types";
 
-/**
- * Get portfolio summary.
- */
 export function usePortfolioSummary() {
   return useQuery({
     queryKey: queryKeys.portfolio.summary(),
@@ -31,9 +22,6 @@ export function usePortfolioSummary() {
   });
 }
 
-/**
- * Get all positions.
- */
 export function usePositions() {
   return useQuery({
     queryKey: queryKeys.portfolio.positions(),
@@ -47,9 +35,6 @@ export function usePositions() {
   });
 }
 
-/**
- * Get position detail.
- */
 export function usePositionDetail(id: string) {
   return useQuery({
     queryKey: queryKeys.portfolio.position(id),
@@ -63,9 +48,6 @@ export function usePositionDetail(id: string) {
   });
 }
 
-/**
- * Get equity curve.
- */
 export function useEquityCurve(days = 30) {
   return useQuery({
     queryKey: [...queryKeys.portfolio.all, "equity", days] as const,
@@ -78,9 +60,6 @@ export function useEquityCurve(days = 30) {
   });
 }
 
-/**
- * Get performance metrics.
- */
 export function usePerformanceMetrics() {
   return useQuery({
     queryKey: [...queryKeys.portfolio.all, "performance"] as const,
@@ -93,23 +72,6 @@ export function usePerformanceMetrics() {
   });
 }
 
-// ============================================
-// Mutations
-// ============================================
-
-/**
- * Close a position.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useClosePosition();
- * return (
- *   <button onClick={() => mutate(positionId)} disabled={isPending}>
- *     Close Position
- *   </button>
- * );
- * ```
- */
 export function useClosePosition() {
   const queryClient = useQueryClient();
 
@@ -125,22 +87,6 @@ export function useClosePosition() {
   });
 }
 
-/**
- * Modify stop loss for a position.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useModifyStop();
- * return (
- *   <button
- *     onClick={() => mutate({ positionId: "pos-123", stop: 150.00 })}
- *     disabled={isPending}
- *   >
- *     Update Stop
- *   </button>
- * );
- * ```
- */
 export function useModifyStop() {
   const queryClient = useQueryClient();
 
@@ -161,22 +107,6 @@ export function useModifyStop() {
   });
 }
 
-/**
- * Modify target price for a position.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useModifyTarget();
- * return (
- *   <button
- *     onClick={() => mutate({ positionId: "pos-123", target: 200.00 })}
- *     disabled={isPending}
- *   >
- *     Update Target
- *   </button>
- * );
- * ```
- */
 export function useModifyTarget() {
   const queryClient = useQueryClient();
 

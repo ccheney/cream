@@ -18,64 +18,32 @@ import {
 import { useRef } from "react";
 import { useToastStore } from "@/stores/toast-store";
 
-// ============================================
-// Types
-// ============================================
-
 export interface OptimisticMutationOptions<TData, TVariables, TContext = unknown> {
-  /** Mutation function to call */
   mutationFn: MutationFunction<TData, TVariables>;
-  /** Query key to update optimistically */
   queryKey: QueryKey;
-  /** Function to update query data optimistically */
   optimisticUpdate: (currentData: TData | undefined, variables: TVariables) => TData;
-  /** Success message for toast (optional) */
   successMessage?: string | ((data: TData, variables: TVariables) => string);
-  /** Error message for toast (optional, uses error.message if not provided) */
   errorMessage?: string | ((error: Error, variables: TVariables) => string);
-  /** Called on successful mutation */
   onSuccess?: (data: TData, variables: TVariables, context: TContext) => void;
-  /** Called on error (after rollback) */
   onError?: (error: Error, variables: TVariables, context: TContext | undefined) => void;
-  /** Whether to show success toast (default: false) */
   showSuccessToast?: boolean;
-  /** Whether to show error toast (default: true) */
   showErrorToast?: boolean;
-  /** Related query keys to invalidate on success */
   invalidateKeys?: QueryKey[];
 }
 
 export interface OptimisticMutationResult<TData, TVariables> {
-  /** Execute the mutation */
   mutate: (variables: TVariables) => void;
-  /** Execute the mutation and return a promise */
   mutateAsync: (variables: TVariables) => Promise<TData>;
-  /** Whether mutation is pending */
   isPending: boolean;
-  /** Whether mutation was successful */
   isSuccess: boolean;
-  /** Whether mutation failed */
   isError: boolean;
-  /** Error from mutation */
   error: Error | null;
-  /** Data returned from mutation */
   data: TData | undefined;
-  /** Reset mutation state */
   reset: () => void;
 }
 
-// ============================================
-// Hook
-// ============================================
-
 /**
  * Hook for mutations with optimistic updates.
- *
- * Pattern:
- * 1. Apply change optimistically in UI
- * 2. Send request to server
- * 3. On success: invalidate/refetch to sync
- * 4. On failure: revert UI, show error toast
  *
  * @example
  * ```tsx
@@ -88,7 +56,6 @@ export interface OptimisticMutationResult<TData, TVariables> {
  *   showSuccessToast: true,
  * });
  *
- * // Usage
  * acknowledgeAlert('alert-123');
  * ```
  */
@@ -110,55 +77,41 @@ export function useOptimisticMutation<TData, TVariables, TContext = unknown>(
 
   const queryClient = useQueryClient();
   const { success: showSuccess, error: showError } = useToastStore();
-
-  // Store previous data for rollback
   const previousDataRef = useRef<TData | undefined>(undefined);
 
   const mutation = useMutation<TData, Error, TVariables, TContext>({
     mutationFn,
 
     onMutate: async (variables) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey });
-
-      // Snapshot current data for rollback
       previousDataRef.current = queryClient.getQueryData<TData>(queryKey);
-
-      // Optimistically update cache
       queryClient.setQueryData<TData>(queryKey, (currentData) =>
         optimisticUpdate(currentData, variables)
       );
-
-      // Return context for potential rollback
       return { previousData: previousDataRef.current } as TContext;
     },
 
     onSuccess: (data, variables, context) => {
-      // Show success toast if enabled
       if (showSuccessToast && successMessage) {
         const message =
           typeof successMessage === "function" ? successMessage(data, variables) : successMessage;
         showSuccess(message);
       }
 
-      // Invalidate related queries to ensure consistency
       if (invalidateKeys) {
         for (const key of invalidateKeys) {
           queryClient.invalidateQueries({ queryKey: key });
         }
       }
 
-      // Call user's onSuccess
       onSuccess?.(data, variables, context);
     },
 
     onError: (error, variables, context) => {
-      // Rollback to previous data
       if (previousDataRef.current !== undefined) {
         queryClient.setQueryData(queryKey, previousDataRef.current);
       }
 
-      // Show error toast
       if (showErrorToast) {
         const message =
           typeof errorMessage === "function"
@@ -167,12 +120,10 @@ export function useOptimisticMutation<TData, TVariables, TContext = unknown>(
         showError(message);
       }
 
-      // Call user's onError
       onError?.(error, variables, context);
     },
 
     onSettled: () => {
-      // Always refetch after mutation settles to ensure consistency
       queryClient.invalidateQueries({ queryKey });
     },
   });

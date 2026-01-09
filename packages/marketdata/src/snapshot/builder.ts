@@ -32,10 +32,6 @@ import {
   type UniverseMetadata,
 } from "./schema";
 
-// ============================================
-// Types
-// ============================================
-
 /**
  * Candle data source interface.
  * Implement this to provide candle data from your storage.
@@ -115,10 +111,6 @@ export interface BuildSnapshotOptions {
   cache?: SnapshotCache;
 }
 
-// ============================================
-// Builder Implementation
-// ============================================
-
 /**
  * Build a feature snapshot for a symbol at a specific timestamp.
  *
@@ -159,7 +151,6 @@ export async function buildSnapshot(
   const useCache = options.useCache ?? true;
   const cache = options.cache ?? getGlobalCache();
 
-  // Check cache first
   if (useCache) {
     const cached = cache.get(symbol, timestamp);
     if (cached) {
@@ -167,7 +158,6 @@ export async function buildSnapshot(
     }
   }
 
-  // Fetch candles for all timeframes in parallel
   const candlePromises = config.timeframes.map(async (tf) => {
     const candles = await sources.candles.getCandles(symbol, tf, config.lookbackWindow, timestamp);
     return [tf, candles] as const;
@@ -175,7 +165,6 @@ export async function buildSnapshot(
 
   const candleResults = await Promise.all(candlePromises);
 
-  // Build candles by timeframe
   const candlesByTimeframe: CandlesByTimeframe = {};
   const candleMap = new Map<Timeframe, IndicatorCandle[]>();
 
@@ -184,7 +173,6 @@ export async function buildSnapshot(
     candleMap.set(tf, candles);
   }
 
-  // Get latest candle from shortest timeframe
   const primaryTimeframe = config.timeframes[0] ?? "1h";
   const primaryCandles = candlesByTimeframe[primaryTimeframe] ?? [];
   const latestCandle = primaryCandles[primaryCandles.length - 1];
@@ -195,11 +183,9 @@ export async function buildSnapshot(
     );
   }
 
-  // Calculate indicators for all timeframes
   const indicatorSnapshot = calculateMultiTimeframeIndicators(candleMap, indicatorConfig);
   const indicators: IndicatorValues = indicatorSnapshot?.values ?? {};
 
-  // Calculate normalized values (z-score, returns, percentile)
   let normalized: NormalizedValues = {};
   if (config.includeNormalized) {
     const transformResult = applyTransforms(
@@ -210,11 +196,9 @@ export async function buildSnapshot(
     normalized = transformResult?.values ?? {};
   }
 
-  // Classify regime using primary timeframe candles
   const regimeInput = { candles: primaryCandles };
   const regime: RegimeClassification = classifyRegime(regimeInput, DEFAULT_RULE_BASED_CONFIG);
 
-  // Fetch external events (if source provided and enabled)
   let recentEvents: ExternalEventSummary[] = [];
   if (config.includeEvents && sources.events) {
     recentEvents = await sources.events.getRecentEvents(
@@ -224,7 +208,6 @@ export async function buildSnapshot(
     );
   }
 
-  // Fetch universe metadata (if source provided)
   let metadata: UniverseMetadata = { symbol };
   if (sources.universe) {
     const resolved = await sources.universe.getMetadata(symbol);
@@ -242,7 +225,6 @@ export async function buildSnapshot(
     }
   }
 
-  // Build final snapshot
   const snapshot: FeatureSnapshot = {
     symbol,
     timestamp,
@@ -262,7 +244,6 @@ export async function buildSnapshot(
     },
   };
 
-  // Store in cache
   if (useCache) {
     cache.set(snapshot);
   }
@@ -301,10 +282,6 @@ export async function buildSnapshots(
 
   return snapshots;
 }
-
-// ============================================
-// Mock Data Sources (for testing)
-// ============================================
 
 /**
  * Create a mock candle data source for testing.
@@ -364,10 +341,6 @@ export function createMockUniverseSource(
     },
   };
 }
-
-// ============================================
-// Serialization Utilities
-// ============================================
 
 /**
  * Serialize a snapshot to a compact JSON format for LLM consumption.

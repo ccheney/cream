@@ -30,10 +30,6 @@
 
 import { z } from "zod/v4";
 
-// ============================================
-// Storage Tier
-// ============================================
-
 /**
  * Storage tier for data lifecycle management
  */
@@ -93,43 +89,28 @@ export const STORAGE_TIER_SPECS: Record<StorageTier, StorageTierCharacteristics>
   },
 };
 
-// ============================================
-// Environment
-// ============================================
-
 /**
  * Trading environment for retention policies
  */
 export const RetentionEnvironment = z.enum(["LIVE", "PAPER", "BACKTEST"]);
 export type RetentionEnvironment = z.infer<typeof RetentionEnvironment>;
 
-// ============================================
-// Node Types
-// ============================================
-
 /**
  * Node types for retention policies
  */
 export const RetentionNodeType = z.enum([
-  // Trading memory
   "TradeDecision",
   "TradeLifecycleEvent",
-  // Documents
   "FilingChunk_10K_10Q",
   "FilingChunk_8K",
   "TranscriptChunk",
   "NewsItem",
-  // External events
   "ExternalEvent_EARNINGS",
   "ExternalEvent_MACRO",
   "ExternalEvent_NEWS",
   "ExternalEvent_SENTIMENT_SPIKE",
 ]);
 export type RetentionNodeType = z.infer<typeof RetentionNodeType>;
-
-// ============================================
-// Retention Period
-// ============================================
 
 /**
  * Retention period for a storage tier
@@ -163,11 +144,6 @@ export const RetentionPolicySchema = z.object({
 
 export type RetentionPolicy = z.infer<typeof RetentionPolicySchema>;
 
-// ============================================
-// Duration Constants
-// ============================================
-
-/** Days per year */
 const DAYS_PER_YEAR = 365;
 
 /** Permanent retention (never delete) */
@@ -188,15 +164,10 @@ export const DURATIONS = {
   PERMANENT,
 };
 
-// ============================================
-// Retention Policy Definitions
-// ============================================
-
 /**
  * LIVE environment retention policies (SEC/FINRA compliant)
  */
 export const LIVE_RETENTION_POLICIES: RetentionPolicy[] = [
-  // Trading Memory - 6+ years total
   {
     nodeType: "TradeDecision",
     environment: "LIVE",
@@ -221,8 +192,6 @@ export const LIVE_RETENTION_POLICIES: RetentionPolicy[] = [
     complianceRequired: true,
     complianceNotes: "SEC Rule 17a-4: 6 years, 2 years accessible",
   },
-
-  // Documents
   {
     nodeType: "FilingChunk_10K_10Q",
     environment: "LIVE",
@@ -268,8 +237,6 @@ export const LIVE_RETENTION_POLICIES: RetentionPolicy[] = [
     totalRetentionDays: DURATIONS.YEAR_2 + DURATIONS.YEAR_1 + DURATIONS.DAYS_90,
     complianceRequired: false,
   },
-
-  // External Events
   {
     nodeType: "ExternalEvent_EARNINGS",
     environment: "LIVE",
@@ -372,10 +339,6 @@ export const ALL_RETENTION_POLICIES: Record<RetentionEnvironment, RetentionPolic
   BACKTEST: BACKTEST_RETENTION_POLICIES,
 };
 
-// ============================================
-// Policy Lookup
-// ============================================
-
 /**
  * Get retention policy for a node type and environment
  *
@@ -406,10 +369,6 @@ export function getCompliancePolicies(): RetentionPolicy[] {
     .flat()
     .filter((p) => p.complianceRequired);
 }
-
-// ============================================
-// Tier Transition Logic
-// ============================================
 
 /**
  * Node age and tier information for transition decisions
@@ -563,13 +522,8 @@ export function getTargetTier(
     }
   }
 
-  // Beyond all tiers - should be deleted
   return null;
 }
-
-// ============================================
-// Compliance Helpers
-// ============================================
 
 /**
  * Check if a policy meets SEC Rule 17a-4 requirements

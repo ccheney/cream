@@ -1,6 +1,4 @@
 /**
- * Cycle State Store
- *
  * Zustand store for managing active OODA cycle state during live trading.
  * Receives real-time updates from WebSocket during trading cycles.
  *
@@ -9,29 +7,16 @@
 
 import { create } from "zustand";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * OODA cycle phases.
- */
 export type CyclePhase = "observe" | "orient" | "decide" | "act" | "complete";
 
-/**
- * Active cycle information.
- */
 export interface CycleInfo {
   id: string;
   phase: CyclePhase;
   startedAt: string;
-  progress: number; // 0-100
+  progress: number;
   estimatedEndAt?: string;
 }
 
-/**
- * Agent output during a cycle.
- */
 export interface AgentOutput {
   decisionId: string;
   agentType: string;
@@ -44,9 +29,6 @@ export interface AgentOutput {
   timestamp: string;
 }
 
-/**
- * Symbol analysis during a cycle.
- */
 export interface SymbolAnalysis {
   symbol: string;
   phase: CyclePhase;
@@ -57,69 +39,30 @@ export interface SymbolAnalysis {
   timestamp: string;
 }
 
-/**
- * Cycle store state.
- */
 export interface CycleState {
-  /** Currently active cycle, null if not running */
   activeCycle: CycleInfo | null;
-
-  /** Agent outputs keyed by agentType */
   agentOutputs: Map<string, AgentOutput>;
-
-  /** Symbol analysis keyed by symbol */
   symbolAnalysis: Map<string, SymbolAnalysis>;
-
-  /** Streaming agent output (partial text) */
   streamingOutput: {
     agentType: string;
     text: string;
   } | null;
 }
 
-/**
- * Cycle store actions.
- */
 export interface CycleActions {
-  /** Set the active cycle */
   setCycle: (cycle: CycleInfo | null) => void;
-
-  /** Update cycle phase */
   updatePhase: (phase: CyclePhase) => void;
-
-  /** Update cycle progress */
   updateProgress: (progress: number) => void;
-
-  /** Add or update agent output */
   updateAgentOutput: (output: AgentOutput) => void;
-
-  /** Add or update symbol analysis */
   updateSymbolAnalysis: (analysis: SymbolAnalysis) => void;
-
-  /** Set streaming output (partial agent reasoning) */
   setStreamingOutput: (output: { agentType: string; text: string } | null) => void;
-
-  /** Append to streaming output */
   appendStreamingOutput: (text: string) => void;
-
-  /** Clear all outputs for a new cycle */
   clearOutputs: () => void;
-
-  /** Complete the current cycle */
   completeCycle: () => void;
-
-  /** Reset entire store */
   reset: () => void;
 }
 
-/**
- * Combined store type.
- */
 export type CycleStore = CycleState & CycleActions;
-
-// ============================================
-// Initial State
-// ============================================
 
 const initialState: CycleState = {
   activeCycle: null,
@@ -128,15 +71,8 @@ const initialState: CycleState = {
   streamingOutput: null,
 };
 
-// ============================================
-// Store Implementation
-// ============================================
-
 /**
- * Cycle state store.
- *
- * Not persisted - cycle state is ephemeral and reconstructed
- * from server on reconnection.
+ * Not persisted - cycle state is ephemeral and reconstructed from server on reconnection.
  *
  * @example
  * ```tsx
@@ -156,14 +92,11 @@ const initialState: CycleState = {
  * ```
  */
 export const useCycleStore = create<CycleStore>((set, get) => ({
-  // Initial state
   ...initialState,
 
-  // Actions
   setCycle: (cycle) => {
     set({ activeCycle: cycle });
     if (cycle) {
-      // Clear previous cycle data when starting new cycle
       get().clearOutputs();
     }
   },
@@ -251,10 +184,6 @@ export const useCycleStore = create<CycleStore>((set, get) => ({
   },
 }));
 
-// ============================================
-// Selectors
-// ============================================
-
 export const selectActiveCycle = (state: CycleStore) => state.activeCycle;
 export const selectCyclePhase = (state: CycleStore) => state.activeCycle?.phase;
 export const selectCycleProgress = (state: CycleStore) => state.activeCycle?.progress ?? 0;
@@ -264,13 +193,6 @@ export const selectAgentOutputs = (state: CycleStore) => state.agentOutputs;
 export const selectSymbolAnalysis = (state: CycleStore) => state.symbolAnalysis;
 export const selectStreamingOutput = (state: CycleStore) => state.streamingOutput;
 
-// ============================================
-// Convenience Hooks
-// ============================================
-
-/**
- * Hook for active cycle state.
- */
 export function useActiveCycle() {
   return useCycleStore((state) => ({
     cycle: state.activeCycle,
@@ -280,9 +202,6 @@ export function useActiveCycle() {
   }));
 }
 
-/**
- * Hook for agent outputs.
- */
 export function useAgentOutputs() {
   const outputs = useCycleStore((state) => state.agentOutputs);
   return {
@@ -293,16 +212,10 @@ export function useAgentOutputs() {
   };
 }
 
-/**
- * Hook for specific agent output.
- */
 export function useAgentOutput(agentType: string) {
   return useCycleStore((state) => state.agentOutputs.get(agentType));
 }
 
-/**
- * Hook for symbol analysis.
- */
 export function useSymbolAnalysis(symbol?: string) {
   const analysis = useCycleStore((state) => state.symbolAnalysis);
   if (symbol) {
@@ -311,16 +224,10 @@ export function useSymbolAnalysis(symbol?: string) {
   return analysis;
 }
 
-/**
- * Hook for streaming output.
- */
 export function useStreamingOutput() {
   return useCycleStore((state) => state.streamingOutput);
 }
 
-/**
- * Hook for cycle actions.
- */
 export function useCycleActions() {
   return useCycleStore((state) => ({
     setCycle: state.setCycle,

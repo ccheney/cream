@@ -10,10 +10,6 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export type CountdownFormat = "mm:ss" | "hh:mm:ss" | "auto";
 
 export interface CountdownProps {
@@ -33,42 +29,23 @@ export interface CountdownProps {
   className?: string;
   /** ARIA label for accessibility */
   "aria-label"?: string;
-  /** Test ID for testing */
   "data-testid"?: string;
 }
 
 export interface CountdownState {
-  /** Total remaining seconds */
   totalSeconds: number;
-  /** Hours component */
   hours: number;
-  /** Minutes component */
   minutes: number;
-  /** Seconds component */
   seconds: number;
-  /** Whether countdown is complete */
   isComplete: boolean;
-  /** Whether in warning state (<5 min) */
   isWarning: boolean;
-  /** Whether in critical state (<1 min) */
   isCritical: boolean;
 }
 
-// ============================================
-// Constants
-// ============================================
+const DEFAULT_WARNING_THRESHOLD = 300;
+const DEFAULT_CRITICAL_THRESHOLD = 60;
+const UPDATE_INTERVAL = 1000;
 
-const DEFAULT_WARNING_THRESHOLD = 300; // 5 minutes
-const DEFAULT_CRITICAL_THRESHOLD = 60; // 1 minute
-const UPDATE_INTERVAL = 1000; // 1 second
-
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Calculate countdown state from target time.
- */
 function calculateCountdownState(
   targetTime: Date,
   warningThreshold: number,
@@ -94,20 +71,13 @@ function calculateCountdownState(
   };
 }
 
-/**
- * Format time component with leading zero.
- */
 function pad(value: number): string {
   return value.toString().padStart(2, "0");
 }
 
-/**
- * Format countdown for display.
- */
 function formatCountdown(state: CountdownState, format: CountdownFormat): string {
   const { hours, minutes, seconds } = state;
 
-  // Auto format: show hours only if > 0
   if (format === "auto") {
     if (hours > 0) {
       return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
@@ -119,14 +89,10 @@ function formatCountdown(state: CountdownState, format: CountdownFormat): string
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   }
 
-  // mm:ss format (cap at 99:59)
   const totalMinutes = Math.min(99, hours * 60 + minutes);
   return `${pad(totalMinutes)}:${pad(seconds)}`;
 }
 
-/**
- * Format countdown with suffix like "(in 5m)".
- */
 function formatWithSuffix(state: CountdownState): string {
   const { totalSeconds, hours, minutes } = state;
 
@@ -146,9 +112,6 @@ function formatWithSuffix(state: CountdownState): string {
   return `(in ${totalSeconds}s)`;
 }
 
-/**
- * Hook to check if user prefers reduced motion.
- */
 function usePrefersReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -167,13 +130,6 @@ function usePrefersReducedMotion(): boolean {
   return prefersReducedMotion;
 }
 
-// ============================================
-// Hook
-// ============================================
-
-/**
- * Hook for countdown timer logic.
- */
 export function useCountdown(
   targetTime: Date,
   options: {
@@ -195,34 +151,27 @@ export function useCountdown(
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
 
-  // Keep callback ref updated
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // Reset completion flag when target changes
   const _targetTimeMs = targetTime.getTime();
   useEffect(() => {
     hasCompletedRef.current = false;
   }, []);
 
-  // Update countdown every second
   useEffect(() => {
     const tick = () => {
       const newState = calculateCountdownState(targetTime, warningThreshold, criticalThreshold);
       setState(newState);
 
-      // Trigger onComplete once when countdown reaches zero
       if (newState.isComplete && !hasCompletedRef.current) {
         hasCompletedRef.current = true;
         onCompleteRef.current?.();
       }
     };
 
-    // Initial tick
     tick();
-
-    // Set up interval
     const intervalId = setInterval(tick, UPDATE_INTERVAL);
 
     return () => clearInterval(intervalId);
@@ -231,28 +180,6 @@ export function useCountdown(
   return state;
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Countdown displays time remaining until target with visual feedback.
- *
- * @example
- * ```tsx
- * // Basic countdown
- * <Countdown targetTime={nextCycleTime} />
- *
- * // With callback
- * <Countdown
- *   targetTime={nextCycleTime}
- *   onComplete={() => refetchData()}
- * />
- *
- * // Suffix format "(in 5m)"
- * <Countdown targetTime={nextCycleTime} showSuffix />
- * ```
- */
 export const Countdown = memo(function Countdown({
   targetTime,
   onComplete,
@@ -272,7 +199,6 @@ export const Countdown = memo(function Countdown({
     criticalThreshold,
   });
 
-  // Determine display text
   const displayText = useMemo(() => {
     if (showSuffix) {
       return formatWithSuffix(state);
@@ -280,7 +206,6 @@ export const Countdown = memo(function Countdown({
     return formatCountdown(state, format);
   }, [state, format, showSuffix]);
 
-  // Determine visual state classes
   const stateClasses = useMemo(() => {
     if (state.isComplete) {
       return "text-emerald-600 dark:text-emerald-400";
@@ -294,7 +219,6 @@ export const Countdown = memo(function Countdown({
     return "text-stone-700 dark:text-stone-300";
   }, [state.isComplete, state.isCritical, state.isWarning]);
 
-  // Animation classes for critical state
   const animationClasses = useMemo(() => {
     if (state.isCritical && !prefersReducedMotion) {
       return "animate-pulse";
@@ -302,7 +226,6 @@ export const Countdown = memo(function Countdown({
     return "";
   }, [state.isCritical, prefersReducedMotion]);
 
-  // Generate ARIA label
   const computedAriaLabel = useMemo(() => {
     if (ariaLabel) {
       return ariaLabel;
@@ -342,9 +265,5 @@ export const Countdown = memo(function Countdown({
     </span>
   );
 });
-
-// ============================================
-// Exports
-// ============================================
 
 export default Countdown;

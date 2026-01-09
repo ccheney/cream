@@ -17,13 +17,6 @@ import {
   toJson,
 } from "./base.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Decision status
- */
 export type DecisionStatus =
   | "pending"
   | "approved"
@@ -33,19 +26,10 @@ export type DecisionStatus =
   | "failed"
   | "cancelled";
 
-/**
- * Decision action
- */
 export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE";
 
-/**
- * Decision direction
- */
 export type DecisionDirection = "LONG" | "SHORT" | "FLAT";
 
-/**
- * Decision entity
- */
 export interface Decision {
   id: string;
   cycleId: string;
@@ -71,9 +55,6 @@ export interface Decision {
   updatedAt: string;
 }
 
-/**
- * Create decision input
- */
 export interface CreateDecisionInput {
   id: string;
   cycleId: string;
@@ -97,9 +78,6 @@ export interface CreateDecisionInput {
   environment: string;
 }
 
-/**
- * Decision filter options
- */
 export interface DecisionFilters {
   symbol?: string;
   status?: DecisionStatus | DecisionStatus[];
@@ -110,10 +88,6 @@ export interface DecisionFilters {
   fromDate?: string;
   toDate?: string;
 }
-
-// ============================================
-// Row Mapper
-// ============================================
 
 function mapDecisionRow(row: Row): Decision {
   return {
@@ -142,21 +116,11 @@ function mapDecisionRow(row: Row): Decision {
   };
 }
 
-// ============================================
-// Repository
-// ============================================
-
-/**
- * Decisions repository
- */
 export class DecisionsRepository {
   private readonly table = "decisions";
 
   constructor(private readonly client: TursoClient) {}
 
-  /**
-   * Create a new decision
-   */
   async create(input: CreateDecisionInput): Promise<Decision> {
     const now = new Date().toISOString();
 
@@ -202,18 +166,12 @@ export class DecisionsRepository {
     return this.findById(input.id) as Promise<Decision>;
   }
 
-  /**
-   * Find decision by ID
-   */
   async findById(id: string): Promise<Decision | null> {
     const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapDecisionRow(row) : null;
   }
 
-  /**
-   * Find decision by ID, throw if not found
-   */
   async findByIdOrThrow(id: string): Promise<Decision> {
     const decision = await this.findById(id);
     if (!decision) {
@@ -222,9 +180,6 @@ export class DecisionsRepository {
     return decision;
   }
 
-  /**
-   * Find decisions with filters
-   */
   async findMany(
     filters: DecisionFilters = {},
     pagination?: PaginationOptions
@@ -277,9 +232,6 @@ export class DecisionsRepository {
     };
   }
 
-  /**
-   * Find decisions by symbol
-   */
   async findBySymbol(symbol: string, limit = 20): Promise<Decision[]> {
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table} WHERE symbol = ? ORDER BY created_at DESC LIMIT ?`,
@@ -289,9 +241,6 @@ export class DecisionsRepository {
     return rows.map(mapDecisionRow);
   }
 
-  /**
-   * Find decisions by cycle
-   */
   async findByCycle(cycleId: string): Promise<Decision[]> {
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table} WHERE cycle_id = ? ORDER BY created_at DESC`,
@@ -301,9 +250,6 @@ export class DecisionsRepository {
     return rows.map(mapDecisionRow);
   }
 
-  /**
-   * Find recent decisions
-   */
   async findRecent(environment: string, limit = 10): Promise<Decision[]> {
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
@@ -313,9 +259,6 @@ export class DecisionsRepository {
     return rows.map(mapDecisionRow);
   }
 
-  /**
-   * Update decision status
-   */
   async updateStatus(id: string, status: DecisionStatus): Promise<Decision> {
     const now = new Date().toISOString();
 
@@ -331,9 +274,6 @@ export class DecisionsRepository {
     return this.findByIdOrThrow(id);
   }
 
-  /**
-   * Update decision
-   */
   async update(
     id: string,
     updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>
@@ -417,18 +357,12 @@ export class DecisionsRepository {
     return this.findByIdOrThrow(id);
   }
 
-  /**
-   * Delete decision
-   */
   async delete(id: string): Promise<boolean> {
     const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
 
     return result.changes > 0;
   }
 
-  /**
-   * Count decisions by status
-   */
   async countByStatus(environment: string): Promise<Record<DecisionStatus, number>> {
     const rows = await this.client.execute<{ status: string; count: number }>(
       `SELECT status, COUNT(*) as count FROM ${this.table} WHERE environment = ? GROUP BY status`,

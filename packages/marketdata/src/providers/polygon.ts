@@ -15,16 +15,9 @@
 import { z } from "zod";
 import { createRestClient, type RateLimitConfig, type RestClient } from "../client";
 
-// ============================================
-// API Configuration
-// ============================================
-
 const POLYGON_BASE_URL = "https://api.polygon.io";
 // Alternative: const MASSIVE_BASE_URL = "https://api.massive.com";
 
-/**
- * Polygon rate limits by subscription.
- */
 export const POLYGON_RATE_LIMITS: Record<string, RateLimitConfig> = {
   free: { maxRequests: 5, intervalMs: 60000 }, // 5/min
   starter: { maxRequests: 100, intervalMs: 60000 }, // 100/min
@@ -32,13 +25,6 @@ export const POLYGON_RATE_LIMITS: Record<string, RateLimitConfig> = {
   advanced: { maxRequests: 5000, intervalMs: 60000 }, // 5000/min
 };
 
-// ============================================
-// Response Schemas
-// ============================================
-
-/**
- * Aggregate bar (candle) schema.
- */
 export const AggregateBarSchema = z.object({
   o: z.number(), // open
   h: z.number(), // high
@@ -51,9 +37,6 @@ export const AggregateBarSchema = z.object({
 });
 export type AggregateBar = z.infer<typeof AggregateBarSchema>;
 
-/**
- * Aggregates response schema.
- */
 export const AggregatesResponseSchema = z.object({
   ticker: z.string(),
   queryCount: z.number(),
@@ -65,9 +48,6 @@ export const AggregatesResponseSchema = z.object({
 });
 export type AggregatesResponse = z.infer<typeof AggregatesResponseSchema>;
 
-/**
- * Option contract schema.
- */
 export const OptionContractSchema = z.object({
   ticker: z.string(),
   underlying_ticker: z.string(),
@@ -80,9 +60,6 @@ export const OptionContractSchema = z.object({
 });
 export type OptionContract = z.infer<typeof OptionContractSchema>;
 
-/**
- * Option chain response schema.
- */
 export const OptionChainResponseSchema = z.object({
   results: z.array(OptionContractSchema).optional(),
   status: z.string(),
@@ -91,9 +68,6 @@ export const OptionChainResponseSchema = z.object({
 });
 export type OptionChainResponse = z.infer<typeof OptionChainResponseSchema>;
 
-/**
- * Option snapshot day data.
- */
 export const OptionSnapshotDaySchema = z.object({
   change: z.number().optional(),
   change_percent: z.number().optional(),
@@ -107,9 +81,6 @@ export const OptionSnapshotDaySchema = z.object({
   vwap: z.number().optional(),
 });
 
-/**
- * Option snapshot greeks.
- */
 export const OptionSnapshotGreeksSchema = z.object({
   delta: z.number().optional(),
   gamma: z.number().optional(),
@@ -117,9 +88,6 @@ export const OptionSnapshotGreeksSchema = z.object({
   vega: z.number().optional(),
 });
 
-/**
- * Option snapshot quote.
- */
 export const OptionSnapshotQuoteSchema = z.object({
   ask: z.number().optional(),
   ask_size: z.number().optional(),
@@ -129,9 +97,6 @@ export const OptionSnapshotQuoteSchema = z.object({
   midpoint: z.number().optional(),
 });
 
-/**
- * Option snapshot underlying asset.
- */
 export const OptionSnapshotUnderlyingSchema = z.object({
   change_to_break_even: z.number().optional(),
   last_updated: z.number().optional(),
@@ -140,9 +105,6 @@ export const OptionSnapshotUnderlyingSchema = z.object({
   timeframe: z.string().optional(),
 });
 
-/**
- * Option contract snapshot details.
- */
 export const OptionContractDetailsSchema = z.object({
   contract_type: z.enum(["call", "put"]),
   exercise_style: z.string().optional(),
@@ -152,9 +114,6 @@ export const OptionContractDetailsSchema = z.object({
   ticker: z.string(),
 });
 
-/**
- * Option snapshot result.
- */
 export const OptionSnapshotResultSchema = z.object({
   break_even_price: z.number().optional(),
   day: OptionSnapshotDaySchema.optional(),
@@ -167,9 +126,6 @@ export const OptionSnapshotResultSchema = z.object({
 });
 export type OptionSnapshotResult = z.infer<typeof OptionSnapshotResultSchema>;
 
-/**
- * Option chain snapshot response.
- */
 export const OptionChainSnapshotResponseSchema = z.object({
   results: z.array(OptionSnapshotResultSchema).optional(),
   status: z.string(),
@@ -178,9 +134,6 @@ export const OptionChainSnapshotResponseSchema = z.object({
 });
 export type OptionChainSnapshotResponse = z.infer<typeof OptionChainSnapshotResponseSchema>;
 
-/**
- * Snapshot schema.
- */
 export const SnapshotSchema = z.object({
   ticker: z.string(),
   day: z
@@ -215,9 +168,6 @@ export const SnapshotSchema = z.object({
 });
 export type Snapshot = z.infer<typeof SnapshotSchema>;
 
-/**
- * Tickers snapshot response.
- */
 export const TickersSnapshotResponseSchema = z.object({
   tickers: z.array(SnapshotSchema).optional(),
   status: z.string(),
@@ -225,9 +175,6 @@ export const TickersSnapshotResponseSchema = z.object({
 });
 export type TickersSnapshotResponse = z.infer<typeof TickersSnapshotResponseSchema>;
 
-/**
- * Stock split schema.
- */
 export const StockSplitSchema = z.object({
   ticker: z.string(),
   execution_date: z.string(),
@@ -236,9 +183,6 @@ export const StockSplitSchema = z.object({
 });
 export type StockSplit = z.infer<typeof StockSplitSchema>;
 
-/**
- * Stock splits response.
- */
 export const StockSplitsResponseSchema = z.object({
   results: z.array(StockSplitSchema).optional(),
   status: z.string(),
@@ -247,9 +191,6 @@ export const StockSplitsResponseSchema = z.object({
 });
 export type StockSplitsResponse = z.infer<typeof StockSplitsResponseSchema>;
 
-/**
- * Dividend schema.
- */
 export const DividendSchema = z.object({
   ticker: z.string(),
   cash_amount: z.number(),
@@ -263,9 +204,6 @@ export const DividendSchema = z.object({
 });
 export type Dividend = z.infer<typeof DividendSchema>;
 
-/**
- * Dividends response.
- */
 export const DividendsResponseSchema = z.object({
   results: z.array(DividendSchema).optional(),
   status: z.string(),
@@ -274,13 +212,6 @@ export const DividendsResponseSchema = z.object({
 });
 export type DividendsResponse = z.infer<typeof DividendsResponseSchema>;
 
-// ============================================
-// Polygon Client
-// ============================================
-
-/**
- * Polygon API client configuration.
- */
 export interface PolygonClientConfig {
   /** Polygon API key */
   apiKey: string;
@@ -290,14 +221,8 @@ export interface PolygonClientConfig {
   useMassive?: boolean;
 }
 
-/**
- * Timespan for aggregates.
- */
 export type Timespan = "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 
-/**
- * Polygon.io API client.
- */
 export class PolygonClient {
   private client: RestClient;
   private apiKey: string;
@@ -320,9 +245,6 @@ export class PolygonClient {
     this.apiKey = config.apiKey;
   }
 
-  /**
-   * Get aggregate bars (candles) for a ticker.
-   */
   async getAggregates(
     ticker: string,
     multiplier: number,
@@ -347,9 +269,6 @@ export class PolygonClient {
     );
   }
 
-  /**
-   * Get previous day's aggregates.
-   */
   async getPreviousClose(ticker: string, adjusted = true): Promise<AggregatesResponse> {
     return this.client.get(
       `/v2/aggs/ticker/${ticker}/prev`,
@@ -358,9 +277,6 @@ export class PolygonClient {
     );
   }
 
-  /**
-   * Get option contracts for an underlying.
-   */
   async getOptionContracts(
     underlyingTicker: string,
     options: {
@@ -415,9 +331,6 @@ export class PolygonClient {
     );
   }
 
-  /**
-   * Get snapshot for all tickers.
-   */
   async getAllTickersSnapshot(tickers?: string[]): Promise<TickersSnapshotResponse> {
     const params: Record<string, string | number | boolean | undefined> = {
       apiKey: this.apiKey,
@@ -434,9 +347,6 @@ export class PolygonClient {
     );
   }
 
-  /**
-   * Get snapshot for a single ticker.
-   */
   async getTickerSnapshot(ticker: string): Promise<Snapshot | undefined> {
     const response = await this.getAllTickersSnapshot([ticker]);
     return response.tickers && response.tickers.length > 0 ? response.tickers[0] : undefined;
@@ -496,9 +406,6 @@ export class PolygonClient {
     );
   }
 
-  /**
-   * Convert aggregate bars to standard candle format.
-   */
   static toCandles(bars: AggregateBar[]): Array<{
     timestamp: number;
     open: number;
@@ -520,13 +427,6 @@ export class PolygonClient {
   }
 }
 
-// ============================================
-// Factory
-// ============================================
-
-/**
- * Create a Polygon client from environment variables.
- */
 export function createPolygonClientFromEnv(): PolygonClient {
   const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
   if (!apiKey) {

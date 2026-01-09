@@ -13,116 +13,47 @@
 
 import { z } from "zod";
 
-// ============================================
-// Configuration
-// ============================================
-
-/**
- * Default configuration values for trigger detection
- */
 export const TRIGGER_DEFAULTS = {
-  /** Minimum IC threshold (below this indicates underperformance) */
   minRollingIC: 0.02,
-  /** Minimum consecutive days of IC decay to trigger */
   minICDecayDays: 5,
-  /** Minimum days between generation attempts */
   cooldownDays: 30,
-  /** Maximum number of active indicators */
   maxIndicatorCapacity: 20,
-  /** Rolling window for IC calculation (days) */
   icRollingWindowDays: 30,
 } as const;
 
-// ============================================
-// Schemas
-// ============================================
-
-/**
- * Trigger conditions evaluation result
- */
 export const TriggerConditionsSchema = z.object({
-  // Regime gap analysis
-  /** Whether a coverage gap was detected for current regime */
   regimeGapDetected: z.boolean(),
-  /** Current market regime label */
   currentRegime: z.string().optional(),
-  /** Details about the gap (e.g., missing indicator categories) */
   regimeGapDetails: z.string().optional(),
-  /** Similarity score of closest matching indicator (0-1) */
   closestIndicatorSimilarity: z.number().min(0).max(1).optional(),
-
-  // Performance metrics
-  /** Whether existing indicators are underperforming */
   existingIndicatorsUnderperforming: z.boolean(),
-  /** Rolling 30-day IC across portfolio */
   rollingIC30Day: z.number(),
-  /** Number of consecutive days with declining/low IC */
   icDecayDays: z.number().int().min(0),
-
-  // Cooldown
-  /** Days since last generation attempt */
   daysSinceLastAttempt: z.number().int().min(0),
-  /** ISO 8601 timestamp of last attempt */
   lastAttemptAt: z.string().optional(),
-
-  // Capacity
-  /** Current number of active indicators */
   activeIndicatorCount: z.number().int().min(0),
-  /** Maximum allowed active indicators */
   maxIndicatorCapacity: z.number().int().min(1).default(TRIGGER_DEFAULTS.maxIndicatorCapacity),
-
-  // Evaluation metadata
-  /** When this evaluation was performed */
   evaluatedAt: z.string(),
 });
 
 export type TriggerConditions = z.infer<typeof TriggerConditionsSchema>;
 
-/**
- * Trigger evaluation result
- */
 export const TriggerEvaluationResultSchema = z.object({
-  /** Whether generation should be triggered */
   shouldTrigger: z.boolean(),
-  /** The evaluated conditions */
   conditions: TriggerConditionsSchema,
-  /** Reasons for the decision */
   reasons: z.array(z.string()),
-  /** Summary message */
   summary: z.string(),
 });
 
 export type TriggerEvaluationResult = z.infer<typeof TriggerEvaluationResultSchema>;
 
-/**
- * IC history entry for decay analysis
- */
 export const ICHistoryEntrySchema = z.object({
-  /** Date (ISO 8601 date string) */
   date: z.string(),
-  /** IC value for that date */
   icValue: z.number(),
 });
 
 export type ICHistoryEntry = z.infer<typeof ICHistoryEntrySchema>;
 
-// ============================================
-// Core Logic
-// ============================================
-
-/**
- * Evaluate whether indicator generation should be triggered.
- *
- * ALL conditions must be met for generation to trigger:
- * 1. Regime gap detected
- * 2. Existing indicators underperforming (rolling IC < 0.02)
- * 3. IC decay for 5+ consecutive days
- * 4. Cooldown of 30+ days since last attempt
- * 5. Under capacity limit
- *
- * @param conditions - The evaluated trigger conditions
- * @returns Whether generation should be triggered
- */
 export function shouldTriggerGeneration(conditions: TriggerConditions): boolean {
   return (
     conditions.regimeGapDetected &&
@@ -134,17 +65,10 @@ export function shouldTriggerGeneration(conditions: TriggerConditions): boolean 
   );
 }
 
-/**
- * Evaluate trigger conditions and provide detailed reasoning.
- *
- * @param conditions - The evaluated trigger conditions
- * @returns Detailed evaluation result with reasons
- */
 export function evaluateTriggerConditions(conditions: TriggerConditions): TriggerEvaluationResult {
   const reasons: string[] = [];
   const failures: string[] = [];
 
-  // Check each condition
   if (conditions.regimeGapDetected) {
     reasons.push(
       `Regime gap detected for ${conditions.currentRegime ?? "unknown"} regime` +
@@ -207,18 +131,9 @@ export function evaluateTriggerConditions(conditions: TriggerConditions): Trigge
   };
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
 /**
- * Calculate the number of consecutive days with IC decay.
- *
  * IC decay is defined as IC below threshold OR declining from previous day.
- *
- * @param icHistory - Array of IC history entries (newest first)
- * @param threshold - IC threshold (default: 0.02)
- * @returns Number of consecutive decay days
+ * Expects icHistory with newest entries first.
  */
 export function calculateICDecayDays(
   icHistory: ICHistoryEntry[],
@@ -237,17 +152,12 @@ export function calculateICDecayDays(
     }
 
     const previous = icHistory[i + 1];
-
-    // Check if current IC is below threshold
     const belowThreshold = current.icValue < threshold;
-
-    // Check if IC is declining from previous day
     const declining = previous !== undefined && current.icValue < previous.icValue;
 
     if (belowThreshold || declining) {
       consecutiveDays++;
     } else {
-      // Streak broken
       break;
     }
   }
@@ -255,13 +165,6 @@ export function calculateICDecayDays(
   return consecutiveDays;
 }
 
-/**
- * Calculate rolling IC over a window of days.
- *
- * @param icHistory - Array of IC history entries
- * @param windowDays - Number of days for rolling window
- * @returns Average IC over the window, or 0 if insufficient data
- */
 export function calculateRollingIC(
   icHistory: ICHistoryEntry[],
   windowDays: number = TRIGGER_DEFAULTS.icRollingWindowDays
@@ -280,16 +183,10 @@ export function calculateRollingIC(
   return sum / windowEntries.length;
 }
 
-/**
- * Calculate days since a given timestamp.
- *
- * @param timestamp - ISO 8601 timestamp
- * @param now - Current time (defaults to now)
- * @returns Number of days since timestamp
- */
 export function daysSince(timestamp: string | null | undefined, now: Date = new Date()): number {
   if (!timestamp) {
-    return Number.MAX_SAFE_INTEGER; // No previous attempt = infinite days
+    // No previous attempt means cooldown is satisfied
+    return Number.MAX_SAFE_INTEGER;
   }
 
   const then = new Date(timestamp);
@@ -297,27 +194,12 @@ export function daysSince(timestamp: string | null | undefined, now: Date = new 
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-/**
- * Determine if indicators are underperforming based on IC.
- *
- * @param rollingIC - Current rolling IC value
- * @param icDecayDays - Number of consecutive decay days
- * @returns Whether indicators are considered underperforming
- */
 export function isUnderperforming(rollingIC: number, icDecayDays: number): boolean {
   return (
     rollingIC < TRIGGER_DEFAULTS.minRollingIC || icDecayDays >= TRIGGER_DEFAULTS.minICDecayDays
   );
 }
 
-/**
- * Create a trigger conditions object for evaluation.
- *
- * This is a helper to construct the conditions object from various inputs.
- *
- * @param params - Individual condition parameters
- * @returns TriggerConditions object
- */
 export function createTriggerConditions(params: {
   regimeGapDetected: boolean;
   currentRegime?: string;

@@ -26,10 +26,6 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
-// ============================================
-// Types
-// ============================================
-
 export type ConfirmationDialogVariant = "warning" | "danger" | "info";
 
 export interface ConfirmationDialogCheckbox {
@@ -62,10 +58,6 @@ export interface ConfirmationDialogProps {
   /** Additional content in the body */
   children?: ReactNode;
 }
-
-// ============================================
-// Icons
-// ============================================
 
 function WarningIcon({ className }: { className?: string }) {
   return (
@@ -127,10 +119,6 @@ function InfoIcon({ className }: { className?: string }) {
   );
 }
 
-// ============================================
-// Variant Configuration
-// ============================================
-
 const variantConfig: Record<
   ConfirmationDialogVariant,
   {
@@ -159,10 +147,6 @@ const variantConfig: Record<
     confirmVariant: "primary",
   },
 };
-
-// ============================================
-// Component
-// ============================================
 
 /**
  * ConfirmationDialog - Dialog for confirming destructive actions.
@@ -208,7 +192,6 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
     const config = variantConfig[variant];
     const Icon = config.Icon;
 
-    // Check if all required checkboxes are checked
     const requiredCheckboxes = checkboxes.filter((cb) => cb.required);
     const allRequiredChecked = requiredCheckboxes.every((cb) => checkedItems[cb.id]);
     const canConfirm = requiredCheckboxes.length === 0 || allRequiredChecked;
@@ -231,7 +214,6 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
       setCheckedItems((prev) => ({ ...prev, [id]: checked }));
     };
 
-    // Reset checkboxes when dialog closes
     const handleOpenChange = (newOpen: boolean) => {
       if (!newOpen) {
         setCheckedItems({});
@@ -258,10 +240,8 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 
           {(checkboxes.length > 0 || children) && (
             <DialogBody>
-              {/* Custom content */}
               {children}
 
-              {/* Checkboxes */}
               {checkboxes.length > 0 && (
                 <div className="space-y-3 mt-4">
                   {checkboxes.map((checkbox) => (
@@ -310,19 +290,12 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 
 ConfirmationDialog.displayName = "ConfirmationDialog";
 
-// ============================================
-// Pre-configured Dialogs
-// ============================================
-
 export interface StopSystemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (options: { cancelOrders: boolean }) => void | Promise<void>;
 }
 
-/**
- * StopSystemDialog - Confirmation for stopping the trading system.
- */
 export function StopSystemDialog({ open, onOpenChange, onConfirm }: StopSystemDialogProps) {
   const [cancelOrders, setCancelOrders] = useState(false);
 
@@ -358,9 +331,6 @@ export interface ClosePositionDialogProps {
   onConfirm: () => void | Promise<void>;
 }
 
-/**
- * ClosePositionDialog - Confirmation for closing a position.
- */
 export function ClosePositionDialog({
   open,
   onOpenChange,
@@ -380,9 +350,5 @@ export function ClosePositionDialog({
     />
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default ConfirmationDialog;

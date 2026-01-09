@@ -1,10 +1,3 @@
-/**
- * Transform Pipeline
- *
- * Orchestrates application of multiple transforms to feature data.
- * Produces named outputs following configurable naming conventions.
- */
-
 import type { Candle, NamedIndicatorOutput, Timeframe } from "../types";
 import {
   calculatePercentileRank,
@@ -24,13 +17,6 @@ import {
 } from "./volatilityScale";
 import { calculateZScore, ZSCORE_DEFAULTS, type ZScoreParams } from "./zscore";
 
-// ============================================
-// Configuration Types
-// ============================================
-
-/**
- * Transform pipeline configuration.
- */
 export interface TransformPipelineConfig {
   returns?: {
     enabled: boolean;
@@ -56,9 +42,6 @@ export interface TransformPipelineConfig {
   };
 }
 
-/**
- * Default transform pipeline configuration.
- */
 export const DEFAULT_TRANSFORM_CONFIG: TransformPipelineConfig = {
   returns: {
     enabled: true,
@@ -79,13 +62,6 @@ export const DEFAULT_TRANSFORM_CONFIG: TransformPipelineConfig = {
   },
 };
 
-// ============================================
-// Transform Snapshot
-// ============================================
-
-/**
- * Transform output snapshot.
- */
 export interface TransformSnapshot {
   /** Unix timestamp in milliseconds */
   timestamp: number;
@@ -93,18 +69,6 @@ export interface TransformSnapshot {
   values: NamedIndicatorOutput;
 }
 
-// ============================================
-// Pipeline Implementation
-// ============================================
-
-/**
- * Apply transforms to candle data.
- *
- * @param candles - OHLCV candle data
- * @param timeframe - Timeframe identifier
- * @param config - Transform configuration
- * @returns Transform snapshot
- */
 export function applyTransforms(
   candles: Candle[],
   timeframe: Timeframe,
@@ -116,12 +80,9 @@ export function applyTransforms(
 
   const output: NamedIndicatorOutput = {};
   const latestCandle = candles[candles.length - 1];
-
-  // Extract price and volume series
   const closes = candles.map((c) => c.close);
   const timestamps = candles.map((c) => c.timestamp);
 
-  // Calculate returns
   if (config.returns?.enabled) {
     const periods = config.returns.params?.periods ?? RETURNS_DEFAULTS.periods;
     const logReturns = config.returns.params?.logReturns ?? false;
@@ -144,13 +105,11 @@ export function applyTransforms(
     }
   }
 
-  // Calculate z-scores for specified indicators
   if (config.zscore?.enabled && config.zscore.applyTo) {
     const lookback = config.zscore.params?.lookback ?? ZSCORE_DEFAULTS.lookback;
     const minSamples = config.zscore.params?.minSamples ?? ZSCORE_DEFAULTS.minSamples;
 
-    // For now, apply to close prices as a demo
-    // In production, this would apply to indicator outputs
+    // TODO: Apply to indicator outputs instead of close prices
     try {
       const results = calculateZScore(closes, timestamps, { lookback, minSamples });
 
@@ -163,7 +122,6 @@ export function applyTransforms(
     }
   }
 
-  // Calculate percentile ranks
   if (config.percentileRank?.enabled) {
     const lookback = config.percentileRank.params?.lookback ?? PERCENTILE_RANK_DEFAULTS.lookback;
     const minSamples =
@@ -181,7 +139,6 @@ export function applyTransforms(
     }
   }
 
-  // Calculate volatility-scaled values
   if (config.volatilityScale?.enabled) {
     const volPeriod =
       config.volatilityScale.params?.volatilityPeriod ?? VOLATILITY_SCALE_DEFAULTS.volatilityPeriod;
@@ -192,7 +149,6 @@ export function applyTransforms(
     const maxScale =
       config.volatilityScale.params?.maxScaleFactor ?? VOLATILITY_SCALE_DEFAULTS.maxScaleFactor;
 
-    // Calculate returns for volatility
     const returns: number[] = [];
     for (let i = 1; i < closes.length; i++) {
       returns.push(simpleReturn(closes[i]!, closes[i - 1]!));
@@ -232,15 +188,6 @@ export function applyTransforms(
   };
 }
 
-/**
- * Apply transforms to indicator outputs.
- *
- * @param indicatorValues - Map of indicator name to historical values
- * @param timestamps - Timestamps for the values
- * @param timeframe - Timeframe identifier
- * @param config - Transform configuration
- * @returns Named transform outputs
- */
 export function applyTransformsToIndicators(
   indicatorValues: Map<string, number[]>,
   timestamps: number[],
@@ -249,7 +196,6 @@ export function applyTransformsToIndicators(
 ): NamedIndicatorOutput {
   const output: NamedIndicatorOutput = {};
 
-  // Apply z-scores to specified indicators
   if (config.zscore?.enabled && config.zscore.applyTo) {
     const lookback = config.zscore.params?.lookback ?? ZSCORE_DEFAULTS.lookback;
     const minSamples = config.zscore.params?.minSamples ?? ZSCORE_DEFAULTS.minSamples;
@@ -273,7 +219,6 @@ export function applyTransformsToIndicators(
     }
   }
 
-  // Apply percentile ranks to specified indicators
   if (config.percentileRank?.enabled && config.percentileRank.applyTo) {
     const lookback = config.percentileRank.params?.lookback ?? PERCENTILE_RANK_DEFAULTS.lookback;
     const minSamples =
@@ -300,9 +245,6 @@ export function applyTransformsToIndicators(
   return output;
 }
 
-/**
- * Get required warmup period for transforms.
- */
 export function getTransformWarmupPeriod(
   config: TransformPipelineConfig = DEFAULT_TRANSFORM_CONFIG
 ): number {
@@ -333,10 +275,6 @@ export function getTransformWarmupPeriod(
 
   return maxPeriod;
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   applyTransforms,

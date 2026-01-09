@@ -9,10 +9,6 @@
  * All calculators enforce risk-per-trade limits and return position sizes.
  */
 
-// ============================================
-// Types
-// ============================================
-
 /** Input parameters for position sizing calculation */
 export interface SizingInput {
   /** Total account equity in dollars */
@@ -59,10 +55,6 @@ export interface KellySizingInput extends SizingInput {
   kellyFraction?: number;
 }
 
-// ============================================
-// Configuration
-// ============================================
-
 /** Default risk limits */
 export const DEFAULT_RISK_LIMITS = {
   /** Maximum risk per trade (default 2%) */
@@ -72,10 +64,6 @@ export const DEFAULT_RISK_LIMITS = {
   /** Minimum risk-reward ratio */
   minRiskReward: 1.5,
 } as const;
-
-// ============================================
-// Fixed Fractional Sizing
-// ============================================
 
 /**
  * Calculate position size using fixed fractional method.
@@ -92,21 +80,16 @@ export function calculateFixedFractional(input: SizingInput, riskPercent = 0.01)
 
   const { accountEquity, price, stopLoss, takeProfit, multiplier = 1 } = input;
 
-  // Validate risk percent
   if (riskPercent <= 0 || riskPercent > DEFAULT_RISK_LIMITS.maxRiskPerTrade * 5) {
     throw new Error(`riskPercent must be between 0 and ${DEFAULT_RISK_LIMITS.maxRiskPerTrade * 5}`);
   }
 
-  // Calculate risk per unit
   const riskPerUnit = Math.abs(price - stopLoss) * multiplier;
   if (riskPerUnit === 0) {
     throw new Error("Stop loss cannot equal entry price");
   }
 
-  // Calculate max dollar risk
   const maxDollarRisk = accountEquity * riskPercent;
-
-  // Calculate quantity (floor to get whole units)
   const quantity = Math.floor(maxDollarRisk / riskPerUnit);
 
   if (quantity <= 0) {
@@ -132,10 +115,6 @@ export function calculateFixedFractional(input: SizingInput, riskPercent = 0.01)
     riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
-
-// ============================================
-// Volatility-Targeting Sizing
-// ============================================
 
 /**
  * Calculate position size using volatility-targeting method.
@@ -169,13 +148,8 @@ export function calculateVolatilityTargeted(
     throw new Error("ATR must be positive");
   }
 
-  // Calculate stop distance based on ATR
   const atrStopDistance = atr * atrMultiplier * multiplier;
-
-  // Calculate max dollar risk
   const maxDollarRisk = accountEquity * targetRisk;
-
-  // Calculate quantity based on ATR stop
   const quantity = Math.floor(maxDollarRisk / atrStopDistance);
 
   if (quantity <= 0) {
@@ -190,7 +164,6 @@ export function calculateVolatilityTargeted(
     };
   }
 
-  // Use actual stop loss for risk calculation
   const riskPerUnit = Math.abs(price - stopLoss) * multiplier;
   const actualDollarRisk = quantity * riskPerUnit;
   const notionalValue = quantity * price * multiplier;
@@ -203,10 +176,6 @@ export function calculateVolatilityTargeted(
     riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
-
-// ============================================
-// Fractional Kelly Sizing
-// ============================================
 
 /**
  * Calculate position size using fractional Kelly criterion.
@@ -238,7 +207,6 @@ export function calculateFractionalKelly(
     multiplier = 1,
   } = input;
 
-  // Validate Kelly inputs
   if (winRate < 0 || winRate > 1) {
     throw new Error("winRate must be between 0 and 1");
   }
@@ -249,11 +217,8 @@ export function calculateFractionalKelly(
     throw new Error("kellyFraction must be between 0 and 1");
   }
 
-  // Calculate full Kelly percentage
-  // Kelly % = W - [(1-W) / R]
   const fullKelly = winRate - (1 - winRate) / payoffRatio;
 
-  // If Kelly is negative, don't trade
   if (fullKelly <= 0) {
     return {
       quantity: 0,
@@ -266,19 +231,13 @@ export function calculateFractionalKelly(
     };
   }
 
-  // Apply fraction to Kelly and cap at max risk
   const kellyRisk = Math.min(fullKelly * kellyFraction, maxRiskPercent);
 
-  // Calculate position using fixed fractional with Kelly risk
   return calculateFixedFractional(
     { accountEquity, price, stopLoss, takeProfit, multiplier },
     kellyRisk
   );
 }
-
-// ============================================
-// Adaptive Sizing
-// ============================================
 
 /** Market condition adjustments */
 export interface MarketConditions {
@@ -316,14 +275,11 @@ export function calculateAdaptiveAdjustment(conditions: MarketConditions): numbe
     adjustment *= vixFactor;
   }
 
-  // Correlation adjustment
   if (conditions.portfolioCorrelation !== undefined && conditions.portfolioCorrelation > 0.7) {
-    // Reduce when correlated positions
     const corrFactor = Math.max(0.5, 1.0 - (conditions.portfolioCorrelation - 0.7) / 0.6);
     adjustment *= corrFactor;
   }
 
-  // Drawdown adjustment
   if (conditions.accountDrawdown !== undefined && conditions.accountDrawdown > 0.1) {
     // 50% reduction during drawdowns > 10%
     adjustment *= 0.5;
@@ -353,10 +309,6 @@ export function calculateLiquidityLimit(
   }
   return Math.floor(averageDailyVolume * maxParticipation);
 }
-
-// ============================================
-// Options-Specific Sizing
-// ============================================
 
 /** Options-specific sizing input */
 export interface OptionsSizingInput extends SizingInput {
@@ -406,8 +358,6 @@ export function calculateDeltaAdjustedSize(
     throw new Error("underlyingPrice must be positive");
   }
 
-  // Calculate contracts needed for target delta exposure
-  // Delta exposure = contracts * underlying price * |delta| * multiplier
   const deltaPerContract = Math.abs(delta) * multiplier * underlyingPrice;
 
   const contracts = Math.floor(targetDeltaExposure / deltaPerContract);
@@ -424,7 +374,6 @@ export function calculateDeltaAdjustedSize(
     };
   }
 
-  // For long options, max risk is premium paid
   const premiumRisk = contracts * price * multiplier;
   const notionalValue = contracts * underlyingPrice * multiplier;
 
@@ -436,10 +385,6 @@ export function calculateDeltaAdjustedSize(
     riskRewardRatio: takeProfit ? calculateRiskRewardRatio(price, stopLoss, takeProfit) : undefined,
   };
 }
-
-// ============================================
-// Utilities
-// ============================================
 
 /**
  * Validate common input parameters.

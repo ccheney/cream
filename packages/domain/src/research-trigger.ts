@@ -11,13 +11,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Enums
-// ============================================
-
-/**
- * Types of conditions that trigger research
- */
 export const ResearchTriggerDetectionTypeSchema = z.enum([
   "REGIME_GAP", // Current regime not covered by active strategies
   "ALPHA_DECAY", // Rolling IC < 50% of peak for 20+ days
@@ -26,19 +19,9 @@ export const ResearchTriggerDetectionTypeSchema = z.enum([
 ]);
 export type ResearchTriggerDetectionType = z.infer<typeof ResearchTriggerDetectionTypeSchema>;
 
-/**
- * Severity level of the detected trigger
- */
 export const TriggerSeveritySchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
 export type TriggerSeverity = z.infer<typeof TriggerSeveritySchema>;
 
-// ============================================
-// Trigger Metadata Schemas
-// ============================================
-
-/**
- * Metadata for regime gap triggers
- */
 export const RegimeGapMetadataSchema = z.object({
   currentRegime: z.string(),
   coveredRegimes: z.array(z.string()),
@@ -46,9 +29,6 @@ export const RegimeGapMetadataSchema = z.object({
 });
 export type RegimeGapMetadata = z.infer<typeof RegimeGapMetadataSchema>;
 
-/**
- * Metadata for alpha decay triggers
- */
 export const AlphaDecayMetadataSchema = z.object({
   peakIC: z.number(),
   currentIC: z.number(),
@@ -58,9 +38,6 @@ export const AlphaDecayMetadataSchema = z.object({
 });
 export type AlphaDecayMetadata = z.infer<typeof AlphaDecayMetadataSchema>;
 
-/**
- * Metadata for performance degradation triggers
- */
 export const PerformanceDegradationMetadataSchema = z.object({
   rollingSharpe: z.number(),
   sharpeThreshold: z.number(),
@@ -69,9 +46,6 @@ export const PerformanceDegradationMetadataSchema = z.object({
 });
 export type PerformanceDegradationMetadata = z.infer<typeof PerformanceDegradationMetadataSchema>;
 
-/**
- * Metadata for factor crowding triggers
- */
 export const FactorCrowdingMetadataSchema = z.object({
   marketBetaCorrelation: z.number().min(-1).max(1),
   crowdingThreshold: z.number(),
@@ -79,9 +53,6 @@ export const FactorCrowdingMetadataSchema = z.object({
 });
 export type FactorCrowdingMetadata = z.infer<typeof FactorCrowdingMetadataSchema>;
 
-/**
- * Union of all trigger metadata types
- */
 export const TriggerMetadataSchema = z.union([
   RegimeGapMetadataSchema,
   AlphaDecayMetadataSchema,
@@ -90,13 +61,6 @@ export const TriggerMetadataSchema = z.union([
 ]);
 export type TriggerMetadata = z.infer<typeof TriggerMetadataSchema>;
 
-// ============================================
-// Core Research Trigger Schema
-// ============================================
-
-/**
- * A detected research trigger
- */
 export const ResearchTriggerSchema = z.object({
   type: ResearchTriggerDetectionTypeSchema,
   severity: TriggerSeveritySchema,
@@ -107,13 +71,6 @@ export const ResearchTriggerSchema = z.object({
 });
 export type ResearchTrigger = z.infer<typeof ResearchTriggerSchema>;
 
-// ============================================
-// Blocking Conditions
-// ============================================
-
-/**
- * Conditions that prevent research from being triggered
- */
 export const BlockingConditionsSchema = z.object({
   /** Days since last research run completed */
   daysSinceLastResearch: z.number().int().nonnegative(),
@@ -126,9 +83,6 @@ export const BlockingConditionsSchema = z.object({
 });
 export type BlockingConditions = z.infer<typeof BlockingConditionsSchema>;
 
-/**
- * Result of checking blocking conditions
- */
 export const BlockingCheckResultSchema = z.object({
   isBlocked: z.boolean(),
   reasons: z.array(z.string()),
@@ -136,15 +90,7 @@ export const BlockingCheckResultSchema = z.object({
 });
 export type BlockingCheckResult = z.infer<typeof BlockingCheckResultSchema>;
 
-// ============================================
-// Configuration
-// ============================================
-
-/**
- * Configuration thresholds for trigger detection
- */
 export const ResearchTriggerConfigSchema = z.object({
-  // Cooldown
   cooldownDays: z.number().int().positive().default(7),
 
   // Capacity limits
@@ -171,9 +117,6 @@ export const ResearchTriggerConfigSchema = z.object({
 });
 export type ResearchTriggerConfig = z.infer<typeof ResearchTriggerConfigSchema>;
 
-/**
- * Default configuration for research trigger detection
- */
 export const DEFAULT_RESEARCH_TRIGGER_CONFIG: ResearchTriggerConfig = {
   cooldownDays: 7,
   maxActiveResearch: 2,
@@ -188,13 +131,6 @@ export const DEFAULT_RESEARCH_TRIGGER_CONFIG: ResearchTriggerConfig = {
   highSeverityFactorCount: 3,
 };
 
-// ============================================
-// Detection State
-// ============================================
-
-/**
- * Current state of the market for trigger detection
- */
 export const TriggerDetectionStateSchema = z.object({
   /** Current market regime */
   currentRegime: z.string(),
@@ -207,9 +143,6 @@ export const TriggerDetectionStateSchema = z.object({
 });
 export type TriggerDetectionState = z.infer<typeof TriggerDetectionStateSchema>;
 
-/**
- * Result of trigger detection
- */
 export const TriggerDetectionResultSchema = z.object({
   /** Detected trigger, if any */
   trigger: ResearchTriggerSchema.nullable(),

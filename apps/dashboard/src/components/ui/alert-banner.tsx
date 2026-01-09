@@ -11,10 +11,6 @@
 
 import { selectCriticalBanner, useAlertStore } from "@/stores/alert-store";
 
-// ============================================
-// Alert Banner Component
-// ============================================
-
 export function AlertBanner() {
   const criticalBanner = useAlertStore(selectCriticalBanner);
   const acknowledge = useAlertStore((state) => state.acknowledgeCritical);
@@ -40,9 +36,7 @@ export function AlertBanner() {
     >
       <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          {/* Icon + Content */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Warning Icon */}
             <span className="flex-shrink-0" aria-hidden="true">
               <svg
                 className="h-6 w-6 text-white"
@@ -60,7 +54,6 @@ export function AlertBanner() {
               </svg>
             </span>
 
-            {/* Text Content */}
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-white text-sm sm:text-base">
                 {criticalBanner.title}
@@ -69,9 +62,7 @@ export function AlertBanner() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Custom Action Button */}
             {criticalBanner.action && (
               <button
                 type="button"
@@ -89,7 +80,6 @@ export function AlertBanner() {
               </button>
             )}
 
-            {/* Acknowledge Button */}
             <button
               type="button"
               onClick={acknowledge}
@@ -111,9 +101,5 @@ export function AlertBanner() {
     </div>
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default AlertBanner;

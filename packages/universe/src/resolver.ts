@@ -74,7 +74,6 @@ function composeUnion(sourceResults: SourceResolutionResult[]): ResolvedInstrume
     for (const instrument of result.instruments) {
       const existing = symbolMap.get(instrument.symbol);
       if (existing) {
-        // Merge metadata (prefer non-undefined values)
         const merged: ResolvedInstrument = {
           symbol: instrument.symbol,
           source: `${existing.source},${instrument.source}`,
@@ -128,12 +127,10 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
     return firstResult.instruments;
   }
 
-  // Get symbol sets for each source
   const symbolSets = sourceResults.map(
     (result) => new Set(result.instruments.map((i) => i.symbol))
   );
 
-  // Find intersection - first set is guaranteed to exist since length >= 2
   const firstSet = symbolSets[0];
   if (!firstSet) {
     return [];
@@ -142,7 +139,6 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
     Array.from(firstSet).filter((symbol) => symbolSets.every((set) => set.has(symbol)))
   );
 
-  // Merge instruments that are in the intersection
   const symbolMap = new Map<string, ResolvedInstrument>();
 
   for (const result of sourceResults) {
@@ -246,7 +242,6 @@ async function applyFilters(
     }
   }
 
-  // Apply volume filter
   if (filters.min_avg_volume > 0) {
     const before = filtered.length;
     filtered = filtered.filter((i) => (i.avgVolume ?? 0) >= filters.min_avg_volume);
@@ -255,7 +250,6 @@ async function applyFilters(
     }
   }
 
-  // Apply market cap filter
   if (filters.min_market_cap > 0) {
     const before = filtered.length;
     filtered = filtered.filter((i) => (i.marketCap ?? 0) >= filters.min_market_cap);
@@ -264,7 +258,6 @@ async function applyFilters(
     }
   }
 
-  // Apply price filters
   if (filters.min_price > 0) {
     const before = filtered.length;
     filtered = filtered.filter((i) => (i.price ?? 0) >= filters.min_price);
@@ -282,7 +275,6 @@ async function applyFilters(
     }
   }
 
-  // Apply exclude tickers
   if (filters.exclude_tickers.length > 0) {
     const excludeSet = new Set(filters.exclude_tickers.map((t: string) => t.toUpperCase()));
     const before = filtered.length;
@@ -292,7 +284,6 @@ async function applyFilters(
     }
   }
 
-  // Apply sector includes
   if (filters.include_sectors && filters.include_sectors.length > 0) {
     const includeSet = new Set(filters.include_sectors.map((s: string) => s.toLowerCase()));
     const before = filtered.length;
@@ -307,13 +298,12 @@ async function applyFilters(
     }
   }
 
-  // Apply sector excludes
   if (filters.exclude_sectors && filters.exclude_sectors.length > 0) {
     const excludeSet = new Set(filters.exclude_sectors.map((s: string) => s.toLowerCase()));
     const before = filtered.length;
     filtered = filtered.filter((i) => {
       if (!i.sector) {
-        return true; // Keep if no sector data
+        return true;
       }
       return !excludeSet.has(i.sector.toLowerCase());
     });
@@ -351,7 +341,6 @@ function applyDiversification(
   const warnings: string[] = [];
   let filtered = [...instruments];
 
-  // Check for diversification config (may be in config.diversification or extended UniverseConfig)
   const diversify = (config as UniverseConfig & { diversification?: DiversificationConfig })
     .diversification;
 
@@ -359,7 +348,6 @@ function applyDiversification(
     return { instruments: filtered, warnings };
   }
 
-  // Apply max per sector
   if (diversify.maxPerSector && diversify.maxPerSector > 0) {
     const sectorCounts = new Map<string, number>();
     const diversified: ResolvedInstrument[] = [];
@@ -381,7 +369,6 @@ function applyDiversification(
     filtered = diversified;
   }
 
-  // Apply max per industry
   if (diversify.maxPerIndustry && diversify.maxPerIndustry > 0) {
     const industryCounts = new Map<string, number>();
     const diversified: ResolvedInstrument[] = [];
@@ -403,7 +390,6 @@ function applyDiversification(
     filtered = diversified;
   }
 
-  // Check min sectors represented
   if (diversify.minSectorsRepresented && diversify.minSectorsRepresented > 0) {
     const sectorsPresent = new Set(filtered.filter((i) => i.sector).map((i) => i.sector as string));
     if (sectorsPresent.size < diversify.minSectorsRepresented) {
@@ -432,7 +418,6 @@ function rankAndLimit(
     return instruments;
   }
 
-  // Default ranking by volume (descending)
   const ranked = [...instruments].sort((a, b) => {
     const aVol = a.avgVolume ?? 0;
     const bVol = b.avgVolume ?? 0;
@@ -456,14 +441,12 @@ export async function resolveUniverse(
   const warnings: string[] = [];
   const sourceResults: SourceResolutionResult[] = [];
 
-  // Filter to enabled sources
   const enabledSources = config.sources.filter((s: UniverseSource) => s.enabled);
 
   if (enabledSources.length === 0) {
     throw new Error("No enabled sources in universe configuration");
   }
 
-  // Resolve each source
   for (const source of enabledSources) {
     try {
       const result = await resolveSource(source, options);
@@ -478,10 +461,8 @@ export async function resolveUniverse(
     throw new Error("All sources failed to resolve");
   }
 
-  // Track stats
   const totalFromSources = sourceResults.reduce((sum, r) => sum + r.instruments.length, 0);
 
-  // Compose sources
   const composeMode = config.compose_mode;
   let instruments =
     composeMode === "intersection"
@@ -490,24 +471,20 @@ export async function resolveUniverse(
 
   const afterComposition = instruments.length;
 
-  // Apply filters
   const filterResult = await applyFilters(instruments, config.filters, options.fmpConfig);
   instruments = filterResult.instruments;
   warnings.push(...filterResult.warnings);
 
   const afterFilters = instruments.length;
 
-  // Apply diversification
   const diversifyResult = applyDiversification(instruments, config);
   instruments = diversifyResult.instruments;
   warnings.push(...diversifyResult.warnings);
 
   const afterDiversification = instruments.length;
 
-  // Apply limits
   instruments = rankAndLimit(instruments, config.max_instruments);
 
-  // Calculate sectors represented
   const sectors = [...new Set(instruments.filter((i) => i.sector).map((i) => i.sector as string))];
 
   return {

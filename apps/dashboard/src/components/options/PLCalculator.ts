@@ -6,59 +6,36 @@
  * @see docs/plans/ui/40-streaming-data-integration.md Part 2.3
  */
 
-// ============================================
-// Types
-// ============================================
-
 export interface OptionLeg {
-  /** Strike price */
   strike: number;
-  /** Option type */
   right: "CALL" | "PUT";
-  /** Number of contracts (+ long, - short) */
+  /** Positive for long, negative for short */
   quantity: number;
-  /** Entry premium per share */
   premium: number;
-  /** Expiration date (YYYY-MM-DD) */
+  /** YYYY-MM-DD format */
   expiration: string;
-  /** Implied volatility (optional, for time value calc) */
   impliedVolatility?: number;
 }
 
 export interface PLDataPoint {
-  /** Underlying price */
   price: number;
-  /** P/L at expiration */
   pnlAtExpiration: number;
-  /** P/L today (with time value) */
   pnlToday: number;
 }
 
 export interface PLAnalysis {
-  /** Break-even points */
   breakevens: number[];
-  /** Maximum profit (Infinity for unlimited) */
+  /** Infinity for unlimited upside */
   maxProfit: number;
-  /** Maximum loss */
   maxLoss: number;
-  /** Max profit price(s) */
   maxProfitPrices: number[];
-  /** Max loss price(s) */
   maxLossPrices: number[];
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const MULTIPLIER = 100;
 const DAYS_PER_YEAR = 365;
 const DEFAULT_RISK_FREE_RATE = 0.05;
 const DEFAULT_IV = 0.3;
-
-// ============================================
-// Black-Scholes Math
-// ============================================
 
 function normalCDF(x: number): number {
   const p = 0.2316419;
@@ -81,14 +58,11 @@ function normalCDF(x: number): number {
   return x >= 0 ? cdfPositive : 1.0 - cdfPositive;
 }
 
-/**
- * Calculate Black-Scholes option value.
- */
 function blackScholes(
-  S: number, // Underlying price
-  K: number, // Strike
-  T: number, // Time to expiration in years
-  sigma: number, // IV
+  S: number,
+  K: number,
+  T: number,
+  sigma: number,
   isCall: boolean,
   r: number = DEFAULT_RISK_FREE_RATE
 ): number {
@@ -112,13 +86,6 @@ function blackScholes(
   return K * expRT * normalCDF(-d2) - S * normalCDF(-d1);
 }
 
-// ============================================
-// P/L Calculation Functions
-// ============================================
-
-/**
- * Calculate P/L for a single option leg at a given underlying price.
- */
 export function legPnlAtExpiration(price: number, leg: OptionLeg): number {
   const intrinsic =
     leg.right === "CALL" ? Math.max(0, price - leg.strike) : Math.max(0, leg.strike - price);
@@ -126,9 +93,6 @@ export function legPnlAtExpiration(price: number, leg: OptionLeg): number {
   return (intrinsic - leg.premium) * leg.quantity * MULTIPLIER;
 }
 
-/**
- * Calculate P/L for a single option leg today (with time value).
- */
 export function legPnlToday(price: number, leg: OptionLeg, dte: number): number {
   const T = Math.max(0, dte / DAYS_PER_YEAR);
   const sigma = leg.impliedVolatility ?? DEFAULT_IV;
@@ -137,32 +101,20 @@ export function legPnlToday(price: number, leg: OptionLeg, dte: number): number 
   return (currentValue - leg.premium) * leg.quantity * MULTIPLIER;
 }
 
-/**
- * Calculate combined P/L for all legs at a given underlying price.
- */
 export function strategyPnlAtExpiration(price: number, legs: OptionLeg[]): number {
   return legs.reduce((sum, leg) => sum + legPnlAtExpiration(price, leg), 0);
 }
 
-/**
- * Calculate combined P/L for all legs today.
- */
 export function strategyPnlToday(price: number, legs: OptionLeg[], dte: number): number {
   return legs.reduce((sum, leg) => sum + legPnlToday(price, leg, dte), 0);
 }
 
-/**
- * Generate P/L data points across a price range.
- */
 export function generatePLData(
   legs: OptionLeg[],
   currentPrice: number,
   options: {
-    /** Price range as percentage from current (default: 20) */
     rangePercent?: number;
-    /** Number of data points (default: 100) */
     points?: number;
-    /** Days to expiration (for today P/L) */
     dte?: number;
   } = {}
 ): PLDataPoint[] {
@@ -186,9 +138,6 @@ export function generatePLData(
   return data;
 }
 
-/**
- * Find break-even points (where P/L crosses zero).
- */
 export function findBreakevens(_legs: OptionLeg[], data: PLDataPoint[]): number[] {
   const breakevens: number[] = [];
 
@@ -196,7 +145,6 @@ export function findBreakevens(_legs: OptionLeg[], data: PLDataPoint[]): number[
     const prev = data[i - 1];
     const curr = data[i];
 
-    // Check if P/L crosses zero
     if (
       prev &&
       curr &&
@@ -204,7 +152,6 @@ export function findBreakevens(_legs: OptionLeg[], data: PLDataPoint[]): number[
       ((prev.pnlAtExpiration < 0 && curr.pnlAtExpiration >= 0) ||
         (prev.pnlAtExpiration > 0 && curr.pnlAtExpiration <= 0))
     ) {
-      // Linear interpolation to find exact crossing
       const ratio =
         Math.abs(prev.pnlAtExpiration) /
         (Math.abs(prev.pnlAtExpiration) + Math.abs(curr.pnlAtExpiration));
@@ -216,9 +163,6 @@ export function findBreakevens(_legs: OptionLeg[], data: PLDataPoint[]): number[
   return breakevens;
 }
 
-/**
- * Analyze strategy for max profit/loss and key price levels.
- */
 export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnalysis {
   const breakevens = findBreakevens(legs, data);
 
@@ -245,17 +189,15 @@ export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnaly
     }
   }
 
-  // Check if profit/loss is unlimited at edges
   const firstPoint = data[0];
   const lastPoint = data[data.length - 1];
 
+  // Long calls/puts have unlimited profit potential at price extremes
   if (firstPoint && lastPoint) {
-    // If P/L is still increasing at edges, it may be unlimited
     if (
       maxProfitPrices[0] === firstPoint.price ||
       maxProfitPrices[maxProfitPrices.length - 1] === lastPoint.price
     ) {
-      // Check slope at edge to determine if unlimited
       const hasUnlimitedUpside = legs.some((leg) => leg.right === "CALL" && leg.quantity > 0);
       const hasUnlimitedDownside = legs.some((leg) => leg.right === "PUT" && leg.quantity > 0);
 
@@ -274,9 +216,6 @@ export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnaly
   };
 }
 
-/**
- * Calculate days to expiration from date string.
- */
 export function calculateDTE(expiration: string): number {
   const expDate = new Date(expiration);
   const now = new Date();
@@ -284,9 +223,6 @@ export function calculateDTE(expiration: string): number {
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 }
 
-/**
- * Get the earliest expiration from legs.
- */
 export function getEarliestExpiration(legs: OptionLeg[]): string {
   if (legs.length === 0) {
     return new Date().toISOString().split("T")[0] ?? "";

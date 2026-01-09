@@ -19,41 +19,22 @@ import {
   type PLDataPoint,
 } from "@/components/options/PLCalculator";
 
-// ============================================
-// Types
-// ============================================
-
 export interface UsePLDataOptions {
-  /** Option legs */
   legs: OptionLeg[];
-  /** Current underlying price */
   underlyingPrice: number;
-  /** Price range as percentage from current (default: 20) */
   rangePercent?: number;
-  /** Number of data points (default: 100) */
   points?: number;
-  /** Custom DTE override */
   dteOverride?: number;
 }
 
 export interface UsePLDataReturn {
-  /** P/L data points */
   data: PLDataPoint[];
-  /** Strategy analysis */
   analysis: PLAnalysis;
-  /** Days to expiration */
   dte: number;
-  /** Price range (min, max) */
   priceRange: { min: number; max: number };
-  /** Current P/L at underlying price */
   currentPnl: { atExpiration: number; today: number };
-  /** Update underlying price */
   updateUnderlyingPrice: (price: number) => void;
 }
-
-// ============================================
-// Hook Implementation
-// ============================================
 
 /**
  * Hook to generate P/L data for options strategies.
@@ -77,15 +58,12 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
     dteOverride,
   } = options;
 
-  // State for live price updates
   const [livePrice, setLivePrice] = useState(initialPrice);
 
-  // Update live price when initial price changes
   useEffect(() => {
     setLivePrice(initialPrice);
   }, [initialPrice]);
 
-  // Calculate DTE
   const dte = useMemo(() => {
     if (dteOverride !== undefined) {
       return dteOverride;
@@ -97,7 +75,6 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
     return calculateDTE(earliestExp);
   }, [legs, dteOverride]);
 
-  // Calculate price range
   const priceRange = useMemo(() => {
     const min = livePrice * (1 - rangePercent / 100);
     const max = livePrice * (1 + rangePercent / 100);

@@ -81,7 +81,6 @@ export function compareVersionRegistries(
   const backtestIds = new Set(Object.keys(backtest.indicators));
   const liveIds = new Set(Object.keys(live.indicators));
 
-  // Check for mismatches and missing from live
   for (const id of backtestIds) {
     const backtestIndicator = backtest.indicators[id];
     if (!backtestIndicator) {
@@ -102,7 +101,6 @@ export function compareVersionRegistries(
     }
   }
 
-  // Check for missing from backtest
   for (const id of liveIds) {
     if (!backtestIds.has(id)) {
       missingFromBacktest.push(id);
@@ -174,7 +172,6 @@ export function checkLookAheadBias(
   const violations: LookAheadBiasResult["violations"] = [];
   const decisionTime = new Date(decisionTimestamp).getTime();
 
-  // Check for future data
   for (const candle of candles) {
     const candleTime = new Date(candle.timestamp).getTime();
     if (candleTime > decisionTime) {
@@ -186,7 +183,6 @@ export function checkLookAheadBias(
     }
   }
 
-  // Check for sequential timestamps
   for (let i = 1; i < candles.length; i++) {
     const prev = candles[i - 1];
     const curr = candles[i];
@@ -326,7 +322,6 @@ export function compareFillModels(
 ): FillModelComparisonResult {
   const discrepancies: FillModelComparisonResult["discrepancies"] = [];
 
-  // Calculate backtest stats
   const backtestSlippages = backtestFills
     .map((f) => f.slippageBps)
     .filter((s): s is number => s !== undefined);
@@ -340,7 +335,6 @@ export function compareFillModels(
       ? backtestFills.filter((f) => f.filledQty > 0).length / backtestFills.length
       : 0;
 
-  // Calculate live stats
   const liveSlippages = liveFills
     .map((f) => f.slippageBps)
     .filter((s): s is number => s !== undefined);
@@ -350,7 +344,6 @@ export function compareFillModels(
   const liveFillRate =
     liveFills.length > 0 ? liveFills.filter((f) => f.filledQty > 0).length / liveFills.length : 0;
 
-  // Check for discrepancies
   if (Math.abs(avgSlippageBacktest - avgSlippageLive) > tolerance.slippageBps) {
     discrepancies.push({
       orderId: "aggregate",
@@ -369,7 +362,6 @@ export function compareFillModels(
     });
   }
 
-  // Match individual fills by orderId
   const liveByOrderId = new Map(liveFills.map((f) => [f.orderId, f]));
   let matchedFills = 0;
 
@@ -501,8 +493,6 @@ export function comparePerformanceMetrics(
     const btValue = backtest[metric];
     const liveValue = live[metric];
 
-    // Calculate percentage difference
-    // Handle zero values specially
     let diffPct: number;
     if (btValue === 0 && liveValue === 0) {
       diffPct = 0;
@@ -610,7 +600,6 @@ export function validateDataConsistency(
   const issues: DataConsistencyResult["issues"] = [];
   const recommendations: string[] = [];
 
-  // Check provider consistency
   if (historical.provider !== realtime.provider) {
     issues.push({
       type: "provider_mismatch",
@@ -622,7 +611,6 @@ export function validateDataConsistency(
     );
   }
 
-  // Check adjustment consistency
   if (historical.adjusted !== realtime.adjusted) {
     issues.push({
       type: "adjustment_mismatch",
@@ -632,7 +620,6 @@ export function validateDataConsistency(
     recommendations.push("Ensure both data sources use same adjustment setting.");
   }
 
-  // Check for survivorship bias
   const historicalSymbols = new Set(historical.symbols);
   for (const symbol of delistedSymbols) {
     if (!historicalSymbols.has(symbol)) {

@@ -9,35 +9,18 @@
 
 import { useEffect, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export interface UseRelativeTimeOptions {
-  /** Update interval in ms for recent timestamps (< 60s) */
   recentIntervalMs?: number;
-  /** Update interval in ms for older timestamps */
   olderIntervalMs?: number;
-  /** Threshold in seconds for "recent" timestamps */
   recentThresholdSec?: number;
 }
 
 export interface RelativeTimeResult {
-  /** Formatted relative time string */
   formatted: string;
-  /** Seconds since the timestamp */
   secondsAgo: number;
-  /** Whether timestamp is considered "recent" */
   isRecent: boolean;
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Format seconds into a relative time string.
- */
 function formatRelativeTime(seconds: number): string {
   if (seconds < 0) {
     return "just now";
@@ -63,22 +46,12 @@ function formatRelativeTime(seconds: number): string {
   return `${days}d ago`;
 }
 
-/**
- * Calculate seconds since a given timestamp.
- */
 function getSecondsAgo(timestamp: Date | number): number {
   const now = Date.now();
   const then = typeof timestamp === "number" ? timestamp : timestamp.getTime();
   return Math.floor((now - then) / 1000);
 }
 
-// ============================================
-// Hook Implementation
-// ============================================
-
-/**
- * Hook for a single relative timestamp.
- */
 export function useRelativeTime(
   timestamp: Date | number | undefined,
   options: UseRelativeTimeOptions = {}
@@ -111,10 +84,8 @@ export function useRelativeTime(
       });
     };
 
-    // Initial update
     updateTime();
 
-    // Determine update interval based on how recent the timestamp is
     const seconds = getSecondsAgo(timestamp);
     const intervalMs = seconds < recentThresholdSec ? recentIntervalMs : olderIntervalMs;
 
@@ -126,9 +97,6 @@ export function useRelativeTime(
   return result;
 }
 
-/**
- * Hook for multiple relative timestamps (batch updates for performance).
- */
 export function useRelativeTimeBatch(
   timestamps: Array<Date | number>,
   options: UseRelativeTimeOptions = {}
@@ -165,10 +133,9 @@ export function useRelativeTimeBatch(
       );
     };
 
-    // Initial update
     updateTimes();
 
-    // Use the shortest interval (recent) for batch updates
+    // Batch updates use shortest interval since any timestamp could be recent
     const interval = setInterval(updateTimes, recentIntervalMs);
 
     return () => clearInterval(interval);
@@ -176,10 +143,6 @@ export function useRelativeTimeBatch(
 
   return results;
 }
-
-// ============================================
-// Utility Export
-// ============================================
 
 export { formatRelativeTime, getSecondsAgo };
 export default useRelativeTime;

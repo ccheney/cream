@@ -1,87 +1,38 @@
-/**
- * Turso Database Client
- *
- * Wrapper for @tursodatabase/database providing:
- * - Environment-aware connection (local vs sync)
- * - Type-safe query methods
- * - Automatic connection management
- *
- * @see https://github.com/tursodatabase/turso
- */
-
 import { type ExecutionContext, env, getEnvDatabaseSuffix, isBacktest } from "@cream/domain";
 import { connect } from "@tursodatabase/database";
 import { connect as connectSync } from "@tursodatabase/sync";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Turso client configuration
- */
 export interface TursoConfig {
-  /** Database file path (for local mode) */
   path?: string;
-  /** Remote sync URL (for sync mode) */
   syncUrl?: string;
-  /** Authentication token for remote sync */
   authToken?: string;
-  /** Sync interval in milliseconds */
   syncInterval?: number;
 }
 
-/**
- * Query result row
- */
 export type Row = Record<string, unknown>;
 
-/**
- * Batch statement
- */
 export interface BatchStatement {
   sql: string;
   args?: unknown[];
 }
 
-/**
- * Turso client wrapper
- */
 export interface TursoClient {
-  /** Execute a SQL query */
   execute<T extends Row = Row>(sql: string, args?: unknown[]): Promise<T[]>;
-  /** Execute a single query and return first row */
   get<T extends Row = Row>(sql: string, args?: unknown[]): Promise<T | undefined>;
-  /** Execute a batch of statements */
   batch(statements: BatchStatement[]): Promise<void>;
-  /** Run a statement (no return value) */
   run(sql: string, args?: unknown[]): Promise<{ changes: number; lastInsertRowid: bigint }>;
-  /** Close the connection */
   close(): void | Promise<void>;
-  /** Sync with remote (only for sync mode) */
   sync?(): Promise<void>;
 }
 
-// ============================================
-// Implementation
-// ============================================
-
-/**
- * Get parent directory path.
- */
 function getParentDir(dir: string): string {
   const lastSlash = dir.lastIndexOf("/");
   return lastSlash <= 0 ? "/" : dir.slice(0, lastSlash);
 }
 
-/**
- * Find the monorepo root by looking for package.json with workspaces.
- * Falls back to current directory if not found.
- */
 async function findProjectRoot(): Promise<string> {
   let dir = process.cwd();
 
-  // Traverse up until we hit the filesystem root
   while (dir !== "/" && dir !== getParentDir(dir)) {
     const pkgPath = `${dir}/package.json`;
     const file = Bun.file(pkgPath);
@@ -92,67 +43,28 @@ async function findProjectRoot(): Promise<string> {
           return dir;
         }
       } catch {
-        // Continue searching
+        // Ignore parse errors
       }
     }
     dir = getParentDir(dir);
   }
 
-  // Fallback to cwd
   return process.cwd();
 }
 
-/**
- * Create a Turso client
- *
- * Automatically selects the appropriate connection mode:
- * - BACKTEST: Local in-memory or file database
- * - PAPER/LIVE: Sync with remote Turso server
- *
- * @example
- * ```typescript
- * // Auto-configured based on environment
- * const client = await createTursoClient();
- *
- * // Execute queries
- * const users = await client.execute<{ id: number; name: string }>(
- *   "SELECT * FROM users WHERE active = ?",
- *   [true]
- * );
- *
- * // Single row
- * const user = await client.get<{ id: number; name: string }>(
- *   "SELECT * FROM users WHERE id = ?",
- *   [1]
- * );
- *
- * // Batch operations
- * await client.batch([
- *   { sql: "INSERT INTO users (name) VALUES (?)", args: ["Alice"] },
- *   { sql: "INSERT INTO users (name) VALUES (?)", args: ["Bob"] },
- * ]);
- *
- * // Close when done
- * client.close();
- * ```
- */
 export async function createTursoClient(
   ctx: ExecutionContext,
   config: TursoConfig = {}
 ): Promise<TursoClient> {
   const suffix = getEnvDatabaseSuffix(ctx);
   const dbName = `cream${suffix}.db`;
-  // Use absolute path in project root for consistent database location
   const projectRoot = await findProjectRoot();
   const defaultPath = `${projectRoot}/${dbName}`;
 
-  // Determine connection mode based on environment
   if (isBacktest(ctx) || !config.syncUrl) {
-    // Local mode: use embedded database
     return createLocalClient(config.path ?? defaultPath);
   }
 
-  // Sync mode: connect with remote sync
   return createSyncClient({
     path: config.path ?? defaultPath,
     syncUrl: config.syncUrl,
@@ -161,9 +73,6 @@ export async function createTursoClient(
   });
 }
 
-/**
- * Create a local (embedded) Turso client
- */
 async function createLocalClient(path: string): Promise<TursoClient> {
   const db = await connect(path);
 
@@ -213,9 +122,6 @@ async function createLocalClient(path: string): Promise<TursoClient> {
   };
 }
 
-/**
- * Create a sync-enabled Turso client
- */
 async function createSyncClient(config: {
   path: string;
   syncUrl: string;
@@ -281,23 +187,8 @@ async function createSyncClient(config: {
   };
 }
 
-/**
- * Create an in-memory client for testing
- *
- * Uses Bun's native SQLite for better compatibility with in-memory databases.
- *
- * @example
- * ```typescript
- * const client = await createInMemoryClient();
- * await client.run("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
- * await client.run("INSERT INTO users (name) VALUES (?)", ["Test"]);
- * const users = await client.execute("SELECT * FROM users");
- * client.close();
- * ```
- */
 export async function createInMemoryClient(): Promise<TursoClient> {
-  // Use Bun's native SQLite for in-memory databases
-  // The @tursodatabase/database library has issues with in-memory sequential schema changes
+  // Bun's native SQLite handles in-memory sequential schema changes better than @tursodatabase/database
   const { Database } = await import("bun:sqlite");
   const db = new Database(":memory:");
 
@@ -351,13 +242,6 @@ export async function createInMemoryClient(): Promise<TursoClient> {
   };
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Get the default database path based on environment
- */
 export async function getDefaultDatabasePath(ctx: ExecutionContext): Promise<string> {
   const suffix = getEnvDatabaseSuffix(ctx);
   const dbName = `cream${suffix}.db`;

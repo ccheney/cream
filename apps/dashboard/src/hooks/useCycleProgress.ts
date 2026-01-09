@@ -1,12 +1,3 @@
-/**
- * useCycleProgress Hook
- *
- * React hook for real-time trading cycle progress updates via WebSocket.
- * Subscribes to cycle-specific events and provides progress state.
- *
- * @see docs/plans/22-self-service-dashboard.md Phase 3
- */
-
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,38 +12,17 @@ import type {
 } from "@/lib/api/types";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Cycle status.
- */
 export type CycleStatus = "idle" | "running" | "completed" | "failed";
 
-/**
- * Return type for useCycleProgress hook.
- */
 export interface UseCycleProgressReturn {
-  /** Current cycle status */
   status: CycleStatus;
-  /** Progress information */
   progress: CycleProgressData | null;
-  /** Current phase */
   phase: CyclePhase | null;
-  /** Human-readable step description */
   currentStep: string | null;
-  /** Result (when completed) */
   result: CycleResult | null;
-  /** Error message (if failed) */
   error: string | null;
-  /** Whether subscribed to WebSocket */
   isSubscribed: boolean;
 }
-
-// ============================================
-// Message Types (match server messages)
-// ============================================
 
 interface CycleProgressMessage {
   type: "cycle_progress";
@@ -92,43 +62,10 @@ interface CycleResultMessage {
 
 type CycleWSMessage = CycleProgressMessage | CycleResultMessage;
 
-// ============================================
-// Hook Implementation
-// ============================================
-
-/**
- * Hook for real-time cycle progress updates.
- *
- * @param cycleId - The cycle ID to track (null to disable)
- * @returns Cycle progress state
- *
- * @example
- * ```tsx
- * function CycleStatus({ id }: { id: string }) {
- *   const { status, progress, phase, currentStep, error } = useCycleProgress(id);
- *
- *   if (status === "running" && progress) {
- *     return (
- *       <div>
- *         <ProgressBar value={progress.progress} />
- *         <span>{phase}: {currentStep}</span>
- *       </div>
- *     );
- *   }
- *
- *   if (status === "failed") {
- *     return <Alert variant="error">{error}</Alert>;
- *   }
- *
- *   return <span>Cycle complete</span>;
- * }
- * ```
- */
 export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn {
   const queryClient = useQueryClient();
   const { lastMessage, subscribe, unsubscribe, connected } = useWebSocketContext();
 
-  // State
   const [status, setStatus] = useState<CycleStatus>("idle");
   const [progress, setProgress] = useState<CycleProgressData | null>(null);
   const [phase, setPhase] = useState<CyclePhase | null>(null);
@@ -137,11 +74,10 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Track current cycle ID in ref to avoid stale closures
+  // Ref avoids stale closures in handleMessage callback
   const cycleIdRef = useRef(cycleId);
   cycleIdRef.current = cycleId;
 
-  // Reset state when cycle ID changes
   const resetState = useCallback(() => {
     setStatus("idle");
     setProgress(null);

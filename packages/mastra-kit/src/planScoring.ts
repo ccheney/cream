@@ -14,13 +14,6 @@
 
 import type { Decision, DecisionPlan } from "./types.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Decision quality assessment.
- */
 export interface DecisionQualityScore {
   /** Decision ID */
   decisionId: string;
@@ -177,13 +170,6 @@ const DEFAULT_CONFIG: DecisionScoringConfig = {
   },
 };
 
-// ============================================
-// Decision Scorer
-// ============================================
-
-/**
- * Scores individual decisions for quality assessment.
- */
 export class DecisionScorer {
   private readonly config: DecisionScoringConfig;
 
@@ -191,9 +177,6 @@ export class DecisionScorer {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  /**
-   * Score a single decision.
-   */
   scoreDecision(
     decision: Decision,
     portfolioValue: number,
@@ -202,22 +185,18 @@ export class DecisionScorer {
     const flags: DecisionQualityFlag[] = [];
     const recommendations: string[] = [];
 
-    // Skip HOLD decisions - they don't need scoring
     if (decision.action === "HOLD") {
       return this.createHoldScore(decision.decisionId);
     }
 
-    // Get current price for calculations
-    const currentPrice = context?.currentPrice ?? 100; // Default for calculations
+    const currentPrice = context?.currentPrice ?? 100;
 
-    // Calculate individual component scores
     const riskReward = this.scoreRiskReward(decision, currentPrice, flags, recommendations);
     const stopLoss = this.scoreStopLoss(decision, currentPrice, flags, recommendations);
     const sizing = this.scoreSizing(decision, portfolioValue, currentPrice, flags, recommendations);
     const entryTiming = this.scoreEntryTiming(decision, context, flags, recommendations);
     const rationaleQuality = this.scoreRationale(decision, flags, recommendations);
 
-    // Calculate weighted overall score
     const overall = Math.round(
       riskReward * this.config.weights.riskReward +
         stopLoss * this.config.weights.stopLoss +
@@ -226,13 +205,8 @@ export class DecisionScorer {
         rationaleQuality * this.config.weights.rationaleQuality
     );
 
-    // Calculate expected value
     const expectedValue = this.calculateExpectedValue(decision, currentPrice, context);
-
-    // Determine risk level
     const riskLevel = this.determineRiskLevel(overall, flags, expectedValue);
-
-    // Calculate confidence based on available data
     const confidence = this.calculateConfidence(decision, context);
 
     return {
@@ -253,9 +227,6 @@ export class DecisionScorer {
     };
   }
 
-  /**
-   * Score an entire DecisionPlan.
-   */
   scorePlan(plan: DecisionPlan, portfolioValue: number, context?: MarketContext): PlanQualityScore {
     const decisionScores = plan.decisions.map((d) =>
       this.scoreDecision(d, portfolioValue, context)
@@ -267,7 +238,6 @@ export class DecisionScorer {
         ? overallScores.reduce((a, b) => a + b, 0) / overallScores.length
         : 0;
 
-    // Aggregate flag counts
     const flagCounts: Record<string, number> = { ERROR: 0, WARNING: 0, INFO: 0 };
     for (const score of decisionScores) {
       for (const flag of score.flags) {
@@ -275,7 +245,6 @@ export class DecisionScorer {
       }
     }
 
-    // Determine overall risk level
     const riskLevel = this.determineOverallRiskLevel(decisionScores, flagCounts);
 
     const positiveEVCount = decisionScores.filter(
@@ -298,9 +267,6 @@ export class DecisionScorer {
     };
   }
 
-  /**
-   * Score risk/reward ratio.
-   */
   private scoreRiskReward(
     decision: Decision,
     currentPrice: number,
@@ -320,7 +286,6 @@ export class DecisionScorer {
     const stopLossPrice = decision.stopLoss.price;
     const takeProfitPrice = decision.takeProfit.price;
 
-    // Calculate risk and reward
     const risk = Math.abs(entryPrice - stopLossPrice);
     const reward = Math.abs(takeProfitPrice - entryPrice);
 
@@ -335,7 +300,6 @@ export class DecisionScorer {
 
     const ratio = reward / risk;
 
-    // Score based on ratio quality
     if (ratio < 1.0) {
       flags.push({
         type: "WARNING",
@@ -362,9 +326,6 @@ export class DecisionScorer {
     return 60 + ((ratio - 2) / 1) * 40;
   }
 
-  /**
-   * Score stop loss placement.
-   */
   private scoreStopLoss(
     decision: Decision,
     currentPrice: number,
@@ -383,11 +344,8 @@ export class DecisionScorer {
 
     const entryPrice = currentPrice;
     const stopLossPrice = decision.stopLoss.price;
-
-    // Calculate stop loss distance
     const distancePct = (Math.abs(entryPrice - stopLossPrice) / entryPrice) * 100;
 
-    // Check for too tight stop
     if (distancePct < 1.0) {
       flags.push({
         type: "WARNING",
@@ -398,7 +356,6 @@ export class DecisionScorer {
       return 40;
     }
 
-    // Check for too wide stop
     if (distancePct > this.config.maxStopLossDistancePct) {
       flags.push({
         type: "WARNING",
@@ -409,7 +366,6 @@ export class DecisionScorer {
       return 50;
     }
 
-    // Validate stop is in correct direction
     const isLong = decision.direction === "LONG";
     const stopBelowEntry = stopLossPrice < entryPrice;
 
@@ -431,7 +387,6 @@ export class DecisionScorer {
       return 0;
     }
 
-    // Score based on optimal range (2-5%)
     if (distancePct >= 2.0 && distancePct <= 5.0) {
       return 100;
     }
@@ -440,13 +395,9 @@ export class DecisionScorer {
       return 100 - ((distancePct - 5) / 5) * 50;
     }
 
-    // Between 1-2%
     return 40 + ((distancePct - 1) / 1) * 60;
   }
 
-  /**
-   * Score position sizing.
-   */
   private scoreSizing(
     decision: Decision,
     portfolioValue: number,
@@ -481,7 +432,6 @@ export class DecisionScorer {
 
     const positionPct = (positionValue / portfolioValue) * 100;
 
-    // Check for oversized position
     if (positionPct > this.config.maxPositionPct) {
       flags.push({
         type: "WARNING",
@@ -492,7 +442,6 @@ export class DecisionScorer {
       return Math.max(0, 100 - (positionPct - this.config.maxPositionPct) * 10);
     }
 
-    // Check for very small position
     if (positionPct < 0.5) {
       flags.push({
         type: "INFO",
@@ -502,7 +451,6 @@ export class DecisionScorer {
       return 70;
     }
 
-    // Ideal range is 1-3% of portfolio
     if (positionPct >= 1.0 && positionPct <= 3.0) {
       return 100;
     }
@@ -511,13 +459,9 @@ export class DecisionScorer {
       return 80;
     }
 
-    // Below 1%
     return 60 + (positionPct / 1.0) * 40;
   }
 
-  /**
-   * Score entry timing quality.
-   */
   private scoreEntryTiming(
     decision: Decision,
     context: MarketContext | undefined,
@@ -535,7 +479,6 @@ export class DecisionScorer {
       return score;
     }
 
-    // Check trend alignment
     const isLong = decision.direction === "LONG";
     const trendAligned =
       (isLong && context.trend === "UPTREND") ||
@@ -553,7 +496,6 @@ export class DecisionScorer {
       recommendations.push("Consider waiting for trend confirmation");
     }
 
-    // Check volatility conditions
     if (context.volatility > 30) {
       flags.push({
         type: "WARNING",
@@ -564,7 +506,6 @@ export class DecisionScorer {
       recommendations.push("Consider reducing position size during high volatility");
     }
 
-    // Check spread
     if (context.spreadPct && context.spreadPct > 0.5) {
       flags.push({
         type: "WARNING",
@@ -577,9 +518,6 @@ export class DecisionScorer {
     return Math.max(0, Math.min(100, score));
   }
 
-  /**
-   * Score rationale quality.
-   */
   private scoreRationale(
     decision: Decision,
     flags: DecisionQualityFlag[],
@@ -588,7 +526,6 @@ export class DecisionScorer {
     let score = 0;
     const rationale = decision.rationale;
 
-    // Check for summary
     if (rationale.summary && rationale.summary.length > 20) {
       score += 30;
     } else {
@@ -600,12 +537,10 @@ export class DecisionScorer {
       recommendations.push("Provide a detailed summary of the trade thesis");
     }
 
-    // Check for bullish factors
     if (rationale.bullishFactors && rationale.bullishFactors.length > 0) {
       score += 20;
     }
 
-    // Check for bearish factors (shows balanced analysis)
     if (rationale.bearishFactors && rationale.bearishFactors.length > 0) {
       score += 20;
     } else {
@@ -617,12 +552,10 @@ export class DecisionScorer {
       recommendations.push("Document potential risks and bearish factors");
     }
 
-    // Check for decision logic
     if (rationale.decisionLogic && rationale.decisionLogic.length > 10) {
       score += 15;
     }
 
-    // Check for memory references
     if (rationale.memoryReferences && rationale.memoryReferences.length > 0) {
       score += 15;
     }
@@ -630,9 +563,6 @@ export class DecisionScorer {
     return Math.min(100, score);
   }
 
-  /**
-   * Calculate expected value of the trade.
-   */
   private calculateExpectedValue(
     decision: Decision,
     currentPrice: number,
@@ -656,7 +586,6 @@ export class DecisionScorer {
     const rewardPct = Math.abs(takeProfitPrice - entryPrice) / entryPrice;
     const rrRatio = riskPct > 0 ? rewardPct / riskPct : 1;
 
-    // Estimate win probability
     let winProbability = 0.45;
 
     if (rrRatio > 2) {
@@ -695,9 +624,6 @@ export class DecisionScorer {
     };
   }
 
-  /**
-   * Determine overall risk level.
-   */
   private determineRiskLevel(
     score: number,
     flags: DecisionQualityFlag[],
@@ -721,9 +647,6 @@ export class DecisionScorer {
     return "LOW";
   }
 
-  /**
-   * Determine overall plan risk level.
-   */
   private determineOverallRiskLevel(
     scores: DecisionQualityScore[],
     flagCounts: Record<string, number>
@@ -743,9 +666,6 @@ export class DecisionScorer {
     return "LOW";
   }
 
-  /**
-   * Calculate confidence in the assessment.
-   */
   private calculateConfidence(decision: Decision, context?: MarketContext): number {
     let confidence = 0.6;
 
@@ -771,9 +691,6 @@ export class DecisionScorer {
     return Math.min(1.0, confidence);
   }
 
-  /**
-   * Create a score for HOLD decisions.
-   */
   private createHoldScore(decisionId: string): DecisionQualityScore {
     return {
       decisionId,
@@ -806,13 +723,6 @@ export class DecisionScorer {
   }
 }
 
-// ============================================
-// Factory Functions
-// ============================================
-
-/**
- * Score a single decision.
- */
 export function scoreDecision(
   decision: Decision,
   portfolioValue: number,
@@ -823,9 +733,6 @@ export function scoreDecision(
   return scorer.scoreDecision(decision, portfolioValue, context);
 }
 
-/**
- * Score an entire plan.
- */
 export function scorePlan(
   plan: DecisionPlan,
   portfolioValue: number,
@@ -835,10 +742,6 @@ export function scorePlan(
   const scorer = new DecisionScorer(config);
   return scorer.scorePlan(plan, portfolioValue, context);
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   DecisionScorer,

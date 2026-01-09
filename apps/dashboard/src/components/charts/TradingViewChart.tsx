@@ -28,10 +28,6 @@ import {
   type TradeMarker,
 } from "@/lib/chart-config";
 
-// ============================================
-// Types
-// ============================================
-
 export interface TradingViewChartProps {
   /** OHLCV data for the chart */
   data: OHLCVData[];
@@ -61,10 +57,6 @@ export interface TradingViewChartProps {
   className?: string;
 }
 
-// ============================================
-// Component
-// ============================================
-
 /**
  * TradingView Lightweight Charts candlestick component.
  */
@@ -87,13 +79,11 @@ function TradingViewChartComponent({
   // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts IPriceLine type
   const priceLineRefs = useRef<Map<string, any>>(new Map());
 
-  // Initialize chart
   useEffect(() => {
     if (!containerRef.current) {
       return;
     }
 
-    // Create chart
     const chart = createChart(containerRef.current, {
       ...DEFAULT_CHART_OPTIONS,
       width: typeof width === "number" ? width : containerRef.current.clientWidth,
@@ -102,18 +92,15 @@ function TradingViewChartComponent({
 
     chartRef.current = chart;
 
-    // Add candlestick series
     const series = chart.addSeries(
       CandlestickSeries,
       DEFAULT_CANDLESTICK_OPTIONS
     ) as ISeriesApi<"Candlestick">;
     seriesRef.current = series;
 
-    // Add markers primitive
     const seriesMarkers = createSeriesMarkers(series, []);
     markersRef.current = seriesMarkers;
 
-    // Add volume series
     const volumeSeries = chart.addSeries(HistogramSeries, {
       color: "#26a69a",
       priceFormat: {
@@ -132,7 +119,6 @@ function TradingViewChartComponent({
       visible: false,
     });
 
-    // Set data
     if (data.length > 0) {
       const formattedData = data.map((d) => ({
         time: d.time as Time,
@@ -154,7 +140,6 @@ function TradingViewChartComponent({
       volumeSeries.setData(volumeData);
     }
 
-    // Subscribe to crosshair move
     if (onCrosshairMove) {
       chart.subscribeCrosshairMove((param) => {
         if (!param.time) {
@@ -168,10 +153,7 @@ function TradingViewChartComponent({
       });
     }
 
-    // Fit content
     chart.timeScale().fitContent();
-
-    // Notify ready
     onReady?.(chart);
 
     return () => {
@@ -184,7 +166,6 @@ function TradingViewChartComponent({
     };
   }, [height, onCrosshairMove, onReady, width, data.length, data.map]);
 
-  // Update data
   useEffect(() => {
     if (!seriesRef.current || !volumeSeriesRef.current || data.length === 0) {
       return;
@@ -213,7 +194,6 @@ function TradingViewChartComponent({
     chartRef.current?.timeScale().fitContent();
   }, [data]);
 
-  // Update markers
   useEffect(() => {
     if (!markersRef.current) {
       return;
@@ -230,19 +210,16 @@ function TradingViewChartComponent({
     markersRef.current.setMarkers(formattedMarkers);
   }, [markers]);
 
-  // Update price lines
   useEffect(() => {
     if (!seriesRef.current) {
       return;
     }
 
-    // Remove old price lines
     for (const [_key, priceLine] of priceLineRefs.current) {
       seriesRef.current.removePriceLine(priceLine);
     }
     priceLineRefs.current.clear();
 
-    // Add new price lines
     for (const config of priceLines) {
       const priceLine = seriesRef.current.createPriceLine({
         price: config.price,
@@ -256,7 +233,6 @@ function TradingViewChartComponent({
     }
   }, [priceLines]);
 
-  // Handle resize
   const handleResize = useCallback(() => {
     if (!chartRef.current || !containerRef.current || !autoResize) {
       return;

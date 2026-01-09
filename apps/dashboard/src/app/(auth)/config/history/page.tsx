@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * Config History Page
- *
- * View configuration version history and rollback to previous versions.
- * Timeline view with comparison and one-click rollback.
- */
-
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfigDiff } from "@/components/config/ConfigDiff";
@@ -21,10 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { useRollbackConfig, useRuntimeConfigHistory } from "@/hooks/queries";
 import type { ConfigHistoryEntry, Environment, FullRuntimeConfig } from "@/lib/api/types";
-
-// ============================================
-// Main Page Component
-// ============================================
 
 export default function ConfigHistoryPage() {
   const router = useRouter();
@@ -51,7 +40,7 @@ export default function ConfigHistoryPage() {
       setRollbackTarget(null);
       router.push("/config");
     } catch {
-      // Error is handled by the mutation's error state
+      // Mutation's error state handles display
     }
   };
 
@@ -101,12 +90,9 @@ export default function ConfigHistoryPage() {
     <div className="space-y-6">
       <PageHeader onBack={() => router.back()} />
 
-      {/* Timeline */}
       <div className="relative">
-        {/* Timeline line */}
         <div className="absolute left-6 top-0 bottom-0 w-px bg-cream-200 dark:bg-night-600" />
 
-        {/* Version cards */}
         <div className="space-y-4">
           {history.map((version, index) => (
             <ConfigVersionCard
@@ -120,7 +106,6 @@ export default function ConfigHistoryPage() {
         </div>
       </div>
 
-      {/* Comparison Dialog */}
       {selectedVersions && (
         <ComparisonDialog
           open={!!selectedVersions}
@@ -132,7 +117,6 @@ export default function ConfigHistoryPage() {
         />
       )}
 
-      {/* Rollback Confirmation Dialog */}
       {rollbackTarget && (
         <Dialog open={!!rollbackTarget} onOpenChange={() => setRollbackTarget(null)}>
           <DialogContent>
@@ -174,10 +158,6 @@ export default function ConfigHistoryPage() {
   );
 }
 
-// ============================================
-// Page Header
-// ============================================
-
 function PageHeader({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex items-center gap-4">
@@ -213,10 +193,6 @@ function PageHeader({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ============================================
-// Config Version Card
-// ============================================
-
 interface ConfigVersionCardProps {
   version: ConfigHistoryEntry;
   previousVersionId?: string;
@@ -232,7 +208,6 @@ function ConfigVersionCard({
 }: ConfigVersionCardProps) {
   return (
     <div className="relative pl-12">
-      {/* Timeline dot */}
       <div
         className={`absolute left-4 top-6 w-4 h-4 rounded-full border-2 ${
           version.isActive
@@ -241,7 +216,6 @@ function ConfigVersionCard({
         }`}
       />
 
-      {/* Card */}
       <div
         className={`bg-white dark:bg-night-800 rounded-lg border p-4 ${
           version.isActive
@@ -289,7 +263,6 @@ function ConfigVersionCard({
           </div>
         </div>
 
-        {/* Changes summary */}
         {version.changedFields.length > 0 && (
           <div className="mt-3 pt-3 border-t border-cream-100 dark:border-night-700">
             <p className="text-sm text-cream-600 dark:text-cream-400">
@@ -314,7 +287,6 @@ function ConfigVersionCard({
           </div>
         )}
 
-        {/* Description */}
         {version.description && (
           <p className="mt-2 text-sm text-cream-600 dark:text-cream-400 italic">
             {version.description}
@@ -324,10 +296,6 @@ function ConfigVersionCard({
     </div>
   );
 }
-
-// ============================================
-// Comparison Dialog
-// ============================================
 
 interface ComparisonDialogProps {
   open: boolean;

@@ -16,15 +16,6 @@
 import WebSocket from "ws";
 import { z } from "zod";
 
-// ============================================
-// API Configuration
-// ============================================
-
-/**
- * WebSocket endpoints by plan tier and market.
- * Starter plan uses delayed endpoints (15-min delay).
- * Advanced plan uses real-time endpoints.
- */
 const MASSIVE_WS_ENDPOINTS = {
   stocks: {
     delayed: "wss://delayed.massive.com/stocks",
@@ -44,9 +35,6 @@ const MASSIVE_WS_ENDPOINTS = {
   },
 } as const;
 
-/**
- * Massive subscription channel types.
- */
 export type MassiveChannel =
   // Stocks
   | "AM" // Aggregates (Per Minute)
@@ -59,23 +47,10 @@ export type MassiveChannel =
   | "T" // Options Trades - same as stocks
   | "Q"; // Options Quotes - same as stocks
 
-/**
- * Market type for connection.
- */
 export type MassiveMarket = "stocks" | "options" | "forex" | "crypto";
 
-/**
- * Feed type (delayed or real-time based on subscription).
- */
 export type MassiveFeed = "delayed" | "realtime";
 
-// ============================================
-// Message Schemas
-// ============================================
-
-/**
- * Status message schema (connection/auth status).
- */
 export const MassiveStatusMessageSchema = z.object({
   ev: z.literal("status"),
   status: z.enum(["connected", "auth_success", "auth_failed", "success", "error"]),
@@ -83,10 +58,6 @@ export const MassiveStatusMessageSchema = z.object({
 });
 export type MassiveStatusMessage = z.infer<typeof MassiveStatusMessageSchema>;
 
-/**
- * Aggregate (OHLCV) message schema.
- * Event types: AM (per-minute), AS (per-second), A (options per-minute)
- */
 export const MassiveAggregateMessageSchema = z.object({
   ev: z.enum(["AM", "AS", "A"]),
   sym: z.string(), // Symbol
@@ -108,9 +79,6 @@ export const MassiveAggregateMessageSchema = z.object({
 });
 export type MassiveAggregateMessage = z.infer<typeof MassiveAggregateMessageSchema>;
 
-/**
- * Trade message schema.
- */
 export const MassiveTradeMessageSchema = z.object({
   ev: z.literal("T"),
   sym: z.string(), // Symbol
@@ -127,9 +95,6 @@ export const MassiveTradeMessageSchema = z.object({
 });
 export type MassiveTradeMessage = z.infer<typeof MassiveTradeMessageSchema>;
 
-/**
- * Quote message schema.
- */
 export const MassiveQuoteMessageSchema = z.object({
   ev: z.literal("Q"),
   sym: z.string(), // Symbol
@@ -147,22 +112,12 @@ export const MassiveQuoteMessageSchema = z.object({
 });
 export type MassiveQuoteMessage = z.infer<typeof MassiveQuoteMessageSchema>;
 
-/**
- * Union of all Massive message types.
- */
 export type MassiveMessage =
   | MassiveStatusMessage
   | MassiveAggregateMessage
   | MassiveTradeMessage
   | MassiveQuoteMessage;
 
-// ============================================
-// Client Configuration
-// ============================================
-
-/**
- * Massive WebSocket client configuration.
- */
 export interface MassiveWebSocketConfig {
   /** Massive/Polygon API key */
   apiKey: string;
@@ -180,13 +135,6 @@ export interface MassiveWebSocketConfig {
   pingIntervalS?: number;
 }
 
-// ============================================
-// Connection State
-// ============================================
-
-/**
- * WebSocket connection state.
- */
 export enum MassiveConnectionState {
   DISCONNECTED = "DISCONNECTED",
   CONNECTING = "CONNECTING",
@@ -196,13 +144,6 @@ export enum MassiveConnectionState {
   ERROR = "ERROR",
 }
 
-// ============================================
-// Event Types
-// ============================================
-
-/**
- * Event types emitted by the client.
- */
 export type MassiveEvent =
   | { type: "connected" }
   | { type: "authenticated" }
@@ -215,14 +156,7 @@ export type MassiveEvent =
   | { type: "disconnected"; reason: string }
   | { type: "reconnecting"; attempt: number };
 
-/**
- * Event handler type.
- */
 export type MassiveEventHandler = (event: MassiveEvent) => void | Promise<void>;
-
-// ============================================
-// Massive WebSocket Client
-// ============================================
 
 /**
  * Massive WebSocket client for real-time market data streaming.
@@ -310,15 +244,12 @@ export class MassiveWebSocketClient {
     this.eventHandlers = this.eventHandlers.filter((h) => h !== handler);
   }
 
-  /**
-   * Emit an event to all handlers.
-   */
   private emit(event: MassiveEvent): void {
     for (const handler of this.eventHandlers) {
       try {
         void handler(event);
       } catch {
-        // Ignore handler errors
+        // Handler errors must not crash the WebSocket client
       }
     }
   }
@@ -341,7 +272,6 @@ export class MassiveWebSocketClient {
         this.ws.on("open", () => {
           this.state = MassiveConnectionState.CONNECTED;
           this.emit({ type: "connected" });
-          // Server sends status message on connect, auth happens in handleMessage
         });
 
         this.ws.on("message", (data: Buffer) => {
@@ -401,7 +331,6 @@ export class MassiveWebSocketClient {
     const paramsStr = params.join(",");
     this.send({ action: "subscribe", params: paramsStr });
 
-    // Track subscriptions for reconnection
     for (const param of params) {
       this.activeSubscriptions.add(param);
     }
@@ -420,7 +349,6 @@ export class MassiveWebSocketClient {
     const paramsStr = params.join(",");
     this.send({ action: "unsubscribe", params: paramsStr });
 
-    // Remove from tracked subscriptions
     for (const param of params) {
       this.activeSubscriptions.delete(param);
     }
@@ -478,12 +406,10 @@ export class MassiveWebSocketClient {
         const msgObj = msg as Record<string, unknown>;
         const ev = msgObj.ev as string;
 
-        // Handle status messages
         if (ev === "status") {
           const status = msgObj.status as string;
 
           if (status === "connected") {
-            // Server confirmed connection, now authenticate
             this.authenticate();
           } else if (status === "auth_success") {
             this.state = MassiveConnectionState.AUTHENTICATED;
@@ -491,13 +417,11 @@ export class MassiveWebSocketClient {
             this.startPing();
             this.reconnectAttempts = 0;
 
-            // Resubscribe if reconnecting
             if (this.activeSubscriptions.size > 0) {
               const subs = Array.from(this.activeSubscriptions);
               this.send({ action: "subscribe", params: subs.join(",") });
             }
 
-            // Resolve connect promise
             if (connectResolve) {
               connectResolve(undefined);
             }
@@ -506,7 +430,6 @@ export class MassiveWebSocketClient {
             this.state = MassiveConnectionState.ERROR;
             this.emit({ type: "error", error, message: msgObj.message as string });
           } else if (status === "success" && msgObj.message) {
-            // Subscription confirmation
             this.emit({ type: "subscribed", params: msgObj.message as string });
           } else if (status === "error") {
             this.emit({
@@ -518,7 +441,6 @@ export class MassiveWebSocketClient {
           continue;
         }
 
-        // Handle market data messages
         if (ev === "AM" || ev === "AS" || ev === "A") {
           const aggregate = MassiveAggregateMessageSchema.safeParse(msgObj);
           if (aggregate.success) {
@@ -603,10 +525,8 @@ export class MassiveWebSocketClient {
 
     this.pingTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        // Check if we've received a pong recently
         const timeSinceLastPong = Date.now() - this.lastPongTime;
         if (timeSinceLastPong > this.config.pingIntervalS * 2 * 1000) {
-          // Connection seems dead, trigger reconnect
           this.ws.close();
           return;
         }
@@ -632,13 +552,6 @@ export class MassiveWebSocketClient {
   }
 }
 
-// ============================================
-// Factory Functions
-// ============================================
-
-/**
- * Create a Massive WebSocket client for stocks from environment variables.
- */
 export function createMassiveStocksClientFromEnv(
   feed: MassiveFeed = "delayed"
 ): MassiveWebSocketClient {
@@ -654,9 +567,6 @@ export function createMassiveStocksClientFromEnv(
   });
 }
 
-/**
- * Create a Massive WebSocket client for options from environment variables.
- */
 export function createMassiveOptionsClientFromEnv(
   feed: MassiveFeed = "delayed"
 ): MassiveWebSocketClient {
@@ -672,9 +582,6 @@ export function createMassiveOptionsClientFromEnv(
   });
 }
 
-/**
- * Create a Massive WebSocket client with custom config from environment.
- */
 export function createMassiveWebSocketClientFromEnv(
   market: MassiveMarket = "stocks",
   feed: MassiveFeed = "delayed"

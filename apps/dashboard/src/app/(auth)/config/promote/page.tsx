@@ -21,10 +21,6 @@ import {
 import { useCycleProgress } from "@/hooks/useCycleProgress";
 import type { CycleResult, Environment, FullRuntimeConfig } from "@/lib/api/types";
 
-// ============================================
-// Main Page Component
-// ============================================
-
 export default function ConfigPromotePage() {
   const router = useRouter();
   const { data: activeConfig, isLoading: activeLoading } = useActiveConfig();
@@ -58,20 +54,15 @@ export default function ConfigPromotePage() {
   };
 
   const handleTestInPaper = async () => {
-    // First validate
     const validation = await handleValidate();
     if (!validation.valid) {
       return;
     }
 
-    // Trigger a cycle with draft config
     await triggerCycle.mutateAsync({
       environment: "PAPER",
       useDraftConfig: true,
     });
-
-    // Wait for completion (via WebSocket)
-    // The cycleProgress will update automatically
   };
 
   const handlePromote = async (environment: Environment) => {
@@ -85,8 +76,6 @@ export default function ConfigPromotePage() {
   };
 
   const handleLivePromotion = async () => {
-    // For LIVE, we'd need a separate hook that calls promoteToEnvironment
-    // For now, we just promote the draft to active
     await promoteDraft.mutateAsync();
     setShowLiveConfirm(false);
     router.push("/config");
@@ -97,7 +86,6 @@ export default function ConfigPromotePage() {
   const canPromoteToLive =
     canPromoteToPaper && testResult?.status === "completed" && !testResult.error;
 
-  // Update test result when cycle completes
   if (cycleStatus === "completed" && cycleResult && !testResult) {
     setTestResult(cycleResult);
   }
@@ -123,7 +111,6 @@ export default function ConfigPromotePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -157,7 +144,6 @@ export default function ConfigPromotePage() {
         </div>
       </div>
 
-      {/* Step 1: Review Changes */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
         <div className="flex items-center gap-3 mb-4">
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium">
@@ -187,7 +173,6 @@ export default function ConfigPromotePage() {
           </button>
         </div>
 
-        {/* Validation Result */}
         {validationResult && (
           <div
             className={`mt-4 p-4 rounded-lg border ${
@@ -233,7 +218,6 @@ export default function ConfigPromotePage() {
         )}
       </div>
 
-      {/* Step 2: Test in Paper */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
         <div className="flex items-center gap-3 mb-4">
           <span
@@ -263,7 +247,6 @@ export default function ConfigPromotePage() {
           {isTestInProgress ? "Running Test..." : "Run Paper Test"}
         </button>
 
-        {/* Test Progress */}
         {cycleProgress && (
           <div className="mt-4 p-4 border border-cream-200 dark:border-night-700 rounded-lg">
             <div className="flex items-center justify-between mb-2">
@@ -284,11 +267,9 @@ export default function ConfigPromotePage() {
           </div>
         )}
 
-        {/* Test Result */}
         {testResult && <TestResultDisplay result={testResult} />}
       </div>
 
-      {/* Step 3: Promote */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
         <div className="flex items-center gap-3 mb-4">
           <span
@@ -338,7 +319,6 @@ export default function ConfigPromotePage() {
         )}
       </div>
 
-      {/* LIVE Confirmation Dialog */}
       {showLiveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-night-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
@@ -372,10 +352,6 @@ export default function ConfigPromotePage() {
     </div>
   );
 }
-
-// ============================================
-// Test Result Display
-// ============================================
 
 function TestResultDisplay({ result }: { result: CycleResult }) {
   const formatDuration = (ms: number) => {

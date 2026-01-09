@@ -1,17 +1,8 @@
-/**
- * Alerts Query Hooks
- *
- * TanStack Query hooks for system alerts.
- */
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { get, post, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type { Alert, AlertSettings } from "@/lib/api/types";
 
-/**
- * Get all alerts.
- */
 export function useAlerts() {
   return useQuery({
     queryKey: queryKeys.alerts.all,
@@ -25,9 +16,6 @@ export function useAlerts() {
   });
 }
 
-/**
- * Get unacknowledged alerts count.
- */
 export function useUnacknowledgedAlertCount() {
   return useQuery({
     queryKey: [...queryKeys.alerts.all, "unacknowledged"] as const,
@@ -41,9 +29,6 @@ export function useUnacknowledgedAlertCount() {
   });
 }
 
-/**
- * Get alert settings.
- */
 export function useAlertSettings() {
   return useQuery({
     queryKey: [...queryKeys.alerts.all, "settings"] as const,
@@ -56,23 +41,6 @@ export function useAlertSettings() {
   });
 }
 
-// ============================================
-// Mutations
-// ============================================
-
-/**
- * Acknowledge an alert.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useAcknowledgeAlert();
- * return (
- *   <button onClick={() => mutate(alertId)} disabled={isPending}>
- *     Acknowledge
- *   </button>
- * );
- * ```
- */
 export function useAcknowledgeAlert() {
   const queryClient = useQueryClient();
 
@@ -87,19 +55,6 @@ export function useAcknowledgeAlert() {
   });
 }
 
-/**
- * Acknowledge all alerts.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useAcknowledgeAllAlerts();
- * return (
- *   <button onClick={() => mutate()} disabled={isPending}>
- *     Acknowledge All
- *   </button>
- * );
- * ```
- */
 export function useAcknowledgeAllAlerts() {
   const queryClient = useQueryClient();
 
@@ -113,19 +68,6 @@ export function useAcknowledgeAllAlerts() {
   });
 }
 
-/**
- * Dismiss an alert (remove from view).
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useDismissAlert();
- * return (
- *   <button onClick={() => mutate(alertId)} disabled={isPending}>
- *     Dismiss
- *   </button>
- * );
- * ```
- */
 export function useDismissAlert() {
   const queryClient = useQueryClient();
 
@@ -140,22 +82,6 @@ export function useDismissAlert() {
   });
 }
 
-/**
- * Update alert settings.
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useUpdateAlertSettings();
- * return (
- *   <button
- *     onClick={() => mutate({ enablePush: true, criticalOnly: false })}
- *     disabled={isPending}
- *   >
- *     Save Settings
- *   </button>
- * );
- * ```
- */
 export function useUpdateAlertSettings() {
   const queryClient = useQueryClient();
 

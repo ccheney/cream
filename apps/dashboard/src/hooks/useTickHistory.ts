@@ -1,9 +1,4 @@
 /**
- * useTickHistory Hook
- *
- * Tracks price tick direction history for a symbol.
- * Returns an array of 'up'/'down' ticks based on recent price changes.
- *
  * @see docs/plans/ui/40-streaming-data-integration.md Part 1.1
  */
 
@@ -16,33 +11,12 @@ export interface UseTickHistoryOptions {
 }
 
 export interface UseTickHistoryResult {
-  /** Array of tick directions (most recent last) */
   ticks: TickDirection[];
-  /** Record a new price tick */
   recordTick: (price: number) => void;
-  /** Clear tick history */
   clearTicks: () => void;
-  /** Get price history (raw prices) */
   priceHistory: number[];
 }
 
-/**
- * Hook to track price tick direction history.
- *
- * @example
- * ```tsx
- * const { ticks, recordTick } = useTickHistory({ maxTicks: 8 });
- *
- * // When new price arrives
- * useEffect(() => {
- *   if (quote.price) {
- *     recordTick(quote.price);
- *   }
- * }, [quote.price, recordTick]);
- *
- * return <TickDots ticks={ticks} />;
- * ```
- */
 export function useTickHistory(options: UseTickHistoryOptions = {}): UseTickHistoryResult {
   const { maxTicks = 8 } = options;
 
@@ -54,13 +28,12 @@ export function useTickHistory(options: UseTickHistoryOptions = {}): UseTickHist
     (price: number) => {
       const lastPrice = lastPriceRef.current;
 
-      // Update price history (keep last 20 for sparkline)
+      // Keep last 20 prices for sparkline visualization
       setPriceHistory((prev) => {
         const updated = [...prev, price];
         return updated.slice(-20);
       });
 
-      // Only record tick if we have a previous price and it changed
       if (lastPrice !== null && price !== lastPrice) {
         const direction: TickDirection = price > lastPrice ? "up" : "down";
         setTicks((prev) => {
@@ -88,20 +61,11 @@ export function useTickHistory(options: UseTickHistoryOptions = {}): UseTickHist
   };
 }
 
-// ============================================
-// Multi-Symbol Hook
-// ============================================
-
 export interface UseMultiTickHistoryResult {
-  /** Get ticks for a symbol */
   getTicks: (symbol: string) => TickDirection[];
-  /** Get price history for a symbol */
   getPriceHistory: (symbol: string) => number[];
-  /** Record a tick for a symbol */
   recordTick: (symbol: string, price: number) => void;
-  /** Clear ticks for a symbol */
   clearTicks: (symbol: string) => void;
-  /** Clear all tick history */
   clearAll: () => void;
 }
 

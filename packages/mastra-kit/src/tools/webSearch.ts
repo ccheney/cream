@@ -11,18 +11,8 @@ import { type ExecutionContext, isBacktest } from "@cream/domain";
 import { z } from "zod";
 import { createTavilyClientFromEnv, type TavilyClient } from "./providers/tavily.js";
 
-// ============================================
-// Types and Schemas
-// ============================================
-
-/**
- * Available web search source filters
- */
 export type WebSearchSource = "all" | "reddit" | "x" | "substack" | "blogs" | "news" | "financial";
 
-/**
- * Search parameters schema
- */
 export const WebSearchParamsSchema = z.object({
   query: z.string().min(1),
   maxAgeHours: z.number().min(1).max(168).optional().default(24),
@@ -36,9 +26,6 @@ export const WebSearchParamsSchema = z.object({
 });
 export type WebSearchParams = z.input<typeof WebSearchParamsSchema>;
 
-/**
- * Individual search result
- */
 export interface WebSearchResult {
   title: string;
   snippet: string;
@@ -49,9 +36,6 @@ export interface WebSearchResult {
   rawContent?: string;
 }
 
-/**
- * Search response with metadata
- */
 export interface WebSearchResponse {
   results: WebSearchResult[];
   metadata: {
@@ -62,12 +46,8 @@ export interface WebSearchResponse {
   };
 }
 
-// ============================================
-// Cache Configuration
-// ============================================
-
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 100; // Max entries before LRU eviction
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 100;
 
 interface CacheEntry {
   results: WebSearchResponse;
@@ -77,9 +57,7 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 
 /**
- * Generate cache key from search params
- * Query is normalized (lowercase, trimmed) for better hit rate
- * maxResults excluded - can serve larger cached set with slice
+ * maxResults excluded from cache key - can serve larger cached set with slice
  */
 function getCacheKey(params: z.infer<typeof WebSearchParamsSchema>): string {
   return JSON.stringify({
@@ -91,16 +69,12 @@ function getCacheKey(params: z.infer<typeof WebSearchParamsSchema>): string {
   });
 }
 
-/**
- * Get cached result if still valid
- */
 function getCached(key: string): WebSearchResponse | null {
   const entry = cache.get(key);
   if (!entry) {
     return null;
   }
 
-  // Check TTL
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
     cache.delete(key);
     return null;
@@ -109,11 +83,7 @@ function getCached(key: string): WebSearchResponse | null {
   return entry.results;
 }
 
-/**
- * Store result in cache with LRU eviction
- */
 function setCache(key: string, results: WebSearchResponse): void {
-  // LRU eviction if at capacity
   if (cache.size >= MAX_CACHE_SIZE) {
     const oldestKey = cache.keys().next().value;
     if (oldestKey) {
@@ -127,28 +97,14 @@ function setCache(key: string, results: WebSearchResponse): void {
   });
 }
 
-/**
- * Clear all cached results (for testing)
- */
 export function clearWebSearchCache(): void {
   cache.clear();
 }
 
-/**
- * Get current cache size (for testing/monitoring)
- */
 export function getWebSearchCacheSize(): number {
   return cache.size;
 }
 
-// ============================================
-// Rate Limiting
-// ============================================
-
-/**
- * Rate limits by provider
- * Tavily free tier: 1000 requests/month, ~33/day, but we allow bursts
- */
 const RATE_LIMITS = {
   tavily: {
     perMinute: 60,
@@ -163,16 +119,9 @@ interface RateLimitState {
   dayReset: number;
 }
 
-/**
- * Rate limiter for API providers
- * Uses sliding window counters with automatic reset
- */
 class RateLimiter {
   private counts = new Map<string, RateLimitState>();
 
-  /**
-   * Check if we can proceed with a request
-   */
   canProceed(provider: keyof typeof RATE_LIMITS): boolean {
     const limits = RATE_LIMITS[provider];
     if (!limits) {
@@ -185,9 +134,6 @@ class RateLimiter {
     return state.minute < limits.perMinute && state.day < limits.perDay;
   }
 
-  /**
-   * Record a successful API call
-   */
   record(provider: keyof typeof RATE_LIMITS): void {
     const now = Date.now();
     const state = this.getState(provider, now);
@@ -196,9 +142,6 @@ class RateLimiter {
     this.counts.set(provider, state);
   }
 
-  /**
-   * Get remaining quota for monitoring
-   */
   getRemainingQuota(provider: keyof typeof RATE_LIMITS): { minute: number; day: number } {
     const limits = RATE_LIMITS[provider];
     if (!limits) {
@@ -212,9 +155,6 @@ class RateLimiter {
     };
   }
 
-  /**
-   * Reset rate limiter state (for testing)
-   */
   reset(): void {
     this.counts.clear();
   }
@@ -233,13 +173,11 @@ class RateLimiter {
       return state;
     }
 
-    // Reset minute counter if window expired
     if (now >= state.minuteReset) {
       state.minute = 0;
       state.minuteReset = now + 60000;
     }
 
-    // Reset day counter if window expired
     if (now >= state.dayReset) {
       state.day = 0;
       state.dayReset = now + 86400000;
@@ -251,35 +189,19 @@ class RateLimiter {
 
 export const rateLimiter = new RateLimiter();
 
-// ============================================
-// Rate Limit Alerting
-// ============================================
-
-/**
- * Alert thresholds as percentage of limit used
- */
 const ALERT_THRESHOLDS = {
   tavily: {
-    minuteWarning: 0.8, // 80% of per-minute limit
-    minuteCritical: 0.95, // 95% of per-minute limit
-    dayWarning: 0.7, // 70% of daily limit
-    dayCritical: 0.9, // 90% of daily limit
+    minuteWarning: 0.8,
+    minuteCritical: 0.95,
+    dayWarning: 0.7,
+    dayCritical: 0.9,
   },
 } as const;
 
-/**
- * Alert severity levels
- */
 export type AlertSeverity = "warning" | "critical";
 
-/**
- * Alert types
- */
 export type RateLimitAlertType = "minute_limit" | "day_limit";
 
-/**
- * Rate limit alert structure
- */
 export interface RateLimitAlert {
   timestamp: string;
   provider: string;
@@ -291,16 +213,10 @@ export interface RateLimitAlert {
   message: string;
 }
 
-/**
- * Rate limit alerter with cooldown to prevent alert spam
- */
 class RateLimitAlerter {
   private lastAlerts = new Map<string, number>();
-  private readonly alertCooldownMs = 5 * 60 * 1000; // 5 minutes
+  private readonly alertCooldownMs = 5 * 60 * 1000;
 
-  /**
-   * Check current usage and return any alerts that should be raised
-   */
   check(provider: keyof typeof RATE_LIMITS): RateLimitAlert[] {
     const thresholds = ALERT_THRESHOLDS[provider];
     const limits = RATE_LIMITS[provider];
@@ -311,11 +227,9 @@ class RateLimitAlerter {
     const remaining = rateLimiter.getRemainingQuota(provider);
     const alerts: RateLimitAlert[] = [];
 
-    // Calculate usage percentages
     const minuteUsed = 1 - remaining.minute / limits.perMinute;
     const dayUsed = 1 - remaining.day / limits.perDay;
 
-    // Check minute limit
     if (minuteUsed >= thresholds.minuteCritical) {
       alerts.push(
         this.createAlert(provider, "minute_limit", "critical", minuteUsed, limits.perMinute)
@@ -326,7 +240,6 @@ class RateLimitAlerter {
       );
     }
 
-    // Check day limit
     if (dayUsed >= thresholds.dayCritical) {
       alerts.push(this.createAlert(provider, "day_limit", "critical", dayUsed, limits.perDay));
     } else if (dayUsed >= thresholds.dayWarning) {
@@ -336,9 +249,6 @@ class RateLimitAlerter {
     return this.filterCooldown(alerts);
   }
 
-  /**
-   * Create an alert object
-   */
   private createAlert(
     provider: string,
     type: RateLimitAlertType,
@@ -360,9 +270,6 @@ class RateLimitAlerter {
     };
   }
 
-  /**
-   * Filter alerts that are still within cooldown period
-   */
   private filterCooldown(alerts: RateLimitAlert[]): RateLimitAlert[] {
     const now = Date.now();
     return alerts.filter((alert) => {
@@ -370,18 +277,14 @@ class RateLimitAlerter {
       const lastAlertTime = this.lastAlerts.get(key);
 
       if (lastAlertTime && now - lastAlertTime < this.alertCooldownMs) {
-        return false; // Still in cooldown
+        return false;
       }
 
-      // Record this alert
       this.lastAlerts.set(key, now);
       return true;
     });
   }
 
-  /**
-   * Reset alerter state (for testing)
-   */
   reset(): void {
     this.lastAlerts.clear();
   }
@@ -389,10 +292,6 @@ class RateLimitAlerter {
 
 export const rateLimitAlerter = new RateLimitAlerter();
 
-/**
- * Check for rate limit alerts and log them
- * Call this after each webSearch request
- */
 export function checkAndLogRateLimitAlerts(provider: keyof typeof RATE_LIMITS = "tavily"): void {
   const alerts = rateLimitAlerter.check(provider);
   for (const alert of alerts) {
@@ -406,50 +305,32 @@ export function checkAndLogRateLimitAlerts(provider: keyof typeof RATE_LIMITS = 
   }
 }
 
-// ============================================
-// Usage Metrics & Logging
-// ============================================
-
-/**
- * Request count aggregates for time windows
- */
 export interface RequestCount {
   total: number;
   successful: number;
   cached: number;
 }
 
-/**
- * Aggregated web search metrics for monitoring and dashboards
- */
 export interface WebSearchMetrics {
-  // Request counts
   totalRequests: number;
   successfulRequests: number;
   failedRequests: number;
   cacheHits: number;
   rateLimitedRequests: number;
 
-  // Latency (in milliseconds)
   averageLatencyMs: number;
   p95LatencyMs: number;
   p99LatencyMs: number;
 
-  // Results
   averageResultCount: number;
   emptyResultCount: number;
 
-  // Cost tracking
   apiCallsUsed: number;
 
-  // Time windows
   lastHour: RequestCount;
   lastDay: RequestCount;
 }
 
-/**
- * Individual request record for metrics collection
- */
 interface RequestRecord {
   timestamp: number;
   type: "success" | "cache_hit" | "rate_limited" | "error" | "backtest";
@@ -457,53 +338,38 @@ interface RequestRecord {
   resultCount: number;
 }
 
-/**
- * Metrics collector with memory-bounded storage
- */
 class MetricsCollector {
   private requests: RequestRecord[] = [];
   private readonly maxRecords = 10000;
 
-  /**
-   * Record a request for metrics
-   */
   record(record: RequestRecord): void {
     this.requests.push(record);
 
-    // Prune old records (older than 24 hours)
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     this.requests = this.requests.filter((r) => r.timestamp > cutoff);
 
-    // Limit memory
     if (this.requests.length > this.maxRecords) {
       this.requests = this.requests.slice(-this.maxRecords);
     }
   }
 
-  /**
-   * Get aggregated metrics
-   */
   getMetrics(): WebSearchMetrics {
     const now = Date.now();
     const oneHourAgo = now - 60 * 60 * 1000;
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-    // Filter by time windows
     const lastHourRequests = this.requests.filter((r) => r.timestamp > oneHourAgo);
     const lastDayRequests = this.requests.filter((r) => r.timestamp > oneDayAgo);
 
-    // Calculate counts
     const successRequests = lastDayRequests.filter((r) => r.type === "success");
     const cacheHits = lastDayRequests.filter((r) => r.type === "cache_hit");
     const rateLimited = lastDayRequests.filter((r) => r.type === "rate_limited");
     const errors = lastDayRequests.filter((r) => r.type === "error");
 
-    // Calculate latency percentiles from successful API calls (not cache hits)
     const latencies = successRequests.map((r) => r.latencyMs).sort((a, b) => a - b);
     const p95Index = Math.floor(latencies.length * 0.95);
     const p99Index = Math.floor(latencies.length * 0.99);
 
-    // Calculate averages
     const avgLatency =
       latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
 
@@ -513,7 +379,6 @@ class MetricsCollector {
 
     const emptyResults = lastDayRequests.filter((r) => r.resultCount === 0).length;
 
-    // Time window aggregates
     const lastHourStats = this.aggregateWindow(lastHourRequests);
     const lastDayStats = this.aggregateWindow(lastDayRequests);
 
@@ -538,9 +403,6 @@ class MetricsCollector {
     };
   }
 
-  /**
-   * Aggregate stats for a time window
-   */
   private aggregateWindow(requests: RequestRecord[]): RequestCount {
     return {
       total: requests.length,
@@ -549,16 +411,10 @@ class MetricsCollector {
     };
   }
 
-  /**
-   * Reset collector (for testing)
-   */
   reset(): void {
     this.requests = [];
   }
 
-  /**
-   * Get record count (for testing)
-   */
   getRecordCount(): number {
     return this.requests.length;
   }
@@ -566,16 +422,10 @@ class MetricsCollector {
 
 export const metricsCollector = new MetricsCollector();
 
-/**
- * Get current web search metrics (for dashboard integration)
- */
 export function getWebSearchMetrics(): WebSearchMetrics {
   return metricsCollector.getMetrics();
 }
 
-/**
- * Structured log entry for web search operations
- */
 export interface WebSearchLogEntry {
   timestamp: string;
   level: "info" | "warn" | "error";
@@ -591,10 +441,6 @@ export interface WebSearchLogEntry {
   error?: string;
 }
 
-/**
- * Log a structured web search entry
- * Uses JSON format for log aggregation systems
- */
 function logWebSearch(
   entry: Partial<WebSearchLogEntry> & { event: WebSearchLogEntry["event"] }
 ): void {
@@ -608,7 +454,6 @@ function logWebSearch(
     ...entry,
   };
 
-  // Choose console method based on level
   // biome-ignore lint/suspicious/noConsole: Intentional structured logging
   const logFn =
     fullEntry.level === "error"
@@ -620,82 +465,50 @@ function logWebSearch(
   logFn("[WEB_SEARCH]", JSON.stringify(fullEntry));
 }
 
-// ============================================
-// Security Configuration
-// ============================================
-
 const MAX_QUERY_LENGTH = 500;
 const MAX_TITLE_LENGTH = 200;
 const MAX_SNIPPET_LENGTH = 1000;
 const MAX_RAW_CONTENT_LENGTH = 10000;
 
-/** Characters that could be used for injection attacks */
 const DANGEROUS_CHARS = /[<>{}|\\^`]/g;
 
-/** Allowed URL protocols */
 const ALLOWED_PROTOCOLS = ["https:", "http:"];
 
-/** Blocked TLDs for security */
 const BLOCKED_TLDS = [".onion", ".local", ".internal"];
 
-/** Patterns for internal/private IP addresses */
 const INTERNAL_IP_PATTERNS = [
-  /^10\./, // 10.0.0.0/8
-  /^172\.(1[6-9]|2[0-9]|3[01])\./, // 172.16.0.0/12
-  /^192\.168\./, // 192.168.0.0/16
-  /^127\./, // 127.0.0.0/8 (loopback)
-  /^169\.254\./, // 169.254.0.0/16 (link-local)
-  /^0\./, // 0.0.0.0/8
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,
+  /^192\.168\./,
+  /^127\./,
+  /^169\.254\./,
+  /^0\./,
   /^localhost$/i,
 ];
 
-/**
- * Sanitize a search query for security
- * - Trims and limits length
- * - Removes potentially dangerous characters
- * - Normalizes whitespace
- */
 export function sanitizeQuery(query: string): string {
-  // Trim and limit length
   let sanitized = query.trim().slice(0, MAX_QUERY_LENGTH);
-
-  // Remove potentially dangerous characters
   sanitized = sanitized.replace(DANGEROUS_CHARS, "");
-
-  // Normalize whitespace (collapse multiple spaces)
   sanitized = sanitized.replace(/\s+/g, " ");
-
   return sanitized;
 }
 
-/**
- * Check if a hostname is an internal/private IP address
- */
 function isInternalIP(hostname: string): boolean {
   return INTERNAL_IP_PATTERNS.some((pattern) => pattern.test(hostname));
 }
 
-/**
- * Validate a result URL for security
- * - Checks protocol is allowed
- * - Blocks internal IPs
- * - Blocks dangerous TLDs
- */
 export function validateResultUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
 
-    // Check protocol
     if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
       return false;
     }
 
-    // Check for blocked TLDs
     if (BLOCKED_TLDS.some((tld) => parsed.hostname.endsWith(tld))) {
       return false;
     }
 
-    // Check for internal IP addresses
     if (isInternalIP(parsed.hostname)) {
       return false;
     }

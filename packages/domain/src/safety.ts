@@ -96,10 +96,7 @@ export function validateBrokerEndpoint(endpoint: string, ctx: ExecutionContext):
 // Live Execution Guards
 // ============================================
 
-/** Track if LIVE confirmation has been granted for this session */
 let liveConfirmationGranted = false;
-
-/** Confirmation token for LIVE operations (must match expected value) */
 const LIVE_CONFIRMATION_TOKEN = "I_UNDERSTAND_THIS_IS_REAL_MONEY";
 
 /**
@@ -114,7 +111,6 @@ const LIVE_CONFIRMATION_TOKEN = "I_UNDERSTAND_THIS_IS_REAL_MONEY";
  */
 export function requireLiveConfirmation(confirmationToken: string, ctx: ExecutionContext): void {
   if (!isLive(ctx)) {
-    // No confirmation needed for non-LIVE environments
     return;
   }
 
@@ -145,7 +141,7 @@ export function requireLiveConfirmation(confirmationToken: string, ctx: Executio
  */
 export function isLiveConfirmed(ctx: ExecutionContext): boolean {
   if (!isLive(ctx)) {
-    return true; // Non-LIVE doesn't need confirmation
+    return true;
   }
   return liveConfirmationGranted;
 }
@@ -183,12 +179,10 @@ export function preventAccidentalLiveExecution(ctx: ExecutionContext): void {
  * @throws {SafetyError} If any consistency check fails
  */
 export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
-  // Validate broker endpoint if configured
   if (env.ALPACA_BASE_URL) {
     validateBrokerEndpoint(env.ALPACA_BASE_URL, ctx);
   }
 
-  // LIVE-specific checks - log for audit trail
   if (isLive(ctx)) {
     auditLog(
       "ENVIRONMENT_VALIDATION",
@@ -250,7 +244,6 @@ export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext):
 // Audit Logging
 // ============================================
 
-/** Audit log entries for operations */
 const auditLogEntries: AuditLogEntry[] = [];
 
 interface AuditLogEntry {
@@ -397,9 +390,8 @@ export function isCircuitOpen(
     return false;
   }
 
-  // Check if enough time has passed to try again (half-open state)
   if (state.openedAt && Date.now() - state.openedAt > resetTimeoutMs) {
-    return false; // Allow a test request
+    return false;
   }
 
   return true;

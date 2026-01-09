@@ -11,26 +11,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Chart dimensions.
- */
 export interface ChartDimensions {
   width: number;
   height: number;
 }
 
-/**
- * Breakpoint type.
- */
 export type Breakpoint = "mobile" | "tablet" | "desktop";
 
-/**
- * Resize hook options.
- */
 export interface UseChartResizeOptions {
   /** Aspect ratio (width / height). Default: 16/9 */
   aspectRatio?: number;

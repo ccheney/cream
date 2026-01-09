@@ -9,13 +9,6 @@
 
 import type { TursoClient } from "@cream/storage";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Paper signal record
- */
 export interface PaperSignal {
   id: string;
   indicatorId: string;
@@ -26,9 +19,6 @@ export interface PaperSignal {
   createdAt: string;
 }
 
-/**
- * Pending outcome record
- */
 export interface PendingOutcome {
   id: string;
   indicatorId: string;
@@ -37,27 +27,13 @@ export interface PendingOutcome {
   signal: number;
 }
 
-/**
- * Signal recorder configuration
- */
 export interface SignalRecorderConfig {
   /** Forward return horizon in trading days (default: 5) */
   horizonDays?: number;
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_HORIZON_DAYS = 5;
 
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Extract date portion from ISO string (YYYY-MM-DD)
- */
 function extractDatePart(d: Date): string {
   const isoString = d.toISOString();
   const parts = isoString.split("T");
@@ -100,16 +76,9 @@ export function addTradingDays(date: string, days: number): string {
   return extractDatePart(d);
 }
 
-/**
- * Generate a unique ID for a paper signal
- */
 function generateSignalId(indicatorId: string, date: string, symbol: string): string {
   return `ps-${indicatorId}-${date}-${symbol}`.replace(/[^a-zA-Z0-9-]/g, "-");
 }
-
-// ============================================
-// Signal Recorder Implementation
-// ============================================
 
 /**
  * Signal Recorder for paper trading validation.
@@ -159,7 +128,6 @@ export class SignalRecorder {
       return;
     }
 
-    // Use batch insert for efficiency
     const values: string[] = [];
     const args: unknown[] = [];
     let paramIndex = 0;
@@ -196,10 +164,8 @@ export class SignalRecorder {
       return;
     }
 
-    // Calculate the signal date (horizonDays ago)
     const signalDate = subtractTradingDays(currentDate, this.horizonDays);
 
-    // Update each outcome
     for (const [symbol, outcome] of outcomes) {
       await this.db.run(
         `UPDATE indicator_paper_signals
@@ -217,7 +183,6 @@ export class SignalRecorder {
    * @returns Signals that need outcomes recorded
    */
   async getPendingOutcomes(indicatorId: string): Promise<PendingOutcome[]> {
-    // Calculate the cutoff date (signals older than this should have outcomes)
     const today = extractDatePart(new Date());
     const cutoffDate = subtractTradingDays(today, this.horizonDays);
 

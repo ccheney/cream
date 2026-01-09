@@ -13,17 +13,8 @@ import type {
   PredictionMarketType,
 } from "@cream/domain";
 
-// ============================================
-// Instrument Mapping
-// ============================================
-
-/**
- * Configuration for market type to instrument mapping
- */
 export interface InstrumentMappingConfig {
-  /** Default instruments for a market type */
   defaultInstruments: string[];
-  /** Keywords in market question that trigger additional instruments */
   keywordMappings: Record<string, string[]>;
 }
 
@@ -99,9 +90,6 @@ export const INSTRUMENT_MAPPING: Record<PredictionMarketType, InstrumentMappingC
   },
 };
 
-/**
- * Map a prediction market event to related instrument IDs
- */
 export function mapToRelatedInstruments(event: PredictionMarketEvent): string[] {
   const marketType = event.payload.marketType;
   const config = INSTRUMENT_MAPPING[marketType];
@@ -113,7 +101,6 @@ export function mapToRelatedInstruments(event: PredictionMarketEvent): string[] 
   const instruments = new Set<string>(config.defaultInstruments);
   const question = event.payload.marketQuestion.toLowerCase();
 
-  // Add instruments based on keyword matches
   for (const [keyword, additionalInstruments] of Object.entries(config.keywordMappings)) {
     if (question.includes(keyword)) {
       for (const instrument of additionalInstruments) {
@@ -122,7 +109,6 @@ export function mapToRelatedInstruments(event: PredictionMarketEvent): string[] 
     }
   }
 
-  // Add any existing related instruments from the event
   for (const id of event.relatedInstrumentIds) {
     instruments.add(id);
   }
@@ -130,13 +116,6 @@ export function mapToRelatedInstruments(event: PredictionMarketEvent): string[] 
   return [...instruments];
 }
 
-// ============================================
-// Event Transformers
-// ============================================
-
-/**
- * Transform a single prediction market event to ExternalEvent format
- */
 export function transformToExternalEvent(event: PredictionMarketEvent): ExternalEvent {
   const relatedInstruments = mapToRelatedInstruments(event);
 
@@ -166,54 +145,34 @@ export function transformToExternalEvent(event: PredictionMarketEvent): External
   };
 }
 
-/**
- * Transform multiple prediction market events to ExternalEvent format
- */
 export function transformToExternalEvents(events: PredictionMarketEvent[]): ExternalEvent[] {
   return events.map(transformToExternalEvent);
 }
 
-// ============================================
-// Score Transformers
-// ============================================
-
-/**
- * Transform prediction market scores to NumericScores format
- * for integration with ExternalContext.numericScores
- */
 export function transformScoresToNumeric(scores: PredictionMarketScores): NumericScores {
   const result: NumericScores = {};
 
-  // Fed signals
   if (scores.fedCutProbability !== undefined) {
     result.pm_fed_cut = scores.fedCutProbability;
   }
   if (scores.fedHikeProbability !== undefined) {
     result.pm_fed_hike = scores.fedHikeProbability;
   }
-
-  // Recession probability
   if (scores.recessionProbability12m !== undefined) {
     result.pm_recession_12m = scores.recessionProbability12m;
   }
-
-  // Economic surprise indicators
   if (scores.cpiSurpriseDirection !== undefined) {
     result.pm_cpi_surprise = scores.cpiSurpriseDirection;
   }
   if (scores.gdpSurpriseDirection !== undefined) {
     result.pm_gdp_surprise = scores.gdpSurpriseDirection;
   }
-
-  // Policy uncertainty
   if (scores.shutdownProbability !== undefined) {
     result.pm_shutdown = scores.shutdownProbability;
   }
   if (scores.tariffEscalationProbability !== undefined) {
     result.pm_tariff_escalation = scores.tariffEscalationProbability;
   }
-
-  // Aggregate signals
   if (scores.macroUncertaintyIndex !== undefined) {
     result.pm_macro_uncertainty = scores.macroUncertaintyIndex;
   }

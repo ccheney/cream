@@ -9,25 +9,13 @@
 
 import type { HTMLAttributes, ReactNode } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export type ElevationLevel = 0 | 1 | 2 | 3 | 4;
 export type SurfaceVariant = "default" | "interactive" | "translucent" | "inset";
 
-// ============================================
-// Card Component
-// ============================================
-
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Elevation level (0-4) */
   elevation?: ElevationLevel;
-  /** Card variant */
   variant?: SurfaceVariant;
-  /** Padding size */
   padding?: "none" | "sm" | "md" | "lg";
-  /** Children */
   children: ReactNode;
 }
 
@@ -46,17 +34,6 @@ const paddingClasses = {
   lg: "p-6",
 };
 
-/**
- * Card component with configurable elevation and padding.
- *
- * @example
- * ```tsx
- * <Card elevation={1} padding="md">
- *   <h2>Portfolio Summary</h2>
- *   <p>Content here</p>
- * </Card>
- * ```
- */
 export function Card({
   elevation = 1,
   variant = "default",
@@ -88,32 +65,13 @@ export function Card({
   );
 }
 
-// ============================================
-// Panel Component
-// ============================================
-
 export interface PanelProps extends HTMLAttributes<HTMLElement> {
-  /** Use as semantic section */
   as?: "div" | "section" | "article" | "aside";
-  /** Elevation level */
   elevation?: ElevationLevel;
-  /** Full height */
   fullHeight?: boolean;
-  /** Children */
   children: ReactNode;
 }
 
-/**
- * Panel component for larger content sections.
- *
- * @example
- * ```tsx
- * <Panel as="section" elevation={1} fullHeight>
- *   <PanelHeader>Positions</PanelHeader>
- *   <PanelBody>...</PanelBody>
- * </Panel>
- * ```
- */
 export function Panel({
   as: Component = "div",
   elevation = 1,
@@ -137,12 +95,7 @@ export function Panel({
   );
 }
 
-// ============================================
-// Panel Sub-components
-// ============================================
-
 export interface PanelHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  /** Children */
   children: ReactNode;
 }
 
@@ -162,9 +115,7 @@ export function PanelHeader({ className = "", children, ...props }: PanelHeaderP
 }
 
 export interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
-  /** Padding size */
   padding?: "none" | "sm" | "md" | "lg";
-  /** Children */
   children: ReactNode;
 }
 
@@ -183,7 +134,6 @@ export function PanelBody({ padding = "md", className = "", children, ...props }
 }
 
 export interface PanelFooterProps extends HTMLAttributes<HTMLDivElement> {
-  /** Children */
   children: ReactNode;
 }
 
@@ -203,27 +153,12 @@ export function PanelFooter({ className = "", children, ...props }: PanelFooterP
   );
 }
 
-// ============================================
-// Backdrop Component
-// ============================================
-
 export interface BackdropProps extends HTMLAttributes<HTMLDivElement> {
-  /** Backdrop type */
   type?: "modal" | "drawer";
-  /** Whether visible */
   visible?: boolean;
-  /** Click handler */
   onClose?: () => void;
 }
 
-/**
- * Backdrop overlay for modals and drawers.
- *
- * @example
- * ```tsx
- * <Backdrop type="modal" visible={isOpen} onClose={() => setIsOpen(false)} />
- * ```
- */
 export function Backdrop({
   type = "modal",
   visible = true,
@@ -257,31 +192,13 @@ export function Backdrop({
   );
 }
 
-// ============================================
-// Overlay Component
-// ============================================
-
 export interface OverlayProps extends HTMLAttributes<HTMLDivElement> {
-  /** Overlay type */
   type?: "modal" | "drawer" | "popover";
-  /** Position (for drawer) */
   position?: "left" | "right" | "top" | "bottom";
-  /** Whether open */
   open?: boolean;
-  /** Children */
   children: ReactNode;
 }
 
-/**
- * Overlay container for modals, drawers, and popovers.
- *
- * @example
- * ```tsx
- * <Overlay type="modal" open={isOpen}>
- *   <Card elevation={3}>Modal content</Card>
- * </Overlay>
- * ```
- */
 export function Overlay({
   type = "modal",
   position = "right",
@@ -321,26 +238,11 @@ export function Overlay({
   );
 }
 
-// ============================================
-// Floating Surface Component
-// ============================================
-
 export interface FloatingSurfaceProps extends HTMLAttributes<HTMLDivElement> {
-  /** Children */
   children: ReactNode;
 }
 
-/**
- * Floating surface that elevates on scroll.
- * Use data-scrolled="true" attribute to trigger elevation.
- *
- * @example
- * ```tsx
- * <FloatingSurface data-scrolled={isScrolled}>
- *   <nav>...</nav>
- * </FloatingSurface>
- * ```
- */
+/** Use data-scrolled="true" attribute to trigger elevation. */
 export function FloatingSurface({ className = "", children, ...props }: FloatingSurfaceProps) {
   return (
     <div className={`surface-floating ${className}`.trim()} {...props}>
@@ -349,24 +251,10 @@ export function FloatingSurface({ className = "", children, ...props }: Floating
   );
 }
 
-// ============================================
-// Divider Component
-// ============================================
-
 export interface DividerProps extends HTMLAttributes<HTMLHRElement> {
-  /** Orientation */
   orientation?: "horizontal" | "vertical";
 }
 
-/**
- * Visual divider between content sections.
- *
- * @example
- * ```tsx
- * <Divider />
- * <Divider orientation="vertical" />
- * ```
- */
 export function Divider({ orientation = "horizontal", className = "", ...props }: DividerProps) {
   return (
     <hr
@@ -379,10 +267,6 @@ export function Divider({ orientation = "horizontal", className = "", ...props }
     />
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   Card,

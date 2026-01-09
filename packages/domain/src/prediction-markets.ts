@@ -9,19 +9,9 @@
 
 import { z } from "zod";
 
-// ============================================
-// Platform and Market Type Enums
-// ============================================
-
-/**
- * Prediction market platform
- */
 export const PredictionPlatform = z.enum(["KALSHI", "POLYMARKET"]);
 export type PredictionPlatform = z.infer<typeof PredictionPlatform>;
 
-/**
- * Category of prediction market
- */
 export const PredictionMarketType = z.enum([
   "FED_RATE",
   "ECONOMIC_DATA",
@@ -32,13 +22,6 @@ export const PredictionMarketType = z.enum([
 ]);
 export type PredictionMarketType = z.infer<typeof PredictionMarketType>;
 
-// ============================================
-// Market Outcome Schema
-// ============================================
-
-/**
- * A single outcome in a prediction market
- */
 export const PredictionOutcomeSchema = z.object({
   /** Outcome description (e.g., "25bps cut") */
   outcome: z.string(),
@@ -54,13 +37,6 @@ export const PredictionOutcomeSchema = z.object({
 });
 export type PredictionOutcome = z.infer<typeof PredictionOutcomeSchema>;
 
-// ============================================
-// Prediction Market Event Schema
-// ============================================
-
-/**
- * Event payload for prediction market data
- */
 export const PredictionMarketPayloadSchema = z.object({
   /** Platform source */
   platform: PredictionPlatform,
@@ -91,9 +67,6 @@ export const PredictionMarketPayloadSchema = z.object({
 });
 export type PredictionMarketPayload = z.infer<typeof PredictionMarketPayloadSchema>;
 
-/**
- * Prediction market event for integration with ExternalContext
- */
 export const PredictionMarketEventSchema = z.object({
   /** Unique identifier (e.g., "pm_kalshi_fed_jan26") */
   eventId: z.string(),
@@ -112,16 +85,7 @@ export const PredictionMarketEventSchema = z.object({
 });
 export type PredictionMarketEvent = z.infer<typeof PredictionMarketEventSchema>;
 
-// ============================================
-// Prediction Market Scores Schema
-// ============================================
-
-/**
- * Aggregated scores derived from prediction markets
- * for integration with NumericScores in ExternalContext
- */
 export const PredictionMarketScoresSchema = z.object({
-  // Fed/Macro Signals
   /** Probability of Fed rate cut at next meeting */
   fedCutProbability: z.number().min(0).max(1).optional(),
 
@@ -131,21 +95,18 @@ export const PredictionMarketScoresSchema = z.object({
   /** Probability of recession within 12 months */
   recessionProbability12m: z.number().min(0).max(1).optional(),
 
-  // Economic Surprise Indicators
   /** CPI surprise direction (-1 = below expectations, +1 = above) */
   cpiSurpriseDirection: z.number().min(-1).max(1).optional(),
 
   /** GDP surprise direction (-1 = below expectations, +1 = above) */
   gdpSurpriseDirection: z.number().min(-1).max(1).optional(),
 
-  // Policy Uncertainty
   /** Probability of government shutdown */
   shutdownProbability: z.number().min(0).max(1).optional(),
 
   /** Probability of tariff escalation */
   tariffEscalationProbability: z.number().min(0).max(1).optional(),
 
-  // Aggregate Signals
   /** Macro uncertainty index (higher = more uncertainty) */
   macroUncertaintyIndex: z.number().min(0).max(1).optional(),
 
@@ -154,13 +115,6 @@ export const PredictionMarketScoresSchema = z.object({
 });
 export type PredictionMarketScores = z.infer<typeof PredictionMarketScoresSchema>;
 
-// ============================================
-// Aggregated Market Data
-// ============================================
-
-/**
- * Aggregated data from all prediction market platforms
- */
 export const AggregatedPredictionDataSchema = z.object({
   /** All prediction market events */
   events: z.array(PredictionMarketEventSchema),
@@ -176,34 +130,18 @@ export const AggregatedPredictionDataSchema = z.object({
 });
 export type AggregatedPredictionData = z.infer<typeof AggregatedPredictionDataSchema>;
 
-// ============================================
-// Helpers
-// ============================================
-
-/**
- * Create empty prediction market scores
- */
 export function createEmptyPredictionScores(): PredictionMarketScores {
   return {};
 }
 
-/**
- * Check if prediction scores indicate high macro uncertainty
- */
 export function hasHighMacroUncertainty(scores: PredictionMarketScores, threshold = 0.5): boolean {
   return (scores.macroUncertaintyIndex ?? 0) >= threshold;
 }
 
-/**
- * Check if prediction scores indicate high policy risk
- */
 export function hasHighPolicyRisk(scores: PredictionMarketScores, threshold = 0.4): boolean {
   return (scores.policyEventRisk ?? 0) >= threshold;
 }
 
-/**
- * Get the dominant Fed probability direction
- */
 export function getFedDirection(scores: PredictionMarketScores): "CUT" | "HIKE" | "HOLD" {
   const cutProb = scores.fedCutProbability ?? 0;
   const hikeProb = scores.fedHikeProbability ?? 0;
@@ -218,9 +156,6 @@ export function getFedDirection(scores: PredictionMarketScores): "CUT" | "HIKE" 
   return "HOLD";
 }
 
-/**
- * Convert prediction market scores to NumericScores format
- */
 export function toNumericScores(scores: PredictionMarketScores): Record<string, number> {
   const result: Record<string, number> = {};
 

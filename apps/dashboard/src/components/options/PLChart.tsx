@@ -25,10 +25,6 @@ import { usePLData } from "@/hooks/usePLData";
 import { CHART_COLORS } from "@/lib/chart-config";
 import type { OptionLeg, PLAnalysis, PLDataPoint } from "./PLCalculator";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PLChartProps {
   /** Option legs */
   legs: OptionLeg[];
@@ -53,10 +49,6 @@ export interface PLChartProps {
   /** Additional class names */
   className?: string;
 }
-
-// ============================================
-// Custom Tooltip
-// ============================================
 
 interface CustomTooltipPayload extends PLDataPoint {
   name?: string;
@@ -97,10 +89,6 @@ function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
     </div>
   );
 }
-
-// ============================================
-// Chart Legend
-// ============================================
 
 interface ChartLegendProps {
   showAtExpiration: boolean;
@@ -160,20 +148,6 @@ const ChartLegend = memo(function ChartLegend({
   );
 });
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * PLChart displays interactive profit/loss visualization for options strategies.
- *
- * Features:
- * - P/L at expiration (solid line)
- * - P/L today with time value (dashed line)
- * - Break-even markers
- * - Current price marker
- * - Interactive hover tooltip
- */
 function PLChartComponent({
   legs,
   underlyingPrice,
@@ -186,7 +160,6 @@ function PLChartComponent({
   onPriceHover,
   className = "",
 }: PLChartProps) {
-  // Generate P/L data
   const { data, analysis, dte, priceRange } = usePLData({
     legs,
     underlyingPrice,
@@ -194,7 +167,6 @@ function PLChartComponent({
     points: 100,
   });
 
-  // Calculate Y axis domain
   const yDomain = useMemo(() => {
     if (data.length === 0) {
       return [-1000, 1000];
@@ -208,7 +180,6 @@ function PLChartComponent({
     return [min - padding, max + padding];
   }, [data]);
 
-  // Handle mouse move for hover callback
   const handleMouseMove = useCallback(
     (state: { activePayload?: Array<{ payload: PLDataPoint }> }) => {
       if (onPriceHover && state.activePayload && state.activePayload.length > 0) {
@@ -221,7 +192,6 @@ function PLChartComponent({
     [onPriceHover]
   );
 
-  // Empty state
   if (legs.length === 0) {
     return (
       <div
@@ -242,12 +212,10 @@ function PLChartComponent({
           onMouseMove={handleMouseMove}
         >
           <defs>
-            {/* Gradient for profit area */}
             <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={CHART_COLORS.profit} stopOpacity={0.3} />
               <stop offset="100%" stopColor={CHART_COLORS.profit} stopOpacity={0} />
             </linearGradient>
-            {/* Gradient for loss area */}
             <linearGradient id="lossGradient" x1="0" y1="1" x2="0" y2="0">
               <stop offset="0%" stopColor={CHART_COLORS.loss} stopOpacity={0.3} />
               <stop offset="100%" stopColor={CHART_COLORS.loss} stopOpacity={0} />
@@ -255,7 +223,6 @@ function PLChartComponent({
           </defs>
 
           <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-
           <XAxis
             dataKey="price"
             stroke={CHART_COLORS.text}
@@ -265,7 +232,6 @@ function PLChartComponent({
             tickLine={{ stroke: CHART_COLORS.grid }}
             domain={[priceRange.min, priceRange.max]}
           />
-
           <YAxis
             domain={yDomain}
             stroke={CHART_COLORS.text}
@@ -275,11 +241,7 @@ function PLChartComponent({
             tickLine={{ stroke: CHART_COLORS.grid }}
             width={60}
           />
-
-          {/* Zero line */}
           <ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />
-
-          {/* Current price marker */}
           {showCurrentPrice && (
             <ReferenceLine
               x={underlyingPrice}
@@ -294,8 +256,6 @@ function PLChartComponent({
               }}
             />
           )}
-
-          {/* Break-even markers */}
           {showBreakeven &&
             analysis.breakevens.map((be) => (
               <ReferenceLine
@@ -311,10 +271,7 @@ function PLChartComponent({
                 }}
               />
             ))}
-
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.grid }} />
-
-          {/* P/L at expiration area (profit above zero) */}
           {showAtExpiration && (
             <Area
               type="monotone"
@@ -324,8 +281,6 @@ function PLChartComponent({
               isAnimationActive={false}
             />
           )}
-
-          {/* P/L at expiration line */}
           {showAtExpiration && (
             <Line
               type="monotone"
@@ -336,8 +291,6 @@ function PLChartComponent({
               isAnimationActive={false}
             />
           )}
-
-          {/* P/L today line (dashed) */}
           {showToday && (
             <Line
               type="monotone"
@@ -351,8 +304,6 @@ function PLChartComponent({
           )}
         </ComposedChart>
       </ResponsiveContainer>
-
-      {/* Legend */}
       <ChartLegend
         showAtExpiration={showAtExpiration}
         showToday={showToday}
@@ -363,9 +314,6 @@ function PLChartComponent({
   );
 }
 
-/**
- * Memoized PLChart component.
- */
 export const PLChart = memo(PLChartComponent);
 
 export default PLChart;

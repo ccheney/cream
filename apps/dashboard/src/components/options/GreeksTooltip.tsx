@@ -1,35 +1,14 @@
-/**
- * GreeksTooltip Component
- *
- * Tooltip displaying option greeks (delta, gamma, theta, vega).
- * Shows on hover over option contract cells.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 2.1
- */
-
 "use client";
 
 import { memo } from "react";
 import type { OptionsGreeks } from "@/lib/api/types";
 
-// ============================================
-// Types
-// ============================================
-
 export interface GreeksTooltipProps {
-  /** Greeks values */
   greeks: OptionsGreeks;
-  /** Whether tooltip is visible */
   visible: boolean;
-  /** Position for tooltip */
   position?: { x: number; y: number };
-  /** Custom CSS class */
   className?: string;
 }
-
-// ============================================
-// Helper Functions
-// ============================================
 
 function formatGreek(value: number | null, decimals = 4): string {
   if (value === null) {
@@ -57,28 +36,6 @@ function getGreekColor(greek: string, value: number | null): string {
   }
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * GreeksTooltip displays option greeks in a hover tooltip.
- *
- * Features:
- * - Shows δ (delta), γ (gamma), θ (theta), ν (vega)
- * - Color-coded values based on sign and type
- * - Greek symbols with full names
- * - Positioned near the hovered element
- *
- * @example
- * ```tsx
- * <GreeksTooltip
- *   greeks={{ delta: 0.65, gamma: 0.02, theta: -0.05, vega: 0.15 }}
- *   visible={isHovered}
- *   position={{ x: mouseX, y: mouseY }}
- * />
- * ```
- */
 export const GreeksTooltip = memo(function GreeksTooltip({
   greeks,
   visible,
@@ -111,7 +68,6 @@ export const GreeksTooltip = memo(function GreeksTooltip({
       <div className="text-xs font-semibold text-cream-500 dark:text-cream-400 mb-2">Greeks</div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-        {/* Delta */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-cream-500 dark:text-cream-400">δ Delta</span>
           <span className={`text-xs font-mono ${getGreekColor("delta", greeks.delta)}`}>
@@ -119,7 +75,6 @@ export const GreeksTooltip = memo(function GreeksTooltip({
           </span>
         </div>
 
-        {/* Gamma */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-cream-500 dark:text-cream-400">γ Gamma</span>
           <span className={`text-xs font-mono ${getGreekColor("gamma", greeks.gamma)}`}>
@@ -127,7 +82,6 @@ export const GreeksTooltip = memo(function GreeksTooltip({
           </span>
         </div>
 
-        {/* Theta */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-cream-500 dark:text-cream-400">θ Theta</span>
           <span className={`text-xs font-mono ${getGreekColor("theta", greeks.theta)}`}>
@@ -135,7 +89,6 @@ export const GreeksTooltip = memo(function GreeksTooltip({
           </span>
         </div>
 
-        {/* Vega */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-cream-500 dark:text-cream-400">ν Vega</span>
           <span className={`text-xs font-mono ${getGreekColor("vega", greeks.vega)}`}>
@@ -147,18 +100,11 @@ export const GreeksTooltip = memo(function GreeksTooltip({
   );
 });
 
-// ============================================
-// Inline Greeks Display
-// ============================================
-
 export interface InlineGreeksProps {
   greeks: OptionsGreeks;
   className?: string;
 }
 
-/**
- * Compact inline display of greeks for table cells.
- */
 export const InlineGreeks = memo(function InlineGreeks({
   greeks,
   className = "",

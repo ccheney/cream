@@ -9,10 +9,6 @@
 
 import type { AgentType, BatchEvalResults, EvalResult } from "../../src/index.js";
 
-// ============================================
-// Types
-// ============================================
-
 /**
  * Test case for LLM-as-Judge evaluation.
  */
@@ -81,10 +77,6 @@ export interface JudgeConfig {
   timeout?: number;
 }
 
-// ============================================
-// Default Configuration
-// ============================================
-
 /**
  * Default thresholds per agent type.
  */
@@ -123,10 +115,6 @@ export const DEFAULT_JUDGE_CONFIG: JudgeConfig = {
   timeout: 60000,
 };
 
-// ============================================
-// Mock Judge (for testing without API calls)
-// ============================================
-
 /**
  * Mock judge for testing without API calls.
  * Returns deterministic scores based on test case ID patterns.
@@ -138,15 +126,12 @@ export function createMockJudge() {
     expectedBehavior: string,
     _config: JudgeConfig
   ): Promise<{ score: number; reasoning: string }> => {
-    // Simulate some latency
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // Deterministic scoring based on output content
     const outputStr = JSON.stringify(output).toLowerCase();
 
-    let score = 0.75; // Base score
+    let score = 0.75;
 
-    // Boost score for good patterns
     if (outputStr.includes("rationale")) {
       score += 0.05;
     }
@@ -157,7 +142,6 @@ export function createMockJudge() {
       score += 0.05;
     }
 
-    // Reduce score for bad patterns
     if (outputStr.includes("error")) {
       score -= 0.2;
     }
@@ -168,7 +152,6 @@ export function createMockJudge() {
       score -= 0.1;
     }
 
-    // Clamp to 0-1
     score = Math.max(0, Math.min(1, score));
 
     return {
@@ -177,10 +160,6 @@ export function createMockJudge() {
     };
   };
 }
-
-// ============================================
-// Core Functions
-// ============================================
 
 /**
  * Evaluate a single agent output using LLM-as-Judge.
@@ -193,7 +172,7 @@ export async function evaluateAgentWithJudge(
 ): Promise<JudgeResult> {
   const threshold = testCase.threshold ?? AGENT_THRESHOLDS[agentType];
 
-  // Use mock judge for now (real implementation would call LLM API)
+  // TODO: Replace with real LLM API call
   const mockJudge = createMockJudge();
   const { score, reasoning } = await mockJudge(
     testCase.input,
@@ -251,7 +230,6 @@ export async function runBatchEvaluation(
     });
   }
 
-  // Calculate statistics
   const scores = results.map((r) => r.score).sort((a, b) => a - b);
   const stats = {
     total: results.length,
@@ -334,10 +312,6 @@ export function checkForRegression(
 
   return { hasRegression, details };
 }
-
-// ============================================
-// Sample Test Cases
-// ============================================
 
 /**
  * Sample test cases for each agent type.

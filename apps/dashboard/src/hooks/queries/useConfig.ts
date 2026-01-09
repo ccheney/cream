@@ -1,9 +1,3 @@
-/**
- * Config Query Hooks
- *
- * TanStack Query hooks for system configuration.
- */
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { get, post, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
@@ -19,9 +13,6 @@ import type {
   ValidationResult,
 } from "@/lib/api/types";
 
-/**
- * Get current configuration.
- */
 export function useConfig() {
   return useQuery({
     queryKey: queryKeys.config.all,
@@ -34,9 +25,6 @@ export function useConfig() {
   });
 }
 
-/**
- * Update configuration.
- */
 export function useUpdateConfig() {
   const queryClient = useQueryClient();
 
@@ -52,9 +40,6 @@ export function useUpdateConfig() {
   });
 }
 
-/**
- * Get configuration history.
- */
 export function useConfigHistory() {
   return useQuery({
     queryKey: [...queryKeys.config.all, "history"] as const,
@@ -67,9 +52,6 @@ export function useConfigHistory() {
   });
 }
 
-/**
- * Reset configuration to defaults.
- */
 export function useResetConfig() {
   const queryClient = useQueryClient();
 
@@ -85,9 +67,6 @@ export function useResetConfig() {
   });
 }
 
-/**
- * Get universe configuration.
- */
 export function useUniverseConfig() {
   return useQuery({
     queryKey: [...queryKeys.config.all, "universe"] as const,
@@ -100,9 +79,6 @@ export function useUniverseConfig() {
   });
 }
 
-/**
- * Update universe configuration.
- */
 export function useUpdateUniverseConfig() {
   const queryClient = useQueryClient();
 
@@ -118,9 +94,6 @@ export function useUpdateUniverseConfig() {
   });
 }
 
-/**
- * Get constraints configuration.
- */
 export function useConstraintsConfig() {
   return useQuery({
     queryKey: [...queryKeys.config.all, "constraints"] as const,
@@ -133,9 +106,6 @@ export function useConstraintsConfig() {
   });
 }
 
-/**
- * Update constraints configuration.
- */
 export function useUpdateConstraintsConfig() {
   const queryClient = useQueryClient();
 
@@ -151,13 +121,8 @@ export function useUpdateConstraintsConfig() {
   });
 }
 
-// ============================================
 // Runtime Config Hooks (Database-backed)
-// ============================================
 
-/**
- * Get active runtime configuration.
- */
 export function useActiveConfig(environment: Environment = "PAPER") {
   return useQuery({
     queryKey: [...queryKeys.config.all, "active", environment] as const,
@@ -170,9 +135,6 @@ export function useActiveConfig(environment: Environment = "PAPER") {
   });
 }
 
-/**
- * Get draft runtime configuration.
- */
 export function useDraftConfig(environment: Environment = "PAPER") {
   return useQuery({
     queryKey: [...queryKeys.config.all, "draft", environment] as const,
@@ -185,9 +147,6 @@ export function useDraftConfig(environment: Environment = "PAPER") {
   });
 }
 
-/**
- * Save draft configuration.
- */
 export function useSaveDraft(environment: Environment = "PAPER") {
   const queryClient = useQueryClient();
 
@@ -205,9 +164,6 @@ export function useSaveDraft(environment: Environment = "PAPER") {
   });
 }
 
-/**
- * Validate draft for promotion.
- */
 export function useValidateDraft(environment: Environment = "PAPER") {
   return useMutation({
     mutationFn: async () => {
@@ -217,9 +173,6 @@ export function useValidateDraft(environment: Environment = "PAPER") {
   });
 }
 
-/**
- * Promote draft to active.
- */
 export function usePromoteDraft(environment: Environment = "PAPER") {
   const queryClient = useQueryClient();
 

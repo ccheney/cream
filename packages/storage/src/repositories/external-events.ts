@@ -18,18 +18,8 @@ import {
   toJson,
 } from "./base.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Content source type
- */
 export type ContentSourceType = "news" | "press_release" | "transcript" | "macro";
 
-/**
- * Event type classification
- */
 export type EventType =
   | "earnings"
   | "guidance"
@@ -46,23 +36,14 @@ export type EventType =
   | "legal"
   | "other";
 
-/**
- * Sentiment classification
- */
 export type Sentiment = "bullish" | "bearish" | "neutral";
 
-/**
- * Extracted entity
- */
 export interface ExtractedEntity {
   name: string;
   type: "company" | "person" | "product" | "event" | "location";
   ticker?: string;
 }
 
-/**
- * Extracted data point
- */
 export interface DataPoint {
   metric: string;
   value: number;
@@ -70,9 +51,6 @@ export interface DataPoint {
   period?: string;
 }
 
-/**
- * External event entity
- */
 export interface ExternalEvent {
   id: string;
   sourceType: ContentSourceType;
@@ -80,7 +58,6 @@ export interface ExternalEvent {
   eventTime: string;
   processedAt: string;
 
-  // Extraction results
   sentiment: Sentiment;
   confidence: number;
   importance: number;
@@ -89,24 +66,15 @@ export interface ExternalEvent {
   entities: ExtractedEntity[];
   dataPoints: DataPoint[];
 
-  // Computed scores
   sentimentScore: number;
   importanceScore: number;
   surpriseScore: number;
 
-  // Related instruments
   relatedInstruments: string[];
-
-  // Original content
   originalContent: string;
-
-  // Metadata
   createdAt: string;
 }
 
-/**
- * Create external event input
- */
 export interface CreateExternalEventInput {
   id: string;
   sourceType: ContentSourceType;
@@ -130,9 +98,6 @@ export interface CreateExternalEventInput {
   originalContent: string;
 }
 
-/**
- * External event filter options
- */
 export interface ExternalEventFilters {
   sourceType?: ContentSourceType | ContentSourceType[];
   eventType?: EventType | EventType[];
@@ -142,10 +107,6 @@ export interface ExternalEventFilters {
   toDate?: string;
   minImportance?: number;
 }
-
-// ============================================
-// Row Mapper
-// ============================================
 
 function mapExternalEventRow(row: Row): ExternalEvent {
   return {
@@ -173,21 +134,11 @@ function mapExternalEventRow(row: Row): ExternalEvent {
   };
 }
 
-// ============================================
-// Repository
-// ============================================
-
-/**
- * External events repository
- */
 export class ExternalEventsRepository {
   private readonly table = "external_events";
 
   constructor(private readonly client: TursoClient) {}
 
-  /**
-   * Create a new external event
-   */
   async create(input: CreateExternalEventInput): Promise<ExternalEvent> {
     try {
       await this.client.run(
@@ -224,9 +175,6 @@ export class ExternalEventsRepository {
     return this.findById(input.id) as Promise<ExternalEvent>;
   }
 
-  /**
-   * Create multiple external events (batch insert)
-   */
   async createMany(inputs: CreateExternalEventInput[]): Promise<number> {
     if (inputs.length === 0) {
       return 0;
@@ -248,18 +196,12 @@ export class ExternalEventsRepository {
     return created;
   }
 
-  /**
-   * Find event by ID
-   */
   async findById(id: string): Promise<ExternalEvent | null> {
     const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapExternalEventRow(row) : null;
   }
 
-  /**
-   * Find event by ID, throw if not found
-   */
   async findByIdOrThrow(id: string): Promise<ExternalEvent> {
     const event = await this.findById(id);
     if (!event) {
@@ -268,9 +210,6 @@ export class ExternalEventsRepository {
     return event;
   }
 
-  /**
-   * Find events with filters
-   */
   async findMany(
     filters: ExternalEventFilters = {},
     pagination?: PaginationOptions
@@ -319,7 +258,7 @@ export class ExternalEventsRepository {
       pagination
     );
 
-    // Filter by symbol if provided (requires JSON parsing)
+    // Symbol filtering done in-memory because SQLite JSON querying has limitations
     let filteredData = result.data.map(mapExternalEventRow);
     if (filters.symbol) {
       filteredData = filteredData.filter((event) =>
@@ -333,9 +272,6 @@ export class ExternalEventsRepository {
     };
   }
 
-  /**
-   * Find recent events (last N hours)
-   */
   async findRecent(hours = 24, limit = 100): Promise<ExternalEvent[]> {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
@@ -350,11 +286,7 @@ export class ExternalEventsRepository {
     return rows.map(mapExternalEventRow);
   }
 
-  /**
-   * Find events by symbol
-   */
   async findBySymbol(symbol: string, limit = 50): Promise<ExternalEvent[]> {
-    // SQLite JSON functions for searching in JSON array
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table}
        WHERE related_instruments LIKE ?
@@ -366,15 +298,11 @@ export class ExternalEventsRepository {
     return rows.map(mapExternalEventRow);
   }
 
-  /**
-   * Find events by multiple symbols
-   */
   async findBySymbols(symbols: string[], limit = 100): Promise<ExternalEvent[]> {
     if (symbols.length === 0) {
       return [];
     }
 
-    // Build OR conditions for each symbol
     const conditions = symbols.map(() => "related_instruments LIKE ?").join(" OR ");
     const args = symbols.map((s) => `%"${s}"%`);
 
@@ -389,9 +317,6 @@ export class ExternalEventsRepository {
     return rows.map(mapExternalEventRow);
   }
 
-  /**
-   * Find macro events only
-   */
   async findMacroEvents(limit = 50): Promise<ExternalEvent[]> {
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table}
@@ -404,9 +329,6 @@ export class ExternalEventsRepository {
     return rows.map(mapExternalEventRow);
   }
 
-  /**
-   * Get aggregate sentiment for a symbol
-   */
   async getSymbolSentiment(
     symbol: string,
     hours = 24
@@ -426,9 +348,6 @@ export class ExternalEventsRepository {
     };
   }
 
-  /**
-   * Delete old events
-   */
   async deleteOlderThan(days: number): Promise<number> {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
@@ -439,9 +358,6 @@ export class ExternalEventsRepository {
     return result.changes;
   }
 
-  /**
-   * Count events by source type
-   */
   async countBySourceType(): Promise<Record<ContentSourceType, number>> {
     const rows = await this.client.execute<{ source_type: string; count: number }>(
       `SELECT source_type, COUNT(*) as count FROM ${this.table} GROUP BY source_type`

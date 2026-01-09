@@ -1,21 +1,10 @@
 /**
- * Config Versions Repository
- *
- * Data access for config_versions table.
- *
  * @see docs/plans/ui/04-data-requirements.md
  */
 
 import type { Row, TursoClient } from "../turso.js";
 import { parseJson, RepositoryError, toBoolean, toJson } from "./base.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Config version entity
- */
 export interface ConfigVersion {
   id: string;
   environment: string;
@@ -28,9 +17,6 @@ export interface ConfigVersion {
   deactivatedAt: string | null;
 }
 
-/**
- * Create config version input
- */
 export interface CreateConfigVersionInput {
   id: string;
   environment: string;
@@ -38,10 +24,6 @@ export interface CreateConfigVersionInput {
   description?: string | null;
   createdBy?: string | null;
 }
-
-// ============================================
-// Row Mapper
-// ============================================
 
 function mapConfigVersionRow(row: Row): ConfigVersion {
   return {
@@ -57,21 +39,11 @@ function mapConfigVersionRow(row: Row): ConfigVersion {
   };
 }
 
-// ============================================
-// Repository
-// ============================================
-
-/**
- * Config versions repository
- */
 export class ConfigVersionsRepository {
   private readonly table = "config_versions";
 
   constructor(private readonly client: TursoClient) {}
 
-  /**
-   * Create a new config version
-   */
   async create(input: CreateConfigVersionInput): Promise<ConfigVersion> {
     try {
       await this.client.run(
@@ -93,18 +65,12 @@ export class ConfigVersionsRepository {
     return this.findById(input.id) as Promise<ConfigVersion>;
   }
 
-  /**
-   * Find config version by ID
-   */
   async findById(id: string): Promise<ConfigVersion | null> {
     const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
 
     return row ? mapConfigVersionRow(row) : null;
   }
 
-  /**
-   * Find config version by ID, throw if not found
-   */
   async findByIdOrThrow(id: string): Promise<ConfigVersion> {
     const config = await this.findById(id);
     if (!config) {
@@ -113,9 +79,6 @@ export class ConfigVersionsRepository {
     return config;
   }
 
-  /**
-   * Get active config for environment
-   */
   async getActive(environment: string): Promise<ConfigVersion | null> {
     const row = await this.client.get<Row>(
       `SELECT * FROM ${this.table} WHERE environment = ? AND active = 1`,
@@ -125,9 +88,6 @@ export class ConfigVersionsRepository {
     return row ? mapConfigVersionRow(row) : null;
   }
 
-  /**
-   * Get active config, throw if not found
-   */
   async getActiveOrThrow(environment: string): Promise<ConfigVersion> {
     const config = await this.getActive(environment);
     if (!config) {
@@ -140,9 +100,6 @@ export class ConfigVersionsRepository {
     return config;
   }
 
-  /**
-   * Find all versions for environment
-   */
   async findByEnvironment(environment: string, limit = 20): Promise<ConfigVersion[]> {
     const rows = await this.client.execute<Row>(
       `SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
@@ -152,20 +109,16 @@ export class ConfigVersionsRepository {
     return rows.map(mapConfigVersionRow);
   }
 
-  /**
-   * Activate a config version (deactivates current active)
-   */
+  /** Deactivates current active config before activating the new one. */
   async activate(id: string): Promise<ConfigVersion> {
     const config = await this.findByIdOrThrow(id);
     const now = new Date().toISOString();
 
-    // Deactivate current active config for this environment
     await this.client.run(
       `UPDATE ${this.table} SET active = 0, deactivated_at = ? WHERE environment = ? AND active = 1`,
       [now, config.environment]
     );
 
-    // Activate the new config
     await this.client.run(`UPDATE ${this.table} SET active = 1, activated_at = ? WHERE id = ?`, [
       now,
       id,
@@ -174,9 +127,6 @@ export class ConfigVersionsRepository {
     return this.findByIdOrThrow(id);
   }
 
-  /**
-   * Deactivate a config version
-   */
   async deactivate(id: string): Promise<ConfigVersion> {
     const now = new Date().toISOString();
 
@@ -192,9 +142,6 @@ export class ConfigVersionsRepository {
     return this.findByIdOrThrow(id);
   }
 
-  /**
-   * Compare two config versions
-   */
   async compare(
     id1: string,
     id2: string
@@ -207,8 +154,6 @@ export class ConfigVersionsRepository {
     const config2 = await this.findByIdOrThrow(id2);
 
     const differences: { path: string; value1: unknown; value2: unknown }[] = [];
-
-    // Simple shallow diff - in production you'd want deep diff
     const allKeys = new Set([...Object.keys(config1.config), ...Object.keys(config2.config)]);
 
     for (const key of allKeys) {
@@ -223,9 +168,6 @@ export class ConfigVersionsRepository {
     return { config1, config2, differences };
   }
 
-  /**
-   * Delete config version (cannot delete active)
-   */
   async delete(id: string): Promise<boolean> {
     const config = await this.findById(id);
 
@@ -242,9 +184,6 @@ export class ConfigVersionsRepository {
     return result.changes > 0;
   }
 
-  /**
-   * Get config history for environment
-   */
   async getHistory(
     environment: string,
     limit = 50

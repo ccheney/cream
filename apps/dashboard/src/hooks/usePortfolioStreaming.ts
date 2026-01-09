@@ -1,20 +1,10 @@
 /**
- * usePortfolioStreaming Hook
- *
- * Manages real-time streaming for portfolio positions.
- * Subscribes to quote updates for all position symbols and
- * calculates real-time P/L.
- *
  * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Position } from "@/lib/api/types";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
-
-// ============================================
-// Types
-// ============================================
 
 export interface StreamingQuote {
   symbol: string;
@@ -26,56 +16,35 @@ export interface StreamingQuote {
 }
 
 export interface StreamingPosition extends Position {
-  /** Live price from streaming (overrides Position.currentPrice) */
   livePrice: number;
-  /** Calculated market value using live price */
   liveMarketValue: number;
-  /** Calculated unrealized P/L using live price */
   liveUnrealizedPnl: number;
-  /** Calculated unrealized P/L % using live price */
   liveUnrealizedPnlPct: number;
-  /** Previous price for flash animation */
   previousPrice: number;
-  /** Is this position receiving live updates */
   isStreaming: boolean;
-  /** Last update timestamp */
   lastUpdated: Date | null;
 }
 
 export interface PortfolioStreamingState {
-  /** Total NAV with live prices */
   liveNav: number;
-  /** Total unrealized P/L with live prices */
   liveTotalPnl: number;
-  /** Total unrealized P/L % with live prices */
   liveTotalPnlPct: number;
-  /** Day P/L (requires open prices) */
   liveDayPnl: number;
-  /** Day P/L % */
   liveDayPnlPct: number;
-  /** Are we receiving streaming data */
   isStreaming: boolean;
-  /** Last portfolio update time */
   lastUpdated: Date | null;
 }
 
 export interface UsePortfolioStreamingOptions {
-  /** Cash balance for NAV calculation */
   cash?: number;
-  /** Initial positions from query */
   positions?: Position[];
-  /** Enable streaming */
   enabled?: boolean;
 }
 
 export interface UsePortfolioStreamingResult {
-  /** Positions with live pricing */
   streamingPositions: StreamingPosition[];
-  /** Portfolio-level streaming state */
   state: PortfolioStreamingState;
-  /** Get live quote for a symbol */
   getQuote: (symbol: string) => StreamingQuote | undefined;
-  /** Force refresh subscriptions */
   refresh: () => void;
 }
 

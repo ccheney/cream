@@ -10,10 +10,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { SymbolStream } from "@/components/feed/SymbolStream";
 
-// ============================================
-// Types
-// ============================================
-
 interface StreamPanelProps {
   symbol: string;
   isOpen: boolean;
@@ -21,17 +17,9 @@ interface StreamPanelProps {
   width?: number;
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_WIDTH = 400;
 const MIN_WIDTH = 300;
 const MAX_WIDTH = 600;
-
-// ============================================
-// Component
-// ============================================
 
 export function StreamPanel({
   symbol,
@@ -42,13 +30,11 @@ export function StreamPanel({
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Handle resize
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
   }, []);
 
-  // Handle keyboard shortcut to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -60,7 +46,6 @@ export function StreamPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Handle resize drag
   useEffect(() => {
     if (!isResizing) {
       return;
@@ -88,7 +73,6 @@ export function StreamPanel({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.3 }}
@@ -98,7 +82,6 @@ export function StreamPanel({
             onClick={onClose}
           />
 
-          {/* Panel */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -107,7 +90,6 @@ export function StreamPanel({
             style={{ width }}
             className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
           >
-            {/* Resize Handle */}
             <div
               role="slider"
               aria-label="Resize panel"
@@ -128,7 +110,6 @@ export function StreamPanel({
               }`}
             />
 
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
               <h2 className="text-lg font-semibold text-cream-900 dark:text-cream-100">
                 {symbol} Event Stream
@@ -158,7 +139,6 @@ export function StreamPanel({
               </button>
             </div>
 
-            {/* Stream Content */}
             <div className="flex-1 overflow-hidden">
               <SymbolStream
                 symbol={symbol}
@@ -173,10 +153,6 @@ export function StreamPanel({
     </AnimatePresence>
   );
 }
-
-// ============================================
-// Toggle Button Component
-// ============================================
 
 interface StreamToggleButtonProps {
   isOpen: boolean;

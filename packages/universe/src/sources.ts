@@ -105,19 +105,16 @@ export async function resolveIndexSource(
   let constituentsData: Array<{ symbol: string; name: string; sector: string }> = [];
 
   if (source.point_in_time && options.asOfDate) {
-    // Get point-in-time constituents for backtesting
     symbols = await client.getConstituentsAsOf(source.index_id, options.asOfDate);
     warnings.push(
       `Using point-in-time constituents as of ${options.asOfDate.toISOString().split("T")[0]}`
     );
   } else {
-    // Get current constituents
     const constituents = await client.getIndexConstituents(source.index_id);
     constituentsData = constituents;
     symbols = constituents.map((c) => c.symbol);
   }
 
-  // Build instruments with available metadata
   const instruments: ResolvedInstrument[] = symbols.map((symbol: string) => {
     const constituent = constituentsData.find((c) => c.symbol === symbol);
     const inst: ResolvedInstrument = {
@@ -157,31 +154,25 @@ export async function resolveETFHoldingsSource(
 
   const client = createFMPClient(options.fmpConfig);
 
-  // Get ETF symbols to process
   const etfSymbols: string[] = source.etf_symbol ? [source.etf_symbol] : (source.etf_symbols ?? []);
 
   if (etfSymbols.length === 0) {
     throw new Error("ETF holdings source requires etf_symbol or etf_symbols");
   }
 
-  // Fetch holdings for all ETFs
   const allHoldings: ResolvedInstrument[] = [];
 
   for (const etfSymbol of etfSymbols) {
     const holdings = await client.getETFHoldings(etfSymbol);
 
-    // Filter by weight
     let filteredHoldings = holdings.filter((h) => h.weightPercentage >= source.min_weight_pct);
 
-    // Sort by weight descending
     filteredHoldings.sort((a, b) => b.weightPercentage - a.weightPercentage);
 
-    // Apply top_n limit if specified
     if (source.top_n !== null && source.top_n !== undefined) {
       filteredHoldings = filteredHoldings.slice(0, source.top_n);
     }
 
-    // Convert to resolved instruments
     for (const holding of filteredHoldings) {
       allHoldings.push({
         symbol: holding.asset,
@@ -191,7 +182,6 @@ export async function resolveETFHoldingsSource(
     }
   }
 
-  // Deduplicate by symbol (keep first occurrence)
   const seen = new Set<string>();
   const instruments = allHoldings.filter((h) => {
     if (seen.has(h.symbol)) {
@@ -225,13 +215,11 @@ export async function resolveScreenerSource(
 
   const client = createFMPClient(options.fmpConfig);
 
-  // Map source filters to FMP screener filters
   const filters = source.filters as Record<string, unknown>;
   const fmpFilters: Parameters<typeof client.screenStocks>[0] = {
     limit: source.limit,
   };
 
-  // Map common filter names
   if (filters.market_cap_min) {
     fmpFilters.marketCapMoreThan = Number(filters.market_cap_min);
   }
@@ -264,7 +252,6 @@ export async function resolveScreenerSource(
 
   const results = await client.screenStocks(fmpFilters);
 
-  // Sort results if specified
   if (source.sort_by) {
     results.sort((a, b) => {
       let aVal: number;
@@ -288,7 +275,6 @@ export async function resolveScreenerSource(
     });
   }
 
-  // Convert to resolved instruments
   const instruments: ResolvedInstrument[] = results.map((r) => ({
     symbol: r.symbol,
     name: r.companyName,

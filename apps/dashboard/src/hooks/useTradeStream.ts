@@ -1,31 +1,15 @@
-/**
- * useTradeStream Hook
- *
- * Manages real-time trade streaming for the TradeTape component.
- * Connects to WebSocket and accumulates trades with memory management.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 1.2
- */
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { classifyTradeSide, type Trade } from "@/components/ui/trade-tape";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Raw trade message from WebSocket (Massive format)
- */
 export interface RawTradeMessage {
   ev: "T";
   sym: string;
-  p: number; // Price
-  s: number; // Size
-  x?: number; // Exchange ID
-  c?: number[]; // Conditions
-  t: number; // Timestamp (nanoseconds)
-  i?: string; // Trade ID
+  p: number;
+  s: number;
+  x?: number;
+  c?: number[];
+  t: number;
+  i?: string;
 }
 
 export interface UseTradeStreamOptions {

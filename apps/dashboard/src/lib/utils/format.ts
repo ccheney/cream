@@ -1,14 +1,6 @@
 /**
- * Formatting Utility Functions
- *
- * Standard formatting functions for currency, percentages, numbers, and dates.
- *
  * @see docs/plans/ui/22-typography.md number formatting
  */
-
-// ============================================
-// Currency Formatting
-// ============================================
 
 /**
  * Format a number as currency (USD).
@@ -45,10 +37,6 @@ export function formatCurrencyWithSign(value: number, decimals?: number): string
   return prefix + formatCurrency(value, decimals);
 }
 
-// ============================================
-// Percentage Formatting
-// ============================================
-
 /**
  * Format a number as a percentage.
  *
@@ -76,10 +64,6 @@ export function formatPercent(value: number, decimals = 2, showSign = false): st
 export function formatDecimalAsPercent(value: number, showSign = false, decimals = 2): string {
   return formatPercent(value * 100, decimals, showSign);
 }
-
-// ============================================
-// Number Formatting
-// ============================================
 
 /**
  * Format a large number with suffix (K, M, B, T).
@@ -143,10 +127,6 @@ export function formatGreek(value: number, decimals = 4): string {
 export function formatPrice(value: number): string {
   return value.toFixed(2);
 }
-
-// ============================================
-// Date/Time Formatting
-// ============================================
 
 /**
  * Format a date as relative time.

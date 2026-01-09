@@ -1,40 +1,20 @@
-/**
- * GreekCard Component
- *
- * Display card for an individual Greek metric with large value display.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 4.3
- */
+/** @see docs/plans/ui/40-streaming-data-integration.md Part 4.3 */
 
 "use client";
 
 import { memo } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 
-// ============================================
-// Types
-// ============================================
-
 export type GreekType = "delta" | "gamma" | "theta" | "vega" | "rho";
 
 export interface GreekCardProps {
-  /** Greek type */
   type: GreekType;
-  /** Current value */
   value: number;
-  /** Optional limit value */
   limit?: number;
-  /** Size variant */
   size?: "sm" | "md" | "lg";
-  /** Whether streaming is active */
   isStreaming?: boolean;
-  /** Additional class names */
   className?: string;
 }
-
-// ============================================
-// Greek Configuration
-// ============================================
 
 interface GreekConfig {
   letter: string;
@@ -88,30 +68,6 @@ const GREEK_CONFIG: Record<GreekType, GreekConfig> = {
   },
 };
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * GreekCard displays a single Greek metric with formatting and animation.
- *
- * Features:
- * - Greek letter with name
- * - Large animated value
- * - Unit description
- * - Optional limit display
- * - Color coding for positive/negative
- *
- * @example
- * ```tsx
- * <GreekCard
- *   type="gamma"
- *   value={8500}
- *   limit={10000}
- *   isStreaming
- * />
- * ```
- */
 export const GreekCard = memo(function GreekCard({
   type,
   value,
@@ -122,7 +78,6 @@ export const GreekCard = memo(function GreekCard({
 }: GreekCardProps) {
   const config = GREEK_CONFIG[type];
 
-  // Size classes
   const sizeClasses = {
     sm: { letter: "text-2xl", value: "text-lg", label: "text-[10px]", padding: "p-3" },
     md: { letter: "text-3xl", value: "text-xl", label: "text-xs", padding: "p-4" },
@@ -131,7 +86,7 @@ export const GreekCard = memo(function GreekCard({
 
   const sizes = sizeClasses[size];
 
-  // Determine value color
+  // Theta is inverted: negative theta (paying premium) is bad, positive (collecting) is good
   const valueColor =
     type === "theta"
       ? value <= 0
@@ -141,7 +96,6 @@ export const GreekCard = memo(function GreekCard({
         ? config.colorPositive
         : config.colorNegative;
 
-  // Calculate limit utilization if provided
   const limitUtilization = limit ? Math.abs(value) / limit : null;
   const isNearLimit = limitUtilization && limitUtilization >= 0.8;
   const isAtLimit = limitUtilization && limitUtilization >= 0.95;
@@ -157,20 +111,16 @@ export const GreekCard = memo(function GreekCard({
         ${className}
       `}
     >
-      {/* Streaming indicator */}
       {isStreaming && (
         <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
       )}
 
-      {/* Greek letter */}
       <div className={`${sizes.letter} font-serif text-cream-300 dark:text-cream-600`}>
         {config.letter}
       </div>
 
-      {/* Greek name */}
       <div className={`${sizes.label} text-cream-500 dark:text-cream-400 mt-1`}>{config.name}</div>
 
-      {/* Value */}
       <div className={`mt-2 ${sizes.value} font-mono font-semibold ${valueColor}`}>
         {type === "delta" || type === "vega" ? (
           <AnimatedNumber
@@ -199,10 +149,8 @@ export const GreekCard = memo(function GreekCard({
         )}
       </div>
 
-      {/* Unit description */}
       <div className={`${sizes.label} text-cream-400 dark:text-cream-500 mt-1`}>{config.unit}</div>
 
-      {/* Limit indicator */}
       {limit !== undefined && (
         <div className={`${sizes.label} text-cream-400 mt-2`}>
           Limit: {config.format(limit)}

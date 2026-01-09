@@ -9,10 +9,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Constants
-// ============================================
-
 /**
  * Default configuration for walk-forward validation
  */
@@ -35,10 +31,6 @@ export const WF_DEFAULTS = {
  * Walk-forward method types
  */
 export type WalkForwardMethod = "rolling" | "anchored";
-
-// ============================================
-// Schemas
-// ============================================
 
 /**
  * Input parameters for walk-forward validation
@@ -118,10 +110,6 @@ export const WalkForwardResultSchema = z.object({
 
 export type WalkForwardResult = z.infer<typeof WalkForwardResultSchema>;
 
-// ============================================
-// Core Functions
-// ============================================
-
 /**
  * Calculate Sharpe ratio from returns.
  *
@@ -147,7 +135,6 @@ function calculateSharpe(
   const variance = squaredDiffs.reduce((a, b) => a + b, 0) / (returns.length - 1);
   const std = Math.sqrt(variance);
 
-  // Use tolerance for near-zero std
   if (std < 1e-15) {
     return 0;
   }
@@ -212,16 +199,13 @@ export function walkForwardValidation(input: WalkForwardInput): WalkForwardResul
     let end: number;
 
     if (method === "rolling") {
-      // Rolling window: each period is a fixed-size window
       start = i * periodSize;
       end = start + periodSize;
     } else {
-      // Anchored: training starts from beginning, window grows
       start = 0;
       end = (i + 1) * periodSize;
     }
 
-    // Ensure we don't exceed array bounds
     end = Math.min(end, n);
 
     const periodReturns = returns.slice(start, end);
@@ -231,22 +215,19 @@ export function walkForwardValidation(input: WalkForwardInput): WalkForwardResul
     const testSize = periodReturns.length - trainSize;
 
     if (trainSize < 2 || testSize < 2) {
-      continue; // Skip periods with insufficient data
+      continue;
     }
 
-    // In-sample (training)
     const isReturns = periodReturns.slice(0, trainSize);
     const isSignals = periodSignals.slice(0, trainSize);
     const isStrategyReturns = calculateStrategyReturns(isReturns, isSignals);
     const inSampleSharpe = calculateSharpe(isStrategyReturns);
 
-    // Out-of-sample (test)
     const oosReturns = periodReturns.slice(trainSize);
     const oosSignals = periodSignals.slice(trainSize);
     const oosStrategyReturns = calculateStrategyReturns(oosReturns, oosSignals);
     const outOfSampleSharpe = calculateSharpe(oosStrategyReturns);
 
-    // Period efficiency
     const efficiency = inSampleSharpe !== 0 ? outOfSampleSharpe / inSampleSharpe : 0;
 
     periods.push({
@@ -280,7 +261,6 @@ export function walkForwardValidation(input: WalkForwardInput): WalkForwardResul
     };
   }
 
-  // Calculate summary statistics
   const isSharpes = periods.map((p) => p.inSampleSharpe);
   const oosSharpes = periods.map((p) => p.outOfSampleSharpe);
 
@@ -296,15 +276,12 @@ export function walkForwardValidation(input: WalkForwardInput): WalkForwardResul
       Math.max(oosSharpes.length - 1, 1)
   );
 
-  // Walk-forward efficiency
   const efficiency = meanIS !== 0 ? meanOOS / meanIS : 0;
   const degradation = 1 - efficiency;
 
-  // Consistency (% of periods with positive OOS)
   const positiveOOS = periods.filter((p) => p.oosPositive).length;
   const consistency = positiveOOS / periods.length;
 
-  // Determine interpretation
   let interpretation: "robust" | "marginal" | "overfit";
   if (efficiency >= WF_DEFAULTS.minEfficiency && consistency >= WF_DEFAULTS.minConsistency) {
     interpretation = "robust";
@@ -314,7 +291,6 @@ export function walkForwardValidation(input: WalkForwardInput): WalkForwardResul
     interpretation = "overfit";
   }
 
-  // Check if passes validation
   const passed =
     efficiency >= WF_DEFAULTS.minEfficiency && consistency >= WF_DEFAULTS.minConsistency;
 
@@ -504,7 +480,6 @@ export function compareWalkForwardMethods(
   let better: "rolling" | "anchored" | "tie";
   let explanation: string;
 
-  // Compare based on efficiency and consistency
   const rollingScore = rolling.efficiency + rolling.consistency;
   const anchoredScore = anchored.efficiency + anchored.consistency;
 

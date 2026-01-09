@@ -11,13 +11,6 @@
 import type React from "react";
 import type { ConnectionStatus } from "../../lib/ws/connection-monitor";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Connection banner props.
- */
 export interface ConnectionBannerProps {
   /** Current connection status */
   status: ConnectionStatus;
@@ -32,10 +25,6 @@ export interface ConnectionBannerProps {
   /** Test ID for testing */
   testId?: string;
 }
-
-// ============================================
-// Styles
-// ============================================
 
 const bannerStyles = {
   container: {
@@ -114,16 +103,11 @@ const bannerStyles = {
   },
 };
 
-// Inline keyframes for spinner
 const spinnerKeyframes = `
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
 `;
-
-// ============================================
-// Icons
-// ============================================
 
 function WarningIcon({ style }: { style?: React.CSSProperties }) {
   return (
@@ -184,13 +168,6 @@ function RefreshIcon({ style }: { style?: React.CSSProperties }) {
   );
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Format milliseconds as human-readable time.
- */
 export function formatRetryTime(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
   if (seconds <= 0) {
@@ -206,9 +183,6 @@ export function formatRetryTime(ms: number): string {
   return `${minutes} minute${minutes > 1 ? "s" : ""}`;
 }
 
-/**
- * Get status message based on connection state.
- */
 export function getStatusMessage(
   status: ConnectionStatus,
   nextRetryIn: number,
@@ -244,24 +218,6 @@ export function getStatusMessage(
   }
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Connection banner component for WebSocket disconnection state.
- *
- * @example
- * ```tsx
- * <ConnectionBanner
- *   status="reconnecting"
- *   retryCount={3}
- *   nextRetryIn={8000}
- *   onReconnect={() => ws.connect()}
- *   onDismiss={() => setDismissed(true)}
- * />
- * ```
- */
 export function ConnectionBanner({
   status,
   retryCount = 0,
@@ -270,7 +226,6 @@ export function ConnectionBanner({
   onDismiss,
   testId = "connection-banner",
 }: ConnectionBannerProps) {
-  // Don't render when connected
   if (status === "connected") {
     return null;
   }
@@ -283,18 +238,14 @@ export function ConnectionBanner({
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
       <div role="alert" aria-live="assertive" data-testid={testId} style={bannerStyles.container}>
-        {/* Warning Icon */}
         <WarningIcon style={bannerStyles.icon} />
 
-        {/* Content */}
         <div style={bannerStyles.content}>
           <div style={bannerStyles.title}>{title}</div>
           <div style={bannerStyles.message}>{message}</div>
         </div>
 
-        {/* Actions */}
         <div style={bannerStyles.actions}>
-          {/* Reconnect Button */}
           {/* biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior */}
           <button
             type="button"
@@ -323,7 +274,6 @@ export function ConnectionBanner({
             {isReconnecting ? "Reconnecting..." : "Reconnect Now"}
           </button>
 
-          {/* Dismiss Button */}
           {onDismiss && (
             // biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
             <button

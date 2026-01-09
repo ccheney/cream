@@ -12,10 +12,6 @@
 import type { ConnectionState } from "@/hooks/use-connection-recovery";
 import { useConnectionStatus, useWSStore } from "@/stores/websocket";
 
-// ============================================
-// Types
-// ============================================
-
 export interface ConnectionStatusProps {
   /** Connection state override (uses WebSocket store if not provided) */
   state?: ConnectionState;
@@ -30,10 +26,6 @@ export interface ConnectionStatusProps {
   /** Compact mode (just the dot) */
   compact?: boolean;
 }
-
-// ============================================
-// Status Dot Component
-// ============================================
 
 interface StatusDotProps {
   color: "green" | "yellow" | "red" | "gray";
@@ -68,10 +60,6 @@ function StatusDot({ color, pulse }: StatusDotProps) {
   );
 }
 
-// ============================================
-// Connection Status Component
-// ============================================
-
 export function ConnectionStatus({
   state: stateProp,
   retryCountdown,
@@ -80,19 +68,16 @@ export function ConnectionStatus({
   detailed = false,
   compact = false,
 }: ConnectionStatusProps) {
-  // Use WebSocket store state if not provided
   const wsStatus = useConnectionStatus();
   const wsState = useWSStore((s) => ({
     reconnectAttempts: s.reconnectAttempts,
     lastError: s.lastError,
   }));
 
-  // Map WS status to connection state
   const state: ConnectionState = stateProp || (wsStatus as ConnectionState);
   const attempt = retryAttempt || wsState.reconnectAttempts;
 
-  // Determine display values
-  const getStatusInfo = () => {
+  function getStatusInfo() {
     switch (state) {
       case "connected":
         return {
@@ -144,12 +129,11 @@ export function ConnectionStatus({
           ariaLabel: "Unknown connection state",
         };
     }
-  };
+  }
 
   const status = getStatusInfo();
   const countdownSeconds = retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
 
-  // Compact mode: just the dot with tooltip
   if (compact) {
     return (
       <output
@@ -168,18 +152,13 @@ export function ConnectionStatus({
       aria-live="polite"
       aria-label={status.ariaLabel}
     >
-      {/* Status Dot */}
       <StatusDot color={status.color} pulse={status.pulse} />
-
-      {/* Status Text */}
       <span className="text-xs text-text-secondary">{status.text}</span>
 
-      {/* Retry Countdown */}
       {countdownSeconds !== null && countdownSeconds > 0 && (
         <span className="text-xs text-text-muted">(retrying in {countdownSeconds}s)</span>
       )}
 
-      {/* Retry Button */}
       {(state === "error" || state === "disconnected") && onRetry && (
         <button
           type="button"
@@ -196,7 +175,6 @@ export function ConnectionStatus({
         </button>
       )}
 
-      {/* Detailed Info */}
       {detailed && wsState.lastError && (
         <span className="text-xs text-text-muted" title={wsState.lastError.message}>
           ({wsState.lastError.name})
@@ -205,10 +183,6 @@ export function ConnectionStatus({
     </output>
   );
 }
-
-// ============================================
-// Connection Banner Component
-// ============================================
 
 export interface ConnectionBannerProps {
   /** Connection state */
@@ -230,7 +204,6 @@ export function ConnectionBanner({
   onRetry,
   onDismiss,
 }: ConnectionBannerProps) {
-  // Only show for error/disconnected states
   if (state === "connected" || state === "connecting") {
     return null;
   }
@@ -253,9 +226,7 @@ export function ConnectionBanner({
         flex items-center justify-between gap-4
       `}
     >
-      {/* Icon + Message */}
       <div className="flex items-center gap-2">
-        {/* Warning Icon */}
         <svg
           className={`h-4 w-4 ${textColor}`}
           fill="none"
@@ -271,7 +242,6 @@ export function ConnectionBanner({
           />
         </svg>
 
-        {/* Message */}
         <span className={`text-sm ${textColor}`}>
           {isReconnecting
             ? `Reconnecting...${countdownSeconds ? ` (${countdownSeconds}s)` : ""}`
@@ -279,9 +249,7 @@ export function ConnectionBanner({
         </span>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2">
-        {/* Retry Button */}
         {onRetry && (
           <button
             type="button"
@@ -299,7 +267,6 @@ export function ConnectionBanner({
           </button>
         )}
 
-        {/* Dismiss Button */}
         {onDismiss && (
           <button
             type="button"
@@ -323,9 +290,5 @@ export function ConnectionBanner({
     </div>
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default ConnectionStatus;

@@ -25,10 +25,6 @@ import {
   trimData,
 } from "@/lib/chart-updaters.js";
 
-// ============================================
-// Types
-// ============================================
-
 export interface UseChartUpdatesOptions {
   /** Chart type to subscribe to */
   chartType: ChartUpdateType;
@@ -81,10 +77,6 @@ export interface ChartUpdatesActions {
 }
 
 export type UseChartUpdatesReturn = ChartUpdatesState & ChartUpdatesActions;
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_MAX_DATA_POINTS = 500;
 const DEFAULT_THROTTLE_MS = 100;

@@ -9,10 +9,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Constants
-// ============================================
-
 export const KALSHI_WEBSOCKET_URL = "wss://trading-api.kalshi.com/trade-api/ws/v2";
 export const KALSHI_DEMO_WEBSOCKET_URL = "wss://demo-api.kalshi.co/trade-api/ws/v2";
 
@@ -27,13 +23,6 @@ export const DEFAULT_RECONNECT_CONFIG = {
   maxRetries: 10,
 };
 
-// ============================================
-// Message Schemas
-// ============================================
-
-/**
- * Available WebSocket channels
- */
 export type KalshiWebSocketChannel =
   | "orderbook_delta"
   | "ticker"
@@ -41,9 +30,6 @@ export type KalshiWebSocketChannel =
   | "fill"
   | "market_lifecycle_v2";
 
-/**
- * Subscribe command message
- */
 export const SubscribeCommandSchema = z.object({
   id: z.number(),
   cmd: z.literal("subscribe"),
@@ -54,9 +40,6 @@ export const SubscribeCommandSchema = z.object({
 });
 export type SubscribeCommand = z.infer<typeof SubscribeCommandSchema>;
 
-/**
- * Unsubscribe command message
- */
 export const UnsubscribeCommandSchema = z.object({
   id: z.number(),
   cmd: z.literal("unsubscribe"),
@@ -67,9 +50,6 @@ export const UnsubscribeCommandSchema = z.object({
 });
 export type UnsubscribeCommand = z.infer<typeof UnsubscribeCommandSchema>;
 
-/**
- * Ticker update message
- */
 export const TickerMessageSchema = z.object({
   type: z.literal("ticker"),
   msg: z.object({
@@ -86,9 +66,6 @@ export const TickerMessageSchema = z.object({
 });
 export type TickerMessage = z.infer<typeof TickerMessageSchema>;
 
-/**
- * Orderbook delta message
- */
 export const OrderbookDeltaMessageSchema = z.object({
   type: z.literal("orderbook_delta"),
   msg: z.object({
@@ -101,9 +78,6 @@ export const OrderbookDeltaMessageSchema = z.object({
 });
 export type OrderbookDeltaMessage = z.infer<typeof OrderbookDeltaMessageSchema>;
 
-/**
- * Trade message
- */
 export const TradeMessageSchema = z.object({
   type: z.literal("trade"),
   msg: z.object({
@@ -119,9 +93,6 @@ export const TradeMessageSchema = z.object({
 });
 export type TradeMessage = z.infer<typeof TradeMessageSchema>;
 
-/**
- * Market lifecycle message
- */
 export const MarketLifecycleMessageSchema = z.object({
   type: z.literal("market_lifecycle_v2"),
   msg: z.object({
@@ -132,22 +103,12 @@ export const MarketLifecycleMessageSchema = z.object({
 });
 export type MarketLifecycleMessage = z.infer<typeof MarketLifecycleMessageSchema>;
 
-/**
- * Union of all WebSocket messages
- */
 export type KalshiWebSocketMessage =
   | TickerMessage
   | OrderbookDeltaMessage
   | TradeMessage
   | MarketLifecycleMessage;
 
-// ============================================
-// Cached Market State
-// ============================================
-
-/**
- * In-memory market state cache entry
- */
 export interface CachedMarketState {
   ticker: string;
   yesBid?: number;
@@ -161,9 +122,6 @@ export interface CachedMarketState {
   expiresAt: Date;
 }
 
-/**
- * In-memory cache for market state
- */
 export class MarketStateCache {
   private cache: Map<string, CachedMarketState> = new Map();
   private readonly ttlMs: number;
@@ -172,9 +130,6 @@ export class MarketStateCache {
     this.ttlMs = ttlMs;
   }
 
-  /**
-   * Update cache with ticker data
-   */
   updateFromTicker(msg: TickerMessage["msg"]): void {
     const now = new Date();
     const existing = this.cache.get(msg.market_ticker) ?? {
@@ -197,9 +152,6 @@ export class MarketStateCache {
     });
   }
 
-  /**
-   * Get cached market state
-   */
   get(ticker: string): CachedMarketState | undefined {
     const entry = this.cache.get(ticker);
     if (!entry) {
@@ -215,16 +167,10 @@ export class MarketStateCache {
     return entry;
   }
 
-  /**
-   * Clear all cached entries
-   */
   clear(): void {
     this.cache.clear();
   }
 
-  /**
-   * Remove expired entries
-   */
   prune(): number {
     const now = new Date();
     let removed = 0;
@@ -239,17 +185,10 @@ export class MarketStateCache {
     return removed;
   }
 
-  /**
-   * Get all cached tickers
-   */
   getAllTickers(): string[] {
     return [...this.cache.keys()];
   }
 }
-
-// ============================================
-// WebSocket Client
-// ============================================
 
 export type KalshiWebSocketCallback = (message: KalshiWebSocketMessage) => void;
 
@@ -273,9 +212,6 @@ export interface KalshiWebSocketConfig {
 
 export type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
 
-/**
- * Kalshi WebSocket client for real-time market data
- */
 export class KalshiWebSocketClient {
   private ws: WebSocket | null = null;
   private messageId = 0;
@@ -315,23 +251,14 @@ export class KalshiWebSocketClient {
     this.cache = new MarketStateCache(this.config.cacheTtlMs);
   }
 
-  /**
-   * Get current connection state
-   */
   getConnectionState(): ConnectionState {
     return this.connectionState;
   }
 
-  /**
-   * Get the market state cache
-   */
   getCache(): MarketStateCache {
     return this.cache;
   }
 
-  /**
-   * Connect to Kalshi WebSocket
-   */
   async connect(): Promise<void> {
     if (this.connectionState === "connected" || this.connectionState === "connecting") {
       return;
@@ -379,9 +306,6 @@ export class KalshiWebSocketClient {
     });
   }
 
-  /**
-   * Disconnect from WebSocket
-   */
   disconnect(): void {
     this.stopHeartbeat();
     this.stopReconnect();
@@ -394,9 +318,6 @@ export class KalshiWebSocketClient {
     this.connectionState = "disconnected";
   }
 
-  /**
-   * Subscribe to a channel for specific market tickers
-   */
   subscribe(
     channel: KalshiWebSocketChannel,
     tickers: string[],
@@ -404,17 +325,14 @@ export class KalshiWebSocketClient {
   ): void {
     const key = this.getSubscriptionKey(channel, tickers);
 
-    // Store callback
     if (!this.subscriptions.has(key)) {
       this.subscriptions.set(key, new Set());
     }
     this.subscriptions.get(key)?.add(callback);
 
-    // Send subscription if connected
     if (this.connectionState === "connected" && this.ws) {
       this.sendSubscription(channel, tickers);
     } else {
-      // Queue for when connected
       if (!this.pendingSubscriptions.has(channel)) {
         this.pendingSubscriptions.set(channel, new Set());
       }
@@ -424,9 +342,6 @@ export class KalshiWebSocketClient {
     }
   }
 
-  /**
-   * Unsubscribe from a channel
-   */
   unsubscribe(
     channel: KalshiWebSocketChannel,
     tickers: string[],
@@ -447,30 +362,17 @@ export class KalshiWebSocketClient {
     }
   }
 
-  /**
-   * Add connection event listener
-   */
   onConnect(callback: () => void): void {
     this.onConnectCallbacks.add(callback);
   }
 
-  /**
-   * Add disconnect event listener
-   */
   onDisconnect(callback: (reason?: string) => void): void {
     this.onDisconnectCallbacks.add(callback);
   }
 
-  /**
-   * Add error event listener
-   */
   onError(callback: (error: Error) => void): void {
     this.onErrorCallbacks.add(callback);
   }
-
-  // ============================================
-  // Private Methods
-  // ============================================
 
   private getSubscriptionKey(channel: string, tickers: string[]): string {
     return `${channel}:${tickers.sort().join(",")}`;
@@ -514,7 +416,6 @@ export class KalshiWebSocketClient {
     try {
       const parsed = JSON.parse(data);
 
-      // Handle different message types
       if (parsed.type === "ticker") {
         const result = TickerMessageSchema.safeParse(parsed);
         if (result.success) {
@@ -543,7 +444,6 @@ export class KalshiWebSocketClient {
   }
 
   private notifySubscribers(message: KalshiWebSocketMessage): void {
-    // Notify all subscribers that match the message type
     for (const [key, callbacks] of this.subscriptions.entries()) {
       if (key.startsWith(message.type)) {
         for (const cb of callbacks) {
@@ -603,7 +503,6 @@ export class KalshiWebSocketClient {
   }
 
   private resubscribe(): void {
-    // Re-send all pending subscriptions
     for (const [channel, tickers] of this.pendingSubscriptions.entries()) {
       if (tickers.size > 0) {
         this.sendSubscription(channel, [...tickers]);
@@ -611,7 +510,6 @@ export class KalshiWebSocketClient {
     }
     this.pendingSubscriptions.clear();
 
-    // Re-send active subscriptions
     for (const key of this.subscriptions.keys()) {
       const [channel, tickerStr] = key.split(":");
       const tickers = tickerStr?.split(",").filter(Boolean) ?? [];
@@ -637,13 +535,6 @@ export class KalshiWebSocketClient {
   }
 }
 
-// ============================================
-// Factory Function
-// ============================================
-
-/**
- * Create a Kalshi WebSocket client
- */
 export function createKalshiWebSocketClient(config?: KalshiWebSocketConfig): KalshiWebSocketClient {
   return new KalshiWebSocketClient(config);
 }

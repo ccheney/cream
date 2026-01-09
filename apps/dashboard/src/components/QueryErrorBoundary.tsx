@@ -14,32 +14,18 @@ import type { ReactNode } from "react";
 import { ErrorState } from "./ErrorState";
 import { ErrorBoundary } from "./error-boundary";
 
-// ============================================
-// Types
-// ============================================
-
 export interface QueryErrorBoundaryProps {
-  /** Children to wrap */
   children: ReactNode;
-  /** Optional title for the error state */
   title?: string;
-  /** Optional custom fallback (overrides default ErrorState) */
   fallback?: ReactNode;
-  /** Callback when error occurs */
   onError?: (error: Error) => void;
-  /** Whether to show retry button (default: true) */
   showRetry?: boolean;
-  /** Additional action buttons */
   actions?: Array<{
     label: string;
     onClick: () => void;
     variant?: "primary" | "secondary";
   }>;
 }
-
-// ============================================
-// Component
-// ============================================
 
 /**
  * Error boundary that integrates with TanStack Query.
@@ -101,9 +87,5 @@ export function QueryErrorBoundary({
     </QueryErrorResetBoundary>
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default QueryErrorBoundary;

@@ -11,65 +11,38 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export type SwipeDirection = "left" | "right" | "up" | "down";
 
 export interface TouchGestureHandlers {
-  /** Called on swipe gesture */
   onSwipe?: (direction: SwipeDirection, distance: number) => void;
-  /** Called on long press (default: 500ms) */
   onLongPress?: () => void;
-  /** Called on pull down (for refresh) */
   onPullRefresh?: () => void | Promise<void>;
 }
 
 export interface TouchGestureOptions {
-  /** Minimum swipe distance in pixels (default: 50) */
   swipeThreshold?: number;
-  /** Long press duration in ms (default: 500) */
   longPressDelay?: number;
-  /** Pull refresh threshold in pixels (default: 80) */
   pullThreshold?: number;
-  /** Whether gestures are enabled (default: true) */
   enabled?: boolean;
 }
 
 export interface TouchGestureState {
-  /** Whether a touch is active */
   isTouching: boolean;
-  /** Whether long press is active */
   isLongPressing: boolean;
-  /** Whether pull refresh is active */
   isPulling: boolean;
-  /** Current pull distance */
   pullDistance: number;
-  /** Whether refresh is in progress */
   isRefreshing: boolean;
 }
 
 export interface UseTouchGesturesReturn<T extends HTMLElement> {
-  /** Ref to attach to the element */
   ref: React.RefObject<T | null>;
-  /** Current gesture state */
   state: TouchGestureState;
-  /** Manually reset state */
   reset: () => void;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_SWIPE_THRESHOLD = 50;
 const DEFAULT_LONG_PRESS_DELAY = 500;
 const DEFAULT_PULL_THRESHOLD = 80;
-
-// ============================================
-// Hook
-// ============================================
 
 /**
  * Hook for touch gesture handling.
@@ -158,7 +131,6 @@ export function useTouchGestures<T extends HTMLElement = HTMLDivElement>(
 
       setState((prev) => ({ ...prev, isTouching: true }));
 
-      // Start long press timer
       if (handlers.onLongPress) {
         longPressTimerRef.current = setTimeout(() => {
           setState((prev) => ({ ...prev, isLongPressing: true }));
@@ -180,7 +152,6 @@ export function useTouchGestures<T extends HTMLElement = HTMLDivElement>(
       const deltaX = touch.clientX - touchStartRef.current.x;
       const deltaY = touch.clientY - touchStartRef.current.y;
 
-      // Cancel long press on significant movement
       if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);

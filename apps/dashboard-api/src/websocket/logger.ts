@@ -7,18 +7,8 @@
  * @see docs/plans/ui/08-realtime.md lines 130-139
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Log levels.
- */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-/**
- * WebSocket event types.
- */
 export type WebSocketEventType =
   | "connection.attempt"
   | "connection.success"
@@ -39,9 +29,6 @@ export type WebSocketEventType =
   | "heartbeat.pong"
   | "heartbeat.timeout";
 
-/**
- * Base log entry fields.
- */
 export interface LogEntry {
   timestamp: string;
   level: LogLevel;
@@ -53,9 +40,6 @@ export interface LogEntry {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Connection event metadata.
- */
 export interface ConnectionEventMeta {
   ip?: string;
   userAgent?: string;
@@ -65,9 +49,6 @@ export interface ConnectionEventMeta {
   attemptCount?: number;
 }
 
-/**
- * Message event metadata.
- */
 export interface MessageEventMeta {
   type: string;
   size: number;
@@ -75,9 +56,6 @@ export interface MessageEventMeta {
   error?: string;
 }
 
-/**
- * Subscription event metadata.
- */
 export interface SubscriptionEventMeta {
   channels?: string[];
   symbols?: string[];
@@ -86,9 +64,6 @@ export interface SubscriptionEventMeta {
   reason?: string;
 }
 
-/**
- * Logger configuration.
- */
 export interface LoggerConfig {
   level: LogLevel;
   enabled: boolean;
@@ -97,13 +72,6 @@ export interface LoggerConfig {
   maxRawMessageLength: number;
 }
 
-// ============================================
-// Constants
-// ============================================
-
-/**
- * Log level priorities.
- */
 export const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
@@ -111,9 +79,6 @@ export const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   error: 3,
 };
 
-/**
- * Default logger configuration.
- */
 export const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
   level: "info",
   enabled: true,
@@ -122,34 +87,18 @@ export const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
   maxRawMessageLength: 500,
 };
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Generate a correlation ID.
- */
 export function generateCorrelationId(): string {
   return `ws-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/**
- * Check if log level should be output.
- */
 export function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
   return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[minLevel];
 }
 
-/**
- * Get current ISO timestamp.
- */
 export function getTimestamp(): string {
   return new Date().toISOString();
 }
 
-/**
- * Truncate raw message for logging.
- */
 export function truncateMessage(raw: string, maxLength: number): string {
   if (raw.length <= maxLength) {
     return raw;
@@ -157,13 +106,7 @@ export function truncateMessage(raw: string, maxLength: number): string {
   return `${raw.slice(0, maxLength)}...[truncated]`;
 }
 
-// ============================================
-// WebSocket Logger
-// ============================================
-
 /**
- * WebSocket structured logger.
- *
  * @example
  * ```ts
  * const logger = createWebSocketLogger();
@@ -174,11 +117,9 @@ export function truncateMessage(raw: string, maxLength: number): string {
  * ```
  */
 export interface WebSocketLogger {
-  // Configuration
   config: LoggerConfig;
   setLevel(level: LogLevel): void;
 
-  // Connection lifecycle
   connectionAttempt(meta: { userId?: string; ip: string; userAgent?: string }): void;
   connectionSuccess(meta: { connectionId: string; userId?: string; protocol?: string }): void;
   connectionFailure(meta: { userId?: string; ip: string; reason: string }): void;
@@ -190,36 +131,27 @@ export interface WebSocketLogger {
   }): void;
   reconnectAttempt(meta: { userId: string; connectionId: string; attemptCount: number }): void;
 
-  // Messages
   messageReceived(meta: { connectionId: string; type: string; size: number }): void;
   messageSent(meta: { connectionId: string; type: string; size: number }): void;
   messageInvalid(meta: { connectionId: string; error: string; raw?: string }): void;
 
-  // Subscriptions
   channelSubscribe(meta: { connectionId: string; userId?: string; channels: string[] }): void;
   channelUnsubscribe(meta: { connectionId: string; channels: string[] }): void;
   symbolSubscribe(meta: { connectionId: string; symbols: string[] }): void;
   symbolUnsubscribe(meta: { connectionId: string; symbols: string[] }): void;
   authFailure(meta: { userId?: string; channel: string; reason: string }): void;
 
-  // Rate limiting
   rateLimitExceeded(meta: { connectionId: string; userId?: string; reason: string }): void;
 
-  // Errors
   broadcastError(meta: { connectionId: string; error: string }): void;
 
-  // Heartbeat
   heartbeatPing(meta: { connectionId: string }): void;
   heartbeatPong(meta: { connectionId: string; latency: number }): void;
   heartbeatTimeout(meta: { connectionId: string }): void;
 
-  // Raw logging
   log(entry: LogEntry): void;
 }
 
-/**
- * Create a WebSocket logger instance.
- */
 export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSocketLogger {
   const fullConfig: LoggerConfig = { ...DEFAULT_LOGGER_CONFIG, ...config };
 
@@ -490,9 +422,5 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
     log,
   };
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default createWebSocketLogger;

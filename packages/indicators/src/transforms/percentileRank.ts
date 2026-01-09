@@ -20,13 +20,6 @@
  * @see https://en.wikipedia.org/wiki/Percentile_rank
  */
 
-// ============================================
-// Parameters
-// ============================================
-
-/**
- * Percentile rank transform parameters.
- */
 export interface PercentileRankParams {
   /** Rolling window lookback period */
   lookback: number;
@@ -42,13 +35,6 @@ export const PERCENTILE_RANK_DEFAULTS: PercentileRankParams = {
   minSamples: 10,
 };
 
-// ============================================
-// Result Types
-// ============================================
-
-/**
- * Percentile rank result.
- */
 export interface PercentileRankResult {
   /** Unix timestamp in milliseconds */
   timestamp: number;
@@ -57,10 +43,6 @@ export interface PercentileRankResult {
   /** Number of samples in window */
   sampleCount: number;
 }
-
-// ============================================
-// Calculation Functions
-// ============================================
 
 /**
  * Calculate percentile rank of a value within a sample.
@@ -74,7 +56,6 @@ export function calculatePercentileOfValue(value: number, sample: number[]): num
     return 50; // Default to middle
   }
 
-  // Count values less than or equal to current value
   let count = 0;
   for (const v of sample) {
     if (v <= value) {
@@ -82,7 +63,6 @@ export function calculatePercentileOfValue(value: number, sample: number[]): num
     }
   }
 
-  // Calculate percentile (excluding current value from denominator for rolling calculation)
   return (count / sample.length) * 100;
 }
 
@@ -107,7 +87,6 @@ export function calculatePercentileRank(
   }
 
   for (let i = minSamples - 1; i < values.length; i++) {
-    // Get window (use all available up to lookback)
     const windowStart = Math.max(0, i - lookback + 1);
     const window = values.slice(windowStart, i + 1);
 
@@ -157,10 +136,6 @@ export function percentileRankRequiredPeriods(
 ): number {
   return params.minSamples ?? 10;
 }
-
-// ============================================
-// Percentile Rank Interpretation
-// ============================================
 
 /**
  * Get percentile rank quintile (0-4).
@@ -255,10 +230,6 @@ export function getRegimeSignal(
 export function generatePercentileOutputName(inputName: string, suffix = "pct"): string {
   return `${inputName}_${suffix}`;
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   calculatePercentileRank,

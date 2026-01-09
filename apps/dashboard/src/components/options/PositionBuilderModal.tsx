@@ -1,10 +1,3 @@
-/**
- * PositionBuilderModal Component
- *
- * Modal for building options positions from contract clicks.
- * Supports order type, quantity, time-in-force, and price settings.
- */
-
 "use client";
 
 import { memo, useCallback, useMemo, useState } from "react";
@@ -23,55 +16,31 @@ import { Spinner } from "@/components/ui/spinner";
 import type { OptionsContract } from "@/lib/api/types";
 import { OrderPreview } from "./OrderPreview";
 
-// ============================================
-// Types
-// ============================================
-
 export type OrderSide = "buy" | "sell";
 export type OrderType = "market" | "limit" | "stop" | "stop_limit";
 export type TimeInForce = "day" | "gtc" | "ioc" | "fok";
 
 export interface OptionsOrderRequest {
-  /** Options contract symbol */
   symbol: string;
-  /** Order side */
   side: OrderSide;
-  /** Number of contracts */
   quantity: number;
-  /** Order type */
   orderType: OrderType;
-  /** Time in force */
   timeInForce: TimeInForce;
-  /** Limit price (for limit/stop_limit orders) */
   limitPrice?: number;
-  /** Stop price (for stop/stop_limit orders) */
   stopPrice?: number;
 }
 
 export interface PositionBuilderModalProps {
-  /** Whether the modal is open */
   isOpen: boolean;
-  /** Callback to close the modal */
   onClose: () => void;
-  /** The selected contract */
   contract: OptionsContract | null;
-  /** Contract type (call or put) */
   contractType: "call" | "put" | null;
-  /** Strike price */
   strike: number | null;
-  /** Underlying symbol */
   underlying: string;
-  /** Expiration date */
   expiration: string | null;
-  /** Submit handler */
   onSubmit: (order: OptionsOrderRequest) => Promise<void>;
-  /** Test ID */
   "data-testid"?: string;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const ORDER_TYPE_OPTIONS = [
   { value: "market", label: "Market" },
@@ -87,27 +56,6 @@ const TIME_IN_FORCE_OPTIONS = [
   { value: "fok", label: "FOK (Fill or Kill)" },
 ];
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * PositionBuilderModal - Modal for building options positions.
- *
- * @example
- * ```tsx
- * <PositionBuilderModal
- *   isOpen={modalOpen}
- *   onClose={() => setModalOpen(false)}
- *   contract={selectedContract}
- *   contractType="call"
- *   strike={150}
- *   underlying="AAPL"
- *   expiration="2024-03-15"
- *   onSubmit={handleSubmitOrder}
- * />
- * ```
- */
 export const PositionBuilderModal = memo(function PositionBuilderModal({
   isOpen,
   onClose,
@@ -119,19 +67,15 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
   onSubmit,
   "data-testid": testId = "position-builder-modal",
 }: PositionBuilderModalProps) {
-  // Form state
   const [side, setSide] = useState<OrderSide>("buy");
   const [quantity, setQuantity] = useState<string>("1");
   const [orderType, setOrderType] = useState<OrderType>("limit");
   const [timeInForce, setTimeInForce] = useState<TimeInForce>("day");
   const [limitPrice, setLimitPrice] = useState<string>("");
   const [stopPrice, setStopPrice] = useState<string>("");
-
-  // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate default limit price from mid
   const defaultLimitPrice = useMemo(() => {
     if (!contract?.bid || !contract?.ask) {
       return contract?.last ?? 0;
@@ -139,14 +83,12 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
     return (contract.bid + contract.ask) / 2;
   }, [contract]);
 
-  // Set initial limit price when contract changes
   useMemo(() => {
     if (contract && !limitPrice) {
       setLimitPrice(defaultLimitPrice.toFixed(2));
     }
   }, [contract, defaultLimitPrice, limitPrice]);
 
-  // Reset form when closing
   const handleClose = useCallback(() => {
     setSide("buy");
     setQuantity("1");
@@ -158,7 +100,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
     onClose();
   }, [onClose]);
 
-  // Validate form
   const validationError = useMemo(() => {
     const qty = parseInt(quantity, 10);
     if (Number.isNaN(qty) || qty <= 0) {
@@ -185,7 +126,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
     return null;
   }, [quantity, orderType, limitPrice, stopPrice]);
 
-  // Handle submit
   const handleSubmit = useCallback(async () => {
     if (!contract || validationError) {
       return;
@@ -231,7 +171,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
     handleClose,
   ]);
 
-  // Format contract description
   const contractDescription = useMemo(() => {
     if (!strike || !contractType || !expiration) {
       return "";
@@ -252,7 +191,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
         </DialogHeader>
 
         <DialogBody>
-          {/* Contract Info */}
           <div className="mb-4 p-3 bg-cream-50 dark:bg-night-700 rounded-md">
             <div className="text-sm font-medium text-cream-800 dark:text-cream-100">
               {contractDescription}
@@ -264,7 +202,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             </div>
           </div>
 
-          {/* Side Selection */}
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for button group */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
@@ -304,7 +241,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             </div>
           </div>
 
-          {/* Quantity */}
           <div className="mb-4">
             <label
               htmlFor="quantity"
@@ -323,7 +259,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             />
           </div>
 
-          {/* Order Type */}
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
@@ -337,7 +272,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             />
           </div>
 
-          {/* Limit Price (for limit/stop_limit) */}
           {(orderType === "limit" || orderType === "stop_limit") && (
             <div className="mb-4">
               <label
@@ -358,7 +292,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             </div>
           )}
 
-          {/* Stop Price (for stop/stop_limit) */}
           {(orderType === "stop" || orderType === "stop_limit") && (
             <div className="mb-4">
               <label
@@ -379,7 +312,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             </div>
           )}
 
-          {/* Time in Force */}
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
             <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
@@ -393,7 +325,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             />
           </div>
 
-          {/* Order Preview */}
           <OrderPreview
             side={side}
             quantity={parseInt(quantity, 10) || 0}
@@ -407,7 +338,6 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             data-testid="order-preview"
           />
 
-          {/* Error Display */}
           {(error || validationError) && (
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
               <p className="text-sm text-red-600 dark:text-red-400">{error || validationError}</p>

@@ -13,11 +13,9 @@
 export {
   type AgentOutputInsert,
   AgentOutputInsertSchema,
-  // Agent
   AgentTypeEnum,
   type AlertInsert,
   AlertInsertSchema,
-  // Alert
   AlertSeverityType,
   type AlertUpdate,
   AlertUpdateSchema,
@@ -28,45 +26,36 @@ export {
   CycleLogInsertSchema,
   type CycleLogUpdate,
   CycleLogUpdateSchema,
-  // Cycle
   CyclePhase,
   DatetimeSchema,
   DecimalPercentSchema,
   type DecisionInsert,
   DecisionInsertSchema,
-  // Decision
   DecisionStatus,
   type DecisionUpdate,
   DecisionUpdateSchema,
   Environment,
   EquityTickerSchema,
-  // Indicator
   type IndicatorInsert,
   IndicatorInsertSchema,
-  // Regime
   MarketRegime,
-  // Market
   type MarketSnapshotInsert,
   MarketSnapshotInsertSchema,
   MoneySchema,
   type OptionChainInsert,
   OptionChainInsertSchema,
-  // Option
   OptionTypeEnum,
   type OrderInsert,
   OrderInsertSchema,
-  // Order
   OrderSideType,
   OrderStatusType,
   OrderTypeType,
   type OrderUpdate,
   OrderUpdateSchema,
   PercentageSchema,
-  // Portfolio
   type PortfolioSnapshotInsert,
   PortfolioSnapshotInsertSchema,
   PositionDirection,
-  // Position
   type PositionInsert,
   PositionInsertSchema,
   type PositionUpdate,
@@ -75,10 +64,8 @@ export {
   RegimeInsertSchema,
   SizeUnitType,
   TickerSymbolSchema,
-  // Candle
   Timeframe,
   TradingAction,
-  // Common validators
   UuidSchema,
 } from "./turso.js";
 
@@ -90,20 +77,16 @@ export {
   type CitationNode,
   CitationNodeSchema,
   CitationSource,
-  // Edge schemas
   type CitesEdge,
   CitesEdgeSchema,
   type DecisionNode,
   DecisionNodeSchema,
-  // Constants
   EMBEDDING_DIMENSION,
-  // Common schemas
   EmbeddingSchema,
   type InvalidatesEdge,
   InvalidatesEdgeSchema,
   type MarketContextNode,
   MarketContextNodeSchema,
-  // Node schemas
   type MemoryNode,
   type MemoryNodeCreate,
   MemoryNodeCreateSchema,
@@ -121,12 +104,10 @@ export {
   ThesisUpdateSchema,
   type TransitionsEdge,
   TransitionsEdgeSchema,
-  // Vector search
   type VectorSearchQuery,
   VectorSearchQuerySchema,
   type VectorSearchResult,
   VectorSearchResultSchema,
-  // Utilities
   validateEmbedding,
   validateThesisTransition,
 } from "./helix.js";
@@ -136,34 +117,25 @@ export {
 // ============================================
 
 export {
-  // Batch validation
   type BatchValidationResult,
   coerceBool,
   coerceDate,
-  // Coercion
   coerceInt,
-  // SQL injection prevention
   containsSqlInjection,
-  // Type guards
   createTypeGuard,
-  // Error formatting
   formatValidationError,
   formatZodIssue,
   getErrorMessages,
-  // Safe parsing
   type ParseResult,
   parseWithDefaults,
-  // Schema composition
   partialExcept,
   safeParse,
   safeString,
   safeTickerSymbol,
   sanitizeString,
   type ValidationError,
-  // Error types
   type ValidationFieldError,
   validateBatch,
-  // Validation decorators
   validated,
   validatedSafe,
   withSoftDelete,
@@ -175,10 +147,8 @@ export {
 // ============================================
 
 export {
-  // Enums
   type Action,
   ActionSchema,
-  // Messages
   type Decision,
   type DecisionPlan,
   DecisionPlanSchema,
@@ -225,7 +195,6 @@ export {
   StrategyFamilySchema,
   type TimeInForce,
   TimeInForceSchema,
-  // Utilities
   validateDecisionPlan,
   validateRiskReward,
 } from "./decision-plan.js";
@@ -235,16 +204,12 @@ export {
 // ============================================
 
 export {
-  // Utilities
   checkPinRisk,
   classifyMoneyness,
-  // Constants
   DEFAULT_EXPIRATION_POLICY,
   EXPIRATION_CHECKPOINT_TIMES,
-  // Enums
   ExpirationAction,
   ExpirationCheckpoint,
-  // Schemas
   type ExpirationEvaluation,
   ExpirationEvaluationSchema,
   type ExpirationPolicyConfig,

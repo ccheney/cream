@@ -24,10 +24,6 @@ import {
   type RegimeFeatures,
 } from "./features";
 
-// ============================================
-// Types
-// ============================================
-
 /**
  * GMM cluster parameters.
  */
@@ -109,10 +105,6 @@ export const DEFAULT_GMM_CONFIG: GMMConfig = {
   featureConfig: DEFAULT_FEATURE_CONFIG,
 };
 
-// ============================================
-// GMM Training
-// ============================================
-
 /**
  * Train a GMM model on candle data.
  *
@@ -121,7 +113,6 @@ export const DEFAULT_GMM_CONFIG: GMMConfig = {
  * @returns Trained GMM model
  */
 export function trainGMM(candles: Candle[], config: GMMConfig = DEFAULT_GMM_CONFIG): GMMModel {
-  // Extract and normalize features
   const features = extractFeatures(candles, config.featureConfig);
   if (features.length < config.k * 10) {
     throw new Error(
@@ -130,32 +121,22 @@ export function trainGMM(candles: Candle[], config: GMMConfig = DEFAULT_GMM_CONF
   }
 
   const { normalized, means, stds } = normalizeFeatures(features);
-
-  // Initialize clusters using k-means++ style initialization
   const clusters = initializeClusters(normalized, config.k, config.seed);
 
-  // Run EM algorithm
   let prevLogLikelihood = -Infinity;
   let logLikelihood = 0;
 
   for (let iter = 0; iter < config.maxIterations; iter++) {
-    // E-step: compute responsibilities
     const responsibilities = computeResponsibilities(normalized, clusters);
-
-    // M-step: update cluster parameters
     updateClusters(normalized, responsibilities, clusters);
-
-    // Compute log-likelihood
     logLikelihood = computeLogLikelihood(normalized, clusters);
 
-    // Check convergence
     if (Math.abs(logLikelihood - prevLogLikelihood) < config.tolerance) {
       break;
     }
     prevLogLikelihood = logLikelihood;
   }
 
-  // Assign regime labels to clusters based on characteristics
   assignRegimeLabels(clusters);
 
   return {
@@ -180,12 +161,10 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
   const d = data[0]?.length ?? 4;
   const clusters: GMMCluster[] = [];
 
-  // Pick first center randomly
   const firstIdx = Math.floor(rng() * n);
   const firstCenter = data[firstIdx]?.slice() ?? new Array(d).fill(0);
   const centers: number[][] = [firstCenter];
 
-  // Pick remaining centers with probability proportional to distance squared
   for (let c = 1; c < k; c++) {
     const distances = data.map((point) => {
       const minDist = Math.min(...centers.map((center) => squaredDistance(point, center)));
@@ -206,7 +185,6 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
     centers.push(data[nextIdx]?.slice() ?? new Array(d).fill(0));
   }
 
-  // Create clusters from centers
   for (let c = 0; c < k; c++) {
     clusters.push({
       index: c,
@@ -240,7 +218,6 @@ function computeResponsibilities(data: number[][], clusters: GMMCluster[]): numb
       sum += prob;
     }
 
-    // Normalize
     responsibilities.push(probs.map((p) => (sum > 0 ? p / sum : 1 / k)));
   }
 
@@ -269,13 +246,11 @@ function updateClusters(
     }
 
     if (nk < 1e-10) {
-      continue; // Empty cluster, skip update
+      continue;
     }
 
-    // Update weight
     cluster.weight = nk / n;
 
-    // Update mean
     const newMean = new Array(d).fill(0);
     for (let i = 0; i < n; i++) {
       const r = responsibilities[i]?.[c] ?? 0;
@@ -288,7 +263,6 @@ function updateClusters(
     }
     cluster.mean = newMean;
 
-    // Update variance (diagonal covariance)
     const newVariance = new Array(d).fill(0);
     for (let i = 0; i < n; i++) {
       const r = responsibilities[i]?.[c] ?? 0;
@@ -323,47 +297,29 @@ function computeLogLikelihood(data: number[][], clusters: GMMCluster[]): number 
  */
 function assignRegimeLabels(clusters: GMMCluster[]): void {
   // Feature indices: 0=returns, 1=volatility, 2=volumeZScore, 3=trendStrength
+  const sorted = [...clusters].sort((a, b) => a.mean[1]! - b.mean[1]!);
 
-  // Sort clusters by different characteristics and assign labels
-  const sorted = [...clusters].sort((a, b) => {
-    // Primary sort by volatility (feature index 1)
-    return a.mean[1]! - b.mean[1]!;
-  });
-
-  // Find extreme volatility clusters
   const lowestVol = sorted[0]!;
   const highestVol = sorted[sorted.length - 1]!;
 
-  // Assign LOW_VOL and HIGH_VOL
   lowestVol.regime = "LOW_VOL";
   highestVol.regime = "HIGH_VOL";
 
-  // For remaining clusters, sort by trend strength
   const remaining = sorted.filter((c) => c !== lowestVol && c !== highestVol);
-  remaining.sort((a, b) => a.mean[3]! - b.mean[3]!); // Sort by trend strength
+  remaining.sort((a, b) => a.mean[3]! - b.mean[3]!);
 
   if (remaining.length >= 1) {
-    // Most negative trend strength = BEAR_TREND
     remaining[0]!.regime = "BEAR_TREND";
   }
   if (remaining.length >= 2) {
-    // Most positive trend strength = BULL_TREND
     remaining[remaining.length - 1]!.regime = "BULL_TREND";
   }
   if (remaining.length >= 3) {
-    // Middle clusters = RANGE
     for (let i = 1; i < remaining.length - 1; i++) {
       remaining[i]!.regime = "RANGE";
     }
   }
-
-  // Handle case with fewer than 5 clusters
-  // Ensure all clusters have a label (already defaulted to RANGE)
 }
-
-// ============================================
-// Classification
-// ============================================
 
 /**
  * Classify candles using a trained GMM model.
@@ -373,18 +329,14 @@ function assignRegimeLabels(clusters: GMMCluster[]): void {
  * @returns Classification result
  */
 export function classifyWithGMM(model: GMMModel, candles: Candle[]): GMMClassification | null {
-  // Extract features
   const features = extractFeatures(candles, model.config.featureConfig);
   if (features.length === 0) {
     return null;
   }
 
   const latestFeature = features[features.length - 1]!;
-
-  // Normalize using model's normalization parameters
   const normalized = normalizeFeatureVector(latestFeature, model.featureMeans, model.featureStds);
 
-  // Compute probabilities for each cluster
   const probs: number[] = [];
   let sum = 0;
   for (const cluster of model.clusters) {
@@ -393,10 +345,8 @@ export function classifyWithGMM(model: GMMModel, candles: Candle[]): GMMClassifi
     sum += prob;
   }
 
-  // Normalize probabilities
   const normalizedProbs = probs.map((p) => (sum > 0 ? p / sum : 1 / model.k));
 
-  // Find highest probability cluster
   let maxProb = 0;
   let maxIdx = 0;
   for (let i = 0; i < normalizedProbs.length; i++) {
@@ -463,10 +413,6 @@ export function classifySeriesWithGMM(
   return results;
 }
 
-// ============================================
-// Model Serialization
-// ============================================
-
 /**
  * Serialize GMM model to JSON string.
  */
@@ -480,10 +426,6 @@ export function serializeGMMModel(model: GMMModel): string {
 export function deserializeGMMModel(json: string): GMMModel {
   return JSON.parse(json) as GMMModel;
 }
-
-// ============================================
-// Helper Functions
-// ============================================
 
 /**
  * Compute Gaussian PDF with diagonal covariance.

@@ -30,10 +30,6 @@ import { memo, useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { useTheme } from "@/hooks/useTheme";
 
-// ============================================
-// Types
-// ============================================
-
 export interface NavItem {
   href: string;
   label: string;
@@ -48,10 +44,6 @@ export interface SidebarProps {
   /** CSS class name */
   className?: string;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
@@ -68,10 +60,6 @@ export const NAV_ITEMS: NavItem[] = [
 
 const SIDEBAR_WIDTH = 240;
 const COLLAPSED_WIDTH = 64;
-
-// ============================================
-// Nav Link Component
-// ============================================
 
 interface NavLinkProps {
   item: NavItem;
@@ -101,18 +89,6 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
   );
 });
 
-// ============================================
-// Main Component
-// ============================================
-
-/**
- * Sidebar navigation with responsive collapse behavior.
- *
- * @example
- * ```tsx
- * <Sidebar collapsed={isLaptop} userEmail={user.email} />
- * ```
- */
 export const Sidebar = memo(function Sidebar({
   collapsed = false,
   userEmail,
@@ -135,19 +111,16 @@ export const Sidebar = memo(function Sidebar({
       onMouseEnter={() => collapsed && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Logo */}
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center gap-3 h-14">
         <Logo className="h-8 w-8 flex-shrink-0" />
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 mt-4 px-2 space-y-1 overflow-y-auto" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
         ))}
       </nav>
 
-      {/* Theme Toggle */}
       <div className="px-2 mb-2">
         <button
           type="button"
@@ -168,7 +141,6 @@ export const Sidebar = memo(function Sidebar({
         </button>
       </div>
 
-      {/* User info */}
       {userEmail && (
         <div className="p-4 border-t border-cream-200 dark:border-night-700">
           {!collapsed || isHovered ? (
@@ -185,9 +157,5 @@ export const Sidebar = memo(function Sidebar({
     </aside>
   );
 });
-
-// ============================================
-// Exports
-// ============================================
 
 export default Sidebar;

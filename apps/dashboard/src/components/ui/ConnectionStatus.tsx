@@ -1,50 +1,20 @@
-/**
- * ConnectionStatus Component
- *
- * Displays WebSocket connection state with reconnection status.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 6.3
- */
+/** @see docs/plans/ui/40-streaming-data-integration.md Part 6.3 */
 
 "use client";
 
 import { RefreshCw, Wifi, WifiOff, Zap } from "lucide-react";
 import { memo } from "react";
 
-// ============================================
-// Types
-// ============================================
-
 export interface ConnectionStatusProps {
-  /** Connection state */
   state: "connected" | "connecting" | "reconnecting" | "disconnected";
-  /** Current reconnection attempt */
   attempt?: number;
-  /** Maximum reconnection attempts */
   maxAttempts?: number;
-  /** Seconds until next retry */
   nextRetryIn?: number | null;
-  /** Show detailed status */
   showDetails?: boolean;
-  /** Size variant */
   size?: "sm" | "md" | "lg";
-  /** Custom class */
   className?: string;
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * ConnectionStatus shows the WebSocket connection state.
- *
- * States:
- * - Connected: Green dot with "Connected" label
- * - Connecting: Yellow pulsing dot with "Connecting..."
- * - Reconnecting: Yellow pulsing dot with attempt count and countdown
- * - Disconnected: Red dot with "Disconnected"
- */
 export const ConnectionStatus = memo(function ConnectionStatus({
   state,
   attempt = 0,
@@ -98,22 +68,18 @@ export const ConnectionStatus = memo(function ConnectionStatus({
 
   return (
     <output className={`flex items-center gap-2 ${className}`} aria-live="polite">
-      {/* Status dot */}
       <span
         className={`${styles.dot} rounded-full ${config.dotColor} ${config.animate ? "animate-pulse" : ""}`}
       />
 
-      {/* Icon (for larger sizes or when showing details) */}
       {(showDetails || size === "lg") && (
         <Icon
           className={`${styles.icon} ${config.textColor} ${config.animate ? "animate-spin" : ""}`}
         />
       )}
 
-      {/* Label */}
       <span className={`${styles.text} ${config.textColor}`}>{config.label}</span>
 
-      {/* Countdown (reconnecting only) */}
       {state === "reconnecting" &&
         nextRetryIn !== null &&
         nextRetryIn !== undefined &&
@@ -123,7 +89,6 @@ export const ConnectionStatus = memo(function ConnectionStatus({
           </span>
         )}
 
-      {/* Streaming indicator when connected */}
       {state === "connected" && showDetails && (
         <span title="Streaming active">
           <Zap className={`${styles.icon} text-green-500 animate-pulse`} />
@@ -132,9 +97,5 @@ export const ConnectionStatus = memo(function ConnectionStatus({
     </output>
   );
 });
-
-// ============================================
-// Exports
-// ============================================
 
 export default ConnectionStatus;

@@ -1,11 +1,4 @@
-/**
- * PositionRow Component
- *
- * Single row in the positions table with real-time price updates
- * and flash animations.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
- */
+/** @see docs/plans/ui/40-streaming-data-integration.md Part 4.2 */
 
 "use client";
 
@@ -15,22 +8,11 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { usePriceFlash } from "@/components/ui/use-price-flash";
 import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PositionRowProps {
-  /** Position data with live pricing */
   position: StreamingPosition;
-  /** Format currency helper */
   formatCurrency?: (value: number) => string;
-  /** Format percentage helper */
   formatPct?: (value: number) => string;
 }
-
-// ============================================
-// Defaults
-// ============================================
 
 const defaultFormatCurrency = (value: number) =>
   new Intl.NumberFormat("en-US", {
@@ -42,19 +24,6 @@ const defaultFormatCurrency = (value: number) =>
 
 const defaultFormatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * PositionRow displays a single position with live price updates.
- *
- * Features:
- * - Animated price transitions
- * - Flash animation on price changes
- * - Live P/L calculations
- * - Streaming status indicator
- */
 export const PositionRow = memo(function PositionRow({
   position,
   formatCurrency: _formatCurrency = defaultFormatCurrency,
@@ -64,7 +33,6 @@ export const PositionRow = memo(function PositionRow({
 
   const pnlColor = position.liveUnrealizedPnl >= 0 ? "text-green-600" : "text-red-600";
 
-  // Flash classes for P/L column
   const pnlFlashClasses = flash.isFlashing
     ? flash.direction === "up"
       ? "animate-flash-profit"
@@ -73,7 +41,6 @@ export const PositionRow = memo(function PositionRow({
 
   return (
     <tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
-      {/* Symbol with streaming indicator */}
       <td className="px-4 py-3 font-medium text-cream-900 dark:text-cream-100">
         <div className="flex items-center gap-2">
           <Link href={`/portfolio/positions/${position.id}`} className="hover:text-blue-600">
@@ -91,7 +58,6 @@ export const PositionRow = memo(function PositionRow({
         </div>
       </td>
 
-      {/* Side */}
       <td className="px-4 py-3">
         <span
           className={`px-2 py-0.5 text-xs font-medium rounded ${
@@ -104,17 +70,14 @@ export const PositionRow = memo(function PositionRow({
         </span>
       </td>
 
-      {/* Quantity */}
       <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
         {position.qty}
       </td>
 
-      {/* Avg Entry */}
       <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
         ${position.avgEntry.toFixed(2)}
       </td>
 
-      {/* Current Price - Animated */}
       <td className="px-4 py-3 text-right">
         <AnimatedNumber
           value={position.livePrice}
@@ -125,7 +88,6 @@ export const PositionRow = memo(function PositionRow({
         />
       </td>
 
-      {/* Market Value */}
       <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
         <AnimatedNumber
           value={position.liveMarketValue}
@@ -136,7 +98,6 @@ export const PositionRow = memo(function PositionRow({
         />
       </td>
 
-      {/* P&L - With flash */}
       <td className={`px-4 py-3 text-right font-mono ${pnlColor} ${pnlFlashClasses} rounded`}>
         <span className="font-mono">
           {position.liveUnrealizedPnl >= 0 ? "+" : ""}
@@ -150,12 +111,10 @@ export const PositionRow = memo(function PositionRow({
         </span>
       </td>
 
-      {/* P&L % */}
       <td className={`px-4 py-3 text-right font-mono ${pnlColor}`}>
         {formatPct(position.liveUnrealizedPnlPct)}
       </td>
 
-      {/* Days Held */}
       <td className="px-4 py-3 text-right text-cream-500 dark:text-cream-400">
         {position.daysHeld}d
       </td>

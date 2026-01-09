@@ -1,8 +1,4 @@
 /**
- * PositionsTable Component
- *
- * Table of portfolio positions with real-time streaming updates.
- *
  * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
  */
 
@@ -12,24 +8,11 @@ import { memo } from "react";
 import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
 import { PositionRow } from "./PositionRow";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PositionsTableProps {
-  /** Positions with streaming data */
   positions: StreamingPosition[];
-  /** Is data loading */
   isLoading?: boolean;
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * PositionsTable displays portfolio positions with live streaming updates.
- */
 export const PositionsTable = memo(function PositionsTable({
   positions,
   isLoading = false,

@@ -10,10 +10,6 @@ import { createHelixClientFromEnv, getDecisionCitations } from "@cream/helix";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAgentOutputsRepo, getDecisionsRepo, getOrdersRepo } from "../db.js";
 
-// ============================================
-// Schemas
-// ============================================
-
 const DecisionActionSchema = z.enum(["BUY", "SELL", "HOLD", "CLOSE"]);
 const DecisionDirectionSchema = z.enum(["LONG", "SHORT", "FLAT"]);
 const SizeUnitSchema = z.enum(["SHARES", "CONTRACTS", "DOLLARS", "PCT_EQUITY"]);
@@ -98,13 +94,8 @@ const DecisionQuerySchema = z.object({
   offset: z.coerce.number().min(0).default(0),
 });
 
-// ============================================
-// Routes
-// ============================================
-
 const app = new OpenAPIHono();
 
-// GET /api/decisions
 const listRoute = createRoute({
   method: "get",
   path: "/",
@@ -129,7 +120,13 @@ app.openapi(listRoute, async (c) => {
     {
       symbol: query.symbol,
       action: query.action,
-      status: query.status as any,
+      status: query.status?.toLowerCase() as
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "executed"
+        | "failed"
+        | undefined,
       fromDate: query.dateFrom,
       toDate: query.dateTo,
     },
@@ -161,7 +158,6 @@ app.openapi(listRoute, async (c) => {
   });
 });
 
-// GET /api/decisions/:id
 const detailRoute = createRoute({
   method: "get",
   path: "/:id",
@@ -199,14 +195,11 @@ app.openapi(detailRoute, async (c) => {
     return c.json({ error: "Decision not found" }, 404);
   }
 
-  // Get agent outputs for this decision
   const agentOutputs = await agentOutputsRepo.findByDecision(id);
-
-  // Get execution details (orders linked to this decision)
   const orders = await ordersRepo.findByDecision(id);
-  const order = orders[0]; // Primary order
+  const order = orders[0];
 
-  // Fetch citations from HelixDB (non-blocking - empty array if unavailable)
+  // HelixDB citations are non-blocking - gracefully degrade to empty array if unavailable
   let citations: Array<{
     id: string;
     url: string;
@@ -281,7 +274,6 @@ app.openapi(detailRoute, async (c) => {
   });
 });
 
-// GET /api/decisions/:id/agents
 const agentsRoute = createRoute({
   method: "get",
   path: "/:id/agents",
@@ -332,7 +324,6 @@ app.openapi(agentsRoute, async (c) => {
   );
 });
 
-// GET /api/decisions/:id/citations
 const citationsRoute = createRoute({
   method: "get",
   path: "/:id/citations",
@@ -366,7 +357,6 @@ app.openapi(citationsRoute, async (c) => {
     return c.json({ error: "Decision not found" }, 404);
   }
 
-  // Fetch citations from HelixDB
   try {
     const helixClient = createHelixClientFromEnv();
     const citations = await getDecisionCitations(helixClient, id);
@@ -383,12 +373,11 @@ app.openapi(citationsRoute, async (c) => {
       }))
     );
   } catch {
-    // If HelixDB is unavailable, return empty array gracefully
+    // HelixDB unavailable - graceful degradation
     return c.json([]);
   }
 });
 
-// GET /api/decisions/:id/execution
 const executionRoute = createRoute({
   method: "get",
   path: "/:id/execution",

@@ -1,8 +1,4 @@
 /**
- * Indicators Repository
- *
- * Data access for indicator synthesis tables.
- *
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
 
@@ -16,23 +12,10 @@ import {
   toJson,
 } from "./base.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Indicator category
- */
 export type IndicatorCategory = "momentum" | "trend" | "volatility" | "volume" | "custom";
 
-/**
- * Indicator lifecycle status
- */
 export type IndicatorStatus = "staging" | "paper" | "production" | "retired";
 
-/**
- * Validation report with statistical rigor metrics
- */
 export interface ValidationReport {
   trialsCount: number;
   rawSharpe: number;
@@ -55,9 +38,6 @@ export interface WalkForwardPeriod {
   informationCoefficient: number;
 }
 
-/**
- * Paper trading performance report
- */
 export interface PaperTradingReport {
   periodStart: string;
   periodEnd: string;
@@ -74,9 +54,6 @@ export interface PaperTradingReport {
   generatedAt: string;
 }
 
-/**
- * Trial parameters
- */
 export interface TrialParameters {
   lookback?: number;
   smoothing?: number;
@@ -85,9 +62,6 @@ export interface TrialParameters {
   custom?: Record<string, unknown>;
 }
 
-/**
- * Indicator entity
- */
 export interface Indicator {
   id: string;
   name: string;
@@ -114,9 +88,6 @@ export interface Indicator {
   updatedAt: string;
 }
 
-/**
- * Indicator trial entity
- */
 export interface IndicatorTrial {
   id: string;
   indicatorId: string;
@@ -132,9 +103,6 @@ export interface IndicatorTrial {
   createdAt: string;
 }
 
-/**
- * Indicator IC history entity
- */
 export interface IndicatorICHistory {
   id: string;
   indicatorId: string;
@@ -146,9 +114,6 @@ export interface IndicatorICHistory {
   createdAt: string;
 }
 
-/**
- * Create indicator input
- */
 export interface CreateIndicatorInput {
   id: string;
   name: string;
@@ -162,9 +127,6 @@ export interface CreateIndicatorInput {
   replaces?: string;
 }
 
-/**
- * Create trial input
- */
 export interface CreateIndicatorTrialInput {
   id: string;
   indicatorId: string;
@@ -173,9 +135,6 @@ export interface CreateIndicatorTrialInput {
   parameters: TrialParameters;
 }
 
-/**
- * Create IC history input
- */
 export interface CreateIndicatorICHistoryInput {
   id: string;
   indicatorId: string;
@@ -186,9 +145,6 @@ export interface CreateIndicatorICHistoryInput {
   decisionsCorrect?: number;
 }
 
-/**
- * Indicator filter options
- */
 export interface IndicatorFilters {
   status?: IndicatorStatus | IndicatorStatus[];
   category?: IndicatorCategory;
@@ -196,26 +152,16 @@ export interface IndicatorFilters {
   codeHash?: string;
 }
 
-/**
- * Trial filter options
- */
 export interface TrialFilters {
   indicatorId?: string;
   selected?: boolean;
 }
 
-/**
- * IC history filter options
- */
 export interface ICHistoryFilters {
   startDate?: string;
   endDate?: string;
   limit?: number;
 }
-
-// ============================================
-// Row Mappers
-// ============================================
 
 function mapIndicatorRow(row: Row): Indicator {
   return {
@@ -275,23 +221,9 @@ function mapICHistoryRow(row: Row): IndicatorICHistory {
   };
 }
 
-// ============================================
-// Repository
-// ============================================
-
-/**
- * Indicators repository
- */
 export class IndicatorsRepository {
   constructor(private client: TursoClient) {}
 
-  // ============================================
-  // Indicators CRUD
-  // ============================================
-
-  /**
-   * Create a new indicator
-   */
   async create(input: CreateIndicatorInput): Promise<Indicator> {
     try {
       await this.client.run(
@@ -324,17 +256,11 @@ export class IndicatorsRepository {
     }
   }
 
-  /**
-   * Find indicator by ID
-   */
   async findById(id: string): Promise<Indicator | null> {
     const row = await this.client.get<Row>("SELECT * FROM indicators WHERE id = ?", [id]);
     return row ? mapIndicatorRow(row) : null;
   }
 
-  /**
-   * Find indicator by ID or throw
-   */
   async findByIdOrThrow(id: string): Promise<Indicator> {
     const indicator = await this.findById(id);
     if (!indicator) {
@@ -343,17 +269,11 @@ export class IndicatorsRepository {
     return indicator;
   }
 
-  /**
-   * Find indicator by name
-   */
   async findByName(name: string): Promise<Indicator | null> {
     const row = await this.client.get<Row>("SELECT * FROM indicators WHERE name = ?", [name]);
     return row ? mapIndicatorRow(row) : null;
   }
 
-  /**
-   * Find indicator by code hash (for deduplication)
-   */
   async findByCodeHash(codeHash: string): Promise<Indicator | null> {
     const row = await this.client.get<Row>("SELECT * FROM indicators WHERE code_hash = ?", [
       codeHash,
@@ -361,9 +281,6 @@ export class IndicatorsRepository {
     return row ? mapIndicatorRow(row) : null;
   }
 
-  /**
-   * Find indicators with pagination and filters
-   */
   async findMany(
     filters?: IndicatorFilters,
     pagination?: PaginationOptions
@@ -409,9 +326,6 @@ export class IndicatorsRepository {
     };
   }
 
-  /**
-   * Find active indicators (paper or production)
-   */
   async findActive(): Promise<Indicator[]> {
     const rows = await this.client.execute<Row>(
       "SELECT * FROM indicators WHERE status IN ('paper', 'production') ORDER BY created_at DESC"
@@ -419,9 +333,6 @@ export class IndicatorsRepository {
     return rows.map(mapIndicatorRow);
   }
 
-  /**
-   * Find production indicators
-   */
   async findProduction(): Promise<Indicator[]> {
     const rows = await this.client.execute<Row>(
       "SELECT * FROM indicators WHERE status = 'production' ORDER BY created_at DESC"
@@ -429,9 +340,6 @@ export class IndicatorsRepository {
     return rows.map(mapIndicatorRow);
   }
 
-  /**
-   * Update indicator status
-   */
   async updateStatus(id: string, status: IndicatorStatus): Promise<Indicator> {
     try {
       await this.client.run(
@@ -444,9 +352,6 @@ export class IndicatorsRepository {
     }
   }
 
-  /**
-   * Save validation report
-   */
   async saveValidationReport(id: string, report: ValidationReport): Promise<Indicator> {
     try {
       await this.client.run(
@@ -461,9 +366,6 @@ export class IndicatorsRepository {
     }
   }
 
-  /**
-   * Start paper trading period
-   */
   async startPaperTrading(id: string, startTimestamp: string): Promise<Indicator> {
     try {
       await this.client.run(
@@ -478,9 +380,6 @@ export class IndicatorsRepository {
     }
   }
 
-  /**
-   * End paper trading and save report
-   */
   async endPaperTrading(
     id: string,
     endTimestamp: string,

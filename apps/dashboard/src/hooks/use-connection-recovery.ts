@@ -10,10 +10,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAlert } from "@/stores/alert-store";
 
-// ============================================
-// Types
-// ============================================
-
 export type ConnectionState =
   | "connected"
   | "connecting"
@@ -32,81 +28,50 @@ export type ConnectionErrorType =
   | "unknown";
 
 export interface ConnectionError {
-  /** Error type classification */
   type: ConnectionErrorType;
-  /** HTTP status code if applicable */
   statusCode?: number;
-  /** Human-readable message */
   message: string;
-  /** Whether retry should be attempted */
   retryable: boolean;
-  /** Original error */
   originalError?: Error;
 }
 
 export interface BackoffConfig {
-  /** Initial delay in ms (default: 1000) */
   initialDelayMs?: number;
-  /** Maximum delay in ms (default: 30000) */
   maxDelayMs?: number;
-  /** Backoff multiplier (default: 2) */
   multiplier?: number;
-  /** Jitter factor 0-1 (default: 0.2) */
+  /** Range: 0-1 */
   jitterFactor?: number;
-  /** Maximum retry attempts (default: 10) */
   maxRetries?: number;
 }
 
 export interface HeartbeatConfig {
-  /** Ping interval in ms (default: 30000) */
   pingIntervalMs?: number;
-  /** Pong timeout in ms (default: 5000) */
   pongTimeoutMs?: number;
-  /** Connection dead timeout in ms (default: 60000) */
   deadTimeoutMs?: number;
 }
 
 export interface UseConnectionRecoveryOptions {
-  /** Backoff configuration */
   backoff?: BackoffConfig;
-  /** Heartbeat configuration */
   heartbeat?: HeartbeatConfig;
-  /** Show toast notifications */
   showToasts?: boolean;
-  /** Callback when connected */
   onConnect?: () => void;
-  /** Callback when disconnected */
   onDisconnect?: (error?: ConnectionError) => void;
-  /** Callback when retry starts */
   onRetry?: (attempt: number, delay: number) => void;
-  /** Callback when max retries exceeded */
   onMaxRetriesExceeded?: () => void;
 }
 
 export interface UseConnectionRecoveryReturn {
-  /** Current connection state */
   state: ConnectionState;
-  /** Current error if any */
   error: ConnectionError | null;
-  /** Current retry attempt */
   retryAttempt: number;
-  /** Time until next retry (ms) */
   retryCountdown: number | null;
-  /** Manual retry function */
   retry: () => void;
-  /** Reset error state */
   reset: () => void;
-  /** Record successful connection */
   onConnected: () => void;
-  /** Record disconnection */
   onDisconnected: (error?: ConnectionError) => void;
-  /** Record error */
   onError: (error: ConnectionError) => void;
-  /** Check if should retry */
   shouldRetry: () => boolean;
-  /** Get next backoff delay */
   getBackoffDelay: () => number;
-  /** Heartbeat handlers */
   heartbeat: {
     start: () => void;
     stop: () => void;
@@ -114,10 +79,6 @@ export interface UseConnectionRecoveryReturn {
     isAlive: boolean;
   };
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_BACKOFF: Required<BackoffConfig> = {
   initialDelayMs: 1000,
@@ -133,13 +94,6 @@ const DEFAULT_HEARTBEAT: Required<HeartbeatConfig> = {
   deadTimeoutMs: 60000,
 };
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Calculate backoff delay with jitter.
- */
 export function calculateBackoffDelay(attempt: number, config: Required<BackoffConfig>): number {
   const { initialDelayMs, maxDelayMs, multiplier, jitterFactor } = config;
 

@@ -1,16 +1,6 @@
-/**
- * Indicator Lab Query Hooks
- *
- * TanStack Query hooks for the Indicator Lab dashboard.
- */
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { get, post } from "@/lib/api/client";
 import { CACHE_TIMES, STALE_TIMES } from "@/lib/api/query-client";
-
-// ============================================
-// Types
-// ============================================
 
 export type IndicatorStatus = "staging" | "paper" | "production" | "retired";
 export type IndicatorCategory =
@@ -89,10 +79,6 @@ export interface Activity {
   details: string | null;
 }
 
-// ============================================
-// Query Keys
-// ============================================
-
 export const indicatorLabKeys = {
   all: ["indicatorLab"] as const,
   indicators: (filters?: { status?: IndicatorStatus; category?: IndicatorCategory }) =>
@@ -107,13 +93,6 @@ export const indicatorLabKeys = {
   activity: (limit?: number) => [...indicatorLabKeys.all, "activity", limit] as const,
 };
 
-// ============================================
-// Query Hooks
-// ============================================
-
-/**
- * Get list of indicators with optional filtering.
- */
 export function useIndicatorList(filters?: {
   status?: IndicatorStatus;
   category?: IndicatorCategory;
@@ -140,9 +119,6 @@ export function useIndicatorList(filters?: {
   });
 }
 
-/**
- * Get indicator detail by ID.
- */
 export function useIndicatorDetail(id: string) {
   return useQuery({
     queryKey: indicatorLabKeys.detail(id),
@@ -156,9 +132,6 @@ export function useIndicatorDetail(id: string) {
   });
 }
 
-/**
- * Get IC history for an indicator.
- */
 export function useIndicatorICHistory(id: string, days = 30) {
   return useQuery({
     queryKey: indicatorLabKeys.icHistory(id, days),
@@ -174,9 +147,6 @@ export function useIndicatorICHistory(id: string, days = 30) {
   });
 }
 
-/**
- * Get current trigger status for indicator generation.
- */
 export function useTriggerStatus() {
   return useQuery({
     queryKey: indicatorLabKeys.triggerStatus(),
@@ -186,13 +156,10 @@ export function useTriggerStatus() {
     },
     staleTime: STALE_TIMES.DEFAULT,
     gcTime: CACHE_TIMES.DEFAULT,
-    refetchInterval: 60000, // Refresh every 60 seconds
+    refetchInterval: 60000,
   });
 }
 
-/**
- * Get paper trading indicators with progress.
- */
 export function usePaperTradingIndicators() {
   return useQuery({
     queryKey: indicatorLabKeys.paperTrading(),
@@ -204,13 +171,10 @@ export function usePaperTradingIndicators() {
     },
     staleTime: STALE_TIMES.DEFAULT,
     gcTime: CACHE_TIMES.DEFAULT,
-    refetchInterval: 60000, // Refresh every 60 seconds
+    refetchInterval: 60000,
   });
 }
 
-/**
- * Get recent activity log.
- */
 export function useIndicatorActivity(limit = 20) {
   return useQuery({
     queryKey: indicatorLabKeys.activity(limit),
@@ -225,13 +189,6 @@ export function useIndicatorActivity(limit = 20) {
   });
 }
 
-// ============================================
-// Mutation Hooks
-// ============================================
-
-/**
- * Retire an indicator.
- */
 export function useRetireIndicator() {
   const queryClient = useQueryClient();
 
@@ -243,15 +200,11 @@ export function useRetireIndicator() {
       return data;
     },
     onSuccess: () => {
-      // Invalidate all indicator-related queries
       queryClient.invalidateQueries({ queryKey: indicatorLabKeys.all });
     },
   });
 }
 
-/**
- * Force trigger check (manual).
- */
 export function useForceTriggerCheck() {
   const queryClient = useQueryClient();
 

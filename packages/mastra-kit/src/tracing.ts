@@ -1,6 +1,4 @@
 /**
- * Agent Tracing Infrastructure
- *
  * Captures execution traces using LangSmith SDK for debugging,
  * dataset creation, and production monitoring.
  *
@@ -9,136 +7,54 @@
 
 import type { AgentType } from "./index.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Agent interface for tracing.
- */
 export interface TracedAgent {
-  /** Agent name */
   name: AgentType;
-
-  /** Agent version */
   version: string;
-
-  /** Run the agent */
   run: <T>(input: AgentInput) => Promise<T>;
 }
 
-/**
- * Input to an agent.
- */
 export interface AgentInput {
-  /** Snapshot ID */
   snapshotId: string;
-
-  /** Additional input data */
   [key: string]: unknown;
 }
 
-/**
- * Agent output with common fields.
- */
 export interface AgentOutput {
-  /** Decisions made */
   decisions?: unknown[];
-
-  /** Verdict (for risk/critic) */
   verdict?: "APPROVE" | "REJECT";
-
-  /** Confidence score */
   confidence?: number;
-
-  /** Additional output data */
   [key: string]: unknown;
 }
 
-/**
- * Trace metadata.
- */
 export interface TraceMetadata {
-  /** Unique run identifier */
   runId: string;
-
-  /** Trading cycle identifier */
   cycleId: string;
-
-  /** Environment */
   environment?: "BACKTEST" | "PAPER" | "LIVE";
-
-  /** Additional metadata */
   [key: string]: unknown;
 }
 
-/**
- * Span interface for trace operations.
- */
 export interface Span {
-  /** Set span attributes */
   setAttributes: (attributes: Record<string, unknown>) => void;
-
-  /** Set span status */
   setStatus: (status: "OK" | "ERROR") => void;
-
-  /** Record error */
   recordError: (error: Error) => void;
-
-  /** End the span */
   end: () => void;
-
-  /** Get span ID */
   spanId: string;
-
-  /** Get trace ID */
   traceId: string;
 }
 
-/**
- * Trace record for retrieval.
- */
 export interface TraceRecord {
-  /** Trace ID */
   traceId: string;
-
-  /** Span ID */
   spanId: string;
-
-  /** Parent span ID */
   parentSpanId?: string;
-
-  /** Agent name */
   agentName: AgentType;
-
-  /** Agent version */
   agentVersion: string;
-
-  /** Snapshot ID */
   snapshotId: string;
-
-  /** Run ID */
   runId: string;
-
-  /** Cycle ID */
   cycleId: string;
-
-  /** Start time */
   startTime: string;
-
-  /** End time */
   endTime: string;
-
-  /** Duration in ms */
   durationMs: number;
-
-  /** Status */
   status: "OK" | "ERROR";
-
-  /** Attributes */
   attributes: Record<string, unknown>;
-
-  /** Error if any */
   error?: {
     type: string;
     message: string;
@@ -146,83 +62,43 @@ export interface TraceRecord {
   };
 }
 
-/**
- * LangSmith configuration.
- */
 export interface LangSmithConfig {
-  /** API key (defaults to LANGSMITH_API_KEY env var) */
   apiKey?: string;
-
-  /** Project name */
   projectName: string;
-
-  /** Environment */
   environment: "BACKTEST" | "PAPER" | "LIVE";
-
-  /** Trace sampling rate (0-1) */
   samplingRate: number;
-
-  /** Enable tracing */
   enabled: boolean;
 }
 
-// ============================================
-// Default Configuration
-// ============================================
-
-/**
- * Default LangSmith configuration.
- */
 export const DEFAULT_LANGSMITH_CONFIG: LangSmithConfig = {
   projectName: "cream-trading-system",
   environment: "PAPER",
-  samplingRate: 1.0, // 100% in PAPER, can be reduced in LIVE
+  samplingRate: 1.0,
   enabled: true,
 };
 
-/**
- * Get sampling rate for environment.
- */
 export function getSamplingRateForEnvironment(environment: "BACKTEST" | "PAPER" | "LIVE"): number {
   switch (environment) {
     case "BACKTEST":
-      return 1.0; // 100% - need full traces for analysis
+      return 1.0;
     case "PAPER":
-      return 1.0; // 100% - need full traces for testing
+      return 1.0;
     case "LIVE":
-      return 0.1; // 10% - reduce overhead in production
+      // Reduce overhead in production while still capturing meaningful sample
+      return 0.1;
   }
 }
 
-// ============================================
-// Mock Trace Storage
-// ============================================
-
-/**
- * In-memory trace storage for testing.
- * In production, traces go to LangSmith.
- */
+/** In production, traces go to LangSmith instead of this in-memory store. */
 const traceStore: TraceRecord[] = [];
 
-/**
- * Active spans for nested tracing.
- */
+/** Tracks active spans to support nested tracing with parent-child relationships. */
 const activeSpans = new Map<string, Span>();
 
-/**
- * Generate unique ID.
- */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-// ============================================
-// Core Tracing Functions
-// ============================================
-
-/**
- * Create a new span for tracing.
- */
 export function createSpan(_name: string, parentSpanId?: string): Span {
   const spanId = generateId();
   const traceId = parentSpanId
@@ -251,7 +127,6 @@ export function createSpan(_name: string, parentSpanId?: string): Span {
       const endTime = new Date().toISOString();
       const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
 
-      // Store trace record
       traceStore.push({
         traceId,
         spanId,
@@ -283,10 +158,7 @@ export function createSpan(_name: string, parentSpanId?: string): Span {
   return span;
 }
 
-/**
- * Execute a function with tracing.
- * This is a mock implementation of LangSmith's trace() function.
- */
+/** Mock implementation of LangSmith's trace() function for local development. */
 export async function trace<T>(
   fn: (span: Span) => Promise<T>,
   options: { name: string; metadata?: TraceMetadata; parentSpanId?: string }
@@ -313,28 +185,22 @@ export async function trace<T>(
   }
 }
 
-/**
- * Run an agent with tracing instrumentation.
- */
 export async function runAgentWithTracing<T>(
   agent: TracedAgent,
   input: AgentInput,
   metadata: TraceMetadata,
   config: LangSmithConfig = DEFAULT_LANGSMITH_CONFIG
 ): Promise<T> {
-  // Check if tracing is enabled
   if (!config.enabled) {
     return agent.run<T>(input);
   }
 
-  // Check sampling rate
   if (Math.random() > config.samplingRate) {
     return agent.run<T>(input);
   }
 
   return trace(
     async (span) => {
-      // Set agent metadata
       span.setAttributes({
         "agent.name": agent.name,
         "agent.version": agent.version,
@@ -348,7 +214,6 @@ export async function runAgentWithTracing<T>(
       try {
         const result = await agent.run<T>(input);
 
-        // Set output metadata
         const output = result as AgentOutput;
         span.setAttributes({
           "output.decision_count": output.decisions?.length ?? 0,
@@ -370,9 +235,6 @@ export async function runAgentWithTracing<T>(
   );
 }
 
-/**
- * Run a trading cycle with nested tracing.
- */
 export async function runCycleWithTracing<T>(
   cycleFn: (span: Span) => Promise<T>,
   metadata: TraceMetadata,
@@ -401,27 +263,14 @@ export async function runCycleWithTracing<T>(
   );
 }
 
-// ============================================
-// Trace Retrieval Functions
-// ============================================
-
-/**
- * Get traces by run ID.
- */
 export function getTracesByRunId(runId: string): TraceRecord[] {
   return traceStore.filter((t) => t.runId === runId);
 }
 
-/**
- * Get traces by cycle ID.
- */
 export function getTracesByCycleId(cycleId: string): TraceRecord[] {
   return traceStore.filter((t) => t.cycleId === cycleId);
 }
 
-/**
- * Get agent traces within date range.
- */
 export function getAgentTraces(
   agentName: AgentType,
   startDate: Date,
@@ -433,41 +282,19 @@ export function getAgentTraces(
   });
 }
 
-/**
- * Get traces with errors.
- */
 export function getErrorTraces(): TraceRecord[] {
   return traceStore.filter((t) => t.status === "ERROR");
 }
 
-/**
- * Get trace by ID.
- */
 export function getTraceById(traceId: string): TraceRecord[] {
   return traceStore.filter((t) => t.traceId === traceId);
 }
 
-// ============================================
-// Dataset Export
-// ============================================
-
-/**
- * Dataset example format.
- */
 export interface DatasetExample {
-  /** Unique ID */
   id: string;
-
-  /** Input data */
   input: Record<string, unknown>;
-
-  /** Expected output */
   expectedOutput?: Record<string, unknown>;
-
-  /** Actual output */
   actualOutput: Record<string, unknown>;
-
-  /** Metadata */
   metadata: {
     traceId: string;
     agentName: AgentType;
@@ -475,10 +302,7 @@ export interface DatasetExample {
   };
 }
 
-/**
- * Export traces to dataset format.
- * In production, this would call LangSmith API to create a dataset.
- */
+/** In production, this calls LangSmith API to create a dataset. */
 export function exportTracesToDataset(traceIds: string[], datasetName: string): DatasetExample[] {
   const examples: DatasetExample[] = [];
 
@@ -509,9 +333,6 @@ export function exportTracesToDataset(traceIds: string[], datasetName: string): 
   return examples;
 }
 
-/**
- * Create a golden dataset from successful traces.
- */
 export function createGoldenDataset(agentName: AgentType, count = 100): DatasetExample[] {
   const successfulTraces = traceStore
     .filter((t) => t.agentName === agentName && t.status === "OK")
@@ -521,13 +342,6 @@ export function createGoldenDataset(agentName: AgentType, count = 100): DatasetE
   return exportTracesToDataset(traceIds, `golden-${agentName}`);
 }
 
-// ============================================
-// Error Tracing
-// ============================================
-
-/**
- * Trace an error with full context.
- */
 export function traceError(
   error: Error,
   context: {
@@ -553,42 +367,26 @@ export function traceError(
   span.end();
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Clear all traces (for testing).
- */
+/** For testing only. */
 export function clearTraces(): void {
   traceStore.length = 0;
   activeSpans.clear();
 }
 
-/**
- * Get trace store size (for testing).
- */
+/** For testing only. */
 export function getTraceCount(): number {
   return traceStore.length;
 }
 
-/**
- * Get all traces (for testing/debugging).
- */
+/** For testing/debugging only. */
 export function getAllTraces(): TraceRecord[] {
   return [...traceStore];
 }
 
-/**
- * Check if LangSmith is configured.
- */
 export function isLangSmithConfigured(): boolean {
   return Boolean(process.env.LANGSMITH_API_KEY || Bun.env.LANGSMITH_API_KEY);
 }
 
-/**
- * Get LangSmith configuration from environment.
- */
 export function getLangSmithConfigFromEnv(): LangSmithConfig {
   const environment = (process.env.CREAM_ENV ?? "PAPER") as "BACKTEST" | "PAPER" | "LIVE";
 

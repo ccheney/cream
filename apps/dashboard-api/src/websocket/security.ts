@@ -12,30 +12,17 @@
 import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
 import type { Session } from "../auth/better-auth.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Authentication result.
- */
 export interface AuthResult {
   authenticated: boolean;
   userId?: string;
   error?: string;
 }
 
-/**
- * Channel permission check result.
- */
 export interface AuthorizationResult {
   authorized: boolean;
   reason?: string;
 }
 
-/**
- * Rate limit check result.
- */
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
@@ -43,9 +30,6 @@ export interface RateLimitResult {
   reason?: string;
 }
 
-/**
- * Security audit event.
- */
 export interface SecurityAuditEvent {
   timestamp: string;
   eventType: SecurityEventType;
@@ -58,9 +42,6 @@ export interface SecurityAuditEvent {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Security event types.
- */
 export type SecurityEventType =
   | "connection.attempt"
   | "connection.rejected"
@@ -72,13 +53,6 @@ export type SecurityEventType =
   | "symbol_limit.exceeded"
   | "connection_limit.exceeded";
 
-// ============================================
-// Constants
-// ============================================
-
-/**
- * Rate limit configuration.
- */
 export const RATE_LIMITS = {
   /** Max subscribe/unsubscribe per second */
   SUBSCRIBE_PER_SECOND: 10,
@@ -88,9 +62,6 @@ export const RATE_LIMITS = {
   MESSAGES_PER_HOUR: 1000,
 } as const;
 
-/**
- * Connection limits.
- */
 export const CONNECTION_LIMITS = {
   /** Max symbols per connection */
   MAX_SYMBOLS_PER_CONNECTION: 50,
@@ -98,9 +69,6 @@ export const CONNECTION_LIMITS = {
   MAX_CONNECTIONS_PER_USER: 5,
 } as const;
 
-/**
- * Allowed origins for WebSocket connections.
- */
 export const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
@@ -108,12 +76,7 @@ export const ALLOWED_ORIGINS = [
   "https://dashboard.cream.app",
 ];
 
-// ============================================
-// Channel Authorization (Simplified)
-// ============================================
-
 /**
- * Check if session can access channel.
  * All authenticated users can access all channels.
  */
 export function canAccessChannel(_channel: Channel, session: Session | null): AuthorizationResult {
@@ -127,9 +90,6 @@ export function canAccessChannel(_channel: Channel, session: Session | null): Au
   return { authorized: true };
 }
 
-/**
- * Check if session can access multiple channels.
- */
 export function canAccessChannels(
   channels: Channel[],
   session: Session | null
@@ -141,43 +101,22 @@ export function canAccessChannels(
   return results;
 }
 
-/**
- * Filter channels to only those accessible by session.
- * Returns all channels for authenticated users, empty for unauthenticated.
- */
 export function filterAccessibleChannels(channels: Channel[], session: Session | null): Channel[] {
   return session ? channels : [];
 }
 
-// ============================================
-// Rate Limiting
-// ============================================
-
-/**
- * Rate limiter using token bucket algorithm.
- */
 export interface RateLimiter {
-  /** Check if action is allowed */
   check(key: string): RateLimitResult;
-  /** Record an action */
   record(key: string): void;
-  /** Reset rate limit for key */
   reset(key: string): void;
-  /** Get current state for key */
   getState(key: string): { count: number; windowStart: Date } | undefined;
 }
 
-/**
- * Rate limit bucket state.
- */
 interface RateLimitBucket {
   count: number;
   windowStart: number;
 }
 
-/**
- * Create a rate limiter.
- */
 export function createRateLimiter(maxRequests: number, windowMs: number): RateLimiter {
   const buckets = new Map<string, RateLimitBucket>();
 
@@ -211,7 +150,7 @@ export function createRateLimiter(maxRequests: number, windowMs: number): RateLi
 
       return {
         allowed: true,
-        remaining: remaining - 1, // Subtract 1 for the pending action
+        remaining: remaining - 1,
         resetAt,
       };
     },
@@ -238,89 +177,45 @@ export function createRateLimiter(maxRequests: number, windowMs: number): RateLi
   };
 }
 
-// ============================================
-// Connection Rate Limiters
-// ============================================
-
-/**
- * Subscribe/unsubscribe rate limiter (10/second).
- */
 export const subscribeRateLimiter = createRateLimiter(RATE_LIMITS.SUBSCRIBE_PER_SECOND, 1000);
-
-/**
- * Message rate limiter (100/minute).
- */
 export const messageRateLimiterMinute = createRateLimiter(RATE_LIMITS.MESSAGES_PER_MINUTE, 60000);
-
-/**
- * Message rate limiter (1000/hour).
- */
 export const messageRateLimiterHour = createRateLimiter(RATE_LIMITS.MESSAGES_PER_HOUR, 3600000);
 
-/**
- * Check all message rate limits.
- */
 export function checkMessageRateLimit(connectionId: string): RateLimitResult {
-  // Check minute limit first (more granular)
   const minuteResult = messageRateLimiterMinute.check(connectionId);
   if (!minuteResult.allowed) {
     return minuteResult;
   }
 
-  // Check hourly limit
   const hourResult = messageRateLimiterHour.check(connectionId);
   if (!hourResult.allowed) {
     return hourResult;
   }
 
-  return minuteResult; // Return the more immediate result
+  return minuteResult;
 }
 
-/**
- * Record message for rate limiting.
- */
 export function recordMessage(connectionId: string): void {
   messageRateLimiterMinute.record(connectionId);
   messageRateLimiterHour.record(connectionId);
 }
 
-/**
- * Check subscribe rate limit.
- */
 export function checkSubscribeRateLimit(connectionId: string): RateLimitResult {
   return subscribeRateLimiter.check(connectionId);
 }
 
-/**
- * Record subscribe for rate limiting.
- */
 export function recordSubscribe(connectionId: string): void {
   subscribeRateLimiter.record(connectionId);
 }
 
-// ============================================
-// Connection Limits
-// ============================================
-
-/**
- * Connection tracking.
- */
 interface ConnectionTracker {
-  /** Check if user can open new connection */
   canConnect(userId: string): boolean;
-  /** Record new connection */
   addConnection(userId: string, connectionId: string): void;
-  /** Remove connection */
   removeConnection(userId: string, connectionId: string): void;
-  /** Get connection count for user */
   getConnectionCount(userId: string): number;
-  /** Get all connection IDs for user */
   getConnectionIds(userId: string): string[];
 }
 
-/**
- * Create connection tracker.
- */
 export function createConnectionTracker(): ConnectionTracker {
   const userConnections = new Map<string, Set<string>>();
 
@@ -360,32 +255,15 @@ export function createConnectionTracker(): ConnectionTracker {
   };
 }
 
-/**
- * Global connection tracker.
- */
 export const connectionTracker = createConnectionTracker();
 
-// ============================================
-// Symbol Subscription Limits
-// ============================================
-
-/**
- * Symbol subscription tracker.
- */
 interface SymbolTracker {
-  /** Check if connection can subscribe to more symbols */
   canSubscribe(connectionId: string, symbolCount: number): boolean;
-  /** Get current symbol count for connection */
   getSymbolCount(connectionId: string): number;
-  /** Set symbol count for connection */
   setSymbolCount(connectionId: string, count: number): void;
-  /** Remove connection tracking */
   removeConnection(connectionId: string): void;
 }
 
-/**
- * Create symbol tracker.
- */
 export function createSymbolTracker(): SymbolTracker {
   const symbolCounts = new Map<string, number>();
 
@@ -414,18 +292,8 @@ export function createSymbolTracker(): SymbolTracker {
   };
 }
 
-/**
- * Global symbol tracker.
- */
 export const symbolTracker = createSymbolTracker();
 
-// ============================================
-// Origin Validation
-// ============================================
-
-/**
- * Validate request origin.
- */
 export function validateOrigin(origin: string | null): boolean {
   if (!origin) {
     return false;
@@ -439,32 +307,15 @@ export function validateOrigin(origin: string | null): boolean {
   return ALLOWED_ORIGINS.includes(origin);
 }
 
-/**
- * Add allowed origin.
- */
 export function addAllowedOrigin(origin: string): void {
   if (!ALLOWED_ORIGINS.includes(origin)) {
     (ALLOWED_ORIGINS as string[]).push(origin);
   }
 }
 
-// ============================================
-// Audit Logging
-// ============================================
-
-/**
- * Audit log storage.
- */
 const auditLog: SecurityAuditEvent[] = [];
-
-/**
- * Max audit log entries to keep in memory.
- */
 const MAX_AUDIT_LOG_SIZE = 10000;
 
-/**
- * Log security event.
- */
 export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): void {
   const fullEvent: SecurityAuditEvent = {
     ...event,
@@ -473,15 +324,11 @@ export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): 
 
   auditLog.push(fullEvent);
 
-  // Trim log if too large
   if (auditLog.length > MAX_AUDIT_LOG_SIZE) {
     auditLog.splice(0, auditLog.length - MAX_AUDIT_LOG_SIZE);
   }
 }
 
-/**
- * Get audit log entries.
- */
 export function getAuditLog(
   filter?: {
     eventType?: SecurityEventType;
@@ -515,30 +362,20 @@ export function getAuditLog(
     });
   }
 
-  // Return most recent entries
   return filtered.slice(-limit);
 }
 
-/**
- * Clear audit log (for testing).
- */
 export function clearAuditLog(): void {
   auditLog.length = 0;
 }
 
-// ============================================
-// Convenience Functions
-// ============================================
-
 /**
- * Perform full connection security check.
  * Simplified to authentication-only (no role checks).
  */
 export function checkConnectionSecurity(
   session: Session | null,
   origin: string | null
 ): { allowed: boolean; error?: string } {
-  // Validate origin
   if (!validateOrigin(origin)) {
     logSecurityEvent({
       eventType: "connection.rejected",
@@ -550,7 +387,6 @@ export function checkConnectionSecurity(
     return { allowed: false, error: "Invalid origin" };
   }
 
-  // Check authentication
   if (!session) {
     logSecurityEvent({
       eventType: "auth.failure",
@@ -560,7 +396,6 @@ export function checkConnectionSecurity(
     return { allowed: false, error: "Authentication required" };
   }
 
-  // Check connection limit
   const userId = session.user.id;
   if (!connectionTracker.canConnect(userId)) {
     logSecurityEvent({
@@ -585,8 +420,7 @@ export function checkConnectionSecurity(
 }
 
 /**
- * Perform channel subscription security check.
- * Simplified to authentication-only (all channels accessible to authenticated users).
+ * All channels accessible to authenticated users.
  */
 export function checkSubscriptionSecurity(
   connectionId: string,
@@ -595,7 +429,6 @@ export function checkSubscriptionSecurity(
 ): { allowed: boolean; authorizedChannels: Channel[]; errors: string[] } {
   const errors: string[] = [];
 
-  // Check authentication
   if (!session) {
     logSecurityEvent({
       eventType: "auth.failure",
@@ -607,8 +440,6 @@ export function checkSubscriptionSecurity(
   }
 
   const userId = session.user.id;
-
-  // Check rate limit
   const rateResult = checkSubscribeRateLimit(connectionId);
   if (!rateResult.allowed) {
     const reason = rateResult.reason ?? "Rate limit exceeded";
@@ -622,10 +453,7 @@ export function checkSubscriptionSecurity(
     return { allowed: false, authorizedChannels: [], errors: [reason] };
   }
 
-  // All channels are authorized for authenticated users
   const authorizedChannels = channels;
-
-  // Record rate limit
   recordSubscribe(connectionId);
 
   return {
@@ -635,9 +463,6 @@ export function checkSubscriptionSecurity(
   };
 }
 
-/**
- * Check symbol subscription security.
- */
 export function checkSymbolSubscriptionSecurity(
   connectionId: string,
   userId: string,
@@ -660,10 +485,6 @@ export function checkSymbolSubscriptionSecurity(
 
   return { allowed: true };
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   canAccessChannel,

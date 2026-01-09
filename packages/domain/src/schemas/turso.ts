@@ -1,73 +1,30 @@
-/**
- * Turso Database Validation Schemas
- *
- * Zod schemas for validating data before Turso insert/update operations.
- * These schemas mirror the Turso table definitions and ensure data integrity.
- *
- * @see docs/plans/ui/04-data-requirements.md
- */
-
 import { z } from "zod";
 
-// ============================================
-// Common Field Validators
-// ============================================
-
-/**
- * UUID validator.
- */
 export const UuidSchema = z.string().uuid();
 
-/**
- * ISO-8601 datetime validator.
- */
 export const DatetimeSchema = z.string().datetime();
 
-/**
- * Ticker symbol validator (1-10 uppercase letters, allows option symbols).
- */
+// Max 21 chars to accommodate full option symbols like AAPL231215C00150000
 export const TickerSymbolSchema = z
   .string()
   .min(1)
-  .max(21) // Allow full option symbols like AAPL231215C00150000
+  .max(21)
   .regex(/^[A-Z0-9]+$/);
 
-/**
- * Simple equity ticker (1-5 uppercase letters).
- */
 export const EquityTickerSchema = z
   .string()
   .min(1)
   .max(5)
   .regex(/^[A-Z]+$/);
 
-/**
- * Money amount (positive number with up to 2 decimal places).
- */
 export const MoneySchema = z.number().nonnegative();
 
-/**
- * Percentage (0-100).
- */
 export const PercentageSchema = z.number().min(-100).max(100);
 
-/**
- * Percentage as decimal (-1 to 1, for signed values like P&L).
- */
 export const DecimalPercentSchema = z.number().min(-1).max(1);
 
-/**
- * Confidence score (0-1, unsigned).
- */
 export const ConfidenceSchema = z.number().min(0).max(1);
 
-// ============================================
-// Decision Table
-// ============================================
-
-/**
- * Decision status.
- */
 export const DecisionStatus = z.enum([
   "PENDING",
   "APPROVED",
@@ -78,27 +35,15 @@ export const DecisionStatus = z.enum([
 ]);
 export type DecisionStatus = z.infer<typeof DecisionStatus>;
 
-/**
- * Trading action.
- */
 export const TradingAction = z.enum(["BUY", "SELL", "HOLD", "CLOSE", "INCREASE", "REDUCE"]);
 export type TradingAction = z.infer<typeof TradingAction>;
 
-/**
- * Position direction.
- */
 export const PositionDirection = z.enum(["LONG", "SHORT", "FLAT"]);
 export type PositionDirection = z.infer<typeof PositionDirection>;
 
-/**
- * Size unit.
- */
 export const SizeUnitType = z.enum(["SHARES", "CONTRACTS", "DOLLARS", "PCT_EQUITY"]);
 export type SizeUnitType = z.infer<typeof SizeUnitType>;
 
-/**
- * Decision insert schema.
- */
 export const DecisionInsertSchema = z.object({
   id: UuidSchema,
   cycleId: z.string().min(1),
@@ -118,34 +63,18 @@ export const DecisionInsertSchema = z.object({
 });
 export type DecisionInsert = z.infer<typeof DecisionInsertSchema>;
 
-/**
- * Decision update schema (partial).
- */
 export const DecisionUpdateSchema = DecisionInsertSchema.partial().extend({
-  id: UuidSchema, // ID is always required for update
+  id: UuidSchema,
   updatedAt: DatetimeSchema,
 });
 export type DecisionUpdate = z.infer<typeof DecisionUpdateSchema>;
 
-// ============================================
-// Order Table
-// ============================================
-
-/**
- * Order side.
- */
 export const OrderSideType = z.enum(["BUY", "SELL"]);
 export type OrderSideType = z.infer<typeof OrderSideType>;
 
-/**
- * Order type.
- */
 export const OrderTypeType = z.enum(["MARKET", "LIMIT", "STOP", "STOP_LIMIT"]);
 export type OrderTypeType = z.infer<typeof OrderTypeType>;
 
-/**
- * Order status.
- */
 export const OrderStatusType = z.enum([
   "NEW",
   "ACCEPTED",
@@ -157,9 +86,7 @@ export const OrderStatusType = z.enum([
 ]);
 export type OrderStatusType = z.infer<typeof OrderStatusType>;
 
-/**
- * Order base schema (without refinements, used for partial).
- */
+// Base schema without refinements - enables partial() for updates
 const OrderBaseSchema = z.object({
   id: UuidSchema,
   decisionId: UuidSchema,
@@ -181,9 +108,6 @@ const OrderBaseSchema = z.object({
   updatedAt: DatetimeSchema,
 });
 
-/**
- * Order insert schema.
- */
 export const OrderInsertSchema = OrderBaseSchema.superRefine((data, ctx) => {
   if (data.orderType === "LIMIT" && data.limitPrice === null) {
     ctx.addIssue({
@@ -202,28 +126,15 @@ export const OrderInsertSchema = OrderBaseSchema.superRefine((data, ctx) => {
 });
 export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
-/**
- * Order update schema (partial, from base without refinements).
- */
 export const OrderUpdateSchema = OrderBaseSchema.partial().extend({
   id: UuidSchema,
   updatedAt: DatetimeSchema,
 });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
-// ============================================
-// Alert Table
-// ============================================
-
-/**
- * Alert severity.
- */
 export const AlertSeverityType = z.enum(["critical", "warning", "info"]);
 export type AlertSeverityType = z.infer<typeof AlertSeverityType>;
 
-/**
- * Alert insert schema.
- */
 export const AlertInsertSchema = z.object({
   id: UuidSchema,
   severity: AlertSeverityType,
@@ -239,21 +150,11 @@ export const AlertInsertSchema = z.object({
 });
 export type AlertInsert = z.infer<typeof AlertInsertSchema>;
 
-/**
- * Alert update schema (partial).
- */
 export const AlertUpdateSchema = AlertInsertSchema.partial().extend({
   id: UuidSchema,
 });
 export type AlertUpdate = z.infer<typeof AlertUpdateSchema>;
 
-// ============================================
-// Portfolio Snapshot Table
-// ============================================
-
-/**
- * Portfolio snapshot insert schema.
- */
 export const PortfolioSnapshotInsertSchema = z.object({
   id: UuidSchema,
   timestamp: DatetimeSchema,
@@ -273,18 +174,11 @@ export const PortfolioSnapshotInsertSchema = z.object({
 });
 export type PortfolioSnapshotInsert = z.infer<typeof PortfolioSnapshotInsertSchema>;
 
-// ============================================
-// Position Table
-// ============================================
-
-/**
- * Position insert schema.
- */
 export const PositionInsertSchema = z.object({
   id: UuidSchema,
   symbol: TickerSymbolSchema,
   instrumentType: z.enum(["EQUITY", "OPTION"]),
-  quantity: z.number().int(), // Can be negative for short
+  quantity: z.number().int(), // Negative for short positions
   avgEntryPrice: z.number().positive(),
   marketValue: z.number(),
   unrealizedPnl: z.number(),
@@ -296,28 +190,15 @@ export const PositionInsertSchema = z.object({
 });
 export type PositionInsert = z.infer<typeof PositionInsertSchema>;
 
-/**
- * Position update schema (partial).
- */
 export const PositionUpdateSchema = PositionInsertSchema.partial().extend({
   id: UuidSchema,
   lastUpdated: DatetimeSchema,
 });
 export type PositionUpdate = z.infer<typeof PositionUpdateSchema>;
 
-// ============================================
-// Candle Table
-// ============================================
-
-/**
- * Timeframe enum.
- */
 export const Timeframe = z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M"]);
 export type Timeframe = z.infer<typeof Timeframe>;
 
-/**
- * Candle insert schema.
- */
 export const CandleInsertSchema = z
   .object({
     id: UuidSchema,
@@ -343,13 +224,6 @@ export const CandleInsertSchema = z
   });
 export type CandleInsert = z.infer<typeof CandleInsertSchema>;
 
-// ============================================
-// Indicator Table
-// ============================================
-
-/**
- * Indicator insert schema.
- */
 export const IndicatorInsertSchema = z.object({
   id: UuidSchema,
   symbol: EquityTickerSchema,
@@ -361,25 +235,12 @@ export const IndicatorInsertSchema = z.object({
 });
 export type IndicatorInsert = z.infer<typeof IndicatorInsertSchema>;
 
-// ============================================
-// Cycle Log Table
-// ============================================
-
-/**
- * Cycle phase enum.
- */
 export const CyclePhase = z.enum(["observe", "orient", "decide", "act", "complete", "failed"]);
 export type CyclePhase = z.infer<typeof CyclePhase>;
 
-/**
- * Environment enum.
- */
 export const Environment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 export type Environment = z.infer<typeof Environment>;
 
-/**
- * Cycle log insert schema.
- */
 export const CycleLogInsertSchema = z.object({
   id: UuidSchema,
   cycleId: z.string().min(1),
@@ -396,21 +257,11 @@ export const CycleLogInsertSchema = z.object({
 });
 export type CycleLogInsert = z.infer<typeof CycleLogInsertSchema>;
 
-/**
- * Cycle log update schema.
- */
 export const CycleLogUpdateSchema = CycleLogInsertSchema.partial().extend({
   id: UuidSchema,
 });
 export type CycleLogUpdate = z.infer<typeof CycleLogUpdateSchema>;
 
-// ============================================
-// Agent Output Table
-// ============================================
-
-/**
- * Agent type enum.
- */
 export const AgentTypeEnum = z.enum([
   "technical",
   "news_sentiment",
@@ -423,9 +274,6 @@ export const AgentTypeEnum = z.enum([
 ]);
 export type AgentTypeEnum = z.infer<typeof AgentTypeEnum>;
 
-/**
- * Agent output insert schema.
- */
 export const AgentOutputInsertSchema = z.object({
   id: UuidSchema,
   cycleId: z.string().min(1),
@@ -440,13 +288,6 @@ export const AgentOutputInsertSchema = z.object({
 });
 export type AgentOutputInsert = z.infer<typeof AgentOutputInsertSchema>;
 
-// ============================================
-// Market Snapshot Table
-// ============================================
-
-/**
- * Market snapshot insert schema.
- */
 export const MarketSnapshotInsertSchema = z.object({
   id: UuidSchema,
   timestamp: DatetimeSchema,
@@ -463,23 +304,13 @@ export const MarketSnapshotInsertSchema = z.object({
 });
 export type MarketSnapshotInsert = z.infer<typeof MarketSnapshotInsertSchema>;
 
-// ============================================
-// Option Chain Table
-// ============================================
-
-/**
- * Option type enum.
- */
 export const OptionTypeEnum = z.enum(["CALL", "PUT"]);
 export type OptionTypeEnum = z.infer<typeof OptionTypeEnum>;
 
-/**
- * Option chain insert schema.
- */
 export const OptionChainInsertSchema = z.object({
   id: UuidSchema,
   underlying: EquityTickerSchema,
-  expiration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
+  expiration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   strike: z.number().positive(),
   optionType: OptionTypeEnum,
   contractSymbol: TickerSymbolSchema,
@@ -498,13 +329,6 @@ export const OptionChainInsertSchema = z.object({
 });
 export type OptionChainInsert = z.infer<typeof OptionChainInsertSchema>;
 
-// ============================================
-// Regime Table
-// ============================================
-
-/**
- * Market regime enum.
- */
 export const MarketRegime = z.enum([
   "BULL_TREND",
   "BEAR_TREND",
@@ -515,9 +339,6 @@ export const MarketRegime = z.enum([
 ]);
 export type MarketRegime = z.infer<typeof MarketRegime>;
 
-/**
- * Regime insert schema.
- */
 export const RegimeInsertSchema = z.object({
   id: UuidSchema,
   timestamp: DatetimeSchema,
@@ -531,12 +352,7 @@ export const RegimeInsertSchema = z.object({
 });
 export type RegimeInsert = z.infer<typeof RegimeInsertSchema>;
 
-// ============================================
-// Exports
-// ============================================
-
 export default {
-  // Common
   UuidSchema,
   DatetimeSchema,
   TickerSymbolSchema,
@@ -545,59 +361,35 @@ export default {
   PercentageSchema,
   DecimalPercentSchema,
   ConfidenceSchema,
-
-  // Decision
   DecisionStatus,
   TradingAction,
   PositionDirection,
   SizeUnitType,
   DecisionInsertSchema,
   DecisionUpdateSchema,
-
-  // Order
   OrderSideType,
   OrderTypeType,
   OrderStatusType,
   OrderInsertSchema,
   OrderUpdateSchema,
-
-  // Alert
   AlertSeverityType,
   AlertInsertSchema,
   AlertUpdateSchema,
-
-  // Portfolio
   PortfolioSnapshotInsertSchema,
-
-  // Position
   PositionInsertSchema,
   PositionUpdateSchema,
-
-  // Candle
   Timeframe,
   CandleInsertSchema,
-
-  // Indicator
   IndicatorInsertSchema,
-
-  // Cycle
   CyclePhase,
   Environment,
   CycleLogInsertSchema,
   CycleLogUpdateSchema,
-
-  // Agent
   AgentTypeEnum,
   AgentOutputInsertSchema,
-
-  // Market
   MarketSnapshotInsertSchema,
-
-  // Option
   OptionTypeEnum,
   OptionChainInsertSchema,
-
-  // Regime
   MarketRegime,
   RegimeInsertSchema,
 };

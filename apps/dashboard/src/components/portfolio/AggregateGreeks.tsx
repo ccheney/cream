@@ -13,10 +13,6 @@ import { memo } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import type { AggregateGreeks as AggregateGreeksType } from "@/hooks/usePositionGreeks";
 
-// ============================================
-// Types
-// ============================================
-
 export interface AggregateGreeksProps {
   /** Aggregated greeks data */
   greeks: AggregateGreeksType;
@@ -27,10 +23,6 @@ export interface AggregateGreeksProps {
   /** Additional class names */
   className?: string;
 }
-
-// ============================================
-// Component
-// ============================================
 
 /**
  * AggregateGreeks displays portfolio-level options exposure.
@@ -62,7 +54,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
   const textSize = textSizes[size];
   const labelSize = labelSizes[size];
 
-  // Format helpers
   const _formatDelta = (value: number) => {
     const sign = value >= 0 ? "+" : "";
     return `${sign}$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -82,7 +73,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
     return `${sign}$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   };
 
-  // Determine colors
   const deltaColor = greeks.deltaNotional >= 0 ? "text-green-600" : "text-red-600";
   const thetaColor = greeks.totalTheta <= 0 ? "text-red-500" : "text-green-500";
 
@@ -92,7 +82,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
       role="group"
       aria-label="Portfolio Greeks"
     >
-      {/* Streaming indicator */}
       {isStreaming && (
         <div className="flex items-center gap-1">
           <span
@@ -104,7 +93,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
         </div>
       )}
 
-      {/* Delta */}
       <div className="flex items-center gap-1.5">
         <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Δ</span>
         <span className={`${textSize} font-mono ${deltaColor}`}>
@@ -118,7 +106,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
         </span>
       </div>
 
-      {/* Gamma */}
       <div className="flex items-center gap-1.5">
         <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Γ</span>
         <span className={`${textSize} font-mono text-cream-700 dark:text-cream-300`}>
@@ -126,7 +113,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
         </span>
       </div>
 
-      {/* Theta */}
       <div className="flex items-center gap-1.5">
         <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Θ</span>
         <span className={`${textSize} font-mono ${thetaColor}`}>
@@ -134,7 +120,6 @@ export const AggregateGreeks = memo(function AggregateGreeks({
         </span>
       </div>
 
-      {/* Vega */}
       <div className="flex items-center gap-1.5">
         <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>V</span>
         <span className={`${textSize} font-mono text-cream-700 dark:text-cream-300`}>

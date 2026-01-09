@@ -11,10 +11,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OptionsPosition } from "@/hooks/queries/useOptionsPositions";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PositionGreeks {
   /** Delta: change in option price per $1 change in underlying */
   delta: number;
@@ -84,18 +80,10 @@ export interface UsePositionGreeksReturn {
   updateUnderlyingPrice: (symbol: string, price: number) => void;
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_IV = 0.3;
 const DEFAULT_RISK_FREE_RATE = 0.05;
 const DAYS_PER_YEAR = 365;
 const MULTIPLIER = 100;
-
-// ============================================
-// Black-Scholes Math
-// ============================================
 
 function normalCDF(x: number): number {
   const p = 0.2316419;

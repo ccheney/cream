@@ -1,98 +1,39 @@
-/**
- * Database Migration Runner
- *
- * Handles schema migrations for Turso/SQLite databases.
- * Supports:
- * - Forward migrations (up)
- * - Rollback migrations (down)
- * - Migration status tracking via schema_migrations table
- *
- * @see packages/storage/migrations/ for migration files
- */
-
 import { readdir } from "node:fs/promises";
 import type { TursoClient } from "./turso.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Migration file metadata
- */
 export interface Migration {
-  /** Migration version number (e.g., 1, 2, 3) */
   version: number;
-  /** Migration name (e.g., "initial_schema") */
   name: string;
-  /** Full filename (e.g., "001_initial_schema.sql") */
   filename: string;
-  /** SQL content */
   sql: string;
 }
 
-/**
- * Applied migration record from database
- */
 export interface AppliedMigration {
   version: number;
   name: string;
   applied_at: string;
-  [key: string]: unknown; // Index signature for Row compatibility
+  [key: string]: unknown; // Row compatibility
 }
 
-/**
- * Migration result
- */
 export interface MigrationResult {
-  /** Migrations that were applied */
   applied: Migration[];
-  /** Migrations that were rolled back */
   rolledBack: Migration[];
-  /** Current database version after operation */
   currentVersion: number;
-  /** Total time in milliseconds */
   durationMs: number;
 }
 
-/**
- * Migration options
- */
 export interface MigrationOptions {
-  /** Directory containing migration files */
   migrationsDir?: string;
-  /** Target version for migrate or rollback (default: latest for up, 0 for down) */
   targetVersion?: number;
-  /** Dry run - log but don't execute */
   dryRun?: boolean;
-  /** Logger function */
   logger?: (message: string) => void;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const DEFAULT_MIGRATIONS_DIR = `${import.meta.dir}/../migrations`;
 
 const MIGRATION_FILE_PATTERN = /^(\d{3})_(.+)\.sql$/;
 const ROLLBACK_FILE_PATTERN = /^(\d{3})_(.+)_down\.sql$/;
 
-// ============================================
-// Migration Functions
-// ============================================
-
-/**
- * Run all pending migrations
- *
- * @example
- * ```typescript
- * const client = await createTursoClient();
- * const result = await runMigrations(client);
- * console.log(`Applied ${result.applied.length} migrations`);
- * console.log(`Current version: ${result.currentVersion}`);
- * ```
- */
 export async function runMigrations(
   client: TursoClient,
   options: MigrationOptions = {}
@@ -106,18 +47,14 @@ export async function runMigrations(
 
   const startTime = Date.now();
 
-  // Ensure schema_migrations table exists
   await ensureMigrationsTable(client);
 
-  // Get current state
   const appliedMigrations = await getAppliedMigrations(client);
   const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
   const currentVersion = Math.max(0, ...appliedVersions);
 
-  // Load available migrations
   const availableMigrations = await loadMigrations(migrationsDir, "up");
 
-  // Filter to pending migrations
   const pendingMigrations = availableMigrations
     .filter((m) => !appliedVersions.has(m.version))
     .filter((m) => (targetVersion !== undefined ? m.version <= targetVersion : true))
@@ -140,7 +77,6 @@ export async function runMigrations(
 
     if (!dryRun) {
       try {
-        // Execute migration SQL (may contain multiple statements)
         await executeSqlStatements(client, migration.sql);
         applied.push(migration);
       } catch (error) {
@@ -170,18 +106,6 @@ export async function runMigrations(
   };
 }
 
-/**
- * Rollback migrations to a specific version
- *
- * @example
- * ```typescript
- * const client = await createTursoClient();
- * // Rollback to version 1
- * const result = await rollbackMigrations(client, { targetVersion: 1 });
- * // Rollback all
- * const result = await rollbackMigrations(client, { targetVersion: 0 });
- * ```
- */
 export async function rollbackMigrations(
   client: TursoClient,
   options: MigrationOptions = {}
@@ -195,7 +119,6 @@ export async function rollbackMigrations(
 
   const startTime = Date.now();
 
-  // Get current state
   const appliedMigrations = await getAppliedMigrations(client);
   const currentVersion = Math.max(0, ...appliedMigrations.map((m) => m.version));
 
@@ -209,13 +132,11 @@ export async function rollbackMigrations(
     };
   }
 
-  // Load rollback migrations
   const rollbackMigrations = await loadMigrations(migrationsDir, "down");
 
-  // Filter to migrations that need rollback (in reverse order)
   const toRollback = rollbackMigrations
     .filter((m) => m.version > targetVersion && m.version <= currentVersion)
-    .sort((a, b) => b.version - a.version); // Reverse order
+    .sort((a, b) => b.version - a.version);
 
   if (toRollback.length === 0) {
     logger("No rollback migrations found");
@@ -262,16 +183,6 @@ export async function rollbackMigrations(
   };
 }
 
-/**
- * Get migration status
- *
- * @example
- * ```typescript
- * const status = await getMigrationStatus(client);
- * console.log(`Current version: ${status.currentVersion}`);
- * console.log(`Pending: ${status.pending.length}`);
- * ```
- */
 export async function getMigrationStatus(
   client: TursoClient,
   options: Pick<MigrationOptions, "migrationsDir"> = {}
@@ -300,13 +211,6 @@ export async function getMigrationStatus(
   };
 }
 
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Ensure schema_migrations table exists
- */
 async function ensureMigrationsTable(client: TursoClient): Promise<void> {
   await client.run(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -317,9 +221,6 @@ async function ensureMigrationsTable(client: TursoClient): Promise<void> {
   `);
 }
 
-/**
- * Get list of applied migrations
- */
 async function getAppliedMigrations(client: TursoClient): Promise<AppliedMigration[]> {
   try {
     return await client.execute<AppliedMigration>(
@@ -331,9 +232,6 @@ async function getAppliedMigrations(client: TursoClient): Promise<AppliedMigrati
   }
 }
 
-/**
- * Load migration files from directory
- */
 async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Migration[]> {
   const pattern = direction === "up" ? MIGRATION_FILE_PATTERN : ROLLBACK_FILE_PATTERN;
   const migrations: Migration[] = [];
@@ -347,7 +245,6 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
         continue;
       }
 
-      // Skip rollback files when loading "up" migrations
       if (direction === "up" && file.includes("_down.sql")) {
         continue;
       }
@@ -373,32 +270,16 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
   return migrations.sort((a, b) => a.version - b.version);
 }
 
-/**
- * Execute multiple SQL statements (separated by semicolons)
- *
- * This function properly handles:
- * - Multi-statement SQL files
- * - Comments (both -- and /* style)
- * - Semicolons inside string literals
- */
 async function executeSqlStatements(client: TursoClient, sql: string): Promise<void> {
-  // Remove SQL comments first
-  const withoutComments = sql
-    // Remove -- style comments (but not inside strings)
-    .replace(/--[^\n]*$/gm, "")
-    // Remove /* */ style comments
-    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const withoutComments = sql.replace(/--[^\n]*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 
-  // Split on semicolons, being careful about edge cases
-  // This simple approach works for migration files where we don't expect
-  // semicolons inside string literals
+  // Simple semicolon split works for migration files (no semicolons in string literals)
   const statements = withoutComments
     .split(";")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
   for (const statement of statements) {
-    // Skip if only whitespace remains
     if (!statement || /^\s*$/.test(statement)) {
       continue;
     }
@@ -406,13 +287,6 @@ async function executeSqlStatements(client: TursoClient, sql: string): Promise<v
   }
 }
 
-// ============================================
-// Error Types
-// ============================================
-
-/**
- * Migration error with context
- */
 export class MigrationError extends Error {
   constructor(
     message: string,

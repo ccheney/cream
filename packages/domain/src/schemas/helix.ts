@@ -17,13 +17,6 @@ import {
   UuidSchema,
 } from "./turso.js";
 
-// ============================================
-// Vector Embedding
-// ============================================
-
-/**
- * Voyage-3 embedding dimension.
- */
 export const EMBEDDING_DIMENSION = 1536;
 
 /**
@@ -34,13 +27,7 @@ export const EmbeddingSchema = z
   .length(EMBEDDING_DIMENSION)
   .describe("Voyage-3 embedding vector");
 
-// ============================================
-// Memory Node
-// ============================================
-
 /**
- * Memory node schema.
- *
  * Stores agent reasoning and observations with vector embeddings
  * for similarity search.
  */
@@ -56,21 +43,12 @@ export const MemoryNodeSchema = z.object({
 });
 export type MemoryNode = z.infer<typeof MemoryNodeSchema>;
 
-/**
- * Memory node without embedding (for creation before embedding).
- */
+/** For creation before embedding is computed. */
 export const MemoryNodeCreateSchema = MemoryNodeSchema.omit({ embedding: true }).extend({
   embedding: EmbeddingSchema.optional(),
 });
 export type MemoryNodeCreate = z.infer<typeof MemoryNodeCreateSchema>;
 
-// ============================================
-// Citation Node
-// ============================================
-
-/**
- * Citation source types.
- */
 export const CitationSource = z.enum([
   "FMP",
   "NEWS_API",
@@ -82,11 +60,7 @@ export const CitationSource = z.enum([
 ]);
 export type CitationSource = z.infer<typeof CitationSource>;
 
-/**
- * Citation node schema.
- *
- * Stores references to external sources that inform decisions.
- */
+/** External sources that inform decisions. */
 export const CitationNodeSchema = z.object({
   id: UuidSchema,
   url: z.string().url(),
@@ -102,13 +76,6 @@ export const CitationNodeSchema = z.object({
 });
 export type CitationNode = z.infer<typeof CitationNodeSchema>;
 
-// ============================================
-// Thesis Node
-// ============================================
-
-/**
- * Thesis state machine states.
- */
 export const ThesisState = z.enum([
   "WATCHING", // Monitoring for entry conditions
   "ENTERED", // Initial position taken
@@ -120,11 +87,7 @@ export const ThesisState = z.enum([
 ]);
 export type ThesisState = z.infer<typeof ThesisState>;
 
-/**
- * Thesis node schema.
- *
- * Represents a trading thesis with state machine tracking.
- */
+/** Trading thesis with state machine tracking. */
 export const ThesisNodeSchema = z.object({
   id: UuidSchema,
   symbol: EquityTickerSchema,
@@ -137,30 +100,19 @@ export const ThesisNodeSchema = z.object({
   invalidation: z.string().max(1000).optional(),
   targetPrice: z.number().positive().optional(),
   stopPrice: z.number().positive().optional(),
-  timeHorizon: z.string().max(50).optional(), // e.g., "1-2 weeks"
+  timeHorizon: z.string().max(50).optional(),
   confidence: ConfidenceSchema,
   metadata: z.record(z.string(), z.any()).optional(),
 });
 export type ThesisNode = z.infer<typeof ThesisNodeSchema>;
 
-/**
- * Thesis update schema (for state transitions).
- */
 export const ThesisUpdateSchema = ThesisNodeSchema.partial().extend({
   id: UuidSchema,
   updatedAt: DatetimeSchema,
 });
 export type ThesisUpdate = z.infer<typeof ThesisUpdateSchema>;
 
-// ============================================
-// Market Context Node
-// ============================================
-
-/**
- * Market context node schema.
- *
- * Captures market regime and conditions at a point in time.
- */
+/** Market regime and conditions at a point in time. */
 export const MarketContextNodeSchema = z.object({
   id: UuidSchema,
   timestamp: DatetimeSchema,
@@ -180,15 +132,7 @@ export const MarketContextNodeSchema = z.object({
 });
 export type MarketContextNode = z.infer<typeof MarketContextNodeSchema>;
 
-// ============================================
-// Decision Node (for graph relationships)
-// ============================================
-
-/**
- * Decision node schema (for graph relationships).
- *
- * Links decisions to citations and other graph nodes.
- */
+/** Links decisions to citations and other graph nodes. */
 export const DecisionNodeSchema = z.object({
   id: UuidSchema,
   cycleId: z.string().min(1),
@@ -200,59 +144,39 @@ export const DecisionNodeSchema = z.object({
 });
 export type DecisionNode = z.infer<typeof DecisionNodeSchema>;
 
-// ============================================
-// Edge Schemas
-// ============================================
-
-/**
- * CITES edge schema.
- *
- * Connects a decision to citations that informed it.
- */
+/** Connects a decision to citations that informed it. */
 export const CitesEdgeSchema = z.object({
-  fromId: UuidSchema, // Decision ID
-  toId: UuidSchema, // Citation ID
+  fromId: UuidSchema,
+  toId: UuidSchema,
   relevanceScore: ConfidenceSchema,
   createdAt: DatetimeSchema,
 });
 export type CitesEdge = z.infer<typeof CitesEdgeSchema>;
 
-/**
- * SUPPORTS edge schema.
- *
- * Connects a memory to a thesis it supports.
- */
+/** Connects a memory to a thesis it supports. */
 export const SupportsEdgeSchema = z.object({
-  fromId: UuidSchema, // Memory ID
-  toId: UuidSchema, // Thesis ID
+  fromId: UuidSchema,
+  toId: UuidSchema,
   confidence: ConfidenceSchema,
   reasoning: z.string().max(500).optional(),
   createdAt: DatetimeSchema,
 });
 export type SupportsEdge = z.infer<typeof SupportsEdgeSchema>;
 
-/**
- * INVALIDATES edge schema.
- *
- * Connects a memory to a thesis it invalidates.
- */
+/** Connects a memory to a thesis it invalidates. */
 export const InvalidatesEdgeSchema = z.object({
-  fromId: UuidSchema, // Memory ID
-  toId: UuidSchema, // Thesis ID
+  fromId: UuidSchema,
+  toId: UuidSchema,
   reason: z.string().min(1).max(1000),
   severity: z.enum(["minor", "moderate", "major", "critical"]),
   createdAt: DatetimeSchema,
 });
 export type InvalidatesEdge = z.infer<typeof InvalidatesEdgeSchema>;
 
-/**
- * TRANSITIONS edge schema.
- *
- * Connects thesis state transitions (thesis → thesis).
- */
+/** Thesis state transitions (same thesis, different state snapshots). */
 export const TransitionsEdgeSchema = z.object({
-  fromId: UuidSchema, // Thesis ID (previous state)
-  toId: UuidSchema, // Thesis ID (new state, same thesis)
+  fromId: UuidSchema,
+  toId: UuidSchema,
   fromState: ThesisState,
   toState: ThesisState,
   timestamp: DatetimeSchema,
@@ -263,38 +187,23 @@ export const TransitionsEdgeSchema = z.object({
 });
 export type TransitionsEdge = z.infer<typeof TransitionsEdgeSchema>;
 
-/**
- * OCCURRED_IN edge schema.
- *
- * Connects decisions/memories to market context.
- */
+/** Connects decisions/memories to market context. */
 export const OccurredInEdgeSchema = z.object({
-  fromId: UuidSchema, // Decision or Memory ID
-  toId: UuidSchema, // MarketContext ID
+  fromId: UuidSchema,
+  toId: UuidSchema,
   createdAt: DatetimeSchema,
 });
 export type OccurredInEdge = z.infer<typeof OccurredInEdgeSchema>;
 
-/**
- * REFERENCES edge schema.
- *
- * Connects memories that reference each other.
- */
+/** Connects memories that reference each other. */
 export const ReferencesEdgeSchema = z.object({
-  fromId: UuidSchema, // Memory ID
-  toId: UuidSchema, // Memory ID
+  fromId: UuidSchema,
+  toId: UuidSchema,
   relationshipType: z.enum(["extends", "contradicts", "clarifies", "supersedes"]),
   createdAt: DatetimeSchema,
 });
 export type ReferencesEdge = z.infer<typeof ReferencesEdgeSchema>;
 
-// ============================================
-// Vector Search Types
-// ============================================
-
-/**
- * Vector search query parameters.
- */
 export const VectorSearchQuerySchema = z.object({
   embedding: EmbeddingSchema,
   topK: z.number().int().min(1).max(100).default(10),
@@ -310,9 +219,6 @@ export const VectorSearchQuerySchema = z.object({
 });
 export type VectorSearchQuery = z.infer<typeof VectorSearchQuerySchema>;
 
-/**
- * Vector search result.
- */
 export const VectorSearchResultSchema = z.object({
   id: UuidSchema,
   similarity: ConfidenceSchema,
@@ -323,20 +229,11 @@ export const VectorSearchResultSchema = z.object({
 });
 export type VectorSearchResult = z.infer<typeof VectorSearchResultSchema>;
 
-// ============================================
-// Validation Utilities
-// ============================================
-
-/**
- * Validate embedding dimension.
- */
 export function validateEmbedding(embedding: number[]): boolean {
   return embedding.length === EMBEDDING_DIMENSION;
 }
 
-/**
- * Validate thesis state transition.
- */
+/** Enforces valid state machine transitions. */
 export function validateThesisTransition(fromState: ThesisState, toState: ThesisState): boolean {
   const validTransitions: Record<ThesisState, ThesisState[]> = {
     WATCHING: ["ENTERED", "CLOSED"], // Can enter or give up
@@ -351,18 +248,9 @@ export function validateThesisTransition(fromState: ThesisState, toState: Thesis
   return validTransitions[fromState]?.includes(toState) ?? false;
 }
 
-// ============================================
-// Exports
-// ============================================
-
 export default {
-  // Constants
   EMBEDDING_DIMENSION,
-
-  // Common schemas
   EmbeddingSchema,
-
-  // Node schemas
   MemoryNodeSchema,
   MemoryNodeCreateSchema,
   CitationNodeSchema,
@@ -372,20 +260,14 @@ export default {
   ThesisUpdateSchema,
   MarketContextNodeSchema,
   DecisionNodeSchema,
-
-  // Edge schemas
   CitesEdgeSchema,
   SupportsEdgeSchema,
   InvalidatesEdgeSchema,
   TransitionsEdgeSchema,
   OccurredInEdgeSchema,
   ReferencesEdgeSchema,
-
-  // Vector search
   VectorSearchQuerySchema,
   VectorSearchResultSchema,
-
-  // Utilities
   validateEmbedding,
   validateThesisTransition,
 };

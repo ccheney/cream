@@ -1,33 +1,14 @@
-/**
- * PortfolioSummary Component
- *
- * Summary cards showing portfolio metrics with real-time streaming updates.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
- */
-
 "use client";
 
 import { memo } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import type { PortfolioStreamingState } from "@/hooks/usePortfolioStreaming";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PortfolioSummaryProps {
-  /** Streaming state with live metrics */
   state: PortfolioStreamingState;
-  /** Static cash balance */
   cash: number;
-  /** Is data loading */
   isLoading?: boolean;
 }
-
-// ============================================
-// MetricCard Component
-// ============================================
 
 interface MetricCardProps {
   label: string;
@@ -100,19 +81,6 @@ const MetricCard = memo(function MetricCard({
   );
 });
 
-// ============================================
-// PortfolioSummary Component
-// ============================================
-
-/**
- * PortfolioSummary displays the portfolio metrics with live updates.
- *
- * Shows:
- * - Total NAV (cash + positions value)
- * - Cash balance
- * - Unrealized P/L
- * - Day P/L
- */
 export const PortfolioSummary = memo(function PortfolioSummary({
   state,
   cash,

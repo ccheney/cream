@@ -11,10 +11,6 @@
 import type { Factor, FactorPerformance, FactorZooStats } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
 
-// ============================================
-// Configuration
-// ============================================
-
 /**
  * Factor Zoo configuration following AlphaForge parameters
  */
@@ -41,10 +37,6 @@ export const DEFAULT_FACTOR_ZOO_CONFIG: FactorZooConfig = {
   decayThreshold: 0.5,
   decayWindow: 20,
 };
-
-// ============================================
-// Types
-// ============================================
 
 /**
  * Qualifying factor with computed recent metrics
@@ -105,10 +97,6 @@ export interface FactorZooEventEmitter {
   emit(event: string, data: unknown): Promise<void>;
 }
 
-// ============================================
-// Service
-// ============================================
-
 /**
  * Factor Zoo Service
  *
@@ -129,10 +117,6 @@ export class FactorZooService {
     };
   }
 
-  // ============================================
-  // Weight Management (AlphaForge Algorithm 2)
-  // ============================================
-
   /**
    * Update weights daily based on recent factor performance.
    * Implements AlphaForge Algorithm 2.
@@ -146,7 +130,6 @@ export class FactorZooService {
   async updateDailyWeights(): Promise<WeightUpdateResult> {
     const timestamp = new Date().toISOString();
 
-    // Get all active factors
     const activeFactors = await this.repository.findActiveFactors();
 
     if (activeFactors.length === 0) {
@@ -159,7 +142,6 @@ export class FactorZooService {
       };
     }
 
-    // Evaluate each factor against thresholds
     const qualifyingFactors: QualifyingFactor[] = [];
 
     for (const factor of activeFactors) {
@@ -169,7 +151,7 @@ export class FactorZooService {
       );
 
       if (history.length < Math.min(5, this.config.lookbackDays)) {
-        // Not enough history to evaluate - skip but don't zero
+        // Don't zero - factors with insufficient history may qualify later
         continue;
       }
 
@@ -187,7 +169,6 @@ export class FactorZooService {
     }
 
     if (qualifyingFactors.length === 0) {
-      // No factors qualify - zero all weights
       const zeroedFactors = activeFactors.map((f) => f.factorId);
       const zeroWeights = new Map(zeroedFactors.map((id) => [id, 0]));
       await this.repository.updateWeights(zeroWeights);
@@ -201,12 +182,10 @@ export class FactorZooService {
       };
     }
 
-    // Rank by IC and select top N
     qualifyingFactors.sort((a, b) => b.recentIC - a.recentIC);
     const topFactors = qualifyingFactors.slice(0, this.config.maxFactors);
     const selectedIds = new Set(topFactors.map((f) => f.factorId));
 
-    // Compute weights via IC-weighted average
     const totalIC = topFactors.reduce((sum, f) => sum + f.recentIC, 0);
     const newWeights = new Map<string, number>();
 
@@ -215,7 +194,6 @@ export class FactorZooService {
       newWeights.set(factor.factorId, weight);
     }
 
-    // Zero out non-selected factors
     const zeroedFactors: string[] = [];
     for (const factor of activeFactors) {
       if (!selectedIds.has(factor.factorId)) {
@@ -224,7 +202,6 @@ export class FactorZooService {
       }
     }
 
-    // Persist to database
     await this.repository.updateWeights(newWeights);
 
     return {
@@ -235,10 +212,6 @@ export class FactorZooService {
       updatedAt: timestamp,
     };
   }
-
-  // ============================================
-  // Mega-Alpha Computation
-  // ============================================
 
   /**
    * Combine individual factor signals into Mega-Alpha.
@@ -307,10 +280,6 @@ export class FactorZooService {
     return results;
   }
 
-  // ============================================
-  // Decay Detection
-  // ============================================
-
   /**
    * Check all active factors for alpha decay.
    * Factors showing consistent decay are marked for review/retirement.
@@ -326,7 +295,6 @@ export class FactorZooService {
       );
 
       if (history.length < this.config.decayWindow) {
-        // Not enough history to evaluate decay
         continue;
       }
 
@@ -337,7 +305,6 @@ export class FactorZooService {
       const isDecaying = recentIC < peakIC * this.config.decayThreshold;
       const decayRate = isDecaying ? (peakIC - recentIC) / this.config.decayWindow : 0;
 
-      // Count consecutive days below threshold
       let daysInDecay = 0;
       const sortedHistory = [...history].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -359,7 +326,6 @@ export class FactorZooService {
         daysInDecay,
       });
 
-      // If decaying, mark the factor and optionally trigger replacement research
       if (isDecaying) {
         await this.repository.markDecaying(factor.factorId, decayRate);
 
@@ -410,10 +376,6 @@ export class FactorZooService {
       daysInDecay: 0, // Not computed for single factor check
     };
   }
-
-  // ============================================
-  // Factor Queries
-  // ============================================
 
   /**
    * Get all active factors with their current weights
@@ -476,10 +438,6 @@ export class FactorZooService {
     return qualifyingFactors;
   }
 
-  // ============================================
-  // Correlation Management
-  // ============================================
-
   /**
    * Get correlation matrix for portfolio optimization
    */
@@ -487,13 +445,6 @@ export class FactorZooService {
     return this.repository.getCorrelationMatrix();
   }
 
-  // ============================================
-  // Helper Methods
-  // ============================================
-
-  /**
-   * Compute recent IC as mean of lookback period
-   */
   private computeRecentIC(history: FactorPerformance[]): number {
     if (history.length === 0) {
       return 0;
@@ -502,9 +453,6 @@ export class FactorZooService {
     return sum / history.length;
   }
 
-  /**
-   * Compute recent ICIR (IC / std(IC)) for lookback period
-   */
   private computeRecentICIR(history: FactorPerformance[]): number {
     if (history.length < 2) {
       return 0;
@@ -518,10 +466,6 @@ export class FactorZooService {
     return std > 0 ? mean / std : 0;
   }
 }
-
-// ============================================
-// Factory
-// ============================================
 
 export interface FactorZooDependencies {
   factorZoo: FactorZooRepository;

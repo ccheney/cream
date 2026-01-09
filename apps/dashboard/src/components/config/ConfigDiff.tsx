@@ -1,10 +1,3 @@
-/**
- * ConfigDiff Component
- *
- * Visual comparison of configuration changes using @pierre/diffs.
- * Displays JSON configs side-by-side with syntax highlighting.
- */
-
 "use client";
 
 import { MultiFileDiff } from "@pierre/diffs/react";
@@ -25,29 +18,15 @@ import {
   revertChange,
 } from "@/lib/config-diff";
 
-// ============================================
-// Types
-// ============================================
-
-/** Accepts either Configuration or FullRuntimeConfig */
 export type ConfigType = Configuration | FullRuntimeConfig;
 
 export interface ConfigDiffProps<T extends ConfigType = ConfigType> {
-  /** Configuration before changes */
   before: T;
-  /** Configuration after changes */
   after: T;
-  /** Show unchanged fields (default: false) */
   showUnchanged?: boolean;
-  /** Callback to revert a specific change */
   onRevert?: (path: string[], oldValue: unknown, newConfig: T) => void;
-  /** View mode: unified diff or tree view */
   viewMode?: "diff" | "tree";
 }
-
-// ============================================
-// Component
-// ============================================
 
 export function ConfigDiff<T extends ConfigType>({
   before,
@@ -85,7 +64,6 @@ export function ConfigDiff<T extends ConfigType>({
 
   return (
     <div className="space-y-4">
-      {/* Header with stats and view toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
           {diffResult.stats.added > 0 && (
@@ -130,7 +108,6 @@ export function ConfigDiff<T extends ConfigType>({
         </div>
       </div>
 
-      {/* Content based on view mode */}
       {mode === "diff" ? (
         <DiffView before={before} after={after} />
       ) : (
@@ -139,10 +116,6 @@ export function ConfigDiff<T extends ConfigType>({
     </div>
   );
 }
-
-// ============================================
-// Diff View (using @pierre/diffs)
-// ============================================
 
 function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) {
   const oldContents = JSON.stringify(before, null, 2);
@@ -163,10 +136,6 @@ function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) 
     </div>
   );
 }
-
-// ============================================
-// Tree View (structured config diff)
-// ============================================
 
 interface TreeViewProps<T extends ConfigType> {
   entries: DiffEntry[];
@@ -202,10 +171,6 @@ function TreeView<T extends ConfigType>({ entries, onRevert, after }: TreeViewPr
     </div>
   );
 }
-
-// ============================================
-// Diff Entry Row
-// ============================================
 
 interface DiffEntryRowProps {
   entry: DiffEntry;
@@ -310,9 +275,5 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
     </div>
   );
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default ConfigDiff;

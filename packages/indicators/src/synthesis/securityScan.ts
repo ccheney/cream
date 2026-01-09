@@ -12,13 +12,6 @@
 import ts from "typescript";
 import { z } from "zod";
 
-// ============================================
-// Configuration
-// ============================================
-
-/**
- * Forbidden regex patterns that indicate potential security issues
- */
 const FORBIDDEN_PATTERNS: Array<{
   pattern: RegExp;
   description: string;
@@ -139,103 +132,40 @@ const FORBIDDEN_PATTERNS: Array<{
   { pattern: /spawnSync\s*\(/, description: "spawnSync call", severity: "critical" },
 ];
 
-/**
- * Allowed import prefixes for indicator code
- */
-const ALLOWED_IMPORT_PREFIXES = [
-  "./", // Relative current directory
-  "../", // Relative parent directory
-  "@cream/", // Cream monorepo packages
-];
+const ALLOWED_IMPORT_PREFIXES = ["./", "../", "@cream/"];
 
-/**
- * Allowed external packages that indicators may import
- */
-const ALLOWED_EXTERNAL_PACKAGES = [
-  "zod", // Schema validation
-  "decimal.js", // Precise decimal arithmetic
-];
+const ALLOWED_EXTERNAL_PACKAGES = ["zod", "decimal.js"];
 
-// ============================================
-// Schemas
-// ============================================
-
-/**
- * Individual security issue found during scanning
- */
 export const SecurityIssueSchema = z.object({
-  /** Type of issue */
   type: z.enum(["forbidden_pattern", "disallowed_import", "ast_violation", "type_safety"]),
-  /** Human-readable description */
   description: z.string(),
-  /** Severity level */
   severity: z.enum(["critical", "warning", "info"]),
-  /** Line number where issue was found (if available) */
   line: z.number().optional(),
-  /** Column number where issue was found (if available) */
   column: z.number().optional(),
-  /** Code snippet showing the issue */
   snippet: z.string().optional(),
 });
 
 export type SecurityIssue = z.infer<typeof SecurityIssueSchema>;
 
-/**
- * Result of security scanning
- */
 export const SecurityScanResultSchema = z.object({
-  /** Whether the code passed all security checks */
   safe: z.boolean(),
-  /** List of issues found */
   issues: z.array(SecurityIssueSchema),
-  /** Highest severity issue found */
   severity: z.enum(["critical", "warning", "info"]),
-  /** Number of lines scanned */
   linesScanned: z.number().int(),
-  /** Scan duration in milliseconds */
   scanDurationMs: z.number(),
 });
 
 export type SecurityScanResult = z.infer<typeof SecurityScanResultSchema>;
 
-// ============================================
-// Core Functions
-// ============================================
-
-/**
- * Scan indicator source code for security vulnerabilities.
- *
- * Performs multiple types of analysis:
- * 1. Regex pattern matching for forbidden patterns
- * 2. Import validation against whitelist
- * 3. AST-based analysis for dynamic access patterns
- * 4. Type safety checks
- *
- * @param source - TypeScript source code to scan
- * @param fileName - Optional file name for error reporting
- * @returns Scan result with safety status and issues
- */
 export function scanIndicatorCode(source: string, fileName = "indicator.ts"): SecurityScanResult {
   const startTime = performance.now();
   const issues: SecurityIssue[] = [];
 
-  // 1. Check forbidden patterns
-  const patternIssues = checkForbiddenPatterns(source);
-  issues.push(...patternIssues);
+  issues.push(...checkForbiddenPatterns(source));
+  issues.push(...checkImports(source, fileName));
+  issues.push(...performASTAnalysis(source, fileName));
+  issues.push(...checkTypeSafety(source, fileName));
 
-  // 2. Check imports
-  const importIssues = checkImports(source, fileName);
-  issues.push(...importIssues);
-
-  // 3. AST-based analysis
-  const astIssues = performASTAnalysis(source, fileName);
-  issues.push(...astIssues);
-
-  // 4. Type safety checks
-  const typeIssues = checkTypeSafety(source, fileName);
-  issues.push(...typeIssues);
-
-  // Determine overall severity
   let severity: "critical" | "warning" | "info" = "info";
   for (const issue of issues) {
     if (issue.severity === "critical") {
@@ -257,17 +187,12 @@ export function scanIndicatorCode(source: string, fileName = "indicator.ts"): Se
   };
 }
 
-/**
- * Check source code against forbidden regex patterns.
- */
 function checkForbiddenPatterns(source: string): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
   const lines = source.split("\n");
 
   for (const { pattern, description, severity } of FORBIDDEN_PATTERNS) {
-    // Check whole source
     if (pattern.test(source)) {
-      // Find the line number
       let lineNumber: number | undefined;
       let snippet: string | undefined;
 
@@ -293,9 +218,6 @@ function checkForbiddenPatterns(source: string): SecurityIssue[] {
   return issues;
 }
 
-/**
- * Check that all imports are from allowed sources.
- */
 function checkImports(source: string, fileName: string): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
 
@@ -303,7 +225,6 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
     const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
 
     function visit(node: ts.Node): void {
-      // Check import declarations
       if (ts.isImportDeclaration(node)) {
         const moduleSpecifier = node.moduleSpecifier;
         if (ts.isStringLiteral(moduleSpecifier)) {
@@ -322,7 +243,6 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check dynamic imports
       if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const arg = node.arguments[0];
         if (arg && ts.isStringLiteral(arg)) {
@@ -338,7 +258,6 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
             });
           }
         } else if (arg && !ts.isStringLiteral(arg)) {
-          // Dynamic import with non-literal path
           const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
           issues.push({
             type: "disallowed_import",
@@ -350,7 +269,6 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check require calls
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
@@ -377,7 +295,6 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
 
     visit(sourceFile);
   } catch {
-    // Parse error - report as issue
     issues.push({
       type: "ast_violation",
       description: "Failed to parse source code for import analysis",
@@ -388,18 +305,13 @@ function checkImports(source: string, fileName: string): SecurityIssue[] {
   return issues;
 }
 
-/**
- * Check if an import path is allowed.
- */
 function isAllowedImport(importPath: string): boolean {
-  // Check allowed prefixes
   for (const prefix of ALLOWED_IMPORT_PREFIXES) {
     if (importPath.startsWith(prefix)) {
       return true;
     }
   }
 
-  // Check allowed external packages
   for (const pkg of ALLOWED_EXTERNAL_PACKAGES) {
     if (importPath === pkg || importPath.startsWith(`${pkg}/`)) {
       return true;
@@ -409,9 +321,6 @@ function isAllowedImport(importPath: string): boolean {
   return false;
 }
 
-/**
- * Perform AST-based analysis for security issues.
- */
 function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
 
@@ -419,14 +328,11 @@ function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
     const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
 
     function visit(node: ts.Node): void {
-      // Check for dynamic property access with variables
       if (ts.isElementAccessExpression(node)) {
         const argument = node.argumentExpression;
 
-        // Check for suspicious computed access patterns
         if (ts.isIdentifier(argument)) {
           const argText = argument.text;
-          // Flag if accessing with common injection patterns
           if (
             ["key", "prop", "property", "field", "name", "attr"].includes(argText.toLowerCase())
           ) {
@@ -442,7 +348,6 @@ function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check for Function constructor usage in property access
       if (ts.isPropertyAccessExpression(node)) {
         const propName = node.name.text;
         if (propName === "constructor") {
@@ -457,7 +362,6 @@ function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check for globalThis access
       if (ts.isIdentifier(node) && node.text === "globalThis") {
         const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
         issues.push({
@@ -468,7 +372,6 @@ function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
         });
       }
 
-      // Check for window access (if somehow present)
       if (ts.isIdentifier(node) && node.text === "window") {
         const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
         issues.push({
@@ -494,9 +397,6 @@ function performASTAnalysis(source: string, fileName: string): SecurityIssue[] {
   return issues;
 }
 
-/**
- * Check for type safety issues in the code.
- */
 function checkTypeSafety(source: string, fileName: string): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
 
@@ -504,7 +404,6 @@ function checkTypeSafety(source: string, fileName: string): SecurityIssue[] {
     const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
 
     function visit(node: ts.Node): void {
-      // Check for 'any' type in type annotations
       if (ts.isTypeReferenceNode(node)) {
         const typeName = node.typeName;
         if (ts.isIdentifier(typeName) && typeName.text === "any") {
@@ -519,10 +418,9 @@ function checkTypeSafety(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check for explicit 'any' keyword
       if (node.kind === ts.SyntaxKind.AnyKeyword) {
         const parent = node.parent;
-        // Only flag if it's in a type position (not in comments, etc.)
+        // Only flag in type positions, not comments
         if (
           parent &&
           (ts.isTypeNode(parent) || ts.isParameter(parent) || ts.isVariableDeclaration(parent))
@@ -537,7 +435,6 @@ function checkTypeSafety(source: string, fileName: string): SecurityIssue[] {
         }
       }
 
-      // Check for type assertions to 'any'
       if (ts.isAsExpression(node)) {
         const typeNode = node.type;
         if (typeNode.kind === ts.SyntaxKind.AnyKeyword) {
@@ -567,38 +464,16 @@ function checkTypeSafety(source: string, fileName: string): SecurityIssue[] {
   return issues;
 }
 
-// ============================================
-// Convenience Functions
-// ============================================
-
-/**
- * Quick check if code is safe (no critical issues).
- *
- * @param source - Source code to check
- * @returns True if no critical issues found
- */
 export function isCodeSafe(source: string): boolean {
   const result = scanIndicatorCode(source);
   return result.safe;
 }
 
-/**
- * Get only critical issues from a scan.
- *
- * @param source - Source code to scan
- * @returns Array of critical security issues
- */
 export function getCriticalIssues(source: string): SecurityIssue[] {
   const result = scanIndicatorCode(source);
   return result.issues.filter((i) => i.severity === "critical");
 }
 
-/**
- * Validate indicator file and return human-readable result.
- *
- * @param source - Source code to validate
- * @returns Validation result with safe status and human-readable issues
- */
 export function validateIndicatorFile(source: string): {
   safe: boolean;
   issues: string[];

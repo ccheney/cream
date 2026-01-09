@@ -1,21 +1,8 @@
-/**
- * CycleProgress Component
- *
- * Real-time progress indicator for trading cycles.
- * Shows phase, progress bar, and step description.
- *
- * @see docs/plans/22-self-service-dashboard.md Phase 3
- */
-
 "use client";
 
 import { useMemo } from "react";
 import { type CycleStatus, useCycleProgress } from "@/hooks/useCycleProgress";
 import type { CyclePhase } from "@/lib/api/types";
-
-// ============================================
-// Types
-// ============================================
 
 export interface CycleProgressProps {
   /** Cycle ID to track */
@@ -26,14 +13,9 @@ export interface CycleProgressProps {
   onError?: (error: string) => void;
 }
 
-// Simple className merger utility
 function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
-
-// ============================================
-// Configuration
-// ============================================
 
 const phaseLabels: Record<CyclePhase | string, string> = {
   OBSERVE: "Observing",
@@ -74,26 +56,9 @@ const statusColors: Record<CycleStatus, { bar: string; bg: string; text: string 
   },
 };
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * CycleProgress - Real-time cycle progress indicator.
- *
- * @example
- * ```tsx
- * <CycleProgress
- *   cycleId={activeCycleId}
- *   onComplete={() => toast.success("Cycle completed!")}
- *   onError={(err) => toast.error(err)}
- * />
- * ```
- */
 export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressProps) {
   const { status, progress, phase, currentStep, error, result } = useCycleProgress(cycleId);
 
-  // Call callbacks on status change
   useMemo(() => {
     if (status === "completed" && onComplete) {
       onComplete();
@@ -112,7 +77,6 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
 
   return (
     <div className="space-y-3">
-      {/* Phase indicator */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -135,7 +99,6 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
         </span>
       </div>
 
-      {/* Progress bar */}
       <div
         role="progressbar"
         aria-valuenow={percentage}
@@ -154,24 +117,20 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
         />
       </div>
 
-      {/* Step description */}
       <p className="text-sm text-stone-600 dark:text-stone-400">{phaseDescription}</p>
 
-      {/* Symbol progress */}
       {progress?.totalSymbols && progress.totalSymbols > 0 && (
         <p className="text-xs text-stone-500 dark:text-stone-500">
           {progress.completedSymbols ?? 0} / {progress.totalSymbols} symbols processed
         </p>
       )}
 
-      {/* Error message */}
       {status === "failed" && error && (
         <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
 
-      {/* Completion summary */}
       {status === "completed" && result?.result && (
         <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-sm">
           <div className="flex items-center gap-4 text-green-700 dark:text-green-300">

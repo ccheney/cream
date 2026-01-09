@@ -10,18 +10,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * WebSocket connection state.
- */
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "reconnecting";
 
-/**
- * Reconnection configuration.
- */
 export interface ReconnectionConfig {
   /** Maximum reconnection attempts (default: 10) */
   maxAttempts: number;
@@ -33,9 +23,6 @@ export interface ReconnectionConfig {
   backoffMultiplier: number;
 }
 
-/**
- * Heartbeat configuration.
- */
 export interface HeartbeatConfig {
   /** Ping interval in ms (default: 30000) */
   pingInterval: number;
@@ -43,9 +30,6 @@ export interface HeartbeatConfig {
   pongTimeout: number;
 }
 
-/**
- * WebSocket hook options.
- */
 export interface UseWebSocketOptions {
   /** WebSocket URL */
   url: string;
@@ -75,9 +59,6 @@ export interface UseWebSocketOptions {
   autoConnect?: boolean;
 }
 
-/**
- * WebSocket hook return type.
- */
 export interface UseWebSocketReturn {
   /** Current connection state */
   connectionState: ConnectionState;
@@ -149,10 +130,6 @@ export interface UseWebSocketReturn {
   subscribedBacktests: string[];
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_RECONNECTION: ReconnectionConfig = {
   maxAttempts: 10,
   initialDelay: 1000,
@@ -165,14 +142,8 @@ const DEFAULT_HEARTBEAT: HeartbeatConfig = {
   pongTimeout: 60000,
 };
 
-// ============================================
-// Helper Functions
-// ============================================
-
 /**
- * Calculate reconnection delay with exponential backoff.
- * When jitter is enabled (default in production), adds randomness to prevent
- * reconnection storms when many clients reconnect simultaneously.
+ * Jitter prevents reconnection storms when many clients reconnect simultaneously.
  */
 export function calculateBackoffDelay(
   attempt: number,
@@ -188,9 +159,6 @@ export function calculateBackoffDelay(
   return Math.min(baseDelay, config.maxDelay);
 }
 
-/**
- * Create WebSocket URL with token.
- */
 export function createWebSocketUrl(baseUrl: string, token?: string): string {
   if (!token) {
     return baseUrl;
@@ -199,13 +167,6 @@ export function createWebSocketUrl(baseUrl: string, token?: string): string {
   return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
-// ============================================
-// Hook Implementation
-// ============================================
-
-/**
- * WebSocket hook with reconnection and heartbeat.
- */
 export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const {
     url,

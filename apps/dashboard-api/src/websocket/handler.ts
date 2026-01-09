@@ -182,7 +182,6 @@ function handleSubscribe(ws: WebSocketWithMetadata, message: SubscribeMessage): 
     }
   }
 
-  // Send confirmation
   sendMessage(ws, {
     type: "subscribed",
     channels: Array.from(metadata.channels),
@@ -199,7 +198,6 @@ function handleUnsubscribe(ws: WebSocketWithMetadata, message: UnsubscribeMessag
     metadata.channels.delete(channelName as Channel);
   }
 
-  // Send confirmation
   sendMessage(ws, {
     type: "unsubscribed",
     channels: message.channels,
@@ -222,16 +220,13 @@ function handleSubscribeSymbols(ws: WebSocketWithMetadata, message: SubscribeSym
     }
   }
 
-  // Auto-subscribe to quotes channel
   metadata.channels.add("quotes");
 
-  // Subscribe to streaming market data for new symbols
   if (newSymbols.length > 0) {
     subscribeToStreaming(newSymbols).catch((_error) => {
-      // Silently handle subscription failures - streaming is optional enhancement
+      // Streaming is an optional enhancement; failures are non-critical
     });
 
-    // Send cached quotes immediately for symbols we have data for
     for (const symbol of newSymbols) {
       const cached = getCachedQuote(symbol);
       if (cached) {
@@ -291,16 +286,13 @@ function handleSubscribeOptions(ws: WebSocketWithMetadata, message: SubscribeOpt
     }
   }
 
-  // Auto-subscribe to options channel
   metadata.channels.add("options");
 
-  // Subscribe to streaming options data for new contracts
   if (newContracts.length > 0) {
     subscribeToOptionsStreaming(newContracts).catch((_error) => {
-      // Silently handle subscription failures - streaming is optional enhancement
+      // Streaming is an optional enhancement; failures are non-critical
     });
 
-    // Send cached quotes immediately for contracts we have data for
     for (const contract of newContracts) {
       const cached = getCachedOptionsQuote(contract);
       if (cached) {
@@ -356,10 +348,7 @@ function handleSubscribeBacktest(
 ): void {
   const metadata = ws.data;
 
-  // Subscribe to backtest updates
   subscribeToBacktest(ws, message.backtestId);
-
-  // Auto-subscribe to backtests channel
   metadata.channels.add("backtests");
 
   sendMessage(ws, {
@@ -466,7 +455,6 @@ async function handleRequestState(
         const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
         const alerts = await alertsRepo.findUnacknowledged(environment, 50);
 
-        // Send each alert as an individual message
         for (const alert of alerts) {
           sendMessage(ws, {
             type: "alert",
@@ -548,7 +536,6 @@ async function handleRequestState(
         break;
       }
       case "quotes": {
-        // Send cached quotes for subscribed symbols
         const metadata = ws.data;
         for (const symbol of metadata.symbols) {
           const cached = getCachedQuote(symbol);
@@ -600,7 +587,6 @@ async function handleAcknowledgeAlert(
 
     const alert = await alertsRepo.acknowledge(alertId, userId);
 
-    // Broadcast acknowledgment to all connected clients subscribed to alerts
     broadcast("alerts", {
       type: "alert",
       data: {
@@ -621,7 +607,6 @@ async function handleAcknowledgeAlert(
       },
     });
 
-    // Send confirmation to the acknowledging client
     sendMessage(ws, {
       type: "subscribed",
       channels: ["alerts"],
@@ -655,10 +640,8 @@ export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): vo
     return;
   }
 
-  // Update last activity
   ws.data.lastPing = new Date();
 
-  // Route to handler
   switch (message.type) {
     case "subscribe":
       handleSubscribe(ws, message);
@@ -749,7 +732,6 @@ export function broadcast(channel: Channel, message: ServerMessage): number {
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -775,7 +757,6 @@ export function broadcastQuote(symbol: string, message: ServerMessage): number {
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -801,7 +782,6 @@ export function broadcastOptionsQuote(contract: string, message: ServerMessage):
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -827,7 +807,6 @@ export function broadcastTrade(symbol: string, message: ServerMessage): number {
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -837,7 +816,7 @@ export function broadcastTrade(symbol: string, message: ServerMessage): number {
 
 /**
  * Broadcast aggregate message to connections subscribed to quotes for a specific symbol.
- * Note: reusing 'quotes' channel for now as charts subscribe to symbols via quotes channel logic.
+ * Reuses 'quotes' channel because chart subscribers use the same symbol subscription logic.
  */
 export function broadcastAggregate(symbol: string, message: ServerMessage): number {
   let sent = 0;
@@ -845,7 +824,6 @@ export function broadcastAggregate(symbol: string, message: ServerMessage): numb
   const upperSymbol = symbol.toUpperCase();
 
   for (const [connectionId, ws] of connections) {
-    // Clients subscribed to "quotes" for a symbol likely want the charts too
     if (ws.data.channels.has("quotes") && ws.data.symbols.has(upperSymbol)) {
       if (sendMessage(ws, message)) {
         sent++;
@@ -855,7 +833,6 @@ export function broadcastAggregate(symbol: string, message: ServerMessage): numb
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -878,7 +855,6 @@ export function broadcastAll(message: ServerMessage): number {
     }
   }
 
-  // Clean up dead connections
   for (const connectionId of deadConnections) {
     removeConnection(connectionId);
   }
@@ -911,7 +887,6 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
   const metadata = ws.data;
   connections.set(metadata.connectionId, ws);
 
-  // Send welcome message
   sendMessage(ws, {
     type: "system_status",
     data: {
@@ -931,7 +906,6 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
 export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: string): void {
   const metadata = ws.data;
   removeConnection(metadata.connectionId);
-  // Clean up backtest subscriptions
   cleanupBacktestSubscriptions(ws);
 }
 
@@ -941,7 +915,6 @@ export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: s
 export function handleError(ws: WebSocketWithMetadata, _error: Error): void {
   const metadata = ws.data;
   removeConnection(metadata.connectionId);
-  // Clean up backtest subscriptions
   cleanupBacktestSubscriptions(ws);
 }
 

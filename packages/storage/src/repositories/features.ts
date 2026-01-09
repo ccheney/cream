@@ -11,10 +11,6 @@ import type { TursoClient } from "../turso.js";
 import { parseJson, RepositoryError, toJson } from "./base.js";
 import { type Timeframe, TimeframeSchema } from "./candles.js";
 
-// ============================================
-// Zod Schemas
-// ============================================
-
 export const FeatureSchema = z.object({
   id: z.number().optional(),
   symbol: z.string(),
@@ -33,16 +29,9 @@ export type Feature = z.infer<typeof FeatureSchema>;
 export const FeatureInsertSchema = FeatureSchema.omit({ id: true, computedAt: true });
 export type FeatureInsert = z.infer<typeof FeatureInsertSchema>;
 
-// ============================================
-// Repository
-// ============================================
-
 export class FeaturesRepository {
   constructor(private client: TursoClient) {}
 
-  /**
-   * Upsert a feature value
-   */
   async upsert(feature: FeatureInsert): Promise<void> {
     try {
       await this.client.run(
@@ -73,9 +62,6 @@ export class FeaturesRepository {
     }
   }
 
-  /**
-   * Bulk upsert features
-   */
   async bulkUpsert(features: FeatureInsert[]): Promise<number> {
     if (features.length === 0) {
       return 0;
@@ -99,9 +85,6 @@ export class FeaturesRepository {
     return inserted;
   }
 
-  /**
-   * Get features for a symbol at a specific timestamp
-   */
   async getAtTimestamp(
     symbol: string,
     timestamp: string,
@@ -115,9 +98,6 @@ export class FeaturesRepository {
     return rows.map(mapRowToFeature);
   }
 
-  /**
-   * Get a specific indicator's values over a time range
-   */
   async getIndicatorRange(
     symbol: string,
     indicatorName: string,
@@ -135,9 +115,6 @@ export class FeaturesRepository {
     return rows.map(mapRowToFeature);
   }
 
-  /**
-   * Get latest feature values for a symbol
-   */
   async getLatest(
     symbol: string,
     timeframe: Timeframe,
@@ -168,9 +145,6 @@ export class FeaturesRepository {
     return rows.map(mapRowToFeature);
   }
 
-  /**
-   * Get all available indicators for a symbol
-   */
   async listIndicators(symbol: string, timeframe: Timeframe): Promise<string[]> {
     const rows = await this.client.execute<{ indicator_name: string }>(
       `SELECT DISTINCT indicator_name FROM features
@@ -181,18 +155,11 @@ export class FeaturesRepository {
     return rows.map((r) => r.indicator_name);
   }
 
-  /**
-   * Delete features older than a date
-   */
   async deleteOlderThan(beforeDate: string): Promise<number> {
     const result = await this.client.run(`DELETE FROM features WHERE timestamp < ?`, [beforeDate]);
     return result.changes;
   }
 }
-
-// ============================================
-// Row Mapping
-// ============================================
 
 interface FeatureRow {
   id: number;

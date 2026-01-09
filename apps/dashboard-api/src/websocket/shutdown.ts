@@ -10,13 +10,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ConnectionMetadata } from "./handler.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Shutdown phase names.
- */
 export type ShutdownPhase =
   | "idle"
   | "reject_connections"
@@ -27,14 +20,8 @@ export type ShutdownPhase =
   | "flush_queues"
   | "complete";
 
-/**
- * Shutdown reason.
- */
 export type ShutdownReason = "SIGTERM" | "SIGINT" | "manual" | "error";
 
-/**
- * Shutdown configuration.
- */
 export interface ShutdownConfig {
   /** Time to wait for clients to disconnect after warning (ms) */
   drainTimeout: number;
@@ -48,9 +35,6 @@ export interface ShutdownConfig {
   exitProcess: boolean;
 }
 
-/**
- * Shutdown state.
- */
 export interface ShutdownState {
   /** Current shutdown phase */
   phase: ShutdownPhase;
@@ -68,9 +52,6 @@ export interface ShutdownState {
   droppedMessages: number;
 }
 
-/**
- * Shutdown event type.
- */
 export type ShutdownEventType =
   | "shutdown.initiated"
   | "shutdown.phase_change"
@@ -83,9 +64,6 @@ export type ShutdownEventType =
   | "shutdown.timeout"
   | "shutdown.error";
 
-/**
- * Shutdown log entry.
- */
 export interface ShutdownLogEntry {
   timestamp: string;
   event: ShutdownEventType;
@@ -97,9 +75,6 @@ export interface ShutdownLogEntry {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Shutdown callback types.
- */
 export type ShutdownLogCallback = (entry: ShutdownLogEntry) => void;
 export type GetConnectionsCallback = () => Map<string, ServerWebSocket<ConnectionMetadata>>;
 export type SendMessageCallback = (
@@ -109,9 +84,6 @@ export type SendMessageCallback = (
 export type FlushQueuesCallback = () => Promise<void>;
 export type CleanupSubscriptionsCallback = () => Promise<void>;
 
-/**
- * Shutdown dependencies.
- */
 export interface ShutdownDependencies {
   getConnections: GetConnectionsCallback;
   sendMessage: SendMessageCallback;
@@ -120,13 +92,6 @@ export interface ShutdownDependencies {
   onLog?: ShutdownLogCallback;
 }
 
-// ============================================
-// Constants
-// ============================================
-
-/**
- * Default shutdown configuration.
- */
 export const DEFAULT_SHUTDOWN_CONFIG: ShutdownConfig = {
   drainTimeout: 30000, // 30s for clients to disconnect
   flushTimeout: 10000, // 10s to flush queues
@@ -135,18 +100,11 @@ export const DEFAULT_SHUTDOWN_CONFIG: ShutdownConfig = {
   exitProcess: true,
 };
 
-/**
- * WebSocket close codes.
- */
 export const WS_CLOSE_CODES = {
   NORMAL: 1000,
   GOING_AWAY: 1001,
   SHUTDOWN: 1012,
 } as const;
-
-// ============================================
-// Shutdown Manager
-// ============================================
 
 /**
  * Manages graceful WebSocket server shutdown.
@@ -224,10 +182,6 @@ export function createShutdownManager(
   let signalHandlerRegistered = false;
   let shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // ----------------------------------------
-  // Logging
-  // ----------------------------------------
-
   const log = (
     event: ShutdownEventType,
     message: string,
@@ -251,10 +205,6 @@ export function createShutdownManager(
     deps.onLog(entry);
   };
 
-  // ----------------------------------------
-  // Phase Transitions
-  // ----------------------------------------
-
   const setPhase = (phase: ShutdownPhase): void => {
     const previousPhase = state.phase;
     state.phase = phase;
@@ -265,24 +215,11 @@ export function createShutdownManager(
     });
   };
 
-  // ----------------------------------------
-  // Shutdown Phases
-  // ----------------------------------------
-
-  /**
-   * Phase 1: Reject new connections.
-   * Server marks itself as unhealthy so load balancer stops routing traffic.
-   */
+  /** Server marks itself as unhealthy so load balancer stops routing traffic. */
   const rejectConnectionsPhase = (): void => {
     setPhase("reject_connections");
-    // Health check now returns false
-    // New connections will get 503 response
   };
 
-  /**
-   * Phase 2: Warn connected clients.
-   * Send shutdown warning to all connections.
-   */
   const warnClientsPhase = (): void => {
     setPhase("warn_clients");
 
@@ -312,10 +249,6 @@ export function createShutdownManager(
     });
   };
 
-  /**
-   * Phase 3: Drain connections.
-   * Wait for clients to disconnect gracefully.
-   */
   const drainConnectionsPhase = async (): Promise<void> => {
     setPhase("drain_connections");
 
@@ -352,9 +285,6 @@ export function createShutdownManager(
     );
   };
 
-  /**
-   * Phase 4: Force close remaining connections.
-   */
   const forceClosePhase = (): void => {
     setPhase("force_close");
 
@@ -382,10 +312,7 @@ export function createShutdownManager(
     }
   };
 
-  /**
-   * Phase 5: Cleanup subscriptions.
-   * Close Redis connections, gRPC streams, etc.
-   */
+  /** Close Redis connections, gRPC streams, etc. */
   const cleanupSubscriptionsPhase = async (): Promise<void> => {
     setPhase("cleanup_subscriptions");
 
@@ -411,10 +338,6 @@ export function createShutdownManager(
     }
   };
 
-  /**
-   * Phase 6: Flush message queues.
-   * Ensure pending messages are sent.
-   */
   const flushQueuesPhase = async (): Promise<void> => {
     setPhase("flush_queues");
 
@@ -440,9 +363,6 @@ export function createShutdownManager(
     }
   };
 
-  /**
-   * Phase 7: Complete shutdown.
-   */
   const completePhase = (): void => {
     setPhase("complete");
 
@@ -455,16 +375,12 @@ export function createShutdownManager(
     });
 
     if (fullConfig.exitProcess) {
-      // Give time for final log to flush
+      // Allow final log to flush before exiting
       setTimeout(() => {
         process.exit(0);
       }, 100);
     }
   };
-
-  // ----------------------------------------
-  // Main Shutdown Sequence
-  // ----------------------------------------
 
   const initiateShutdown = async (reason: ShutdownReason): Promise<void> => {
     if (state.isShuttingDown) {
@@ -491,7 +407,6 @@ export function createShutdownManager(
     }, fullConfig.maxShutdownTime);
 
     try {
-      // Execute phases sequentially
       rejectConnectionsPhase();
       warnClientsPhase();
       await drainConnectionsPhase();
@@ -518,24 +433,17 @@ export function createShutdownManager(
       forcedClosures: state.forcedClosures,
     });
 
-    // Close all connections immediately
     const connections = deps.getConnections();
     for (const [_id, ws] of connections) {
       try {
         ws.close(WS_CLOSE_CODES.SHUTDOWN, "Forced shutdown");
-      } catch {
-        // Ignore
-      }
+      } catch {}
     }
 
     if (fullConfig.exitProcess) {
       process.exit(1);
     }
   };
-
-  // ----------------------------------------
-  // Signal Handlers
-  // ----------------------------------------
 
   const handleSigterm = (): void => {
     initiateShutdown("SIGTERM");
@@ -568,10 +476,6 @@ export function createShutdownManager(
 
     signalHandlerRegistered = false;
   };
-
-  // ----------------------------------------
-  // Public API
-  // ----------------------------------------
 
   return {
     getState(): ShutdownState {
@@ -612,29 +516,16 @@ export function createShutdownManager(
   };
 }
 
-// ============================================
-// Utilities
-// ============================================
-
-/**
- * Sleep for a given duration.
- */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Check if server should accept new connections.
- * Use this in the upgrade handler.
- */
+/** Use in the upgrade handler to reject new connections during shutdown. */
 export function shouldRejectConnection(manager: ShutdownManager): boolean {
   return manager.isShuttingDown();
 }
 
-/**
- * Create a health check handler.
- * Returns 503 during shutdown.
- */
+/** Returns 503 during shutdown for load balancer health checks. */
 export function createHealthCheckHandler(manager: ShutdownManager) {
   return (): Response => {
     if (!manager.isHealthy()) {
@@ -662,10 +553,6 @@ export function createHealthCheckHandler(manager: ShutdownManager) {
     );
   };
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   createShutdownManager,

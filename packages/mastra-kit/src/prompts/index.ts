@@ -1,19 +1,4 @@
-/**
- * System prompts for the 8-agent trading network
- *
- * Prompts optimized for Google Gemini models following:
- * - ReAct Framework (Reasoning + Acting)
- * - Chain-of-Thought with structured XML tags
- * - Structured JSON output enforcement
- *
- * @see docs/plans/05-agents.md
- */
-
 import type { AgentType } from "../types.js";
-
-// ============================================
-// Technical Analyst Prompt
-// ============================================
 
 export const TECHNICAL_ANALYST_PROMPT = `<system>
 You are a Technical Analyst at a systematic trading firm. Your role is to analyze price action, technical indicators, and market structure to identify trading setups.
@@ -82,10 +67,6 @@ Analyze each instrument using Chain-of-Thought reasoning:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// News & Sentiment Analyst Prompt
-// ============================================
-
 export const NEWS_ANALYST_PROMPT = `<system>
 You are a News & Sentiment Analyst at a systematic trading firm. Your role is to assess the market impact of news events and social sentiment signals.
 
@@ -153,10 +134,6 @@ For each instrument, apply Chain-of-Thought analysis:
 
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
-
-// ============================================
-// Fundamentals & Macro Analyst Prompt
-// ============================================
 
 export const FUNDAMENTALS_ANALYST_PROMPT = `<system>
 You are a Fundamentals & Macro Analyst at a systematic trading firm. Your role is to assess fundamental valuation and macroeconomic context for trading decisions, incorporating prediction market signals.
@@ -267,10 +244,6 @@ For each instrument, apply Chain-of-Thought analysis:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// Bullish Research Prompt
-// ============================================
-
 export const BULLISH_RESEARCHER_PROMPT = `<system>
 You are a Bullish Research Analyst at a systematic trading firm. Your role is to construct the strongest possible case for LONG exposure to each instrument.
 
@@ -374,10 +347,6 @@ For each instrument, construct the bullish case:
 Be an advocate for the long side. Your job is to find reasons to be bullish.
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
-
-// ============================================
-// Bearish Research Prompt
-// ============================================
 
 export const BEARISH_RESEARCHER_PROMPT = `<system>
 You are a Bearish Research Analyst at a systematic trading firm. Your role is to construct the strongest possible case for SHORT exposure or avoiding each instrument.
@@ -483,10 +452,6 @@ For each instrument, construct the bearish case:
 Be an advocate for caution. Your job is to find reasons to be bearish or stay out.
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
-
-// ============================================
-// Trader Agent Prompt
-// ============================================
 
 export const TRADER_PROMPT = `<system>
 You are the Head Trader at a systematic trading firm. Your role is to synthesize all analyst and research outputs into a concrete portfolio adjustment plan.
@@ -656,10 +621,6 @@ Synthesize all inputs into a trading plan using this process:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// Risk Manager Prompt
-// ============================================
-
 export const RISK_MANAGER_PROMPT = `<system>
 You are the Chief Risk Officer at a systematic trading firm. Your role is to validate trading plans against risk constraints before execution.
 
@@ -789,10 +750,6 @@ Validate the trading plan using this checklist:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// Critic Prompt
-// ============================================
-
 export const CRITIC_PROMPT = `<system>
 You are the Internal Auditor at a systematic trading firm. Your role is to validate the logical consistency and evidentiary basis of trading plans.
 
@@ -893,10 +850,6 @@ Audit the trading plan for logical consistency:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// Self-Check Prompt
-// ============================================
-
 export const SELF_CHECK_PROMPT = `<system>
 You are a JSON Schema Validator for trading plans. Your role is to verify structural correctness and completeness before execution.
 
@@ -969,10 +922,6 @@ If errors found:
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
 
-// ============================================
-// Prompt Registry
-// ============================================
-
 export const AGENT_PROMPTS: Record<AgentType, string> = {
   technical_analyst: TECHNICAL_ANALYST_PROMPT,
   news_analyst: NEWS_ANALYST_PROMPT,
@@ -984,9 +933,6 @@ export const AGENT_PROMPTS: Record<AgentType, string> = {
   critic: CRITIC_PROMPT,
 };
 
-/**
- * Get the system prompt for an agent type
- */
 export function getAgentPrompt(agentType: AgentType): string {
   const prompt = AGENT_PROMPTS[agentType];
   if (!prompt) {
@@ -995,16 +941,9 @@ export function getAgentPrompt(agentType: AgentType): string {
   return prompt;
 }
 
-/**
- * Get all agent prompts
- */
 export function getAllAgentPrompts(): Record<AgentType, string> {
   return { ...AGENT_PROMPTS };
 }
-
-// ============================================
-// Research Pipeline Prompts
-// ============================================
 
 export {
   buildFactorZooSummary,

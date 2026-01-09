@@ -11,13 +11,6 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Server message types received via WebSocket.
- */
 export type ServerMessageType =
   | "quote"
   | "order"

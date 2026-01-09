@@ -30,20 +30,11 @@ import type { OptionsContract } from "@/lib/api/types";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
-// ============================================
-// Types
-// ============================================
-
 interface OptionsChainPageProps {
   params: Promise<{ underlying: string }>;
 }
 
-// ============================================
-// Page Component
-// ============================================
-
 export default function OptionsChainPage({ params }: OptionsChainPageProps) {
-  // Unwrap params using React.use
   const [resolvedParams, setResolvedParams] = useState<{ underlying: string } | null>(null);
 
   useEffect(() => {
@@ -61,60 +52,42 @@ export default function OptionsChainPage({ params }: OptionsChainPageProps) {
   return <OptionsChainContent underlying={resolvedParams.underlying} />;
 }
 
-// ============================================
-// Content Component
-// ============================================
-
 function OptionsChainContent({ underlying }: { underlying: string }) {
   const upperUnderlying = underlying.toUpperCase();
 
-  // Watchlist store
   const watchlistSymbols = useWatchlistStore((s) => s.symbols);
   const addSymbol = useWatchlistStore((s) => s.addSymbol);
   const isInWatchlist = watchlistSymbols.includes(upperUnderlying);
 
-  // WebSocket context for options contract subscriptions
   const {
     subscribeOptions,
     unsubscribeOptions,
     connected: wsContextConnected,
   } = useWebSocketContext();
 
-  // Track currently subscribed contracts for cleanup
   const subscribedContractsRef = useRef<Set<string>>(new Set());
 
-  // State
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
-
-  // Position builder modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<OptionsContract | null>(null);
   const [selectedContractType, setSelectedContractType] = useState<"call" | "put" | null>(null);
   const [selectedStrike, setSelectedStrike] = useState<number | null>(null);
 
-  // Options order mutation
   const { mutateAsync: submitOrder } = useOptionsOrder();
-
-  // Fetch underlying quote
   const { data: quote, connected: wsConnected } = useQuote(upperUnderlying);
-
-  // Fetch available expirations
   const { data: expirationsData, isLoading: expirationsLoading } =
     useOptionsExpirations(upperUnderlying);
 
-  // Set initial expiration when data loads
   useEffect(() => {
     if (
       expirationsData?.expirations &&
       expirationsData.expirations.length > 0 &&
       !selectedExpiration
     ) {
-      // Select the first expiration by default
       setSelectedExpiration(expirationsData.expirations[0]?.date ?? null);
     }
   }, [expirationsData, selectedExpiration]);
 
-  // Fetch options chain for selected expiration
   const {
     data: chainData,
     isLoading: chainLoading,
@@ -126,12 +99,10 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     enabled: Boolean(selectedExpiration),
   });
 
-  // Handle expiration selection
   const handleExpirationSelect = useCallback((date: string) => {
     setSelectedExpiration(date);
   }, []);
 
-  // Handle contract click (for position builder)
   const handleContractClick = useCallback(
     (contract: OptionsContract, type: "call" | "put", strike: number) => {
       setSelectedContract(contract);
@@ -142,7 +113,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     []
   );
 
-  // Handle modal close
   const handleModalClose = useCallback(() => {
     setModalOpen(false);
     setSelectedContract(null);
@@ -150,7 +120,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     setSelectedStrike(null);
   }, []);
 
-  // Handle order submission
   const handleSubmitOrder = useCallback(
     async (order: OptionsOrderRequest) => {
       await submitOrder(order);
@@ -158,14 +127,12 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     [submitOrder]
   );
 
-  // Handle visible rows change (for subscription management)
   const handleVisibleRowsChange = useCallback(
     (startIndex: number, endIndex: number) => {
       if (!chainData?.chain || !wsContextConnected) {
         return;
       }
 
-      // Extract contract symbols for visible rows
       const visibleContracts = new Set<string>();
       for (let i = startIndex; i <= endIndex && i < chainData.chain.length; i++) {
         const row = chainData.chain[i];
@@ -177,25 +144,21 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
         }
       }
 
-      // Find contracts to subscribe (new) and unsubscribe (no longer visible)
       const toSubscribe: string[] = [];
       const toUnsubscribe: string[] = [];
 
-      // New contracts to subscribe
       for (const symbol of visibleContracts) {
         if (!subscribedContractsRef.current.has(symbol)) {
           toSubscribe.push(symbol);
         }
       }
 
-      // Contracts to unsubscribe (no longer visible)
       for (const symbol of subscribedContractsRef.current) {
         if (!visibleContracts.has(symbol)) {
           toUnsubscribe.push(symbol);
         }
       }
 
-      // Update subscriptions
       if (toUnsubscribe.length > 0) {
         unsubscribeOptions(toUnsubscribe);
         for (const symbol of toUnsubscribe) {
@@ -213,7 +176,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     [chainData?.chain, wsContextConnected, subscribeOptions, unsubscribeOptions]
   );
 
-  // Clean up subscriptions when expiration changes or component unmounts
   useEffect(() => {
     return () => {
       const contracts = Array.from(subscribedContractsRef.current);
@@ -224,12 +186,10 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     };
   }, [unsubscribeOptions]);
 
-  // Handle add to watchlist
   const handleAddToWatchlist = useCallback(() => {
     addSymbol(upperUnderlying);
   }, [addSymbol, upperUnderlying]);
 
-  // Calculate price change
   const priceChange = useMemo(() => {
     if (!quote?.last || !quote?.prevClose) {
       return null;

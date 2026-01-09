@@ -1,18 +1,7 @@
 /**
- * Chart Accessibility Utilities
- *
- * ARIA labels, keyboard navigation, and screen reader support for charts.
- *
  * @see docs/plans/ui/29-accessibility.md
  */
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Chart statistics for screen readers.
- */
 export interface ChartStats {
   current?: number;
   min?: number;
@@ -22,17 +11,11 @@ export interface ChartStats {
   changePercent?: number;
 }
 
-/**
- * Time range description.
- */
 export interface TimeRange {
   start: string | Date;
   end: string | Date;
 }
 
-/**
- * Chart description options.
- */
 export interface ChartDescriptionOptions {
   chartType: string;
   title?: string;
@@ -41,13 +24,6 @@ export interface ChartDescriptionOptions {
   dataPointCount?: number;
 }
 
-// ============================================
-// ARIA Label Generators
-// ============================================
-
-/**
- * Generate ARIA label for chart.
- */
 export function generateChartAriaLabel(options: ChartDescriptionOptions): string {
   const { chartType, title, stats, timeRange } = options;
 
@@ -67,9 +43,6 @@ export function generateChartAriaLabel(options: ChartDescriptionOptions): string
   return label;
 }
 
-/**
- * Generate detailed description for aria-describedby.
- */
 export function generateChartDescription(options: ChartDescriptionOptions): string {
   const { chartType, stats, dataPointCount } = options;
 
@@ -103,9 +76,6 @@ export function generateChartDescription(options: ChartDescriptionOptions): stri
   return lines.join(" ");
 }
 
-/**
- * Generate live region announcement for updates.
- */
 export function generateUpdateAnnouncement(
   chartType: string,
   newValue: number,
@@ -124,13 +94,6 @@ export function generateUpdateAnnouncement(
   return `${chartType} ${direction} to ${formatted}, change of ${changeFormatted}`;
 }
 
-// ============================================
-// Statistics Calculation
-// ============================================
-
-/**
- * Calculate statistics from numeric array.
- */
 export function calculateStats(data: number[]): ChartStats {
   if (data.length === 0) {
     return {};
@@ -155,9 +118,6 @@ export function calculateStats(data: number[]): ChartStats {
   };
 }
 
-/**
- * Calculate statistics from OHLC data.
- */
 export function calculateOHLCStats(
   data: Array<{ close: number; time: string | number }>
 ): ChartStats {
@@ -165,9 +125,6 @@ export function calculateOHLCStats(
   return calculateStats(closes);
 }
 
-/**
- * Calculate statistics from equity data.
- */
 export function calculateEquityStats(
   data: Array<{ value: number; time: string | number }>
 ): ChartStats {
@@ -175,13 +132,6 @@ export function calculateEquityStats(
   return calculateStats(values);
 }
 
-// ============================================
-// Keyboard Navigation
-// ============================================
-
-/**
- * Keyboard navigation keys.
- */
 export const KEYBOARD_KEYS = {
   LEFT: "ArrowLeft",
   RIGHT: "ArrowRight",
@@ -197,18 +147,12 @@ export const KEYBOARD_KEYS = {
   ESCAPE: "Escape",
 } as const;
 
-/**
- * Keyboard navigation handler result.
- */
 export interface KeyboardNavigationResult {
   handled: boolean;
   action?: "next" | "prev" | "first" | "last" | "zoom-in" | "zoom-out" | "select" | "cancel";
   index?: number;
 }
 
-/**
- * Handle keyboard navigation for data points.
- */
 export function handleDataPointNavigation(
   event: KeyboardEvent,
   currentIndex: number,
@@ -268,9 +212,6 @@ export function handleDataPointNavigation(
   }
 }
 
-/**
- * Handle zoom keyboard navigation.
- */
 export function handleZoomNavigation(event: KeyboardEvent): KeyboardNavigationResult {
   switch (event.key) {
     case KEYBOARD_KEYS.PLUS:

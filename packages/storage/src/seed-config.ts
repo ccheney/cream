@@ -24,42 +24,26 @@ import { TradingConfigRepository, type TradingEnvironment } from "./repositories
 import { UniverseConfigsRepository } from "./repositories/universe-configs.js";
 import { createTursoClient } from "./turso.js";
 
-// ============================================
-// Default Configuration Values
-// ============================================
-
-/**
- * Default trading configuration parameters.
- * Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts
- */
+/** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 const DEFAULT_TRADING_CONFIG = {
-  // Consensus settings
   maxConsensusIterations: 3,
-  agentTimeoutMs: 30_000, // 30 seconds
-  totalConsensusTimeoutMs: 300_000, // 5 minutes
+  agentTimeoutMs: 30_000,
+  totalConsensusTimeoutMs: 300_000,
 
-  // Conviction thresholds
   convictionDeltaHold: 0.2,
   convictionDeltaAction: 0.3,
 
-  // Position sizing percentages (of Kelly optimal)
-  highConvictionPct: 0.7,
+  highConvictionPct: 0.7, // % of Kelly optimal
   mediumConvictionPct: 0.5,
   lowConvictionPct: 0.25,
 
-  // Risk/reward
   minRiskRewardRatio: 1.5,
   kellyFraction: 0.5,
 
-  // Schedule intervals
-  tradingCycleIntervalMs: 60 * 60 * 1000, // 1 hour
-  predictionMarketsIntervalMs: 15 * 60 * 1000, // 15 minutes
+  tradingCycleIntervalMs: 60 * 60 * 1000,
+  predictionMarketsIntervalMs: 15 * 60 * 1000,
 };
 
-/**
- * Default agent configurations.
- * All 8 agents in the consensus network.
- */
 const DEFAULT_AGENT_CONFIGS: Record<
   AgentType,
   {
@@ -119,10 +103,6 @@ const DEFAULT_AGENT_CONFIGS: Record<
   },
 };
 
-/**
- * Default universe configuration.
- * Uses a static watchlist of core ETFs for development.
- */
 const DEFAULT_UNIVERSE_CONFIG = {
   source: "static" as const,
   staticSymbols: ["SPY", "QQQ", "IWM", "DIA", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
@@ -133,10 +113,6 @@ const DEFAULT_UNIVERSE_CONFIG = {
   includeList: [] as string[],
   excludeList: [] as string[],
 };
-
-// ============================================
-// CLI Argument Parsing
-// ============================================
 
 interface SeedOptions {
   force: boolean;
@@ -165,10 +141,6 @@ function parseArgs(): SeedOptions {
   return { force, environments };
 }
 
-// ============================================
-// Seed Functions
-// ============================================
-
 interface SeedResult {
   environment: TradingEnvironment;
   trading: "created" | "skipped" | "replaced";
@@ -190,15 +162,12 @@ async function seedEnvironment(
     universe: "skipped",
   };
 
-  // Check for existing configs
   const existingTrading = await tradingRepo.getActive(environment);
   const existingUniverse = await universeRepo.getActive(environment);
   const existingAgents = await agentRepo.getAll(environment);
 
-  // Seed trading config
   if (!existingTrading || force) {
     if (existingTrading && force) {
-      // Archive existing config before creating new one
       await tradingRepo.setStatus(existingTrading.id, "archived");
       result.trading = "replaced";
     } else {
@@ -215,7 +184,6 @@ async function seedEnvironment(
     });
   }
 
-  // Seed agent configs
   const hasAllAgents = existingAgents.length === AGENT_TYPES.length;
   if (!hasAllAgents || force) {
     result.agents = existingAgents.length > 0 ? "replaced" : "created";
@@ -232,7 +200,6 @@ async function seedEnvironment(
     }
   }
 
-  // Seed universe config
   if (!existingUniverse || force) {
     if (existingUniverse && force) {
       await universeRepo.setStatus(existingUniverse.id, "archived");
@@ -241,7 +208,6 @@ async function seedEnvironment(
       result.universe = "created";
     }
 
-    // Create and immediately activate
     const draft = await universeRepo.saveDraft(environment, DEFAULT_UNIVERSE_CONFIG);
     await universeRepo.setStatus(draft.id, "active");
   }
@@ -249,11 +215,7 @@ async function seedEnvironment(
   return result;
 }
 
-// ============================================
-// Main
-// ============================================
-
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs();
 
   // biome-ignore lint/suspicious/noConsole: CLI script requires console output
@@ -263,11 +225,10 @@ async function main() {
     console.log("⚠️  Force mode enabled - existing configs will be replaced\n");
   }
 
-  // Initialize database connection (use BACKTEST context for seeding - safe for all environments)
+  // BACKTEST context is safe for seeding any environment's config
   const ctx = createContext("BACKTEST", "manual");
   const client = await createTursoClient(ctx);
 
-  // Initialize repositories
   const tradingRepo = new TradingConfigRepository(client);
   const agentRepo = new AgentConfigsRepository(client);
   const universeRepo = new UniverseConfigsRepository(client);
@@ -293,7 +254,6 @@ async function main() {
     }
   }
 
-  // Print summary
   // biome-ignore lint/suspicious/noConsole: CLI script requires console output
   console.log("\n✅ Seed complete!\n");
   // biome-ignore lint/suspicious/noConsole: CLI script requires console output
@@ -327,7 +287,6 @@ function formatStatus(status: "created" | "skipped" | "replaced"): string {
   }
 }
 
-// Run
 main().catch((error) => {
   // biome-ignore lint/suspicious/noConsole: CLI script requires console output
   console.error("Fatal error:", error);

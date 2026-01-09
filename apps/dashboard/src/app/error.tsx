@@ -1,28 +1,11 @@
-/**
- * Next.js Error Page
- *
- * Route segment error boundary for client-side errors.
- *
- * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
- * @see docs/plans/ui/28-states.md lines 83-87
- */
-
 "use client";
 
 import { useEffect } from "react";
-
-// ============================================
-// Types
-// ============================================
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
-
-// ============================================
-// Styles
-// ============================================
 
 const styles = {
   container: {
@@ -32,7 +15,7 @@ const styles = {
     justifyContent: "center",
     minHeight: "100vh",
     padding: "24px",
-    backgroundColor: "#fafaf9", // stone-50
+    backgroundColor: "#fafaf9",
   },
   card: {
     display: "flex",
@@ -40,7 +23,7 @@ const styles = {
     alignItems: "center",
     padding: "48px 32px",
     backgroundColor: "#ffffff",
-    border: "1px solid #e7e5e4", // stone-200
+    border: "1px solid #e7e5e4",
     borderRadius: "12px",
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
     maxWidth: "480px",
@@ -54,18 +37,18 @@ const styles = {
   title: {
     fontSize: "24px",
     fontWeight: 700,
-    color: "#1c1917", // stone-900
+    color: "#1c1917",
     marginBottom: "12px",
   },
   message: {
     fontSize: "16px",
-    color: "#57534e", // stone-600
+    color: "#57534e",
     marginBottom: "32px",
     lineHeight: 1.6,
   },
   digest: {
     fontSize: "12px",
-    color: "#a8a29e", // stone-400
+    color: "#a8a29e",
     fontFamily: "monospace",
     marginBottom: "24px",
   },
@@ -80,7 +63,7 @@ const styles = {
     fontSize: "14px",
     fontWeight: 600,
     color: "#ffffff",
-    backgroundColor: "#292524", // stone-800
+    backgroundColor: "#292524",
     border: "none",
     borderRadius: "8px",
     cursor: "pointer",
@@ -90,30 +73,19 @@ const styles = {
     padding: "12px 24px",
     fontSize: "14px",
     fontWeight: 500,
-    color: "#44403c", // stone-700
+    color: "#44403c",
     backgroundColor: "transparent",
-    border: "1px solid #d6d3d1", // stone-300
+    border: "1px solid #d6d3d1",
     borderRadius: "8px",
     cursor: "pointer",
     transition: "background-color 0.2s",
   },
 };
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Error page component for route segment errors.
- *
- * This component is rendered when an error occurs within a route segment.
- * It receives the error and a reset function to attempt recovery.
- */
-export default function ErrorPage({ error, reset }: ErrorPageProps) {
+export default function ErrorPage({ error, reset }: ErrorPageProps): React.JSX.Element {
   useEffect(() => {
-    // In production, you would send this to an error tracking service
-    // Example: logErrorToService(error);
-  }, []);
+    // TODO: Send to error tracking service (e.g., Sentry)
+  }, [error]);
 
   const handleReset = () => {
     reset();

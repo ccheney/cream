@@ -16,13 +16,6 @@ import type { Factor } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
 import { z } from "zod";
 
-// ============================================
-// Schemas
-// ============================================
-
-/**
- * Decay alert type
- */
 export const DecayAlertTypeSchema = z.enum([
   "IC_DECAY",
   "SHARPE_DECAY",
@@ -32,16 +25,10 @@ export const DecayAlertTypeSchema = z.enum([
 
 export type DecayAlertType = z.infer<typeof DecayAlertTypeSchema>;
 
-/**
- * Alert severity
- */
 export const DecaySeveritySchema = z.enum(["WARNING", "CRITICAL"]);
 
 export type DecaySeverity = z.infer<typeof DecaySeveritySchema>;
 
-/**
- * Decay alert schema
- */
 export const DecayAlertSchema = z.object({
   factorId: z.string(),
   alertType: DecayAlertTypeSchema,
@@ -57,13 +44,6 @@ export const DecayAlertSchema = z.object({
 
 export type DecayAlert = z.infer<typeof DecayAlertSchema>;
 
-// ============================================
-// Configuration
-// ============================================
-
-/**
- * Decay monitoring configuration
- */
 export interface DecayMonitorConfig {
   /** IC decay threshold as fraction of peak (default: 0.5) */
   icDecayThreshold: number;
@@ -91,57 +71,24 @@ export const DEFAULT_DECAY_MONITOR_CONFIG: DecayMonitorConfig = {
   correlationLookbackDays: 60,
 };
 
-// ============================================
-// Interfaces
-// ============================================
-
-/**
- * Alert service interface for sending alerts
- */
 export interface DecayAlertService {
   send(alert: DecayAlert): Promise<void>;
 }
 
-/**
- * Market data provider for fetching market returns
- */
 export interface MarketDataProvider {
-  /**
-   * Get daily market returns for the given number of days
-   * @param days - Number of days to fetch
-   * @returns Array of daily returns (most recent first)
-   */
+  /** Returns array of daily returns (most recent first) */
   getMarketReturns(days: number): Promise<number[]>;
 }
 
-/**
- * Daily check result
- */
 export interface DailyCheckResult {
-  /** Alerts generated */
   alerts: DecayAlert[];
-  /** Number of factors checked */
   factorsChecked: number;
-  /** Factors found to be decaying */
   decayingFactors: string[];
-  /** Factors with crowding issues */
   crowdedFactors: string[];
-  /** Factor pairs with high correlation */
   correlatedPairs: Array<{ factor1: string; factor2: string; correlation: number }>;
-  /** Timestamp of check */
   checkedAt: string;
 }
 
-// ============================================
-// Service
-// ============================================
-
-/**
- * Decay Monitor Service
- *
- * Monitors active factors for performance degradation and generates
- * alerts when factors show signs of alpha decay.
- */
 export class DecayMonitorService {
   private readonly config: DecayMonitorConfig;
 
@@ -157,14 +104,6 @@ export class DecayMonitorService {
     };
   }
 
-  // ============================================
-  // Daily Check
-  // ============================================
-
-  /**
-   * Run all decay checks for active factors.
-   * Called daily after market close.
-   */
   async runDailyCheck(): Promise<DailyCheckResult> {
     const timestamp = new Date().toISOString();
     const alerts: DecayAlert[] = [];
@@ -175,14 +114,12 @@ export class DecayMonitorService {
     const activeFactors = await this.factorZoo.findActiveFactors();
 
     for (const factor of activeFactors) {
-      // IC Decay Check
       const icAlert = await this.checkICDecay(factor);
       if (icAlert) {
         alerts.push(icAlert);
         decayingFactors.push(factor.factorId);
       }
 
-      // Sharpe Decay Check
       const sharpeAlert = await this.checkSharpeDecay(factor);
       if (sharpeAlert) {
         alerts.push(sharpeAlert);
@@ -191,7 +128,6 @@ export class DecayMonitorService {
         }
       }
 
-      // Crowding Check (correlation to market)
       if (this.marketData) {
         const crowdingAlert = await this.checkCrowding(factor);
         if (crowdingAlert) {
@@ -201,7 +137,6 @@ export class DecayMonitorService {
       }
     }
 
-    // Factor-Factor Correlation Check (pairwise)
     const corrAlerts = await this.checkCorrelationSpikes(activeFactors);
     for (const alert of corrAlerts) {
       alerts.push(alert);
@@ -214,7 +149,6 @@ export class DecayMonitorService {
       }
     }
 
-    // Send alerts
     if (this.alertService) {
       for (const alert of alerts) {
         await this.alertService.send(alert);
@@ -231,13 +165,6 @@ export class DecayMonitorService {
     };
   }
 
-  // ============================================
-  // Individual Checks
-  // ============================================
-
-  /**
-   * Check a factor for IC decay
-   */
   async checkICDecay(factor: Factor): Promise<DecayAlert | null> {
     const history = await this.factorZoo.getPerformanceHistory(
       factor.factorId,
@@ -275,9 +202,6 @@ export class DecayMonitorService {
     return null;
   }
 
-  /**
-   * Check a factor for Sharpe decay
-   */
   async checkSharpeDecay(factor: Factor): Promise<DecayAlert | null> {
     const history = await this.factorZoo.getPerformanceHistory(
       factor.factorId,
@@ -313,9 +237,6 @@ export class DecayMonitorService {
     return null;
   }
 
-  /**
-   * Check a factor for market crowding (high correlation to SPY)
-   */
   async checkCrowding(factor: Factor): Promise<DecayAlert | null> {
     if (!this.marketData) {
       return null;
@@ -346,14 +267,10 @@ export class DecayMonitorService {
     return null;
   }
 
-  /**
-   * Check all factor pairs for correlation spikes
-   */
   async checkCorrelationSpikes(factors: Factor[]): Promise<DecayAlert[]> {
     const alerts: DecayAlert[] = [];
     const correlationMatrix = await this.factorZoo.getCorrelationMatrix();
 
-    // Check each pair once using indices with proper guards
     for (let i = 0; i < factors.length; i++) {
       const factor1 = factors[i];
       if (!factor1) {
@@ -392,9 +309,6 @@ export class DecayMonitorService {
     return alerts;
   }
 
-  /**
-   * Check a single factor for all decay types
-   */
   async checkFactor(factorId: string): Promise<DecayAlert[]> {
     const factor = await this.factorZoo.findFactorById(factorId);
     if (!factor || factor.status !== "active") {
@@ -423,13 +337,6 @@ export class DecayMonitorService {
     return alerts;
   }
 
-  // ============================================
-  // Correlation Computation
-  // ============================================
-
-  /**
-   * Compute correlation between factor IC and market returns
-   */
   private async computeMarketCorrelation(factorId: string): Promise<number> {
     if (!this.marketData) {
       throw new Error("Market data provider not configured");
@@ -441,7 +348,7 @@ export class DecayMonitorService {
     );
 
     if (factorHistory.length < 20) {
-      return 0; // Not enough data
+      return 0;
     }
 
     const marketReturns = await this.marketData.getMarketReturns(
@@ -449,23 +356,15 @@ export class DecayMonitorService {
     );
 
     if (marketReturns.length < 20) {
-      return 0; // Not enough market data
+      return 0;
     }
 
-    // Align the series (both should be ordered most recent first)
     const factorIC = factorHistory.map((h) => h.ic);
     const n = Math.min(factorIC.length, marketReturns.length);
 
     return this.correlation(factorIC.slice(0, n), marketReturns.slice(0, n));
   }
 
-  // ============================================
-  // Helper Methods
-  // ============================================
-
-  /**
-   * Compute mean of an array
-   */
   private mean(arr: number[]): number {
     if (arr.length === 0) {
       return 0;
@@ -473,9 +372,6 @@ export class DecayMonitorService {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   }
 
-  /**
-   * Compute Pearson correlation coefficient
-   */
   private correlation(x: number[], y: number[]): number {
     const n = Math.min(x.length, y.length);
     if (n < 2) {
@@ -513,21 +409,10 @@ export class DecayMonitorService {
     return num / denominator;
   }
 
-  // ============================================
-  // Getters
-  // ============================================
-
-  /**
-   * Get current configuration
-   */
   getConfig(): DecayMonitorConfig {
     return { ...this.config };
   }
 }
-
-// ============================================
-// Factory
-// ============================================
 
 export interface DecayMonitorDependencies {
   factorZoo: FactorZooRepository;
@@ -535,9 +420,6 @@ export interface DecayMonitorDependencies {
   marketData?: MarketDataProvider;
 }
 
-/**
- * Create a Decay Monitor Service with dependencies
- */
 export function createDecayMonitorService(
   deps: DecayMonitorDependencies,
   config?: Partial<DecayMonitorConfig>

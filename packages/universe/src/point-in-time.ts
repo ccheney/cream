@@ -17,13 +17,6 @@ import type {
 } from "@cream/storage";
 import { createFMPClient, type FMPClient, type FMPClientConfig } from "./fmp-client.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Point-in-time resolution result
- */
 export interface PointInTimeResult {
   /** Symbols valid on the target date */
   symbols: string[];
@@ -79,10 +72,6 @@ export interface DataValidationResult {
   };
 }
 
-// ============================================
-// Point-in-Time Universe Resolver
-// ============================================
-
 /**
  * Resolves universe at historical dates for survivorship-bias-free backtesting.
  *
@@ -111,9 +100,6 @@ export class PointInTimeUniverseResolver {
     };
   }
 
-  /**
-   * Get universe as of a specific date
-   */
   async getUniverseAsOf(indexId: IndexId, asOfDate: string): Promise<PointInTimeResult> {
     const warnings: string[] = [];
     const tickerChangesMapped = new Map<string, string>();
@@ -121,7 +107,6 @@ export class PointInTimeUniverseResolver {
     let tickerChangesApplied = 0;
     let _fromCache = false;
 
-    // 1. Try to get from cached snapshot first
     if (this.config.useCache) {
       const snapshot = await this.snapshotsRepo.get(indexId, asOfDate);
       if (snapshot) {
@@ -139,7 +124,6 @@ export class PointInTimeUniverseResolver {
         };
       }
 
-      // Try closest snapshot before date
       const closestSnapshot = await this.snapshotsRepo.getClosestBefore(indexId, asOfDate);
       if (closestSnapshot) {
         const snapshotDate = new Date(closestSnapshot.snapshotDate);
@@ -150,7 +134,6 @@ export class PointInTimeUniverseResolver {
 
         if (daysDiff <= this.config.maxCacheAgeDays) {
           _fromCache = true;
-          // Use snapshot but note it's approximate
           warnings.push(
             `Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`
           );
@@ -170,15 +153,12 @@ export class PointInTimeUniverseResolver {
       }
     }
 
-    // 2. Try to resolve from constituent history in database
     const constituents = await this.constituentsRepo.getConstituentsAsOf(indexId, asOfDate);
 
     if (constituents.length > 0) {
-      // Apply ticker changes to map historical tickers to what they were on that date
       const resolvedSymbols: string[] = [];
 
       for (const symbol of constituents) {
-        // Check if symbol had a different ticker on that date
         const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
           symbol,
           asOfDate
@@ -206,7 +186,6 @@ export class PointInTimeUniverseResolver {
       };
     }
 
-    // 3. Fall back to FMP API if autoPopulate is enabled
     if (this.config.autoPopulate) {
       const fmp = this.getFMPClient();
       const targetDate = new Date(asOfDate);
@@ -214,7 +193,6 @@ export class PointInTimeUniverseResolver {
       try {
         const symbols = await fmp.getConstituentsAsOf(indexId, targetDate);
 
-        // Cache the result
         await this.snapshotsRepo.save({
           snapshotDate: asOfDate,
           indexId,
@@ -240,7 +218,6 @@ export class PointInTimeUniverseResolver {
       }
     }
 
-    // 4. No data available
     warnings.push(`No historical data available for ${indexId} on ${asOfDate}`);
     return {
       symbols: [],
@@ -256,11 +233,7 @@ export class PointInTimeUniverseResolver {
     };
   }
 
-  /**
-   * Check if a symbol was in an index on a specific date
-   */
   async wasInIndex(indexId: IndexId, symbol: string, asOfDate: string): Promise<boolean> {
-    // First check direct membership
     const directMembership = await this.constituentsRepo.wasInIndexOnDate(
       indexId,
       symbol,
@@ -270,7 +243,6 @@ export class PointInTimeUniverseResolver {
       return true;
     }
 
-    // Check if symbol might have had a different ticker on that date
     const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
       symbol,
       asOfDate
@@ -282,40 +254,27 @@ export class PointInTimeUniverseResolver {
     return false;
   }
 
-  /**
-   * Resolve a ticker to its historical equivalent
-   */
   async resolveHistoricalTicker(currentSymbol: string, asOfDate: string): Promise<string> {
     return this.tickerChangesRepo.resolveToHistoricalSymbol(currentSymbol, asOfDate);
   }
 
-  /**
-   * Resolve a historical ticker to its current equivalent
-   */
   async resolveCurrentTicker(historicalSymbol: string): Promise<string> {
     return this.tickerChangesRepo.resolveToCurrentSymbol(historicalSymbol);
   }
 
-  /**
-   * Validate historical data coverage for an index
-   */
   async validateDataCoverage(indexId: IndexId): Promise<DataValidationResult> {
     const issues: string[] = [];
 
-    // Get constituent count and dates
     const constituentCount = await this.constituentsRepo.getConstituentCount(indexId);
     const currentConstituents = await this.constituentsRepo.getCurrentConstituents(indexId);
 
-    // Get ticker changes
     const tickerChanges = await this.tickerChangesRepo.getChangesInRange(
       "1900-01-01",
       "2100-12-31"
     );
 
-    // Get snapshot dates
     const snapshotDates = await this.snapshotsRepo.listDates(indexId);
 
-    // Validation checks
     const expectedCounts: Record<string, number> = {
       SP500: 500,
       NASDAQ100: 100,
@@ -335,7 +294,6 @@ export class PointInTimeUniverseResolver {
       issues.push(`No constituent data for ${indexId}`);
     }
 
-    // Find date range
     let earliestDate: string | null = null;
     let latestDate: string | null = null;
 
@@ -359,9 +317,6 @@ export class PointInTimeUniverseResolver {
     };
   }
 
-  /**
-   * Populate historical data from FMP for a date range
-   */
   async populateHistoricalData(
     indexId: IndexId,
     startDate: string,
@@ -371,7 +326,6 @@ export class PointInTimeUniverseResolver {
     let snapshotsCreated = 0;
     let constituentsAdded = 0;
 
-    // Fetch current constituents
     const currentConstituents = await fmp.getIndexConstituents(indexId);
 
     for (const constituent of currentConstituents) {
@@ -387,12 +341,10 @@ export class PointInTimeUniverseResolver {
       constituentsAdded++;
     }
 
-    // Fetch historical changes
     try {
       const historicalChanges = await fmp.getHistoricalConstituents(indexId);
 
       for (const change of historicalChanges) {
-        // Record removal
         if (change.removedTicker) {
           await this.constituentsRepo.upsert({
             indexId,
@@ -404,7 +356,6 @@ export class PointInTimeUniverseResolver {
           });
         }
 
-        // Record ticker change if it looks like a rename
         if (
           change.symbol &&
           change.removedTicker &&
@@ -424,7 +375,6 @@ export class PointInTimeUniverseResolver {
       // Historical data may not be available for all indices
     }
 
-    // Create a snapshot for the current date
     const todayParts = new Date().toISOString().split("T");
     const today = todayParts[0] ?? new Date().toISOString().slice(0, 10);
     const currentSymbols = currentConstituents.map((c) => c.symbol);
@@ -448,10 +398,6 @@ export class PointInTimeUniverseResolver {
     return this.fmpClient;
   }
 }
-
-// ============================================
-// Factory Function
-// ============================================
 
 /**
  * Create a PointInTimeUniverseResolver.

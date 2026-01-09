@@ -1,12 +1,3 @@
-/**
- * Options Query Hooks
- *
- * TanStack Query hooks for options chain data.
- * Initial data from REST API, streaming updates via WebSocket.
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 2.1
- */
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OptionsOrderRequest } from "@/components/options/PositionBuilderModal";
 import { get, post } from "@/lib/api/client";
@@ -16,10 +7,6 @@ import type {
   OptionsChainResponse,
   OptionsQuoteDetail,
 } from "@/lib/api/types";
-
-// ============================================
-// Options Chain Hook
-// ============================================
 
 export interface UseOptionsChainOptions {
   /** Filter to specific expiration date (YYYY-MM-DD) */
@@ -60,13 +47,9 @@ export function useOptionsChain(underlying: string, options: UseOptionsChainOpti
     staleTime: STALE_TIMES.MARKET,
     gcTime: CACHE_TIMES.CHART,
     enabled: enabled && Boolean(underlying),
-    refetchInterval: 30000, // Refetch every 30 seconds for fresh data
+    refetchInterval: 30000,
   });
 }
-
-// ============================================
-// Expirations Hook
-// ============================================
 
 /**
  * Fetch available expiration dates for an underlying.
@@ -85,15 +68,11 @@ export function useOptionsExpirations(underlying: string, enabled = true) {
       const { data } = await get<ExpirationsResponse>(url);
       return data;
     },
-    staleTime: STALE_TIMES.CONFIG, // Expirations don't change often
+    staleTime: STALE_TIMES.CONFIG,
     gcTime: CACHE_TIMES.CONFIG,
     enabled: enabled && Boolean(underlying),
   });
 }
-
-// ============================================
-// Option Quote Hook
-// ============================================
 
 /**
  * Fetch detailed quote with greeks for a specific option contract.
@@ -117,10 +96,6 @@ export function useOptionQuote(contract: string, enabled = true) {
     enabled: enabled && Boolean(contract),
   });
 }
-
-// ============================================
-// Utility Functions
-// ============================================
 
 /**
  * Format OCC option symbol from components.
@@ -181,25 +156,12 @@ export function parseOccSymbol(symbol: string): {
   };
 }
 
-// ============================================
-// Options Order Mutation
-// ============================================
-
-/**
- * Options order response from the API.
- */
 export interface OptionsOrderResponse {
-  /** Order ID */
   orderId: string;
-  /** Client order ID */
   clientOrderId: string;
-  /** Order status */
   status: "pending" | "accepted" | "filled" | "rejected";
-  /** Filled quantity */
   filledQty: number;
-  /** Average fill price */
   avgFillPrice: number | null;
-  /** Created timestamp */
   createdAt: string;
 }
 
@@ -225,9 +187,7 @@ export function useOptionsOrder() {
       return data;
     },
     onSuccess: () => {
-      // Invalidate portfolio positions to reflect new order
       queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
-      // Invalidate options positions
       queryClient.invalidateQueries({ queryKey: ["options-positions"] });
     },
   });

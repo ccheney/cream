@@ -11,10 +11,6 @@
 import { memo, useMemo } from "react";
 import { CHART_COLORS } from "@/lib/chart-config";
 
-// ============================================
-// Types
-// ============================================
-
 export type SparklineColor = "profit" | "loss" | "primary" | "neutral";
 
 export interface SparklineProps {
@@ -43,13 +39,6 @@ export interface SparklineProps {
   autoColor?: boolean;
 }
 
-// ============================================
-// Color Helpers
-// ============================================
-
-/**
- * Get color from preset or custom value.
- */
 function getColor(color: SparklineColor | string): string {
   switch (color) {
     case "profit":
@@ -65,9 +54,6 @@ function getColor(color: SparklineColor | string): string {
   }
 }
 
-/**
- * Determine color based on trend (first vs last value).
- */
 function getTrendColor(data: number[]): SparklineColor {
   if (data.length < 2) {
     return "neutral";
@@ -83,14 +69,6 @@ function getTrendColor(data: number[]): SparklineColor {
   return "neutral";
 }
 
-// ============================================
-// Path Generation
-// ============================================
-
-/**
- * Generate SVG path for sparkline.
- * Uses monotone interpolation for smooth curves.
- */
 function generatePath(data: number[], width: number, height: number, padding = 2): string {
   if (data.length === 0) {
     return "";
@@ -101,19 +79,16 @@ function generatePath(data: number[], width: number, height: number, padding = 2
     return `M 0 ${y} L ${width} ${y}`;
   }
 
-  // Calculate bounds
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
 
-  // Calculate points
   const points: [number, number][] = data.map((value, index) => {
     const x = (index / (data.length - 1)) * (width - padding * 2) + padding;
     const y = height - padding - ((value - min) / range) * (height - padding * 2);
     return [x, y];
   });
 
-  // Generate smooth path using catmull-rom spline
   let path = `M ${points[0]?.[0] ?? 0} ${points[0]?.[1] ?? 0}`;
 
   for (let i = 0; i < points.length - 1; i++) {
@@ -134,9 +109,6 @@ function generatePath(data: number[], width: number, height: number, padding = 2
   return path;
 }
 
-/**
- * Get last point coordinates.
- */
 function getLastPoint(
   data: number[],
   width: number,
@@ -158,13 +130,6 @@ function getLastPoint(
   return { x, y };
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Sparkline component for inline trend visualization.
- */
 function SparklineComponent({
   data,
   width = 80,
@@ -175,16 +140,13 @@ function SparklineComponent({
   className,
   autoColor = true,
 }: SparklineProps) {
-  // Memoize path calculation
   const path = useMemo(() => generatePath(data, width, height), [data, width, height]);
 
-  // Memoize last point calculation
   const lastPoint = useMemo(
     () => (showLastPoint ? getLastPoint(data, width, height) : null),
     [data, width, height, showLastPoint]
   );
 
-  // Determine color
   const resolvedColor = useMemo(() => {
     if (color) {
       return getColor(color);
@@ -195,7 +157,6 @@ function SparklineComponent({
     return CHART_COLORS.text;
   }, [color, autoColor, data]);
 
-  // Handle empty data
   if (data.length === 0) {
     return (
       <svg width={width} height={height} className={className} role="img" aria-label="No data">
@@ -220,7 +181,6 @@ function SparklineComponent({
       role="img"
       aria-label={`Sparkline showing trend from ${data[0]} to ${data[data.length - 1]}`}
     >
-      {/* Sparkline path */}
       <path
         d={path}
         fill="none"
@@ -230,21 +190,13 @@ function SparklineComponent({
         strokeLinejoin="round"
       />
 
-      {/* Last point dot */}
       {lastPoint && <circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill={resolvedColor} />}
     </svg>
   );
 }
 
-/**
- * Memoized Sparkline component.
- */
 export const Sparkline = memo(SparklineComponent);
 
 export default Sparkline;
-
-// ============================================
-// Utility Exports
-// ============================================
 
 export { getColor, getTrendColor, generatePath, getLastPoint };

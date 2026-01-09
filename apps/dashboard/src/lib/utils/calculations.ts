@@ -6,10 +6,6 @@
  * @see docs/plans/ui/22-typography.md number formatting
  */
 
-// ============================================
-// Types
-// ============================================
-
 export interface Position {
   symbol: string;
   qty: number;
@@ -37,10 +33,6 @@ export interface PnLResult {
   absolute: number;
   percent: number;
 }
-
-// ============================================
-// P&L Calculations
-// ============================================
 
 /**
  * Calculate absolute P&L for a position.
@@ -84,10 +76,6 @@ export function calculatePnLFull(
     percent: calculatePnLPercent(entryPrice, currentPrice),
   };
 }
-
-// ============================================
-// Portfolio Calculations
-// ============================================
 
 /**
  * Calculate total portfolio value from positions and quotes.
@@ -160,10 +148,6 @@ export function calculateExposurePercent(
     short: (exposure.short / nav) * 100,
   };
 }
-
-// ============================================
-// Risk Calculations
-// ============================================
 
 /**
  * Calculate position concentration as percentage of portfolio.
@@ -248,7 +232,6 @@ export function calculateSortinoRatio(
   const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
   const annualizedReturn = meanReturn * periodsPerYear;
 
-  // Calculate downside deviation (only negative returns)
   const downsideReturns = returns.filter((r) => r < 0);
   if (downsideReturns.length === 0) {
     return meanReturn > 0 ? Number.POSITIVE_INFINITY : 0;
@@ -265,10 +248,6 @@ export function calculateSortinoRatio(
 
   return (annualizedReturn - riskFreeRate) / annualizedDownside;
 }
-
-// ============================================
-// Greeks Calculations
-// ============================================
 
 /**
  * Calculate total portfolio delta.
@@ -287,10 +266,6 @@ export function calculatePortfolioTheta(
 ): number {
   return thetas.reduce((total, t) => total + t.theta * t.quantity, 0);
 }
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
   calculatePnL,

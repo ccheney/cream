@@ -12,10 +12,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Expiration Action Types
-// ============================================
-
 /**
  * Action to take for an expiring position.
  *
@@ -63,10 +59,6 @@ export const Moneyness = z.enum([
 ]);
 export type Moneyness = z.infer<typeof Moneyness>;
 
-// ============================================
-// Expiration Timeline
-// ============================================
-
 /**
  * Expiration Friday timeline checkpoints (all times ET).
  *
@@ -98,10 +90,6 @@ export const EXPIRATION_CHECKPOINT_TIMES: Record<ExpirationCheckpoint, string> =
   MARKET_CLOSE: "16:00",
   OCC_DEADLINE: "17:30",
 };
-
-// ============================================
-// Configuration Schemas
-// ============================================
 
 /**
  * Minimum DTE thresholds by position type.
@@ -213,10 +201,6 @@ export const ExpirationPolicyConfig = z.object({
 });
 export type ExpirationPolicyConfig = z.infer<typeof ExpirationPolicyConfig>;
 
-// ============================================
-// Expiring Position Types
-// ============================================
-
 /**
  * An option position that is expiring and needs handling.
  */
@@ -292,10 +276,6 @@ export const ExpirationEvaluationSchema = z.object({
 });
 export type ExpirationEvaluation = z.infer<typeof ExpirationEvaluationSchema>;
 
-// ============================================
-// Default Configuration
-// ============================================
-
 /**
  * Default minimum DTE configuration.
  */
@@ -328,10 +308,6 @@ export const DEFAULT_EXPIRATION_POLICY: ExpirationPolicyConfig = {
   closeITMByTime: "14:00",
   disabled: false,
 };
-
-// ============================================
-// Helper Functions
-// ============================================
 
 /**
  * Get the minimum DTE for a position type.

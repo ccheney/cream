@@ -18,10 +18,6 @@ import { TickDots } from "./tick-dots";
 import { usePriceFlash } from "./use-price-flash";
 import { useStaleData } from "./use-stale-data";
 
-// ============================================
-// Types
-// ============================================
-
 export interface PriceTickerProps {
   /** Trading symbol */
   symbol: string;
@@ -63,13 +59,6 @@ export interface PriceTickerProps {
   "data-testid"?: string;
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
-/**
- * Format delta value with sign and arrow.
- */
 function formatDelta(delta: number, percent?: number): string {
   const sign = delta >= 0 ? "+" : "";
   const arrow = delta >= 0 ? "↑" : "↓";
@@ -83,16 +72,9 @@ function formatDelta(delta: number, percent?: number): string {
   return `${arrow} ${formattedDelta}`;
 }
 
-/**
- * Format bid/ask spread
- */
 function formatBidAsk(bid: number, ask: number): string {
   return `${bid.toFixed(2)} × ${ask.toFixed(2)}`;
 }
-
-// ============================================
-// Styles
-// ============================================
 
 const sizeStyles = {
   sm: {
@@ -132,10 +114,6 @@ const variantStyles = {
     gap: "gap-1",
   },
 };
-
-// ============================================
-// Component
-// ============================================
 
 /**
  * PriceTicker displays live prices with visual feedback.
@@ -197,7 +175,6 @@ export const PriceTicker = memo(function PriceTicker({
   const { flash } = usePriceFlash(price, previousPrice);
   const { stale, markUpdated } = useStaleData(lastUpdatedAt);
 
-  // Mark updated when price changes
   useEffect(() => {
     if (price !== previousPrice) {
       markUpdated();
@@ -207,7 +184,6 @@ export const PriceTicker = memo(function PriceTicker({
   const styles = sizeStyles[size];
   const variantStyle = variantStyles[variant];
 
-  // Calculate delta if not provided
   const displayDelta = delta ?? (previousPrice !== undefined ? price - previousPrice : undefined);
   const displayDeltaPercent =
     deltaPercent ??
@@ -215,26 +191,21 @@ export const PriceTicker = memo(function PriceTicker({
       ? ((price - previousPrice) / previousPrice) * 100
       : undefined);
 
-  // Determine if positive or negative
   const isPositive = displayDelta !== undefined ? displayDelta >= 0 : true;
 
-  // Flash background classes
   const flashClasses = flash.isFlashing
     ? flash.direction === "up"
       ? "animate-flash-profit"
       : "animate-flash-loss"
     : "";
 
-  // Sparkline data - ensure we have enough points
   const sparklineData = useMemo(() => {
     if (!showSparkline || !priceHistory) {
       return [];
     }
-    // Take last 20 points, or all if less
     return priceHistory.slice(-20);
   }, [showSparkline, priceHistory]);
 
-  // Tick history data
   const tickData = useMemo(() => {
     if (!showTickDots || !tickHistory) {
       return [];
@@ -242,7 +213,6 @@ export const PriceTicker = memo(function PriceTicker({
     return tickHistory;
   }, [showTickDots, tickHistory]);
 
-  // Stale indicator
   const StaleIndicator = () => (
     <span
       className="ml-1 text-gray-400"
@@ -277,16 +247,13 @@ export const PriceTicker = memo(function PriceTicker({
       }}
       data-testid={testId}
     >
-      {/* Symbol */}
       {showSymbol && (
         <span className={`${styles.symbol} text-gray-500 dark:text-gray-400`}>{symbol}</span>
       )}
 
-      {/* Price with flash and animation */}
       <div
         className={`${styles.price} ${flashClasses} rounded px-1 -mx-1 flex items-center gap-2`}
         style={{
-          // CSS custom properties for flash animation
           ["--flash-color" as string]: isPositive
             ? "rgba(34, 197, 94, 0.3)"
             : "rgba(239, 68, 68, 0.3)",
@@ -303,20 +270,17 @@ export const PriceTicker = memo(function PriceTicker({
         />
         {stale.showIndicator && <StaleIndicator />}
 
-        {/* Sparkline next to price in compact mode */}
         {variant === "compact" && showSparkline && sparklineData.length >= 2 && (
           <Sparkline data={sparklineData} width={50} height={16} strokeWidth={1} />
         )}
       </div>
 
-      {/* Bid/Ask spread */}
       {showBidAsk && bid !== undefined && ask !== undefined && (
         <span className={`${styles.bidAsk} text-gray-500 dark:text-gray-400 font-mono`}>
           {formatBidAsk(bid, ask)}
         </span>
       )}
 
-      {/* Delta */}
       {showChange && displayDelta !== undefined && (
         <span
           className={`${styles.delta} ${
@@ -329,22 +293,16 @@ export const PriceTicker = memo(function PriceTicker({
         </span>
       )}
 
-      {/* Sparkline (in default/expanded variants) */}
       {variant !== "compact" && showSparkline && sparklineData.length >= 2 && (
         <Sparkline data={sparklineData} width={60} height={20} className="mt-1" />
       )}
 
-      {/* Tick dots */}
       {showTickDots && tickData.length > 0 && (
         <TickDots ticks={tickData} maxDots={8} dotSize={size === "sm" ? 5 : 6} className="mt-0.5" />
       )}
     </div>
   );
 });
-
-// ============================================
-// CSS Keyframes (add to global CSS or Tailwind config)
-// ============================================
 
 /**
  * Add these keyframes to your global CSS or tailwind.config.js:
@@ -373,9 +331,5 @@ export const PriceTicker = memo(function PriceTicker({
  * }
  * ```
  */
-
-// ============================================
-// Exports
-// ============================================
 
 export default PriceTicker;

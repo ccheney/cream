@@ -1,20 +1,5 @@
 "use client";
 
-/**
- * Unified Event Feed Page
- *
- * Real-time event stream with support for stock quotes, trades,
- * options events, decisions, orders, and agent outputs.
- *
- * Features:
- * - Options event integration (quotes and trades)
- * - Virtualized list for 1000+ events
- * - Rate statistics footer
- * - Filter by event type
- *
- * @see docs/plans/ui/40-streaming-data-integration.md Part 3.1
- */
-
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFeedStats } from "@/hooks/useFeedStats";
@@ -27,10 +12,6 @@ import {
   type WebSocketMessage,
 } from "@/lib/feed/event-normalizer";
 import { useWebSocketContext as useWebSocket } from "@/providers/WebSocketProvider";
-
-// ============================================
-// Constants
-// ============================================
 
 const MAX_EVENTS = 500;
 const ROW_HEIGHT = 48;
@@ -63,10 +44,6 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
   system: "System",
 };
 
-// ============================================
-// Main Component
-// ============================================
-
 export default function FeedPage() {
   const { connected, lastMessage } = useWebSocket();
   const { stats, recordEvent } = useFeedStats();
@@ -83,7 +60,6 @@ export default function FeedPage() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // Process incoming WebSocket messages
   useEffect(() => {
     if (lastMessage && !isPaused) {
       const normalized = normalizeEvent(lastMessage as WebSocketMessage);
@@ -94,7 +70,6 @@ export default function FeedPage() {
     }
   }, [lastMessage, isPaused, recordEvent]);
 
-  // Filter events
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       if (!filters[e.type]) {
@@ -111,7 +86,6 @@ export default function FeedPage() {
     });
   }, [events, filters, symbolFilter]);
 
-  // Virtual list
   const virtualizer = useVirtualizer({
     count: filteredEvents.length,
     getScrollElement: () => parentRef.current,
@@ -137,7 +111,6 @@ export default function FeedPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
           Real-Time Feed
@@ -167,7 +140,6 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center gap-1 mr-2">
           <button
@@ -204,7 +176,6 @@ export default function FeedPage() {
         />
       </div>
 
-      {/* Event Stream */}
       <div className="flex-1 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 flex flex-col overflow-hidden">
         <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-shrink-0">
           <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
@@ -224,7 +195,6 @@ export default function FeedPage() {
           </button>
         </div>
 
-        {/* Virtualized Event List */}
         <div ref={parentRef} className="flex-1 overflow-auto">
           {filteredEvents.length > 0 ? (
             <div
@@ -264,7 +234,6 @@ export default function FeedPage() {
           )}
         </div>
 
-        {/* Rate Statistics Footer */}
         <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750 flex-shrink-0">
           <div className="flex items-center gap-6 text-xs text-cream-500 dark:text-cream-400">
             <span>
@@ -289,10 +258,6 @@ export default function FeedPage() {
     </div>
   );
 }
-
-// ============================================
-// Sub-components
-// ============================================
 
 function FilterChip({
   label,
