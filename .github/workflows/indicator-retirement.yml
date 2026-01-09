@@ -41,6 +41,8 @@ concurrency:
 
 env:
   CREAM_ENV: BACKTEST
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
   create-retirement-pr:
