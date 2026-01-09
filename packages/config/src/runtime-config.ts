@@ -897,7 +897,6 @@ export class RuntimeConfigService {
       });
     }
 
-
     // Warnings for model consistency
     const models = new Set(enabledAgents.map((a) => a.model));
     if (models.size > 3) {

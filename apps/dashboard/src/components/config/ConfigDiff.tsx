@@ -8,7 +8,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/collapsible";
-import { usePreferencesStore } from "@/stores/preferences-store";
 import type { FullRuntimeConfig } from "@/lib/api/types";
 import {
   calculateDiff,
@@ -18,6 +17,7 @@ import {
   formatValue,
   revertChange,
 } from "@/lib/config-diff";
+import { usePreferencesStore } from "@/stores/preferences-store";
 
 export type ConfigType = FullRuntimeConfig;
 

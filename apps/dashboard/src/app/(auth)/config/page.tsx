@@ -114,10 +114,7 @@ export default function ConfigPage() {
               label="Max Drawdown"
               value={`${((constraints?.portfolio?.maxDrawdown ?? 0) * 100).toFixed(0)}%`}
             />
-            <ConfigField
-              label="Max Delta"
-              value={String(constraints?.options?.maxDelta ?? "--")}
-            />
+            <ConfigField label="Max Delta" value={String(constraints?.options?.maxDelta ?? "--")} />
           </ConfigSection>
         </div>
       ) : null}

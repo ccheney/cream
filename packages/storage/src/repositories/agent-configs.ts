@@ -100,7 +100,6 @@ const DEFAULT_MODELS: Record<AgentType, string> = {
   critic: "gemini-2.5-pro-preview-05-06",
 };
 
-
 // ============================================
 // Row Mapper
 // ============================================

@@ -8,11 +8,7 @@
 
 "use client";
 
-import {
-  type ThemeMode,
-  selectTheme,
-  usePreferencesStore,
-} from "@/stores/preferences-store";
+import { selectTheme, type ThemeMode, usePreferencesStore } from "@/stores/preferences-store";
 
 // ============================================
 // Types
