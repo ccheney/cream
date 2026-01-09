@@ -32,13 +32,10 @@ export {
   getFedDirection,
   hasHighMacroUncertainty,
   hasHighPolicyRisk,
-  // Aliases for convenience
+  // Type aliases for convenience
   type MarketOutcome,
-  MarketOutcomeSchema,
   type MarketType,
-  MarketTypeSchema,
   type Platform,
-  PlatformSchema,
   // Core types
   type PredictionMarketEvent,
   PredictionMarketEventSchema,

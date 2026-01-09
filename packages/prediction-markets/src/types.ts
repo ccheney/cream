@@ -31,13 +31,6 @@ export type Platform = import("@cream/domain").PredictionPlatform;
 export type MarketType = import("@cream/domain").PredictionMarketType;
 export type MarketOutcome = import("@cream/domain").PredictionOutcome;
 
-// Re-export schemas with alternative names for backward compatibility
-export {
-  PredictionMarketType as MarketTypeSchema,
-  PredictionOutcomeSchema as MarketOutcomeSchema,
-  PredictionPlatform as PlatformSchema,
-} from "@cream/domain";
-
 // ============================================
 // Provider Client Interface
 // ============================================

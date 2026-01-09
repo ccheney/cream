@@ -167,9 +167,6 @@ export interface ExecutionEngineClient {
     request?: Partial<GetPositionsRequest>,
     options?: CallOptions
   ): Promise<GetPositionsResponse>;
-
-  /** Close the client connection */
-  close(): void;
 }
 
 // ============================================
@@ -276,10 +273,8 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
     );
   }
 
-  close(): void {
-    // Connect transport doesn't require explicit cleanup
-    // but we keep this for API compatibility
-  }
+  // Note: Connect transport does not require explicit cleanup.
+  // Unlike traditional gRPC clients, there's no close() method needed.
 }
 
 // ============================================
@@ -320,14 +315,15 @@ export function getExecutionEngineClient(): ExecutionEngineClient {
 }
 
 /**
- * Close the global execution engine client.
+ * Reset the global execution engine client.
+ * Connect transport does not require explicit cleanup, so this simply
+ * clears the singleton reference to allow a new client to be created.
  */
 export function closeExecutionEngineClient(): void {
   if (globalClient) {
-    globalClient.close();
     globalClient = null;
     // biome-ignore lint/suspicious/noConsole: Shutdown logging is intentional
-    console.log("[ExecutionEngine] Client closed");
+    console.log("[ExecutionEngine] Client reset");
   }
 }
 

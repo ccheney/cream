@@ -8,13 +8,13 @@
 import { describe, expect, it } from "bun:test";
 import {
   AuthenticationError,
-  MarketOutcomeSchema,
-  MarketTypeSchema,
   PACKAGE_NAME,
-  PlatformSchema,
   PredictionMarketError,
   PredictionMarketEventSchema,
   PredictionMarketScoresSchema,
+  PredictionMarketType,
+  PredictionOutcomeSchema,
+  PredictionPlatform,
   RateLimitError,
   VERSION,
 } from "./index";
@@ -27,23 +27,23 @@ describe("Package metadata", () => {
 });
 
 describe("Schema re-exports", () => {
-  it("should export PlatformSchema", () => {
-    expect(PlatformSchema.parse("KALSHI")).toBe("KALSHI");
-    expect(PlatformSchema.parse("POLYMARKET")).toBe("POLYMARKET");
+  it("should export PredictionPlatform", () => {
+    expect(PredictionPlatform.parse("KALSHI")).toBe("KALSHI");
+    expect(PredictionPlatform.parse("POLYMARKET")).toBe("POLYMARKET");
   });
 
-  it("should export MarketTypeSchema", () => {
-    expect(MarketTypeSchema.parse("FED_RATE")).toBe("FED_RATE");
-    expect(MarketTypeSchema.parse("RECESSION")).toBe("RECESSION");
+  it("should export PredictionMarketType", () => {
+    expect(PredictionMarketType.parse("FED_RATE")).toBe("FED_RATE");
+    expect(PredictionMarketType.parse("RECESSION")).toBe("RECESSION");
   });
 
-  it("should export MarketOutcomeSchema", () => {
+  it("should export PredictionOutcomeSchema", () => {
     const outcome = {
       outcome: "25bps cut",
       probability: 0.81,
       price: 0.81,
     };
-    expect(MarketOutcomeSchema.parse(outcome)).toEqual(outcome);
+    expect(PredictionOutcomeSchema.parse(outcome)).toEqual(outcome);
   });
 
   it("should export PredictionMarketEventSchema", () => {
