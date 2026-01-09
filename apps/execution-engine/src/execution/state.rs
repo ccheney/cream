@@ -301,7 +301,7 @@ mod tests {
         let manager = OrderStateManager::new();
         let order = make_order("ord-1", "broker-1", OrderStatus::New);
 
-        manager.insert(order.clone());
+        manager.insert(order);
 
         let retrieved = manager.get("ord-1");
         assert!(retrieved.is_some());

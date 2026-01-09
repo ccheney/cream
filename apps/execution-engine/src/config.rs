@@ -632,7 +632,7 @@ pub fn load_config(path: Option<&str>) -> Result<Config, ConfigError> {
     })?;
 
     // Interpolate environment variables
-    let interpolated = interpolate_env_vars(&contents)?;
+    let interpolated = interpolate_env_vars(&contents);
 
     // Parse YAML
     let config: Config = serde_yaml_bw::from_str(&interpolated)?;
@@ -649,7 +649,7 @@ pub fn load_config(path: Option<&str>) -> Result<Config, ConfigError> {
 ///
 /// Returns a `ConfigError` if the YAML cannot be parsed or validated.
 pub fn load_config_from_string(yaml: &str) -> Result<Config, ConfigError> {
-    let interpolated = interpolate_env_vars(yaml)?;
+    let interpolated = interpolate_env_vars(yaml);
     let config: Config = serde_yaml_bw::from_str(&interpolated)?;
     validate_config(&config)?;
     Ok(config)
@@ -658,7 +658,8 @@ pub fn load_config_from_string(yaml: &str) -> Result<Config, ConfigError> {
 /// Interpolate environment variables in a string.
 ///
 /// Supports both `${VAR}` and `${VAR:-default}` syntax.
-fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
+#[allow(clippy::expect_used)] // Regex is compile-time constant; expect() is safe here
+fn interpolate_env_vars(input: &str) -> String {
     use std::sync::OnceLock;
 
     static ENV_VAR_REGEX: OnceLock<regex::Regex> = OnceLock::new();
@@ -669,7 +670,7 @@ fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
     let re = ENV_VAR_REGEX.get_or_init(|| {
         // This regex pattern is compile-time constant and always valid
         regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
-            .unwrap_or_else(|_| regex::Regex::new("^$").unwrap())
+            .expect("env var regex is valid")
     });
 
     for cap in re.captures_iter(input) {
@@ -686,17 +687,13 @@ fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
 
         let value = match std::env::var(var_name) {
             Ok(v) if !v.is_empty() => v,
-            _ => default_value.map_or_else(
-                // Leave as empty string for optional values
-                String::new,
-                |default| default.to_string(),
-            ),
+            _ => default_value.map_or_else(String::new, str::to_string),
         };
 
         result = result.replace(full_match, &value);
     }
 
-    Ok(result)
+    result
 }
 
 /// Validate configuration values.
@@ -811,23 +808,19 @@ server:
     fn test_env_var_with_default_when_missing() {
         // Use a variable name unlikely to exist
         let input = "mode: ${CREAM_CONFIG_TEST_NONEXISTENT_VAR:-PAPER}";
-        let result = match interpolate_env_vars(input) {
-            Ok(r) => r,
-            Err(e) => panic!("should interpolate env vars: {e}"),
-        };
+        let result = interpolate_env_vars(input);
 
         // When env var doesn't exist, should use default value
         assert_eq!(result, "mode: PAPER");
     }
 
     #[test]
+    #[expect(clippy::literal_string_with_formatting_args)] // ${...} is env var syntax, not format args
     fn test_env_var_with_default_uses_existing() {
         // PATH should always exist
+        // Note: The ${...} syntax is for env var interpolation, not format strings
         let input = "path: ${PATH:-default}";
-        let result = match interpolate_env_vars(input) {
-            Ok(r) => r,
-            Err(e) => panic!("should interpolate env vars: {e}"),
-        };
+        let result = interpolate_env_vars(input);
 
         // Should not be the default value
         assert_ne!(result, "path: default");
@@ -839,10 +832,7 @@ server:
     fn test_env_var_without_default_becomes_empty() {
         // Use a variable name unlikely to exist
         let input = "api_key: ${CREAM_CONFIG_TEST_UNLIKELY_TO_EXIST}";
-        let result = match interpolate_env_vars(input) {
-            Ok(r) => r,
-            Err(e) => panic!("should interpolate env vars: {e}"),
-        };
+        let result = interpolate_env_vars(input);
 
         // Without default, missing env var becomes empty string
         assert_eq!(result, "api_key: ");

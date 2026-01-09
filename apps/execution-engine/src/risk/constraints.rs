@@ -62,7 +62,7 @@ impl BuyingPowerInfo {
     /// Create `BuyingPowerInfo` with unlimited buying power (for testing only).
     #[cfg(test)]
     #[must_use]
-    pub fn unlimited() -> Self {
+    pub const fn unlimited() -> Self {
         Self {
             available: Decimal::MAX,
             required_margin: Decimal::ZERO,
@@ -228,6 +228,7 @@ impl ConstraintValidator {
     /// This method allows full validation including options Greeks limits,
     /// buying power checks, and conflicting order detection.
     #[must_use]
+    #[allow(clippy::too_many_lines)] // Comprehensive constraint validation requires checking many rules
     pub fn validate_with_context(
         &self,
         request: &ConstraintCheckRequest,

@@ -163,7 +163,7 @@ impl Default for IvSolver {
 impl IvSolver {
     /// Create a new IV solver with the given configuration.
     #[must_use]
-    pub fn new(config: IvSolverConfig) -> Self {
+    pub const fn new(config: IvSolverConfig) -> Self {
         Self { config }
     }
 

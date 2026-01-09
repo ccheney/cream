@@ -624,6 +624,7 @@ mod tests {
         // Verify service is created with empty data
         let data = service.market_data.read().await;
         assert_eq!(data.len(), 0);
+        drop(data);
     }
 
     #[tokio::test]
@@ -655,6 +656,7 @@ mod tests {
         };
         assert!((aapl.bid_price - 150.0).abs() < 1e-10);
         assert_eq!(aapl.volume, 1000);
+        drop(data);
     }
 
     #[tokio::test]

@@ -211,6 +211,7 @@ fn create_execution_server(
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).
+#[allow(clippy::expect_used)] // Signal handler failure is unrecoverable; panic is appropriate
 async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
     let ctrl_c = async {
         signal::ctrl_c()

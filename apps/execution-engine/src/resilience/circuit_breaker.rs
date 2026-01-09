@@ -278,6 +278,7 @@ impl CircuitBreaker {
         while window.len() > self.config.sliding_window_size as usize {
             window.pop_front();
         }
+        drop(window);
     }
 
     /// Evaluate CLOSED state and potentially transition to OPEN.
@@ -359,6 +360,7 @@ impl CircuitBreaker {
                 .write()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             *opened_at = Some(Instant::now());
+            drop(opened_at);
 
             self.state_transitions.fetch_add(1, Ordering::Relaxed);
 
@@ -424,6 +426,7 @@ impl CircuitBreaker {
                 .write()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             *opened_at = None;
+            drop(opened_at);
 
             self.state_transitions.fetch_add(1, Ordering::Relaxed);
 

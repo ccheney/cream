@@ -207,6 +207,7 @@ impl PortfolioRecovery {
     /// - Database operations fail (loading state, orders, or positions)
     /// - Broker API calls fail (fetching state, resolving orphans)
     /// - Critical discrepancies are detected and `abort_on_critical` is enabled
+    #[allow(clippy::too_many_lines)] // Recovery workflow requires sequential validation steps
     pub async fn recover(&self, broker: &AlpacaAdapter) -> Result<RecoveryResult, RecoveryError> {
         let start = std::time::Instant::now();
         let mut result = RecoveryResult::success();

@@ -35,7 +35,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 /// Configuration for OpenTelemetry tracing.
 #[derive(Debug, Clone)]
 pub struct TracingConfig {
-    /// OTLP endpoint URL (e.g., "http://localhost:4317").
+    /// OTLP endpoint URL (e.g., `<http://localhost:4317>`).
     pub otlp_endpoint: String,
     /// Service name for resource attributes.
     pub service_name: String,
@@ -201,7 +201,7 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
 /// Create a tracing configuration from environment variables.
 ///
 /// Reads the following environment variables:
-/// - `OTEL_EXPORTER_OTLP_ENDPOINT` - OTLP endpoint (default: http://localhost:4317)
+/// - `OTEL_EXPORTER_OTLP_ENDPOINT` - OTLP endpoint (default: `<http://localhost:4317>`)
 /// - `OTEL_SERVICE_NAME` - Service name (default: execution-engine)
 /// - `OTEL_TRACES_SAMPLER_ARG` - Sampling ratio (default: 1.0)
 #[must_use]

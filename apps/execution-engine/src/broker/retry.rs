@@ -177,8 +177,7 @@ impl ExponentialBackoffCalculator {
         let min = (backoff_ms as f64 - jitter_range).max(0.0);
         let max = backoff_ms as f64 + jitter_range;
 
-        let jittered = rng.random_range(min..=max) as u64;
-        jittered
+        rng.random_range(min..=max) as u64
     }
 
     /// Get the current attempt number.

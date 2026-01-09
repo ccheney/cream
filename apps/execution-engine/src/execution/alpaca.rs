@@ -180,6 +180,8 @@ impl AlpacaAdapter {
     }
 
     /// Make an authenticated HTTP request with retry logic.
+    #[allow(clippy::too_many_lines)] // Complex retry logic with error handling is inherently verbose
+    #[allow(clippy::future_not_send)] // Body reference not Send is acceptable for single-threaded executor
     async fn request<T: for<'de> Deserialize<'de>>(
         &self,
         method: &str,

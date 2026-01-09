@@ -340,8 +340,7 @@ pub fn validate_multi_leg_order(order: &MultiLegOrder) -> MultiLegValidationResu
     }
 
     // Check ratios are positive
-    let zero_ratios: Vec<_> = order.legs.iter().filter(|l| l.ratio == 0).collect();
-    if !zero_ratios.is_empty() {
+    if order.legs.iter().any(|l| l.ratio == 0) {
         errors.push("All leg ratios must be positive".to_string());
     }
 
@@ -389,6 +388,7 @@ pub fn aggregate_greeks(legs: &[OptionLeg]) -> Greeks {
 /// # Returns
 /// Aggregated Greeks for the entire portfolio
 #[must_use]
+#[allow(clippy::implicit_hasher)] // Using concrete RandomState for simpler API; callers use std HashMap
 pub fn calculate_portfolio_greeks(positions: &HashMap<String, (Greeks, Decimal)>) -> Greeks {
     positions
         .values()
@@ -497,7 +497,7 @@ pub fn assess_early_exercise_risk(
     let dividend_risk = if contract.option_type == OptionType::Call {
         ex_dividend_date.is_some_and(|ex_div| {
             let days_to_ex_div = (ex_div - current_time).num_days();
-            days_to_ex_div >= 0 && days_to_ex_div <= 2
+            (0..=2).contains(&days_to_ex_div)
         })
     } else {
         false

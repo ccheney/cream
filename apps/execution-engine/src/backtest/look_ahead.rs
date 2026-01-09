@@ -421,6 +421,7 @@ pub fn check_fundamental_availability(
 /// # Returns
 ///
 /// `ValidationResult` with any discrepancies noted.
+#[allow(clippy::implicit_hasher)] // Using concrete RandomState for simpler API; callers use std HashMap
 pub fn validate_universe_constituents(
     index: &str,
     symbols: &[String],

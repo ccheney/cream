@@ -421,10 +421,10 @@ impl MonteCarloSimulator {
         let below_var: Vec<Decimal> = sorted.iter().take(var_idx + 1).copied().collect();
         // Precision loss acceptable: below_var.len() is bounded by returns.len()
         #[allow(clippy::cast_precision_loss)]
-        let cvar = if !below_var.is_empty() {
-            below_var.iter().sum::<Decimal>() / Decimal::from(below_var.len() as u64)
-        } else {
+        let cvar = if below_var.is_empty() {
             var
+        } else {
+            below_var.iter().sum::<Decimal>() / Decimal::from(below_var.len() as u64)
         };
 
         // Probability of negative returns
@@ -471,7 +471,7 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
     let mean = sum / Decimal::from(n as u64);
 
     // Median
-    let median = if n % 2 == 0 {
+    let median = if n.is_multiple_of(2) {
         (sorted[n / 2 - 1] + sorted[n / 2]) / Decimal::TWO
     } else {
         sorted[n / 2]

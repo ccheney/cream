@@ -8,6 +8,8 @@
 //! - Profit factor (gross profit / gross loss)
 //! - Win rate, expectancy, and trade statistics
 
+use std::fmt::Write;
+
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -313,10 +315,8 @@ impl PerformanceCalculator {
 
         let profit_factor = if gross_loss > Decimal::ZERO {
             Some(gross_profit / gross_loss)
-        } else if gross_profit > Decimal::ZERO {
-            None // Infinite (no losses)
         } else {
-            None
+            None // Infinite (no losses) or no trades
         };
 
         let payoff_ratio = if avg_loss > Decimal::ZERO {
@@ -584,8 +584,9 @@ impl PerformanceCalculator {
         );
 
         for trade in &self.trades {
-            csv.push_str(&format!(
-                "{},{},{},{},{},{},{},{:?},{},{},{},{},{}\n",
+            let _ = writeln!(
+                csv,
+                "{},{},{},{},{},{},{},{:?},{},{},{},{},{}",
                 trade.trade_id,
                 trade.instrument_id,
                 trade.side,
@@ -599,7 +600,7 @@ impl PerformanceCalculator {
                 trade.commission,
                 trade.net_pnl,
                 trade.holding_period_hours,
-            ));
+            );
         }
 
         csv
@@ -697,10 +698,7 @@ pub fn format_decimal(value: Decimal) -> String {
 /// Format an optional decimal ratio.
 #[must_use]
 pub fn format_ratio(value: Option<Decimal>) -> String {
-    match value {
-        Some(v) => format!("{v:.2}"),
-        None => "N/A".to_string(),
-    }
+    value.map_or_else(|| "N/A".to_string(), |v| format!("{v:.2}"))
 }
 
 #[cfg(test)]

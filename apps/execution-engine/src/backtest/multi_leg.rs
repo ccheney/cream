@@ -133,6 +133,7 @@ impl MultiLegFillResult {
 /// # Returns
 /// Multi-leg fill result with net price (debit/credit)
 #[must_use]
+#[allow(clippy::implicit_hasher)] // Using concrete RandomState for simpler API; callers use std HashMap
 pub fn simulate_multi_leg_order(
     legs: &[OrderLeg],
     candles: &HashMap<String, Candle>,

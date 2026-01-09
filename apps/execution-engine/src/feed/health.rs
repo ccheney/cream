@@ -250,9 +250,8 @@ impl FeedHealthTracker {
 
     /// Check if feed is stale.
     fn is_stale(&self) -> bool {
-        self.last_message_time.map_or(true, |last| {
-            last.elapsed() > self.config.staleness_threshold
-        })
+        self.last_message_time
+            .is_none_or(|last| last.elapsed() > self.config.staleness_threshold)
     }
 
     /// Get the last message age.

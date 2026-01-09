@@ -199,6 +199,7 @@ impl Clone for BacktestAdapter {
 }
 
 #[async_trait]
+#[allow(clippy::too_many_lines)] // Single-line over limit; backtest simulation requires complete order flow
 impl BrokerAdapter for BacktestAdapter {
     async fn submit_orders(
         &self,

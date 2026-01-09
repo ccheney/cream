@@ -337,19 +337,19 @@ impl MicrostructureTracker {
 
     /// Get the rolling volume.
     #[must_use]
-    pub fn volume(&self) -> Decimal {
+    pub const fn volume(&self) -> Decimal {
         self.vwap_denominator
     }
 
     /// Get buy volume.
     #[must_use]
-    pub fn buy_volume(&self) -> Decimal {
+    pub const fn buy_volume(&self) -> Decimal {
         self.buy_volume
     }
 
     /// Get sell volume.
     #[must_use]
-    pub fn sell_volume(&self) -> Decimal {
+    pub const fn sell_volume(&self) -> Decimal {
         self.sell_volume
     }
 
@@ -368,9 +368,9 @@ impl MicrostructureTracker {
     /// Check if state is stale.
     #[must_use]
     pub fn is_stale(&self) -> bool {
-        self.current_quote.as_ref().map_or(true, |quote| {
-            quote.timestamp.elapsed() > self.staleness_threshold
-        })
+        self.current_quote
+            .as_ref()
+            .is_none_or(|quote| quote.timestamp.elapsed() > self.staleness_threshold)
     }
 
     /// Get the current spread in basis points.
@@ -431,7 +431,7 @@ impl MicrostructureTracker {
 
     /// Get the window duration.
     #[must_use]
-    pub fn window_duration(&self) -> Duration {
+    pub const fn window_duration(&self) -> Duration {
         self.window_duration
     }
 }
@@ -461,7 +461,7 @@ impl MicrostructureManager {
 
     /// Create with custom default window.
     #[must_use]
-    pub fn with_window(mut self, window: Duration) -> Self {
+    pub const fn with_window(mut self, window: Duration) -> Self {
         self.default_window = window;
         self
     }

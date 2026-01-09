@@ -337,6 +337,7 @@ impl ReconciliationManager {
     /// Reconcile local state with broker state.
     ///
     /// This is the main entry point for reconciliation.
+    #[allow(clippy::too_many_lines)] // Full reconciliation workflow is inherently complex
     pub async fn reconcile(&self, broker_state: BrokerStateSnapshot) -> ReconciliationReport {
         let start = Instant::now();
         let now = chrono::Utc::now();
@@ -1148,7 +1149,7 @@ mod tests {
         // Test old order should be canceled
         let old_orphan = OrphanedOrder {
             age_secs: 7200, // > max_order_age
-            ..orphan.clone()
+            ..orphan
         };
         let resolution = manager.determine_resolution(&old_orphan);
         assert_eq!(resolution, OrphanResolution::Cancel);

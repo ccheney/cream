@@ -881,6 +881,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::expect_used)] // Test code: expect() with descriptive message is idiomatic for test assertions
     fn test_roll_order_builder_sequential() {
         let order = RollOrderBuilder::new()
             .position_id("pos-1")
