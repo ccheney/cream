@@ -1,14 +1,28 @@
 -- ============================================
--- Consolidated Schema Initialization
+-- Cream Database Schema (Consolidated)
 -- ============================================
--- Single init file combining all migrations for greenfield deployment.
--- This replaces migrations 001-010 for new database setup.
+-- Single init file for greenfield deployment.
+-- For incremental migrations post-deployment, create new numbered migrations (002+).
 --
--- Generated from: 001_initial_schema.sql through 010_paper_signals.sql
--- For incremental migrations post-deployment, create new numbered migrations.
+-- Tables included:
+--   Core Trading: decisions, agent_outputs, orders, positions, position_history,
+--                 portfolio_snapshots, config_versions
+--   Dashboard: alerts, system_state, backtests, backtest_trades, backtest_equity
+--   Market Data: candles, corporate_actions, universe_cache, features, regime_labels
+--   Thesis: thesis_state, thesis_state_history
+--   Universe: index_constituents, ticker_changes, universe_snapshots
+--   Prediction Markets: prediction_market_snapshots, prediction_market_signals,
+--                       prediction_market_arbitrage
+--   External: external_events
+--   Indicators: indicators, indicator_trials, indicator_ic_history
+--   Factors: hypotheses, factors, factor_performance, factor_correlations,
+--            research_runs, factor_weights, paper_signals
+--   Runtime Config: trading_config, agent_configs, universe_configs
+--   Auth: user, session, account, verification, two_factor
+--   User: alert_settings, user_preferences, audit_log
 --
--- @see docs/plans/ui/04-data-requirements.md
--- @see docs/plans/02-data-layer.md
+-- Note: CHECK constraints NOT used - Turso/libSQL does not support them.
+-- Validation is handled at the application layer using Zod schemas.
 
 -- ============================================
 -- Schema Migrations Tracking
@@ -20,7 +34,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 -- ============================================
--- 1. Core Trading Tables (from 001_initial_schema)
+-- 1. Core Trading Tables
 -- ============================================
 
 -- decisions: Trading decisions from OODA loop
@@ -28,16 +42,16 @@ CREATE TABLE IF NOT EXISTS decisions (
   id TEXT PRIMARY KEY,
   cycle_id TEXT NOT NULL,
   symbol TEXT NOT NULL,
-  action TEXT NOT NULL,
-  direction TEXT NOT NULL,
+  action TEXT NOT NULL,            -- BUY, SELL, HOLD, CLOSE, INCREASE, REDUCE, NO_TRADE
+  direction TEXT NOT NULL,         -- LONG, SHORT, FLAT
   size REAL NOT NULL,
-  size_unit TEXT NOT NULL,
+  size_unit TEXT NOT NULL,         -- SHARES, CONTRACTS, DOLLARS, PCT_EQUITY
   entry_price REAL,
   stop_loss REAL,
   take_profit REAL,
-  status TEXT NOT NULL DEFAULT 'pending',
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending, approved, rejected, executed, cancelled, expired
   rationale TEXT,
-  environment TEXT NOT NULL,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   executed_at TEXT,
@@ -55,9 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_decisions_environment ON decisions(environment);
 CREATE TABLE IF NOT EXISTS agent_outputs (
   id TEXT PRIMARY KEY,
   decision_id TEXT NOT NULL,
-  agent_type TEXT NOT NULL,
-  vote TEXT NOT NULL,
-  confidence REAL NOT NULL,
+  agent_type TEXT NOT NULL,        -- technical, news, fundamentals, bullish, bearish, trader, risk, critic
+  vote TEXT NOT NULL,              -- APPROVE, REJECT, ABSTAIN
+  confidence REAL NOT NULL,        -- 0 to 1
   reasoning_summary TEXT,
   full_reasoning TEXT,
   tokens_used INTEGER,
@@ -75,18 +89,18 @@ CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   decision_id TEXT,
   symbol TEXT NOT NULL,
-  side TEXT NOT NULL,
+  side TEXT NOT NULL,              -- buy, sell
   qty REAL NOT NULL,
-  order_type TEXT NOT NULL,
+  order_type TEXT NOT NULL,        -- market, limit, stop, stop_limit
   limit_price REAL,
   stop_price REAL,
-  time_in_force TEXT NOT NULL DEFAULT 'day',
-  status TEXT NOT NULL DEFAULT 'pending',
+  time_in_force TEXT NOT NULL DEFAULT 'day',  -- day, gtc, ioc, fok
+  status TEXT NOT NULL DEFAULT 'pending',     -- pending, submitted, accepted, partial_fill, filled, cancelled, rejected, expired
   broker_order_id TEXT,
   filled_qty REAL DEFAULT 0,
   filled_avg_price REAL,
   commission REAL,
-  environment TEXT NOT NULL,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   submitted_at TEXT,
   filled_at TEXT,
@@ -105,7 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_environment ON orders(environment);
 CREATE TABLE IF NOT EXISTS positions (
   id TEXT PRIMARY KEY,
   symbol TEXT NOT NULL,
-  side TEXT NOT NULL,
+  side TEXT NOT NULL,              -- long, short
   qty REAL NOT NULL,
   avg_entry REAL NOT NULL,
   current_price REAL,
@@ -116,9 +130,9 @@ CREATE TABLE IF NOT EXISTS positions (
   cost_basis REAL,
   thesis_id TEXT,
   decision_id TEXT,
-  status TEXT NOT NULL DEFAULT 'open',
-  metadata TEXT,
-  environment TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',  -- open, closed, pending
+  metadata TEXT,                   -- JSON for additional context
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   opened_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   closed_at TEXT
@@ -151,7 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_position_history_position_ts ON position_history(
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp TEXT NOT NULL,
-  environment TEXT NOT NULL,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   nav REAL NOT NULL,
   cash REAL NOT NULL,
   equity REAL NOT NULL,
@@ -173,7 +187,7 @@ CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_environment ON portfolio_snap
 -- config_versions: Version-controlled configuration
 CREATE TABLE IF NOT EXISTS config_versions (
   id TEXT PRIMARY KEY,
-  environment TEXT NOT NULL,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   config_json TEXT NOT NULL,
   description TEXT,
   active INTEGER NOT NULL DEFAULT 0,
@@ -187,13 +201,13 @@ CREATE INDEX IF NOT EXISTS idx_config_versions_created_at ON config_versions(cre
 CREATE UNIQUE INDEX IF NOT EXISTS idx_config_versions_env_active ON config_versions(environment) WHERE active = 1;
 
 -- ============================================
--- 2. Dashboard Tables (from 002_dashboard_tables)
+-- 2. Dashboard Tables
 -- ============================================
 
 -- alerts: System and trading alerts
 CREATE TABLE IF NOT EXISTS alerts (
   id TEXT PRIMARY KEY,
-  severity TEXT NOT NULL,
+  severity TEXT NOT NULL,          -- info, warning, error, critical
   type TEXT NOT NULL,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -304,28 +318,15 @@ CREATE INDEX IF NOT EXISTS idx_backtest_equity_backtest_id ON backtest_equity(ba
 CREATE INDEX IF NOT EXISTS idx_backtest_equity_timestamp ON backtest_equity(timestamp);
 CREATE INDEX IF NOT EXISTS idx_backtest_equity_bt_ts ON backtest_equity(backtest_id, timestamp);
 
--- user_preferences: User settings
-CREATE TABLE IF NOT EXISTS user_preferences (
-  user_id TEXT PRIMARY KEY,
-  preferences_json TEXT NOT NULL DEFAULT '{}',
-  theme TEXT DEFAULT 'system',
-  default_environment TEXT DEFAULT 'PAPER',
-  sidebar_collapsed INTEGER DEFAULT 0,
-  chart_settings TEXT,
-  alert_settings TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
 -- ============================================
--- 3. Market Data Tables (from 003_market_data_tables)
+-- 3. Market Data Tables
 -- ============================================
 
 -- candles: OHLCV data
 CREATE TABLE IF NOT EXISTS candles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,
-  timeframe TEXT NOT NULL,
+  timeframe TEXT NOT NULL,         -- 1m, 5m, 15m, 1h, 1d
   timestamp TEXT NOT NULL,
   open REAL NOT NULL,
   high REAL NOT NULL,
@@ -351,7 +352,7 @@ CREATE INDEX IF NOT EXISTS idx_candles_timeframe ON candles(timeframe);
 CREATE TABLE IF NOT EXISTS corporate_actions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   symbol TEXT NOT NULL,
-  action_type TEXT NOT NULL,
+  action_type TEXT NOT NULL,       -- split, dividend, merger, spinoff
   ex_date TEXT NOT NULL,
   record_date TEXT,
   pay_date TEXT,
@@ -410,7 +411,7 @@ CREATE TABLE IF NOT EXISTS regime_labels (
   symbol TEXT NOT NULL,
   timestamp TEXT NOT NULL,
   timeframe TEXT NOT NULL,
-  regime TEXT NOT NULL,
+  regime TEXT NOT NULL,            -- trending_up, trending_down, ranging, volatile
   confidence REAL NOT NULL,
   trend_strength REAL,
   volatility_percentile REAL,
@@ -426,13 +427,13 @@ CREATE INDEX IF NOT EXISTS idx_regime_labels_regime ON regime_labels(regime);
 CREATE INDEX IF NOT EXISTS idx_regime_labels_market ON regime_labels(symbol, timestamp) WHERE symbol = '_MARKET';
 
 -- ============================================
--- 4. Thesis State (from 004_thesis_state)
+-- 4. Thesis State Tables
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS thesis_state (
   thesis_id TEXT PRIMARY KEY,
   instrument_id TEXT NOT NULL,
-  state TEXT NOT NULL,
+  state TEXT NOT NULL,             -- WATCHING, STAGED, OPEN, SCALING, EXITING, CLOSED
   entry_price REAL,
   entry_date TEXT,
   current_stop REAL,
@@ -481,12 +482,12 @@ CREATE INDEX IF NOT EXISTS idx_thesis_history_created_at ON thesis_state_history
 CREATE INDEX IF NOT EXISTS idx_thesis_history_thesis_created ON thesis_state_history(thesis_id, created_at);
 
 -- ============================================
--- 5. Historical Universe (from 005_historical_universe)
+-- 5. Historical Universe Tables
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS index_constituents (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  index_id TEXT NOT NULL,
+  index_id TEXT NOT NULL,          -- SP500, NDX100, DJIA
   symbol TEXT NOT NULL,
   date_added TEXT NOT NULL,
   date_removed TEXT,
@@ -510,7 +511,7 @@ CREATE TABLE IF NOT EXISTS ticker_changes (
   old_symbol TEXT NOT NULL,
   new_symbol TEXT NOT NULL,
   change_date TEXT NOT NULL,
-  change_type TEXT NOT NULL,
+  change_type TEXT NOT NULL,       -- rename, merger, spinoff, delisted
   conversion_ratio REAL,
   reason TEXT,
   acquiring_company TEXT,
@@ -538,14 +539,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_universe_snapshots_pit ON universe_snapsho
 CREATE INDEX IF NOT EXISTS idx_universe_snapshots_date ON universe_snapshots(snapshot_date);
 
 -- ============================================
--- 6. Prediction Markets (from 006_prediction_markets)
+-- 6. Prediction Markets Tables
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS prediction_market_snapshots (
   id TEXT PRIMARY KEY,
-  platform TEXT NOT NULL,
+  platform TEXT NOT NULL,          -- kalshi, polymarket
   market_ticker TEXT NOT NULL,
-  market_type TEXT NOT NULL,
+  market_type TEXT NOT NULL,       -- rate, election, economic
   market_question TEXT,
   snapshot_time TEXT NOT NULL,
   data JSON NOT NULL,
@@ -589,18 +590,18 @@ CREATE INDEX IF NOT EXISTS idx_pm_arbitrage_detected ON prediction_market_arbitr
 CREATE INDEX IF NOT EXISTS idx_pm_arbitrage_unresolved ON prediction_market_arbitrage(resolved_at) WHERE resolved_at IS NULL;
 
 -- ============================================
--- 7. External Events (from 007_external_events)
+-- 7. External Events Table
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS external_events (
   id TEXT PRIMARY KEY,
-  source_type TEXT NOT NULL,
+  source_type TEXT NOT NULL,       -- news, earnings, sec_filing, fed
   event_type TEXT NOT NULL,
   event_time TEXT NOT NULL,
   processed_at TEXT NOT NULL,
-  sentiment TEXT NOT NULL,
+  sentiment TEXT NOT NULL,         -- positive, negative, neutral
   confidence REAL NOT NULL,
-  importance INTEGER NOT NULL,
+  importance INTEGER NOT NULL,     -- 1-5
   summary TEXT NOT NULL,
   key_insights JSON NOT NULL,
   entities JSON NOT NULL,
@@ -621,14 +622,14 @@ CREATE INDEX IF NOT EXISTS idx_external_events_sentiment ON external_events(sent
 CREATE INDEX IF NOT EXISTS idx_external_events_importance ON external_events(importance_score);
 
 -- ============================================
--- 8. Indicator Synthesis (from 008_indicator_synthesis)
+-- 8. Indicator Synthesis Tables
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS indicators (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
-  category TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'staging',
+  category TEXT NOT NULL,          -- momentum, trend, volatility, volume, sentiment
+  status TEXT NOT NULL DEFAULT 'staging',  -- staging, paper, production, retired
   hypothesis TEXT NOT NULL,
   economic_rationale TEXT NOT NULL,
   generated_at TEXT NOT NULL,
@@ -688,7 +689,7 @@ CREATE TABLE IF NOT EXISTS indicator_ic_history (
 CREATE INDEX IF NOT EXISTS idx_ic_history_indicator_date ON indicator_ic_history(indicator_id, date);
 
 -- ============================================
--- 9. Factor Zoo (from 009_factor_zoo)
+-- 9. Factor Zoo Tables
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS hypotheses (
@@ -698,7 +699,7 @@ CREATE TABLE IF NOT EXISTS hypotheses (
   market_mechanism TEXT NOT NULL,
   target_regime TEXT,
   falsification_criteria TEXT,
-  status TEXT NOT NULL DEFAULT 'proposed',
+  status TEXT NOT NULL DEFAULT 'proposed',  -- proposed, testing, validated, rejected
   iteration INTEGER NOT NULL DEFAULT 1,
   parent_hypothesis_id TEXT REFERENCES hypotheses(hypothesis_id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -711,7 +712,7 @@ CREATE TABLE IF NOT EXISTS factors (
   factor_id TEXT PRIMARY KEY,
   hypothesis_id TEXT REFERENCES hypotheses(hypothesis_id),
   name TEXT NOT NULL UNIQUE,
-  status TEXT NOT NULL DEFAULT 'research',
+  status TEXT NOT NULL DEFAULT 'research',  -- research, stage1, stage2, paper, active, decaying, retired
   version INTEGER NOT NULL DEFAULT 1,
   author TEXT NOT NULL DEFAULT 'claude-code',
   python_module TEXT,
@@ -772,9 +773,9 @@ CREATE TABLE IF NOT EXISTS factor_correlations (
 
 CREATE TABLE IF NOT EXISTS research_runs (
   run_id TEXT PRIMARY KEY,
-  trigger_type TEXT NOT NULL, -- Valid: 'scheduled', 'decay_detected', 'regime_change', 'manual', 'refinement'
+  trigger_type TEXT NOT NULL,      -- scheduled, decay_detected, regime_change, manual, refinement
   trigger_reason TEXT NOT NULL,
-  phase TEXT NOT NULL DEFAULT 'idea', -- Valid: 'idea', 'implementation', 'stage1', 'stage2', 'translation', 'equivalence', 'paper', 'promotion', 'completed', 'failed'
+  phase TEXT NOT NULL DEFAULT 'idea',  -- idea, implementation, stage1, stage2, translation, equivalence, paper, promotion, completed, failed
   current_iteration INTEGER NOT NULL DEFAULT 1,
   hypothesis_id TEXT REFERENCES hypotheses(hypothesis_id),
   factor_id TEXT REFERENCES factors(factor_id),
@@ -798,17 +799,13 @@ CREATE TABLE IF NOT EXISTS factor_weights (
   last_updated TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- ============================================
--- 10. Paper Signals (from 010_paper_signals)
--- ============================================
-
 CREATE TABLE IF NOT EXISTS paper_signals (
   id TEXT PRIMARY KEY,
   factor_id TEXT NOT NULL REFERENCES factors(factor_id) ON DELETE CASCADE,
   signal_date TEXT NOT NULL,
   symbol TEXT NOT NULL,
   signal_value REAL NOT NULL,
-  direction TEXT NOT NULL,
+  direction TEXT NOT NULL,         -- long, short
   entry_price REAL,
   exit_price REAL,
   actual_return REAL,
@@ -822,6 +819,261 @@ CREATE INDEX IF NOT EXISTS idx_paper_signals_date ON paper_signals(signal_date);
 CREATE INDEX IF NOT EXISTS idx_paper_signals_factor_date ON paper_signals(factor_id, signal_date);
 
 -- ============================================
--- Record consolidated migration
+-- 10. Runtime Configuration Tables
 -- ============================================
-INSERT INTO schema_migrations (version, name) VALUES (0, 'consolidated_init');
+
+CREATE TABLE IF NOT EXISTS trading_config (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
+  version INTEGER NOT NULL,
+
+  -- Consensus settings
+  max_consensus_iterations INTEGER DEFAULT 3,
+  agent_timeout_ms INTEGER DEFAULT 30000,
+  total_consensus_timeout_ms INTEGER DEFAULT 300000,
+
+  -- Conviction thresholds
+  conviction_delta_hold REAL DEFAULT 0.2,
+  conviction_delta_action REAL DEFAULT 0.3,
+
+  -- Position sizing
+  high_conviction_pct REAL DEFAULT 0.7,
+  medium_conviction_pct REAL DEFAULT 0.5,
+  low_conviction_pct REAL DEFAULT 0.25,
+
+  -- Risk/reward
+  min_risk_reward_ratio REAL DEFAULT 1.5,
+  kelly_fraction REAL DEFAULT 0.5,
+
+  -- Schedule (milliseconds)
+  trading_cycle_interval_ms INTEGER DEFAULT 3600000,
+  prediction_markets_interval_ms INTEGER DEFAULT 900000,
+
+  -- Workflow status
+  status TEXT NOT NULL DEFAULT 'draft',  -- draft, testing, active, archived
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  promoted_from TEXT,
+
+  FOREIGN KEY (promoted_from) REFERENCES trading_config(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_trading_config_environment ON trading_config(environment);
+CREATE INDEX IF NOT EXISTS idx_trading_config_status ON trading_config(status);
+CREATE INDEX IF NOT EXISTS idx_trading_config_env_status ON trading_config(environment, status);
+CREATE INDEX IF NOT EXISTS idx_trading_config_created_at ON trading_config(created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_config_env_active ON trading_config(environment) WHERE status = 'active';
+
+CREATE TABLE IF NOT EXISTS agent_configs (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
+  agent_type TEXT NOT NULL,        -- technical, news, fundamentals, bullish, bearish, trader, risk, critic
+  model TEXT NOT NULL,
+  temperature REAL NOT NULL,
+  max_tokens INTEGER NOT NULL,
+  system_prompt_override TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_configs_environment ON agent_configs(environment);
+CREATE INDEX IF NOT EXISTS idx_agent_configs_agent_type ON agent_configs(agent_type);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_configs_env_agent ON agent_configs(environment, agent_type);
+
+CREATE TABLE IF NOT EXISTS universe_configs (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
+  source TEXT NOT NULL,            -- static, index, screener
+
+  -- Static symbols (JSON array)
+  static_symbols TEXT,
+
+  -- Index source configuration
+  index_source TEXT,               -- SP500, NDX100, DJIA
+
+  -- Screener filters
+  min_volume INTEGER,
+  min_market_cap INTEGER,
+  optionable_only INTEGER NOT NULL DEFAULT 0,
+
+  -- Include/exclude lists (JSON arrays)
+  include_list TEXT,
+  exclude_list TEXT,
+
+  -- Workflow status
+  status TEXT NOT NULL DEFAULT 'draft',  -- draft, testing, active, archived
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_universe_configs_environment ON universe_configs(environment);
+CREATE INDEX IF NOT EXISTS idx_universe_configs_status ON universe_configs(status);
+CREATE INDEX IF NOT EXISTS idx_universe_configs_env_status ON universe_configs(environment, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_universe_configs_env_active ON universe_configs(environment) WHERE status = 'active';
+
+-- ============================================
+-- 11. Authentication Tables (better-auth)
+-- ============================================
+-- Timestamps use INTEGER (milliseconds since epoch) for better-auth compatibility.
+
+CREATE TABLE IF NOT EXISTS user (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  image TEXT,
+  two_factor_enabled INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+CREATE INDEX IF NOT EXISTS idx_user_created_at ON user(created_at);
+
+CREATE TABLE IF NOT EXISTS session (
+  id TEXT PRIMARY KEY,
+  expires_at INTEGER NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  ip_address TEXT,
+  user_agent TEXT,
+  user_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_user_id ON session(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_token ON session(token);
+CREATE INDEX IF NOT EXISTS idx_session_expires_at ON session(expires_at);
+
+CREATE TABLE IF NOT EXISTS account (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  access_token TEXT,
+  refresh_token TEXT,
+  id_token TEXT,
+  access_token_expires_at INTEGER,
+  refresh_token_expires_at INTEGER,
+  scope TEXT,
+  password TEXT,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_user_id ON account(user_id);
+CREATE INDEX IF NOT EXISTS idx_account_provider_id ON account(provider_id);
+CREATE INDEX IF NOT EXISTS idx_account_provider_account ON account(provider_id, account_id);
+
+CREATE TABLE IF NOT EXISTS verification (
+  id TEXT PRIMARY KEY,
+  identifier TEXT NOT NULL,
+  value TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
+
+CREATE INDEX IF NOT EXISTS idx_verification_identifier ON verification(identifier);
+CREATE INDEX IF NOT EXISTS idx_verification_expires_at ON verification(expires_at);
+
+CREATE TABLE IF NOT EXISTS two_factor (
+  id TEXT PRIMARY KEY,
+  secret TEXT NOT NULL,
+  backup_codes TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_two_factor_user_id ON two_factor(user_id);
+CREATE INDEX IF NOT EXISTS idx_two_factor_secret ON two_factor(secret);
+
+-- ============================================
+-- 12. User Settings Tables
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS alert_settings (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+  enable_push INTEGER NOT NULL DEFAULT 1,
+  enable_email INTEGER NOT NULL DEFAULT 1,
+  email_address TEXT,
+  critical_only INTEGER NOT NULL DEFAULT 0,
+  quiet_hours_start TEXT,
+  quiet_hours_end TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_settings_user_id ON alert_settings(user_id);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+
+  -- UI Theme
+  theme TEXT NOT NULL DEFAULT 'system',  -- light, dark, system
+
+  -- Chart settings
+  chart_timeframe TEXT NOT NULL DEFAULT '1M',  -- 1D, 1W, 1M, 3M, 6M, 1Y, ALL
+
+  -- Feed filters (JSON array of strings)
+  feed_filters TEXT NOT NULL DEFAULT '[]',
+
+  -- UI state
+  sidebar_collapsed INTEGER NOT NULL DEFAULT 0,
+
+  -- Notification settings (JSON object)
+  notification_settings TEXT NOT NULL DEFAULT '{"emailAlerts":true,"pushNotifications":false,"tradeConfirmations":true,"dailySummary":true,"riskAlerts":true}',
+
+  -- Portfolio view
+  default_portfolio_view TEXT NOT NULL DEFAULT 'table',  -- table, cards
+
+  -- Date/time formatting
+  date_format TEXT NOT NULL DEFAULT 'MM/DD/YYYY',  -- MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD
+  time_format TEXT NOT NULL DEFAULT '12h',         -- 12h, 24h
+
+  -- Currency
+  currency TEXT NOT NULL DEFAULT 'USD',
+
+  -- Timestamps
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_created_at ON user_preferences(created_at);
+
+-- ============================================
+-- 13. Audit Log Table
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY,
+  timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+  user_id TEXT NOT NULL,
+  user_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  environment TEXT NOT NULL DEFAULT 'LIVE',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_environment ON audit_log(environment);
+
+-- ============================================
+-- Record this migration
+-- ============================================
+INSERT INTO schema_migrations (version, name) VALUES (1, 'init');
