@@ -8,15 +8,22 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import { tmpdir } from "node:os";
 import type { Backtest } from "@cream/storage";
 
+// Generate enough data for SMA calculations (need at least 30 bars for SMA crossover)
+const generateMockBars = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    t: 1704067200000 + i * 3600000,
+    o: 100 + i * 0.1,
+    h: 101 + i * 0.1,
+    l: 99 + i * 0.1,
+    c: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0), // Create some crossover opportunities
+    v: 1000 + i * 10,
+  }));
+
 // Mock dependencies before importing the module
 const mockGetAggregates = mock(() =>
   Promise.resolve({
-    results: [
-      { t: 1704067200000, o: 100.0, h: 101.0, l: 99.0, c: 100.5, v: 1000 },
-      { t: 1704153600000, o: 100.5, h: 102.0, l: 100.0, c: 101.0, v: 1100 },
-      { t: 1704240000000, o: 101.0, h: 103.0, l: 100.5, c: 102.5, v: 1200 },
-    ],
-    resultsCount: 3,
+    results: generateMockBars(50), // Provide enough data for SMA calculations
+    resultsCount: 50,
   })
 );
 
@@ -315,19 +322,10 @@ const uvAvailable = isUvAvailable();
 
 describe.skipIf(!uvAvailable)("Signal Generation", () => {
   beforeEach(() => {
-    // Provide enough data for SMA calculations (need at least 30 bars)
-    const bars = Array.from({ length: 50 }, (_, i) => ({
-      t: 1704067200000 + i * 3600000,
-      o: 100 + i * 0.1,
-      h: 101 + i * 0.1,
-      l: 99 + i * 0.1,
-      c: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0), // Create some crossover opportunities
-      v: 1000 + i * 10,
-    }));
-
+    // Ensure sufficient data for SMA calculations (uses helper defined above)
     mockGetAggregates.mockResolvedValue({
-      results: bars,
-      resultsCount: bars.length,
+      results: generateMockBars(50),
+      resultsCount: 50,
     });
   });
 

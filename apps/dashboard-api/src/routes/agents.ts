@@ -7,9 +7,11 @@
  * @see docs/plans/05-agents.md
  */
 
+import { requireEnv } from "@cream/domain";
+import type { AgentType as DbAgentType } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getAgentOutputsRepo } from "../db.js";
+import { getAgentConfigsRepo, getAgentOutputsRepo } from "../db.js";
 
 // ============================================
 // App Setup
@@ -71,6 +73,20 @@ const PaginatedOutputsSchema = z.object({
 // Agent Definitions
 // ============================================
 
+/**
+ * Map from API agent types (short) to database agent types (full)
+ */
+const API_TO_DB_AGENT_TYPE: Record<string, DbAgentType> = {
+  technical: "technical_analyst",
+  news: "news_analyst",
+  fundamentals: "fundamentals_analyst",
+  bullish: "bullish_researcher",
+  bearish: "bearish_researcher",
+  trader: "trader",
+  risk: "risk_manager",
+  critic: "critic",
+};
+
 const AGENT_DEFINITIONS = [
   { type: "technical", displayName: "Technical Analyst" },
   { type: "news", displayName: "News & Sentiment" },
@@ -82,18 +98,19 @@ const AGENT_DEFINITIONS = [
   { type: "critic", displayName: "Critic" },
 ];
 
-// In-memory config store (TODO: persist to database when agent_configs table is added)
-const agentConfigs = new Map<string, z.infer<typeof AgentConfigSchema>>(
-  AGENT_DEFINITIONS.map((agent) => [
-    agent.type,
-    {
-      type: agent.type,
-      model: "gemini-3-pro-preview",
-      systemPrompt: `You are the ${agent.displayName} agent for the Cream trading system.`,
-      enabled: true,
-    },
-  ])
-);
+/**
+ * Default prompts for each agent type
+ */
+const DEFAULT_PROMPTS: Record<string, string> = {
+  technical: "You are the Technical Analyst agent for the Cream trading system.",
+  news: "You are the News & Sentiment agent for the Cream trading system.",
+  fundamentals: "You are the Fundamentals & Macro agent for the Cream trading system.",
+  bullish: "You are the Bullish Research agent for the Cream trading system.",
+  bearish: "You are the Bearish Research agent for the Cream trading system.",
+  trader: "You are the Trader agent for the Cream trading system.",
+  risk: "You are the Risk Manager agent for the Cream trading system.",
+  critic: "You are the Critic agent for the Cream trading system.",
+};
 
 // ============================================
 // Helper Functions
@@ -242,13 +259,34 @@ const getConfigRoute = createRoute({
   tags: ["Agents"],
 });
 
-app.openapi(getConfigRoute, (c) => {
+app.openapi(getConfigRoute, async (c) => {
   const { type } = c.req.valid("param");
+  const env = requireEnv();
+  const dbType = API_TO_DB_AGENT_TYPE[type];
 
-  const config = agentConfigs.get(type);
-  if (!config) {
+  if (!dbType) {
     throw new HTTPException(404, { message: "Agent not found" });
   }
+
+  const repo = await getAgentConfigsRepo();
+  const dbConfig = await repo.get(env, dbType);
+
+  // Return config from database if exists, otherwise return defaults
+  const defaultPrompt =
+    DEFAULT_PROMPTS[type] ?? `You are the ${type} agent for the Cream trading system.`;
+  const config: z.infer<typeof AgentConfigSchema> = dbConfig
+    ? {
+        type,
+        model: dbConfig.model,
+        systemPrompt: dbConfig.systemPromptOverride ?? defaultPrompt,
+        enabled: dbConfig.enabled,
+      }
+    : {
+        type,
+        model: "gemini-2.5-flash-preview-05-20",
+        systemPrompt: defaultPrompt,
+        enabled: true,
+      };
 
   return c.json(config);
 });
@@ -285,24 +323,36 @@ const updateConfigRoute = createRoute({
   tags: ["Agents"],
 });
 
-app.openapi(updateConfigRoute, (c) => {
+app.openapi(updateConfigRoute, async (c) => {
   const { type } = c.req.valid("param");
   const updates = c.req.valid("json");
+  const env = requireEnv();
+  const dbType = API_TO_DB_AGENT_TYPE[type];
 
-  const existing = agentConfigs.get(type);
-  if (!existing) {
+  if (!dbType) {
     throw new HTTPException(404, { message: "Agent not found" });
   }
 
-  const updated: z.infer<typeof AgentConfigSchema> = {
-    ...existing,
-    ...updates,
-    type, // Ensure type can't be changed
+  const repo = await getAgentConfigsRepo();
+
+  // Upsert the config (creates if not exists, updates if exists)
+  const dbConfig = await repo.upsert(env, dbType, {
+    model: updates.model,
+    systemPromptOverride:
+      updates.systemPrompt !== DEFAULT_PROMPTS[type] ? updates.systemPrompt : null,
+    enabled: updates.enabled,
+  });
+
+  const defaultPrompt =
+    DEFAULT_PROMPTS[type] ?? `You are the ${type} agent for the Cream trading system.`;
+  const result: z.infer<typeof AgentConfigSchema> = {
+    type,
+    model: dbConfig.model,
+    systemPrompt: dbConfig.systemPromptOverride ?? defaultPrompt,
+    enabled: dbConfig.enabled,
   };
 
-  agentConfigs.set(type, updated);
-
-  return c.json(updated);
+  return c.json(result);
 });
 
 // ============================================
