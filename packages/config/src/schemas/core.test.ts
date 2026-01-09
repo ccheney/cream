@@ -49,52 +49,6 @@ describe("LLMConfigSchema", () => {
       })
     ).toThrow();
   });
-
-  it("applies default temperature of 0", () => {
-    const config = LLMConfigSchema.parse({
-      model_id: "gemini-3-pro-preview",
-    });
-    expect(config.temperature).toBe(0);
-  });
-
-  it("applies default max_tokens of 4096", () => {
-    const config = LLMConfigSchema.parse({
-      model_id: "gemini-3-pro-preview",
-    });
-    expect(config.max_tokens).toBe(4096);
-  });
-
-  it("validates temperature range (0-2)", () => {
-    expect(() =>
-      LLMConfigSchema.parse({
-        model_id: "gemini-3-pro-preview",
-        temperature: -0.1,
-      })
-    ).toThrow();
-
-    expect(() =>
-      LLMConfigSchema.parse({
-        model_id: "gemini-3-pro-preview",
-        temperature: 2.1,
-      })
-    ).toThrow();
-  });
-
-  it("validates max_tokens range (1-65536)", () => {
-    expect(() =>
-      LLMConfigSchema.parse({
-        model_id: "gemini-3-pro-preview",
-        max_tokens: 0,
-      })
-    ).toThrow();
-
-    expect(() =>
-      LLMConfigSchema.parse({
-        model_id: "gemini-3-pro-preview",
-        max_tokens: 100000,
-      })
-    ).toThrow();
-  });
 });
 
 describe("TimeframesConfigSchema", () => {

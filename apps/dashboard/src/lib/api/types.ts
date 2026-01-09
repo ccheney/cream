@@ -389,8 +389,6 @@ export interface AgentStatus {
 export interface AgentConfig {
   type: string;
   model: string;
-  temperature: number;
-  maxTokens: number;
   systemPrompt: string;
   enabled: boolean;
 }
@@ -482,8 +480,6 @@ export interface RuntimeAgentConfig {
   environment: Environment;
   agentType: RuntimeAgentType;
   model: string;
-  temperature: number;
-  maxTokens: number;
   systemPromptOverride: string | null;
   enabled: boolean;
   createdAt: string;

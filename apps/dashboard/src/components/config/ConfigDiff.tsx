@@ -8,6 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/collapsible";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import type { FullRuntimeConfig } from "@/lib/api/types";
 import {
   calculateDiff,
@@ -118,6 +119,7 @@ export function ConfigDiff<T extends ConfigType>({
 }
 
 function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) {
+  const resolvedTheme = usePreferencesStore((s) => s.getComputedTheme());
   const oldContents = JSON.stringify(before, null, 2);
   const newContents = JSON.stringify(after, null, 2);
 
@@ -131,6 +133,9 @@ function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) 
         newFile={{
           name: "config.json",
           contents: newContents,
+        }}
+        options={{
+          theme: resolvedTheme === "dark" ? "pierre-dark" : "pierre-light",
         }}
       />
     </div>

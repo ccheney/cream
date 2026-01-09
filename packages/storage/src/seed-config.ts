@@ -51,57 +51,39 @@ const DEFAULT_AGENT_CONFIGS: Record<
   AgentType,
   {
     model: string;
-    temperature: number;
-    maxTokens: number;
     enabled: boolean;
   }
 > = {
   technical_analyst: {
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     enabled: true,
   },
   news_analyst: {
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     enabled: true,
   },
   fundamentals_analyst: {
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     enabled: true,
   },
   bullish_researcher: {
     model: "gemini-3-pro-preview",
-    temperature: 0.3,
-    maxTokens: 4096,
     enabled: true,
   },
   bearish_researcher: {
     model: "gemini-3-pro-preview",
-    temperature: 0.3,
-    maxTokens: 4096,
     enabled: true,
   },
   trader: {
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     enabled: true,
   },
   risk_manager: {
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     enabled: true,
   },
   critic: {
     model: "gemini-3-pro-preview",
-    temperature: 0.2,
-    maxTokens: 4096,
     enabled: true,
   },
 };
@@ -195,8 +177,6 @@ async function seedEnvironment(
       const defaults = DEFAULT_AGENT_CONFIGS[agentType];
       await agentRepo.upsert(environment, agentType, {
         model: defaults.model,
-        temperature: defaults.temperature,
-        maxTokens: defaults.maxTokens,
         enabled: defaults.enabled,
         systemPromptOverride: null,
       });

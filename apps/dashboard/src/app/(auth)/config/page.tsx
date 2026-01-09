@@ -49,24 +49,31 @@ export default function ConfigPage() {
 
       {/* Config Sections */}
       {configLoading ? (
-        <div className="grid grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-48 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : config ? (
-        <div className="grid grid-cols-2 gap-6">
-          {/* Trading Config */}
+        <div className="grid grid-cols-3 gap-6">
+          {/* Trading Config (includes consensus) */}
           <ConfigSection title="Trading" href="/config/edit">
             <ConfigField label="Environment" value={config.trading.environment} />
             <ConfigField
               label="Cycle Interval"
               value={`${config.trading.tradingCycleIntervalMs / 60000}m`}
             />
-            <ConfigField label="Agent Timeout" value={`${config.trading.agentTimeoutMs / 1000}s`} />
             <ConfigField
               label="Kelly Fraction"
               value={`${(config.trading.kellyFraction * 100).toFixed(0)}%`}
+            />
+            <ConfigField
+              label="Min Risk/Reward"
+              value={`${config.trading.minRiskRewardRatio.toFixed(1)}:1`}
+            />
+            <ConfigField
+              label="Consensus Iterations"
+              value={String(config.trading.maxConsensusIterations)}
             />
           </ConfigSection>
 
@@ -89,71 +96,27 @@ export default function ConfigPage() {
             />
           </ConfigSection>
 
-          {/* Per-Instrument Limits */}
-          <ConfigSection title="Per-Instrument Limits" href="/config/constraints">
+          {/* Constraints (per-instrument, portfolio, options) */}
+          <ConfigSection title="Constraints" href="/config/constraints">
             <ConfigField
               label="Max Shares"
-              value={constraints?.perInstrument.maxShares.toLocaleString() ?? "--"}
-            />
-            <ConfigField
-              label="Max Contracts"
-              value={String(constraints?.perInstrument.maxContracts ?? "--")}
+              value={constraints?.perInstrument?.maxShares?.toLocaleString() ?? "--"}
             />
             <ConfigField
               label="Max Notional"
-              value={`$${((constraints?.perInstrument.maxNotional ?? 0) / 1000).toFixed(0)}K`}
+              value={`$${((constraints?.perInstrument?.maxNotional ?? 0) / 1000).toFixed(0)}K`}
             />
-            <ConfigField
-              label="Max % Equity"
-              value={`${((constraints?.perInstrument.maxPctEquity ?? 0) * 100).toFixed(0)}%`}
-            />
-          </ConfigSection>
-
-          {/* Portfolio Limits */}
-          <ConfigSection title="Portfolio Limits" href="/config/constraints">
             <ConfigField
               label="Max Gross Exposure"
-              value={`${((constraints?.portfolio.maxGrossExposure ?? 0) * 100).toFixed(0)}%`}
-            />
-            <ConfigField
-              label="Max Net Exposure"
-              value={`${((constraints?.portfolio.maxNetExposure ?? 0) * 100).toFixed(0)}%`}
-            />
-            <ConfigField
-              label="Max Concentration"
-              value={`${((constraints?.portfolio.maxConcentration ?? 0) * 100).toFixed(0)}%`}
+              value={`${((constraints?.portfolio?.maxGrossExposure ?? 0) * 100).toFixed(0)}%`}
             />
             <ConfigField
               label="Max Drawdown"
-              value={`${((constraints?.portfolio.maxDrawdown ?? 0) * 100).toFixed(0)}%`}
-            />
-          </ConfigSection>
-
-          {/* Options Limits */}
-          <ConfigSection title="Options Greeks Limits" href="/config/constraints">
-            <ConfigField label="Max Delta" value={String(constraints?.options.maxDelta ?? "--")} />
-            <ConfigField label="Max Gamma" value={String(constraints?.options.maxGamma ?? "--")} />
-            <ConfigField label="Max Vega" value={String(constraints?.options.maxVega ?? "--")} />
-            <ConfigField label="Max Theta" value={String(constraints?.options.maxTheta ?? "--")} />
-          </ConfigSection>
-
-          {/* Consensus Config */}
-          <ConfigSection title="Consensus" href="/config/edit">
-            <ConfigField
-              label="Max Iterations"
-              value={String(config.trading.maxConsensusIterations)}
+              value={`${((constraints?.portfolio?.maxDrawdown ?? 0) * 100).toFixed(0)}%`}
             />
             <ConfigField
-              label="Delta Hold"
-              value={`${(config.trading.convictionDeltaHold * 100).toFixed(0)}%`}
-            />
-            <ConfigField
-              label="Delta Action"
-              value={`${(config.trading.convictionDeltaAction * 100).toFixed(0)}%`}
-            />
-            <ConfigField
-              label="Min Risk/Reward"
-              value={`${config.trading.minRiskRewardRatio.toFixed(1)}:1`}
+              label="Max Delta"
+              value={String(constraints?.options?.maxDelta ?? "--")}
             />
           </ConfigSection>
         </div>

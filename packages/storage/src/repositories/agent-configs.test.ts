@@ -22,8 +22,6 @@ async function setupTables(client: TursoClient): Promise<void> {
       environment TEXT NOT NULL,
       agent_type TEXT NOT NULL,
       model TEXT NOT NULL,
-      temperature REAL NOT NULL,
-      max_tokens INTEGER NOT NULL,
       system_prompt_override TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -59,8 +57,6 @@ describe("AgentConfigsRepository", () => {
         environment: "PAPER",
         agentType: "technical_analyst",
         model: "claude-sonnet-4",
-        temperature: 0.7,
-        maxTokens: 8192,
         systemPromptOverride: "Custom prompt for testing",
         enabled: true,
       };
@@ -71,8 +67,6 @@ describe("AgentConfigsRepository", () => {
       expect(result.environment).toBe("PAPER");
       expect(result.agentType).toBe("technical_analyst");
       expect(result.model).toBe("claude-sonnet-4");
-      expect(result.temperature).toBe(0.7);
-      expect(result.maxTokens).toBe(8192);
       expect(result.systemPromptOverride).toBe("Custom prompt for testing");
       expect(result.enabled).toBe(true);
     });
@@ -85,8 +79,6 @@ describe("AgentConfigsRepository", () => {
       });
 
       expect(result.model).toBe("gemini-2.5-pro-preview-05-06");
-      expect(result.temperature).toBe(0);
-      expect(result.maxTokens).toBe(4096);
       expect(result.systemPromptOverride).toBeNull();
       expect(result.enabled).toBe(true);
     });
@@ -183,20 +175,20 @@ describe("AgentConfigsRepository", () => {
         id: "ac-paper",
         environment: "PAPER",
         agentType: "trader",
-        temperature: 0.5,
+        model: "model-paper",
       });
       await repo.create({
         id: "ac-live",
         environment: "LIVE",
         agentType: "trader",
-        temperature: 0,
+        model: "model-live",
       });
 
       const paperConfig = await repo.get("PAPER", "trader");
       const liveConfig = await repo.get("LIVE", "trader");
 
-      expect(paperConfig!.temperature).toBe(0.5);
-      expect(liveConfig!.temperature).toBe(0);
+      expect(paperConfig!.model).toBe("model-paper");
+      expect(liveConfig!.model).toBe("model-live");
     });
   });
 
@@ -263,22 +255,6 @@ describe("AgentConfigsRepository", () => {
       expect(updated.model).toBe("claude-opus-4");
     });
 
-    test("updates temperature", async () => {
-      await repo.create({ id: "ac-temp", environment: "PAPER", agentType: "trader" });
-
-      const updated = await repo.update("ac-temp", { temperature: 0.8 });
-
-      expect(updated.temperature).toBe(0.8);
-    });
-
-    test("updates maxTokens", async () => {
-      await repo.create({ id: "ac-tokens", environment: "PAPER", agentType: "trader" });
-
-      const updated = await repo.update("ac-tokens", { maxTokens: 16384 });
-
-      expect(updated.maxTokens).toBe(16384);
-    });
-
     test("updates systemPromptOverride", async () => {
       await repo.create({ id: "ac-prompt", environment: "PAPER", agentType: "trader" });
 
@@ -313,13 +289,11 @@ describe("AgentConfigsRepository", () => {
 
       const updated = await repo.update("ac-multi", {
         model: "claude-opus-4",
-        temperature: 0.9,
-        maxTokens: 8192,
+        systemPromptOverride: "Custom prompt",
       });
 
       expect(updated.model).toBe("claude-opus-4");
-      expect(updated.temperature).toBe(0.9);
-      expect(updated.maxTokens).toBe(8192);
+      expect(updated.systemPromptOverride).toBe("Custom prompt");
     });
 
     test("throws for non-existent ID", async () => {
@@ -331,13 +305,11 @@ describe("AgentConfigsRepository", () => {
     test("creates new config when none exists", async () => {
       const config = await repo.upsert("PAPER", "trader", {
         model: "claude-sonnet-4",
-        temperature: 0.5,
       });
 
       expect(config.environment).toBe("PAPER");
       expect(config.agentType).toBe("trader");
       expect(config.model).toBe("claude-sonnet-4");
-      expect(config.temperature).toBe(0.5);
     });
 
     test("updates existing config", async () => {
@@ -346,17 +318,14 @@ describe("AgentConfigsRepository", () => {
         environment: "PAPER",
         agentType: "trader",
         model: "old-model",
-        temperature: 0,
       });
 
       const config = await repo.upsert("PAPER", "trader", {
         model: "new-model",
-        temperature: 0.7,
       });
 
       expect(config.id).toBe("ac-existing");
       expect(config.model).toBe("new-model");
-      expect(config.temperature).toBe(0.7);
     });
   });
 
@@ -390,8 +359,6 @@ describe("AgentConfigsRepository", () => {
         environment: "PAPER",
         agentType: "trader",
         model: "custom-model",
-        temperature: 1.5,
-        maxTokens: 2048,
         systemPromptOverride: "Custom prompt",
         enabled: false,
       });
@@ -400,8 +367,6 @@ describe("AgentConfigsRepository", () => {
 
       expect(reset.id).toBe("ac-reset");
       expect(reset.model).toBe("gemini-2.5-pro-preview-05-06");
-      expect(reset.temperature).toBe(0);
-      expect(reset.maxTokens).toBe(4096);
       expect(reset.systemPromptOverride).toBeNull();
       expect(reset.enabled).toBe(true);
     });
@@ -412,8 +377,6 @@ describe("AgentConfigsRepository", () => {
       expect(config.environment).toBe("PAPER");
       expect(config.agentType).toBe("news_analyst");
       expect(config.model).toBe("gemini-2.5-flash-preview-05-20");
-      expect(config.temperature).toBe(0);
-      expect(config.maxTokens).toBe(4096);
       expect(config.enabled).toBe(true);
     });
   });
@@ -465,14 +428,12 @@ describe("AgentConfigsRepository", () => {
         environment: "PAPER",
         agentType: "trader",
         model: "claude-sonnet-4",
-        temperature: 0.5,
       });
       await repo.create({
         id: "ac-src-2",
         environment: "PAPER",
         agentType: "critic",
         model: "claude-opus-4",
-        temperature: 0,
       });
 
       const cloned = await repo.cloneToEnvironment("PAPER", "LIVE");
@@ -482,7 +443,6 @@ describe("AgentConfigsRepository", () => {
       const liveTrader = await repo.get("LIVE", "trader");
       expect(liveTrader).not.toBeNull();
       expect(liveTrader!.model).toBe("claude-sonnet-4");
-      expect(liveTrader!.temperature).toBe(0.5);
 
       const liveCritic = await repo.get("LIVE", "critic");
       expect(liveCritic).not.toBeNull();
@@ -494,20 +454,20 @@ describe("AgentConfigsRepository", () => {
         id: "ac-src",
         environment: "PAPER",
         agentType: "trader",
-        temperature: 0.5,
+        model: "model-paper",
       });
       await repo.create({
         id: "ac-existing",
         environment: "LIVE",
         agentType: "trader",
-        temperature: 0,
+        model: "model-live",
       });
 
       await repo.cloneToEnvironment("PAPER", "LIVE");
 
       const liveTrader = await repo.get("LIVE", "trader");
       expect(liveTrader!.id).toBe("ac-existing");
-      expect(liveTrader!.temperature).toBe(0.5);
+      expect(liveTrader!.model).toBe("model-paper");
     });
   });
 

@@ -60,8 +60,6 @@ function createMockAgentConfig(
     environment: "PAPER",
     agentType,
     model: "gemini-3-pro-preview",
-    temperature: 0,
-    maxTokens: 4096,
     systemPromptOverride: null,
     enabled: true,
     createdAt: new Date().toISOString(),
@@ -231,8 +229,8 @@ describe("RuntimeConfigService", () => {
       await service.saveDraft("PAPER", {
         agents: {
           technical_analyst: {
-            temperature: 0.5,
-            maxTokens: 8192,
+            model: "gemini-3-flash-preview",
+            enabled: false,
           },
         },
       });

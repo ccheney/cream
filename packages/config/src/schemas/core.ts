@@ -42,22 +42,6 @@ export const LLMConfigSchema = z.object({
     .refine((id) => id.startsWith("gemini-3-pro") || id.startsWith("gemini-3-flash"), {
       message: "Must use Gemini 3.x model (gemini-3-pro-preview or gemini-3-flash-preview)",
     }),
-
-  /**
-   * Temperature for response generation
-   *
-   * 0 = deterministic, 2 = maximum creativity
-   * Default: 0 for consistent trading decisions
-   */
-  temperature: z.number().min(0).max(2).default(0),
-
-  /**
-   * Maximum tokens in response
-   *
-   * Range: 1-65536 (Gemini limit)
-   * Default: 4096 for typical agent responses
-   */
-  max_tokens: z.number().int().positive().max(65536).default(4096),
 });
 export type LLMConfig = z.infer<typeof LLMConfigSchema>;
 

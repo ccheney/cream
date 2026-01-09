@@ -77,8 +77,6 @@ async function seedTestConfig(): Promise<void> {
   for (const agentType of agentTypes) {
     await agentRepo.upsert("PAPER", agentType, {
       model: "gemini-3-pro-preview",
-      temperature: 0,
-      maxTokens: 4096,
       enabled: true,
       systemPromptOverride: null,
     });
@@ -199,15 +197,15 @@ describe("Config Flow Integration", () => {
       await service.saveDraft("PAPER", {
         agents: {
           technical_analyst: {
-            temperature: 0.5,
-            maxTokens: 8192,
+            model: "gemini-3-flash-preview",
+            enabled: false,
           },
         },
       });
 
       const draft = await service.getDraft("PAPER");
-      expect(draft.agents.technical_analyst.temperature).toBe(0.5);
-      expect(draft.agents.technical_analyst.maxTokens).toBe(8192);
+      expect(draft.agents.technical_analyst.model).toBe("gemini-3-flash-preview");
+      expect(draft.agents.technical_analyst.enabled).toBe(false);
     });
 
     it("saves universe config changes in draft", async () => {

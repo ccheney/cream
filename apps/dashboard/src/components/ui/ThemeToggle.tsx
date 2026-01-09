@@ -8,7 +8,11 @@
 
 "use client";
 
-import { type Theme, useTheme } from "../../hooks/useTheme";
+import {
+  type ThemeMode,
+  selectTheme,
+  usePreferencesStore,
+} from "@/stores/preferences-store";
 
 // ============================================
 // Types
@@ -132,7 +136,7 @@ const styles = {
 // Component
 // ============================================
 
-const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
+const THEMES: { value: ThemeMode; label: string; icon: React.ReactNode }[] = [
   { value: "light", label: "Light", icon: <SunIcon /> },
   { value: "dark", label: "Dark", icon: <MoonIcon /> },
   { value: "system", label: "System", icon: <SystemIcon /> },
@@ -148,29 +152,12 @@ const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
  * ```
  */
 export function ThemeToggle({ compact = false, testId = "theme-toggle" }: ThemeToggleProps) {
-  const { theme, setTheme, mounted } = useTheme();
+  const theme = usePreferencesStore(selectTheme);
+  const updateDisplay = usePreferencesStore((s) => s.updateDisplay);
 
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return (
-      <div style={styles.container} data-testid={testId}>
-        {THEMES.map(({ value, icon }) => (
-          <button
-            key={value}
-            type="button"
-            style={{
-              ...styles.button,
-              ...(compact ? styles.buttonCompact : {}),
-            }}
-            disabled
-          >
-            {icon}
-            {!compact && <span>{value}</span>}
-          </button>
-        ))}
-      </div>
-    );
-  }
+  const setTheme = (newTheme: ThemeMode) => {
+    updateDisplay({ theme: newTheme });
+  };
 
   return (
     <div

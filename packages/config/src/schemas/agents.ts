@@ -56,11 +56,6 @@ export const AgentSettingsSchema = z.object({
   model_id: z.string().optional(),
 
   /**
-   * Agent-specific temperature override
-   */
-  temperature: z.number().min(0).max(2).optional(),
-
-  /**
    * Maximum retries for this agent
    */
   max_retries: z.number().int().nonnegative().default(2),

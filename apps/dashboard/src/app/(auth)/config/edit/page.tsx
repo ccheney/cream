@@ -220,58 +220,55 @@ export default function ConfigEditPage() {
         </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Editor Panel */}
-        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-          {activeTab === "trading" && (
-            <TradingConfigForm
-              config={draftConfig.trading}
-              onSave={(updates) => {
-                handleSave({ trading: updates });
-                setHasUnsavedChanges(false);
-              }}
-              onChange={() => setHasUnsavedChanges(true)}
-              isSaving={saveDraft.isPending}
-            />
-          )}
-          {activeTab === "agents" && (
-            <AgentConfigList
-              agents={draftConfig.agents}
-              onSave={(agentType, updates) => {
-                handleSave({ agents: { [agentType]: updates } });
-                setHasUnsavedChanges(false);
-              }}
-              onChange={() => setHasUnsavedChanges(true)}
-              isSaving={saveDraft.isPending}
-            />
-          )}
-          {activeTab === "universe" && (
-            <UniverseConfigForm
-              config={draftConfig.universe}
-              onSave={(updates) => {
-                handleSave({ universe: updates });
-                setHasUnsavedChanges(false);
-              }}
-              onChange={() => setHasUnsavedChanges(true)}
-              isSaving={saveDraft.isPending}
-            />
-          )}
-        </div>
+      {/* Editor Panel */}
+      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
+        {activeTab === "trading" && (
+          <TradingConfigForm
+            config={draftConfig.trading}
+            onSave={(updates) => {
+              handleSave({ trading: updates });
+              setHasUnsavedChanges(false);
+            }}
+            onChange={() => setHasUnsavedChanges(true)}
+            isSaving={saveDraft.isPending}
+          />
+        )}
+        {activeTab === "agents" && (
+          <AgentConfigList
+            agents={draftConfig.agents}
+            onSave={(agentType, updates) => {
+              handleSave({ agents: { [agentType]: updates } });
+              setHasUnsavedChanges(false);
+            }}
+            onChange={() => setHasUnsavedChanges(true)}
+            isSaving={saveDraft.isPending}
+          />
+        )}
+        {activeTab === "universe" && (
+          <UniverseConfigForm
+            config={draftConfig.universe}
+            onSave={(updates) => {
+              handleSave({ universe: updates });
+              setHasUnsavedChanges(false);
+            }}
+            onChange={() => setHasUnsavedChanges(true)}
+            isSaving={saveDraft.isPending}
+          />
+        )}
+      </div>
 
-        {/* Diff Panel */}
-        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-          <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-            Changes from Active
-          </h3>
-          {activeConfig ? (
-            <ConfigDiff before={activeConfig as unknown as FullRuntimeConfig} after={draftConfig} />
-          ) : (
-            <p className="text-cream-500 dark:text-cream-400">
-              No active configuration to compare against
-            </p>
-          )}
-        </div>
+      {/* Diff Panel - Full Width */}
+      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
+        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+          Changes from Active
+        </h3>
+        {activeConfig ? (
+          <ConfigDiff before={activeConfig as unknown as FullRuntimeConfig} after={draftConfig} />
+        ) : (
+          <p className="text-cream-500 dark:text-cream-400">
+            No active configuration to compare against
+          </p>
+        )}
       </div>
     </div>
   );
@@ -559,45 +556,6 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                           </option>
                         ))}
                       </select>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`${agentType}-temperature`}
-                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-                      >
-                        Temperature
-                      </label>
-                      <input
-                        id={`${agentType}-temperature`}
-                        type="number"
-                        step={0.1}
-                        min={0}
-                        max={2}
-                        value={(formData[agentType]?.temperature as number) ?? agent.temperature}
-                        onChange={(e) =>
-                          handleChange(agentType, "temperature", parseFloat(e.target.value))
-                        }
-                        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`${agentType}-maxTokens`}
-                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-                      >
-                        Max Tokens
-                      </label>
-                      <input
-                        id={`${agentType}-maxTokens`}
-                        type="number"
-                        min={100}
-                        max={32000}
-                        value={(formData[agentType]?.maxTokens as number) ?? agent.maxTokens}
-                        onChange={(e) =>
-                          handleChange(agentType, "maxTokens", parseInt(e.target.value, 10))
-                        }
-                        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                      />
                     </div>
                     <div className="flex items-center">
                       <label className="flex items-center gap-2 cursor-pointer">

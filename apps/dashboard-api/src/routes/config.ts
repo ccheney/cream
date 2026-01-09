@@ -88,8 +88,6 @@ const AgentConfigSchema = z.object({
   environment: EnvironmentSchema,
   agentType: AgentTypeSchema,
   model: z.string(),
-  temperature: z.number(),
-  maxTokens: z.number(),
   systemPromptOverride: z.string().nullable(),
   enabled: z.boolean(),
   createdAt: z.string(),

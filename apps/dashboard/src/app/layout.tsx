@@ -39,8 +39,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
               (function() {
                 try {
-                  var stored = localStorage.getItem('theme');
-                  var theme = stored || 'system';
+                  var stored = localStorage.getItem('cream-preferences');
+                  var theme = 'system';
+                  if (stored) {
+                    var parsed = JSON.parse(stored);
+                    if (parsed.state && parsed.state.display && parsed.state.display.theme) {
+                      theme = parsed.state.display.theme;
+                    }
+                  }
                   var resolved = theme;
 
                   if (theme === 'system') {

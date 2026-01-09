@@ -1,8 +1,8 @@
 /**
  * Agent Configs Repository
  *
- * Data access for agent_configs table. Manages per-agent model, temperature,
- * and prompt configuration with environment-specific overrides.
+ * Data access for agent_configs table. Manages per-agent model and prompt
+ * configuration with environment-specific overrides.
  *
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
@@ -54,8 +54,6 @@ export interface AgentConfig {
   environment: AgentEnvironment;
   agentType: AgentType;
   model: string;
-  temperature: number;
-  maxTokens: number;
   systemPromptOverride: string | null;
   enabled: boolean;
   createdAt: string;
@@ -70,8 +68,6 @@ export interface CreateAgentConfigInput {
   environment: AgentEnvironment;
   agentType: AgentType;
   model?: string;
-  temperature?: number;
-  maxTokens?: number;
   systemPromptOverride?: string | null;
   enabled?: boolean;
 }
@@ -81,8 +77,6 @@ export interface CreateAgentConfigInput {
  */
 export interface UpdateAgentConfigInput {
   model?: string;
-  temperature?: number;
-  maxTokens?: number;
   systemPromptOverride?: string | null;
   enabled?: boolean;
 }
@@ -106,11 +100,6 @@ const DEFAULT_MODELS: Record<AgentType, string> = {
   critic: "gemini-2.5-pro-preview-05-06",
 };
 
-/**
- * Default configuration values
- */
-const DEFAULT_TEMPERATURE = 0;
-const DEFAULT_MAX_TOKENS = 4096;
 
 // ============================================
 // Row Mapper
@@ -122,8 +111,6 @@ function mapAgentConfigRow(row: Row): AgentConfig {
     environment: row.environment as AgentEnvironment,
     agentType: row.agent_type as AgentType,
     model: row.model as string,
-    temperature: row.temperature as number,
-    maxTokens: row.max_tokens as number,
     systemPromptOverride: row.system_prompt_override as string | null,
     enabled: toBoolean(row.enabled),
     createdAt: row.created_at as string,
@@ -153,16 +140,14 @@ export class AgentConfigsRepository {
     try {
       await this.client.run(
         `INSERT INTO ${this.table} (
-          id, environment, agent_type, model, temperature, max_tokens,
+          id, environment, agent_type, model,
           system_prompt_override, enabled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           input.id,
           input.environment,
           input.agentType,
           input.model ?? defaultModel,
-          input.temperature ?? DEFAULT_TEMPERATURE,
-          input.maxTokens ?? DEFAULT_MAX_TOKENS,
           input.systemPromptOverride ?? null,
           fromBoolean(input.enabled !== false),
           now,
@@ -261,14 +246,6 @@ export class AgentConfigsRepository {
       updateFields.push("model = ?");
       updateValues.push(input.model);
     }
-    if (input.temperature !== undefined) {
-      updateFields.push("temperature = ?");
-      updateValues.push(input.temperature);
-    }
-    if (input.maxTokens !== undefined) {
-      updateFields.push("max_tokens = ?");
-      updateValues.push(input.maxTokens);
-    }
     if (input.systemPromptOverride !== undefined) {
       updateFields.push("system_prompt_override = ?");
       updateValues.push(input.systemPromptOverride);
@@ -339,8 +316,6 @@ export class AgentConfigsRepository {
     // Update to defaults
     return this.update(existing.id, {
       model: DEFAULT_MODELS[agentType],
-      temperature: DEFAULT_TEMPERATURE,
-      maxTokens: DEFAULT_MAX_TOKENS,
       systemPromptOverride: null,
       enabled: true,
     });
@@ -379,8 +354,6 @@ export class AgentConfigsRepository {
     for (const source of sourceConfigs) {
       const newConfig = await this.upsert(targetEnvironment, source.agentType, {
         model: source.model,
-        temperature: source.temperature,
-        maxTokens: source.maxTokens,
         systemPromptOverride: source.systemPromptOverride,
         enabled: source.enabled,
       });

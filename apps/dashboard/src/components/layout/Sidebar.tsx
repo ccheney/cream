@@ -29,7 +29,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useState } from "react";
 import { Logo } from "@/components/ui/logo";
-import { useTheme } from "@/hooks/useTheme";
+import { usePreferencesStore } from "@/stores/preferences-store";
 
 export interface NavItem {
   href: string;
@@ -99,10 +99,11 @@ export const Sidebar = memo(function Sidebar({
   className = "",
 }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { setTheme, resolvedTheme } = useTheme();
+  const resolvedTheme = usePreferencesStore((s) => s.getComputedTheme());
+  const updateDisplay = usePreferencesStore((s) => s.updateDisplay);
 
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    updateDisplay({ theme: resolvedTheme === "dark" ? "light" : "dark" });
   };
 
   const width = collapsed && !isHovered ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;

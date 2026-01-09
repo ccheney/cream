@@ -286,8 +286,6 @@ function buildAgentConfigs(
   for (const [agentType, config] of Object.entries(runtimeConfig.agents)) {
     result[agentType as AgentType] = {
       model: config.model,
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
       enabled: config.enabled,
       systemPromptOverride: config.systemPromptOverride,
     };
@@ -759,7 +757,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   const maxConsensusIterations =
     runtimeConfig?.trading.maxConsensusIterations ?? DEFAULT_MAX_CONSENSUS_ITERATIONS;
 
-  // Build agent configs from runtime config (model, temperature, maxTokens per agent)
+  // Build agent configs from runtime config (model, system prompt override per agent)
   const agentConfigs = buildAgentConfigs(runtimeConfig);
 
   // Observe Phase

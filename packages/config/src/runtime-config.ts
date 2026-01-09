@@ -69,8 +69,6 @@ export interface RuntimeAgentConfig {
   environment: TradingEnvironment;
   agentType: RuntimeAgentType;
   model: string;
-  temperature: number;
-  maxTokens: number;
   systemPromptOverride: string | null;
   enabled: boolean;
   createdAt: string;
@@ -496,8 +494,6 @@ export class RuntimeConfigService {
         if (agentConfig) {
           await this.agentConfigsRepo.upsert(environment, agentType as RuntimeAgentType, {
             model: agentConfig.model,
-            temperature: agentConfig.temperature,
-            maxTokens: agentConfig.maxTokens,
             systemPromptOverride: agentConfig.systemPromptOverride,
             enabled: agentConfig.enabled,
           });
@@ -901,24 +897,6 @@ export class RuntimeConfigService {
       });
     }
 
-    // Validate temperature ranges
-    for (const [agentType, config] of Object.entries(agents)) {
-      if (config.temperature < 0 || config.temperature > 2) {
-        errors.push({
-          field: `agents.${agentType}.temperature`,
-          message: "Temperature must be between 0 and 2",
-          value: config.temperature,
-        });
-      }
-
-      if (config.maxTokens < 100 || config.maxTokens > 100000) {
-        errors.push({
-          field: `agents.${agentType}.maxTokens`,
-          message: "maxTokens must be between 100 and 100000",
-          value: config.maxTokens,
-        });
-      }
-    }
 
     // Warnings for model consistency
     const models = new Set(enabledAgents.map((a) => a.model));

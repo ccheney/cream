@@ -56,8 +56,6 @@ const AgentOutputSchema = z.object({
 const AgentConfigSchema = z.object({
   type: z.string(),
   model: z.string(),
-  temperature: z.number(),
-  maxTokens: z.number(),
   systemPrompt: z.string(),
   enabled: z.boolean(),
 });
@@ -91,8 +89,6 @@ const agentConfigs = new Map<string, z.infer<typeof AgentConfigSchema>>(
     {
       type: agent.type,
       model: "gemini-3-pro-preview",
-      temperature: 0.7,
-      maxTokens: 4096,
       systemPrompt: `You are the ${agent.displayName} agent for the Cream trading system.`,
       enabled: true,
     },

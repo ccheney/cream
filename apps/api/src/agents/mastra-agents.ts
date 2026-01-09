@@ -410,8 +410,6 @@ export type MastraAgentRegistry = typeof mastraAgents;
  */
 export interface AgentConfigEntry {
   model: string;
-  temperature: number;
-  maxTokens: number;
   enabled: boolean;
   systemPromptOverride?: string | null;
 }
@@ -476,26 +474,23 @@ export interface AgentContext {
 }
 
 /**
- * Default model settings for agent generation.
+ * Default temperature for agent generation (deterministic outputs for trading decisions).
+ * Not configurable - hardcoded for consistency and safety.
  */
-const DEFAULT_MODEL_SETTINGS = {
-  temperature: 0.3, // Lower temperature for more deterministic outputs
-  maxTokens: 4096,
-};
+const DEFAULT_TEMPERATURE = 0.3;
 
 /**
- * Runtime settings for agent execution including model, temperature, and prompt overrides.
+ * Runtime settings for agent execution including model and prompt overrides.
+ * Temperature is fixed at 0.3 for deterministic outputs.
+ * maxTokens is omitted to use model's natural maximum (AI SDK default).
  */
 interface AgentRuntimeSettings {
   model?: string;
-  temperature: number;
-  maxTokens: number;
   systemPromptOverride?: string | null;
 }
 
 /**
  * Get runtime settings for an agent from context config.
- * Falls back to defaults if no config provided.
  */
 function getAgentRuntimeSettings(
   agentType: AgentType,
@@ -505,12 +500,10 @@ function getAgentRuntimeSettings(
   if (config) {
     return {
       model: config.model,
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
       systemPromptOverride: config.systemPromptOverride,
     };
   }
-  return DEFAULT_MODEL_SETTINGS;
+  return {};
 }
 
 /**
@@ -526,26 +519,26 @@ function createRuntimeContext(model?: string): RuntimeContext {
 
 /**
  * Build generation options with model settings, runtime context, and optional instruction override.
+ * Uses fixed temperature (0.3) and model's natural max tokens.
  */
 function buildGenerateOptions(
   settings: AgentRuntimeSettings,
   structuredOutput: { schema: z.ZodType }
 ): {
   structuredOutput: { schema: z.ZodType };
-  modelSettings: { temperature: number; maxOutputTokens: number };
+  modelSettings: { temperature: number };
   runtimeContext: RuntimeContext;
   instructions?: string;
 } {
   const options: {
     structuredOutput: { schema: z.ZodType };
-    modelSettings: { temperature: number; maxOutputTokens: number };
+    modelSettings: { temperature: number };
     runtimeContext: RuntimeContext;
     instructions?: string;
   } = {
     structuredOutput,
     modelSettings: {
-      temperature: settings.temperature,
-      maxOutputTokens: settings.maxTokens,
+      temperature: DEFAULT_TEMPERATURE,
     },
     runtimeContext: createRuntimeContext(settings.model),
   };
@@ -918,8 +911,8 @@ ${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
 
   const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
-  // Cap temperature at 0.1 for validation agents to ensure consistent risk assessment
-  options.modelSettings.temperature = Math.min(options.modelSettings.temperature, 0.1);
+  // Use lower temperature (0.1) for validation agents to ensure consistent risk assessment
+  options.modelSettings.temperature = 0.1;
 
   const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], options);
 
@@ -958,8 +951,8 @@ Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
   const settings = getAgentRuntimeSettings("critic", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
-  // Cap temperature at 0.1 for validation agents to ensure consistent critique
-  options.modelSettings.temperature = Math.min(options.modelSettings.temperature, 0.1);
+  // Use lower temperature (0.1) for validation agents to ensure consistent critique
+  options.modelSettings.temperature = 0.1;
 
   const response = await criticAgent.generate([{ role: "user", content: prompt }], options);
 
