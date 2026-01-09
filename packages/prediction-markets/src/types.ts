@@ -62,3 +62,25 @@ export class AuthenticationError extends PredictionMarketError {
     super(message, platform, "AUTH_ERROR");
   }
 }
+
+export class ConfigurationError extends PredictionMarketError {
+  constructor(platform: PredictionPlatform | "AGGREGATOR", message: string) {
+    super(message, platform, "CONFIG_MISSING");
+  }
+}
+
+export class InsufficientDataError extends PredictionMarketError {
+  constructor(platform: PredictionPlatform | "AGGREGATOR", required: number, actual: number) {
+    super(
+      `Insufficient data: need ${required} samples, got ${actual}`,
+      platform,
+      "INSUFFICIENT_DATA"
+    );
+  }
+}
+
+export class ValidationError extends PredictionMarketError {
+  constructor(platform: PredictionPlatform | "AGGREGATOR", schemaName: string, details: string) {
+    super(`Schema validation failed for ${schemaName}: ${details}`, platform, "VALIDATION_ERROR");
+  }
+}

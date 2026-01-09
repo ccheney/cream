@@ -20,6 +20,7 @@ import type {
   StoragePredictionMarketType,
 } from "@cream/storage";
 import type { MarketType, Platform } from "../types";
+import { ConfigurationError, InsufficientDataError } from "../types";
 
 // ============================================
 // Types
@@ -294,7 +295,10 @@ export class HistoricalPredictionMarketAdapter {
     marketTypes: MarketType[]
   ): Promise<HistoricalPredictionMarket[]> {
     if (!this.repository) {
-      return [];
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
     }
 
     const markets: HistoricalPredictionMarket[] = [];
@@ -365,7 +369,10 @@ export class HistoricalPredictionMarketAdapter {
    */
   async getMarketAtTime(ticker: string, asOf: Date): Promise<HistoricalMarketSnapshot | null> {
     if (!this.repository) {
-      return null;
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
     }
 
     // Get snapshots around the requested time
@@ -432,7 +439,10 @@ export class HistoricalPredictionMarketAdapter {
     period: { start: Date; end: Date }
   ): Promise<SignalAccuracyReport> {
     if (!this.repository) {
-      return this.emptyAccuracyReport(signalType, period);
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
     }
 
     // Get signals from repository
@@ -522,7 +532,10 @@ export class HistoricalPredictionMarketAdapter {
     maxLagHours = 24
   ): Promise<SignalCorrelation[]> {
     if (!this.repository) {
-      return [];
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
     }
 
     // Get signals
@@ -532,8 +545,9 @@ export class HistoricalPredictionMarketAdapter {
       toTime: period.end.toISOString(),
     });
 
-    if (signals.length < 10) {
-      return []; // Need minimum sample size
+    const MIN_SAMPLE_SIZE = 10;
+    if (signals.length < MIN_SAMPLE_SIZE) {
+      throw new InsufficientDataError("AGGREGATOR", MIN_SAMPLE_SIZE, signals.length);
     }
 
     // Convert signals to time series (simplified - in production use aligned time series)
@@ -575,10 +589,14 @@ export class HistoricalPredictionMarketAdapter {
     signalTypes: string[],
     period: { start: Date; end: Date }
   ): Promise<Record<string, number>> {
-    if (!this.repository || signalTypes.length === 0) {
-      // Return equal weights as fallback
-      const equalWeight = 1 / signalTypes.length;
-      return Object.fromEntries(signalTypes.map((s) => [s, equalWeight]));
+    if (!this.repository) {
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
+    }
+    if (signalTypes.length === 0) {
+      return {};
     }
 
     const weights: Record<string, number> = {};
@@ -624,11 +642,10 @@ export class HistoricalPredictionMarketAdapter {
     period: { start: Date; end: Date }
   ): Promise<{ regime: string; accuracy: number; sampleSize: number }[]> {
     if (!this.repository) {
-      return [
-        { regime: "LOW_VOL", accuracy: 0, sampleSize: 0 },
-        { regime: "MEDIUM_VOL", accuracy: 0, sampleSize: 0 },
-        { regime: "HIGH_VOL", accuracy: 0, sampleSize: 0 },
-      ];
+      throw new ConfigurationError(
+        "AGGREGATOR",
+        "Repository not configured. Initialize adapter with getHistoricalAdapter(repository)"
+      );
     }
 
     // Get signals
