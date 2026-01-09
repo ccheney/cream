@@ -5,6 +5,7 @@
  * @see docs/plans/14-testing.md lines 610-644
  */
 
+import { requireEnv } from "@cream/domain";
 import type { AgentType } from "./index.js";
 
 export interface TracedAgent {
@@ -388,7 +389,7 @@ export function isLangSmithConfigured(): boolean {
 }
 
 export function getLangSmithConfigFromEnv(): LangSmithConfig {
-  const environment = (process.env.CREAM_ENV ?? "PAPER") as "BACKTEST" | "PAPER" | "LIVE";
+  const environment = requireEnv();
 
   return {
     apiKey: process.env.LANGSMITH_API_KEY ?? Bun.env.LANGSMITH_API_KEY,

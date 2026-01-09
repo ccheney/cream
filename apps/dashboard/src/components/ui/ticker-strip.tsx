@@ -110,16 +110,8 @@ export const TickerStrip = memo(function TickerStrip({
       return;
     }
 
-    // This is a placeholder - actual implementation would use WebSocket message handlers
-    // The WebSocketProvider would expose a way to listen for quote updates
-
-    // For now, we'll simulate this via the provider's quote subscription
-    // Real implementation would look like:
-    // const unsubscribe = onQuoteUpdate((quote) => {
-    //   if (symbols.includes(quote.symbol)) {
-    //     handleQuoteUpdate(quote);
-    //   }
-    // });
+    // TODO: Wire up WebSocket message handler for quote updates
+    // The WebSocketProvider should expose onQuoteUpdate callback
   }, [connected]);
 
   // Handle incoming quote update

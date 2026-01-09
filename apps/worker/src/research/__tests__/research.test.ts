@@ -341,51 +341,7 @@ describe("FirecrackerRunner", () => {
   });
 });
 
-// ============================================
-// Integration Tests (require infrastructure)
-// ============================================
-
-describe.skip("ResearchContainerSpawner Integration", () => {
-  test("spawns research container with Claude Agent SDK", async () => {
-    const spawner = createResearchSpawner();
-    const events: Array<{ type: string; message: string }> = [];
-
-    const result = await spawner.spawn(
-      {
-        triggerType: "manual",
-        triggerReason: "Integration test",
-        currentRegime: "BULL_TREND",
-        activeFactorIds: [],
-        resources: DEFAULT_RESOURCE_LIMITS,
-        guardrails: DEFAULT_GUARDRAILS,
-        workspacePath: "/var/lib/claude-code/workspace/cream",
-        model: "claude-sonnet-4-5",
-      },
-      (event) => {
-        events.push({ type: event.type, message: event.message });
-      }
-    );
-
-    expect(result.runId).toMatch(/^research-/);
-    expect(result.status).toBe("running");
-    expect(events.length).toBeGreaterThan(0);
-    expect(events[0]?.type).toBe("started");
-  });
-});
-
-describe.skip("FirecrackerRunner Integration", () => {
-  test("launches and stops microVM", async () => {
-    const runner = createFirecrackerRunner();
-
-    const handle = await runner.launchMicroVM({
-      vcpuCount: 2,
-      memSizeMb: 512,
-    });
-
-    expect(handle.status).toBe("running");
-    expect(handle.vmId).toMatch(/^fc-/);
-
-    await runner.stopMicroVM(handle.vmId);
-    expect(handle.status).toBe("stopped");
-  });
-});
+// Integration tests removed - require infrastructure not yet available:
+// - ResearchContainerSpawner: needs Claude Agent SDK
+// - FirecrackerRunner: needs Linux+KVM (not available on macOS)
+// Unit tests above cover the core logic with mocks.

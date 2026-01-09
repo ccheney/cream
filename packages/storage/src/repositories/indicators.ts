@@ -84,6 +84,8 @@ export interface Indicator {
   retirementReason: string | null;
   similarTo: string | null;
   replaces: string | null;
+  parityReport: Record<string, unknown> | null;
+  parityValidatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -186,6 +188,8 @@ function mapIndicatorRow(row: Row): Indicator {
     retirementReason: row.retirement_reason as string | null,
     similarTo: row.similar_to as string | null,
     replaces: row.replaces as string | null,
+    parityReport: parseJson<Record<string, unknown> | null>(row.parity_report, null),
+    parityValidatedAt: row.parity_validated_at as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -400,14 +404,52 @@ export class IndicatorsRepository {
 
   /**
    * Promote to production
+   *
+   * @param id - Indicator ID
+   * @param prUrl - Pull request URL
+   * @param parityReport - Optional parity validation report (JSON)
    */
-  async promote(id: string, prUrl: string): Promise<Indicator> {
+  async promote(
+    id: string,
+    prUrl: string,
+    parityReport?: Record<string, unknown>
+  ): Promise<Indicator> {
+    try {
+      if (parityReport) {
+        await this.client.run(
+          `UPDATE indicators
+           SET status = 'production', promoted_at = datetime('now'), pr_url = ?,
+               parity_report = ?, parity_validated_at = datetime('now'), updated_at = datetime('now')
+           WHERE id = ?`,
+          [prUrl, toJson(parityReport), id]
+        );
+      } else {
+        await this.client.run(
+          `UPDATE indicators
+           SET status = 'production', promoted_at = datetime('now'), pr_url = ?, updated_at = datetime('now')
+           WHERE id = ?`,
+          [prUrl, id]
+        );
+      }
+      return this.findByIdOrThrow(id);
+    } catch (error) {
+      throw RepositoryError.fromSqliteError("indicators", error as Error);
+    }
+  }
+
+  /**
+   * Update parity validation result for an indicator.
+   */
+  async updateParityValidation(
+    id: string,
+    parityReport: Record<string, unknown>
+  ): Promise<Indicator> {
     try {
       await this.client.run(
         `UPDATE indicators
-         SET status = 'production', promoted_at = datetime('now'), pr_url = ?, updated_at = datetime('now')
+         SET parity_report = ?, parity_validated_at = datetime('now'), updated_at = datetime('now')
          WHERE id = ?`,
-        [prUrl, id]
+        [toJson(parityReport), id]
       );
       return this.findByIdOrThrow(id);
     } catch (error) {

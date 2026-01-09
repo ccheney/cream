@@ -85,7 +85,7 @@ const styles = {
 export default function ErrorPage({ error, reset }: ErrorPageProps): React.JSX.Element {
   useEffect(() => {
     // TODO: Send to error tracking service (e.g., Sentry)
-  }, [error]);
+  }, []);
 
   const handleReset = () => {
     reset();

@@ -171,7 +171,6 @@ export async function initAgentEval(
   agentName: keyof typeof AGENT_EVAL_CONFIGS,
   experimentSuffix?: string
 ) {
-  // const _config = AGENT_EVAL_CONFIGS[agentName];
   const experimentName = getExperimentName("paper", experimentSuffix);
 
   // NOTE: This is a placeholder. The Eval() function requires data, task, and scores

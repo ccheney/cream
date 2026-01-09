@@ -5,12 +5,7 @@
 import { describe, expect, it } from "bun:test";
 import { createElement } from "react";
 import type { SystemHealthStatus } from "./system-health-badge";
-import {
-  ConnectionBadge,
-  LiveBadge,
-  StreamingBadge,
-  SystemHealthBadge,
-} from "./system-health-badge";
+import { SystemHealthBadge } from "./system-health-badge";
 
 // ============================================
 // Helper Types
@@ -198,71 +193,10 @@ describe("SystemHealthBadge", () => {
   });
 });
 
-// ============================================
-// LiveBadge Preset Tests
-// ============================================
-
-// TODO: These preset tests pass individually but fail when run with the full
-// test suite due to JSX runtime conflicts. Skip until test isolation is fixed.
-// See: https://github.com/oven-sh/bun/issues/6905
-describe.skip("LiveBadge", () => {
-  it("renders with live status (from internal implementation)", () => {
-    const element = LiveBadge({}) as unknown as TestElement;
-    expect(element).toBeDefined();
-  });
-
-  it("accepts custom className", () => {
-    const element = LiveBadge({ className: "my-class" }) as unknown as TestElement;
-    expect(element.props.className).toContain("my-class");
-  });
-
-  it("accepts other props", () => {
-    const element = LiveBadge({ showLabel: false }) as unknown as TestElement;
-    expect(element.props.showLabel).toBe(false);
-  });
-});
-
-// ============================================
-// ConnectionBadge Preset Tests
-// ============================================
-
-describe.skip("ConnectionBadge", () => {
-  it("creates element with connected=true", () => {
-    const element = ConnectionBadge({ connected: true }) as unknown as TestElement;
-    expect(element).toBeDefined();
-    expect(element.props.status).toBe("connected");
-  });
-
-  it("creates element with connected=false", () => {
-    const element = ConnectionBadge({ connected: false }) as unknown as TestElement;
-    expect(element).toBeDefined();
-    expect(element.props.status).toBe("disconnected");
-  });
-
-  it("accepts custom className", () => {
-    const element = ConnectionBadge({
-      connected: true,
-      className: "my-class",
-    }) as unknown as TestElement;
-    expect(element.props.className).toContain("my-class");
-  });
-});
-
-// ============================================
-// StreamingBadge Preset Tests
-// ============================================
-
-describe.skip("StreamingBadge", () => {
-  it("renders with streaming status", () => {
-    const element = StreamingBadge({}) as unknown as TestElement;
-    expect(element).toBeDefined();
-  });
-
-  it("accepts custom className", () => {
-    const element = StreamingBadge({ className: "my-class" }) as unknown as TestElement;
-    expect(element.props.className).toContain("my-class");
-  });
-});
+// Preset components (LiveBadge, ConnectionBadge, StreamingBadge) are thin
+// wrappers around SystemHealthBadge. Their behavior is covered by:
+// - Main SystemHealthBadge tests (all status variants including live, streaming, connected)
+// - Module exports tests (verify presets exist and are callable)
 
 // ============================================
 // Type Tests
