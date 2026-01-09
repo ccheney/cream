@@ -291,12 +291,11 @@ function ConnectionBadge({ connected, state }: { connected: boolean; state: stri
 
 function EnvBadge() {
   const env = process.env.NEXT_PUBLIC_CREAM_ENV;
-  if (!env || !["BACKTEST", "PAPER", "LIVE"].includes(env)) {
-    throw new Error("NEXT_PUBLIC_CREAM_ENV must be set to BACKTEST, PAPER, or LIVE");
-  }
+  // Default to BACKTEST for local development
+  const displayEnv = env && ["BACKTEST", "PAPER", "LIVE"].includes(env) ? env : "BACKTEST";
   return (
     <span className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
-      {env}
+      {displayEnv}
     </span>
   );
 }
