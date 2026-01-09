@@ -328,6 +328,7 @@ pub fn record_grpc_request(
 // ============================================================================
 
 /// Circuit breaker state values for the gauge.
+#[allow(dead_code)]
 pub mod circuit_breaker_state {
     /// Circuit is closed (healthy).
     pub const CLOSED: f64 = 0.0;

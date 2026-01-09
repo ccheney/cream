@@ -222,12 +222,14 @@ impl ApiError {
 
     /// Create a bad request error.
     #[must_use]
+    #[allow(dead_code)]
     pub fn bad_request(message: impl Into<String>) -> Self {
         Self(ExecutionError::invalid_request(message))
     }
 
     /// Create an internal error.
     #[must_use]
+    #[allow(dead_code)]
     pub fn internal(message: impl Into<String>) -> Self {
         Self(ExecutionError::internal(message))
     }

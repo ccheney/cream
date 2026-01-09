@@ -381,7 +381,7 @@ impl IvSolver {
             });
         }
 
-        for i in 0..self.config.max_iterations {
+        for _i in 0..self.config.max_iterations {
             let mid = (low + high) / 2.0;
             let price = bs_price(s, k, t, r, q, mid, kind);
             let error = price - market_price;

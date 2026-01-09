@@ -17,7 +17,6 @@ use std::collections::{BinaryHeap, HashMap};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{debug, info, warn};
@@ -661,6 +660,7 @@ impl Iterator for SynchronizedReplay {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     fn make_candle(timestamp: &str, close: i64) -> Candle {
         Candle {

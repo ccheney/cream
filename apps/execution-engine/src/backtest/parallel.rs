@@ -737,7 +737,7 @@ impl ParallelBacktester {
         &self,
         windows: &[WalkForwardWindow],
         _config: &WalkForwardConfig,
-        backtest_config: &BacktestConfig,
+        _backtest_config: &BacktestConfig,
     ) -> Result<Vec<WalkForwardWindow>, ParallelError> {
         if windows.is_empty() {
             return Err(ParallelError::NoJobs);

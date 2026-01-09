@@ -112,6 +112,7 @@ pub struct RecoveryResult {
 }
 
 impl RecoveryResult {
+    #[allow(dead_code)]
     fn success() -> Self {
         Self {
             success: true,
@@ -126,6 +127,7 @@ impl RecoveryResult {
         }
     }
 
+    #[cfg(test)]
     fn failure(message: String) -> Self {
         Self {
             success: false,

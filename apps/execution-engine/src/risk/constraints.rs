@@ -708,8 +708,12 @@ impl ConstraintValidator {
 // ============================================================================
 // Risk Limits (per-trade risk, risk-reward ratio, correlation)
 // ============================================================================
+//
+// These risk limit functions are complete but not yet integrated into the
+// main constraint validation flow. They will be enabled in a future phase.
 
 /// Configuration for risk limits enforcement.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskLimitsConfig {
     /// Maximum percentage of account equity at risk per trade (default: 2.0%).
@@ -734,6 +738,7 @@ impl Default for RiskLimitsConfig {
 }
 
 /// Result of per-trade risk validation.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PerTradeRiskResult {
     /// The calculated risk amount in dollars.
@@ -763,6 +768,7 @@ pub struct PerTradeRiskResult {
 ///
 /// `PerTradeRiskResult` with risk amount, percentage, and whether within limits.
 #[must_use]
+#[allow(dead_code)]
 pub fn calculate_per_trade_risk(
     entry_price: Decimal,
     stop_loss: Decimal,
@@ -798,6 +804,7 @@ pub fn calculate_per_trade_risk(
 }
 
 /// Result of risk-reward ratio validation.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct RiskRewardResult {
     /// Potential profit in price terms.
@@ -827,6 +834,7 @@ pub struct RiskRewardResult {
 ///
 /// `RiskRewardResult` with ratio and whether it meets the minimum.
 #[must_use]
+#[allow(dead_code)]
 pub fn calculate_risk_reward_ratio(
     entry_price: Decimal,
     stop_loss: Decimal,
@@ -859,6 +867,7 @@ pub fn calculate_risk_reward_ratio(
 }
 
 /// Result of correlation check.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct CorrelationResult {
     /// Average pairwise correlation.
@@ -882,6 +891,7 @@ pub struct CorrelationResult {
 /// * `max_correlation` - Correlation threshold (default: 0.7)
 /// * `size_reduction` - Size reduction factor when threshold exceeded (default: 0.5)
 #[must_use]
+#[allow(dead_code)]
 pub fn calculate_correlation_adjustment(
     returns: &std::collections::HashMap<String, Vec<f64>>,
     max_correlation: f64,
@@ -938,6 +948,7 @@ pub fn calculate_correlation_adjustment(
 }
 
 /// Calculate Pearson correlation coefficient between two series.
+#[allow(dead_code)]
 fn pearson_correlation(x: &[f64], y: &[f64]) -> Option<f64> {
     let n = x.len().min(y.len());
     if n < 2 {
@@ -970,6 +981,7 @@ fn pearson_correlation(x: &[f64], y: &[f64]) -> Option<f64> {
 ///
 /// Returns a constraint violation if risk exceeds the configured limit.
 #[must_use]
+#[allow(dead_code)]
 pub fn validate_per_trade_risk(
     decision: &crate::models::Decision,
     account_equity: Decimal,
@@ -1027,6 +1039,7 @@ pub fn validate_per_trade_risk(
 ///
 /// Returns a constraint violation if ratio is below the minimum.
 #[must_use]
+#[allow(dead_code)]
 pub fn validate_risk_reward_ratio(
     decision: &crate::models::Decision,
     config: &RiskLimitsConfig,

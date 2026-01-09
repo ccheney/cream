@@ -12,6 +12,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 // Decimal constants
+#[allow(dead_code)]
 const ZERO: Decimal = Decimal::ZERO;
 const ONE: Decimal = Decimal::ONE;
 const TWO: Decimal = Decimal::TWO;

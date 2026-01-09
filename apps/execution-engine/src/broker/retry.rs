@@ -199,6 +199,7 @@ const RETRYABLE_STATUS_CODES: &[u16] = &[
 ];
 
 /// HTTP status codes that are never retryable.
+#[allow(dead_code)]
 const NON_RETRYABLE_STATUS_CODES: &[u16] = &[
     400, // Bad Request
     401, // Unauthorized

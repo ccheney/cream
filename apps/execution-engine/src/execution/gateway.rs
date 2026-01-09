@@ -15,7 +15,7 @@ use crate::models::{
 };
 use crate::risk::ConstraintValidator;
 
-use super::{AlpacaAdapter, OrderStateManager};
+use super::OrderStateManager;
 
 // ============================================
 // BrokerAdapter Trait
@@ -426,9 +426,10 @@ pub enum CancelOrderError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::execution::AlpacaAdapter;
     use crate::models::{
-        Action, Decision, DecisionPlan, Direction, Environment, ExecutionError, OrderSide,
-        OrderStatus, OrderType, Size, SizeUnit, StrategyFamily, TimeHorizon, TimeInForce,
+        Action, Decision, DecisionPlan, Direction, Environment, OrderSide, OrderStatus, OrderType,
+        Size, SizeUnit, StrategyFamily, TimeHorizon, TimeInForce,
     };
     use rust_decimal::Decimal;
     use std::sync::atomic::{AtomicU64, Ordering};

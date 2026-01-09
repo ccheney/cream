@@ -354,6 +354,7 @@ impl DisconnectHandler {
 }
 
 /// Filter orders for mass cancel based on GTC policy.
+#[allow(dead_code)]
 pub fn filter_orders_for_cancel(
     orders: &[(String, TimeInForce, OrderStatus)],
     gtc_policy: GtcOrderPolicy,
