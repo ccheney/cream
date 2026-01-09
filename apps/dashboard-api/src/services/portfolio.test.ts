@@ -1,6 +1,15 @@
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import * as db from "../db";
 
+// Mock MassiveConnectionState enum for streaming modules
+const MassiveConnectionState = {
+  DISCONNECTED: "DISCONNECTED",
+  CONNECTING: "CONNECTING",
+  CONNECTED: "CONNECTED",
+  RECONNECTING: "RECONNECTING",
+  ERROR: "ERROR",
+} as const;
+
 // Mock parseOptionTicker from marketdata
 mock.module("@cream/marketdata", () => ({
   createPolygonClientFromEnv: () => ({
@@ -28,12 +37,20 @@ mock.module("@cream/marketdata", () => ({
     }
     return undefined;
   },
+  // Include MassiveConnectionState for streaming modules
+  MassiveConnectionState,
+  // Stub other exports that streaming modules might need
+  createMassiveStocksClientFromEnv: () => null,
+  createMassiveOptionsClientFromEnv: () => null,
 }));
 
 describe("PortfolioService", () => {
   it("should return enriched option positions", async () => {
     // Dynamic import to ensure mock is applied
     const { PortfolioService } = await import("./portfolio");
+
+    // Reset singleton to ensure mock is used
+    PortfolioService._resetForTesting();
 
     // Mock database repository
     const mockRepo = {
@@ -106,6 +123,9 @@ describe("PortfolioService", () => {
         }
         return undefined;
       },
+      MassiveConnectionState,
+      createMassiveStocksClientFromEnv: () => null,
+      createMassiveOptionsClientFromEnv: () => null,
     }));
 
     // Re-instantiate service to pick up new mock (Note: Singleton persists, so this test might depend on run order or need reset mechanism.

@@ -79,19 +79,19 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ["/login", "/api"];
 
-// Cookie name for access token (set by dashboard-api)
-const AUTH_COOKIE_NAME = "cream_access";
+// Cookie name for session token (set by better-auth with cookiePrefix: "cream")
+const AUTH_COOKIE_NAME = "cream.session_token";
 
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
 
   // Skip proxy for static files (no security headers needed)
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")) {
+  if (path.startsWith("/_next") || path.startsWith("/favicon") || path.includes(".")) {
     return NextResponse.next();
   }
 
   // Skip auth check for public routes and API calls, but add security headers
-  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (PUBLIC_ROUTES.some((route) => path.startsWith(route))) {
     return addSecurityHeaders(NextResponse.next());
   }
 
@@ -100,9 +100,9 @@ export function proxy(request: NextRequest) {
 
   // No auth cookie - redirect to login
   if (!authCookie) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", request.nextUrl);
     // Store the intended destination for post-login redirect
-    loginUrl.searchParams.set("redirect", pathname);
+    loginUrl.searchParams.set("redirect", path);
     return addSecurityHeaders(NextResponse.redirect(loginUrl));
   }
 

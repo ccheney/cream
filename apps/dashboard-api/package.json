@@ -16,7 +16,7 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "NODE_ENV=test bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/"
   },
@@ -33,6 +33,7 @@
     "@libsql/kysely-libsql": "0.4.1",
     "better-auth": "1.4.10",
     "hono": "^4.11.3",
+    "kysely-bun-sqlite": "0.4.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {

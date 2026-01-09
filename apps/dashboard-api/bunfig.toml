@@ -1,0 +1,4 @@
+# Dashboard API test configuration
+
+[test]
+preload = ["./tests/preload.ts"]

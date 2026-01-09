@@ -40,9 +40,21 @@ export interface OptionsPosition {
 
 export class PortfolioService {
   private static instance: PortfolioService;
-  private polygonClient = createPolygonClientFromEnv();
+  private _polygonClient?: ReturnType<typeof createPolygonClientFromEnv>;
 
   private constructor() {}
+
+  private get polygonClient() {
+    if (!this._polygonClient) {
+      this._polygonClient = createPolygonClientFromEnv();
+    }
+    return this._polygonClient;
+  }
+
+  /** Reset singleton for testing */
+  static _resetForTesting(): void {
+    PortfolioService.instance = undefined as unknown as PortfolioService;
+  }
 
   static getInstance(): PortfolioService {
     if (!PortfolioService.instance) {

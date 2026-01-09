@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "CREAM_ENV=${CREAM_ENV:-BACKTEST} turbo run dev",
     "build": "turbo run build",
-    "test": "CREAM_ENV=BACKTEST turbo run test",
+    "test": "NODE_ENV=test CREAM_ENV=BACKTEST turbo run test --filter='!./apps/dashboard'",
+    "test:dashboard": "cd apps/dashboard && bun test src/",
     "test:integration": "CREAM_ENV=BACKTEST bun test ./**/tests/integration/*.test.ts --timeout 120000",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",

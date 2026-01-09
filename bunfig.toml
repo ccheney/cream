@@ -30,15 +30,17 @@ coverageThreshold = { line = 70, branch = 65, function = 70 }
 # - lcov: For Codecov integration
 coverageReporter = ["text", "lcov"]
 
-# Exclude Playwright visual regression tests (run separately via playwright test)
-# Note: *.spec.ts files in visual/ and e2e/ directories use Playwright, not bun:test
-# Also exclude dashboard React component tests (require Next.js JSX runtime, run via dashboard package)
+# Exclude patterns for tests
+# Note: Dashboard tests need special handling (React/Next.js JSX runtime)
+#       Run via: bun run test:dashboard
+# Note: *.spec.ts files use Playwright, run via 'playwright test'
+# Note: Root-level 'bun test' is not recommended - use 'bun run test' (turbo)
 exclude = [
   "**/tests/visual/**",
   "**/tests/e2e/**",
+  "**/e2e/**",
   "**/*.spec.ts",
-  "**/dashboard/**/*.test.tsx",
-  "**/dashboard/**/*.test.ts",
+  "apps/dashboard/**",
 ]
 
 # Patterns to exclude from coverage

@@ -6,10 +6,28 @@
  * @see docs/plans/30-better-auth-migration.md
  */
 
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import * as betterAuthModule from "./better-auth.js";
+
+// Mock the better-auth module to avoid secret validation at import time
+const mockGetSession = mock(() => Promise.resolve(null as unknown));
+mock.module("./better-auth.js", () => ({
+  auth: {
+    api: {
+      getSession: mockGetSession,
+    },
+    $Infer: {
+      Session: {} as const,
+    },
+  },
+  default: {
+    api: {
+      getSession: mockGetSession,
+    },
+  },
+}));
+
 import {
   getSession,
   getUser,
@@ -57,19 +75,13 @@ function createMockSessionWithMFA() {
 // ============================================
 
 describe("sessionMiddleware", () => {
-  let getSessionSpy: ReturnType<typeof spyOn>;
-
   beforeEach(() => {
-    getSessionSpy = spyOn(betterAuthModule.auth.api, "getSession");
-  });
-
-  afterEach(() => {
-    getSessionSpy.mockRestore();
+    mockGetSession.mockClear();
   });
 
   it("sets session and user when authenticated", async () => {
-    const mockSession = createMockSession();
-    getSessionSpy.mockResolvedValue(mockSession);
+    const mockSessionData = createMockSession();
+    mockGetSession.mockResolvedValue(mockSessionData);
 
     const app = new Hono<{ Variables: SessionVariables }>();
     app.use("/*", sessionMiddleware());
@@ -88,7 +100,7 @@ describe("sessionMiddleware", () => {
   });
 
   it("sets session and user to null when not authenticated", async () => {
-    getSessionSpy.mockResolvedValue(null);
+    mockGetSession.mockResolvedValue(null);
 
     const app = new Hono<{ Variables: SessionVariables }>();
     app.use("/*", sessionMiddleware());
@@ -106,7 +118,7 @@ describe("sessionMiddleware", () => {
   });
 
   it("sets session and user to null on error", async () => {
-    getSessionSpy.mockRejectedValue(new Error("Auth error"));
+    mockGetSession.mockRejectedValue(new Error("Auth error"));
 
     const app = new Hono<{ Variables: SessionVariables }>();
     app.use("/*", sessionMiddleware());
@@ -124,7 +136,7 @@ describe("sessionMiddleware", () => {
   });
 
   it("calls next() after setting context", async () => {
-    getSessionSpy.mockResolvedValue(null);
+    mockGetSession.mockResolvedValue(null);
     let nextCalled = false;
 
     const app = new Hono<{ Variables: SessionVariables }>();

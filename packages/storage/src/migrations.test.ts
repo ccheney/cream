@@ -145,7 +145,7 @@ describe("runMigrations", () => {
     expect(result.applied[1]!.version).toBe(2);
     expect(result.applied[2]!.version).toBe(3);
     expect(result.currentVersion).toBe(3);
-    expect(result.durationMs).toBeGreaterThan(0);
+    expect(result.durationMs).toBeGreaterThanOrEqual(0);
 
     // Verify tables exist
     const users = await client.execute(

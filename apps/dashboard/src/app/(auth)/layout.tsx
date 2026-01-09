@@ -28,7 +28,7 @@ import { useWatchlistStore } from "@/stores/watchlist-store";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const { connected, connectionState } = useWebSocketContext();
   const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -134,6 +134,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           open={isDrawerOpen}
           onClose={() => setDrawerOpen(false)}
           userEmail={user?.email}
+          onSignOut={signOut}
         />
 
         {/* Add Symbol Modal */}
@@ -195,6 +196,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           open={isDrawerOpen}
           onClose={() => setDrawerOpen(false)}
           userEmail={user?.email}
+          onSignOut={signOut}
         />
 
         {/* Add Symbol Modal */}
@@ -214,7 +216,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <SkipLink />
 
       {/* Sidebar */}
-      <Sidebar collapsed={isLaptop} userEmail={user?.email} />
+      <Sidebar collapsed={isLaptop} userEmail={user?.email} onSignOut={signOut} />
 
       {/* Main content */}
       <main className="flex-1 overflow-auto flex flex-col">

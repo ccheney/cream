@@ -30,23 +30,32 @@ export const CreamBroker = z.enum(["ALPACA"]);
 export type CreamBroker = z.infer<typeof CreamBroker>;
 
 /**
- * URL validation for database connections
+ * URL validation helper function
  */
-const urlSchema = z.string().refine(
-  (val) => {
-    try {
-      // Allow file: URLs for local SQLite, http/https/ws for remote
-      if (val.startsWith("file:")) {
-        return true;
-      }
-      new URL(val);
+function isValidUrl(val: string): boolean {
+  try {
+    // Allow file: URLs for local SQLite, http/https/ws for remote
+    if (val.startsWith("file:")) {
       return true;
-    } catch {
-      return false;
     }
-  },
-  { message: "Invalid URL format" }
-);
+    new URL(val);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Optional URL schema with default - validates only when a value is provided
+ * In Zod v4, we need to handle the optional case separately to apply defaults first
+ */
+function optionalUrlWithDefault(defaultValue: string) {
+  return z
+    .string()
+    .optional()
+    .transform((val) => val ?? defaultValue)
+    .refine(isValidUrl, { message: "Invalid URL format" });
+}
 
 /**
  * Environment variable schema
@@ -59,12 +68,10 @@ const envSchema = z.object({
   CREAM_BROKER: CreamBroker.default("ALPACA").describe("Broker to use for trading"),
 
   // Database URLs
-  TURSO_DATABASE_URL: urlSchema
-    .optional()
-    .default("http://localhost:8080")
-    .describe("Turso database URL"),
+  TURSO_DATABASE_URL:
+    optionalUrlWithDefault("http://localhost:8080").describe("Turso database URL"),
   TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
-  HELIX_URL: urlSchema.optional().default("http://localhost:6969").describe("HelixDB server URL"),
+  HELIX_URL: optionalUrlWithDefault("http://localhost:6969").describe("HelixDB server URL"),
   // Alternative HelixDB config (host:port vs URL)
   HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
   HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
@@ -78,7 +85,11 @@ const envSchema = z.object({
   // Broker Credentials
   ALPACA_KEY: z.string().optional().describe("Alpaca API key"),
   ALPACA_SECRET: z.string().optional().describe("Alpaca API secret"),
-  ALPACA_BASE_URL: urlSchema.optional().describe("Alpaca API base URL (override for testing)"),
+  ALPACA_BASE_URL: z
+    .string()
+    .optional()
+    .refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
+    .describe("Alpaca API base URL (override for testing)"),
 
   // LLM Configuration
   ANTHROPIC_API_KEY: z.string().optional().describe("Anthropic API key for Claude"),
@@ -94,7 +105,11 @@ const envSchema = z.object({
   // Authentication (OAuth)
   GOOGLE_CLIENT_ID: z.string().optional().describe("Google OAuth client ID"),
   GOOGLE_CLIENT_SECRET: z.string().optional().describe("Google OAuth client secret"),
-  BETTER_AUTH_URL: urlSchema.optional().describe("Better Auth base URL for OAuth callbacks"),
+  BETTER_AUTH_URL: z
+    .string()
+    .optional()
+    .refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
+    .describe("Better Auth base URL for OAuth callbacks"),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

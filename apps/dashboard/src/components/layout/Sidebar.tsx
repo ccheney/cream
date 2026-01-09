@@ -18,6 +18,7 @@ import {
   FlaskConical,
   Gauge,
   LineChart,
+  LogOut,
   Moon,
   Rss,
   Settings,
@@ -41,6 +42,8 @@ export interface SidebarProps {
   collapsed?: boolean;
   /** User email to display */
   userEmail?: string;
+  /** Sign out handler */
+  onSignOut?: () => void;
   /** CSS class name */
   className?: string;
 }
@@ -92,6 +95,7 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
 export const Sidebar = memo(function Sidebar({
   collapsed = false,
   userEmail,
+  onSignOut,
   className = "",
 }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -144,7 +148,21 @@ export const Sidebar = memo(function Sidebar({
       {userEmail && (
         <div className="p-4 border-t border-cream-200 dark:border-night-700">
           {!collapsed || isHovered ? (
-            <div className="text-xs text-cream-500 dark:text-cream-400 truncate">{userEmail}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-cream-500 dark:text-cream-400 truncate flex-1">
+                {userEmail}
+              </div>
+              {onSignOut && (
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="p-1.5 rounded-md text-cream-500 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-cream-700 dark:hover:text-cream-200 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           ) : (
             <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
               <span className="text-xs font-medium text-cream-600 dark:text-cream-300">

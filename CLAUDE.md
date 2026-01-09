@@ -269,6 +269,7 @@ afterAll(async () => {
 
 ## Code Conventions
 
+- **NEVER run `bun run dev` or `bun dev`** - the user manages their own dev servers
 - Prefer Bun APIs over Node.js equivalents (`Bun.file()`, `Bun.serve()`, etc.)
 - Use `workspace:*` for internal package dependencies
 - Financial calculations use `rust_decimal` (Rust) or handle precision carefully (TS)

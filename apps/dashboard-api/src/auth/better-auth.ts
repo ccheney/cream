@@ -21,16 +21,13 @@ import { twoFactor } from "better-auth/plugins";
 
 /**
  * Create the Kysely dialect for libSQL/Turso.
- * Uses environment variables for connection configuration.
+ * Connects to the same Turso server as @cream/storage.
  */
 function createLibsqlDialect(): LibsqlDialect {
   const url = process.env.TURSO_DATABASE_URL ?? "http://localhost:8080";
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
-  return new LibsqlDialect({
-    url,
-    authToken,
-  });
+  return new LibsqlDialect({ url, authToken });
 }
 
 // ============================================
@@ -62,6 +59,37 @@ export const auth = betterAuth({
     type: "sqlite",
   },
 
+  // Map camelCase fields to snake_case database columns
+  user: {
+    fields: {
+      emailVerified: "email_verified",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+      twoFactorEnabled: "two_factor_enabled",
+    },
+  },
+  account: {
+    fields: {
+      accountId: "account_id",
+      providerId: "provider_id",
+      userId: "user_id",
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      idToken: "id_token",
+      accessTokenExpiresAt: "access_token_expires_at",
+      refreshTokenExpiresAt: "refresh_token_expires_at",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+  },
+  verification: {
+    fields: {
+      expiresAt: "expires_at",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+  },
+
   // Google OAuth provider
   socialProviders: {
     google: {
@@ -81,11 +109,35 @@ export const auth = betterAuth({
       skipVerificationOnEnable: false,
       // Use app name as TOTP issuer
       issuer: "Cream Dashboard",
+      // Map to snake_case columns
+      schema: {
+        user: {
+          fields: {
+            twoFactorEnabled: "two_factor_enabled",
+          },
+        },
+        twoFactor: {
+          fields: {
+            secret: "secret",
+            backupCodes: "backup_codes",
+            userId: "user_id",
+          },
+        },
+      },
     }),
   ],
 
-  // Session configuration
+  // Session configuration (includes field mappings for snake_case columns)
   session: {
+    // Map camelCase fields to snake_case database columns
+    fields: {
+      expiresAt: "expires_at",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+      userId: "user_id",
+      ipAddress: "ip_address",
+      userAgent: "user_agent",
+    },
     // Session expires in 7 days
     expiresIn: 60 * 60 * 24 * 7,
     // Refresh session if older than 1 day

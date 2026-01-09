@@ -83,9 +83,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Sign in with Google OAuth
   const signInWithGoogle = useCallback(async () => {
+    // Use absolute URL to redirect back to the dashboard frontend (not the API server)
+    const callbackURL = `${window.location.origin}/dashboard`;
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL,
     });
   }, []);
 
