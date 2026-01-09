@@ -83,17 +83,6 @@ export interface TimestampValidationResult {
 // ============================================
 
 /**
- * NTP pool servers for time checks
- * Using public NTP pool - in production, use dedicated time servers
- * Note: Currently unused - reserved for future NTP implementation
- */
-// const NTP_SERVERS = [
-//   "time.google.com",
-//   "time.cloudflare.com",
-//   "pool.ntp.org",
-// ];
-
-/**
  * Check system clock against reference time
  *
  * In backtest mode, always returns ok (historical data doesn't need clock sync).

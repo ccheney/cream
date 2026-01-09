@@ -32,15 +32,6 @@ import { z } from "zod";
 // ============================================
 
 /**
- * ISO-8601 full timestamp regex
- * Format: YYYY-MM-DDTHH:mm:ss.sssZ
- * - Must be UTC (Z suffix)
- * - Milliseconds required (3 digits)
- * Note: Currently unused - retained for reference
- */
-// const _ISO_8601_FULL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-
-/**
  * ISO-8601 timestamp regex with optional milliseconds
  * For parsing flexibility - accepts .sss or no milliseconds
  */
