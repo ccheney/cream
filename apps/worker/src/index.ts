@@ -6,7 +6,9 @@
  *
  * Also runs the prediction markets workflow every 15 minutes.
  *
- * Configuration is loaded from the database via RuntimeConfigService.
+ * Configuration MUST be loaded from the database via RuntimeConfigService.
+ * Run 'bun run db:seed' to initialize configuration before starting.
+ *
  * Supports config reload on SIGHUP signal.
  */
 
@@ -21,22 +23,12 @@ import {
 import { getRuntimeConfigService, resetRuntimeConfigService } from "./db";
 
 // ============================================
-// Default Configuration (fallback if DB not seeded)
-// ============================================
-
-const DEFAULT_CONFIG = {
-  tradingCycleIntervalMs: 60 * 60 * 1000, // 1 hour
-  predictionMarketsIntervalMs: 15 * 60 * 1000, // 15 minutes
-  defaultInstruments: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-};
-
-// ============================================
 // Worker State
 // ============================================
 
 interface WorkerState {
-  /** Current runtime config (null if using defaults) */
-  config: FullRuntimeConfig | null;
+  /** Current runtime config (required) */
+  config: FullRuntimeConfig;
   /** Environment */
   environment: RuntimeEnvironment;
   /** Whether to run on startup */
@@ -60,72 +52,43 @@ interface WorkerState {
   };
 }
 
-const state: WorkerState = {
-  config: null,
-  environment: (Bun.env.CREAM_ENV ?? "PAPER") as RuntimeEnvironment,
-  runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
-  timers: {
-    tradingCycle: null,
-    predictionMarkets: null,
-  },
-  lastRun: {
-    tradingCycle: null,
-    predictionMarkets: null,
-  },
-  startedAt: new Date(),
-  running: {
-    tradingCycle: false,
-    predictionMarkets: false,
-  },
-};
+// State is initialized in main() after config is loaded
+let state: WorkerState;
+
+// ============================================
+// Config Accessors
+// ============================================
+
+function getIntervals(): {
+  tradingCycleIntervalMs: number;
+  predictionMarketsIntervalMs: number;
+} {
+  return {
+    tradingCycleIntervalMs: state.config.trading.tradingCycleIntervalMs,
+    predictionMarketsIntervalMs: state.config.trading.predictionMarketsIntervalMs,
+  };
+}
+
+function getInstruments(): string[] {
+  const symbols = state.config.universe.staticSymbols;
+  if (!symbols || symbols.length === 0) {
+    throw new Error("No instruments configured in universe.staticSymbols");
+  }
+  return symbols;
+}
 
 // ============================================
 // Config Loading
 // ============================================
 
 /**
- * Get interval values from config or defaults
+ * Load configuration from database.
+ * Throws if config is not found - DB seeding is required.
  */
-function getIntervals(): {
-  tradingCycleIntervalMs: number;
-  predictionMarketsIntervalMs: number;
-} {
-  if (state.config?.trading) {
-    return {
-      tradingCycleIntervalMs: state.config.trading.tradingCycleIntervalMs,
-      predictionMarketsIntervalMs: state.config.trading.predictionMarketsIntervalMs,
-    };
-  }
-  return {
-    tradingCycleIntervalMs: DEFAULT_CONFIG.tradingCycleIntervalMs,
-    predictionMarketsIntervalMs: DEFAULT_CONFIG.predictionMarketsIntervalMs,
-  };
-}
-
-/**
- * Get instruments from universe config or defaults
- */
-function getInstruments(): string[] {
-  if (state.config?.universe?.staticSymbols) {
-    return state.config.universe.staticSymbols;
-  }
-  return DEFAULT_CONFIG.defaultInstruments;
-}
-
-/**
- * Load configuration from database
- */
-async function loadConfig(): Promise<void> {
-  try {
-    const configService = await getRuntimeConfigService();
-    state.config = await configService.getActiveConfig(state.environment);
-  } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: Config loading warning is intentional
-    console.warn(
-      `⚠️  Could not load config from DB: ${error instanceof Error ? error.message : "Unknown error"}. Using defaults.`
-    );
-    state.config = null;
-  }
+async function loadConfig(environment: RuntimeEnvironment): Promise<FullRuntimeConfig> {
+  const configService = await getRuntimeConfigService();
+  const config = await configService.getActiveConfig(environment);
+  return config;
 }
 
 /**
@@ -139,7 +102,7 @@ async function reloadConfig(): Promise<void> {
   resetRuntimeConfigService();
 
   const oldIntervals = getIntervals();
-  await loadConfig();
+  state.config = await loadConfig(state.environment);
   const newIntervals = getIntervals();
 
   // Check if intervals changed
@@ -193,8 +156,7 @@ async function runTradingCycle(): Promise<void> {
     // Create ExecutionContext at scheduler boundary
     // Source is "scheduled" for automated runs
     // configId is the trading config version for traceability
-    const configId = state.config?.trading.id ?? undefined;
-    const ctx = createContext(state.environment, "scheduled", configId);
+    const ctx = createContext(state.environment, "scheduled", state.config.trading.id);
 
     await tradingCycleWorkflow.execute({
       triggerData: {
@@ -329,7 +291,7 @@ function startHealthServer(): void {
           status: "ok",
           uptime_ms: uptime,
           environment: state.environment,
-          config_loaded: state.config !== null,
+          config_id: state.config.trading.id,
           intervals: {
             trading_cycle_ms: intervals.tradingCycleIntervalMs,
             prediction_markets_ms: intervals.predictionMarketsIntervalMs,
@@ -373,9 +335,11 @@ function startHealthServer(): void {
 // ============================================
 
 async function main() {
+  const environment = (Bun.env.CREAM_ENV ?? "PAPER") as RuntimeEnvironment;
+
   // Validate environment at startup
   // In non-backtest mode, require FMP_KEY for external context and at least one LLM key
-  const startupCtx = createContext(state.environment as CreamEnvironment, "scheduled");
+  const startupCtx = createContext(environment as CreamEnvironment, "scheduled");
   if (!isBacktest(startupCtx)) {
     validateEnvironmentOrExit(startupCtx, "worker", ["FMP_KEY"]);
 
@@ -390,14 +354,43 @@ async function main() {
     }
   }
 
-  // Load configuration from database
-  await loadConfig();
+  // Load configuration from database - REQUIRED
+  let config: FullRuntimeConfig;
+  try {
+    config = await loadConfig(environment);
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Fatal error is intentional
+    console.error(
+      `❌ Failed to load config from database: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    // biome-ignore lint/suspicious/noConsole: Fatal error is intentional
+    console.error("   Run 'bun run db:seed' to initialize the database configuration.");
+    process.exit(1);
+  }
+
+  // Initialize state
+  state = {
+    config,
+    environment,
+    runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
+    timers: {
+      tradingCycle: null,
+      predictionMarkets: null,
+    },
+    lastRun: {
+      tradingCycle: null,
+      predictionMarkets: null,
+    },
+    startedAt: new Date(),
+    running: {
+      tradingCycle: false,
+      predictionMarkets: false,
+    },
+  };
 
   const intervals = getIntervals();
   // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(
-    `🚀 Worker starting [env=${state.environment}, config=${state.config ? "DB" : "defaults"}]`
-  );
+  console.log(`🚀 Worker starting [env=${environment}, config=${config.trading.id}]`);
   // biome-ignore lint/suspicious/noConsole: Startup info is intentional
   console.log(
     `📊 Intervals: trading=${intervals.tradingCycleIntervalMs}ms, predictions=${intervals.predictionMarketsIntervalMs}ms`
