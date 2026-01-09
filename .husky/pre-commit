@@ -5,8 +5,9 @@ set -e
 
 echo "🔍 Running pre-commit checks..."
 
-# Get list of staged files
+# Get list of staged files (save for re-staging after formatters run)
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+STAGED_FILES_LIST=$(echo "$STAGED_FILES" | tr '\n' ' ')
 
 # Check if any TypeScript/JavaScript files are staged
 HAS_TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|js|jsx)$' || true)
@@ -84,8 +85,10 @@ if [ -n "$HAS_PKG_FILES" ]; then
   }
 fi
 
-# Re-stage any auto-fixed files
-echo "📦 Re-staging fixed files..."
-git add -u
+# Re-stage only the originally staged files (in case formatters modified them)
+if [ -n "$STAGED_FILES_LIST" ]; then
+  echo "📦 Re-staging fixed files..."
+  echo "$STAGED_FILES_LIST" | xargs git add --
+fi
 
 echo "✅ Pre-commit checks complete!"
