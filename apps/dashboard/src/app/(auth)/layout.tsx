@@ -16,6 +16,7 @@ import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
+import { AddSymbolModal } from "@/components/ui/add-symbol-modal";
 import { Logo } from "@/components/ui/logo";
 import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
@@ -31,7 +32,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const { connected, connectionState } = useWebSocketContext();
   const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isAddSymbolModalOpen, setAddSymbolModalOpen] = useState(false);
   const watchlistSymbols = useWatchlistStore((s) => s.symbols);
+  const addSymbol = useWatchlistStore((s) => s.addSymbol);
   const removeSymbol = useWatchlistStore((s) => s.removeSymbol);
 
   const handleSymbolClick = useCallback(
@@ -42,12 +45,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   );
 
   const handleSymbolAdd = useCallback(() => {
-    // TODO: Open add symbol modal
-    const symbol = window.prompt("Enter symbol to add:");
-    if (symbol) {
-      useWatchlistStore.getState().addSymbol(symbol);
-    }
+    setAddSymbolModalOpen(true);
   }, []);
+
+  const handleAddSymbol = useCallback(
+    (symbol: string) => {
+      addSymbol(symbol);
+    },
+    [addSymbol]
+  );
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -129,6 +135,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           onClose={() => setDrawerOpen(false)}
           userEmail={user?.email}
         />
+
+        {/* Add Symbol Modal */}
+        <AddSymbolModal
+          isOpen={isAddSymbolModalOpen}
+          onClose={() => setAddSymbolModalOpen(false)}
+          onAdd={handleAddSymbol}
+          existingSymbols={watchlistSymbols}
+        />
       </div>
     );
   }
@@ -182,6 +196,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           onClose={() => setDrawerOpen(false)}
           userEmail={user?.email}
         />
+
+        {/* Add Symbol Modal */}
+        <AddSymbolModal
+          isOpen={isAddSymbolModalOpen}
+          onClose={() => setAddSymbolModalOpen(false)}
+          onAdd={handleAddSymbol}
+          existingSymbols={watchlistSymbols}
+        />
       </div>
     );
   }
@@ -222,6 +244,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </Suspense>
       </main>
+
+      {/* Add Symbol Modal */}
+      <AddSymbolModal
+        isOpen={isAddSymbolModalOpen}
+        onClose={() => setAddSymbolModalOpen(false)}
+        onAdd={handleAddSymbol}
+        existingSymbols={watchlistSymbols}
+      />
     </div>
   );
 }

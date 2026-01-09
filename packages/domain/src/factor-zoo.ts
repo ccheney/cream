@@ -301,3 +301,24 @@ export const FactorWeightUpdateSchema = z.object({
   reason: z.string().optional(),
 });
 export type FactorWeightUpdate = z.infer<typeof FactorWeightUpdateSchema>;
+
+/**
+ * Research budget status for the current month
+ */
+export const ResearchBudgetStatusSchema = z.object({
+  /** Tokens used this month */
+  tokensUsedThisMonth: z.number().int().nonnegative(),
+  /** Compute hours used this month */
+  computeHoursThisMonth: z.number().nonnegative(),
+  /** Number of research runs this month */
+  runsThisMonth: z.number().int().nonnegative(),
+  /** Maximum allowed tokens per month (0 = unlimited) */
+  maxMonthlyTokens: z.number().int().nonnegative(),
+  /** Maximum allowed compute hours per month (0 = unlimited) */
+  maxMonthlyComputeHours: z.number().nonnegative(),
+  /** Whether budget is exhausted */
+  isExhausted: z.boolean(),
+  /** Start of the current billing period (first day of month) */
+  periodStart: z.string().datetime(),
+});
+export type ResearchBudgetStatus = z.infer<typeof ResearchBudgetStatusSchema>;

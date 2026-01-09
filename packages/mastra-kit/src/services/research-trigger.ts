@@ -189,9 +189,13 @@ export class ResearchTriggerService {
    * Get current blocking condition values
    */
   private async getBlockingConditions(): Promise<BlockingConditions> {
-    const [activeRuns, stats] = await Promise.all([
+    const [activeRuns, stats, budgetStatus] = await Promise.all([
       this.factorZoo.findActiveResearchRuns(),
       this.factorZoo.getStats(),
+      this.factorZoo.getResearchBudgetStatus(
+        this.config.maxMonthlyTokens,
+        this.config.maxMonthlyComputeHours
+      ),
     ]);
 
     // Calculate days since last research
@@ -201,7 +205,7 @@ export class ResearchTriggerService {
       daysSinceLastResearch,
       activeResearchCount: activeRuns.length,
       factorZooSize: stats.activeFactors,
-      budgetExhausted: false, // TODO: Implement budget tracking
+      budgetExhausted: budgetStatus.isExhausted,
     };
   }
 
@@ -209,18 +213,26 @@ export class ResearchTriggerService {
    * Calculate days since last completed research run
    */
   private async getDaysSinceLastResearch(): Promise<number> {
-    // Query for most recent completed research run
-    // For now, return a large number if no research found
-    const activeRuns = await this.factorZoo.findActiveResearchRuns();
-
     // If there are active runs, we're in cooldown
+    const activeRuns = await this.factorZoo.findActiveResearchRuns();
     if (activeRuns.length > 0) {
       return 0;
     }
 
-    // TODO: Query for most recent completed research run timestamp
-    // For now, return a value that passes cooldown by default
-    return this.config.cooldownDays + 1;
+    // Query for most recent completed research run
+    const lastCompleted = await this.factorZoo.findLastCompletedResearchRun();
+    if (!lastCompleted || !lastCompleted.completedAt) {
+      // No completed research found, allow new research
+      return this.config.cooldownDays + 1;
+    }
+
+    // Calculate days since completion
+    const completedDate = new Date(lastCompleted.completedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - completedDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    return diffDays;
   }
 
   // ============================================

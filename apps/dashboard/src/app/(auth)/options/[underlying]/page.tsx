@@ -11,7 +11,7 @@
 
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ExpirationTabs,
   OptionsChainTable,
@@ -27,6 +27,7 @@ import {
   useOptionsOrder,
 } from "@/hooks/queries/useOptions";
 import type { OptionsContract } from "@/lib/api/types";
+import { useWebSocketContext } from "@/providers/WebSocketProvider";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
 // ============================================
@@ -71,6 +72,16 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   const watchlistSymbols = useWatchlistStore((s) => s.symbols);
   const addSymbol = useWatchlistStore((s) => s.addSymbol);
   const isInWatchlist = watchlistSymbols.includes(upperUnderlying);
+
+  // WebSocket context for options contract subscriptions
+  const {
+    subscribeOptions,
+    unsubscribeOptions,
+    connected: wsContextConnected,
+  } = useWebSocketContext();
+
+  // Track currently subscribed contracts for cleanup
+  const subscribedContractsRef = useRef<Set<string>>(new Set());
 
   // State
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
@@ -148,9 +159,70 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   );
 
   // Handle visible rows change (for subscription management)
-  const handleVisibleRowsChange = useCallback((_startIndex: number, _endIndex: number) => {
-    // TODO: Subscribe to visible contracts via WebSocket (cream-xpyp7)
-  }, []);
+  const handleVisibleRowsChange = useCallback(
+    (startIndex: number, endIndex: number) => {
+      if (!chainData?.chain || !wsContextConnected) {
+        return;
+      }
+
+      // Extract contract symbols for visible rows
+      const visibleContracts = new Set<string>();
+      for (let i = startIndex; i <= endIndex && i < chainData.chain.length; i++) {
+        const row = chainData.chain[i];
+        if (row?.call?.symbol) {
+          visibleContracts.add(row.call.symbol);
+        }
+        if (row?.put?.symbol) {
+          visibleContracts.add(row.put.symbol);
+        }
+      }
+
+      // Find contracts to subscribe (new) and unsubscribe (no longer visible)
+      const toSubscribe: string[] = [];
+      const toUnsubscribe: string[] = [];
+
+      // New contracts to subscribe
+      for (const symbol of visibleContracts) {
+        if (!subscribedContractsRef.current.has(symbol)) {
+          toSubscribe.push(symbol);
+        }
+      }
+
+      // Contracts to unsubscribe (no longer visible)
+      for (const symbol of subscribedContractsRef.current) {
+        if (!visibleContracts.has(symbol)) {
+          toUnsubscribe.push(symbol);
+        }
+      }
+
+      // Update subscriptions
+      if (toUnsubscribe.length > 0) {
+        unsubscribeOptions(toUnsubscribe);
+        for (const symbol of toUnsubscribe) {
+          subscribedContractsRef.current.delete(symbol);
+        }
+      }
+
+      if (toSubscribe.length > 0) {
+        subscribeOptions(toSubscribe);
+        for (const symbol of toSubscribe) {
+          subscribedContractsRef.current.add(symbol);
+        }
+      }
+    },
+    [chainData?.chain, wsContextConnected, subscribeOptions, unsubscribeOptions]
+  );
+
+  // Clean up subscriptions when expiration changes or component unmounts
+  useEffect(() => {
+    return () => {
+      const contracts = Array.from(subscribedContractsRef.current);
+      if (contracts.length > 0) {
+        unsubscribeOptions(contracts);
+        subscribedContractsRef.current.clear();
+      }
+    };
+  }, [selectedExpiration, unsubscribeOptions]);
 
   // Handle add to watchlist
   const handleAddToWatchlist = useCallback(() => {

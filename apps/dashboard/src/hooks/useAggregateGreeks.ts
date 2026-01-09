@@ -161,7 +161,7 @@ export function useAggregateGreeks(
       gammaTotal: aggregateGreeks.totalGamma,
       thetaDaily: aggregateGreeks.totalTheta,
       vegaTotal: aggregateGreeks.totalVega,
-      rhoTotal: 0, // TODO: Calculate rho if needed
+      rhoTotal: aggregateGreeks.totalRho,
       positionCount: positions.length,
       lastUpdated: new Date(),
     };

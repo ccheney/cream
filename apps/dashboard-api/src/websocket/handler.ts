@@ -138,40 +138,7 @@ export function getConnection(connectionId: string): WebSocketWithMetadata | und
 // ============================================
 
 /**
- * Validate authentication token.
- * Uses better-auth session validation via cookies.
- *
- * Note: This is a synchronous wrapper that returns a placeholder.
- * The actual async validation happens in validateAuthTokenAsync.
- */
-export function validateAuthToken(token: string | null): AuthResult {
-  // Token parameter is kept for backwards compatibility
-  // but better-auth uses cookies for session validation
-  if (!token) {
-    return { valid: false, error: "Missing authentication - please sign in" };
-  }
-
-  // For backwards compatibility with JWT tokens during migration
-  // Remove "Bearer " prefix if present
-  const cleanToken = token.startsWith("Bearer ") ? token.slice(7) : token;
-
-  // Accept any non-empty token for now (session validation happens via cookies)
-  // This allows the upgrade to proceed, and the session will be validated
-  // when the client sends messages
-  if (cleanToken.length < 1) {
-    return { valid: false, error: "Invalid token format" };
-  }
-
-  // Extract user ID from token or use placeholder
-  // In production, this comes from the better-auth session
-  const userId = `user-${cleanToken.slice(0, 8)}`;
-
-  return { valid: true, userId };
-}
-
-/**
- * Validate authentication using better-auth session.
- * This is the async version that properly validates the session.
+ * Validate authentication using better-auth session cookies.
  */
 export async function validateAuthTokenAsync(headers: Headers): Promise<AuthResult> {
   try {
@@ -890,7 +857,6 @@ export default {
   broadcastToBacktest,
   sendMessage,
   sendError,
-  validateAuthToken,
   validateAuthTokenAsync,
   createConnectionMetadata,
   getConnectionCount,

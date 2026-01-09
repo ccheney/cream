@@ -19,6 +19,7 @@ import type {
   NewFactor,
   NewHypothesis,
   NewResearchRun,
+  ResearchBudgetStatus,
   ResearchPhase,
   ResearchRun,
 } from "@cream/domain";
@@ -657,6 +658,70 @@ export class FactorZooRepository {
       "SELECT * FROM research_runs WHERE phase NOT IN ('completed', 'failed') ORDER BY started_at DESC"
     );
     return result.map(mapResearchRunRow);
+  }
+
+  /**
+   * Find the most recently completed research run
+   */
+  async findLastCompletedResearchRun(): Promise<ResearchRun | null> {
+    const result = await this.client.execute(
+      "SELECT * FROM research_runs WHERE phase = 'completed' ORDER BY completed_at DESC LIMIT 1"
+    );
+    const row = result[0];
+    if (!row) {
+      return null;
+    }
+    return mapResearchRunRow(row);
+  }
+
+  /**
+   * Get research budget status for the current month
+   *
+   * Calculates tokens used, compute hours, and run count for the current
+   * billing period (calendar month).
+   *
+   * @param maxMonthlyTokens - Maximum tokens allowed per month (0 = unlimited)
+   * @param maxMonthlyComputeHours - Maximum compute hours per month (0 = unlimited)
+   */
+  async getResearchBudgetStatus(
+    maxMonthlyTokens = 0,
+    maxMonthlyComputeHours = 0
+  ): Promise<ResearchBudgetStatus> {
+    // Get first day of current month
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periodStartIso = periodStart.toISOString();
+
+    const result = await this.client.execute(
+      `SELECT
+        COALESCE(SUM(tokens_used), 0) as total_tokens,
+        COALESCE(SUM(compute_hours), 0) as total_compute,
+        COUNT(*) as run_count
+      FROM research_runs
+      WHERE started_at >= ?`,
+      [periodStartIso]
+    );
+
+    const row = result[0];
+    const tokensUsedThisMonth = (row?.total_tokens as number) ?? 0;
+    const computeHoursThisMonth = (row?.total_compute as number) ?? 0;
+    const runsThisMonth = (row?.run_count as number) ?? 0;
+
+    // Determine if budget is exhausted
+    const tokenExhausted = maxMonthlyTokens > 0 && tokensUsedThisMonth >= maxMonthlyTokens;
+    const computeExhausted =
+      maxMonthlyComputeHours > 0 && computeHoursThisMonth >= maxMonthlyComputeHours;
+    const isExhausted = tokenExhausted || computeExhausted;
+
+    return {
+      tokensUsedThisMonth,
+      computeHoursThisMonth,
+      runsThisMonth,
+      maxMonthlyTokens,
+      maxMonthlyComputeHours,
+      isExhausted,
+      periodStart: periodStartIso,
+    };
   }
 
   // ============================================

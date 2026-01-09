@@ -620,9 +620,6 @@ export async function updateCaseOutcome(
       mfe: outcome.mfe,
     });
 
-    // Note: This requires an UpdateDecisionOutcome query in queries.hx
-    // For now, we'll use a generic update pattern
-    // TODO: Add UpdateDecisionOutcome query to queries.hx
     await client.query("UpdateDecisionOutcome", {
       decision_id: decisionId,
       realized_outcome: outcomeJson,

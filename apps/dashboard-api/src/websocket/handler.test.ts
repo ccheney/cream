@@ -24,7 +24,6 @@ import {
   sendMessage,
   startHeartbeat,
   stopHeartbeat,
-  validateAuthToken,
   type WebSocketWithMetadata,
 } from "./handler.js";
 
@@ -70,43 +69,6 @@ beforeEach(() => {
 
 afterEach(() => {
   stopHeartbeat();
-});
-
-// ============================================
-// Authentication Tests
-// ============================================
-
-describe("validateAuthToken", () => {
-  it("rejects null token", () => {
-    const result = validateAuthToken(null);
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe("Missing authentication - please sign in");
-  });
-
-  it("rejects empty token", () => {
-    const result = validateAuthToken("");
-    expect(result.valid).toBe(false);
-  });
-
-  it("accepts any non-empty token (session validation via cookies)", () => {
-    // Implementation accepts any non-empty token for WebSocket upgrade
-    // Real session validation happens via cookies when messages are sent
-    const result = validateAuthToken("short");
-    expect(result.valid).toBe(true);
-    expect(result.userId).toBeDefined();
-  });
-
-  it("accepts valid token", () => {
-    const result = validateAuthToken("valid-token-12345");
-    expect(result.valid).toBe(true);
-    expect(result.userId).toBeDefined();
-  });
-
-  it("handles Bearer prefix", () => {
-    const result = validateAuthToken("Bearer valid-token-12345");
-    expect(result.valid).toBe(true);
-    expect(result.userId).toBeDefined();
-  });
 });
 
 // ============================================

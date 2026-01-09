@@ -24,6 +24,8 @@ export interface PositionGreeks {
   theta: number;
   /** Vega: change per 1% IV change */
   vega: number;
+  /** Rho: change per 1% interest rate change */
+  rho: number;
   /** Theoretical price */
   theoreticalPrice: number;
 }
@@ -54,6 +56,8 @@ export interface AggregateGreeks {
   totalTheta: number;
   /** Total vega exposure */
   totalVega: number;
+  /** Total rho exposure (per 1% rate change) */
+  totalRho: number;
 }
 
 export interface UsePositionGreeksOptions {
@@ -129,14 +133,14 @@ function calculateGreeks(
   if (T <= 0) {
     const intrinsicValue = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
     const delta = isCall ? (S > K ? 1 : 0) : S < K ? -1 : 0;
-    return { delta, gamma: 0, theta: 0, vega: 0, theoreticalPrice: intrinsicValue };
+    return { delta, gamma: 0, theta: 0, vega: 0, rho: 0, theoreticalPrice: intrinsicValue };
   }
 
   if (sigma <= 0) {
     const pv = Math.exp(-r * T);
     const intrinsicValue = isCall ? Math.max(S - K * pv, 0) : Math.max(K * pv - S, 0);
     const delta = isCall ? (S > K * pv ? 1 : 0) : S < K * pv ? -1 : 0;
-    return { delta, gamma: 0, theta: 0, vega: 0, theoreticalPrice: intrinsicValue };
+    return { delta, gamma: 0, theta: 0, vega: 0, rho: 0, theoreticalPrice: intrinsicValue };
   }
 
   const sqrtT = Math.sqrt(T);
@@ -167,6 +171,16 @@ function calculateGreeks(
   // Vega (per 1% change)
   const vega = (S * sqrtT * nd1) / 100;
 
+  // Rho (per 1% rate change)
+  // For calls: rho = K * T * e^(-rT) * N(d2) / 100
+  // For puts: rho = -K * T * e^(-rT) * N(-d2) / 100
+  let rho: number;
+  if (isCall) {
+    rho = (K * T * expRT * Nd2) / 100;
+  } else {
+    rho = (-K * T * expRT * (1 - Nd2)) / 100;
+  }
+
   // Theoretical price
   let theoreticalPrice: number;
   if (isCall) {
@@ -180,6 +194,7 @@ function calculateGreeks(
     gamma,
     theta,
     vega,
+    rho,
     theoreticalPrice: Math.max(theoreticalPrice, 0),
   };
 }
@@ -286,6 +301,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
     let totalGamma = 0;
     let totalTheta = 0;
     let totalVega = 0;
+    let totalRho = 0;
 
     for (const pos of streamingPositions) {
       const underlyingPrice = livePrices[pos.underlying] ?? 0;
@@ -295,9 +311,10 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
       totalGamma += positionMultiplier * pos.greeks.gamma;
       totalTheta += positionMultiplier * pos.greeks.theta;
       totalVega += positionMultiplier * pos.greeks.vega;
+      totalRho += positionMultiplier * pos.greeks.rho;
     }
 
-    return { deltaNotional, totalGamma, totalTheta, totalVega };
+    return { deltaNotional, totalGamma, totalTheta, totalVega, totalRho };
   }, [streamingPositions, livePrices]);
 
   return {

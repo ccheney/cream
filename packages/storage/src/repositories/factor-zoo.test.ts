@@ -1238,6 +1238,145 @@ describe("FactorZooRepository", () => {
       const active = await repo.findActiveResearchRuns();
       expect(active).toHaveLength(2);
     });
+
+    test("finds last completed research run", async () => {
+      // Create and complete first run
+      const run1 = await repo.createResearchRun({
+        triggerType: "scheduled",
+        triggerReason: "First completed run",
+        phase: "stage1",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 1000,
+        computeHours: 1.0,
+        completedAt: null,
+      });
+      const completedAt1 = "2025-01-01T10:00:00.000Z";
+      await repo.updateResearchRun(run1.runId, { phase: "completed", completedAt: completedAt1 });
+
+      // Create and complete second run (more recent)
+      const run2 = await repo.createResearchRun({
+        triggerType: "manual",
+        triggerReason: "Second completed run",
+        phase: "stage2",
+        currentIteration: 2,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 2000,
+        computeHours: 2.0,
+        completedAt: null,
+      });
+      const completedAt2 = "2025-01-02T15:00:00.000Z";
+      await repo.updateResearchRun(run2.runId, { phase: "completed", completedAt: completedAt2 });
+
+      // Create active run (should not be returned)
+      await repo.createResearchRun({
+        triggerType: "scheduled",
+        triggerReason: "Active run",
+        phase: "implementation",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 0,
+        computeHours: 0,
+        completedAt: null,
+      });
+
+      const lastCompleted = await repo.findLastCompletedResearchRun();
+
+      expect(lastCompleted).not.toBeNull();
+      expect(lastCompleted!.runId).toBe(run2.runId);
+      expect(lastCompleted!.completedAt).toBe(completedAt2);
+    });
+
+    test("returns null when no completed runs exist", async () => {
+      // Create only active runs
+      await repo.createResearchRun({
+        triggerType: "scheduled",
+        triggerReason: "Active run",
+        phase: "implementation",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 0,
+        computeHours: 0,
+        completedAt: null,
+      });
+
+      const lastCompleted = await repo.findLastCompletedResearchRun();
+      expect(lastCompleted).toBeNull();
+    });
+
+    test("gets research budget status", async () => {
+      // Create a research run in current month
+      await repo.createResearchRun({
+        triggerType: "scheduled",
+        triggerReason: "Run 1",
+        phase: "completed",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 5000,
+        computeHours: 2.5,
+        completedAt: new Date().toISOString(),
+      });
+      await repo.createResearchRun({
+        triggerType: "manual",
+        triggerReason: "Run 2",
+        phase: "stage1",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 3000,
+        computeHours: 1.5,
+        completedAt: null,
+      });
+
+      const budget = await repo.getResearchBudgetStatus();
+
+      expect(budget.tokensUsedThisMonth).toBe(8000);
+      expect(budget.computeHoursThisMonth).toBe(4.0);
+      expect(budget.runsThisMonth).toBe(2);
+      expect(budget.isExhausted).toBe(false);
+      expect(budget.maxMonthlyTokens).toBe(0); // default unlimited
+      expect(budget.maxMonthlyComputeHours).toBe(0); // default unlimited
+    });
+
+    test("detects exhausted budget", async () => {
+      await repo.createResearchRun({
+        triggerType: "scheduled",
+        triggerReason: "Run 1",
+        phase: "completed",
+        currentIteration: 1,
+        hypothesisId: null,
+        factorId: null,
+        prUrl: null,
+        errorMessage: null,
+        tokensUsed: 10000,
+        computeHours: 5.0,
+        completedAt: new Date().toISOString(),
+      });
+
+      // Check with limits that would be exceeded
+      const budget = await repo.getResearchBudgetStatus(5000, 2.0);
+
+      expect(budget.isExhausted).toBe(true);
+      expect(budget.maxMonthlyTokens).toBe(5000);
+      expect(budget.maxMonthlyComputeHours).toBe(2.0);
+    });
   });
 
   // ========================================

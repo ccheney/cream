@@ -151,6 +151,10 @@ export const ResearchTriggerConfigSchema = z.object({
   maxActiveResearch: z.number().int().positive().default(2),
   maxFactorZooSize: z.number().int().positive().default(30),
 
+  // Budget limits (0 = unlimited)
+  maxMonthlyTokens: z.number().int().nonnegative().default(0),
+  maxMonthlyComputeHours: z.number().nonnegative().default(0),
+
   // Alpha decay thresholds
   alphaDecayICThreshold: z.number().min(0).max(1).default(0.5), // 50% of peak
   alphaDecayMinDays: z.number().int().positive().default(20),
@@ -174,6 +178,8 @@ export const DEFAULT_RESEARCH_TRIGGER_CONFIG: ResearchTriggerConfig = {
   cooldownDays: 7,
   maxActiveResearch: 2,
   maxFactorZooSize: 30,
+  maxMonthlyTokens: 0, // Unlimited by default
+  maxMonthlyComputeHours: 0, // Unlimited by default
   alphaDecayICThreshold: 0.5,
   alphaDecayMinDays: 20,
   performanceSharpeThreshold: 0.5,

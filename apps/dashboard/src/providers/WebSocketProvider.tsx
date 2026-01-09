@@ -38,6 +38,12 @@ interface WebSocketContextValue {
   unsubscribe: (channels: string[]) => void;
   /** Subscribe to symbols for real-time quotes */
   subscribeSymbols: (symbols: string[]) => void;
+  /** Unsubscribe from symbols */
+  unsubscribeSymbols: (symbols: string[]) => void;
+  /** Subscribe to options contracts for real-time quotes */
+  subscribeOptions: (contracts: string[]) => void;
+  /** Unsubscribe from options contracts */
+  unsubscribeOptions: (contracts: string[]) => void;
   /** Subscribe to a backtest for progress updates */
   subscribeBacktest: (backtestId: string) => void;
   /** Unsubscribe from backtest progress updates */
@@ -102,6 +108,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     subscribe,
     unsubscribe,
     subscribeSymbols,
+    unsubscribeSymbols,
+    subscribeOptions,
+    unsubscribeOptions,
     subscribeBacktest,
     unsubscribeBacktest,
     connect,
@@ -129,6 +138,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       subscribe,
       unsubscribe,
       subscribeSymbols,
+      unsubscribeSymbols,
+      subscribeOptions,
+      unsubscribeOptions,
       subscribeBacktest,
       unsubscribeBacktest,
       connect,
@@ -144,6 +156,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       subscribe,
       unsubscribe,
       subscribeSymbols,
+      unsubscribeSymbols,
+      subscribeOptions,
+      unsubscribeOptions,
       subscribeBacktest,
       unsubscribeBacktest,
       connect,

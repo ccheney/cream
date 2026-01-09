@@ -7,7 +7,7 @@ process.env.CREAM_ENV = "BACKTEST";
 process.env.CREAM_BROKER = "ALPACA";
 
 import { describe, expect, mock, test } from "bun:test";
-import type { Factor, FactorZooStats, ResearchRun } from "@cream/domain";
+import type { Factor, FactorZooStats, ResearchBudgetStatus, ResearchRun } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
 import type { RuntimeContext } from "@mastra/core/runtime-context";
 import {
@@ -96,13 +96,32 @@ function createMockResearchRun(overrides: Partial<ResearchRun> = {}): ResearchRu
   };
 }
 
+function createMockBudgetStatus(
+  overrides: Partial<ResearchBudgetStatus> = {}
+): ResearchBudgetStatus {
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    tokensUsedThisMonth: 0,
+    computeHoursThisMonth: 0,
+    runsThisMonth: 0,
+    maxMonthlyTokens: 0,
+    maxMonthlyComputeHours: 0,
+    isExhausted: false,
+    periodStart: periodStart.toISOString(),
+    ...overrides,
+  };
+}
+
 function createMockRepository(overrides: Partial<FactorZooRepository> = {}): FactorZooRepository {
   return {
     findActiveFactors: mock(() => Promise.resolve([])),
     findDecayingFactors: mock(() => Promise.resolve([])),
     findActiveResearchRuns: mock(() => Promise.resolve([])),
+    findLastCompletedResearchRun: mock(() => Promise.resolve(null)),
     getStats: mock(() => Promise.resolve(createMockStats())),
     getPerformanceHistory: mock(() => Promise.resolve([])),
+    getResearchBudgetStatus: mock(() => Promise.resolve(createMockBudgetStatus())),
     createHypothesis: mock(() => Promise.resolve({} as never)),
     findHypothesisById: mock(() => Promise.resolve(null)),
     updateHypothesisStatus: mock(() => Promise.resolve()),

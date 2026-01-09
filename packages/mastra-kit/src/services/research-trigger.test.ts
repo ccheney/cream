@@ -11,6 +11,7 @@ import type {
   Factor,
   FactorPerformance,
   FactorZooStats,
+  ResearchBudgetStatus,
   ResearchRun,
   TriggerDetectionState,
 } from "@cream/domain";
@@ -95,13 +96,32 @@ function createMockStats(overrides: Partial<FactorZooStats> = {}): FactorZooStat
   };
 }
 
+function createMockBudgetStatus(
+  overrides: Partial<ResearchBudgetStatus> = {}
+): ResearchBudgetStatus {
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    tokensUsedThisMonth: 0,
+    computeHoursThisMonth: 0,
+    runsThisMonth: 0,
+    maxMonthlyTokens: 0,
+    maxMonthlyComputeHours: 0,
+    isExhausted: false,
+    periodStart: periodStart.toISOString(),
+    ...overrides,
+  };
+}
+
 function createMockRepository(overrides: Partial<FactorZooRepository> = {}): FactorZooRepository {
   return {
     findActiveFactors: mock(() => Promise.resolve([])),
     findDecayingFactors: mock(() => Promise.resolve([])),
     findActiveResearchRuns: mock(() => Promise.resolve([])),
+    findLastCompletedResearchRun: mock(() => Promise.resolve(null)),
     getStats: mock(() => Promise.resolve(createMockStats())),
     getPerformanceHistory: mock(() => Promise.resolve([])),
+    getResearchBudgetStatus: mock(() => Promise.resolve(createMockBudgetStatus())),
     // Add other methods as no-ops
     createHypothesis: mock(() => Promise.resolve({} as never)),
     findHypothesisById: mock(() => Promise.resolve(null)),

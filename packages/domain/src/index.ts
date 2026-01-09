@@ -434,6 +434,8 @@ export {
   NewHypothesisSchema,
   type NewResearchRun,
   NewResearchRunSchema,
+  type ResearchBudgetStatus,
+  ResearchBudgetStatusSchema,
   type ResearchPhase,
   ResearchPhaseSchema,
   type ResearchRun,
