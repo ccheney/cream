@@ -74,7 +74,7 @@ pub struct StrategyLeg {
 impl StrategyLeg {
     /// Create a new strategy leg.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         contract: OptionContract,
         direction: LegDirection,
         quantity: u32,
@@ -228,7 +228,7 @@ impl Default for StrategyBuilder {
 impl StrategyBuilder {
     /// Create a new strategy builder.
     #[must_use]
-    pub fn new(config: StrategyBuilderConfig) -> Self {
+    pub const fn new(config: StrategyBuilderConfig) -> Self {
         Self { config }
     }
 
@@ -340,7 +340,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
         let multiplier = Decimal::from(100);
 
         // Max profit = net credit received
@@ -459,7 +459,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
         let multiplier = Decimal::from(100);
 
         let (max_profit, max_loss) = if is_credit {
@@ -499,6 +499,10 @@ impl StrategyBuilder {
     /// Build a straddle.
     ///
     /// A straddle is a long call and long put at the same strike.
+    ///
+    /// # Errors
+    ///
+    /// This method is infallible for valid inputs but returns `Result` for API consistency.
     pub fn straddle(
         &self,
         underlying: &str,
@@ -538,7 +542,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
         let multiplier = Decimal::from(100);
         let total_cost = -net_premium; // Debit
 
@@ -568,6 +572,10 @@ impl StrategyBuilder {
     /// Build a strangle.
     ///
     /// A strangle is a long OTM call and long OTM put.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the put strike is not below the call strike.
     pub fn strangle(
         &self,
         underlying: &str,
@@ -614,7 +622,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
         let multiplier = Decimal::from(100);
         let total_cost = -net_premium;
 
@@ -711,7 +719,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
 
         // Max profit for calendar occurs at strike at near expiration
         // Max loss is the net debit paid
@@ -822,7 +830,7 @@ impl StrategyBuilder {
             ),
         ];
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
 
         // Max loss is typically the net debit
         let max_loss = if net_premium < Decimal::ZERO {
@@ -876,7 +884,7 @@ impl StrategyBuilder {
             });
         }
 
-        let net_premium: Decimal = legs.iter().map(|l| l.net_premium()).sum();
+        let net_premium: Decimal = legs.iter().map(StrategyLeg::net_premium).sum();
 
         // For custom strategies, we can't determine max P&L without more info
         // Use placeholder values

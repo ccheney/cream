@@ -50,7 +50,7 @@ use rayon::prelude::*;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{Level, debug, info, span, warn};
+use tracing::{Level, debug, info, span};
 
 use super::config::BacktestConfig;
 use super::metrics::PerformanceSummary;
@@ -621,48 +621,32 @@ impl ParallelBacktester {
         // In a real implementation, this would run the actual backtest.
         // For now, we create a placeholder result.
         // The actual backtest logic would be integrated here.
-        let result = self.run_single_backtest(job);
+        let performance = self.run_single_backtest(job);
 
         let elapsed = start.elapsed();
 
         // Truncation acceptable: millis fit in u64 for practical job durations
-        match result {
-            Ok(performance) => BacktestJobResult {
-                job_id: job.job_id.clone(),
-                strategy_id: job.strategy.strategy_id.clone(),
-                parameters: job.strategy.parameters.clone(),
-                performance: Some(performance),
-                execution_time_ms: elapsed.as_millis() as u64,
-                error: None,
-                success: true,
-            },
-            Err(e) => {
-                if !self.config.continue_on_error {
-                    warn!("Job {} failed: {}", job.job_id, e);
-                }
-                BacktestJobResult {
-                    job_id: job.job_id.clone(),
-                    strategy_id: job.strategy.strategy_id.clone(),
-                    parameters: job.strategy.parameters.clone(),
-                    performance: None,
-                    execution_time_ms: elapsed.as_millis() as u64,
-                    error: Some(e.to_string()),
-                    success: false,
-                }
-            }
+        BacktestJobResult {
+            job_id: job.job_id.clone(),
+            strategy_id: job.strategy.strategy_id.clone(),
+            parameters: job.strategy.parameters.clone(),
+            performance: Some(performance),
+            execution_time_ms: elapsed.as_millis() as u64,
+            error: None,
+            success: true,
         }
     }
 
     /// Run a single backtest (placeholder for actual implementation).
     #[allow(clippy::unused_self)]
-    fn run_single_backtest(&self, _job: &BacktestJob) -> Result<PerformanceSummary, ParallelError> {
+    fn run_single_backtest(&self, _job: &BacktestJob) -> PerformanceSummary {
         // This is a placeholder that returns default metrics.
         // In production, this would:
         // 1. Load historical data for the symbols
         // 2. Initialize the strategy with parameters
         // 3. Run the backtest simulation
         // 4. Calculate and return performance metrics
-        Ok(PerformanceSummary::default())
+        PerformanceSummary::default()
     }
 
     /// Get effective thread count.

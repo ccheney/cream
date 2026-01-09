@@ -274,6 +274,7 @@ afterAll(async () => {
 - Financial calculations use `rust_decimal` (Rust) or handle precision carefully (TS)
 - All trading decisions flow through the 8-agent consensus network
 - DecisionPlans require: action, direction, size with unit, stop-loss, take-profit
+- **Trust self-documenting code.** Do not add comments that restate what the code does. Only add comments when explaining *why* something non-obvious is necessary (e.g., workarounds, business rules, or domain-specific constraints). Good names and clear structure are better than comments.
 - **Do NOT modify linting rules** (Biome, Clippy, Ruff configs) without explicit approval
 - **Do NOT modify code coverage requirements** or thresholds without explicit approval
 

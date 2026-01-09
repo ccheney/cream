@@ -239,7 +239,7 @@ pub trait CandleDataSource: Send + Sync {
     ) -> Result<Vec<Candle>, ReplayError>;
 
     /// Get the name of this data source.
-    fn name(&self) -> &str;
+    fn name(&self) -> &'static str;
 }
 
 /// In-memory data source for testing.
@@ -278,14 +278,14 @@ impl CandleDataSource for InMemoryDataSource {
         // Filter by date range
         let filtered: Vec<Candle> = candles
             .iter()
-            .filter(|c| c.timestamp >= start_date.to_string() && c.timestamp < end_date.to_string())
+            .filter(|c| c.timestamp.as_str() >= start_date && c.timestamp.as_str() < end_date)
             .cloned()
             .collect();
 
         Ok(filtered)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "InMemory"
     }
 }
@@ -313,6 +313,7 @@ impl std::fmt::Debug for ReplayEngine {
             .field("sequence_counter", &self.sequence_counter)
             .field("last_candles", &self.last_candles)
             .field("progress", &self.progress)
+            .field("start_time", &self.start_time)
             .field("initialized", &self.initialized)
             .finish()
     }
@@ -620,43 +621,40 @@ impl SynchronizedReplay {
         }
 
         loop {
-            match self.engine.next_event() {
-                Some(event) => {
-                    let event_timestamp = event.candle.timestamp.clone();
+            if let Some(event) = self.engine.next_event() {
+                let event_timestamp = event.candle.timestamp.clone();
 
-                    match &self.current_timestamp {
-                        None => {
-                            // First event
-                            self.current_timestamp = Some(event_timestamp);
-                            self.buffer.push(event);
-                        }
-                        Some(current) if *current == event_timestamp => {
-                            // Same timestamp - add to buffer
-                            self.buffer.push(event);
-                        }
-                        Some(current_ts) => {
-                            // New timestamp - return buffered events and start new batch
-                            let result_timestamp = current_ts.clone();
-                            self.current_timestamp = None;
-                            let result_events = std::mem::take(&mut self.buffer);
-
-                            self.current_timestamp = Some(event_timestamp);
-                            self.buffer.push(event);
-
-                            return Some((result_timestamp, result_events));
-                        }
+                match &self.current_timestamp {
+                    None => {
+                        // First event
+                        self.current_timestamp = Some(event_timestamp);
+                        self.buffer.push(event);
                     }
-                }
-                None => {
-                    // No more events - return any remaining buffered events
-                    if let Some(result_timestamp) = self.current_timestamp.take()
-                        && !self.buffer.is_empty()
-                    {
+                    Some(current) if *current == event_timestamp => {
+                        // Same timestamp - add to buffer
+                        self.buffer.push(event);
+                    }
+                    Some(current_ts) => {
+                        // New timestamp - return buffered events and start new batch
+                        let result_timestamp = current_ts.clone();
+                        self.current_timestamp = None;
                         let result_events = std::mem::take(&mut self.buffer);
+
+                        self.current_timestamp = Some(event_timestamp);
+                        self.buffer.push(event);
+
                         return Some((result_timestamp, result_events));
                     }
-                    return None;
                 }
+            } else {
+                // No more events - return any remaining buffered events
+                if let Some(result_timestamp) = self.current_timestamp.take()
+                    && !self.buffer.is_empty()
+                {
+                    let result_events = std::mem::take(&mut self.buffer);
+                    return Some((result_timestamp, result_events));
+                }
+                return None;
             }
         }
     }

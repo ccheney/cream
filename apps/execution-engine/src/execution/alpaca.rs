@@ -629,7 +629,7 @@ impl super::gateway::BrokerAdapter for AlpacaAdapter {
         self.cancel_order(broker_order_id).await.map_err(Into::into)
     }
 
-    fn broker_name(&self) -> &str {
+    fn broker_name(&self) -> &'static str {
         "Alpaca"
     }
 }

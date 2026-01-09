@@ -170,8 +170,7 @@ impl BacktestAdapter {
         let price = self
             .simulated_price
             .read()
-            .map(|p| *p)
-            .unwrap_or_else(|_| Decimal::new(100, 0));
+            .map_or_else(|_| Decimal::new(100, 0), |p| *p);
 
         // Create a synthetic candle for simulation
         let candle = crate::backtest::Candle {
@@ -379,7 +378,7 @@ impl BrokerAdapter for BacktestAdapter {
         }
     }
 
-    fn broker_name(&self) -> &str {
+    fn broker_name(&self) -> &'static str {
         "Backtest"
     }
 }

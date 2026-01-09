@@ -643,7 +643,7 @@ impl ReconciliationManager {
             return false;
         }
 
-        self.last_reconciliation.read().await.map_or(true, |last| {
+        self.last_reconciliation.read().await.is_none_or(|last| {
             last.elapsed() >= Duration::from_secs(self.config.periodic_interval_secs)
         })
     }
@@ -727,8 +727,7 @@ impl ReconciliationManager {
                     "Marking order as failed (missing in broker)"
                 );
                 // Update local order status to Rejected
-                if let Some(order) = self.order_state.get(&orphan.order_id) {
-                    let mut updated = order.clone();
+                if let Some(mut updated) = self.order_state.get(&orphan.order_id) {
                     updated.status = OrderStatus::Rejected;
                     updated.status_message =
                         "Order not found at broker during reconciliation".to_string();

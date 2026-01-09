@@ -628,9 +628,8 @@ impl SimulationEngine {
 
         // Extract data needed for position update before mutable borrow
         let (instrument_id, side, instrument_type) = {
-            let order = match self.open_orders.get_mut(order_id) {
-                Some(o) => o,
-                None => return,
+            let Some(order) = self.open_orders.get_mut(order_id) else {
+                return;
             };
 
             // Apply fill to partial fill state

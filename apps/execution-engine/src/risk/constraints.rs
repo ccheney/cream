@@ -107,7 +107,7 @@ fn calculate_median(values: &[Decimal]) -> Option<Decimal> {
     let mut sorted = values.to_vec();
     sorted.sort();
     let mid = sorted.len() / 2;
-    if sorted.len() % 2 == 0 {
+    if sorted.len().is_multiple_of(2) {
         Some((sorted[mid - 1] + sorted[mid]) / Decimal::new(2, 0))
     } else {
         Some(sorted[mid])
@@ -987,7 +987,7 @@ pub fn validate_per_trade_risk(
     };
 
     let max_risk_pct =
-        Decimal::try_from(config.max_per_trade_risk_pct).unwrap_or(Decimal::new(2, 0));
+        Decimal::try_from(config.max_per_trade_risk_pct).unwrap_or_else(|_| Decimal::new(2, 0));
     let result = calculate_per_trade_risk(
         entry_price,
         decision.stop_loss_level,
@@ -996,7 +996,9 @@ pub fn validate_per_trade_risk(
         max_risk_pct,
     );
 
-    if !result.within_limit {
+    if result.within_limit {
+        None
+    } else {
         Some(ConstraintViolation {
             code: "PER_TRADE_RISK_EXCEEDED".to_string(),
             severity: ViolationSeverity::Error,
@@ -1011,8 +1013,6 @@ pub fn validate_per_trade_risk(
             observed: format!("{:.4}%", result.risk_pct),
             limit: format!("{:.2}%", result.limit_pct),
         })
-    } else {
-        None
     }
 }
 
@@ -1039,7 +1039,8 @@ pub fn validate_risk_reward_ratio(
         return None; // Can't calculate R:R without all prices
     }
 
-    let min_ratio = Decimal::try_from(config.min_risk_reward_ratio).unwrap_or(Decimal::new(15, 1));
+    let min_ratio =
+        Decimal::try_from(config.min_risk_reward_ratio).unwrap_or_else(|_| Decimal::new(15, 1));
     let result = calculate_risk_reward_ratio(
         entry_price,
         decision.stop_loss_level,
@@ -1047,7 +1048,9 @@ pub fn validate_risk_reward_ratio(
         min_ratio,
     );
 
-    if !result.meets_minimum {
+    if result.meets_minimum {
+        None
+    } else {
         Some(ConstraintViolation {
             code: "INSUFFICIENT_RISK_REWARD".to_string(),
             severity: ViolationSeverity::Error,
@@ -1063,8 +1066,6 @@ pub fn validate_risk_reward_ratio(
             observed: format!("{:.2}:1", result.ratio),
             limit: format!(">= {:.2}:1", result.minimum_ratio),
         })
-    } else {
-        None
     }
 }
 

@@ -554,13 +554,13 @@ impl WalkForwardEngine {
             Decimal::from(stable_count as u64) / Decimal::from(param_values.len() as u64)
         };
 
-        let warning = if !unstable_parameters.is_empty() {
+        let warning = if unstable_parameters.is_empty() {
+            None
+        } else {
             Some(format!(
                 "Parameters with high variance: {}",
                 unstable_parameters.join(", ")
             ))
-        } else {
-            None
         };
 
         ParameterStability {
@@ -619,8 +619,8 @@ impl WalkForwardEngine {
         let total_days = year * 365 + month * 30 + day + days;
         let new_year = total_days / 365;
         let remaining = total_days % 365;
-        let new_month = (remaining / 30).min(12).max(1);
-        let new_day = (remaining % 30).min(28).max(1);
+        let new_month = (remaining / 30).clamp(1, 12);
+        let new_day = (remaining % 30).clamp(1, 28);
 
         format!("{new_year:04}-{new_month:02}-{new_day:02}")
     }

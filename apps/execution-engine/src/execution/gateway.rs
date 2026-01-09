@@ -114,7 +114,7 @@ pub trait BrokerAdapter: Send + Sync {
     async fn cancel_order(&self, broker_order_id: &str) -> Result<(), BrokerError>;
 
     /// Get broker name for logging and metrics.
-    fn broker_name(&self) -> &str;
+    fn broker_name(&self) -> &'static str;
 }
 
 /// Errors from broker operations.
@@ -522,7 +522,7 @@ mod tests {
             Ok(())
         }
 
-        fn broker_name(&self) -> &str {
+        fn broker_name(&self) -> &'static str {
             "mock"
         }
     }

@@ -52,6 +52,8 @@ pub enum RecoveryError {
 // ============================================================================
 
 /// Configuration for startup recovery.
+// Multiple boolean fields reflect distinct recovery behaviors that are independently configurable
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct RecoveryConfig {
     /// Whether to run recovery on startup.
@@ -348,15 +350,12 @@ impl PortfolioRecovery {
         let mut synced = 0;
 
         for broker_pos in &broker_state.positions {
-            let needs_sync = local_positions.get(&broker_pos.symbol).map_or(
-                true, // Not in local
-                |local| {
-                    // Check if different
-                    local.qty != broker_pos.qty
-                        || (local.avg_entry_price - broker_pos.avg_entry_price).abs()
-                            > self.config.position_price_tolerance_pct * broker_pos.avg_entry_price
-                },
-            );
+            let needs_sync = local_positions.get(&broker_pos.symbol).is_none_or(|local| {
+                // Check if different
+                local.qty != broker_pos.qty
+                    || (local.avg_entry_price - broker_pos.avg_entry_price).abs()
+                        > self.config.position_price_tolerance_pct * broker_pos.avg_entry_price
+            });
 
             if needs_sync {
                 let position = LocalPositionSnapshot {
@@ -377,7 +376,7 @@ impl PortfolioRecovery {
         }
 
         // Remove local positions that don't exist at broker
-        for (symbol, _) in local_positions {
+        for symbol in local_positions.keys() {
             let in_broker = broker_state.positions.iter().any(|p| &p.symbol == symbol);
             if !in_broker {
                 // Position was closed at broker - save with zero quantity
@@ -457,7 +456,7 @@ impl PortfolioRecovery {
     }
 
     /// Get the reconciliation manager for direct access.
-    pub fn reconciliation_manager(&self) -> &ReconciliationManager {
+    pub const fn reconciliation_manager(&self) -> &ReconciliationManager {
         &self.reconciliation
     }
 }

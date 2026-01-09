@@ -184,6 +184,9 @@ impl std::error::Error for SizingError {}
 // ============================================================================
 
 /// Configuration for position sizing behavior.
+// Allow 4 bools: these are independent toggles for sizing constraints
+// (round_down, enforce_minimum, enforce_maximum, check_cash)
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct PositionSizerConfig {
     /// Round shares down (conservative) or to nearest.
@@ -233,7 +236,7 @@ impl PositionSizer {
         Self::validate_input(input)?;
 
         // Calculate raw quantity based on sizing unit
-        let raw_quantity = Self::calculate_raw_quantity(input)?;
+        let raw_quantity = Self::calculate_raw_quantity(input);
 
         // Round to integer
         let mut quantity = self.round_quantity(raw_quantity);
@@ -381,20 +384,20 @@ impl PositionSizer {
         Ok(())
     }
 
-    fn calculate_raw_quantity(input: &SizingInput) -> Result<Decimal, SizingError> {
+    fn calculate_raw_quantity(input: &SizingInput) -> Decimal {
         match input.sizing_unit {
             SizingUnit::Shares | SizingUnit::Contracts => {
                 // Direct value, no conversion needed
-                Ok(input.sizing_value)
+                input.sizing_value
             }
             SizingUnit::Dollars => {
                 // Convert dollars to shares: dollars / price
                 if input.is_options {
                     // For options: dollars / (price * multiplier)
                     let multiplier = Decimal::from(input.contract_multiplier);
-                    Ok(input.sizing_value / (input.current_price * multiplier))
+                    input.sizing_value / (input.current_price * multiplier)
                 } else {
-                    Ok(input.sizing_value / input.current_price)
+                    input.sizing_value / input.current_price
                 }
             }
             SizingUnit::PctEquity => {
@@ -403,9 +406,9 @@ impl PositionSizer {
                 let dollars = input.total_equity * input.sizing_value / Decimal::from(100);
                 if input.is_options {
                     let multiplier = Decimal::from(input.contract_multiplier);
-                    Ok(dollars / (input.current_price * multiplier))
+                    dollars / (input.current_price * multiplier)
                 } else {
-                    Ok(dollars / input.current_price)
+                    dollars / input.current_price
                 }
             }
         }

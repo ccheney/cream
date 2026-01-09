@@ -295,7 +295,7 @@ impl StatePersistence {
             Value::Text(snapshot.submitted_at.clone()),
             Value::Text(snapshot.last_update_at.clone()),
             Value::Text(snapshot.status_message.clone()),
-            Value::Integer(if snapshot.is_multi_leg { 1 } else { 0 }),
+            Value::Integer(i64::from(snapshot.is_multi_leg)),
             Value::Text(self.environment.clone()),
         ];
 
@@ -636,7 +636,7 @@ impl StatePersistence {
     /// Note: This is intentionally synchronous since Turso local databases
     /// don't require sync. For remote sync support in the future, this would
     /// need to become async with actual network calls.
-    pub fn sync(&self) -> Result<(), PersistenceError> {
+    pub const fn sync(&self) -> Result<(), PersistenceError> {
         // Note: Turso local databases don't need sync
         // For remote sync, we'd need a different builder configuration
         Ok(())

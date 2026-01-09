@@ -389,7 +389,7 @@ impl IvSolver {
         }
 
         for _i in 0..self.config.max_iterations {
-            let mid = (low + high) / 2.0;
+            let mid = low.midpoint(high);
             let price = bs_price(s, k, t, r, q, mid, kind);
             let error = price - market_price;
 
@@ -411,7 +411,7 @@ impl IvSolver {
 
         Err(IvError::ConvergenceFailed {
             iterations: self.config.max_iterations,
-            last_error: (bs_price(s, k, t, r, q, (low + high) / 2.0, kind) - market_price).abs(),
+            last_error: (bs_price(s, k, t, r, q, low.midpoint(high), kind) - market_price).abs(),
         })
     }
 

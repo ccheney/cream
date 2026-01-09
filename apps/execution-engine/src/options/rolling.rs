@@ -119,6 +119,8 @@ pub struct RollTriggerResult {
 }
 
 /// Position state for roll evaluation.
+// Struct requires multiple boolean fields to represent position state
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct PositionForRoll {
     /// Position ID.
@@ -507,13 +509,14 @@ pub fn check_roll_timing(
     config: &RollConfig,
 ) -> RollTimingResult {
     let mut reasons = Vec::new();
-    let mut is_good_time = true;
 
     // Check market hours
-    if !is_market_hours {
+    let is_good_time = if is_market_hours {
+        true
+    } else {
         reasons.push("Market is closed".to_string());
-        is_good_time = false;
-    }
+        false
+    };
 
     // Check preferred hour
     if current_hour != config.preferred_roll_hour {
@@ -638,8 +641,9 @@ pub fn evaluate_partial_fill(
 
         // Critical assignment risk or timeout exceeded for pending/partial orders - cancel
         (_, _, AssignmentRiskLevel::Critical)
-        | (RollExecutionState::Pending, true, _)
-        | (RollExecutionState::PartialFill, true, _) => PartialFillAction::Cancel,
+        | (RollExecutionState::Pending | RollExecutionState::PartialFill, true, _) => {
+            PartialFillAction::Cancel
+        }
 
         // Close complete but open stalled
         (RollExecutionState::CloseComplete, true, _) => PartialFillAction::ManualIntervention,

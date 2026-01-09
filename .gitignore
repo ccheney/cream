@@ -41,8 +41,7 @@ yarn-error.log*
 target/
 *.profraw
 *.profdata
-# NOTE: Cargo.lock is committed per Rust 2023 guidance
-# Use `cargo build --locked` in CI for reproducible builds
+rust_out
 
 # Python
 __pycache__/

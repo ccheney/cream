@@ -255,8 +255,7 @@ impl VwapConfig {
     /// Check if execution window has ended.
     #[must_use]
     pub fn is_window_ended(&self) -> bool {
-        self.end_time
-            .map_or(false, |end_time| Utc::now() >= end_time)
+        self.end_time.is_some_and(|end_time| Utc::now() >= end_time)
     }
 }
 

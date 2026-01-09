@@ -119,7 +119,7 @@ impl MassCancelConfig {
 
     /// Create a strict configuration for LIVE trading.
     #[must_use]
-    pub fn live() -> Self {
+    pub const fn live() -> Self {
         Self {
             enabled: true,
             grace_period_seconds: 30,
@@ -131,7 +131,7 @@ impl MassCancelConfig {
 
     /// Create a relaxed configuration for PAPER trading.
     #[must_use]
-    pub fn paper() -> Self {
+    pub const fn paper() -> Self {
         Self {
             enabled: true,
             grace_period_seconds: 60, // Longer grace period for paper
@@ -143,7 +143,7 @@ impl MassCancelConfig {
 
     /// Create a disabled configuration for BACKTEST.
     #[must_use]
-    pub fn backtest() -> Self {
+    pub const fn backtest() -> Self {
         Self {
             enabled: false,
             grace_period_seconds: 0,
@@ -353,12 +353,12 @@ impl DisconnectHandler {
     }
 
     /// Get the GTC order policy.
-    pub fn gtc_policy(&self) -> GtcOrderPolicy {
+    pub const fn gtc_policy(&self) -> GtcOrderPolicy {
         self.config.gtc_policy
     }
 
     /// Get the grace period in seconds.
-    pub fn grace_period_seconds(&self) -> u64 {
+    pub const fn grace_period_seconds(&self) -> u64 {
         self.config.grace_period_seconds
     }
 }

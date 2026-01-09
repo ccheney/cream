@@ -104,9 +104,8 @@ impl OrderStateManager {
     /// Get all orders for a list of IDs.
     #[must_use]
     pub fn get_many(&self, order_ids: &[String]) -> Vec<OrderState> {
-        let orders = match self.orders.read() {
-            Ok(guard) => guard,
-            Err(_) => return vec![],
+        let Ok(orders) = self.orders.read() else {
+            return vec![];
         };
 
         order_ids
@@ -118,9 +117,8 @@ impl OrderStateManager {
     /// Get all active (non-terminal) orders.
     #[must_use]
     pub fn get_active_orders(&self) -> Vec<OrderState> {
-        let orders = match self.orders.read() {
-            Ok(guard) => guard,
-            Err(_) => return vec![],
+        let Ok(orders) = self.orders.read() else {
+            return vec![];
         };
 
         orders
@@ -158,12 +156,11 @@ impl OrderStateManager {
     /// Returns the updated `PartialFillState` if successful.
     pub fn apply_fill(&self, order_id: &str, fill: ExecutionFill) -> Option<PartialFillState> {
         // Update partial fill state
-        let updated_state = {
-            let mut fills = self.partial_fills.write().ok()?;
-            let state = fills.get_mut(order_id)?;
-            state.apply_fill(fill);
-            state.clone()
-        };
+        let mut fills = self.partial_fills.write().ok()?;
+        let state = fills.get_mut(order_id)?;
+        state.apply_fill(fill);
+        let updated_state = state.clone();
+        drop(fills);
 
         // Synchronize with OrderState
         if let Ok(mut orders) = self.orders.write()
@@ -196,9 +193,8 @@ impl OrderStateManager {
     /// Get all orders with partial fills.
     #[must_use]
     pub fn get_partially_filled_orders(&self) -> Vec<PartialFillState> {
-        let fills = match self.partial_fills.read() {
-            Ok(guard) => guard,
-            Err(_) => return vec![],
+        let Ok(fills) = self.partial_fills.read() else {
+            return vec![];
         };
 
         fills.values().filter(|s| s.is_partial()).cloned().collect()
@@ -209,9 +205,8 @@ impl OrderStateManager {
     /// Returns a list of `TimeoutResult` for each order that has timed out.
     #[must_use]
     pub fn check_timeouts(&self) -> Vec<TimeoutResult> {
-        let fills = match self.partial_fills.read() {
-            Ok(guard) => guard,
-            Err(_) => return vec![],
+        let Ok(fills) = self.partial_fills.read() else {
+            return vec![];
         };
 
         let now = chrono::Utc::now();

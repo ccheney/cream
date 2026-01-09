@@ -215,7 +215,7 @@ fn resolve_same_bar_conflict(
             target_level.to_string().hash(&mut hasher);
 
             let hash = hasher.finish();
-            if hash % 2 == 0 {
+            if hash.is_multiple_of(2) {
                 (TriggerType::Stop, stop_level)
             } else {
                 (TriggerType::Target, target_level)

@@ -110,7 +110,7 @@ impl CircuitBreakerConfig {
     ///
     /// More sensitive for market data (lower threshold, larger window, shorter open).
     #[must_use]
-    pub fn databento() -> Self {
+    pub const fn databento() -> Self {
         Self {
             failure_rate_threshold: 0.3, // 30% - more sensitive
             sliding_window_size: 50,     // Larger window
@@ -125,7 +125,7 @@ impl CircuitBreakerConfig {
     ///
     /// Longer timeouts for slower API.
     #[must_use]
-    pub fn ibkr() -> Self {
+    pub const fn ibkr() -> Self {
         Self {
             failure_rate_threshold: 0.5,
             sliding_window_size: 20,
@@ -438,7 +438,7 @@ impl CircuitBreaker {
 
     /// Get the call timeout for this circuit breaker.
     #[must_use]
-    pub fn call_timeout(&self) -> Duration {
+    pub const fn call_timeout(&self) -> Duration {
         self.config.call_timeout
     }
 
