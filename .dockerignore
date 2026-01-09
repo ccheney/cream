@@ -60,9 +60,8 @@ docs
 __pycache__
 *.pyc
 
-# Rust build artifacts
+# Rust build artifacts (Cargo.lock is kept for reproducible builds)
 target
-Cargo.lock
 
 # Development files
 .beads
