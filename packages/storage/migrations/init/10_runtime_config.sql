@@ -50,8 +50,6 @@ CREATE TABLE IF NOT EXISTS agent_configs (
   environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   agent_type TEXT NOT NULL,        -- technical, news, fundamentals, bullish, bearish, trader, risk, critic
   model TEXT NOT NULL,
-  temperature REAL NOT NULL,
-  max_tokens INTEGER NOT NULL,
   system_prompt_override TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

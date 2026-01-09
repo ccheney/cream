@@ -29,6 +29,6 @@
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
-    "@typescript/native-preview": "7.0.0-dev.20260106.1"
+    "@typescript/native-preview": "7.0.0-dev.20260109.1"
   }
 }

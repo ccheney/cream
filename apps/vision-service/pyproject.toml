@@ -17,18 +17,18 @@ authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
 requires-python = ">=3.15"
 
 dependencies = [
-    "pillow>=11.0",
-    "opencv-python>=4.10",
-    "numpy>=2.0",
+    "pillow>=12.1",
+    "opencv-python>=4.12",
+    "numpy>=2.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
+    "pytest>=9.0",
     "pytest-cov>=7.0",
-    "pytest-asyncio>=0.24",
-    "mypy>=1.15",
-    "ruff>=0.8",
+    "pytest-asyncio>=1.1",
+    "mypy>=1.19",
+    "ruff>=0.14",
 ]
 
 # ============================================
