@@ -36,6 +36,7 @@ use arrow_flight::{
     FlightInfo, IpcMessage, PollInfo, SchemaAsIpc, Ticket, encode::FlightDataEncoderBuilder,
     flight_service_server::FlightServiceServer,
 };
+use arrow_ipc::writer::IpcWriteOptions;
 use futures::{Stream, StreamExt, stream};
 use tokio::sync::RwLock;
 
@@ -316,9 +317,10 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
             "market_data" => {
                 let schema = Self::market_data_schema();
                 let ipc_message =
-                    IpcMessage::try_from(SchemaAsIpc::new(&schema, &Default::default())).map_err(
-                        |e| tonic::Status::internal(format!("Failed to encode schema: {e}")),
-                    )?;
+                    IpcMessage::try_from(SchemaAsIpc::new(&schema, &IpcWriteOptions::default()))
+                        .map_err(|e| {
+                            tonic::Status::internal(format!("Failed to encode schema: {e}"))
+                        })?;
 
                 Ok(tonic::Response::new(arrow_flight::SchemaResult {
                     schema: ipc_message.0,
@@ -785,7 +787,7 @@ mod tests {
             Some(Ok(_)) => {}
             Some(Err(e)) => panic!("result should be valid: {e}"),
             None => panic!("stream should have result"),
-        };
+        }
 
         // Verify cache is cleared
         assert_eq!(service.market_data.read().await.len(), 0);
@@ -802,10 +804,8 @@ mod tests {
         };
         let request = tonic::Request::new(action);
 
-        let result = service.do_action(request).await;
-        let status = match result {
-            Err(s) => s,
-            Ok(_) => panic!("should fail for unknown action"),
+        let Err(status) = service.do_action(request).await else {
+            panic!("should fail for unknown action")
         };
         assert_eq!(status.code(), tonic::Code::InvalidArgument);
     }

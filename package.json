@@ -25,7 +25,10 @@
     "lint:rust": "cargo clippy --all-targets --all-features -- -D warnings",
     "lint:py": "ruff check apps/filings-service apps/vision-service apps/evals packages/research",
     "validate": "bun scripts/validate-versions.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:seed": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/seed-config.ts",
+    "db:migrate": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/run-migrations.ts",
+    "db:status": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/run-migrations.ts --status"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

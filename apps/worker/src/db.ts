@@ -85,10 +85,9 @@ async function initializeDb(): Promise<TursoClient> {
     // In-memory for testing
     client = await createInMemoryClient();
   } else {
-    // Local file database
-    client = await createTursoClient(ctx, {
-      path: tursoUrl ?? "cream.db",
-    });
+    // Local file database - let createTursoClient use its default path
+    // which includes the environment suffix (e.g., cream_backtest.db)
+    client = await createTursoClient(ctx, tursoUrl ? { path: tursoUrl } : {});
   }
 
   // Run migrations on first connection

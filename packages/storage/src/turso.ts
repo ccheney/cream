@@ -67,6 +67,42 @@ export interface TursoClient {
 // ============================================
 
 /**
+ * Get parent directory path.
+ */
+function getParentDir(dir: string): string {
+  const lastSlash = dir.lastIndexOf("/");
+  return lastSlash <= 0 ? "/" : dir.slice(0, lastSlash);
+}
+
+/**
+ * Find the monorepo root by looking for package.json with workspaces.
+ * Falls back to current directory if not found.
+ */
+async function findProjectRoot(): Promise<string> {
+  let dir = process.cwd();
+
+  // Traverse up until we hit the filesystem root
+  while (dir !== "/" && dir !== getParentDir(dir)) {
+    const pkgPath = `${dir}/package.json`;
+    const file = Bun.file(pkgPath);
+    if (await file.exists()) {
+      try {
+        const pkg = await file.json();
+        if (pkg.workspaces) {
+          return dir;
+        }
+      } catch {
+        // Continue searching
+      }
+    }
+    dir = getParentDir(dir);
+  }
+
+  // Fallback to cwd
+  return process.cwd();
+}
+
+/**
  * Create a Turso client
  *
  * Automatically selects the appropriate connection mode:
@@ -105,7 +141,10 @@ export async function createTursoClient(
   config: TursoConfig = {}
 ): Promise<TursoClient> {
   const suffix = getEnvDatabaseSuffix(ctx);
-  const defaultPath = `cream${suffix}.db`;
+  const dbName = `cream${suffix}.db`;
+  // Use absolute path in project root for consistent database location
+  const projectRoot = await findProjectRoot();
+  const defaultPath = `${projectRoot}/${dbName}`;
 
   // Determine connection mode based on environment
   if (isBacktest(ctx) || !config.syncUrl) {
@@ -319,7 +358,9 @@ export async function createInMemoryClient(): Promise<TursoClient> {
 /**
  * Get the default database path based on environment
  */
-export function getDefaultDatabasePath(ctx: ExecutionContext): string {
+export async function getDefaultDatabasePath(ctx: ExecutionContext): Promise<string> {
   const suffix = getEnvDatabaseSuffix(ctx);
-  return `cream${suffix}.db`;
+  const dbName = `cream${suffix}.db`;
+  const projectRoot = await findProjectRoot();
+  return `${projectRoot}/${dbName}`;
 }

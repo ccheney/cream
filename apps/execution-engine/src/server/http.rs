@@ -38,7 +38,6 @@ impl ExecutionServer {
 }
 
 /// Create the Axum router with all endpoints.
-#[must_use]
 pub fn create_router(server: ExecutionServer) -> Router {
     Router::new()
         .route("/health", get(health_check))
@@ -216,7 +215,7 @@ pub struct ApiError(ExecutionError);
 impl ApiError {
     /// Create from an execution error.
     #[must_use]
-    pub fn from_error(error: ExecutionError) -> Self {
+    pub const fn from_error(error: ExecutionError) -> Self {
         Self(error)
     }
 

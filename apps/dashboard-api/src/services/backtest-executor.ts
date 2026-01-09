@@ -7,7 +7,6 @@
  * @see docs/plans/28-backtest-execution-pipeline.md Phase 2.1
  */
 
-import { resolve } from "node:path";
 import type { BacktestsRepository } from "@cream/storage";
 
 // ============================================
@@ -146,7 +145,7 @@ const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
  */
 function getResearchPath(): string {
   // Navigate from apps/dashboard-api/src/services to packages/research
-  return resolve(import.meta.dir, "../../../../packages/research");
+  return `${import.meta.dir}/../../../../packages/research`;
 }
 
 // ============================================

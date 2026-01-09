@@ -265,7 +265,7 @@ impl ExecutionService for ExecutionServiceImpl {
             risk_policy_id: "default".to_string(),
             account_equity: rust_decimal::Decimal::from_f64_retain(account_state.equity)
                 .unwrap_or_default(),
-            plan: convert_decision_plan(&decision_plan)?,
+            plan: convert_decision_plan(&decision_plan),
         };
 
         // Validate constraints
@@ -600,7 +600,7 @@ pub struct MarketDataServiceImpl {}
 impl MarketDataServiceImpl {
     /// Create a new market data service.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }
@@ -668,9 +668,7 @@ impl MarketDataService for MarketDataServiceImpl {
 // ============================================
 
 /// Convert proto `DecisionPlan` to internal format.
-fn convert_decision_plan(
-    proto: &proto::cream::v1::DecisionPlan,
-) -> Result<crate::models::DecisionPlan, Status> {
+fn convert_decision_plan(proto: &proto::cream::v1::DecisionPlan) -> crate::models::DecisionPlan {
     use crate::models::{Action, Decision, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon};
     use rust_decimal::Decimal;
 
@@ -769,7 +767,7 @@ fn convert_decision_plan(
         })
         .collect();
 
-    Ok(crate::models::DecisionPlan {
+    crate::models::DecisionPlan {
         plan_id: proto.cycle_id.clone(), // Use cycle_id as plan_id
         cycle_id: proto.cycle_id.clone(),
         timestamp: proto
@@ -788,7 +786,7 @@ fn convert_decision_plan(
         risk_manager_approved: true, // Proto doesn't have this, default to requiring check
         critic_approved: true,
         plan_rationale: proto.portfolio_notes.clone().unwrap_or_default(),
-    })
+    }
 }
 
 /// Convert internal `OrderStatus` to proto `OrderStatus`.
@@ -891,40 +889,35 @@ pub async fn run_grpc_server_with_tls(
     let execution_service = ExecutionServiceImpl::with_defaults()?;
     let market_data_service = MarketDataServiceImpl::new();
 
-    match tls_config {
-        Some(tls) => {
-            tracing::info!(
-                %addr,
-                client_auth = tls.client_auth_required,
-                "Starting gRPC server with TLS"
-            );
+    if let Some(tls) = tls_config {
+        tracing::info!(
+            %addr,
+            client_auth = tls.client_auth_required,
+            "Starting gRPC server with TLS"
+        );
 
-            let server_tls_config = tls.build_server_config().map_err(|e| {
-                tracing::error!(error = %e, "Failed to build TLS config");
-                e
-            })?;
+        let server_tls_config = tls.build_server_config().map_err(|e| {
+            tracing::error!(error = %e, "Failed to build TLS config");
+            e
+        })?;
 
-            tonic::transport::Server::builder()
-                .tls_config(server_tls_config)?
-                .add_service(ExecutionServiceServer::new(execution_service))
-                .add_service(MarketDataServiceServer::new(market_data_service))
-                .serve(addr)
-                .await?;
+        tonic::transport::Server::builder()
+            .tls_config(server_tls_config)?
+            .add_service(ExecutionServiceServer::new(execution_service))
+            .add_service(MarketDataServiceServer::new(market_data_service))
+            .serve(addr)
+            .await?;
+    } else {
+        tracing::info!(%addr, "Starting gRPC server (no TLS)");
 
-            Ok(())
-        }
-        None => {
-            tracing::info!(%addr, "Starting gRPC server (no TLS)");
-
-            tonic::transport::Server::builder()
-                .add_service(ExecutionServiceServer::new(execution_service))
-                .add_service(MarketDataServiceServer::new(market_data_service))
-                .serve(addr)
-                .await?;
-
-            Ok(())
-        }
+        tonic::transport::Server::builder()
+            .add_service(ExecutionServiceServer::new(execution_service))
+            .add_service(MarketDataServiceServer::new(market_data_service))
+            .serve(addr)
+            .await?;
     }
+
+    Ok(())
 }
 
 /// Build the gRPC services for testing or custom server setup.
@@ -1041,7 +1034,10 @@ mod tests {
             bar_timeframes: vec![],
         });
 
-        let response = service.get_snapshot(request).await.unwrap();
+        let response = match service.get_snapshot(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("get_snapshot should succeed: {e}"),
+        };
         // Response should be valid (snapshot may be None for now)
         let _snapshot = response.into_inner();
     }
@@ -1056,7 +1052,10 @@ mod tests {
             max_strike: None,
         });
 
-        let response = service.get_option_chain(request).await.unwrap();
+        let response = match service.get_option_chain(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("get_option_chain should succeed: {e}"),
+        };
         // Response should be valid (chain may be None for now)
         let _chain = response.into_inner();
     }

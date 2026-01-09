@@ -3,8 +3,6 @@
  *
  * Hook to track and update streaming WebSocket metrics.
  * Provides real-time updates for connection health monitoring.
- *
- * @see bead cream-wsw5n
  */
 
 "use client";

@@ -3,8 +3,6 @@
  *
  * Displays order cost/credit preview for options orders.
  * Shows estimated premium and total cost with contract multiplier.
- *
- * @see cream-ynlsj - Position Builder Modal
  */
 
 "use client";

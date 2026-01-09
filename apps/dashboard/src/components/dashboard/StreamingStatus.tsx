@@ -4,7 +4,6 @@
  * Displays WebSocket connection health, subscription counts, and latency metrics.
  * Shows real-time streaming indicators for stocks and options WebSocket connections.
  *
- * @see bead cream-wsw5n
  * @see docs/plans/ui/40-streaming-data-integration.md Part 4.1
  */
 

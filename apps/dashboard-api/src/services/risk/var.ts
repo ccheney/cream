@@ -4,7 +4,6 @@
  * Calculates portfolio VaR using historical simulation or parametric methods.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
- * @see bead cream-a4td0
  */
 
 import type { PolygonClient } from "@cream/marketdata";

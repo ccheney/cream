@@ -3,8 +3,6 @@
  *
  * Modal for building options positions from contract clicks.
  * Supports order type, quantity, time-in-force, and price settings.
- *
- * @see cream-ynlsj - Position Builder Modal
  */
 
 "use client";

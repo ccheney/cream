@@ -6,7 +6,6 @@
  *
  * @see docs/plans/ui/05-api-endpoints.md Theses section
  * @see packages/storage/src/repositories/thesis-state.ts
- * @see bead cream-9s0n8
  */
 
 import type { Thesis, ThesisState } from "@cream/storage";

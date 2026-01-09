@@ -5,8 +5,6 @@
  * - Quote counts per minute
  * - Message latency
  * - Connection health indicators
- *
- * @see bead cream-wsw5n
  */
 
 import { create } from "zustand";

@@ -4,7 +4,6 @@
  * Monitors portfolio risk limits and constraint utilization.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
- * @see bead cream-qubb4
  */
 
 import type { ExposureMetrics, PositionForExposure } from "./types.js";

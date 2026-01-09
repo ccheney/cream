@@ -15,8 +15,6 @@
  *   --environment   Filter by environment (BACKTEST, PAPER, LIVE)
  *   --limit         Maximum number of theses to process
  *   --since         Only process theses closed after this date (ISO 8601)
- *
- * @see cream-bhghv
  */
 
 import { type CreamEnvironment, createContext } from "@cream/domain";

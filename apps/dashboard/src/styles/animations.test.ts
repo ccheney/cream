@@ -8,11 +8,9 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import fs from "node:fs";
-import path from "node:path";
 
-// Read files for testing
-const animationsCss = fs.readFileSync(path.join(__dirname, "animations.css"), "utf-8");
+// Read files for testing using Bun.file
+const animationsCss = await Bun.file(`${import.meta.dir}/animations.css`).text();
 
 // Note: Tailwind v4 uses CSS-based configuration via @tailwindcss/postcss plugin
 // The configuration is inline in CSS files, not in a separate tailwind.config.ts

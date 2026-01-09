@@ -632,7 +632,11 @@ impl StatePersistence {
     ///
     /// Currently always succeeds. For remote databases, would return an error
     /// if synchronization with the remote server fails.
-    pub async fn sync(&self) -> Result<(), PersistenceError> {
+    ///
+    /// Note: This is intentionally synchronous since Turso local databases
+    /// don't require sync. For remote sync support in the future, this would
+    /// need to become async with actual network calls.
+    pub fn sync(&self) -> Result<(), PersistenceError> {
         // Note: Turso local databases don't need sync
         // For remote sync, we'd need a different builder configuration
         Ok(())

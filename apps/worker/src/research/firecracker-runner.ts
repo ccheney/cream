@@ -8,9 +8,8 @@
  * @see https://github.com/firecracker-microvm/firecracker-containerd
  */
 
-import { type ChildProcess, spawn } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rm } from "node:fs/promises";
+import type { Subprocess } from "bun";
 import type { VMConfig, VMHandle } from "./types.js";
 
 // ============================================
@@ -21,11 +20,11 @@ const FIRECRACKER_BINARY = process.env.FIRECRACKER_BIN ?? "/usr/bin/firecracker"
 // Reserved for future jailer support
 const _JAILER_BINARY = process.env.JAILER_BIN ?? "/usr/bin/jailer";
 const VM_BASE_PATH = process.env.VM_BASE_PATH ?? "/var/lib/firecracker";
-const SOCKET_DIR = join(VM_BASE_PATH, "sockets");
+const SOCKET_DIR = `${VM_BASE_PATH}/sockets`;
 
 // Default kernel and rootfs paths
-const DEFAULT_KERNEL_PATH = join(VM_BASE_PATH, "vmlinux");
-const DEFAULT_ROOTFS_PATH = join(VM_BASE_PATH, "rootfs.ext4");
+const DEFAULT_KERNEL_PATH = `${VM_BASE_PATH}/vmlinux`;
+const DEFAULT_ROOTFS_PATH = `${VM_BASE_PATH}/rootfs.ext4`;
 
 // ============================================
 // Firecracker API Types
@@ -62,7 +61,7 @@ interface FirecrackerNetworkInterface {
  * Manages Firecracker microVM lifecycle
  */
 export class FirecrackerRunner {
-  private processes: Map<string, ChildProcess> = new Map();
+  private processes: Map<string, Subprocess> = new Map();
   private handles: Map<string, VMHandle> = new Map();
 
   /**
@@ -100,7 +99,7 @@ export class FirecrackerRunner {
    */
   async launchMicroVM(config: Partial<VMConfig>): Promise<VMHandle> {
     const vmId = config.vmId ?? this.generateVmId();
-    const socketPath = join(SOCKET_DIR, `${vmId}.socket`);
+    const socketPath = `${SOCKET_DIR}/${vmId}.socket`;
 
     // Ensure socket directory exists
     await mkdir(SOCKET_DIR, { recursive: true });
@@ -117,7 +116,7 @@ export class FirecrackerRunner {
     };
 
     // Create Firecracker config file
-    const configPath = join(VM_BASE_PATH, `${vmId}-config.json`);
+    const configPath = `${VM_BASE_PATH}/${vmId}-config.json`;
     await this.writeFirecrackerConfig(configPath, fullConfig);
 
     // Launch Firecracker process
@@ -127,23 +126,24 @@ export class FirecrackerRunner {
       args.push("--no-api");
     }
 
-    const process = spawn(FIRECRACKER_BINARY, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
+    const proc = Bun.spawn([FIRECRACKER_BINARY, ...args], {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
     });
 
     const handle: VMHandle = {
       vmId,
-      pid: process.pid ?? -1,
+      pid: proc.pid,
       socketPath,
       status: "running",
     };
 
-    this.processes.set(vmId, process);
+    this.processes.set(vmId, proc);
     this.handles.set(vmId, handle);
 
     // Handle process exit
-    process.on("exit", (code) => {
+    proc.exited.then((code) => {
       const h = this.handles.get(vmId);
       if (h) {
         h.status = code === 0 ? "stopped" : "error";
@@ -185,7 +185,7 @@ export class FirecrackerRunner {
       "machine-config": machineConfig,
     };
 
-    await writeFile(configPath, JSON.stringify(fcConfig, null, 2));
+    await Bun.write(configPath, JSON.stringify(fcConfig, null, 2));
   }
 
   /**
@@ -196,13 +196,10 @@ export class FirecrackerRunner {
     const checkInterval = 100;
 
     while (Date.now() - startTime < timeoutMs) {
-      try {
-        const { access } = await import("node:fs/promises");
-        await access(socketPath);
+      if (await Bun.file(socketPath).exists()) {
         return;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, checkInterval));
       }
+      await Bun.sleep(checkInterval);
     }
 
     throw new Error(`Timeout waiting for Firecracker socket: ${socketPath}`);
@@ -289,9 +286,9 @@ export class FirecrackerRunner {
    */
   async stopMicroVM(vmId: string): Promise<void> {
     const handle = this.handles.get(vmId);
-    const process = this.processes.get(vmId);
+    const proc = this.processes.get(vmId);
 
-    if (!handle || !process) {
+    if (!handle || !proc) {
       throw new Error(`VM not found: ${vmId}`);
     }
 
@@ -302,21 +299,16 @@ export class FirecrackerRunner {
       });
     } catch {
       // If API fails, kill process directly
-      process.kill("SIGTERM");
+      proc.kill();
     }
 
-    // Wait for process to exit
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        process.kill("SIGKILL");
-        resolve();
-      }, 5000);
-
-      process.once("exit", () => {
-        clearTimeout(timeout);
-        resolve();
-      });
+    // Wait for process to exit with timeout
+    const exitPromise = proc.exited;
+    const timeoutPromise = Bun.sleep(5000).then(() => {
+      proc.kill(9); // SIGKILL
     });
+
+    await Promise.race([exitPromise, timeoutPromise]);
 
     // Cleanup
     handle.status = "stopped";
@@ -366,13 +358,7 @@ export class FirecrackerRunner {
  * Check if Firecracker is available on the system
  */
 export async function isFirecrackerAvailable(): Promise<boolean> {
-  try {
-    const { access } = await import("node:fs/promises");
-    await access(FIRECRACKER_BINARY);
-    return true;
-  } catch {
-    return false;
-  }
+  return Bun.file(FIRECRACKER_BINARY).exists();
 }
 
 /**

@@ -10,8 +10,7 @@
  * @see packages/storage/migrations/ for migration files
  */
 
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import type { TursoClient } from "./turso.js";
 
 // ============================================
@@ -74,7 +73,7 @@ export interface MigrationOptions {
 // Constants
 // ============================================
 
-const DEFAULT_MIGRATIONS_DIR = join(import.meta.dir, "..", "migrations");
+const DEFAULT_MIGRATIONS_DIR = `${import.meta.dir}/../migrations`;
 
 const MIGRATION_FILE_PATTERN = /^(\d{3})_(.+)\.sql$/;
 const ROLLBACK_FILE_PATTERN = /^(\d{3})_(.+)_down\.sql$/;
@@ -355,7 +354,7 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
 
       const version = parseInt(match[1]!, 10);
       const name = match[2]?.replace(/_down$/, "") ?? "";
-      const sql = await readFile(join(dir, file), "utf-8");
+      const sql = await Bun.file(`${dir}/${file}`).text();
 
       migrations.push({
         version,

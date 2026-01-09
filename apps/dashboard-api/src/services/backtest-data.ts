@@ -9,7 +9,6 @@
 
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
 import {
   type AggregateBar,
   createPolygonClientFromEnv,
@@ -75,7 +74,7 @@ const TIMEFRAME_MAP: Record<BacktestTimeframe, { multiplier: number; timespan: T
  * Get the path to the research package (for uv run).
  */
 function getResearchPath(): string {
-  return resolve(import.meta.dir, "../../../../packages/research");
+  return `${import.meta.dir}/../../../../packages/research`;
 }
 
 // ============================================
@@ -281,7 +280,7 @@ export async function prepareBacktestData(backtest: Backtest): Promise<string> {
   );
 
   // Write to temp Parquet file
-  const dataPath = join(tmpdir(), `backtest-data-${randomUUID()}.parquet`);
+  const dataPath = `${tmpdir()}/backtest-data-${randomUUID()}.parquet`;
   await writeParquet(dataPath, ohlcv);
 
   return dataPath;
@@ -319,7 +318,7 @@ export async function prepareSignals(backtest: Backtest): Promise<string> {
   const signals = generatePlaceholderSignals(ohlcv);
 
   // Write to temp Parquet file
-  const signalsPath = join(tmpdir(), `backtest-signals-${randomUUID()}.parquet`);
+  const signalsPath = `${tmpdir()}/backtest-signals-${randomUUID()}.parquet`;
   await writeParquet(signalsPath, signals);
 
   return signalsPath;

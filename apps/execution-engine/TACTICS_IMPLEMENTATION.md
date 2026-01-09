@@ -282,4 +282,4 @@ To complete the execution tactics implementation:
 
 ## Author
 
-Implemented as part of bead cream-i86 for the Cream trading system.
+Implemented for the Cream trading system.

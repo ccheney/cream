@@ -108,12 +108,12 @@ fn test_twap_schedule_generation() {
     assert_eq!(schedule[0], start_time);
 
     // Each subsequent slice is 60 seconds apart
-    for i in 1..schedule.len() {
+    for (i, &slice_time) in schedule.iter().enumerate().skip(1) {
         // Wrapping acceptable: i is bounded by schedule.len() which is small
         #[allow(clippy::cast_possible_wrap)]
         let multiplier = i as i64;
         let expected = start_time + Duration::seconds(60 * multiplier);
-        assert_eq!(schedule[i], expected);
+        assert_eq!(slice_time, expected);
     }
 }
 

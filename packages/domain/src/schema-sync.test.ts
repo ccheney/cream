@@ -8,8 +8,6 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 // Import Zod schemas from domain
 import {
@@ -31,11 +29,9 @@ import {
 /**
  * Load a JSON example from packages/schema/examples/
  */
-function loadProtoExample<T = unknown>(filename: string): T {
-  const examplesDir = join(import.meta.dir, "..", "..", "schema", "examples");
-  const filePath = join(examplesDir, filename);
-  const content = readFileSync(filePath, "utf-8");
-  return JSON.parse(content) as T;
+async function loadProtoExample<T = unknown>(filename: string): Promise<T> {
+  const examplesDir = `${import.meta.dir}/../../schema/examples`;
+  return Bun.file(`${examplesDir}/${filename}`).json() as Promise<T>;
 }
 
 // ============================================
@@ -44,8 +40,8 @@ function loadProtoExample<T = unknown>(filename: string): T {
 
 describe("Decision Schema Sync", () => {
   describe("Valid Examples", () => {
-    it("validates equity decision from proto example", () => {
-      const example = loadProtoExample("decision.json");
+    it("validates equity decision from proto example", async () => {
+      const example = await loadProtoExample("decision.json");
       const result = DecisionSchema.safeParse(example);
 
       expect(result.success).toBe(true);
@@ -56,8 +52,8 @@ describe("Decision Schema Sync", () => {
       }
     });
 
-    it("validates option decision from proto example", () => {
-      const example = loadProtoExample("option_decision.json");
+    it("validates option decision from proto example", async () => {
+      const example = await loadProtoExample("option_decision.json");
       const result = DecisionSchema.safeParse(example);
 
       expect(result.success).toBe(true);
@@ -70,9 +66,9 @@ describe("Decision Schema Sync", () => {
   });
 
   describe("Invalid Instrument Type", () => {
-    it("rejects CRYPTO as instrument type", () => {
+    it("rejects CRYPTO as instrument type", async () => {
       const invalid = {
-        ...loadProtoExample("decision.json"),
+        ...(await loadProtoExample("decision.json")),
         instrument: {
           instrumentId: "BTC",
           instrumentType: "CRYPTO", // Invalid - not in enum
@@ -83,9 +79,9 @@ describe("Decision Schema Sync", () => {
       expect(result.success).toBe(false);
     });
 
-    it("rejects FUTURES as instrument type", () => {
+    it("rejects FUTURES as instrument type", async () => {
       const invalid = {
-        ...loadProtoExample("decision.json"),
+        ...(await loadProtoExample("decision.json")),
         instrument: {
           instrumentId: "ES",
           instrumentType: "FUTURES", // Invalid
@@ -98,16 +94,16 @@ describe("Decision Schema Sync", () => {
   });
 
   describe("Invalid Action", () => {
-    it("rejects CLOSE as action", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects CLOSE as action", async () => {
+      const example = await loadProtoExample("decision.json");
       const invalid = { ...example, action: "CLOSE" }; // Not in current enum
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects lowercase action", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects lowercase action", async () => {
+      const example = await loadProtoExample("decision.json");
       const invalid = { ...example, action: "buy" }; // lowercase
 
       const result = DecisionSchema.safeParse(invalid);
@@ -116,40 +112,40 @@ describe("Decision Schema Sync", () => {
   });
 
   describe("Missing Required Fields", () => {
-    it("rejects decision without instrument", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects decision without instrument", async () => {
+      const example = await loadProtoExample("decision.json");
       const { instrument: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects decision without action", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects decision without action", async () => {
+      const example = await loadProtoExample("decision.json");
       const { action: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects decision without size", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects decision without size", async () => {
+      const example = await loadProtoExample("decision.json");
       const { size: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects decision without riskLevels", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects decision without riskLevels", async () => {
+      const example = await loadProtoExample("decision.json");
       const { riskLevels: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects decision without rationale", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects decision without rationale", async () => {
+      const example = await loadProtoExample("decision.json");
       const { rationale: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionSchema.safeParse(invalid);
@@ -158,16 +154,16 @@ describe("Decision Schema Sync", () => {
   });
 
   describe("Invalid Field Types", () => {
-    it("rejects string confidence instead of number", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects string confidence instead of number", async () => {
+      const example = await loadProtoExample("decision.json");
       const invalid = { ...example, confidence: "0.78" }; // string instead of number
 
       const result = DecisionSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects negative quantity", () => {
-      const example = loadProtoExample("decision.json") as Record<string, unknown>;
+    it("rejects negative quantity", async () => {
+      const example = (await loadProtoExample("decision.json")) as Record<string, unknown>;
       const invalid = {
         ...example,
         size: {
@@ -180,8 +176,8 @@ describe("Decision Schema Sync", () => {
       expect(result.success).toBe(false);
     });
 
-    it("rejects confidence outside 0-1 range", () => {
-      const example = loadProtoExample("decision.json");
+    it("rejects confidence outside 0-1 range", async () => {
+      const example = await loadProtoExample("decision.json");
       const invalid = { ...example, confidence: 1.5 }; // > 1
 
       const result = DecisionSchema.safeParse(invalid);
@@ -196,8 +192,8 @@ describe("Decision Schema Sync", () => {
 
 describe("DecisionPlan Schema Sync", () => {
   describe("Valid Examples", () => {
-    it("validates decision plan from proto example", () => {
-      const example = loadProtoExample("decision_plan.json");
+    it("validates decision plan from proto example", async () => {
+      const example = await loadProtoExample("decision_plan.json");
       const result = DecisionPlanSchema.safeParse(example);
 
       expect(result.success).toBe(true);
@@ -210,16 +206,16 @@ describe("DecisionPlan Schema Sync", () => {
   });
 
   describe("Invalid Environment", () => {
-    it("rejects PRODUCTION as environment", () => {
-      const example = loadProtoExample("decision_plan.json");
+    it("rejects PRODUCTION as environment", async () => {
+      const example = await loadProtoExample("decision_plan.json");
       const invalid = { ...example, environment: "PRODUCTION" }; // Not in enum
 
       const result = DecisionPlanSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("accepts all valid environments", () => {
-      const example = loadProtoExample("decision_plan.json");
+    it("accepts all valid environments", async () => {
+      const example = await loadProtoExample("decision_plan.json");
 
       for (const env of ["BACKTEST", "PAPER", "LIVE"]) {
         const valid = { ...example, environment: env };
@@ -230,16 +226,16 @@ describe("DecisionPlan Schema Sync", () => {
   });
 
   describe("Missing Required Fields", () => {
-    it("rejects plan without cycleId", () => {
-      const example = loadProtoExample("decision_plan.json");
+    it("rejects plan without cycleId", async () => {
+      const example = await loadProtoExample("decision_plan.json");
       const { cycleId: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionPlanSchema.safeParse(invalid);
       expect(result.success).toBe(false);
     });
 
-    it("rejects plan without decisions array", () => {
-      const example = loadProtoExample("decision_plan.json");
+    it("rejects plan without decisions array", async () => {
+      const example = await loadProtoExample("decision_plan.json");
       const { decisions: _, ...invalid } = example as Record<string, unknown>;
 
       const result = DecisionPlanSchema.safeParse(invalid);

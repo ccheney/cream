@@ -10,8 +10,7 @@ process.env.CREAM_ENV = "BACKTEST";
 process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rm } from "node:fs/promises";
 import {
   getMigrationStatus,
   MigrationError,
@@ -24,14 +23,14 @@ import { createInMemoryClient, type TursoClient } from "./turso.js";
 // Test Setup
 // ============================================
 
-const TEST_MIGRATIONS_DIR = join(import.meta.dir, "__test_migrations__");
+const TEST_MIGRATIONS_DIR = `${import.meta.dir}/__test_migrations__`;
 
 async function setupTestMigrations(): Promise<void> {
   await mkdir(TEST_MIGRATIONS_DIR, { recursive: true });
 
   // Migration 001: Create users table
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "001_users.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/001_users.sql`,
     `
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,8 +46,8 @@ async function setupTestMigrations(): Promise<void> {
   );
 
   // Rollback 001
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "001_users_down.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/001_users_down.sql`,
     `
     DROP INDEX IF EXISTS idx_users_email;
     DROP TABLE IF EXISTS users;
@@ -57,8 +56,8 @@ async function setupTestMigrations(): Promise<void> {
   );
 
   // Migration 002: Create posts table
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "002_posts.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/002_posts.sql`,
     `
     CREATE TABLE IF NOT EXISTS posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,8 +75,8 @@ async function setupTestMigrations(): Promise<void> {
   );
 
   // Rollback 002
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "002_posts_down.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/002_posts_down.sql`,
     `
     DROP INDEX IF EXISTS idx_posts_user_id;
     DROP TABLE IF EXISTS posts;
@@ -86,8 +85,8 @@ async function setupTestMigrations(): Promise<void> {
   );
 
   // Migration 003: Add status column
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "003_add_status.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/003_add_status.sql`,
     `
     ALTER TABLE posts ADD COLUMN status TEXT DEFAULT 'draft'
       CHECK (status IN ('draft', 'published', 'archived'));
@@ -97,8 +96,8 @@ async function setupTestMigrations(): Promise<void> {
   );
 
   // Rollback 003 - SQLite doesn't support DROP COLUMN, so we recreate
-  await writeFile(
-    join(TEST_MIGRATIONS_DIR, "003_add_status_down.sql"),
+  await Bun.write(
+    `${TEST_MIGRATIONS_DIR}/003_add_status_down.sql`,
     `
     -- SQLite doesn't support DROP COLUMN, this is a placeholder
     -- In production, you'd recreate the table without the column

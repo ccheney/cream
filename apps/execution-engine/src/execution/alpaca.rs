@@ -36,7 +36,12 @@ pub enum AlpacaError {
 
     /// API returned an error.
     #[error("API error: {code} - {message}")]
-    Api { code: String, message: String },
+    Api {
+        /// Error code from the API.
+        code: String,
+        /// Error message from the API.
+        message: String,
+    },
 
     /// Order was rejected.
     #[error("Order rejected: {0}")]
@@ -48,11 +53,19 @@ pub enum AlpacaError {
 
     /// Rate limited.
     #[error("Rate limited, retry after {retry_after_secs}s")]
-    RateLimited { retry_after_secs: u64 },
+    RateLimited {
+        /// Suggested retry delay in seconds.
+        retry_after_secs: u64,
+    },
 
     /// Environment mismatch.
     #[error("Environment mismatch: expected {expected}, got {actual}")]
-    EnvironmentMismatch { expected: String, actual: String },
+    EnvironmentMismatch {
+        /// Expected environment.
+        expected: String,
+        /// Actual environment.
+        actual: String,
+    },
 
     /// Network error (retryable).
     #[error("Network error: {0}")]
@@ -64,7 +77,10 @@ pub enum AlpacaError {
 
     /// Max retries exceeded.
     #[error("Max retries exceeded after {attempts} attempts")]
-    MaxRetriesExceeded { attempts: u32 },
+    MaxRetriesExceeded {
+        /// Number of attempts made before giving up.
+        attempts: u32,
+    },
 }
 
 impl From<reqwest::Error> for AlpacaError {

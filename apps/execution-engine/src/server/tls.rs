@@ -281,7 +281,7 @@ impl TlsConfigBuilder {
                 "Loading TLS certificates from files"
             );
 
-            let ca_path_ref = self.ca_path.as_ref().map(String::as_str);
+            let ca_path_ref = self.ca_path.as_deref();
             return TlsConfig::from_files(cert_path, key_path, ca_path_ref, self.client_auth)
                 .map(Some);
         }

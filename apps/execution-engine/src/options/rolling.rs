@@ -903,7 +903,7 @@ mod tests {
             .reason(RollReason::UrgentDte)
             .broker_supports_atomic(false)
             .build()
-            .unwrap();
+            .expect("should build sequential roll order");
 
         assert_eq!(order.order_type, RollOrderType::Sequential);
     }

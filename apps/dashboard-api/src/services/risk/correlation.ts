@@ -4,7 +4,6 @@
  * Calculates pairwise correlation matrix for portfolio positions.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
- * @see bead cream-eahae
  */
 
 import type { PolygonClient } from "@cream/marketdata";
