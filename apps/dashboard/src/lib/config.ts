@@ -6,18 +6,18 @@
  */
 
 /**
- * Validate and return NEXT_PUBLIC_CREAM_ENV for client-side code.
- * Throws if not set or invalid.
+ * Get NEXT_PUBLIC_CREAM_ENV for client-side code.
+ * Defaults to BACKTEST for local development.
  */
-function requireClientEnv(): "BACKTEST" | "PAPER" | "LIVE" {
+function getClientEnv(): "BACKTEST" | "PAPER" | "LIVE" {
   const env = process.env.NEXT_PUBLIC_CREAM_ENV;
   if (!env) {
-    throw new Error("NEXT_PUBLIC_CREAM_ENV must be set to BACKTEST, PAPER, or LIVE");
+    // Default to BACKTEST for local development
+    return "BACKTEST";
   }
   if (!["BACKTEST", "PAPER", "LIVE"].includes(env)) {
-    throw new Error(
-      `Invalid NEXT_PUBLIC_CREAM_ENV value: "${env}". Must be BACKTEST, PAPER, or LIVE`
-    );
+    console.warn(`Invalid NEXT_PUBLIC_CREAM_ENV value: "${env}". Defaulting to BACKTEST.`);
+    return "BACKTEST";
   }
   return env as "BACKTEST" | "PAPER" | "LIVE";
 }
@@ -35,7 +35,7 @@ export const config = {
     /** Maximum reconnection attempts before giving up */
     maxReconnectAttempts: 10,
   },
-  environment: requireClientEnv(),
+  environment: getClientEnv(),
 } as const;
 
 /** Type-safe access to configuration */
