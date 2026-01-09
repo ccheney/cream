@@ -89,6 +89,18 @@ export {
   toSplitAdjustment,
   unadjustPrice,
 } from "./corporate-actions";
+// Market data factory
+export {
+  type AdapterCandle,
+  type AdapterQuote,
+  createMarketDataAdapter,
+  getMarketDataAdapter,
+  isMarketDataAvailable,
+  type MarketDataAdapter,
+  MarketDataConfigError,
+  MockMarketDataAdapter,
+  PolygonMarketDataAdapter,
+} from "./factory";
 // Candle ingestion
 export {
   aggregateCandles,
