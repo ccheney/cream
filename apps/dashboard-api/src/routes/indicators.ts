@@ -359,14 +359,37 @@ app.openapi(getTriggerStatusRoute, async (c) => {
     ? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
     : 999;
 
+  // Get current market regime from regime labels
+  let currentRegime: string | null = null;
+  let regimeGapDetected = false;
+  try {
+    const regimeRows = await db.execute(
+      `SELECT regime, confidence FROM regime_labels
+       WHERE symbol = '_MARKET' AND timeframe = '1d'
+       ORDER BY timestamp DESC LIMIT 1`
+    );
+    if (regimeRows.length > 0) {
+      currentRegime = regimeRows[0]?.regime as string;
+      // A regime gap is detected when confidence is low (uncertain regime)
+      const confidence = regimeRows[0]?.confidence as number;
+      regimeGapDetected = confidence < 0.5;
+    } else {
+      // No regime data available - this is a gap
+      regimeGapDetected = true;
+    }
+  } catch {
+    // Regime labels table may not exist or be empty
+    regimeGapDetected = true;
+  }
+
   const conditions = {
     rollingIC30Day: rollingIC,
     icDecayDays,
     daysSinceLastAttempt,
     activeIndicatorCount: activeCount,
     maxIndicatorCapacity: 20,
-    regimeGapDetected: false, // TODO: Integrate with regime detection
-    currentRegime: null,
+    regimeGapDetected,
+    currentRegime,
   };
 
   // Determine if generation should trigger

@@ -36,6 +36,13 @@ export {
   type AlertType,
   type CreateAlertInput,
 } from "./alerts.js";
+// Audit log (migration 015) - LIVE environment action tracking
+export {
+  type AuditLogEntry,
+  type AuditLogFilters,
+  AuditLogRepository,
+  type CreateAuditLogInput,
+} from "./audit-log.js";
 export {
   type Backtest,
   type BacktestEquityPoint,

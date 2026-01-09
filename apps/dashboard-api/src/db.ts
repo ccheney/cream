@@ -12,6 +12,7 @@ import {
   AgentOutputsRepository,
   AlertSettingsRepository,
   AlertsRepository,
+  AuditLogRepository,
   BacktestsRepository,
   ConfigVersionsRepository,
   createInMemoryClient,
@@ -249,6 +250,14 @@ export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepositor
 export async function getUserPreferencesRepo(): Promise<UserPreferencesRepository> {
   const client = await getDbClient();
   return new UserPreferencesRepository(client);
+}
+
+/**
+ * Get audit log repository
+ */
+export async function getAuditLogRepo(): Promise<AuditLogRepository> {
+  const client = await getDbClient();
+  return new AuditLogRepository(client);
 }
 
 // ============================================

@@ -9,11 +9,13 @@
 
 import type { ServerWebSocket } from "bun";
 import {
+  type AcknowledgeAlertMessage,
   CHANNELS,
   type Channel,
   type ClientMessage,
   ClientMessageSchema,
   type PingMessage,
+  type RequestStateMessage,
   type ServerMessage,
   type SubscribeBacktestMessage,
   type SubscribeMessage,
@@ -395,6 +397,244 @@ function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
 }
 
 /**
+ * Handle request state message.
+ * Sends current state snapshot for the requested channel.
+ */
+async function handleRequestState(
+  ws: WebSocketWithMetadata,
+  message: RequestStateMessage
+): Promise<void> {
+  const { channel } = message;
+
+  try {
+    switch (channel) {
+      case "system": {
+        // Return current system status
+        sendMessage(ws, {
+          type: "system_status",
+          data: {
+            health: "healthy",
+            uptimeSeconds: Math.floor(process.uptime()),
+            activeConnections: connections.size,
+            services: {},
+            environment: (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER",
+            timestamp: new Date().toISOString(),
+          },
+        });
+        break;
+      }
+      case "portfolio": {
+        // Import db functions dynamically to avoid circular deps
+        const { getPositionsRepo } = await import("../db.js");
+        const positionsRepo = await getPositionsRepo();
+        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const positionsResult = await positionsRepo.findMany({
+          environment,
+          status: "open",
+        });
+
+        // Calculate portfolio summary
+        const positions = positionsResult.data.map((p) => ({
+          symbol: p.symbol,
+          quantity: p.quantity,
+          marketValue: p.marketValue ?? p.quantity * (p.avgEntryPrice ?? 0),
+          unrealizedPnl: p.unrealizedPnl ?? 0,
+          unrealizedPnlPercent: p.unrealizedPnlPct ?? 0,
+          costBasis: p.avgEntryPrice ?? 0,
+        }));
+
+        const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+
+        sendMessage(ws, {
+          type: "portfolio",
+          data: {
+            totalValue,
+            cash: 0, // Would come from broker account
+            buyingPower: 0,
+            dailyPnl: 0,
+            dailyPnlPercent: 0,
+            openPositions: positions.length,
+            positions,
+            timestamp: new Date().toISOString(),
+          },
+        });
+        break;
+      }
+      case "alerts": {
+        const { getAlertsRepo } = await import("../db.js");
+        const alertsRepo = await getAlertsRepo();
+        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const alerts = await alertsRepo.findUnacknowledged(environment, 50);
+
+        // Send each alert as an individual message
+        for (const alert of alerts) {
+          sendMessage(ws, {
+            type: "alert",
+            data: {
+              id: alert.id,
+              severity: alert.severity,
+              title: alert.title,
+              message: alert.message,
+              category: alert.type as
+                | "order"
+                | "position"
+                | "risk"
+                | "system"
+                | "agent"
+                | "market"
+                | undefined,
+              acknowledged: alert.acknowledged,
+              timestamp: alert.createdAt,
+            },
+          });
+        }
+        break;
+      }
+      case "orders": {
+        const { getOrdersRepo } = await import("../db.js");
+        const ordersRepo = await getOrdersRepo();
+        const environment = (process.env.CREAM_ENV as "BACKTEST" | "PAPER" | "LIVE") ?? "PAPER";
+        const ordersResult = await ordersRepo.findMany({
+          environment,
+          status: "pending",
+        });
+
+        for (const order of ordersResult.data) {
+          // Map storage types to WebSocket protocol types
+          const sideMap: Record<string, "buy" | "sell"> = { BUY: "buy", SELL: "sell" };
+          const orderTypeMap: Record<string, "market" | "limit" | "stop" | "stop_limit"> = {
+            MARKET: "market",
+            LIMIT: "limit",
+            STOP: "stop",
+            STOP_LIMIT: "stop_limit",
+          };
+          const statusMap: Record<
+            string,
+            | "pending"
+            | "submitted"
+            | "partial_fill"
+            | "filled"
+            | "cancelled"
+            | "rejected"
+            | "expired"
+          > = {
+            pending: "pending",
+            submitted: "submitted",
+            accepted: "submitted", // Map accepted to submitted for WebSocket
+            partially_filled: "partial_fill",
+            filled: "filled",
+            cancelled: "cancelled",
+            rejected: "rejected",
+            expired: "expired",
+          };
+
+          sendMessage(ws, {
+            type: "order",
+            data: {
+              id: order.id,
+              symbol: order.symbol,
+              side: sideMap[order.side] ?? "buy",
+              orderType: orderTypeMap[order.orderType] ?? "market",
+              status: statusMap[order.status] ?? "pending",
+              quantity: order.quantity,
+              filledQty: order.filledQuantity ?? 0,
+              limitPrice: order.limitPrice ?? undefined,
+              stopPrice: order.stopPrice ?? undefined,
+              avgPrice: order.avgFillPrice ?? undefined,
+              timestamp: order.createdAt,
+            },
+          });
+        }
+        break;
+      }
+      case "quotes": {
+        // Send cached quotes for subscribed symbols
+        const metadata = ws.data;
+        for (const symbol of metadata.symbols) {
+          const cached = getCachedQuote(symbol);
+          if (cached) {
+            sendMessage(ws, {
+              type: "quote",
+              data: {
+                symbol,
+                bid: cached.bid,
+                ask: cached.ask,
+                last: cached.last,
+                volume: cached.volume,
+                timestamp: cached.timestamp.toISOString(),
+              },
+            });
+          }
+        }
+        break;
+      }
+      default:
+        // For channels without state, just confirm the request
+        sendMessage(ws, {
+          type: "subscribed",
+          channels: [channel],
+        });
+    }
+  } catch (error) {
+    sendError(
+      ws,
+      `Failed to get state for channel ${channel}: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}
+
+/**
+ * Handle acknowledge alert message.
+ * Marks an alert as acknowledged in the database.
+ */
+async function handleAcknowledgeAlert(
+  ws: WebSocketWithMetadata,
+  message: AcknowledgeAlertMessage
+): Promise<void> {
+  const { alertId } = message;
+  const userId = ws.data.userId;
+
+  try {
+    const { getAlertsRepo } = await import("../db.js");
+    const alertsRepo = await getAlertsRepo();
+
+    const alert = await alertsRepo.acknowledge(alertId, userId);
+
+    // Broadcast acknowledgment to all connected clients subscribed to alerts
+    broadcast("alerts", {
+      type: "alert",
+      data: {
+        id: alert.id,
+        severity: alert.severity,
+        title: alert.title,
+        message: alert.message,
+        category: alert.type as
+          | "order"
+          | "position"
+          | "risk"
+          | "system"
+          | "agent"
+          | "market"
+          | undefined,
+        acknowledged: true,
+        timestamp: alert.createdAt,
+      },
+    });
+
+    // Send confirmation to the acknowledging client
+    sendMessage(ws, {
+      type: "subscribed",
+      channels: ["alerts"],
+    });
+  } catch (error) {
+    sendError(
+      ws,
+      `Failed to acknowledge alert ${alertId}: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}
+
+/**
  * Route incoming message to appropriate handler.
  */
 export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): void {
@@ -448,12 +688,10 @@ export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): vo
       handlePing(ws, message);
       break;
     case "request_state":
-      // TODO: Implement state request
-      sendError(ws, "request_state not yet implemented");
+      handleRequestState(ws, message);
       break;
     case "acknowledge_alert":
-      // TODO: Implement alert acknowledgment
-      sendError(ws, "acknowledge_alert not yet implemented");
+      handleAcknowledgeAlert(ws, message);
       break;
     default:
       sendError(ws, `Unknown message type: ${(message as ClientMessage).type}`);

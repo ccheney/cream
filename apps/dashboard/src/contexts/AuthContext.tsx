@@ -48,27 +48,6 @@ interface AuthContextValue {
   verifyTwoFactor: (code: string) => Promise<boolean>;
   /** Manually refresh the session */
   refreshSession: () => void;
-
-  // ============================================
-  // Legacy compatibility aliases
-  // ============================================
-
-  /**
-   * @deprecated Use signInWithGoogle instead
-   */
-  login: (email: string, password: string) => Promise<void>;
-  /**
-   * @deprecated Use signOut instead
-   */
-  logout: () => Promise<void>;
-  /**
-   * @deprecated Use verifyTwoFactor instead
-   */
-  verifyMFA: (code: string) => Promise<void>;
-  /**
-   * @deprecated Roles have been removed - all users have full access
-   */
-  mfaRequired: boolean;
 }
 
 // ============================================
@@ -127,24 +106,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // Legacy compatibility: login (deprecated - redirects to Google OAuth)
-  const legacyLogin = useCallback(
-    async (_email: string, _password: string) => {
-      // Email/password login is deprecated - redirect to Google OAuth
-      await signInWithGoogle();
-    },
-    [signInWithGoogle]
-  );
-
-  // Legacy compatibility: verifyMFA (deprecated - redirects to verifyTwoFactor)
-  const legacyVerifyMFA = useCallback(
-    async (code: string) => {
-      // verifyMFA is deprecated - use verifyTwoFactor
-      await verifyTwoFactor(code);
-    },
-    [verifyTwoFactor]
-  );
-
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -156,11 +117,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signOut: handleSignOut,
       verifyTwoFactor,
       refreshSession: refetch,
-      // Legacy compatibility
-      login: legacyLogin,
-      logout: handleSignOut,
-      verifyMFA: legacyVerifyMFA,
-      mfaRequired: false, // Deprecated - always false
     }),
     [
       user,
@@ -172,8 +128,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       handleSignOut,
       verifyTwoFactor,
       refetch,
-      legacyLogin,
-      legacyVerifyMFA,
     ]
   );
 

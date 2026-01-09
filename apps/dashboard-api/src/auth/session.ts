@@ -184,15 +184,25 @@ export function liveProtection(
 
     // Audit logging
     if (options.auditLog) {
-      const _auditEntry = {
-        timestamp: new Date().toISOString(),
+      const auditEntry = {
+        id: crypto.randomUUID(),
         userId: user.id,
-        email: user.email,
+        userEmail: user.email,
         action: `${c.req.method} ${c.req.path}`,
-        ip: c.req.header("X-Forwarded-For") ?? c.req.header("X-Real-IP") ?? "unknown",
-        userAgent: c.req.header("User-Agent"),
+        ipAddress: c.req.header("X-Forwarded-For") ?? c.req.header("X-Real-IP") ?? "unknown",
+        userAgent: c.req.header("User-Agent") ?? null,
+        environment: "LIVE",
       };
-      // TODO: Persist audit entry to database
+      // Persist audit entry to database (non-blocking)
+      import("../db.js").then(async ({ getAuditLogRepo }) => {
+        try {
+          const repo = await getAuditLogRepo();
+          await repo.create(auditEntry);
+        } catch {
+          // Log error but don't block the request
+          console.error("[AuditLog] Failed to persist audit entry:", auditEntry.id);
+        }
+      });
     }
 
     await next();
