@@ -23,13 +23,10 @@ import {
   createBrokerClient,
 } from "@cream/broker";
 import { type ExecutionContext, isBacktest } from "@cream/domain";
-import {
-  createExecutionClient,
-  createMarketDataClient,
-  type ExecutionServiceClient,
-  GrpcError,
-  type MarketDataServiceClient,
-} from "@cream/domain/grpc";
+
+// Note: gRPC clients are loaded dynamically to avoid module resolution issues in CI
+// where @cream/schema-gen subpath exports don't resolve correctly.
+// See: packages/domain/src/grpc/__tests__/grpc-client.test.ts for context.
 import { createHelixClientFromEnv, type HelixClient, HelixError } from "@cream/helix";
 import {
   type Candle,
@@ -148,19 +145,48 @@ export interface HelixQueryResult {
 const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50052";
 const DEFAULT_EXECUTION_URL = process.env.EXECUTION_SERVICE_URL ?? "http://localhost:50051";
 
-let marketDataClient: MarketDataServiceClient | null = null;
-let executionClient: ExecutionServiceClient | null = null;
+// Using 'any' for client types since we use dynamic imports to avoid CI module resolution issues
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
+let marketDataClient: any = null;
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
+let executionClient: any = null;
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
+let grpcModule: any = null;
 
-function getMarketDataClient(): MarketDataServiceClient {
+async function getGrpcModule() {
+  if (!grpcModule) {
+    grpcModule = await import("@cream/domain/grpc");
+  }
+  return grpcModule;
+}
+
+/**
+ * Check if an error is a GrpcError with UNIMPLEMENTED code.
+ * Used instead of instanceof since gRPC module is dynamically imported.
+ */
+function isGrpcUnimplementedError(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "name" in error &&
+    error.name === "GrpcError" &&
+    "code" in error &&
+    error.code === "UNIMPLEMENTED"
+  );
+}
+
+async function getMarketDataClient() {
   if (!marketDataClient) {
-    marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
+    const grpc = await getGrpcModule();
+    marketDataClient = grpc.createMarketDataClient(DEFAULT_MARKET_DATA_URL);
   }
   return marketDataClient;
 }
 
-function getExecutionClient(): ExecutionServiceClient {
+async function getExecutionClient() {
   if (!executionClient) {
-    executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
+    const grpc = await getGrpcModule();
+    executionClient = grpc.createExecutionClient(DEFAULT_EXECUTION_URL);
   }
   return executionClient;
 }
@@ -235,7 +261,7 @@ export async function getQuotes(ctx: ExecutionContext, instruments: string[]): P
   }
 
   try {
-    const client = getMarketDataClient();
+    const client = await getMarketDataClient();
     const response = await client.getSnapshot({
       symbols: instruments,
       includeBars: false,
@@ -269,7 +295,7 @@ export async function getQuotes(ctx: ExecutionContext, instruments: string[]): P
     return quotes;
   } catch (error) {
     // Fall back to mock data if gRPC fails
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+    if (isGrpcUnimplementedError(error)) {
       // Expected during development - silently fall back
       return instruments.map(createMockQuote);
     }
@@ -310,7 +336,7 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 
   // Try gRPC first
   try {
-    const client = getExecutionClient();
+    const client = await getExecutionClient();
 
     // Fetch account state and positions in parallel
     const [accountResponse, positionsResponse] = await Promise.all([
@@ -323,7 +349,8 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 
     // Calculate total unrealized P&L
     let totalPnL = 0;
-    const mappedPositions: PortfolioPosition[] = positions.map((pos) => {
+    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
+    const mappedPositions: PortfolioPosition[] = positions.map((pos: any) => {
       totalPnL += pos.unrealizedPnl ?? 0;
       return {
         symbol: pos.instrument?.instrumentId ?? "",
@@ -343,7 +370,7 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
     };
   } catch (error) {
     // gRPC failed - try broker client
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+    if (isGrpcUnimplementedError(error)) {
       return getPortfolioStateFromBroker(ctx);
     }
     // Other gRPC errors - also try broker
@@ -421,7 +448,7 @@ export async function getOptionChain(
   }
 
   try {
-    const client = getMarketDataClient();
+    const client = await getMarketDataClient();
     const response = await client.getOptionChain({
       underlying,
     });
@@ -494,7 +521,7 @@ export async function getOptionChain(
     };
   } catch (error) {
     // Fall back to mock data if gRPC fails
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+    if (isGrpcUnimplementedError(error)) {
       // Expected during development - silently fall back
       return createMockOptionChain(underlying);
     }
@@ -584,7 +611,7 @@ export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): 
   }
 
   try {
-    const client = getMarketDataClient();
+    const client = await getMarketDataClient();
 
     // Get option chain for the underlying
     const response = await client.getOptionChain({
@@ -597,7 +624,8 @@ export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): 
     }
 
     // Find the specific contract by matching underlying, expiration, type, and strike
-    const option = chain.options.find((opt) => {
+    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
+    const option = chain.options.find((opt: any) => {
       const contract = opt.contract;
       if (!contract) {
         return false;
@@ -629,7 +657,7 @@ export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): 
     };
   } catch (error) {
     // Fall back to mock data if gRPC fails
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+    if (isGrpcUnimplementedError(error)) {
       // Expected during development - silently fall back
       return createMockGreeks();
     }
@@ -781,7 +809,7 @@ export async function recalcIndicator(
   }
 
   try {
-    const client = getMarketDataClient();
+    const client = await getMarketDataClient();
 
     // Fetch bars from MarketDataService
     // Request 1-hour bars (timeframe 60) for the symbol
@@ -793,7 +821,8 @@ export async function recalcIndicator(
     });
 
     // Extract bars and convert to Candle format
-    const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
+    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
+    const symbolSnapshot = response.data.snapshot?.symbols?.find((s: any) => s.symbol === symbol);
     const bars = symbolSnapshot?.bars ?? [];
 
     if (bars.length === 0) {
@@ -801,7 +830,8 @@ export async function recalcIndicator(
     }
 
     // Convert protobuf bars to Candle format
-    const candles: Candle[] = bars.map((bar) => ({
+    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
+    const candles: Candle[] = bars.map((bar: any) => ({
       timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
       open: bar.open,
       high: bar.high,
@@ -824,7 +854,7 @@ export async function recalcIndicator(
     };
   } catch (error) {
     // Fall back to mock data if gRPC fails
-    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
+    if (isGrpcUnimplementedError(error)) {
       // Expected during development - silently fall back
       return createMockIndicatorResult(indicator, symbol);
     }
