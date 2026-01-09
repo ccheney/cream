@@ -9,6 +9,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 // ============================================
 // Types
@@ -245,52 +246,60 @@ export const selectFeedFilters = (state: UIStore) => state.realTimeFeedFilters;
  * Hook for sidebar state and toggle.
  */
 export function useSidebar() {
-  return useUIStore((state) => ({
-    collapsed: state.sidebarCollapsed,
-    toggle: state.toggleSidebar,
-    setCollapsed: state.setSidebarCollapsed,
-  }));
+  return useUIStore(
+    useShallow((state) => ({
+      collapsed: state.sidebarCollapsed,
+      toggle: state.toggleSidebar,
+      setCollapsed: state.setSidebarCollapsed,
+    }))
+  );
 }
 
 /**
  * Hook for real-time feed visibility.
  */
 export function useRealTimeFeed() {
-  return useUIStore((state) => ({
-    visible: state.realTimeFeedVisible,
-    toggle: state.toggleRealTimeFeed,
-    setVisible: state.setRealTimeFeedVisible,
-    filters: state.realTimeFeedFilters,
-    setFilters: state.setFeedFilters,
-    toggleFilter: state.toggleFeedFilter,
-  }));
+  return useUIStore(
+    useShallow((state) => ({
+      visible: state.realTimeFeedVisible,
+      toggle: state.toggleRealTimeFeed,
+      setVisible: state.setRealTimeFeedVisible,
+      filters: state.realTimeFeedFilters,
+      setFilters: state.setFeedFilters,
+      toggleFilter: state.toggleFeedFilter,
+    }))
+  );
 }
 
 /**
  * Hook for chart preferences.
  */
 export function useChartPreferences() {
-  return useUIStore((state) => ({
-    timeframe: state.chartTimeframe,
-    setTimeframe: state.setChartTimeframe,
-    showVolume: state.chartShowVolume,
-    setShowVolume: state.setChartShowVolume,
-    indicators: state.chartShowIndicators,
-    setIndicators: state.setChartIndicators,
-    toggleIndicator: state.toggleChartIndicator,
-  }));
+  return useUIStore(
+    useShallow((state) => ({
+      timeframe: state.chartTimeframe,
+      setTimeframe: state.setChartTimeframe,
+      showVolume: state.chartShowVolume,
+      setShowVolume: state.setChartShowVolume,
+      indicators: state.chartShowIndicators,
+      setIndicators: state.setChartIndicators,
+      toggleIndicator: state.toggleChartIndicator,
+    }))
+  );
 }
 
 /**
  * Hook for table preferences.
  */
 export function useTablePreferences() {
-  return useUIStore((state) => ({
-    pageSize: state.tablePageSize,
-    setPageSize: state.setTablePageSize,
-    density: state.tableDensity,
-    setDensity: state.setTableDensity,
-  }));
+  return useUIStore(
+    useShallow((state) => ({
+      pageSize: state.tablePageSize,
+      setPageSize: state.setTablePageSize,
+      density: state.tableDensity,
+      setDensity: state.setTableDensity,
+    }))
+  );
 }
 
 export default useUIStore;
