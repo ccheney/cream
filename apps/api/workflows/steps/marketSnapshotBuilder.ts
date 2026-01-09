@@ -24,6 +24,7 @@ import type {
   SymbolSnapshot,
   UniverseConfig,
 } from "@cream/domain";
+import { requireEnv } from "@cream/domain";
 import { createExecutionClient, type ExecutionServiceClient } from "@cream/domain/grpc";
 import type { Candle } from "@cream/indicators";
 import { createPolygonClientFromEnv, type PolygonClient, type Snapshot } from "@cream/marketdata";
@@ -191,7 +192,7 @@ export async function executeMarketSnapshotBuilder(
     // Phase 4: Assemble final market snapshot
     const asOf = input.asOf ?? new Date().toISOString();
     // Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
-    const environment = (process.env.CREAM_ENV ?? "BACKTEST") as "BACKTEST" | "PAPER" | "LIVE";
+    const environment = requireEnv();
     const marketStatus = determineMarketStatus();
 
     const snapshot: MarketSnapshot = {
@@ -245,7 +246,7 @@ async function gatherSnapshotData(
 ): Promise<SnapshotData> {
   // Create Polygon client for market data
   let polygonClient: PolygonClient | null = null;
-  const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
+  const creamEnv = requireEnv();
   const polygonKey = process.env.POLYGON_KEY;
 
   if (creamEnv !== "BACKTEST" || polygonKey) {
@@ -286,7 +287,7 @@ async function fetchMarketData(
   warnings: string[]
 ): Promise<Map<string, InternalSnapshot>> {
   const snapshots = new Map<string, InternalSnapshot>();
-  const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
+  const creamEnv = requireEnv();
   const polygonKey = process.env.POLYGON_KEY;
 
   // In BACKTEST mode without API keys, use deterministic fixtures

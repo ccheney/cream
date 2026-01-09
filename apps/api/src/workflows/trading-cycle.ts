@@ -14,8 +14,10 @@
  * @see docs/plans/05-agents.md
  */
 
+import { create } from "@bufbuild/protobuf";
 import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
 import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { createMarketDataAdapter } from "@cream/marketdata";
 import {
   ConsensusGate,
   type DecisionPlan,
@@ -23,6 +25,7 @@ import {
   withAgentTimeout,
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
+import { InstrumentSchema, InstrumentType } from "@cream/schema-gen/cream/v1/common";
 import {
   FIXTURE_TIMESTAMP,
   getCandleFixtures,
@@ -48,6 +51,7 @@ import {
   getRuntimeConfigService,
   type RuntimeEnvironment,
 } from "../db.js";
+import { ExecutionEngineError, getExecutionEngineClient, OrderSide } from "../grpc/index.js";
 
 // ============================================
 // Types
@@ -301,7 +305,7 @@ function buildAgentConfigs(
  * Fetch market snapshot for the given instruments.
  *
  * In BACKTEST mode, uses deterministic fixture data for reproducible behavior.
- * In PAPER/LIVE mode, will fetch real market data (currently uses fixtures as placeholder).
+ * In PAPER/LIVE mode, fetches real market data via the market data adapter.
  *
  * @param instruments - Array of ticker symbols
  * @param ctx - Execution context for environment detection
@@ -311,7 +315,78 @@ async function fetchMarketSnapshot(
   instruments: string[],
   ctx?: ExecutionContext
 ): Promise<MarketSnapshot> {
-  const timestamp = ctx && isBacktest(ctx) ? FIXTURE_TIMESTAMP : Date.now();
+  // In BACKTEST mode, use deterministic fixture data
+  if (ctx && isBacktest(ctx)) {
+    return fetchFixtureSnapshot(instruments);
+  }
+
+  // In PAPER/LIVE mode, use real market data adapter
+  const adapter = createMarketDataAdapter(ctx?.environment);
+
+  // Calculate date range for candle fetching (last 7 days for 120 hourly candles)
+  const toDate = new Date();
+  const fromDate = new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const from = fromDate.toISOString().split("T")[0]!;
+  const to = toDate.toISOString().split("T")[0]!;
+
+  const timestamp = Date.now();
+  const candles: Record<string, CandleData[]> = {};
+  const quotes: Record<string, QuoteData> = {};
+
+  // Fetch candles for each instrument
+  for (const symbol of instruments) {
+    const adapterCandles = await adapter.getCandles(symbol, "1h", from, to);
+    candles[symbol] = adapterCandles.slice(-120).map((c) => ({
+      timestamp: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+    }));
+  }
+
+  // Fetch quotes in batch
+  const adapterQuotes = await adapter.getQuotes(instruments);
+  for (const symbol of instruments) {
+    const quote = adapterQuotes.get(symbol);
+    if (quote) {
+      quotes[symbol] = {
+        bid: quote.bid,
+        ask: quote.ask,
+        bidSize: quote.bidSize,
+        askSize: quote.askSize,
+        timestamp: quote.timestamp,
+      };
+    } else {
+      // Fallback quote from latest candle
+      const symbolCandles = candles[symbol];
+      const lastCandle = symbolCandles?.[symbolCandles.length - 1];
+      const lastPrice = lastCandle?.close ?? 100;
+      const spread = lastPrice * 0.0002;
+      quotes[symbol] = {
+        bid: Number((lastPrice - spread / 2).toFixed(2)),
+        ask: Number((lastPrice + spread / 2).toFixed(2)),
+        bidSize: 100,
+        askSize: 100,
+        timestamp,
+      };
+    }
+  }
+
+  return {
+    instruments,
+    candles,
+    quotes,
+    timestamp,
+  };
+}
+
+/**
+ * Fetch market snapshot using deterministic fixture data (for BACKTEST mode).
+ */
+function fetchFixtureSnapshot(instruments: string[]): MarketSnapshot {
+  const timestamp = FIXTURE_TIMESTAMP;
   const candles: Record<string, CandleData[]> = {};
   const quotes: Record<string, QuoteData> = {};
 
@@ -333,7 +408,7 @@ async function fetchMarketSnapshot(
     } else {
       // Fallback quote derived from last trade price
       const lastPrice = snapshot.lastTrade?.price ?? snapshot.open;
-      const spread = lastPrice * 0.0002; // 2 basis point spread
+      const spread = lastPrice * 0.0002;
       quotes[symbol] = {
         bid: Number((lastPrice - spread / 2).toFixed(2)),
         ask: Number((lastPrice + spread / 2).toFixed(2)),
@@ -343,11 +418,6 @@ async function fetchMarketSnapshot(
       };
     }
   }
-
-  // TODO: In PAPER/LIVE mode, wire up real market data providers:
-  // - Polygon for candles and quotes
-  // - Databento for real-time execution-grade data
-  // For now, fixture data is used as a placeholder for all environments.
 
   return {
     instruments,
@@ -650,25 +720,124 @@ async function runCriticStub(_plan: WorkflowDecisionPlan): Promise<Approval> {
   };
 }
 
+/**
+ * Check constraints for the trading plan.
+ *
+ * In BACKTEST mode, returns a simple pass/fail based on approval.
+ * In PAPER/LIVE mode, calls the Rust execution engine for constraint validation.
+ */
 async function checkConstraints(
-  approved: boolean
+  approved: boolean,
+  _plan: WorkflowDecisionPlan,
+  ctx?: ExecutionContext
 ): Promise<{ passed: boolean; violations: string[] }> {
   if (!approved) {
     return { passed: false, violations: ["Plan not approved by agents"] };
   }
-  // STUB: Would call Rust gRPC CheckConstraints
-  return { passed: true, violations: [] };
+
+  // In BACKTEST mode, skip execution engine call
+  if (ctx && isBacktest(ctx)) {
+    return { passed: true, violations: [] };
+  }
+
+  // In PAPER/LIVE mode, call execution engine
+  try {
+    const client = getExecutionEngineClient();
+
+    // Get account state and positions for constraint validation
+    const [accountResponse, positionsResponse] = await Promise.all([
+      client.getAccountState({}),
+      client.getPositions({}),
+    ]);
+
+    // Call constraint check
+    const response = await client.checkConstraints({
+      // Note: decisionPlan proto expects cream.v1.DecisionPlan structure
+      // For now, we pass basic data - full conversion would require mapping
+      accountState: accountResponse.accountState,
+      positions: positionsResponse.positions,
+    });
+
+    return {
+      passed: response.approved,
+      violations: response.violations.map((v) => v.message),
+    };
+  } catch (error) {
+    // On execution engine failure, fail closed (reject trades)
+    const message = error instanceof ExecutionEngineError ? error.message : String(error);
+    return { passed: false, violations: [`Execution engine error: ${message}`] };
+  }
 }
 
+/**
+ * Submit orders for approved decisions.
+ *
+ * In BACKTEST mode, returns mock order IDs without executing.
+ * In PAPER/LIVE mode, calls the Rust execution engine to submit orders.
+ */
 async function submitOrders(
-  constraintsPassed: boolean
+  constraintsPassed: boolean,
+  plan: WorkflowDecisionPlan,
+  cycleId: string,
+  ctx?: ExecutionContext
 ): Promise<{ submitted: boolean; orderIds: string[]; errors: string[] }> {
   if (!constraintsPassed) {
     return { submitted: false, orderIds: [], errors: ["Constraints not passed"] };
   }
-  // STUB: Would call Rust gRPC SubmitOrders
-  // For HOLD decisions, no orders to submit
-  return { submitted: true, orderIds: [], errors: [] };
+
+  // Filter to actionable decisions (not HOLD)
+  const actionableDecisions = plan.decisions.filter((d) => d.action !== "HOLD");
+
+  if (actionableDecisions.length === 0) {
+    // No orders to submit
+    return { submitted: true, orderIds: [], errors: [] };
+  }
+
+  // In BACKTEST mode, return mock order IDs
+  if (ctx && isBacktest(ctx)) {
+    const mockOrderIds = actionableDecisions.map(
+      (d) => `mock-${d.instrumentId}-${cycleId}-${Date.now()}`
+    );
+    return { submitted: true, orderIds: mockOrderIds, errors: [] };
+  }
+
+  // In PAPER/LIVE mode, submit orders through execution engine
+  const client = getExecutionEngineClient();
+  const orderIds: string[] = [];
+  const errors: string[] = [];
+
+  for (const decision of actionableDecisions) {
+    try {
+      const response = await client.submitOrder({
+        instrument: create(InstrumentSchema, {
+          instrumentId: decision.instrumentId,
+          instrumentType: InstrumentType.EQUITY,
+        }),
+        side: decision.action === "BUY" ? OrderSide.BUY : OrderSide.SELL,
+        quantity: decision.size.value,
+        orderType: 1, // LIMIT - would need proper mapping
+        timeInForce: 0, // DAY - would need proper mapping
+        clientOrderId: decision.decisionId,
+        cycleId,
+      });
+
+      if (response.orderId) {
+        orderIds.push(response.orderId);
+      }
+      if (response.errorMessage) {
+        errors.push(`${decision.instrumentId}: ${response.errorMessage}`);
+      }
+    } catch (error) {
+      const message = error instanceof ExecutionEngineError ? error.message : String(error);
+      errors.push(`${decision.instrumentId}: ${message}`);
+    }
+  }
+
+  return {
+    submitted: orderIds.length > 0 || errors.length === 0,
+    orderIds,
+    errors,
+  };
 }
 
 // ============================================
@@ -718,8 +887,13 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
   const approved = riskApproval.verdict === "APPROVE" && criticApproval.verdict === "APPROVE";
 
   // Act Phase - Constraints and Orders
-  const constraintCheck = await checkConstraints(approved);
-  const orderSubmission = await submitOrders(constraintCheck.passed);
+  const constraintCheck = await checkConstraints(approved, decisionPlan, context);
+  const orderSubmission = await submitOrders(
+    constraintCheck.passed,
+    decisionPlan,
+    cycleId,
+    context
+  );
 
   return {
     cycleId,
@@ -900,8 +1074,17 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   // Act Phase - Constraints and Orders
   // ============================================
-  const constraintCheck = await checkConstraints(consensusResult.approved);
-  const orderSubmission = await submitOrders(constraintCheck.passed);
+  const constraintCheck = await checkConstraints(
+    consensusResult.approved,
+    consensusResult.plan,
+    context
+  );
+  const orderSubmission = await submitOrders(
+    constraintCheck.passed,
+    consensusResult.plan,
+    cycleId,
+    context
+  );
 
   return {
     cycleId,

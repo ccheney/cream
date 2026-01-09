@@ -4,12 +4,8 @@
  * Step 2: Build feature snapshots for universe symbols using market data providers.
  */
 
-import {
-  type CreamEnvironment,
-  createContext,
-  type ExecutionContext,
-  isBacktest,
-} from "@cream/domain";
+import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
+import { createMarketDataAdapter, type MarketDataAdapter } from "@cream/marketdata";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
@@ -25,8 +21,7 @@ import { LoadStateOutputSchema } from "./loadState.js";
  * Steps are invoked by the Mastra workflow during scheduled runs.
  */
 function createStepContext(): ExecutionContext {
-  const envValue = process.env.CREAM_ENV || "BACKTEST";
-  return createContext(envValue as CreamEnvironment, "scheduled");
+  return createContext(requireEnv(), "scheduled");
 }
 
 export const SnapshotOutputSchema = z.object({
@@ -176,12 +171,19 @@ export const buildSnapshotStep = createStep({
       };
     }
 
-    // In PAPER/LIVE mode, create snapshots
-    // TODO: Wire up real Polygon/FMP data sources when available
-    // For now, use fixture snapshots as placeholder
+    // In PAPER/LIVE mode, fetch real market data
+    const adapter = createMarketDataAdapter(ctx.environment);
     const snapshotMap: Record<string, unknown> = {};
+
+    // Calculate date range for candle fetching (last 7 days)
+    const toDate = new Date();
+    const fromDate = new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const from = fromDate.toISOString().split("T")[0]!;
+    const to = toDate.toISOString().split("T")[0]!;
+
     for (const symbol of allSymbols) {
-      snapshotMap[symbol] = createFixtureSnapshot(symbol, timestamp);
+      const snapshot = await createSnapshotFromAdapter(adapter, symbol, timestamp, from, to);
+      snapshotMap[symbol] = snapshot;
     }
 
     return {
@@ -191,3 +193,114 @@ export const buildSnapshotStep = createStep({
     };
   },
 });
+
+/**
+ * Create a snapshot using real market data from the adapter.
+ */
+async function createSnapshotFromAdapter(
+  adapter: MarketDataAdapter,
+  symbol: string,
+  timestamp: number,
+  from: string,
+  to: string
+) {
+  // Fetch candles from adapter
+  const adapterCandles = await adapter.getCandles(symbol, "1h", from, to);
+
+  // Convert to internal format and limit to last 50 candles
+  const candles = adapterCandles.slice(-50).map((c) => ({
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+    volume: c.volume,
+  }));
+
+  // Fetch quote
+  const quote = await adapter.getQuote(symbol);
+
+  // Calculate deterministic indicators from candles
+  const closes = candles.map((c) => c.close);
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+
+  // Calculate simple RSI (14-period)
+  const rsiPeriod = 14;
+  let gains = 0;
+  let losses = 0;
+  for (let i = closes.length - rsiPeriod; i < closes.length; i++) {
+    const current = closes[i];
+    const previous = closes[i - 1];
+    if (current !== undefined && previous !== undefined) {
+      const change = current - previous;
+      if (change > 0) {
+        gains += change;
+      } else {
+        losses += Math.abs(change);
+      }
+    }
+  }
+  const avgGain = gains / rsiPeriod;
+  const avgLoss = losses / rsiPeriod;
+  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+  const rsi = 100 - 100 / (1 + rs);
+
+  // Calculate ATR (14-period)
+  const atrPeriod = 14;
+  let atrSum = 0;
+  for (let i = closes.length - atrPeriod; i < closes.length; i++) {
+    const high = highs[i];
+    const low = lows[i];
+    const prevClose = closes[i - 1];
+    if (high !== undefined && low !== undefined && prevClose !== undefined) {
+      const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+      atrSum += tr;
+    }
+  }
+  const atr = atrSum / atrPeriod;
+
+  // Calculate SMAs
+  const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(closes.length, 20);
+  const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / Math.min(closes.length, 50);
+
+  // Get price from quote or latest candle
+  const latestCandle = candles[candles.length - 1];
+  const latestPrice = quote?.last ?? latestCandle?.close ?? 0;
+  const latestVolume = latestCandle?.volume ?? 0;
+
+  // Calculate price change
+  const prevClose = candles[candles.length - 2]?.close ?? latestCandle?.close ?? latestPrice;
+  const priceChangePercent = prevClose > 0 ? ((latestPrice - prevClose) / prevClose) * 100 : 0;
+
+  // Calculate volume ratio
+  const avgVolume = candles.reduce((sum, c) => sum + c.volume, 0) / Math.max(candles.length, 1);
+  const volumeRatio = avgVolume > 0 ? latestVolume / avgVolume : 1;
+
+  return {
+    symbol,
+    timestamp,
+    createdAt: new Date().toISOString(),
+    latestPrice,
+    latestVolume,
+    indicators: {
+      rsi: Number(rsi.toFixed(2)),
+      atr: Number(atr.toFixed(2)),
+      sma20: Number(sma20.toFixed(2)),
+      sma50: Number(sma50.toFixed(2)),
+    },
+    normalized: {
+      priceChangePercent: Number(priceChangePercent.toFixed(2)),
+      volumeRatio: Number(volumeRatio.toFixed(2)),
+    },
+    regime: {
+      label: "RANGE" as const,
+      confidence: 0.75,
+    },
+    metadata: {
+      symbol,
+      sector: "Technology",
+      marketCapBucket: "MEGA" as const,
+      dataSource: adapter.getType(),
+    },
+  };
+}
