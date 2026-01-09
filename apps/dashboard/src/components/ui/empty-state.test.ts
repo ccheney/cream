@@ -84,10 +84,10 @@ describe("EmptyStateProps Type", () => {
 
   it("supports all size variants", () => {
     const sizes: Array<EmptyStateProps["size"]> = ["sm", "md", "lg"];
-    sizes.forEach((size) => {
+    for (const size of sizes) {
       const props: EmptyStateProps = { title: "Test", size };
       expect(props.size).toBe(size);
-    });
+    }
   });
 });
 

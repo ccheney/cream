@@ -849,8 +849,8 @@ mod tests {
         oos2.total_trades = 30;
         window2.out_of_sample_metrics = Some(oos2);
 
-        let windows = vec![window1, window2];
-        let aggregated = engine.aggregate_oos_metrics(&windows);
+        let test_windows = vec![window1, window2];
+        let aggregated = engine.aggregate_oos_metrics(&test_windows);
 
         assert_eq!(aggregated.total_windows, 2);
         assert_eq!(aggregated.profitable_windows, 1);

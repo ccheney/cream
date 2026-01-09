@@ -100,11 +100,11 @@ class FixedBpsSlippage(SlippageModel):
 
     def calculate(
         self,
-        side: str | Side,
-        price: float,
-        size: float,
+        _side: str | Side,
+        _price: float,
+        _size: float,
         is_exit: bool = False,
-        **kwargs,
+        **_kwargs,
     ) -> float:
         """Calculate fixed basis points slippage."""
         bps = self.exit_bps if is_exit else self.entry_bps
@@ -130,12 +130,12 @@ class SpreadSlippage(SlippageModel):
 
     def calculate(
         self,
-        side: str | Side,
+        _side: str | Side,
         price: float,
-        size: float,
-        is_exit: bool = False,
+        _size: float,
+        _is_exit: bool = False,
         spread: float | None = None,
-        **kwargs,
+        **_kwargs,
     ) -> float:
         """
         Calculate spread-based slippage.
@@ -143,10 +143,7 @@ class SpreadSlippage(SlippageModel):
         Args:
             spread: Bid-ask spread in dollars. If None, uses default_spread_bps.
         """
-        if spread is not None:
-            spread_pct = spread / price
-        else:
-            spread_pct = self.default_spread_bps / 10_000
+        spread_pct = spread / price if spread is not None else self.default_spread_bps / 10_000
 
         return spread_pct * self.spread_fraction
 
@@ -174,12 +171,12 @@ class VolumeImpactSlippage(SlippageModel):
 
     def calculate(
         self,
-        side: str | Side,
-        price: float,
+        _side: str | Side,
+        _price: float,
         size: float,
-        is_exit: bool = False,
+        _is_exit: bool = False,
         adv: float | None = None,
-        **kwargs,
+        **_kwargs,
     ) -> float:
         """
         Calculate volume-based market impact slippage.
@@ -224,12 +221,12 @@ class SquareRootImpactSlippage(SlippageModel):
 
     def calculate(
         self,
-        side: str | Side,
-        price: float,
+        _side: str | Side,
+        _price: float,
         size: float,
-        is_exit: bool = False,
+        _is_exit: bool = False,
         adv: float | None = None,
-        **kwargs,
+        **_kwargs,
     ) -> float:
         """
         Calculate square-root market impact slippage.
@@ -309,10 +306,10 @@ class PerShareCommission(CommissionModel):
 
     def calculate(
         self,
-        price: float,
+        _price: float,
         size: float,
-        side: str | Side | None = None,
-        **kwargs,
+        _side: str | Side | None = None,
+        **_kwargs,
     ) -> float:
         """Calculate per-share commission."""
         commission = size * self.per_share
@@ -338,8 +335,8 @@ class PercentageCommission(CommissionModel):
         self,
         price: float,
         size: float,
-        side: str | Side | None = None,
-        **kwargs,
+        _side: str | Side | None = None,
+        **_kwargs,
     ) -> float:
         """Calculate percentage-based commission."""
         trade_value = price * size
@@ -369,10 +366,10 @@ class TieredCommission(CommissionModel):
 
     def calculate(
         self,
-        price: float,
+        _price: float,
         size: float,
-        side: str | Side | None = None,
-        **kwargs,
+        _side: str | Side | None = None,
+        **_kwargs,
     ) -> float:
         """Calculate tiered commission based on trade size."""
         remaining = size
@@ -420,7 +417,7 @@ class ZeroCommission(CommissionModel):
         price: float,
         size: float,
         side: str | Side | None = None,
-        **kwargs,
+        **_kwargs,
     ) -> float:
         """Calculate regulatory fees (commission is zero)."""
         if not self.include_fees:
@@ -458,10 +455,10 @@ class OptionsCommission(CommissionModel):
 
     def calculate(
         self,
-        price: float,
+        _price: float,
         size: float,
-        side: str | Side | None = None,
-        **kwargs,
+        _side: str | Side | None = None,
+        **_kwargs,
     ) -> float:
         """Calculate options commission."""
         base = size * self.per_contract

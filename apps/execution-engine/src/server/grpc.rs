@@ -53,6 +53,14 @@ struct AlpacaCache {
 /// Include generated protobuf code.
 /// The generated code is in packages/schema-gen/rust/cream/v1/
 /// cream.v1.rs includes cream.v1.tonic.rs at the end
+#[allow(
+    missing_docs,
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
 pub mod proto {
     pub mod cream {
         pub mod v1 {

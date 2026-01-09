@@ -273,13 +273,13 @@ export function ErrorPanel({
         {/* Actions */}
         {actions && actions.length > 0 && (
           <div style={actionsStyles}>
-            {actions.map((action, index) => (
+            {actions.map((action) => (
               <button
-                key={index}
+                key={action.label}
                 type="button"
                 onClick={action.onClick}
                 style={action.variant === "secondary" ? secondaryButtonStyles : primaryButtonStyles}
-                data-testid={`${testId}-action-${index}`}
+                data-testid={`${testId}-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 {action.label}
               </button>

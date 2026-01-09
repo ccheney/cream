@@ -1096,7 +1096,7 @@ impl OptionsOrderValidator {
         let len = symbol.len();
         let indicator_pos = len - 9;
         let indicator = symbol.chars().nth(indicator_pos);
-        matches!(indicator, Some('C') | Some('P'))
+        matches!(indicator, Some('C' | 'P'))
     }
 }
 
@@ -1397,8 +1397,8 @@ mod tests {
         // 100,000 * 0.000195 = $19.50, capped at $9.79
         let fees = RegulatoryFeeCalculator::calculate_equity_fees(
             false,
-            Decimal::new(100000, 0),
-            Decimal::new(10000000, 0),
+            Decimal::new(100_000, 0),
+            Decimal::new(10_000_000, 0),
         );
 
         assert_eq!(fees.finra_taf, Decimal::new(979, 2));

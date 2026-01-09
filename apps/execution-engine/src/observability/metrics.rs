@@ -43,7 +43,14 @@ impl Default for MetricsConfig {
             ],
             // Size buckets from 64B to 1MB
             size_buckets: vec![
-                64.0, 256.0, 1024.0, 4096.0, 16384.0, 65536.0, 262144.0, 1048576.0,
+                64.0,
+                256.0,
+                1024.0,
+                4096.0,
+                16384.0,
+                65536.0,
+                262_144.0,
+                1_048_576.0,
             ],
             // Iteration buckets from 1 to 100
             iteration_buckets: vec![1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0],

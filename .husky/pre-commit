@@ -17,6 +17,9 @@ HAS_PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
 # Check if any Rust files are staged
 HAS_RS_FILES=$(echo "$STAGED_FILES" | grep -E '\.rs$' || true)
 
+# Check if any package.json files are staged
+HAS_PKG_FILES=$(echo "$STAGED_FILES" | grep 'package\.json$' || true)
+
 # 1. Biome: Format + Lint TypeScript/JavaScript/JSON (staged files only, with fixes)
 echo "📝 Biome: Formatting and linting staged TS/JS/JSON files..."
 bunx @biomejs/biome check --write --staged --files-ignore-unknown=true --no-errors-on-unmatched
@@ -68,6 +71,15 @@ if [ -d "apps/execution-engine" ]; then
     -W clippy::all \
     2>/dev/null || {
     echo "❌ Rust errors found. Please fix them before committing."
+    exit 1
+  }
+fi
+
+# 8. Dependency validation (if package.json files are staged)
+if [ -n "$HAS_PKG_FILES" ]; then
+  echo "📦 Validating package dependencies..."
+  bun run lint:deps || {
+    echo "❌ Dependency validation failed. Please fix circular or invalid dependencies."
     exit 1
   }
 fi

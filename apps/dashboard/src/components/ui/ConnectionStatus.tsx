@@ -97,7 +97,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({
   const Icon = config.icon;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`} role="status" aria-live="polite">
+    <output className={`flex items-center gap-2 ${className}`} aria-live="polite">
       {/* Status dot */}
       <span
         className={`${styles.dot} rounded-full ${config.dotColor} ${config.animate ? "animate-pulse" : ""}`}
@@ -129,7 +129,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({
           <Zap className={`${styles.icon} text-green-500 animate-pulse`} />
         </span>
       )}
-    </div>
+    </output>
   );
 });
 

@@ -8,6 +8,9 @@
 //!
 //! Reference: docs/plans/09-rust-core.md (IV Computation, lines 366-386)
 
+// Black-Scholes uses standard mathematical notation (s, k, t, r, q, sigma)
+#![allow(clippy::many_single_char_names)]
+
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};

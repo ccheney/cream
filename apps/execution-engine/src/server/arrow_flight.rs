@@ -527,7 +527,7 @@ mod tests {
                 ask_price: 150.5,
                 last_price: 150.25,
                 volume: 1000,
-                timestamp: 1234567890,
+                timestamp: 1_234_567_890,
             },
             MarketDataSnapshot {
                 symbol: "GOOGL".to_string(),
@@ -535,7 +535,7 @@ mod tests {
                 ask_price: 2801.0,
                 last_price: 2800.5,
                 volume: 500,
-                timestamp: 1234567891,
+                timestamp: 1_234_567_891,
             },
         ];
 
@@ -588,7 +588,7 @@ mod tests {
         let ask_prices: ArrayRef = Arc::new(Float64Array::from(vec![150.5, 2801.0]));
         let last_prices: ArrayRef = Arc::new(Float64Array::from(vec![150.25, 2800.5]));
         let volumes: ArrayRef = Arc::new(UInt64Array::from(vec![1000, 500]));
-        let timestamps: ArrayRef = Arc::new(Int64Array::from(vec![1234567890, 1234567891]));
+        let timestamps: ArrayRef = Arc::new(Int64Array::from(vec![1_234_567_890, 1_234_567_891]));
 
         let batch = RecordBatch::try_new(
             schema,
@@ -636,7 +636,7 @@ mod tests {
                 ask_price: 150.5,
                 last_price: 150.25,
                 volume: 1000,
-                timestamp: 1234567890,
+                timestamp: 1_234_567_890,
             },
         );
         drop(data);
@@ -728,7 +728,7 @@ mod tests {
                     ask_price: 150.5,
                     last_price: 150.25,
                     volume: 1000,
-                    timestamp: 1234567890,
+                    timestamp: 1_234_567_890,
                 },
             );
         }

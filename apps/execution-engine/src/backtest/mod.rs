@@ -24,7 +24,7 @@
 //!     Decimal::new(10100, 2), // high: $101.00
 //!     Decimal::new(9900, 2),  // low: $99.00
 //!     Decimal::new(10050, 2), // close: $100.50
-//!     Decimal::new(100000, 0), // volume: 100,000
+//!     Decimal::new(100_000, 0), // volume: 100,000
 //! );
 //!
 //! let fill = simulate_market_order(
@@ -856,7 +856,7 @@ mod tests {
             high: Decimal::new(high, 2),
             low: Decimal::new(low, 2),
             close: Decimal::new(close, 2),
-            volume: Decimal::new(100000, 0),
+            volume: Decimal::new(100_000, 0),
             timestamp: "2026-01-05T10:00:00Z".to_string(),
         }
     }

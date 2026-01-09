@@ -551,7 +551,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: DecisionPlan {
                 plan_id: "p1".to_string(),
                 cycle_id: "c1".to_string(),
@@ -562,7 +562,7 @@ mod tests {
                     action: Action::Buy,
                     direction: Direction::Long,
                     size: Size {
-                        quantity: Decimal::new(10000, 0),
+                        quantity: Decimal::new(10_000, 0),
                         unit: SizeUnit::Dollars,
                     },
                     stop_loss_level: Decimal::new(145, 0),

@@ -275,7 +275,7 @@ impl StrategyBuilder {
         let long_put_strike = short_put_strike - width;
         let long_call_strike = short_call_strike + width;
 
-        let (sp_prem, lp_prem, sc_prem, lc_prem) = premiums;
+        let (short_put_premium, long_put_premium, short_call_premium, long_call_premium) = premiums;
 
         let legs = vec![
             // Short put
@@ -291,7 +291,7 @@ impl StrategyBuilder {
                 },
                 LegDirection::Short,
                 1,
-                sp_prem,
+                short_put_premium,
             ),
             // Long put (wing)
             StrategyLeg::new(
@@ -306,7 +306,7 @@ impl StrategyBuilder {
                 },
                 LegDirection::Long,
                 1,
-                lp_prem,
+                long_put_premium,
             ),
             // Short call
             StrategyLeg::new(
@@ -321,7 +321,7 @@ impl StrategyBuilder {
                 },
                 LegDirection::Short,
                 1,
-                sc_prem,
+                short_call_premium,
             ),
             // Long call (wing)
             StrategyLeg::new(
@@ -336,7 +336,7 @@ impl StrategyBuilder {
                 },
                 LegDirection::Long,
                 1,
-                lc_prem,
+                long_call_premium,
             ),
         ];
 

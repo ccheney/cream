@@ -254,7 +254,7 @@ export const AnimatedNumber = memo(function AnimatedNumber({
   const shouldRenderAnimated = animate && !prefersReducedMotion;
 
   return (
-    <span
+    <output
       className={`inline-block ${className}`}
       aria-label={ariaLabel}
       aria-live="polite"
@@ -279,7 +279,7 @@ export const AnimatedNumber = memo(function AnimatedNumber({
       ) : (
         <span>{formattedValue}</span>
       )}
-    </span>
+    </output>
   );
 });
 

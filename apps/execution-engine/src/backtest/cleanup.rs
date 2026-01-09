@@ -179,7 +179,7 @@ fn scan_directory(
             if let Ok(metadata) = entry.metadata() {
                 let modified = metadata.modified().unwrap_or(now);
                 let age = now.duration_since(modified).unwrap_or(Duration::ZERO);
-                let age_days = (age.as_secs() / 86400) as u32;
+                let age_days = (age.as_secs() / 86_400) as u32;
 
                 let is_important = is_important_file(&path, config);
 
@@ -513,7 +513,7 @@ mod tests {
 
         // Set modified time to simulate age
         if age_days > 0 {
-            let mtime = SystemTime::now() - Duration::from_secs(age_days * 86400);
+            let mtime = SystemTime::now() - Duration::from_secs(age_days * 86_400);
             filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(mtime)).unwrap();
         }
 

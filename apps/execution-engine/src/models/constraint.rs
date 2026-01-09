@@ -42,8 +42,8 @@ pub struct PortfolioLimits {
 impl Default for PortfolioLimits {
     fn default() -> Self {
         Self {
-            max_gross_notional: Decimal::new(500000, 0),
-            max_net_notional: Decimal::new(250000, 0),
+            max_gross_notional: Decimal::new(500_000, 0),
+            max_net_notional: Decimal::new(250_000, 0),
             max_pct_equity_gross: Decimal::new(200, 2), // 2.0 = 200%
             max_pct_equity_net: Decimal::new(100, 2),   // 1.0 = 100%
         }
@@ -66,7 +66,7 @@ pub struct OptionsLimits {
 impl Default for OptionsLimits {
     fn default() -> Self {
         Self {
-            max_delta_notional: Decimal::new(100000, 0),
+            max_delta_notional: Decimal::new(100_000, 0),
             max_gamma: Decimal::new(1000, 0),
             max_vega: Decimal::new(5000, 0),
             max_theta: Decimal::new(-500, 0),

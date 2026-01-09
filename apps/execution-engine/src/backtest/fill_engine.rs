@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn test_market_order_buy() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9900, 10050, 100_000);
 
         let result = simulate_market_order(
             OrderSide::Buy,
@@ -455,7 +455,7 @@ mod tests {
     #[test]
     fn test_market_order_sell() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9900, 10050, 100_000);
 
         let result = simulate_market_order(
             OrderSide::Sell,
@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn test_limit_order_buy_fill() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9800, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9800, 10050, 100_000);
 
         // Limit buy at $99.00 should fill (low = $98.00)
         let result = simulate_limit_order(
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn test_limit_order_buy_no_fill() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9900, 10050, 100_000);
 
         // Limit buy at $98.00 should NOT fill (low = $99.00)
         let result = simulate_limit_order(
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn test_limit_order_sell_fill() {
         let config = default_config();
-        let candle = make_candle(10000, 10200, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10200, 9900, 10050, 100_000);
 
         // Limit sell at $101.00 should fill (high = $102.00)
         let result = simulate_limit_order(
@@ -536,7 +536,7 @@ mod tests {
 
         // Candle with low that goes 2 ticks below the limit price
         // Limit buy at $99.00 needs price to go to $98.98 (2 ticks below) for fill
-        let candle = make_candle(10000, 10100, 9897, 10050, 100000); // Low = $98.97 (below $98.98)
+        let candle = make_candle(10000, 10100, 9897, 10050, 100_000); // Low = $98.97 (below $98.98)
 
         let result = simulate_limit_order(
             OrderSide::Buy,
@@ -551,7 +551,7 @@ mod tests {
         assert_eq!(result.price, Some(Decimal::new(9900, 2))); // Fills at limit price
 
         // Test that fill does NOT occur without sufficient penetration
-        let candle_no_fill = make_candle(10000, 10100, 9899, 10050, 100000); // Low = $98.99 (not below $98.98)
+        let candle_no_fill = make_candle(10000, 10100, 9899, 10050, 100_000); // Low = $98.99 (not below $98.98)
 
         let result_no_fill = simulate_limit_order(
             OrderSide::Buy,
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     fn test_stop_order_sell_trigger() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9800, 9900, 100000);
+        let candle = make_candle(10000, 10100, 9800, 9900, 100_000);
 
         // Stop sell at $99.00 should trigger (low = $98.00)
         let result = simulate_stop_order(
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn test_stop_order_buy_trigger() {
         let config = default_config();
-        let candle = make_candle(10000, 10200, 9900, 10100, 100000);
+        let candle = make_candle(10000, 10200, 9900, 10100, 100_000);
 
         // Stop buy at $101.00 should trigger (high = $102.00)
         let result = simulate_stop_order(
@@ -609,7 +609,7 @@ mod tests {
     #[test]
     fn test_stop_order_no_trigger() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9900, 10050, 100_000);
 
         // Stop sell at $98.00 should NOT trigger (low = $99.00)
         let result = simulate_stop_order(
@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn test_stop_limit_order() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9800, 9900, 100000);
+        let candle = make_candle(10000, 10100, 9800, 9900, 100_000);
 
         // Stop at $99.00, limit at $98.50
         // Stop triggers (low = $98.00), then fills at limit
@@ -648,7 +648,7 @@ mod tests {
 
     #[test]
     fn test_candle_price_touched() {
-        let candle = make_candle(10000, 10200, 9800, 10100, 100000);
+        let candle = make_candle(10000, 10200, 9800, 10100, 100_000);
 
         assert!(candle.price_touched(Decimal::new(9900, 2)));
         assert!(candle.price_touched(Decimal::new(10100, 2)));
@@ -659,7 +659,7 @@ mod tests {
     #[test]
     fn test_partial_fill_disabled() {
         let config = default_config();
-        let candle = make_candle(10000, 10100, 9900, 10050, 100000);
+        let candle = make_candle(10000, 10100, 9900, 10050, 100_000);
 
         let result = simulate_market_order(
             OrderSide::Buy,

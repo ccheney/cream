@@ -91,8 +91,8 @@ function KeyBadge({ children }: { children: string }) {
 function ShortcutKeys({ keys }: { keys: string[] }) {
   return (
     <div className="flex items-center gap-1">
-      {keys.map((key, index) => (
-        <KeyBadge key={`${key}-${index}`}>{formatKeyDisplay(key)}</KeyBadge>
+      {keys.map((key) => (
+        <KeyBadge key={key}>{formatKeyDisplay(key)}</KeyBadge>
       ))}
     </div>
   );

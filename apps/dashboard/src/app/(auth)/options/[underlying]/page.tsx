@@ -222,7 +222,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
         subscribedContractsRef.current.clear();
       }
     };
-  }, [selectedExpiration, unsubscribeOptions]);
+  }, [unsubscribeOptions]);
 
   // Handle add to watchlist
   const handleAddToWatchlist = useCallback(() => {

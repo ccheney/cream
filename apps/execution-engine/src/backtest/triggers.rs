@@ -289,7 +289,7 @@ mod tests {
             high: Decimal::new(high, 2),
             low: Decimal::new(low, 2),
             close: Decimal::new(close, 2),
-            volume: Decimal::new(100000, 0),
+            volume: Decimal::new(100_000, 0),
             timestamp: "2026-01-05T10:00:00Z".to_string(),
         }
     }

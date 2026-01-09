@@ -126,6 +126,7 @@ describe("Execution Engine Integration", () => {
 
     if (dockerAvailable && imageAvailable) {
       try {
+        // biome-ignore lint/suspicious/noConsole: Test diagnostic output
         console.log("[Test] Starting execution-engine container...");
         container = await new GenericContainer("cream/execution-engine:test")
           .withExposedPorts(50051)
@@ -136,13 +137,17 @@ describe("Execution Engine Integration", () => {
         const port = container.getMappedPort(50051);
         client = createExecutionEngineClient(`http://localhost:${port}`);
         useContainer = true;
+        // biome-ignore lint/suspicious/noConsole: Test diagnostic output
         console.log(`[Test] Container started on port ${port}`);
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: Test diagnostic output
         console.warn("[Test] Failed to start container, using mock tests:", error);
         useContainer = false;
       }
     } else {
+      // biome-ignore lint/suspicious/noConsole: Test diagnostic output
       console.log("[Test] Docker or image not available, using mock tests");
+      // biome-ignore lint/suspicious/noConsole: Test diagnostic output
       console.log(
         `[Test] Docker available: ${dockerAvailable}, Image available: ${imageAvailable}`
       );
@@ -151,6 +156,7 @@ describe("Execution Engine Integration", () => {
 
   afterAll(async () => {
     if (container) {
+      // biome-ignore lint/suspicious/noConsole: Test diagnostic output
       console.log("[Test] Stopping container...");
       await container.stop();
     }
@@ -278,6 +284,7 @@ describe("Execution Engine Container Lifecycle", () => {
     const imageAvailable = await isImageAvailable();
 
     if (!dockerAvailable || !imageAvailable) {
+      // biome-ignore lint/suspicious/noConsole: Test diagnostic output
       console.log("[Test] Skipping container lifecycle test - Docker/image not available");
       return;
     }

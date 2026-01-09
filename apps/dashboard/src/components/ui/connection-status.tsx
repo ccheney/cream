@@ -152,21 +152,19 @@ export function ConnectionStatus({
   // Compact mode: just the dot with tooltip
   if (compact) {
     return (
-      <div
+      <output
         className="inline-flex items-center"
         title={status.text}
-        role="status"
         aria-label={status.ariaLabel}
       >
         <StatusDot color={status.color} pulse={status.pulse} />
-      </div>
+      </output>
     );
   }
 
   return (
-    <div
+    <output
       className="inline-flex items-center gap-2"
-      role="status"
       aria-live="polite"
       aria-label={status.ariaLabel}
     >
@@ -204,7 +202,7 @@ export function ConnectionStatus({
           ({wsState.lastError.name})
         </span>
       )}
-    </div>
+    </output>
   );
 }
 

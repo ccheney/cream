@@ -242,7 +242,6 @@ function DialogPortalContent({
 export const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
   ({ children, maxWidth = "max-w-md", className, ...props }, ref) => {
     return (
-      // biome-ignore lint/a11y/noStaticElementInteractions: Event stops needed to prevent backdrop click from closing
       <div
         ref={ref}
         role="document"

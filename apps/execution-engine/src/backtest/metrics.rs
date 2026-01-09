@@ -752,23 +752,23 @@ mod tests {
 
     #[test]
     fn test_trade_is_winner() {
-        let winner = make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 200);
+        let winner = make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 200);
         assert!(winner.is_winner());
 
-        let loser = make_trade("2", "AAPL", "LONG", 10500, 10000, 100, 200);
+        let loser = make_trade("2", "AAPL", "LONG", 10_500, 10_000, 100, 200);
         assert!(!loser.is_winner());
     }
 
     #[test]
     fn test_win_rate() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // Add 3 winners and 2 losers
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 100));
-        calc.add_trade(make_trade("2", "MSFT", "LONG", 10000, 10300, 100, 100));
-        calc.add_trade(make_trade("3", "GOOG", "LONG", 10000, 10200, 100, 100));
-        calc.add_trade(make_trade("4", "AMZN", "LONG", 10000, 9500, 100, 100));
-        calc.add_trade(make_trade("5", "META", "LONG", 10000, 9700, 100, 100));
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 100));
+        calc.add_trade(make_trade("2", "MSFT", "LONG", 10_000, 10_300, 100, 100));
+        calc.add_trade(make_trade("3", "GOOG", "LONG", 10_000, 10_200, 100, 100));
+        calc.add_trade(make_trade("4", "AMZN", "LONG", 10_000, 9500, 100, 100));
+        calc.add_trade(make_trade("5", "META", "LONG", 10_000, 9700, 100, 100));
 
         let summary = calc.calculate();
         assert_eq!(summary.total_trades, 5);
@@ -779,14 +779,14 @@ mod tests {
 
     #[test]
     fn test_profit_factor() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // Winners: entry $100, exit $105 = $5*100 - $1 comm = $499 net each
         // Losers: entry $100, exit $97 = -$3*100 - $1 comm = -$301 net each
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 100));
-        calc.add_trade(make_trade("2", "MSFT", "LONG", 10000, 10500, 100, 100));
-        calc.add_trade(make_trade("3", "GOOG", "LONG", 10000, 9700, 100, 100));
-        calc.add_trade(make_trade("4", "AMZN", "LONG", 10000, 9700, 100, 100));
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 100));
+        calc.add_trade(make_trade("2", "MSFT", "LONG", 10_000, 10_500, 100, 100));
+        calc.add_trade(make_trade("3", "GOOG", "LONG", 10_000, 9700, 100, 100));
+        calc.add_trade(make_trade("4", "AMZN", "LONG", 10_000, 9700, 100, 100));
 
         let summary = calc.calculate();
         // 2 winners * $499 = $998 total profit
@@ -800,18 +800,18 @@ mod tests {
 
     #[test]
     fn test_consecutive_streaks() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // W W W L L W L W W
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
-        calc.add_trade(make_trade("2", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
-        calc.add_trade(make_trade("3", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
-        calc.add_trade(make_trade("4", "AAPL", "LONG", 10000, 9500, 100, 100)); // L
-        calc.add_trade(make_trade("5", "AAPL", "LONG", 10000, 9500, 100, 100)); // L
-        calc.add_trade(make_trade("6", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
-        calc.add_trade(make_trade("7", "AAPL", "LONG", 10000, 9500, 100, 100)); // L
-        calc.add_trade(make_trade("8", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
-        calc.add_trade(make_trade("9", "AAPL", "LONG", 10000, 10500, 100, 100)); // W
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
+        calc.add_trade(make_trade("2", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
+        calc.add_trade(make_trade("3", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
+        calc.add_trade(make_trade("4", "AAPL", "LONG", 10_000, 9500, 100, 100)); // L
+        calc.add_trade(make_trade("5", "AAPL", "LONG", 10_000, 9500, 100, 100)); // L
+        calc.add_trade(make_trade("6", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
+        calc.add_trade(make_trade("7", "AAPL", "LONG", 10_000, 9500, 100, 100)); // L
+        calc.add_trade(make_trade("8", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
+        calc.add_trade(make_trade("9", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // W
 
         let summary = calc.calculate();
         assert_eq!(summary.max_consecutive_wins, 3);
@@ -820,35 +820,35 @@ mod tests {
 
     #[test]
     fn test_drawdown_calculation() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // Equity curve: 100k -> 110k -> 105k -> 108k -> 95k -> 100k
-        calc.add_equity_point("2024-01-01", Decimal::new(100000, 0));
-        calc.add_equity_point("2024-01-02", Decimal::new(110000, 0));
-        calc.add_equity_point("2024-01-03", Decimal::new(105000, 0)); // 4.5% dd from peak
-        calc.add_equity_point("2024-01-04", Decimal::new(108000, 0)); // 1.8% dd from peak
-        calc.add_equity_point("2024-01-05", Decimal::new(95000, 0)); // 13.6% dd from peak
-        calc.add_equity_point("2024-01-06", Decimal::new(100000, 0)); // 9% dd from peak
+        calc.add_equity_point("2024-01-01", Decimal::new(100_000, 0));
+        calc.add_equity_point("2024-01-02", Decimal::new(110_000, 0));
+        calc.add_equity_point("2024-01-03", Decimal::new(105_000, 0)); // 4.5% dd from peak
+        calc.add_equity_point("2024-01-04", Decimal::new(108_000, 0)); // 1.8% dd from peak
+        calc.add_equity_point("2024-01-05", Decimal::new(95_000, 0)); // 13.6% dd from peak
+        calc.add_equity_point("2024-01-06", Decimal::new(100_000, 0)); // 9% dd from peak
 
         let summary = calc.calculate();
 
-        // Max drawdown should be ~13.6% (95000 vs 110000 peak)
+        // Max drawdown should be ~13.6% (95_000 vs 110_000 peak)
         let expected_dd =
-            (Decimal::new(110000, 0) - Decimal::new(95000, 0)) / Decimal::new(110000, 0);
+            (Decimal::new(110_000, 0) - Decimal::new(95_000, 0)) / Decimal::new(110_000, 0);
         assert_eq!(summary.max_drawdown, expected_dd);
     }
 
     #[test]
     fn test_expectancy() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // Winners: entry $100, exit $105 = $5*100 - $1 = $499 net each
         // Losers: entry $100, exit $96 = -$4*100 - $1 = -$401 net each
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 100)); // +$499
-        calc.add_trade(make_trade("2", "AAPL", "LONG", 10000, 10500, 100, 100)); // +$499
-        calc.add_trade(make_trade("3", "AAPL", "LONG", 10000, 10500, 100, 100)); // +$499
-        calc.add_trade(make_trade("4", "AAPL", "LONG", 10000, 9600, 100, 100)); // -$401
-        calc.add_trade(make_trade("5", "AAPL", "LONG", 10000, 9600, 100, 100)); // -$401
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // +$499
+        calc.add_trade(make_trade("2", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // +$499
+        calc.add_trade(make_trade("3", "AAPL", "LONG", 10_000, 10_500, 100, 100)); // +$499
+        calc.add_trade(make_trade("4", "AAPL", "LONG", 10_000, 9600, 100, 100)); // -$401
+        calc.add_trade(make_trade("5", "AAPL", "LONG", 10_000, 9600, 100, 100)); // -$401
 
         let summary = calc.calculate();
 
@@ -900,8 +900,8 @@ mod tests {
 
     #[test]
     fn test_csv_export() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10500, 100, 100));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_500, 100, 100));
 
         let csv = calc.to_csv();
         assert!(csv.contains("trade_id"));
@@ -911,31 +911,31 @@ mod tests {
 
     #[test]
     fn test_empty_trades() {
-        let calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
         let summary = calc.calculate();
 
         assert_eq!(summary.total_trades, 0);
         assert_eq!(summary.win_rate, Decimal::ZERO);
-        assert_eq!(summary.initial_equity, Decimal::new(100000, 0));
+        assert_eq!(summary.initial_equity, Decimal::new(100_000, 0));
     }
 
     #[test]
     fn test_format_helpers() {
         assert_eq!(format_pct(Decimal::new(1523, 4)), "15.23%"); // 0.1523
-        // Decimal::new(123456, 3) = 123.456, formatted as 123.45 (truncation)
-        assert_eq!(format_decimal(Decimal::new(123456, 3)), "123.45");
+        // Decimal::new(123_456, 3) = 123.456, formatted as 123.45 (truncation)
+        assert_eq!(format_decimal(Decimal::new(123_456, 3)), "123.45");
         assert_eq!(format_ratio(Some(Decimal::new(235, 2))), "2.35"); // 2.35
         assert_eq!(format_ratio(None), "N/A");
     }
 
     #[test]
     fn test_payoff_ratio() {
-        let mut calc = PerformanceCalculator::new(Decimal::new(100000, 0));
+        let mut calc = PerformanceCalculator::new(Decimal::new(100_000, 0));
 
         // Winner: entry $100, exit $106 = $6*100 - $1 = $599 net
         // Loser: entry $100, exit $97 = -$3*100 - $1 = -$301 net
-        calc.add_trade(make_trade("1", "AAPL", "LONG", 10000, 10600, 100, 100)); // +$599
-        calc.add_trade(make_trade("2", "AAPL", "LONG", 10000, 9700, 100, 100)); // -$301
+        calc.add_trade(make_trade("1", "AAPL", "LONG", 10_000, 10_600, 100, 100)); // +$599
+        calc.add_trade(make_trade("2", "AAPL", "LONG", 10_000, 9700, 100, 100)); // -$301
 
         let summary = calc.calculate();
 

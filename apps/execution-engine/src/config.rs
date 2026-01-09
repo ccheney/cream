@@ -311,10 +311,10 @@ impl Default for PortfolioConstraints {
 }
 
 fn default_max_gross_notional() -> f64 {
-    500000.0
+    500_000.0
 }
 fn default_max_net_notional() -> f64 {
-    200000.0
+    200_000.0
 }
 fn default_max_leverage() -> f64 {
     2.0
@@ -782,11 +782,11 @@ mod tests {
 
     #[test]
     fn test_load_minimal_config() {
-        let yaml = r#"
+        let yaml = r"
 server:
   grpc_port: 50051
   flight_port: 50052
-"#;
+";
 
         let config = load_config_from_string(yaml).unwrap();
         assert_eq!(config.server.grpc_port, 50051);
@@ -827,11 +827,11 @@ server:
 
     #[test]
     fn test_validation_same_ports() {
-        let yaml = r#"
+        let yaml = r"
 server:
   grpc_port: 50051
   flight_port: 50051
-"#;
+";
 
         let result = load_config_from_string(yaml);
         assert!(result.is_err());
@@ -845,13 +845,13 @@ server:
 
     #[test]
     fn test_validation_invalid_risk_free_rate() {
-        let yaml = r#"
+        let yaml = r"
 server:
   grpc_port: 50051
   flight_port: 50052
 pricing:
   risk_free_rate: 1.5
-"#;
+";
 
         let result = load_config_from_string(yaml);
         assert!(result.is_err());
@@ -860,13 +860,13 @@ pricing:
 
     #[test]
     fn test_validation_invalid_environment_mode() {
-        let yaml = r#"
+        let yaml = r"
 server:
   grpc_port: 50051
   flight_port: 50052
 environment:
   mode: INVALID
-"#;
+";
 
         let result = load_config_from_string(yaml);
         assert!(result.is_err());
@@ -929,7 +929,7 @@ environment:
         assert_eq!(config.feeds.databento.reconnect_delay_ms, 2000);
         assert_eq!(config.brokers.alpaca.base_url, "https://api.alpaca.markets");
         assert_eq!(config.pricing.risk_free_rate, 0.04);
-        assert_eq!(config.constraints.per_instrument.max_notional, 100000.0);
+        assert_eq!(config.constraints.per_instrument.max_notional, 100_000.0);
         assert_eq!(config.constraints.portfolio.max_leverage, 3.0);
         assert_eq!(config.constraints.options.max_portfolio_delta, 1000.0);
         assert_eq!(config.observability.metrics.endpoint, "0.0.0.0:9091");
@@ -945,7 +945,7 @@ environment:
 
         assert_eq!(config.per_instrument.max_notional, 50000.0);
         assert_eq!(config.per_instrument.max_units, 1000);
-        assert_eq!(config.portfolio.max_gross_notional, 500000.0);
+        assert_eq!(config.portfolio.max_gross_notional, 500_000.0);
         assert_eq!(config.options.max_portfolio_delta, 500.0);
         assert_eq!(config.buying_power.min_buying_power_ratio, 0.20);
     }

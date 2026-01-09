@@ -119,10 +119,10 @@ describe("ConnectionBannerProps Type", () => {
 
   it("supports all status values", () => {
     const statuses: ConnectionStatus[] = ["connected", "disconnected", "reconnecting", "failed"];
-    statuses.forEach((status) => {
+    for (const status of statuses) {
       const props: ConnectionBannerProps = { status };
       expect(props.status).toBe(status);
-    });
+    }
   });
 
   it("retryCount is optional", () => {

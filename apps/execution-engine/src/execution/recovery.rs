@@ -276,11 +276,10 @@ impl PortfolioRecovery {
                 return Err(RecoveryError::Aborted(
                     "Critical discrepancies detected. Manual intervention required.".to_string(),
                 ));
-            } else {
-                result
-                    .warnings
-                    .push("Critical discrepancies detected but continuing".to_string());
             }
+            result
+                .warnings
+                .push("Critical discrepancies detected but continuing".to_string());
         }
 
         // Step 6: Sync positions from broker if configured

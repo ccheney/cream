@@ -993,9 +993,9 @@ mod tests {
             orders,
             positions: vec![],
             account: BrokerAccountSnapshot {
-                equity: Decimal::new(100000, 0),
-                cash: Decimal::new(50000, 0),
-                buying_power: Decimal::new(200000, 0),
+                equity: Decimal::new(100_000, 0),
+                cash: Decimal::new(50_000, 0),
+                buying_power: Decimal::new(200_000, 0),
             },
             fetched_at: chrono::Utc::now().to_rfc3339(),
         }

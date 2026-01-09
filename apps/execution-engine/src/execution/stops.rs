@@ -982,7 +982,7 @@ mod tests {
             high: Decimal::new(high, 0),
             low: Decimal::new(low, 0),
             close: Decimal::new(close, 0),
-            volume: Decimal::new(1000000, 0),
+            volume: Decimal::new(1_000_000, 0),
         }
     }
 

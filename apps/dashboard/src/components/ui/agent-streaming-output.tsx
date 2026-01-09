@@ -64,7 +64,7 @@ const StatusBadge = memo(function StatusBadge({ status }: StatusBadgeProps) {
   const badge = badges[status];
 
   return (
-    <span
+    <output
       className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full transition-all duration-300"
       style={{
         backgroundColor: `${badge.color}20`,
@@ -78,7 +78,7 @@ const StatusBadge = memo(function StatusBadge({ status }: StatusBadgeProps) {
         </span>
       )}
       {badge.label}
-    </span>
+    </output>
   );
 });
 

@@ -158,8 +158,7 @@ export function EmptyState({
   const sizeStyle = sizeStyles[size];
 
   return (
-    <div
-      role="status"
+    <output
       aria-label={title}
       className={className}
       data-testid={testId}
@@ -235,7 +234,7 @@ export function EmptyState({
           )}
         </div>
       )}
-    </div>
+    </output>
   );
 }
 

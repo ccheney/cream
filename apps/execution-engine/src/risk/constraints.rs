@@ -197,9 +197,9 @@ impl ConstraintValidator {
 
         let portfolio = PortfolioLimits {
             max_gross_notional: Decimal::try_from(constraints.portfolio.max_gross_notional)
-                .unwrap_or_else(|_| Decimal::new(500000, 0)),
+                .unwrap_or_else(|_| Decimal::new(500_000, 0)),
             max_net_notional: Decimal::try_from(constraints.portfolio.max_net_notional)
-                .unwrap_or_else(|_| Decimal::new(250000, 0)),
+                .unwrap_or_else(|_| Decimal::new(250_000, 0)),
             max_pct_equity_gross: Decimal::try_from(constraints.portfolio.max_leverage)
                 .unwrap_or_else(|_| Decimal::new(200, 2)),
             max_pct_equity_net: Decimal::ONE,
@@ -1135,8 +1135,8 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
@@ -1156,8 +1156,8 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(60000, 0))]), // Over 50k limit
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(60_000, 0))]), // Over 50k limit
         };
 
         let response = validator.validate(&request);
@@ -1173,14 +1173,14 @@ mod tests {
     #[test]
     fn test_missing_stop_loss() {
         let validator = ConstraintValidator::with_defaults();
-        let mut decision = make_decision("AAPL", Decimal::new(10000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(10_000, 0));
         decision.stop_loss_level = Decimal::ZERO;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1197,14 +1197,14 @@ mod tests {
     #[test]
     fn test_plan_not_approved() {
         let validator = ConstraintValidator::with_defaults();
-        let mut plan = make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]);
+        let mut plan = make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]);
         plan.critic_approved = false;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan,
         };
 
@@ -1226,12 +1226,12 @@ mod tests {
 
         // Create a balanced portfolio: $8k long + $8k short = $16k gross, $0 net
         // Using $8k each to stay under 10% per-instrument equity limit ($100k * 10% = $10k)
-        let mut long_decision = make_decision("AAPL", Decimal::new(8000, 0));
+        let mut long_decision = make_decision("AAPL", Decimal::new(8_000, 0));
         long_decision.direction = Direction::Long;
 
         // For short position: use Buy action with Short direction
         // (opening a short position is still an entry)
-        let mut short_decision = make_decision("MSFT", Decimal::new(8000, 0));
+        let mut short_decision = make_decision("MSFT", Decimal::new(8_000, 0));
         short_decision.direction = Direction::Short;
         short_decision.instrument_id = "MSFT".to_string();
         short_decision.decision_id = "d2".to_string();
@@ -1241,7 +1241,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![long_decision, short_decision]),
         };
 
@@ -1259,14 +1259,14 @@ mod tests {
         let validator = ConstraintValidator::with_defaults();
 
         // Net limit is $250k, create $300k long exposure
-        let mut decision = make_decision("AAPL", Decimal::new(300000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(300_000, 0));
         decision.direction = Direction::Long;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(1000000, 0), // Large equity to avoid per-position limits
+            account_equity: Decimal::new(1_000_000, 0), // Large equity to avoid per-position limits
             plan: make_plan(vec![decision]),
         };
 
@@ -1286,11 +1286,11 @@ mod tests {
     fn test_conflicting_buy_sell_same_instrument() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut buy = make_decision("AAPL", Decimal::new(5000, 0));
+        let mut buy = make_decision("AAPL", Decimal::new(5_000, 0));
         buy.action = Action::Buy;
         buy.decision_id = "d1".to_string();
 
-        let mut sell = make_decision("AAPL", Decimal::new(3000, 0));
+        let mut sell = make_decision("AAPL", Decimal::new(3_000, 0));
         sell.action = Action::Sell;
         sell.decision_id = "d2".to_string();
 
@@ -1298,7 +1298,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![buy, sell]),
         };
 
@@ -1316,11 +1316,11 @@ mod tests {
     fn test_conflicting_directions_same_instrument() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut long = make_decision("AAPL", Decimal::new(5000, 0));
+        let mut long = make_decision("AAPL", Decimal::new(5_000, 0));
         long.direction = Direction::Long;
         long.decision_id = "d1".to_string();
 
-        let mut short = make_decision("AAPL", Decimal::new(3000, 0));
+        let mut short = make_decision("AAPL", Decimal::new(3_000, 0));
         short.direction = Direction::Short;
         short.action = Action::Sell;
         short.decision_id = "d2".to_string();
@@ -1329,7 +1329,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![long, short]),
         };
 
@@ -1353,13 +1353,13 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             greeks: Some(GreeksSnapshot {
-                delta_notional: Decimal::new(150000, 0), // Over 100k limit
+                delta_notional: Decimal::new(150_000, 0), // Over 100k limit
                 gamma: Decimal::ZERO,
                 vega: Decimal::ZERO,
                 theta: Decimal::ZERO,
@@ -1385,14 +1385,14 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             greeks: Some(GreeksSnapshot {
                 delta_notional: Decimal::ZERO,
-                gamma: Decimal::new(2000, 0), // Over 1000 limit
+                gamma: Decimal::new(2_000, 0), // Over 1000 limit
                 vega: Decimal::ZERO,
                 theta: Decimal::ZERO,
             }),
@@ -1417,15 +1417,15 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             greeks: Some(GreeksSnapshot {
                 delta_notional: Decimal::ZERO,
                 gamma: Decimal::ZERO,
-                vega: Decimal::new(7000, 0), // Over 5000 limit
+                vega: Decimal::new(7_000, 0), // Over 5000 limit
                 theta: Decimal::ZERO,
             }),
             ..Default::default()
@@ -1449,8 +1449,8 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
@@ -1458,7 +1458,7 @@ mod tests {
                 delta_notional: Decimal::ZERO,
                 gamma: Decimal::ZERO,
                 vega: Decimal::ZERO,
-                theta: Decimal::new(-1000, 0), // More negative than -500 limit
+                theta: Decimal::new(-1_000, 0), // More negative than -500 limit
             }),
             ..Default::default()
         };
@@ -1481,16 +1481,16 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             greeks: Some(GreeksSnapshot {
-                delta_notional: Decimal::new(50000, 0), // Under 100k limit
-                gamma: Decimal::new(500, 0),            // Under 1000 limit
-                vega: Decimal::new(2000, 0),            // Under 5000 limit
-                theta: Decimal::new(-200, 0),           // Above -500 limit
+                delta_notional: Decimal::new(50_000, 0), // Under 100k limit
+                gamma: Decimal::new(500, 0),             // Under 1000 limit
+                vega: Decimal::new(2_000, 0),            // Under 5000 limit
+                theta: Decimal::new(-200, 0),            // Above -500 limit
             }),
             buying_power: BuyingPowerInfo::unlimited(),
             ..Default::default()
@@ -1510,13 +1510,13 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(40000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(40_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             buying_power: BuyingPowerInfo {
-                available: Decimal::new(10000, 0), // Only $10k available
+                available: Decimal::new(10_000, 0), // Only $10k available
                 required_margin: Decimal::ZERO,
             },
             ..Default::default()
@@ -1540,13 +1540,13 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
-            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10000, 0))]),
+            account_equity: Decimal::new(100_000, 0),
+            plan: make_plan(vec![make_decision("AAPL", Decimal::new(10_000, 0))]),
         };
 
         let context = ExtendedConstraintContext {
             buying_power: BuyingPowerInfo {
-                available: Decimal::new(50000, 0), // $50k available
+                available: Decimal::new(50_000, 0), // $50k available
                 required_margin: Decimal::ZERO,
             },
             ..Default::default()
@@ -1562,9 +1562,9 @@ mod tests {
     fn test_units_exceeded() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut decision = make_decision("AAPL", Decimal::new(5000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(5_000, 0));
         decision.size = Size {
-            quantity: Decimal::new(5000, 0), // Over 1000 units limit
+            quantity: Decimal::new(5_000, 0), // Over 1000 units limit
             unit: SizeUnit::Shares,
         };
 
@@ -1572,7 +1572,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(1000000, 0),
+            account_equity: Decimal::new(1_000_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1592,14 +1592,14 @@ mod tests {
     fn test_sell_without_position_warning() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut decision = make_decision("AAPL", Decimal::new(10000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(10_000, 0));
         decision.action = Action::Sell;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1623,14 +1623,14 @@ mod tests {
     fn test_hold_action_skipped() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut decision = make_decision("AAPL", Decimal::new(1000000, 0)); // Would exceed limits
+        let mut decision = make_decision("AAPL", Decimal::new(1_000_000, 0)); // Would exceed limits
         decision.action = Action::Hold;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1642,14 +1642,14 @@ mod tests {
     fn test_no_trade_action_skipped() {
         let validator = ConstraintValidator::with_defaults();
 
-        let mut decision = make_decision("AAPL", Decimal::new(1000000, 0)); // Would exceed limits
+        let mut decision = make_decision("AAPL", Decimal::new(1_000_000, 0)); // Would exceed limits
         decision.action = Action::NoTrade;
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(100000, 0),
+            account_equity: Decimal::new(100_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1663,13 +1663,13 @@ mod tests {
 
         // Portfolio gross limit is 200% of equity
         // With $10k equity, max gross is $20k
-        let decision = make_decision("AAPL", Decimal::new(25000, 0)); // 250% of equity
+        let decision = make_decision("AAPL", Decimal::new(25_000, 0)); // 250% of equity
 
         let request = ConstraintCheckRequest {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(10000, 0),
+            account_equity: Decimal::new(10_000, 0),
             plan: make_plan(vec![decision]),
         };
 
@@ -1688,7 +1688,7 @@ mod tests {
         let validator = ConstraintValidator::with_defaults();
 
         // Large short position should still count toward net exposure
-        let mut short_decision = make_decision("AAPL", Decimal::new(300000, 0));
+        let mut short_decision = make_decision("AAPL", Decimal::new(300_000, 0));
         short_decision.direction = Direction::Short;
         short_decision.action = Action::Sell;
 
@@ -1696,7 +1696,7 @@ mod tests {
             request_id: "r1".to_string(),
             cycle_id: "c1".to_string(),
             risk_policy_id: "default".to_string(),
-            account_equity: Decimal::new(1000000, 0),
+            account_equity: Decimal::new(1_000_000, 0),
             plan: make_plan(vec![short_decision]),
         };
 
@@ -1716,26 +1716,26 @@ mod tests {
     #[test]
     fn test_calculate_median_odd() {
         let values = vec![
-            Decimal::new(10000, 0),
-            Decimal::new(20000, 0),
-            Decimal::new(15000, 0),
-            Decimal::new(25000, 0),
-            Decimal::new(18000, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(20_000, 0),
+            Decimal::new(15_000, 0),
+            Decimal::new(25_000, 0),
+            Decimal::new(18_000, 0),
         ];
         let median = super::calculate_median(&values);
-        assert_eq!(median, Some(Decimal::new(18000, 0)));
+        assert_eq!(median, Some(Decimal::new(18_000, 0)));
     }
 
     #[test]
     fn test_calculate_median_even() {
         let values = vec![
-            Decimal::new(10000, 0),
-            Decimal::new(20000, 0),
-            Decimal::new(15000, 0),
-            Decimal::new(25000, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(20_000, 0),
+            Decimal::new(15_000, 0),
+            Decimal::new(25_000, 0),
         ];
         let median = super::calculate_median(&values);
-        assert_eq!(median, Some(Decimal::new(17500, 0)));
+        assert_eq!(median, Some(Decimal::new(17_500, 0)));
     }
 
     #[test]
@@ -1748,32 +1748,32 @@ mod tests {
     #[test]
     fn test_sizing_sanity_within_limit() {
         let historical = vec![
-            Decimal::new(10000, 0),
-            Decimal::new(12000, 0),
-            Decimal::new(11000, 0),
-            Decimal::new(13000, 0),
-            Decimal::new(10500, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(12_000, 0),
+            Decimal::new(11_000, 0),
+            Decimal::new(13_000, 0),
+            Decimal::new(10_500, 0),
         ];
         let threshold = Decimal::new(30, 1); // 3.0
 
         // Proposed $25k is ~2.3x median $11k - within threshold
-        let result = super::check_sizing_sanity(Decimal::new(25000, 0), &historical, threshold);
+        let result = super::check_sizing_sanity(Decimal::new(25_000, 0), &historical, threshold);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_sizing_sanity_exceeds_limit() {
         let historical = vec![
-            Decimal::new(10000, 0),
-            Decimal::new(12000, 0),
-            Decimal::new(11000, 0),
-            Decimal::new(13000, 0),
-            Decimal::new(10500, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(12_000, 0),
+            Decimal::new(11_000, 0),
+            Decimal::new(13_000, 0),
+            Decimal::new(10_500, 0),
         ];
         let threshold = Decimal::new(30, 1); // 3.0
 
         // Proposed $50k is ~4.5x median $11k - exceeds 3x threshold
-        let result = super::check_sizing_sanity(Decimal::new(50000, 0), &historical, threshold);
+        let result = super::check_sizing_sanity(Decimal::new(50_000, 0), &historical, threshold);
         assert!(result.is_some());
         let warning = result.unwrap();
         assert!(warning.size_multiplier > Decimal::new(4, 0));
@@ -1784,14 +1784,14 @@ mod tests {
     fn test_sizing_sanity_insufficient_history() {
         // Less than 5 historical data points
         let historical = vec![
-            Decimal::new(10000, 0),
-            Decimal::new(12000, 0),
-            Decimal::new(11000, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(12_000, 0),
+            Decimal::new(11_000, 0),
         ];
         let threshold = Decimal::new(30, 1);
 
         // Should return None (can't assess with insufficient data)
-        let result = super::check_sizing_sanity(Decimal::new(100000, 0), &historical, threshold);
+        let result = super::check_sizing_sanity(Decimal::new(100_000, 0), &historical, threshold);
         assert!(result.is_none());
     }
 
@@ -1804,11 +1804,11 @@ mod tests {
         // Risk amount: $10,000 × 5% = $500
         // Risk %: $500 / $100,000 × 100 = 0.5%
         let result = calculate_per_trade_risk(
-            Decimal::new(100, 0),    // entry
-            Decimal::new(95, 0),     // stop
-            Decimal::new(10000, 0),  // notional
-            Decimal::new(100000, 0), // equity
-            Decimal::new(2, 0),      // max 2%
+            Decimal::new(100, 0),     // entry
+            Decimal::new(95, 0),      // stop
+            Decimal::new(10_000, 0),  // notional
+            Decimal::new(100_000, 0), // equity
+            Decimal::new(2, 0),       // max 2%
         );
 
         assert!(result.within_limit);
@@ -1825,13 +1825,13 @@ mod tests {
         let result = calculate_per_trade_risk(
             Decimal::new(100, 0),
             Decimal::new(90, 0),
-            Decimal::new(50000, 0),
-            Decimal::new(100000, 0),
+            Decimal::new(50_000, 0),
+            Decimal::new(100_000, 0),
             Decimal::new(2, 0),
         );
 
         assert!(!result.within_limit);
-        assert_eq!(result.risk_amount, Decimal::new(5000, 0));
+        assert_eq!(result.risk_amount, Decimal::new(5_000, 0));
         assert_eq!(result.risk_pct, Decimal::new(5, 0)); // 5% > 2%
     }
 
@@ -1840,8 +1840,8 @@ mod tests {
         let result = calculate_per_trade_risk(
             Decimal::ZERO,
             Decimal::new(95, 0),
-            Decimal::new(10000, 0),
-            Decimal::new(100000, 0),
+            Decimal::new(10_000, 0),
+            Decimal::new(100_000, 0),
             Decimal::new(2, 0),
         );
 
@@ -1981,12 +1981,12 @@ mod tests {
     #[test]
     fn test_validate_per_trade_risk_decision() {
         let config = RiskLimitsConfig::default();
-        let mut decision = make_decision("AAPL", Decimal::new(50000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(50_000, 0));
         decision.limit_price = Some(Decimal::new(100, 0));
         decision.stop_loss_level = Decimal::new(90, 0); // 10% stop
 
         // 10% risk on $50k = $5k = 5% of $100k equity (exceeds 2% limit)
-        let violation = validate_per_trade_risk(&decision, Decimal::new(100000, 0), &config);
+        let violation = validate_per_trade_risk(&decision, Decimal::new(100_000, 0), &config);
 
         assert!(violation.is_some());
         let v = violation.unwrap();
@@ -1996,7 +1996,7 @@ mod tests {
     #[test]
     fn test_validate_risk_reward_ratio_decision() {
         let config = RiskLimitsConfig::default();
-        let mut decision = make_decision("AAPL", Decimal::new(10000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(10_000, 0));
         decision.limit_price = Some(Decimal::new(100, 0));
         decision.stop_loss_level = Decimal::new(95, 0);
         decision.take_profit_level = Decimal::new(103, 0); // 3/5 = 0.6 ratio
@@ -2011,11 +2011,11 @@ mod tests {
     #[test]
     fn test_validate_per_trade_risk_hold_action() {
         let config = RiskLimitsConfig::default();
-        let mut decision = make_decision("AAPL", Decimal::new(10000, 0));
+        let mut decision = make_decision("AAPL", Decimal::new(10_000, 0));
         decision.action = Action::Hold;
 
         // HOLD actions should not be validated for risk
-        let violation = validate_per_trade_risk(&decision, Decimal::new(100000, 0), &config);
+        let violation = validate_per_trade_risk(&decision, Decimal::new(100_000, 0), &config);
 
         assert!(violation.is_none());
     }
