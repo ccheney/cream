@@ -10,12 +10,22 @@
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import {
+  type Candle,
+  calculateBollingerBands,
+  calculateMACD,
+  calculateRSI,
+  calculateSMA,
+  isDeathCross,
+  isGoldenCross,
+} from "@cream/indicators";
+import {
   type AggregateBar,
   createPolygonClientFromEnv,
   type PolygonClient,
   type Timespan,
 } from "@cream/marketdata";
 import type { Backtest } from "@cream/storage";
+import { z } from "zod/v4";
 
 // ============================================
 // Types
@@ -54,6 +64,60 @@ export interface PreparedBacktestData {
  * Timeframe configuration for backtest.
  */
 export type BacktestTimeframe = "1Min" | "5Min" | "15Min" | "1Hour" | "1Day";
+
+// ============================================
+// Strategy Configuration Schemas
+// ============================================
+
+/**
+ * SMA Crossover Strategy: entry on golden cross, exit on death cross.
+ */
+const SMACrossoverConfigSchema = z.object({
+  type: z.literal("sma_crossover"),
+  fastPeriod: z.number().int().min(1).default(10),
+  slowPeriod: z.number().int().min(1).default(30),
+});
+
+/**
+ * RSI Oversold/Overbought Strategy: entry on oversold bounce, exit on overbought.
+ */
+const RSIConfigSchema = z.object({
+  type: z.literal("rsi_oversold_overbought"),
+  period: z.number().int().min(1).default(14),
+  oversold: z.number().min(0).max(100).default(30),
+  overbought: z.number().min(0).max(100).default(70),
+});
+
+/**
+ * Bollinger Breakout Strategy: entry on upper breakout, exit on lower touch.
+ */
+const BollingerBreakoutConfigSchema = z.object({
+  type: z.literal("bollinger_breakout"),
+  period: z.number().int().min(1).default(20),
+  stdDev: z.number().min(0.5).max(4).default(2),
+});
+
+/**
+ * MACD Crossover Strategy: entry on MACD/signal cross up, exit on cross down.
+ */
+const MACDCrossoverConfigSchema = z.object({
+  type: z.literal("macd_crossover"),
+  fastPeriod: z.number().int().default(12),
+  slowPeriod: z.number().int().default(26),
+  signalPeriod: z.number().int().default(9),
+});
+
+/**
+ * Union of all supported strategy configurations.
+ */
+export const StrategyConfigSchema = z.discriminatedUnion("type", [
+  SMACrossoverConfigSchema,
+  RSIConfigSchema,
+  BollingerBreakoutConfigSchema,
+  MACDCrossoverConfigSchema,
+]);
+
+export type StrategyConfig = z.infer<typeof StrategyConfigSchema>;
 
 // ============================================
 // Configuration
@@ -169,83 +233,272 @@ async function fetchHistoricalData(
 // ============================================
 
 /**
- * Generate placeholder signals for MVP.
- *
- * This uses a simple SMA crossover strategy as a placeholder.
- * Future versions will interpret strategy definitions from backtest.config.
+ * Convert OHLCV rows to Candle format for @cream/indicators.
  */
-function generatePlaceholderSignals(ohlcv: OhlcvRow[]): SignalRow[] {
-  // Simple SMA crossover: fast SMA (10) vs slow SMA (30)
-  const fastPeriod = 10;
-  const slowPeriod = 30;
+function ohlcvToCandles(ohlcv: OhlcvRow[]): Candle[] {
+  return ohlcv.map((row) => ({
+    timestamp: new Date(row.timestamp).getTime(),
+    open: row.open,
+    high: row.high,
+    low: row.low,
+    close: row.close,
+    volume: row.volume,
+  }));
+}
 
-  // Calculate SMAs
-  const closes = ohlcv.map((row) => row.close);
-  const fastSma: number[] = [];
-  const slowSma: number[] = [];
+/**
+ * Generate signals using SMA crossover strategy.
+ */
+function generateSMACrossoverSignals(
+  ohlcv: OhlcvRow[],
+  config: z.infer<typeof SMACrossoverConfigSchema>
+): SignalRow[] {
+  const candles = ohlcvToCandles(ohlcv);
+  const fastSMA = calculateSMA(candles, { period: config.fastPeriod });
+  const slowSMA = calculateSMA(candles, { period: config.slowPeriod });
+  const warmup = Math.max(config.fastPeriod, config.slowPeriod);
 
-  for (let i = 0; i < closes.length; i++) {
-    // Fast SMA
-    if (i >= fastPeriod - 1) {
-      const sum = closes.slice(i - fastPeriod + 1, i + 1).reduce((a, b) => a + b, 0);
-      fastSma.push(sum / fastPeriod);
-    } else {
-      fastSma.push(NaN);
+  // Offset between fast and slow SMA arrays
+  const fastOffset = config.fastPeriod - 1;
+  const slowOffset = config.slowPeriod - 1;
+
+  return ohlcv.map((row, i) => {
+    if (i < warmup || i === 0) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
     }
 
-    // Slow SMA
-    if (i >= slowPeriod - 1) {
-      const sum = closes.slice(i - slowPeriod + 1, i + 1).reduce((a, b) => a + b, 0);
-      slowSma.push(sum / slowPeriod);
-    } else {
-      slowSma.push(NaN);
+    // Get aligned indices
+    const fastIdx = i - fastOffset;
+    const slowIdx = i - slowOffset;
+
+    const currFast = fastSMA[fastIdx]?.ma;
+    const prevFast = fastSMA[fastIdx - 1]?.ma;
+    const currSlow = slowSMA[slowIdx]?.ma;
+    const prevSlow = slowSMA[slowIdx - 1]?.ma;
+
+    if (
+      currFast === undefined ||
+      prevFast === undefined ||
+      currSlow === undefined ||
+      prevSlow === undefined
+    ) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
     }
-  }
 
-  // Generate signals: entry when fast crosses above slow, exit when below
-  const signals: SignalRow[] = [];
+    const entry = isGoldenCross(prevFast, prevSlow, currFast, currSlow);
+    const exit = isDeathCross(prevFast, prevSlow, currFast, currSlow);
 
-  for (let i = 0; i < ohlcv.length; i++) {
+    return { timestamp: row.timestamp, entries: entry, exits: exit };
+  });
+}
+
+/**
+ * Generate signals using RSI oversold/overbought strategy.
+ */
+function generateRSISignals(
+  ohlcv: OhlcvRow[],
+  config: z.infer<typeof RSIConfigSchema>
+): SignalRow[] {
+  const candles = ohlcvToCandles(ohlcv);
+  const rsiValues = calculateRSI(candles, { period: config.period });
+  const warmup = config.period + 1;
+
+  let inPosition = false;
+
+  return ohlcv.map((row, i) => {
+    if (i < warmup) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
+    }
+
+    const rsi = rsiValues[i];
+    const prevRsi = rsiValues[i - 1];
     let entry = false;
     let exit = false;
 
-    const currFast = fastSma[i];
-    const currSlow = slowSma[i];
-    const prevFast = i > 0 ? fastSma[i - 1] : undefined;
-    const prevSlow = i > 0 ? slowSma[i - 1] : undefined;
-
-    // Check all values are defined and not NaN
-    if (
-      currFast !== undefined &&
-      currSlow !== undefined &&
-      prevFast !== undefined &&
-      prevSlow !== undefined &&
-      !Number.isNaN(currFast) &&
-      !Number.isNaN(currSlow) &&
-      !Number.isNaN(prevFast) &&
-      !Number.isNaN(prevSlow)
-    ) {
-      // Entry: fast SMA crosses above slow SMA
-      if (prevFast <= prevSlow && currFast > currSlow) {
+    if (rsi && prevRsi) {
+      // Entry: RSI crosses up from oversold
+      if (!inPosition && prevRsi.rsi <= config.oversold && rsi.rsi > config.oversold) {
         entry = true;
+        inPosition = true;
       }
-      // Exit: fast SMA crosses below slow SMA
-      if (prevFast >= prevSlow && currFast < currSlow) {
+      // Exit: RSI reaches overbought
+      if (inPosition && rsi.rsi >= config.overbought) {
         exit = true;
+        inPosition = false;
       }
     }
 
-    const row = ohlcv[i];
-    if (row) {
-      signals.push({
-        timestamp: row.timestamp,
-        entries: entry,
-        exits: exit,
-      });
+    return { timestamp: row.timestamp, entries: entry, exits: exit };
+  });
+}
+
+/**
+ * Generate signals using Bollinger Bands breakout strategy.
+ */
+function generateBollingerSignals(
+  ohlcv: OhlcvRow[],
+  config: z.infer<typeof BollingerBreakoutConfigSchema>
+): SignalRow[] {
+  const candles = ohlcvToCandles(ohlcv);
+  const bbValues = calculateBollingerBands(candles, {
+    period: config.period,
+    stdDev: config.stdDev,
+  });
+  const warmup = config.period;
+
+  let inPosition = false;
+
+  return ohlcv.map((row, i) => {
+    if (i < warmup) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
     }
+
+    const bb = bbValues[i];
+    let entry = false;
+    let exit = false;
+
+    if (bb) {
+      // Entry: Price breaks above upper band (momentum breakout)
+      if (!inPosition && row.close > bb.upper) {
+        entry = true;
+        inPosition = true;
+      }
+      // Exit: Price touches lower band (take profit or stop)
+      if (inPosition && row.close <= bb.lower) {
+        exit = true;
+        inPosition = false;
+      }
+    }
+
+    return { timestamp: row.timestamp, entries: entry, exits: exit };
+  });
+}
+
+/**
+ * Calculate signal line for MACD (EMA of MACD line).
+ */
+function calculateMACDSignalLine(
+  macdValues: Array<{ timestamp: number; macd: number }>,
+  signalPeriod: number
+): Array<{ timestamp: number; signal: number }> {
+  if (macdValues.length < signalPeriod) {
+    return [];
   }
 
-  return signals;
+  const multiplier = 2 / (signalPeriod + 1);
+
+  // Seed with SMA of first signalPeriod values
+  let sum = 0;
+  for (let i = 0; i < signalPeriod; i++) {
+    sum += macdValues[i]?.macd ?? 0;
+  }
+  let signal = sum / signalPeriod;
+
+  const results: Array<{ timestamp: number; signal: number }> = [
+    { timestamp: macdValues[signalPeriod - 1]?.timestamp ?? 0, signal },
+  ];
+
+  // Calculate remaining EMA values
+  for (let i = signalPeriod; i < macdValues.length; i++) {
+    const macd = macdValues[i]?.macd ?? 0;
+    signal = (macd - signal) * multiplier + signal;
+    results.push({ timestamp: macdValues[i]?.timestamp ?? 0, signal });
+  }
+
+  return results;
+}
+
+/**
+ * Generate signals using MACD crossover strategy.
+ */
+function generateMACDSignals(
+  ohlcv: OhlcvRow[],
+  config: z.infer<typeof MACDCrossoverConfigSchema>
+): SignalRow[] {
+  const candles = ohlcvToCandles(ohlcv);
+  const macdValues = calculateMACD(candles, config.fastPeriod, config.slowPeriod);
+  const signalLine = calculateMACDSignalLine(macdValues, config.signalPeriod);
+
+  const warmup = config.slowPeriod + config.signalPeriod;
+
+  return ohlcv.map((row, i) => {
+    if (i < warmup || i === 0) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
+    }
+
+    // Offset to align with MACD array
+    const macdOffset = config.slowPeriod - 1;
+    const signalOffset = config.signalPeriod - 1;
+    const macdIdx = i - macdOffset;
+    const signalIdx = macdIdx - signalOffset;
+
+    if (macdIdx < 1 || signalIdx < 1) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
+    }
+
+    const currMacd = macdValues[macdIdx]?.macd;
+    const prevMacd = macdValues[macdIdx - 1]?.macd;
+    const currSignal = signalLine[signalIdx]?.signal;
+    const prevSignal = signalLine[signalIdx - 1]?.signal;
+
+    if (
+      currMacd === undefined ||
+      prevMacd === undefined ||
+      currSignal === undefined ||
+      prevSignal === undefined
+    ) {
+      return { timestamp: row.timestamp, entries: false, exits: false };
+    }
+
+    let entry = false;
+    let exit = false;
+
+    // Entry: MACD crosses above signal line
+    if (prevMacd <= prevSignal && currMacd > currSignal) {
+      entry = true;
+    }
+    // Exit: MACD crosses below signal line
+    if (prevMacd >= prevSignal && currMacd < currSignal) {
+      exit = true;
+    }
+
+    return { timestamp: row.timestamp, entries: entry, exits: exit };
+  });
+}
+
+/**
+ * Parse strategy config from backtest config.
+ * Falls back to SMA crossover with defaults if not specified.
+ */
+function parseStrategyConfig(config: Record<string, unknown> | undefined): StrategyConfig {
+  if (!config?.strategy) {
+    // Default strategy
+    return { type: "sma_crossover", fastPeriod: 10, slowPeriod: 30 };
+  }
+
+  const result = StrategyConfigSchema.safeParse(config.strategy);
+  if (result.success) {
+    return result.data;
+  }
+
+  // Fall back to default if invalid
+  return { type: "sma_crossover", fastPeriod: 10, slowPeriod: 30 };
+}
+
+/**
+ * Generate trading signals based on strategy configuration.
+ */
+function generateSignals(ohlcv: OhlcvRow[], strategy: StrategyConfig): SignalRow[] {
+  switch (strategy.type) {
+    case "sma_crossover":
+      return generateSMACrossoverSignals(ohlcv, strategy);
+    case "rsi_oversold_overbought":
+      return generateRSISignals(ohlcv, strategy);
+    case "bollinger_breakout":
+      return generateBollingerSignals(ohlcv, strategy);
+    case "macd_crossover":
+      return generateMACDSignals(ohlcv, strategy);
+  }
 }
 
 // ============================================
@@ -290,7 +543,6 @@ export async function prepareBacktestData(backtest: Backtest): Promise<string> {
  * Prepare trading signals for backtest.
  *
  * @param backtest - The backtest configuration
- * @param ohlcvPath - Path to the OHLCV Parquet file (to read timestamps/data)
  * @returns Path to the generated signals Parquet file
  */
 export async function prepareSignals(backtest: Backtest): Promise<string> {
@@ -314,8 +566,11 @@ export async function prepareSignals(backtest: Backtest): Promise<string> {
     timeframe
   );
 
-  // Generate signals
-  const signals = generatePlaceholderSignals(ohlcv);
+  // Parse strategy from config
+  const strategy = parseStrategyConfig(backtest.config);
+
+  // Generate signals using configured strategy
+  const signals = generateSignals(ohlcv, strategy);
 
   // Write to temp Parquet file
   const signalsPath = `${tmpdir()}/backtest-signals-${randomUUID()}.parquet`;
