@@ -158,7 +158,7 @@ impl AlpacaAdapter {
 
     /// Create adapter with custom retry policy.
     #[must_use]
-    pub fn with_retry_policy(mut self, policy: BrokerRetryPolicy) -> Self {
+    pub const fn with_retry_policy(mut self, policy: BrokerRetryPolicy) -> Self {
         self.retry_policy = policy;
         self
     }
@@ -510,11 +510,10 @@ impl AlpacaAdapter {
     ///
     /// Returns an error if the API call fails.
     pub async fn get_orders(&self, status: Option<&str>) -> Result<Vec<OrderState>, AlpacaError> {
-        let path = if let Some(s) = status {
-            format!("/v2/orders?status={s}")
-        } else {
-            "/v2/orders".to_string()
-        };
+        let path = status.map_or_else(
+            || "/v2/orders".to_string(),
+            |s| format!("/v2/orders?status={s}"),
+        );
 
         let responses: Vec<AlpacaOrderResponse> = self.request("GET", &path, None::<&()>).await?;
 
@@ -683,7 +682,9 @@ struct AlpacaOrderRequest {
     stop_loss: Option<StopLossLeg>,
 }
 
-/// Helper to skip serializing `order_class` when it's simple
+/// Helper to skip serializing `order_class` when it's simple.
+/// Note: Takes reference due to serde `skip_serializing_if` signature requirement.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn is_simple_order(class: &OrderClass) -> bool {
     *class == OrderClass::Simple
 }

@@ -686,14 +686,11 @@ fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
 
         let value = match std::env::var(var_name) {
             Ok(v) if !v.is_empty() => v,
-            _ => {
-                if let Some(default) = default_value {
-                    default.to_string()
-                } else {
-                    // Leave as empty string for optional values
-                    String::new()
-                }
-            }
+            _ => default_value.map_or_else(
+                // Leave as empty string for optional values
+                String::new,
+                |default| default.to_string(),
+            ),
         };
 
         result = result.replace(full_match, &value);

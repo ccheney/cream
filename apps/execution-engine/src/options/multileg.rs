@@ -250,7 +250,7 @@ pub struct MultiLegValidationResult {
 impl MultiLegValidationResult {
     /// Create a passing result.
     #[must_use]
-    pub fn success(gcd: u32) -> Self {
+    pub const fn success(gcd: u32) -> Self {
         Self {
             valid: true,
             errors: Vec::new(),
@@ -261,7 +261,7 @@ impl MultiLegValidationResult {
 
     /// Create a failing result.
     #[must_use]
-    pub fn failure(errors: Vec<String>, gcd: u32) -> Self {
+    pub const fn failure(errors: Vec<String>, gcd: u32) -> Self {
         Self {
             valid: false,
             errors,

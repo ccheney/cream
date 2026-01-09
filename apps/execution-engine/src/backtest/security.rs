@@ -158,14 +158,15 @@ fn check_has_secret_value(text: &str, pattern: &str) -> bool {
 /// Find context around a pattern for the warning message.
 fn find_pattern_context(text: &str, pattern: &str) -> String {
     let lower = text.to_lowercase();
-    if let Some(pos) = lower.find(pattern) {
-        let start = pos.saturating_sub(10);
-        let end = (pos + pattern.len() + 20).min(text.len());
-        let context = &text[start..end];
-        format!("...{}...", context.replace('\n', " "))
-    } else {
-        pattern.to_string()
-    }
+    lower.find(pattern).map_or_else(
+        || pattern.to_string(),
+        |pos| {
+            let start = pos.saturating_sub(10);
+            let end = (pos + pattern.len() + 20).min(text.len());
+            let context = &text[start..end];
+            format!("...{}...", context.replace('\n', " "))
+        },
+    )
 }
 
 // ============================================

@@ -113,7 +113,7 @@ pub struct RecoveryResult {
 
 impl RecoveryResult {
     #[allow(dead_code)]
-    fn success() -> Self {
+    const fn success() -> Self {
         Self {
             success: true,
             orders_loaded: 0,
@@ -122,13 +122,13 @@ impl RecoveryResult {
             orphans_resolved: 0,
             positions_synced: 0,
             duration_ms: 0,
-            warnings: vec![],
+            warnings: Vec::new(),
             error_message: None,
         }
     }
 
     #[cfg(test)]
-    fn failure(message: String) -> Self {
+    const fn failure(message: String) -> Self {
         Self {
             success: false,
             orders_loaded: 0,
@@ -137,7 +137,7 @@ impl RecoveryResult {
             orphans_resolved: 0,
             positions_synced: 0,
             duration_ms: 0,
-            warnings: vec![],
+            warnings: Vec::new(),
             error_message: Some(message),
         }
     }

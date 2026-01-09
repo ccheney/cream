@@ -222,7 +222,7 @@ impl TlsConfigBuilder {
 
     /// Set whether TLS is enabled.
     #[must_use = "method returns modified builder"]
-    pub fn enabled(mut self, enabled: bool) -> Self {
+    pub const fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
     }
@@ -250,7 +250,7 @@ impl TlsConfigBuilder {
 
     /// Set whether client authentication is required (mTLS).
     #[must_use = "method returns modified builder"]
-    pub fn client_auth_required(mut self, required: bool) -> Self {
+    pub const fn client_auth_required(mut self, required: bool) -> Self {
         self.client_auth = required;
         self
     }

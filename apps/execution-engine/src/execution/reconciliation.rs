@@ -439,7 +439,7 @@ impl ReconciliationManager {
                 let broker_status = &broker_order.status;
 
                 // Map broker status to local status for comparison
-                let statuses_match = Self::statuses_match(&local_order.status, broker_status);
+                let statuses_match = Self::statuses_match(local_order.status, broker_status);
 
                 if !statuses_match {
                     let age = Self::calculate_order_age(&local_order.submitted_at);
@@ -569,7 +569,7 @@ impl ReconciliationManager {
     }
 
     /// Determine resolution action for an orphaned order.
-    fn determine_resolution(&self, orphan: &OrphanedOrder) -> OrphanResolution {
+    const fn determine_resolution(&self, orphan: &OrphanedOrder) -> OrphanResolution {
         // Check protection window
         if orphan.age_secs < self.config.protection_window_secs {
             return OrphanResolution::Ignore;
@@ -604,7 +604,7 @@ impl ReconciliationManager {
     }
 
     /// Check if local and broker statuses match.
-    fn statuses_match(local: &OrderStatus, broker: &str) -> bool {
+    fn statuses_match(local: OrderStatus, broker: &str) -> bool {
         let broker_lower = broker.to_lowercase();
         match local {
             OrderStatus::New => broker_lower == "pending_new" || broker_lower == "new",
@@ -1159,35 +1159,35 @@ mod tests {
     async fn test_statuses_match() {
         let config = make_config();
         let state = Arc::new(OrderStateManager::new());
-        let manager = ReconciliationManager::new(config, state);
+        let _manager = ReconciliationManager::new(config, state);
 
         assert!(ReconciliationManager::statuses_match(
-            &OrderStatus::Filled,
+            OrderStatus::Filled,
             "filled"
         ));
         assert!(ReconciliationManager::statuses_match(
-            &OrderStatus::Canceled,
+            OrderStatus::Canceled,
             "canceled"
         ));
         assert!(ReconciliationManager::statuses_match(
-            &OrderStatus::Canceled,
+            OrderStatus::Canceled,
             "cancelled"
         ));
         assert!(ReconciliationManager::statuses_match(
-            &OrderStatus::Accepted,
+            OrderStatus::Accepted,
             "accepted"
         ));
         assert!(ReconciliationManager::statuses_match(
-            &OrderStatus::Accepted,
+            OrderStatus::Accepted,
             "new"
         ));
 
         assert!(!ReconciliationManager::statuses_match(
-            &OrderStatus::Filled,
+            OrderStatus::Filled,
             "accepted"
         ));
         assert!(!ReconciliationManager::statuses_match(
-            &OrderStatus::Accepted,
+            OrderStatus::Accepted,
             "filled"
         ));
     }

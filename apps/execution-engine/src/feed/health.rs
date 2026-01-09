@@ -187,7 +187,9 @@ impl FeedHealthTracker {
 
     /// Trim samples outside the metrics window.
     fn trim_old_samples(&mut self, now: Instant) {
-        let cutoff = now - self.config.metrics_window;
+        let Some(cutoff) = now.checked_sub(self.config.metrics_window) else {
+            return;
+        };
 
         while let Some(front) = self.latency_samples.front() {
             if front.timestamp < cutoff {
@@ -204,7 +206,7 @@ impl FeedHealthTracker {
     }
 
     /// Reset the rolling window.
-    fn reset_window(&mut self, now: Instant) {
+    const fn reset_window(&mut self, now: Instant) {
         self.window_start = now;
         self.message_count = 0;
         self.recent_gaps = 0;

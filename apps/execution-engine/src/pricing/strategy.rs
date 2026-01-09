@@ -91,7 +91,7 @@ impl StrategyLeg {
 
     /// Set Greeks for this leg.
     #[must_use]
-    pub fn with_greeks(mut self, greeks: Greeks) -> Self {
+    pub const fn with_greeks(mut self, greeks: Greeks) -> Self {
         self.greeks = Some(greeks);
         self
     }

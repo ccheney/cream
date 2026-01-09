@@ -252,7 +252,7 @@ impl OrderStateManager {
 
     /// Get the timeout duration for an order purpose.
     #[must_use]
-    pub fn timeout_duration_for(&self, purpose: OrderPurpose) -> Duration {
+    pub const fn timeout_duration_for(&self, purpose: OrderPurpose) -> Duration {
         Duration::from_secs(self.timeout_config.timeout_for_purpose(purpose))
     }
 

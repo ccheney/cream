@@ -222,13 +222,11 @@ impl IvSolver {
         } else {
             // Near the money - use Newton-Raphson for speed
             let initial_guess = self.corrado_miller_guess(market_price, s, k, t, r, q, kind);
-            match self.newton_raphson(market_price, s, k, t, r, q, kind, initial_guess) {
-                Ok(iv) => Ok(iv),
-                Err(_) => {
+            self.newton_raphson(market_price, s, k, t, r, q, kind, initial_guess)
+                .or_else(|_| {
                     // Fallback to bisection
                     self.bisection(market_price, s, k, t, r, q, kind)
-                }
-            }
+                })
         }
     }
 

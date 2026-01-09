@@ -460,20 +460,20 @@ pub enum OrderPurpose {
 /// Tactic selector for choosing the best execution tactic.
 #[derive(Debug, Clone)]
 pub struct TacticSelector {
-    /// Default tactic for entries.
-    default_entry: TacticType,
-    /// Default tactic for exits.
-    default_exit: TacticType,
-    /// Default tactic for stop-losses.
-    default_stop_loss: TacticType,
+    /// Tactic for entries.
+    entry: TacticType,
+    /// Tactic for exits.
+    exit: TacticType,
+    /// Tactic for stop-losses.
+    stop_loss: TacticType,
 }
 
 impl Default for TacticSelector {
     fn default() -> Self {
         Self {
-            default_entry: TacticType::PassiveLimit,
-            default_exit: TacticType::AggressiveLimit,
-            default_stop_loss: TacticType::AggressiveLimit,
+            entry: TacticType::PassiveLimit,
+            exit: TacticType::AggressiveLimit,
+            stop_loss: TacticType::AggressiveLimit,
         }
     }
 }
@@ -481,15 +481,11 @@ impl Default for TacticSelector {
 impl TacticSelector {
     /// Create a new tactic selector with custom defaults.
     #[must_use]
-    pub const fn new(
-        default_entry: TacticType,
-        default_exit: TacticType,
-        default_stop_loss: TacticType,
-    ) -> Self {
+    pub const fn new(entry: TacticType, exit: TacticType, stop_loss: TacticType) -> Self {
         Self {
-            default_entry,
-            default_exit,
-            default_stop_loss,
+            entry,
+            exit,
+            stop_loss,
         }
     }
 
@@ -500,7 +496,7 @@ impl TacticSelector {
     pub fn select(&self, context: &TacticSelectionContext) -> TacticType {
         // Stop-loss orders always use aggressive limit
         if context.order_purpose == OrderPurpose::StopLoss {
-            return self.default_stop_loss;
+            return self.stop_loss;
         }
 
         // Volatile markets always use aggressive limit
@@ -544,9 +540,9 @@ impl TacticSelector {
 
             // Default based on order purpose
             _ => match context.order_purpose {
-                OrderPurpose::Entry => self.default_entry,
-                OrderPurpose::Exit => self.default_exit,
-                OrderPurpose::StopLoss => self.default_stop_loss,
+                OrderPurpose::Entry => self.entry,
+                OrderPurpose::Exit => self.exit,
+                OrderPurpose::StopLoss => self.stop_loss,
             },
         }
     }

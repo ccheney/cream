@@ -567,21 +567,21 @@ impl StatePersistence {
             .await
             .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
-        if let Some(row) = rows
-            .next()
+        rows.next()
             .await
             .map_err(|e| PersistenceError::Query(e.to_string()))?
-        {
-            Ok(RecoveryState {
-                last_snapshot_at: row.get(0).ok(),
-                last_reconciliation_at: row.get(1).ok(),
-                last_cycle_id: row.get(2).ok(),
-                status: row.get(3).unwrap_or_else(|_| "unknown".to_string()),
-                error_message: row.get(4).ok(),
-            })
-        } else {
-            Ok(RecoveryState::default())
-        }
+            .map_or_else(
+                || Ok(RecoveryState::default()),
+                |row| {
+                    Ok(RecoveryState {
+                        last_snapshot_at: row.get(0).ok(),
+                        last_reconciliation_at: row.get(1).ok(),
+                        last_cycle_id: row.get(2).ok(),
+                        status: row.get(3).unwrap_or_else(|_| "unknown".to_string()),
+                        error_message: row.get(4).ok(),
+                    })
+                },
+            )
     }
 
     /// Log reconciliation completion.

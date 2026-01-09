@@ -171,7 +171,7 @@ impl BacktestAdapter {
             .simulated_price
             .read()
             .map(|p| *p)
-            .unwrap_or(Decimal::new(100, 0));
+            .unwrap_or_else(|_| Decimal::new(100, 0));
 
         // Create a synthetic candle for simulation
         let candle = crate::backtest::Candle {
@@ -248,7 +248,7 @@ impl BrokerAdapter for BacktestAdapter {
             let fill_result = self.simulate_fill(side, decision.size.quantity);
 
             if fill_result.filled {
-                let fill_price = fill_result.price.unwrap_or(Decimal::new(100, 0));
+                let fill_price = fill_result.price.unwrap_or_else(|| Decimal::new(100, 0));
 
                 let order_state = OrderState {
                     order_id: order_id.clone(),
@@ -332,33 +332,34 @@ impl BrokerAdapter for BacktestAdapter {
     async fn get_order_status(&self, broker_order_id: &str) -> Result<OrderState, BrokerError> {
         // Look up order in recorded orders
         let orders = self.submitted_orders();
-        let recorded = orders.iter().find(|o| o.broker_order_id == broker_order_id);
-
-        match recorded {
-            Some(order) => {
-                let now = chrono::Utc::now().to_rfc3339();
-                Ok(OrderState {
-                    order_id: order.order_id.clone(),
-                    broker_order_id: order.broker_order_id.clone(),
-                    is_multi_leg: false,
-                    instrument_id: order.instrument_id.clone(),
-                    status: order.status,
-                    side: order.side,
-                    order_type: order.order_type,
-                    time_in_force: TimeInForce::Day,
-                    requested_quantity: order.quantity,
-                    filled_quantity: order.fill_quantity,
-                    avg_fill_price: order.fill_price,
-                    limit_price: order.limit_price,
-                    stop_price: None,
-                    submitted_at: order.submitted_at.clone(),
-                    last_update_at: now,
-                    status_message: String::new(),
-                    legs: Vec::new(),
-                })
-            }
-            None => Err(BrokerError::OrderNotFound(broker_order_id.to_string())),
-        }
+        orders
+            .iter()
+            .find(|o| o.broker_order_id == broker_order_id)
+            .map_or_else(
+                || Err(BrokerError::OrderNotFound(broker_order_id.to_string())),
+                |order| {
+                    let now = chrono::Utc::now().to_rfc3339();
+                    Ok(OrderState {
+                        order_id: order.order_id.clone(),
+                        broker_order_id: order.broker_order_id.clone(),
+                        is_multi_leg: false,
+                        instrument_id: order.instrument_id.clone(),
+                        status: order.status,
+                        side: order.side,
+                        order_type: order.order_type,
+                        time_in_force: TimeInForce::Day,
+                        requested_quantity: order.quantity,
+                        filled_quantity: order.fill_quantity,
+                        avg_fill_price: order.fill_price,
+                        limit_price: order.limit_price,
+                        stop_price: None,
+                        submitted_at: order.submitted_at.clone(),
+                        last_update_at: now,
+                        status_message: String::new(),
+                        legs: Vec::new(),
+                    })
+                },
+            )
     }
 
     async fn cancel_order(&self, broker_order_id: &str) -> Result<(), BrokerError> {

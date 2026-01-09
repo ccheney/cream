@@ -80,7 +80,7 @@ impl CreamFlightService {
 
     /// Convert market data to Arrow `RecordBatch`.
     fn market_data_to_record_batch(
-        snapshots: Vec<MarketDataSnapshot>,
+        snapshots: &[MarketDataSnapshot],
     ) -> Result<RecordBatch, arrow_flight::error::FlightError> {
         let schema = Self::market_data_schema();
 
@@ -346,7 +346,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
                 let snapshots: Vec<MarketDataSnapshot> = data.values().cloned().collect();
                 drop(data);
 
-                let batch = Self::market_data_to_record_batch(snapshots)
+                let batch = Self::market_data_to_record_batch(&snapshots)
                     .map_err(|e| tonic::Status::internal(format!("Failed to create batch: {e}")))?;
 
                 // Convert `RecordBatch` to `FlightData` stream using `FlightDataEncoder`
@@ -539,7 +539,7 @@ mod tests {
             },
         ];
 
-        let batch = match CreamFlightService::market_data_to_record_batch(snapshots.clone()) {
+        let batch = match CreamFlightService::market_data_to_record_batch(&snapshots) {
             Ok(b) => b,
             Err(e) => panic!("should convert market data to record batch: {e}"),
         };

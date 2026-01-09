@@ -84,7 +84,7 @@ impl TracingConfig {
 
     /// Disable console logging layer.
     #[must_use]
-    pub fn without_console(mut self) -> Self {
+    pub const fn without_console(mut self) -> Self {
         self.enable_console = false;
         self
     }

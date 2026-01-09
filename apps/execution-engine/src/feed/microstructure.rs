@@ -250,11 +250,12 @@ impl MicrostructureTracker {
     }
 
     /// Update with a new quote.
-    pub fn update_quote(&mut self, quote: QuoteUpdate) {
+    pub const fn update_quote(&mut self, quote: QuoteUpdate) {
         self.current_quote = Some(quote);
     }
 
     /// Update with a new trade.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn update_trade(&mut self, trade: TradeUpdate) {
         let now = Instant::now();
 
@@ -303,7 +304,9 @@ impl MicrostructureTracker {
 
     /// Expire trades outside the rolling window.
     fn expire_old_trades(&mut self, now: Instant) {
-        let cutoff = now - self.window_duration;
+        let Some(cutoff) = now.checked_sub(self.window_duration) else {
+            return;
+        };
 
         while let Some(front) = self.trade_buffer.front() {
             if front.timestamp < cutoff {

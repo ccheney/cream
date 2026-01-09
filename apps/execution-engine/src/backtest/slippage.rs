@@ -43,7 +43,7 @@ pub fn apply_slippage(
         }
         SlippageModel::VolumeImpact => {
             let order_size = order_size.unwrap_or(Decimal::ONE);
-            let avg_volume = avg_volume.unwrap_or(Decimal::from(1_000_000));
+            let avg_volume = avg_volume.unwrap_or_else(|| Decimal::from(1_000_000));
             apply_volume_impact_slippage(price, side, &config.volume_impact, order_size, avg_volume)
         }
     }
