@@ -6,21 +6,22 @@
  * Creates TradeDecision nodes in HelixDB for each decision in the plan.
  * These nodes are later used by retrieveMemory for GraphRAG retrieval.
  *
+ * Memory persistence is CRITICAL for CBR (Case-Based Reasoning) to function.
+ * By default, all environments (BACKTEST, PAPER, LIVE) persist to HelixDB.
+ *
+ * To explicitly skip persistence (e.g., for isolated tests), set:
+ *   SKIP_HELIX_PERSISTENCE=true
+ *
  * @see docs/plans/04-memory-helixdb.md
  */
 
+import { type CreamEnvironment, createContext, type ExecutionContext } from "@cream/domain";
 import {
-  type CreamEnvironment,
-  createContext,
-  type ExecutionContext,
-  isBacktest,
-} from "@cream/domain";
-import {
+  type BatchMutationResult,
   batchUpsertTradeDecisions,
-  createHelixClientFromEnv,
-  type HelixClient,
   type NodeWithEmbedding,
 } from "@cream/helix";
+import { getHelixClient } from "../db.js";
 
 /**
  * Create ExecutionContext for step invocation.
@@ -98,24 +99,10 @@ export type PersistMemoryOutput = z.infer<typeof PersistMemoryOutputSchema>;
 type Decision = z.infer<typeof DecisionSchema>;
 
 // ============================================
-// Client Singletons
+// Embedding Client Singleton
 // ============================================
 
-let helixClient: HelixClient | null = null;
 let embeddingClient: EmbeddingClient | null = null;
-
-function getHelixClient(): HelixClient | null {
-  if (helixClient) {
-    return helixClient;
-  }
-
-  try {
-    helixClient = createHelixClientFromEnv();
-    return helixClient;
-  } catch {
-    return null;
-  }
-}
 
 function getEmbeddingClient(): EmbeddingClient | null {
   if (embeddingClient) {
@@ -231,6 +218,29 @@ async function generateDecisionEmbedding(
 // Step Implementation
 // ============================================
 
+/**
+ * Check if memory persistence should be skipped.
+ * Only returns true if SKIP_HELIX_PERSISTENCE is explicitly set to "true".
+ */
+function shouldSkipPersistence(): boolean {
+  const skipEnv = process.env.SKIP_HELIX_PERSISTENCE;
+  return skipEnv === "true" || skipEnv === "1";
+}
+
+/**
+ * Memory persistence error - thrown when HelixDB is unavailable or write fails.
+ */
+export class MemoryPersistenceError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "HELIX_UNAVAILABLE" | "WRITE_FAILED" | "PARTIAL_FAILURE",
+    public override readonly cause?: Error
+  ) {
+    super(message);
+    this.name = "MemoryPersistenceError";
+  }
+}
+
 export const persistMemoryStep = createStep({
   id: "persist-memory",
   description: "Store decision + outcome in HelixDB",
@@ -240,7 +250,6 @@ export const persistMemoryStep = createStep({
   execute: async ({ inputData }) => {
     const {
       ordersSubmitted,
-      orderIds,
       cycleId = `cycle-${Date.now()}`,
       decisions = [],
       regimeLabel = "UNKNOWN",
@@ -249,13 +258,17 @@ export const persistMemoryStep = createStep({
     // Create context at step boundary
     const ctx = createStepContext();
 
-    // In backtest mode, skip memory persistence for faster execution
-    if (isBacktest(ctx)) {
+    // Check for explicit skip flag (for isolated tests only)
+    if (shouldSkipPersistence()) {
+      // biome-ignore lint/suspicious/noConsole: Explicit skip notification
+      console.warn(
+        `[persist-memory] Skipping HelixDB persistence (SKIP_HELIX_PERSISTENCE=true) for cycle ${cycleId}`
+      );
       return {
-        persisted: true,
-        memoryId: `backtest-memory-${Date.now()}`,
+        persisted: false,
+        memoryId: undefined,
         nodesCreated: 0,
-        errors: [],
+        errors: ["Persistence explicitly skipped via SKIP_HELIX_PERSISTENCE"],
         // Pass-through for next step
         cycleId,
         decisions,
@@ -277,24 +290,29 @@ export const persistMemoryStep = createStep({
       };
     }
 
-    // Get HelixDB client
+    // Get HelixDB client - REQUIRED for memory persistence
     const helix = getHelixClient();
     if (!helix) {
-      // HelixDB not available - return mock success
-      return {
-        persisted: true,
-        memoryId: `memory-batch-${Date.now()}`,
-        nodesCreated: orderIds.length,
-        errors: ["HelixDB client not available - persistence skipped"],
-        // Pass-through for next step
-        cycleId,
-        decisions,
-        regimeLabel,
-      };
+      const errorMsg =
+        `HelixDB client unavailable. CBR memory will not be persisted for cycle ${cycleId}. ` +
+        `Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"} ` +
+        `or set SKIP_HELIX_PERSISTENCE=true to explicitly skip.`;
+
+      // biome-ignore lint/suspicious/noConsole: Critical error logging
+      console.error(`[persist-memory] ${errorMsg}`);
+
+      // Throw error - don't silently succeed
+      throw new MemoryPersistenceError(errorMsg, "HELIX_UNAVAILABLE");
     }
 
     // Get embedding client (optional - persistence still works without embeddings)
     const embedder = getEmbeddingClient();
+    if (!embedder) {
+      // biome-ignore lint/suspicious/noConsole: Warning for missing embeddings
+      console.warn(
+        `[persist-memory] Embedding client unavailable. Decisions will be stored without embeddings for cycle ${cycleId}`
+      );
+    }
 
     // Convert decisions to TradeDecision nodes with embeddings
     const nodesWithEmbeddings: NodeWithEmbedding<TradeDecision>[] = await Promise.all(
@@ -312,12 +330,47 @@ export const persistMemoryStep = createStep({
     );
 
     // Batch upsert to HelixDB
-    const result = await batchUpsertTradeDecisions(helix, nodesWithEmbeddings);
+    let result: BatchMutationResult;
+    try {
+      result = await batchUpsertTradeDecisions(helix, nodesWithEmbeddings);
+    } catch (error) {
+      const errorMsg = `Failed to write to HelixDB for cycle ${cycleId}: ${error instanceof Error ? error.message : "Unknown error"}`;
+
+      // biome-ignore lint/suspicious/noConsole: Critical error logging
+      console.error(`[persist-memory] ${errorMsg}`);
+
+      throw new MemoryPersistenceError(
+        errorMsg,
+        "WRITE_FAILED",
+        error instanceof Error ? error : undefined
+      );
+    }
 
     const errors: string[] = [];
     if (result.failed.length > 0) {
       errors.push(...result.failed.map((f) => `Failed to persist ${f.id}: ${f.error}`));
+
+      // biome-ignore lint/suspicious/noConsole: Partial failure logging
+      console.warn(
+        `[persist-memory] Partial failure for cycle ${cycleId}: ${result.failed.length}/${decisions.length} decisions failed`
+      );
     }
+
+    // If all writes failed, throw an error
+    if (result.successful.length === 0 && decisions.length > 0) {
+      const errorMsg = `All ${decisions.length} decision writes failed for cycle ${cycleId}`;
+
+      // biome-ignore lint/suspicious/noConsole: Critical error logging
+      console.error(`[persist-memory] ${errorMsg}`);
+
+      throw new MemoryPersistenceError(errorMsg, "WRITE_FAILED");
+    }
+
+    // Log success
+    // biome-ignore lint/suspicious/noConsole: Success logging
+    console.log(
+      `[persist-memory] Persisted ${result.successful.length}/${decisions.length} decisions for cycle ${cycleId}`
+    );
 
     return {
       persisted: result.successful.length > 0,

@@ -10,6 +10,7 @@ import { type CreamEnvironment, createContext, type ExecutionContext } from "@cr
 import {
   AgentConfigsRepository,
   AgentOutputsRepository,
+  AlertSettingsRepository,
   AlertsRepository,
   BacktestsRepository,
   ConfigVersionsRepository,
@@ -26,6 +27,7 @@ import {
   TradingConfigRepository,
   type TursoClient,
   UniverseConfigsRepository,
+  UserPreferencesRepository,
 } from "@cream/storage";
 
 /**
@@ -138,6 +140,14 @@ export async function getAlertsRepo(): Promise<AlertsRepository> {
 }
 
 /**
+ * Get alert settings repository
+ */
+export async function getAlertSettingsRepo(): Promise<AlertSettingsRepository> {
+  const client = await getDbClient();
+  return new AlertSettingsRepository(client);
+}
+
+/**
  * Get orders repository
  */
 export async function getOrdersRepo(): Promise<OrdersRepository> {
@@ -231,6 +241,14 @@ export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
 export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
   const client = await getDbClient();
   return new UniverseConfigsRepository(client);
+}
+
+/**
+ * Get user preferences repository
+ */
+export async function getUserPreferencesRepo(): Promise<UserPreferencesRepository> {
+  const client = await getDbClient();
+  return new UserPreferencesRepository(client);
 }
 
 // ============================================

@@ -68,11 +68,26 @@ export type HelixErrorCode =
   | "SCHEMA_ERROR";
 
 /**
+ * Health check result from HelixDB.
+ */
+export interface HealthCheckResult {
+  healthy: boolean;
+  latencyMs: number;
+  error?: string;
+}
+
+/**
  * HelixDB client for executing HelixQL queries.
  *
  * @example
  * ```typescript
  * const client = createHelixClient({ port: 6969 });
+ *
+ * // Check health before using
+ * const health = await client.healthCheck();
+ * if (!health.healthy) {
+ *   throw new Error(`HelixDB unhealthy: ${health.error}`);
+ * }
  *
  * // Execute a query
  * const result = await client.query("getUser", { name: "John" });
@@ -97,6 +112,14 @@ export interface HelixClient {
    * Check if the client is connected to HelixDB.
    */
   isConnected(): boolean;
+
+  /**
+   * Perform a health check against HelixDB.
+   * This attempts to connect and execute a simple query to verify the server is responsive.
+   *
+   * @returns Health check result with latency and any error
+   */
+  healthCheck(): Promise<HealthCheckResult>;
 
   /**
    * Close the client connection.
@@ -214,6 +237,26 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 
     isConnected(): boolean {
       return connected;
+    },
+
+    async healthCheck(): Promise<HealthCheckResult> {
+      const startTime = performance.now();
+      try {
+        // Attempt to initialize the client and make a connection
+        await getClient();
+        const latencyMs = performance.now() - startTime;
+        return {
+          healthy: true,
+          latencyMs,
+        };
+      } catch (error) {
+        const latencyMs = performance.now() - startTime;
+        return {
+          healthy: false,
+          latencyMs,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
     },
 
     close(): void {

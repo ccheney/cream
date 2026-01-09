@@ -18,14 +18,12 @@
 //! - Grace period allows transient network issues to recover
 //! - GTC orders should be included in mass cancel (recommended)
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::mpsc;
-use tokio::time;
 
 use crate::models::{Environment, OrderStatus, TimeInForce};
 

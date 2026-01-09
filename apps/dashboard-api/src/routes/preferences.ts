@@ -2,12 +2,14 @@
  * User Preferences Routes
  *
  * Routes for managing user dashboard preferences.
+ * Uses Turso/SQLite storage via UserPreferencesRepository for persistence.
  *
  * @see docs/plans/ui/04-data-requirements.md user_preferences
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getUser, requireAuth, type SessionVariables } from "../auth/index.js";
+import { getUserPreferencesRepo } from "../db.js";
 
 // ============================================
 // App Setup
@@ -48,39 +50,39 @@ const UserPreferencesSchema = z.object({
 const UpdatePreferencesRequestSchema = UserPreferencesSchema.partial();
 
 // ============================================
-// Mock Storage (replace with Turso in production)
+// Helper: Convert repository entity to API response
 // ============================================
 
-// In-memory store keyed by user ID
-const preferencesStore = new Map<string, z.infer<typeof UserPreferencesSchema>>();
+type PreferencesResponse = z.infer<typeof UserPreferencesSchema>;
 
-// Get or create default preferences for a user
-function getOrCreatePreferences(userId: string): z.infer<typeof UserPreferencesSchema> {
-  const existing = preferencesStore.get(userId);
-  if (existing) {
-    return existing;
-  }
-
-  const defaults: z.infer<typeof UserPreferencesSchema> = {
-    theme: "system",
-    chartTimeframe: "1M",
-    feedFilters: [],
-    sidebarCollapsed: false,
-    notificationSettings: {
-      emailAlerts: true,
-      pushNotifications: false,
-      tradeConfirmations: true,
-      dailySummary: true,
-      riskAlerts: true,
-    },
-    defaultPortfolioView: "table",
-    dateFormat: "MM/DD/YYYY",
-    timeFormat: "12h",
-    currency: "USD",
+function toApiResponse(prefs: {
+  theme: string;
+  chartTimeframe: string;
+  feedFilters: string[];
+  sidebarCollapsed: boolean;
+  notificationSettings: {
+    emailAlerts: boolean;
+    pushNotifications: boolean;
+    tradeConfirmations: boolean;
+    dailySummary: boolean;
+    riskAlerts: boolean;
   };
-
-  preferencesStore.set(userId, defaults);
-  return defaults;
+  defaultPortfolioView: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
+}): PreferencesResponse {
+  return {
+    theme: prefs.theme as "light" | "dark" | "system",
+    chartTimeframe: prefs.chartTimeframe as "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL",
+    feedFilters: prefs.feedFilters,
+    sidebarCollapsed: prefs.sidebarCollapsed,
+    notificationSettings: prefs.notificationSettings,
+    defaultPortfolioView: prefs.defaultPortfolioView as "table" | "cards",
+    dateFormat: prefs.dateFormat as "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD",
+    timeFormat: prefs.timeFormat as "12h" | "24h",
+    currency: prefs.currency,
+  };
 }
 
 // ============================================
@@ -105,10 +107,11 @@ const getPreferencesRoute = createRoute({
   tags: ["Preferences"],
 });
 
-app.openapi(getPreferencesRoute, (c) => {
+app.openapi(getPreferencesRoute, async (c) => {
   const user = getUser(c);
-  const preferences = getOrCreatePreferences(user.id);
-  return c.json(preferences);
+  const repo = await getUserPreferencesRepo();
+  const preferences = await repo.getOrCreate(user.id);
+  return c.json(toApiResponse(preferences));
 });
 
 // PUT /preferences - Update user preferences
@@ -141,20 +144,25 @@ const updatePreferencesRoute = createRoute({
 app.openapi(updatePreferencesRoute, async (c) => {
   const user = getUser(c);
   const updates = c.req.valid("json");
-  const current = getOrCreatePreferences(user.id);
+  const repo = await getUserPreferencesRepo();
 
-  // Merge updates with current preferences
-  const updated: z.infer<typeof UserPreferencesSchema> = {
-    ...current,
-    ...updates,
-    notificationSettings: {
-      ...current.notificationSettings,
-      ...(updates.notificationSettings ?? {}),
-    },
-  };
+  // Ensure preferences exist first
+  await repo.getOrCreate(user.id);
 
-  preferencesStore.set(user.id, updated);
-  return c.json(updated);
+  // Update with new values
+  const updated = await repo.update(user.id, {
+    theme: updates.theme,
+    chartTimeframe: updates.chartTimeframe,
+    feedFilters: updates.feedFilters,
+    sidebarCollapsed: updates.sidebarCollapsed,
+    notificationSettings: updates.notificationSettings,
+    defaultPortfolioView: updates.defaultPortfolioView,
+    dateFormat: updates.dateFormat,
+    timeFormat: updates.timeFormat,
+    currency: updates.currency,
+  });
+
+  return c.json(toApiResponse(updated));
 });
 
 // PATCH /preferences/theme - Quick theme update
@@ -191,9 +199,13 @@ const updateThemeRoute = createRoute({
 app.openapi(updateThemeRoute, async (c) => {
   const user = getUser(c);
   const { theme } = c.req.valid("json");
-  const current = getOrCreatePreferences(user.id);
-  current.theme = theme;
-  preferencesStore.set(user.id, current);
+  const repo = await getUserPreferencesRepo();
+
+  // Ensure preferences exist first
+  await repo.getOrCreate(user.id);
+
+  // Update just the theme
+  await repo.update(user.id, { theme });
 
   return c.json({ theme });
 });
@@ -216,14 +228,15 @@ const resetPreferencesRoute = createRoute({
   tags: ["Preferences"],
 });
 
-app.openapi(resetPreferencesRoute, (c) => {
+app.openapi(resetPreferencesRoute, async (c) => {
   const user = getUser(c);
+  const repo = await getUserPreferencesRepo();
 
-  // Delete current and recreate with defaults
-  preferencesStore.delete(user.id);
-  const defaults = getOrCreatePreferences(user.id);
+  // Ensure preferences exist first, then reset
+  await repo.getOrCreate(user.id);
+  const defaults = await repo.reset(user.id);
 
-  return c.json(defaults);
+  return c.json(toApiResponse(defaults));
 });
 
 // ============================================

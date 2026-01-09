@@ -17,6 +17,7 @@
     "@cream/api": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/helix": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "^0.24.9",
     "zod": "^4.0.0-beta.20"

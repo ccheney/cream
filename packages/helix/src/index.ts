@@ -35,6 +35,7 @@
 export {
   createHelixClient,
   createHelixClientFromEnv,
+  type HealthCheckResult,
   type HelixClient,
   type HelixClientConfig,
   HelixError,

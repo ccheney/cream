@@ -40,6 +40,7 @@ function createMockClient(
       return { data: {} as T, executionTimeMs: 1 };
     },
     isConnected: () => true,
+    healthCheck: async () => ({ healthy: true, latencyMs: 1 }),
     close: () => {},
     getConfig: () => ({
       host: "localhost",

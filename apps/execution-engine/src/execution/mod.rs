@@ -2,8 +2,14 @@
 //!
 //! This module handles order routing, state management, broker adapters,
 //! reconciliation with broker state, and crash recovery.
+//!
+//! # Adapters
+//!
+//! - [`AlpacaAdapter`]: Production adapter for Alpaca Markets (PAPER/LIVE)
+//! - [`BacktestAdapter`]: Simulated adapter for backtesting (BACKTEST)
 
 mod alpaca;
+mod backtest;
 mod gateway;
 pub mod persistence;
 pub mod reconciliation;
@@ -16,6 +22,7 @@ pub use alpaca::{
     AccountInfo, AlpacaAdapter, FeeBreakdown, OptionsOrderValidator, Position as AlpacaPosition,
     RegulatoryFeeCalculator,
 };
+pub use backtest::{BacktestAdapter, RecordedOrder};
 pub use gateway::{
     BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
 };

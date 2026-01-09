@@ -20,6 +20,14 @@ export {
   type AgentVote,
   type CreateAgentOutputInput,
 } from "./agent-outputs.js";
+// Alert settings (migration 013) - per-user notification preferences
+export {
+  type AlertSettings,
+  AlertSettingsRepository,
+  type CreateAlertSettingsInput,
+  type QuietHours,
+  type UpdateAlertSettingsInput,
+} from "./alert-settings.js";
 export {
   type Alert,
   type AlertFilters,
@@ -231,3 +239,16 @@ export {
   type UniverseSource,
   type UpdateUniverseConfigInput,
 } from "./universe-configs.js";
+// User preferences (migration 014) - dashboard user preferences
+export {
+  type ChartTimeframe,
+  type CreateUserPreferencesInput,
+  type DateFormat,
+  type NotificationSettings,
+  type PortfolioView,
+  type Theme,
+  type TimeFormat,
+  type UpdateUserPreferencesInput,
+  type UserPreferences,
+  UserPreferencesRepository,
+} from "./user-preferences.js";

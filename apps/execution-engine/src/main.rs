@@ -13,8 +13,8 @@
 //! # Environment Variables
 //!
 //! - `CREAM_ENV`: BACKTEST | PAPER | LIVE (default: PAPER)
-//! - `ALPACA_KEY`: Broker API key
-//! - `ALPACA_SECRET`: Broker API secret
+//! - `ALPACA_KEY`: Broker API key (required for PAPER/LIVE)
+//! - `ALPACA_SECRET`: Broker API secret (required for PAPER/LIVE)
 //! - `DATABENTO_KEY`: Market data API key
 //! - `RUST_LOG`: Log level (default: info)
 //!
@@ -25,6 +25,11 @@
 //!   - `POST /v1/check-constraints` - Validate decision plan constraints
 //!   - `POST /v1/submit-orders` - Submit orders from decision plan
 //!   - `POST /v1/order-state` - Get current order states
+//!
+//! # Environment-Based Adapter Selection
+//!
+//! - **BACKTEST**: Uses `BacktestAdapter` for deterministic order simulation
+//! - **PAPER/LIVE**: Uses `AlpacaAdapter` with required credentials
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -33,7 +38,7 @@ use std::time::Duration;
 use execution_engine::{
     AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway, ExecutionServer,
     OrderStateManager,
-    config::{Config, load_config},
+    config::{Config, load_config, validate_startup_environment},
     observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
     server::create_router,
 };
@@ -97,14 +102,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse::<Environment>()
         .map_err(|e| format!("Invalid environment mode: {e}"))?;
 
-    // Create Alpaca adapter
-    let alpaca = create_alpaca_adapter(&config, cream_env)?;
+    // Validate environment configuration at startup
+    match validate_startup_environment(&config, cream_env) {
+        Ok(validation) => {
+            for warning in &validation.warnings {
+                tracing::warn!("{}", warning);
+            }
+        }
+        Err(e) => {
+            tracing::error!("{}", e);
+            eprintln!("\nStartup failed: {e}");
+            std::process::exit(1);
+        }
+    }
 
-    // Create execution components
+    // Create execution components based on environment
     let state_manager = OrderStateManager::new();
     let validator = ConstraintValidator::from_config(&config);
-    let gateway = ExecutionGateway::new(alpaca, state_manager, validator);
-    let execution_server = ExecutionServer::new(gateway);
+
+    // Create the appropriate broker adapter and execution server
+    let execution_server = create_execution_server(&config, cream_env, state_manager, validator)?;
 
     // Create HTTP router
     let app = create_router(execution_server);
@@ -151,29 +168,47 @@ fn parse_config_path(args: &[String]) -> Option<&str> {
     None
 }
 
-/// Create Alpaca adapter from configuration.
-fn create_alpaca_adapter(
+/// Create execution server with the appropriate broker adapter based on environment.
+///
+/// - BACKTEST: Uses `AlpacaAdapter` with mock credentials (no real API calls made)
+/// - PAPER/LIVE: Uses `AlpacaAdapter` with validated credentials
+fn create_execution_server(
     config: &Config,
     env: Environment,
-) -> Result<AlpacaAdapter, Box<dyn std::error::Error>> {
-    let api_key = &config.brokers.alpaca.api_key;
-    let api_secret = &config.brokers.alpaca.api_secret;
-
-    if api_key.is_empty() || api_secret.is_empty() {
-        tracing::warn!("Alpaca credentials not configured - using mock adapter");
-        Ok(AlpacaAdapter::new(
-            "mock-key".to_string(),
-            "mock-secret".to_string(),
-            env,
-        )?)
+    state_manager: OrderStateManager,
+    validator: ConstraintValidator,
+) -> Result<ExecutionServer, Box<dyn std::error::Error>> {
+    let (api_key, api_secret) = if env == Environment::Backtest {
+        // In BACKTEST mode, use placeholder credentials since no real API calls are made
+        tracing::info!("Using AlpacaAdapter with mock credentials for BACKTEST mode");
+        ("backtest-key".to_string(), "backtest-secret".to_string())
     } else {
-        tracing::info!("Alpaca adapter initialized");
-        Ok(AlpacaAdapter::new(
-            api_key.clone(),
-            api_secret.clone(),
-            env,
-        )?)
-    }
+        let key = config.brokers.alpaca.api_key.clone();
+        let secret = config.brokers.alpaca.api_secret.clone();
+
+        // Credentials already validated by validate_startup_environment
+        // but we double-check here for safety
+        if key.is_empty() || secret.is_empty() {
+            return Err(format!(
+                "Alpaca credentials required for {} mode. \
+                 Set ALPACA_KEY and ALPACA_SECRET environment variables.",
+                env
+            )
+            .into());
+        }
+
+        tracing::info!(
+            environment = %env,
+            "AlpacaAdapter initialized for {} trading",
+            if env.is_live() { "LIVE" } else { "PAPER" }
+        );
+
+        (key, secret)
+    };
+
+    let adapter = AlpacaAdapter::new(api_key, api_secret, env)?;
+    let gateway = ExecutionGateway::new(adapter, state_manager, validator);
+    Ok(ExecutionServer::new(gateway))
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).

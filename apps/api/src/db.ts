@@ -2,6 +2,7 @@
  * Database Context
  *
  * Provides database client and repositories for API trading workflows.
+ * Also includes HelixDB client management for CBR memory storage.
  */
 
 import {
@@ -9,7 +10,13 @@ import {
   type RuntimeConfigService,
   type RuntimeEnvironment,
 } from "@cream/config";
-import { type CreamEnvironment, createContext, type ExecutionContext } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  type ExecutionContext,
+  isBacktest,
+} from "@cream/domain";
+import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
   AgentConfigsRepository,
   createInMemoryClient,
@@ -216,3 +223,149 @@ export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
  * Re-export RuntimeEnvironment type for workflow use
  */
 export type { RuntimeEnvironment };
+
+// ============================================
+// HelixDB Client Singleton
+// ============================================
+
+let helixClient: HelixClient | null = null;
+
+/**
+ * Get or create the HelixDB client singleton.
+ * Returns null if client creation fails (e.g., missing helix-ts module).
+ */
+export function getHelixClient(): HelixClient | null {
+  if (helixClient) {
+    return helixClient;
+  }
+
+  try {
+    helixClient = createHelixClientFromEnv();
+    return helixClient;
+  } catch (error) {
+    // Log but don't throw - caller should handle null
+    // biome-ignore lint/suspicious/noConsole: Error logging is intentional
+    console.error(
+      `[HelixDB] Failed to create client: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    return null;
+  }
+}
+
+/**
+ * Close the HelixDB client connection.
+ */
+export function closeHelixClient(): void {
+  if (helixClient) {
+    helixClient.close();
+    helixClient = null;
+  }
+}
+
+/**
+ * Perform a health check on HelixDB.
+ *
+ * @returns Health check result with latency and any error
+ */
+export async function checkHelixHealth(): Promise<HealthCheckResult> {
+  const client = getHelixClient();
+  if (!client) {
+    return {
+      healthy: false,
+      latencyMs: 0,
+      error: "HelixDB client could not be created",
+    };
+  }
+  return client.healthCheck();
+}
+
+/**
+ * HelixDB validation error - thrown when startup validation fails.
+ */
+export class HelixDBValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HelixDBValidationError";
+  }
+}
+
+/**
+ * Validate HelixDB connectivity at startup.
+ *
+ * This function should be called during service initialization for PAPER and LIVE environments.
+ * In BACKTEST mode, validation is optional but recommended.
+ *
+ * @param ctx - ExecutionContext with environment information
+ * @param options - Validation options
+ * @throws HelixDBValidationError if validation fails in PAPER/LIVE mode
+ */
+export async function validateHelixDBAtStartup(
+  ctx: ExecutionContext,
+  options: {
+    /** Whether to fail fast (throw) on health check failure. Default: true for PAPER/LIVE */
+    failFast?: boolean;
+    /** Maximum allowed latency in ms. Default: 5000 */
+    maxLatencyMs?: number;
+  } = {}
+): Promise<HealthCheckResult> {
+  const isBacktestEnv = isBacktest(ctx);
+  const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
+
+  // biome-ignore lint/suspicious/noConsole: Startup logging is intentional
+  console.log(`[HelixDB] Validating connection (environment: ${ctx.environment})...`);
+
+  const health = await checkHelixHealth();
+
+  if (!health.healthy) {
+    const errorMsg =
+      `HelixDB health check failed: ${health.error}. ` +
+      `Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"}`;
+
+    // biome-ignore lint/suspicious/noConsole: Error logging is intentional
+    console.error(`[HelixDB] ${errorMsg}`);
+
+    if (failFast) {
+      throw new HelixDBValidationError(errorMsg);
+    }
+
+    // In BACKTEST mode with failFast=false, just warn
+    // biome-ignore lint/suspicious/noConsole: Warning is intentional
+    console.warn(`[HelixDB] Continuing despite health check failure (failFast=false)`);
+  } else if (health.latencyMs > maxLatencyMs) {
+    const warnMsg = `HelixDB latency (${health.latencyMs.toFixed(0)}ms) exceeds threshold (${maxLatencyMs}ms)`;
+
+    // biome-ignore lint/suspicious/noConsole: Warning is intentional
+    console.warn(`[HelixDB] ${warnMsg}`);
+  } else {
+    // biome-ignore lint/suspicious/noConsole: Success logging is intentional
+    console.log(`[HelixDB] Health check passed (latency: ${health.latencyMs.toFixed(0)}ms)`);
+  }
+
+  return health;
+}
+
+/**
+ * Validate HelixDB and exit if validation fails.
+ *
+ * Use this at the entry point of services that require HelixDB.
+ *
+ * @param ctx - ExecutionContext with environment information
+ */
+export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void> {
+  try {
+    await validateHelixDBAtStartup(ctx, { failFast: !isBacktest(ctx) });
+  } catch (error) {
+    if (error instanceof HelixDBValidationError) {
+      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
+      console.error(`\n❌ HelixDB validation failed for API service:\n`);
+      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
+      console.error(`   ${error.message}\n`);
+      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
+      console.error(`Environment: ${ctx.environment}`);
+      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
+      console.error(`\nPlease ensure HelixDB is running and restart.\n`);
+      process.exit(1);
+    }
+    throw error;
+  }
+}

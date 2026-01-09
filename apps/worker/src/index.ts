@@ -20,7 +20,7 @@ import {
   isBacktest,
   validateEnvironmentOrExit,
 } from "@cream/domain";
-import { getRuntimeConfigService, resetRuntimeConfigService } from "./db";
+import { getRuntimeConfigService, resetRuntimeConfigService, validateHelixDBOrExit } from "./db";
 
 // ============================================
 // Worker State
@@ -353,6 +353,11 @@ async function main() {
       );
     }
   }
+
+  // Validate HelixDB connectivity - required for CBR memory persistence
+  // In PAPER/LIVE, this will fail fast if HelixDB is unavailable
+  // In BACKTEST, it will warn but continue (unless SKIP_HELIX_PERSISTENCE is set)
+  await validateHelixDBOrExit(startupCtx);
 
   // Load configuration from database - REQUIRED
   let config: FullRuntimeConfig;

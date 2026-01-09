@@ -30,6 +30,12 @@ import { createPolygonClientFromEnv, type PolygonClient, type Snapshot } from "@
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
 import { resolveUniverseSymbols as resolveUniverseSymbolsFromConfig } from "@cream/universe";
 
+import {
+  getCandleFixtures,
+  getSnapshotFixture,
+  type InternalSnapshot,
+} from "../../fixtures/market";
+
 // ============================================
 // Types
 // ============================================
@@ -73,7 +79,7 @@ export interface SnapshotBuilderResult {
  * Intermediate data structure for building snapshot.
  */
 interface SnapshotData {
-  marketSnapshots: Map<string, Snapshot>;
+  marketSnapshots: Map<string, InternalSnapshot>;
   positions: Position[];
   regime: Regime;
   /** Historical candles for indicators (keyed by symbol) */
@@ -278,24 +284,31 @@ async function fetchMarketData(
   _input: SnapshotBuilderInput,
   errors: string[],
   warnings: string[]
-): Promise<Map<string, Snapshot>> {
-  const snapshots = new Map<string, Snapshot>();
+): Promise<Map<string, InternalSnapshot>> {
+  const snapshots = new Map<string, InternalSnapshot>();
+  const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
+  const polygonKey = process.env.POLYGON_KEY;
 
-  try {
-    // In BACKTEST mode without API keys, use mock data
-    const creamEnv = process.env.CREAM_ENV ?? "BACKTEST";
-    const polygonKey = process.env.POLYGON_KEY;
-    if (creamEnv === "BACKTEST" && !polygonKey) {
-      warnings.push("BACKTEST mode without POLYGON_KEY: using mock market data");
+  // In BACKTEST mode without API keys, use deterministic fixtures
+  if (creamEnv === "BACKTEST" && !polygonKey) {
+    warnings.push("BACKTEST mode without POLYGON_KEY: using fixture market data");
 
-      // Generate mock snapshots for testing
-      for (const symbol of symbols) {
-        snapshots.set(symbol, createMockSnapshot(symbol));
-      }
-
-      return snapshots;
+    for (const symbol of symbols) {
+      snapshots.set(symbol, getSnapshotFixture(symbol));
     }
 
+    return snapshots;
+  }
+
+  // In PAPER/LIVE mode, POLYGON_KEY is required
+  if (!polygonKey) {
+    throw new Error(
+      `POLYGON_KEY is required in ${creamEnv} mode. ` +
+        "Set the POLYGON_KEY environment variable to fetch live market data."
+    );
+  }
+
+  try {
     const client = createPolygonClientFromEnv();
 
     // Fetch snapshots in batches for efficiency
@@ -304,8 +317,11 @@ async function fetchMarketData(
     for (const batch of batches) {
       const results = await Promise.allSettled(
         batch.map(async (symbol) => {
-          const snapshot = await client.getSnapshot(symbol);
-          return { symbol, snapshot };
+          const polygonSnapshot = await client.getTickerSnapshot(symbol);
+          if (!polygonSnapshot) {
+            throw new Error(`No snapshot data returned for ${symbol}`);
+          }
+          return { symbol, snapshot: transformPolygonSnapshot(symbol, polygonSnapshot) };
         })
       );
 
@@ -313,9 +329,7 @@ async function fetchMarketData(
         if (result.status === "fulfilled") {
           snapshots.set(result.value.symbol, result.value.snapshot);
         } else {
-          errors.push(
-            `Failed to fetch snapshot for ${result.status === "rejected" ? "symbol" : result.value.symbol}: ${result.reason}`
-          );
+          errors.push(`Failed to fetch snapshot: ${result.reason}`);
         }
       }
     }
@@ -327,32 +341,32 @@ async function fetchMarketData(
 }
 
 /**
- * Create a mock snapshot for testing.
+ * Transform a Polygon API Snapshot to our internal format.
  */
-function createMockSnapshot(symbol: string): Snapshot {
-  const basePrice = 150.0 + Math.random() * 50;
-  const now = Date.now();
-
+function transformPolygonSnapshot(symbol: string, polygon: Snapshot): InternalSnapshot {
   return {
     symbol,
-    lastTrade: {
-      price: basePrice,
-      size: 100,
-      timestamp: now,
-      exchange: "Q",
-    },
-    lastQuote: {
-      bid: basePrice - 0.05,
-      ask: basePrice + 0.05,
-      bidSize: 1000,
-      askSize: 800,
-      timestamp: now,
-    },
-    volume: 5000000,
-    dayHigh: basePrice + 2.0,
-    dayLow: basePrice - 2.0,
-    prevClose: basePrice - 0.5,
-    open: basePrice - 0.3,
+    lastTrade: polygon.lastTrade
+      ? {
+          price: polygon.lastTrade.p,
+          size: polygon.lastTrade.s,
+          timestamp: polygon.lastTrade.t,
+        }
+      : undefined,
+    lastQuote: polygon.lastQuote
+      ? {
+          bid: polygon.lastQuote.p,
+          ask: polygon.lastQuote.P,
+          bidSize: polygon.lastQuote.s,
+          askSize: polygon.lastQuote.S,
+          timestamp: polygon.lastQuote.t,
+        }
+      : undefined,
+    volume: polygon.day?.v ?? 0,
+    dayHigh: polygon.day?.h ?? 0,
+    dayLow: polygon.day?.l ?? 0,
+    prevClose: polygon.day?.c ?? 0, // Note: Polygon doesn't have prevClose in day, use previous day endpoint if needed
+    open: polygon.day?.o ?? 0,
   };
 }
 
@@ -368,11 +382,11 @@ async function fetchHistoricalCandles(
   const candles = new Map<string, Candle[]>();
   const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
 
-  // If no client available, return mock candles in BACKTEST mode
+  // If no client available, use deterministic fixtures in BACKTEST mode
   if (!polygonClient) {
-    warnings.push("Using mock historical candles (no Polygon client available)");
+    warnings.push("Using fixture historical candles (no Polygon client available)");
     for (const symbol of symbols) {
-      candles.set(symbol, createMockCandles(symbol, requiredBars));
+      candles.set(symbol, getCandleFixtures(symbol, requiredBars));
     }
     return candles;
   }
@@ -420,38 +434,6 @@ async function fetchHistoricalCandles(
         errors.push(`Failed to fetch candles for symbol: ${result.reason}`);
       }
     }
-  }
-
-  return candles;
-}
-
-/**
- * Create mock candles for testing.
- */
-function createMockCandles(_symbol: string, count: number): Candle[] {
-  const candles: Candle[] = [];
-  let basePrice = 150.0 + Math.random() * 50;
-  const now = Date.now();
-  const hourMs = 60 * 60 * 1000;
-
-  for (let i = count - 1; i >= 0; i--) {
-    const volatility = 0.01 + Math.random() * 0.02;
-    const change = (Math.random() - 0.5) * volatility * basePrice;
-    const open = basePrice;
-    const close = basePrice + change;
-    const high = Math.max(open, close) * (1 + Math.random() * volatility);
-    const low = Math.min(open, close) * (1 - Math.random() * volatility);
-
-    candles.push({
-      timestamp: now - i * hourMs,
-      open,
-      high,
-      low,
-      close,
-      volume: Math.floor(100000 + Math.random() * 500000),
-    });
-
-    basePrice = close;
   }
 
   return candles;
@@ -580,23 +562,23 @@ async function buildSymbolSnapshot(
   data: SnapshotData,
   input: SnapshotBuilderInput
 ): Promise<SymbolSnapshot> {
-  const polygonSnapshot = data.marketSnapshots.get(symbol);
+  const marketSnapshot = data.marketSnapshots.get(symbol);
 
-  if (!polygonSnapshot) {
+  if (!marketSnapshot) {
     throw new Error(`No market data available for ${symbol}`);
   }
 
-  // Convert Polygon snapshot to domain Quote schema
+  // Convert internal snapshot to domain Quote schema
   const quote = {
     symbol,
-    bid: polygonSnapshot.lastQuote?.bid ?? polygonSnapshot.lastTrade?.price ?? 0,
-    ask: polygonSnapshot.lastQuote?.ask ?? polygonSnapshot.lastTrade?.price ?? 0,
-    bidSize: polygonSnapshot.lastQuote?.bidSize ?? 0,
-    askSize: polygonSnapshot.lastQuote?.askSize ?? 0,
-    last: polygonSnapshot.lastTrade?.price ?? 0,
-    lastSize: polygonSnapshot.lastTrade?.size ?? 0,
-    volume: polygonSnapshot.volume ?? 0,
-    timestamp: new Date(polygonSnapshot.lastTrade?.timestamp ?? Date.now()).toISOString(),
+    bid: marketSnapshot.lastQuote?.bid ?? marketSnapshot.lastTrade?.price ?? 0,
+    ask: marketSnapshot.lastQuote?.ask ?? marketSnapshot.lastTrade?.price ?? 0,
+    bidSize: marketSnapshot.lastQuote?.bidSize ?? 0,
+    askSize: marketSnapshot.lastQuote?.askSize ?? 0,
+    last: marketSnapshot.lastTrade?.price ?? 0,
+    lastSize: marketSnapshot.lastTrade?.size ?? 0,
+    volume: marketSnapshot.volume ?? 0,
+    timestamp: new Date(marketSnapshot.lastTrade?.timestamp ?? Date.now()).toISOString(),
   };
 
   // Get historical candles for this symbol
@@ -620,10 +602,10 @@ async function buildSymbolSnapshot(
     quote,
     bars,
     marketStatus,
-    dayHigh: polygonSnapshot.dayHigh ?? quote.last,
-    dayLow: polygonSnapshot.dayLow ?? quote.last,
-    prevClose: polygonSnapshot.prevClose ?? quote.last,
-    open: polygonSnapshot.open ?? quote.last,
+    dayHigh: marketSnapshot.dayHigh ?? quote.last,
+    dayLow: marketSnapshot.dayLow ?? quote.last,
+    prevClose: marketSnapshot.prevClose ?? quote.last,
+    open: marketSnapshot.open ?? quote.last,
     asOf,
   };
 }

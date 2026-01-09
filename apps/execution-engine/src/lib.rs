@@ -55,7 +55,7 @@ pub use backtest::{
     simulate_order,
 };
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
-pub use execution::{AlpacaAdapter, ExecutionGateway, OrderStateManager};
+pub use execution::{AlpacaAdapter, BacktestAdapter, ExecutionGateway, OrderStateManager};
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
     OrderState, SubmitOrdersRequest,

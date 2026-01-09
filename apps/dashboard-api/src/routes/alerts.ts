@@ -2,12 +2,14 @@
  * Alert Settings Routes
  *
  * Routes for managing alert notification settings.
+ * Settings are persisted in Turso database via AlertSettingsRepository.
  *
  * @see docs/plans/ui/05-api-endpoints.md Alerts section
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getUser, requireAuth, type SessionVariables } from "../auth/index.js";
+import { getAlertSettingsRepo } from "../db.js";
 
 // ============================================
 // App Setup
@@ -42,29 +44,26 @@ const AlertSettingsSchema = z.object({
 const UpdateAlertSettingsRequestSchema = AlertSettingsSchema.partial();
 
 // ============================================
-// Mock Storage (replace with Turso in production)
+// Helper Functions
 // ============================================
 
-// In-memory store keyed by user ID
-const alertSettingsStore = new Map<string, z.infer<typeof AlertSettingsSchema>>();
-
-// Get or create default alert settings for a user
-function getOrCreateAlertSettings(userId: string): z.infer<typeof AlertSettingsSchema> {
-  const existing = alertSettingsStore.get(userId);
-  if (existing) {
-    return existing;
-  }
-
-  const defaults: z.infer<typeof AlertSettingsSchema> = {
-    enablePush: true,
-    enableEmail: true,
-    emailAddress: null,
-    criticalOnly: false,
-    quietHours: null,
+/**
+ * Map database AlertSettings to API response format
+ */
+function mapToResponse(settings: {
+  enablePush: boolean;
+  enableEmail: boolean;
+  emailAddress: string | null;
+  criticalOnly: boolean;
+  quietHours: { start: string; end: string } | null;
+}): z.infer<typeof AlertSettingsSchema> {
+  return {
+    enablePush: settings.enablePush,
+    enableEmail: settings.enableEmail,
+    emailAddress: settings.emailAddress,
+    criticalOnly: settings.criticalOnly,
+    quietHours: settings.quietHours,
   };
-
-  alertSettingsStore.set(userId, defaults);
-  return defaults;
 }
 
 // ============================================
@@ -89,10 +88,11 @@ const getAlertSettingsRoute = createRoute({
   tags: ["Alerts"],
 });
 
-app.openapi(getAlertSettingsRoute, (c) => {
+app.openapi(getAlertSettingsRoute, async (c) => {
   const user = getUser(c);
-  const settings = getOrCreateAlertSettings(user.id);
-  return c.json(settings);
+  const repo = await getAlertSettingsRepo();
+  const settings = await repo.getOrCreate(user.id);
+  return c.json(mapToResponse(settings));
 });
 
 // PUT /alerts/settings - Update alert settings
@@ -125,16 +125,18 @@ const updateAlertSettingsRoute = createRoute({
 app.openapi(updateAlertSettingsRoute, async (c) => {
   const user = getUser(c);
   const updates = c.req.valid("json");
-  const current = getOrCreateAlertSettings(user.id);
+  const repo = await getAlertSettingsRepo();
 
-  // Merge updates with current settings
-  const updated: z.infer<typeof AlertSettingsSchema> = {
-    ...current,
-    ...updates,
-  };
+  // Update settings in database (creates if not exists)
+  const updated = await repo.update(user.id, {
+    enablePush: updates.enablePush,
+    enableEmail: updates.enableEmail,
+    emailAddress: updates.emailAddress,
+    criticalOnly: updates.criticalOnly,
+    quietHours: updates.quietHours,
+  });
 
-  alertSettingsStore.set(user.id, updated);
-  return c.json(updated);
+  return c.json(mapToResponse(updated));
 });
 
 // ============================================
