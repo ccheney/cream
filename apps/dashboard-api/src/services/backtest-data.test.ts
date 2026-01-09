@@ -305,35 +305,7 @@ describe("Backtest Data Service", () => {
 });
 
 // ============================================
-// Signal Generation Logic Tests
+// Integration Tests
 // ============================================
-
-// Check if uv is available - needed for writeParquet which spawns Python
-function isUvAvailable(): boolean {
-  try {
-    const proc = Bun.spawnSync(["which", "uv"]);
-    return proc.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
-
-const uvAvailable = isUvAvailable();
-
-describe.skipIf(!uvAvailable)("Signal Generation", () => {
-  beforeEach(() => {
-    // Ensure sufficient data for SMA calculations (uses helper defined above)
-    mockGetAggregates.mockResolvedValue({
-      results: generateMockBars(50),
-      resultsCount: 50,
-    });
-  });
-
-  it("should generate signals without crashing for sufficient data", async () => {
-    const backtest = createTestBacktest();
-
-    // Should not throw
-    const signalsPath = await prepareSignals(backtest);
-    expect(signalsPath).toBeDefined();
-  });
-});
+// Integration tests that require uv (Python) are in backtest-data.integration.test.ts
+// Run with: bun test backtest-data.integration.test.ts

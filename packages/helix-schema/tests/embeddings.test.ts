@@ -1,13 +1,12 @@
 /**
- * Gemini Embedding Tests
+ * Gemini Embedding Unit Tests
  *
- * Tests for embedding generation, batch processing, and utilities.
- * Note: Tests requiring API calls are skipped without GEMINI_API_KEY.
+ * Tests for embedding configuration, utilities, and client setup.
+ * API integration tests are in embeddings.integration.test.ts.
  */
 
 import { describe, expect, it } from "bun:test";
 import {
-  batchEmbedWithProgress,
   createEmbeddingClient,
   createEmbeddingMetadata,
   DEFAULT_EMBEDDING_CONFIG,
@@ -333,59 +332,7 @@ describe("createEmbeddingClient", () => {
 });
 
 // ============================================
-// Integration Tests (require API key)
+// Integration Tests
 // ============================================
-
-describe("EmbeddingClient API", () => {
-  const hasApiKey = !!process.env.GEMINI_API_KEY;
-
-  it.skipIf(!hasApiKey)("generates single embedding", async () => {
-    const client = createEmbeddingClient();
-    const result = await client.generateEmbedding("Hello, world!");
-
-    expect(result.values).toBeDefined();
-    expect(result.values.length).toBe(3072);
-    expect(result.model).toBe("gemini-embedding-001");
-    expect(result.generatedAt).toBeDefined();
-    expect(result.inputLength).toBe(13);
-  });
-
-  it.skipIf(!hasApiKey)("generates batch embeddings", async () => {
-    const client = createEmbeddingClient();
-    const texts = ["First text to embed", "Second text to embed", "Third text to embed"];
-
-    const result = await client.batchGenerateEmbeddings(texts);
-
-    expect(result.embeddings.length).toBe(3);
-    expect(result.apiCalls).toBe(1);
-    expect(result.processingTimeMs).toBeGreaterThan(0);
-
-    for (const embedding of result.embeddings) {
-      expect(embedding.values.length).toBe(3072);
-    }
-  });
-
-  it.skipIf(!hasApiKey)("handles empty batch", async () => {
-    const client = createEmbeddingClient();
-    const result = await client.batchGenerateEmbeddings([]);
-
-    expect(result.embeddings.length).toBe(0);
-    expect(result.apiCalls).toBe(0);
-  });
-
-  it.skipIf(!hasApiKey)("batchEmbedWithProgress reports progress", async () => {
-    const client = createEmbeddingClient();
-    const texts = ["Text 1", "Text 2", "Text 3"];
-    const progressUpdates: { processed: number; total: number }[] = [];
-
-    const result = await batchEmbedWithProgress(client, texts, {
-      onProgress: (processed, total) => {
-        progressUpdates.push({ processed, total });
-      },
-    });
-
-    expect(result.embeddings.length).toBe(3);
-    expect(progressUpdates.length).toBeGreaterThan(0);
-    expect(progressUpdates[progressUpdates.length - 1].processed).toBe(3);
-  });
-});
+// API integration tests are in embeddings.integration.test.ts
+// Run with: GEMINI_API_KEY=xxx bun test embeddings.integration.test.ts
