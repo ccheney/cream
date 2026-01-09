@@ -55,7 +55,11 @@ pub use backtest::{
     simulate_order,
 };
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
-pub use execution::{AlpacaAdapter, BacktestAdapter, ExecutionGateway, OrderStateManager};
+pub use execution::{
+    AlpacaAdapter, BacktestAdapter, ExecutionGateway, MonitoredPosition, OrderStateManager,
+    StatePersistence, StopsEnforcer, TacticSelector, TacticType, TriggerResult, TwapConfig,
+    VwapConfig,
+};
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
     OrderState, SubmitOrdersRequest,
@@ -76,7 +80,7 @@ pub use risk::{
     SizingResult, SizingUnit,
 };
 pub use safety::{
-    DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent, MassCancelResult,
-    SafetyError,
+    ConnectionMonitor, DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent,
+    MassCancelResult, SafetyError,
 };
 pub use server::ExecutionServer;

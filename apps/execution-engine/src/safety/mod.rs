@@ -5,10 +5,13 @@
 //!   broker connection is lost
 //! - Heartbeat monitoring: Detect connection health and trigger recovery
 //! - Grace period management: Allow transient network issues to recover
+//! - Connection monitoring: Background task for broker health checks
 
 mod mass_cancel;
+mod monitor;
 
 pub use mass_cancel::{
     DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent, MassCancelResult,
     SafetyError,
 };
+pub use monitor::ConnectionMonitor;

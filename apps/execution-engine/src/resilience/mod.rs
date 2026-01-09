@@ -6,5 +6,6 @@
 mod circuit_breaker;
 
 pub use circuit_breaker::{
-    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerState, ServiceCircuitBreakers,
+    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerMetrics, CircuitBreakerState,
+    ServiceCircuitBreakers,
 };

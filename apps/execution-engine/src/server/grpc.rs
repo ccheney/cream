@@ -154,8 +154,11 @@ impl ExecutionServiceImpl {
 
         let gateway_state_manager = OrderStateManager::new();
         let gateway_validator = ConstraintValidator::with_defaults();
-        let gateway =
-            ExecutionGateway::new(gateway_alpaca, gateway_state_manager, gateway_validator);
+        let gateway = ExecutionGateway::with_defaults(
+            gateway_alpaca,
+            gateway_state_manager,
+            gateway_validator,
+        );
 
         Ok(Self {
             validator: Arc::new(validator),

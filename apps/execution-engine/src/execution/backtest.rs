@@ -382,6 +382,11 @@ impl BrokerAdapter for BacktestAdapter {
     fn broker_name(&self) -> &'static str {
         "Backtest"
     }
+
+    async fn health_check(&self) -> Result<(), BrokerError> {
+        // Backtest adapter is always healthy
+        Ok(())
+    }
 }
 
 #[cfg(test)]

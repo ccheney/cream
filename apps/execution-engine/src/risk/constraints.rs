@@ -701,10 +701,6 @@ pub struct RiskLimitsConfig {
     pub max_per_trade_risk_pct: f64,
     /// Minimum risk-reward ratio (default: 1.5).
     pub min_risk_reward_ratio: f64,
-    /// Maximum average correlation before position size reduction (default: 0.7).
-    pub max_correlation: f64,
-    /// Position size reduction factor when correlation exceeds threshold (default: 0.5).
-    pub correlation_size_reduction: f64,
 }
 
 impl Default for RiskLimitsConfig {
@@ -712,8 +708,6 @@ impl Default for RiskLimitsConfig {
         Self {
             max_per_trade_risk_pct: 2.0,
             min_risk_reward_ratio: 1.5,
-            max_correlation: 0.7,
-            correlation_size_reduction: 0.5,
         }
     }
 }
@@ -845,118 +839,6 @@ pub fn calculate_risk_reward_ratio(
         meets_minimum: ratio >= min_ratio,
         minimum_ratio: min_ratio,
     }
-}
-
-/// Result of correlation check.
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct CorrelationResult {
-    /// Average pairwise correlation.
-    pub average_correlation: f64,
-    /// Whether correlation exceeds the threshold.
-    pub exceeds_threshold: bool,
-    /// Suggested position size multiplier (1.0 if no reduction needed).
-    pub size_multiplier: f64,
-    /// The configured threshold.
-    pub threshold: f64,
-}
-
-/// Calculate average pairwise correlation from returns.
-///
-/// Returns the average correlation coefficient across all pairs.
-/// If less than 2 instruments, returns 0.0 (no correlation check needed).
-///
-/// # Arguments
-///
-/// * `returns` - Map of instrument ID to vector of returns
-/// * `max_correlation` - Correlation threshold (default: 0.7)
-/// * `size_reduction` - Size reduction factor when threshold exceeded (default: 0.5)
-#[must_use]
-#[allow(dead_code)]
-pub fn calculate_correlation_adjustment(
-    returns: &std::collections::HashMap<String, Vec<f64>>,
-    max_correlation: f64,
-    size_reduction: f64,
-) -> CorrelationResult {
-    let instruments: Vec<_> = returns.keys().collect();
-
-    // Need at least 2 instruments for correlation
-    if instruments.len() < 2 {
-        return CorrelationResult {
-            average_correlation: 0.0,
-            exceeds_threshold: false,
-            size_multiplier: 1.0,
-            threshold: max_correlation,
-        };
-    }
-
-    let mut total_correlation = 0.0;
-    let mut pair_count = 0;
-
-    // Calculate pairwise correlations
-    for i in 0..instruments.len() {
-        for j in (i + 1)..instruments.len() {
-            if let (Some(returns_i), Some(returns_j)) =
-                (returns.get(instruments[i]), returns.get(instruments[j]))
-                && let Some(corr) = pearson_correlation(returns_i, returns_j)
-            {
-                total_correlation += corr.abs();
-                pair_count += 1;
-            }
-        }
-    }
-
-    let average_correlation = if pair_count > 0 {
-        // Use From for infallible i32 -> f64 conversion
-        total_correlation / f64::from(pair_count)
-    } else {
-        0.0
-    };
-
-    let exceeds_threshold = average_correlation > max_correlation;
-    let size_multiplier = if exceeds_threshold {
-        size_reduction
-    } else {
-        1.0
-    };
-
-    CorrelationResult {
-        average_correlation,
-        exceeds_threshold,
-        size_multiplier,
-        threshold: max_correlation,
-    }
-}
-
-/// Calculate Pearson correlation coefficient between two series.
-#[allow(dead_code, clippy::cast_precision_loss)]
-fn pearson_correlation(x: &[f64], y: &[f64]) -> Option<f64> {
-    let n = x.len().min(y.len());
-    if n < 2 {
-        return None;
-    }
-
-    // Precision loss acceptable for statistical calculation (approximate metric)
-    let mean_x: f64 = x.iter().take(n).sum::<f64>() / n as f64;
-    let mean_y: f64 = y.iter().take(n).sum::<f64>() / n as f64;
-
-    let mut cov = 0.0;
-    let mut var_x = 0.0;
-    let mut var_y = 0.0;
-
-    for i in 0..n {
-        let dx = x[i] - mean_x;
-        let dy = y[i] - mean_y;
-        cov += dx * dy;
-        var_x += dx * dx;
-        var_y += dy * dy;
-    }
-
-    if var_x == 0.0 || var_y == 0.0 {
-        return None;
-    }
-
-    Some(cov / (var_x.sqrt() * var_y.sqrt()))
 }
 
 /// Validate per-trade risk for a decision.
@@ -1883,85 +1765,10 @@ mod tests {
     }
 
     #[test]
-    fn test_correlation_adjustment_single_instrument() {
-        let mut returns = std::collections::HashMap::new();
-        returns.insert("AAPL".to_string(), vec![0.01, 0.02, -0.01, 0.015]);
-
-        let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
-
-        assert!(!result.exceeds_threshold);
-        assert!((result.size_multiplier - 1.0).abs() < f64::EPSILON);
-        assert!((result.average_correlation - 0.0).abs() < f64::EPSILON);
-    }
-
-    #[test]
-    fn test_correlation_adjustment_high_correlation() {
-        let mut returns = std::collections::HashMap::new();
-        // Highly correlated returns (almost identical)
-        returns.insert("AAPL".to_string(), vec![0.01, 0.02, -0.01, 0.015, 0.005]);
-        returns.insert("MSFT".to_string(), vec![0.012, 0.019, -0.011, 0.014, 0.006]);
-
-        let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
-
-        assert!(result.exceeds_threshold);
-        assert!((result.size_multiplier - 0.5).abs() < f64::EPSILON);
-        assert!(result.average_correlation > 0.7);
-    }
-
-    #[test]
-    fn test_correlation_adjustment_low_correlation() {
-        let mut returns = std::collections::HashMap::new();
-        // Uncorrelated returns
-        returns.insert("AAPL".to_string(), vec![0.01, 0.02, -0.01, 0.015, 0.005]);
-        returns.insert("GLD".to_string(), vec![-0.005, 0.01, 0.02, -0.015, 0.008]);
-
-        let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
-
-        assert!(!result.exceeds_threshold);
-        assert!((result.size_multiplier - 1.0).abs() < f64::EPSILON);
-        assert!(result.average_correlation < 0.7);
-    }
-
-    #[test]
-    fn test_pearson_correlation_positive() {
-        // Perfectly correlated: x = y
-        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-
-        let Some(corr) = super::pearson_correlation(&x, &y) else {
-            panic!("correlation should be computable for valid data");
-        };
-        assert!((corr - 1.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_pearson_correlation_negative() {
-        // Perfectly negative correlated
-        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![5.0, 4.0, 3.0, 2.0, 1.0];
-
-        let Some(corr) = super::pearson_correlation(&x, &y) else {
-            panic!("correlation should be computable for valid data");
-        };
-        assert!((corr + 1.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_pearson_correlation_insufficient_data() {
-        let x = vec![1.0];
-        let y = vec![1.0];
-
-        let corr = super::pearson_correlation(&x, &y);
-        assert!(corr.is_none());
-    }
-
-    #[test]
     fn test_risk_limits_config_defaults() {
         let config = RiskLimitsConfig::default();
         assert!((config.max_per_trade_risk_pct - 2.0).abs() < f64::EPSILON);
         assert!((config.min_risk_reward_ratio - 1.5).abs() < f64::EPSILON);
-        assert!((config.max_correlation - 0.7).abs() < f64::EPSILON);
-        assert!((config.correlation_size_reduction - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]

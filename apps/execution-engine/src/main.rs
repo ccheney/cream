@@ -37,9 +37,11 @@ use std::time::Duration;
 
 use execution_engine::{
     AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway, ExecutionServer,
-    OrderStateManager,
+    OrderStateManager, StatePersistence,
     config::{Config, load_config, validate_startup_environment},
+    execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
     observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
+    safety::ConnectionMonitor,
     server::create_router,
 };
 use tokio::net::TcpListener;
@@ -121,10 +123,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let validator = ConstraintValidator::from_config(&config);
 
     // Create the appropriate broker adapter and execution server
-    let execution_server = create_execution_server(&config, cream_env, state_manager, validator)?;
+    let components = create_execution_server(&config, cream_env, state_manager, validator).await?;
+
+    // Spawn reconciliation background task if enabled
+    let shutdown_rx = shutdown_tx.subscribe();
+    if let (Some(adapter), Some(state_manager)) = (
+        &components.adapter_for_reconciliation,
+        &components.state_manager_for_reconciliation,
+    ) {
+        let recon_config = config.reconciliation.to_reconciliation_config();
+        let recon_manager =
+            ReconciliationManager::new(recon_config.clone(), Arc::clone(state_manager));
+        let interval_secs = config.reconciliation.interval_secs;
+        let adapter_clone = Arc::clone(adapter);
+
+        tracing::info!(
+            interval_secs = interval_secs,
+            "Starting periodic reconciliation background task"
+        );
+
+        tokio::spawn(async move {
+            reconciliation_loop(adapter_clone, recon_manager, interval_secs, shutdown_rx).await;
+        });
+    }
+
+    // Spawn connection monitor for mass cancel on disconnect if enabled
+    let safety_enabled = config.safety.is_enabled_for_env(&cream_env);
+    if safety_enabled {
+        if let (Some(adapter), Some(state_manager)) = (
+            &components.adapter_for_reconciliation,
+            &components.state_manager_for_reconciliation,
+        ) {
+            let mass_cancel_config = config.safety.to_mass_cancel_config();
+            let monitor = ConnectionMonitor::new(
+                Arc::clone(adapter),
+                mass_cancel_config,
+                Arc::clone(state_manager),
+            );
+            let shutdown_rx = shutdown_tx.subscribe();
+
+            tracing::info!(
+                grace_period_secs = config.safety.grace_period_seconds,
+                heartbeat_interval_ms = config.safety.heartbeat_interval_ms,
+                "Starting connection monitor for mass cancel on disconnect"
+            );
+
+            tokio::spawn(async move {
+                monitor.run(shutdown_rx).await;
+            });
+        } else {
+            tracing::info!(
+                "Connection monitor disabled (adapter/state_manager not available in this mode)"
+            );
+        }
+    } else {
+        tracing::info!(
+            environment = %cream_env,
+            "Connection monitor disabled for this environment"
+        );
+    }
 
     // Create HTTP router
-    let app = create_router(execution_server);
+    let app = create_router(components.execution_server);
 
     // Build server address
     let addr: SocketAddr =
@@ -168,16 +228,27 @@ fn parse_config_path(args: &[String]) -> Option<&str> {
     None
 }
 
+/// Components created during server initialization that may be needed for background tasks.
+struct ServerComponents {
+    execution_server: ExecutionServer,
+    /// Adapter for reconciliation (None in BACKTEST mode)
+    adapter_for_reconciliation: Option<Arc<AlpacaAdapter>>,
+    /// State manager for reconciliation (None in BACKTEST mode)
+    state_manager_for_reconciliation: Option<Arc<OrderStateManager>>,
+}
+
 /// Create execution server with the appropriate broker adapter based on environment.
 ///
 /// - BACKTEST: Uses `AlpacaAdapter` with mock credentials (no real API calls made)
 /// - PAPER/LIVE: Uses `AlpacaAdapter` with validated credentials
-fn create_execution_server(
+///
+/// Returns the execution server and optional components needed for background tasks.
+async fn create_execution_server(
     config: &Config,
     env: Environment,
     state_manager: OrderStateManager,
     validator: ConstraintValidator,
-) -> Result<ExecutionServer, Box<dyn std::error::Error>> {
+) -> Result<ServerComponents, Box<dyn std::error::Error>> {
     let (api_key, api_secret) = if env == Environment::Backtest {
         // In BACKTEST mode, use placeholder credentials since no real API calls are made
         tracing::info!("Using AlpacaAdapter with mock credentials for BACKTEST mode");
@@ -205,9 +276,180 @@ fn create_execution_server(
         (key, secret)
     };
 
+    // Get circuit breaker config for Alpaca
+    let circuit_config = config.circuit_breaker.alpaca_config();
+    tracing::info!(
+        failure_threshold = %circuit_config.failure_rate_threshold,
+        wait_duration_secs = circuit_config.wait_duration_in_open.as_secs(),
+        "Circuit breaker configured for Alpaca"
+    );
+
     let adapter = AlpacaAdapter::new(api_key, api_secret, env)?;
-    let gateway = ExecutionGateway::new(adapter, state_manager, validator);
-    Ok(ExecutionServer::new(gateway))
+
+    // Initialize persistence if enabled for this environment
+    let persistence_enabled = config.persistence.is_enabled_for_env(&env);
+    let recovery_enabled = config.recovery.is_enabled_for_env(&env);
+    let reconciliation_enabled = config.reconciliation.is_enabled_for_env(&env);
+
+    if persistence_enabled {
+        let persistence =
+            StatePersistence::new_local(&config.persistence.db_path, &env.to_string())
+                .await
+                .map_err(|e| format!("Failed to initialize persistence: {e}"))?;
+
+        tracing::info!(
+            db_path = %config.persistence.db_path,
+            snapshot_interval_secs = config.persistence.snapshot_interval_secs,
+            "State persistence initialized"
+        );
+
+        let persistence_arc = Arc::new(persistence);
+        let state_manager_arc = Arc::new(state_manager);
+        let adapter_arc = Arc::new(adapter);
+
+        // Run crash recovery before accepting requests
+        if recovery_enabled {
+            tracing::info!("Starting crash recovery...");
+
+            let recovery_config = config.recovery.to_recovery_config();
+            let recovery = PortfolioRecovery::new(
+                recovery_config,
+                Arc::clone(&persistence_arc),
+                Arc::clone(&state_manager_arc),
+            );
+
+            match recovery.recover(&adapter_arc).await {
+                Ok(result) => {
+                    tracing::info!(
+                        orders_loaded = result.orders_loaded,
+                        positions_loaded = result.positions_loaded,
+                        orphans_resolved = result.orphans_resolved,
+                        positions_synced = result.positions_synced,
+                        duration_ms = result.duration_ms,
+                        "Crash recovery completed successfully"
+                    );
+                    for warning in &result.warnings {
+                        tracing::warn!("Recovery warning: {}", warning);
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Crash recovery failed: {}", e);
+
+                    // In LIVE mode, refuse to start without successful recovery
+                    if env.is_live() {
+                        return Err(format!(
+                            "LIVE mode requires successful recovery. Recovery failed: {e}"
+                        )
+                        .into());
+                    }
+
+                    // In PAPER mode, warn but continue
+                    tracing::warn!(
+                        "Continuing without successful recovery in PAPER mode. \
+                         Order states may be inconsistent."
+                    );
+                }
+            }
+        } else {
+            tracing::info!(
+                environment = %env,
+                "Crash recovery disabled (BACKTEST mode or explicitly disabled)"
+            );
+        }
+
+        // Use the Arc-based constructor since we need to keep references for reconciliation
+        let gateway = ExecutionGateway::with_all_arcs(
+            Arc::clone(&adapter_arc),
+            "Alpaca",
+            Arc::clone(&state_manager_arc),
+            validator,
+            circuit_config,
+            Arc::clone(&persistence_arc),
+        );
+
+        // Return components needed for reconciliation if enabled
+        let (adapter_for_recon, state_manager_for_recon) = if reconciliation_enabled {
+            (Some(adapter_arc), Some(state_manager_arc))
+        } else {
+            (None, None)
+        };
+
+        Ok(ServerComponents {
+            execution_server: ExecutionServer::new(gateway),
+            adapter_for_reconciliation: adapter_for_recon,
+            state_manager_for_reconciliation: state_manager_for_recon,
+        })
+    } else {
+        tracing::info!(
+            environment = %env,
+            "State persistence disabled (BACKTEST mode or explicitly disabled)"
+        );
+        let gateway = ExecutionGateway::new(adapter, state_manager, validator, circuit_config);
+        Ok(ServerComponents {
+            execution_server: ExecutionServer::new(gateway),
+            adapter_for_reconciliation: None,
+            state_manager_for_reconciliation: None,
+        })
+    }
+}
+
+/// Background task that periodically reconciles local state with broker state.
+async fn reconciliation_loop(
+    adapter: Arc<AlpacaAdapter>,
+    recon_manager: ReconciliationManager,
+    interval_secs: u64,
+    mut shutdown_rx: broadcast::Receiver<()>,
+) {
+    let mut interval = tokio::time::interval(Duration::from_secs(interval_secs));
+
+    // Skip the first tick (immediate) to allow server to fully start
+    interval.tick().await;
+
+    loop {
+        tokio::select! {
+            _ = interval.tick() => {
+                tracing::debug!("Starting periodic reconciliation");
+
+                // Fetch broker state
+                let broker_state = match fetch_broker_state(&adapter).await {
+                    Ok(state) => state,
+                    Err(e) => {
+                        tracing::error!("Failed to fetch broker state for reconciliation: {}", e);
+                        continue;
+                    }
+                };
+
+                // Run reconciliation
+                let report = recon_manager.reconcile(broker_state).await;
+
+                if report.has_critical() {
+                    tracing::error!(
+                        discrepancy_count = report.discrepancies.len(),
+                        orphan_count = report.orphaned_orders.len(),
+                        "Reconciliation detected critical discrepancies"
+                    );
+                } else if !report.discrepancies.is_empty() || !report.orphaned_orders.is_empty() {
+                    tracing::warn!(
+                        discrepancy_count = report.discrepancies.len(),
+                        orphan_count = report.orphaned_orders.len(),
+                        duration_ms = report.duration_ms,
+                        "Reconciliation completed with discrepancies"
+                    );
+                } else {
+                    tracing::info!(
+                        orders_compared = report.orders_compared,
+                        positions_compared = report.positions_compared,
+                        duration_ms = report.duration_ms,
+                        "Reconciliation completed successfully"
+                    );
+                }
+            }
+            _ = shutdown_rx.recv() => {
+                tracing::info!("Reconciliation loop shutting down");
+                break;
+            }
+        }
+    }
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).

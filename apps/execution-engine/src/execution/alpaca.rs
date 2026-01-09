@@ -634,6 +634,12 @@ impl super::gateway::BrokerAdapter for AlpacaAdapter {
     fn broker_name(&self) -> &'static str {
         "Alpaca"
     }
+
+    async fn health_check(&self) -> Result<(), BrokerError> {
+        // Use get_account as a lightweight health check
+        // It validates authentication and connectivity
+        self.get_account().await.map(|_| ()).map_err(Into::into)
+    }
 }
 
 // ============================================================================

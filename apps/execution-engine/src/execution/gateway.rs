@@ -5,14 +5,17 @@
 //! - Order routing logic with constraint validation
 //! - Order state tracking with FIX protocol semantics
 //! - Cancel order functionality
+//! - Circuit breaker integration for broker resilience
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::execution::StatePersistence;
 use crate::models::{
     ConstraintCheckRequest, ConstraintCheckResponse, ExecutionAck, OrderState, SubmitOrdersRequest,
 };
+use crate::resilience::{CircuitBreaker, CircuitBreakerConfig};
 use crate::risk::ConstraintValidator;
 
 use super::OrderStateManager;
@@ -115,6 +118,24 @@ pub trait BrokerAdapter: Send + Sync {
 
     /// Get broker name for logging and metrics.
     fn broker_name(&self) -> &'static str;
+
+    /// Check broker connection health.
+    ///
+    /// Performs a lightweight check to verify the broker connection is healthy.
+    /// Used by the connection monitor for heartbeat checks.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Connection is healthy
+    /// * `Err(BrokerError)` - Connection check failed
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Authentication fails
+    /// - Network error
+    /// - Broker API error
+    async fn health_check(&self) -> Result<(), BrokerError>;
 }
 
 /// Errors from broker operations.
@@ -176,6 +197,11 @@ pub enum BrokerError {
 /// and state management. It is generic over the broker adapter type, allowing
 /// for different broker integrations while maintaining consistent validation
 /// and state tracking logic.
+///
+/// The gateway includes circuit breaker protection for broker API calls to
+/// prevent cascading failures when the broker becomes unavailable.
+///
+/// Optionally supports state persistence for crash recovery.
 #[derive(Clone)]
 pub struct ExecutionGateway<B: BrokerAdapter> {
     /// Broker adapter for order routing.
@@ -184,21 +210,165 @@ pub struct ExecutionGateway<B: BrokerAdapter> {
     state_manager: Arc<OrderStateManager>,
     /// Constraint validator.
     validator: Arc<ConstraintValidator>,
+    /// Circuit breaker for broker API calls.
+    circuit_breaker: Arc<CircuitBreaker>,
+    /// Optional state persistence for crash recovery.
+    persistence: Option<Arc<StatePersistence>>,
 }
 
 impl<B: BrokerAdapter> ExecutionGateway<B> {
-    /// Create a new execution gateway.
+    /// Create a new execution gateway with circuit breaker protection.
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - The broker adapter for order routing
+    /// * `state_manager` - Order state manager for tracking order lifecycle
+    /// * `validator` - Constraint validator for risk checks
+    /// * `circuit_config` - Circuit breaker configuration for broker resilience
     #[must_use]
     pub fn new(
         broker: B,
         state_manager: OrderStateManager,
         validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
     ) -> Self {
+        let broker_name = broker.broker_name();
         Self {
             broker: Arc::new(broker),
             state_manager: Arc::new(state_manager),
             validator: Arc::new(validator),
+            circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
+            persistence: None,
         }
+    }
+
+    /// Create a new execution gateway with persistence enabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - The broker adapter for order routing
+    /// * `state_manager` - Order state manager for tracking order lifecycle
+    /// * `validator` - Constraint validator for risk checks
+    /// * `circuit_config` - Circuit breaker configuration for broker resilience
+    /// * `persistence` - State persistence manager for crash recovery
+    #[must_use]
+    pub fn with_persistence(
+        broker: B,
+        state_manager: OrderStateManager,
+        validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
+        persistence: StatePersistence,
+    ) -> Self {
+        let broker_name = broker.broker_name();
+        Self {
+            broker: Arc::new(broker),
+            state_manager: Arc::new(state_manager),
+            validator: Arc::new(validator),
+            circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
+            persistence: Some(Arc::new(persistence)),
+        }
+    }
+
+    /// Create a new execution gateway with pre-wrapped Arc references.
+    ///
+    /// This is useful when the state manager and persistence have already been
+    /// created (e.g., after crash recovery).
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - Broker adapter for order routing
+    /// * `state_manager` - Arc-wrapped order state manager
+    /// * `validator` - Constraint validator for risk checks
+    /// * `circuit_config` - Circuit breaker configuration
+    /// * `persistence` - Arc-wrapped state persistence manager
+    #[must_use]
+    pub fn with_persistence_arc(
+        broker: B,
+        state_manager: Arc<OrderStateManager>,
+        validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
+        persistence: Arc<StatePersistence>,
+    ) -> Self {
+        let broker_name = broker.broker_name();
+        Self {
+            broker: Arc::new(broker),
+            state_manager,
+            validator: Arc::new(validator),
+            circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
+            persistence: Some(persistence),
+        }
+    }
+
+    /// Create a new execution gateway with all Arc-wrapped components.
+    ///
+    /// This allows the caller to retain Arc references for background tasks
+    /// like reconciliation while still passing them to the gateway.
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - Arc-wrapped broker adapter
+    /// * `broker_name` - Name of the broker for circuit breaker identification
+    /// * `state_manager` - Arc-wrapped order state manager
+    /// * `validator` - Constraint validator (wrapped internally)
+    /// * `circuit_config` - Circuit breaker configuration
+    /// * `persistence` - Arc-wrapped state persistence manager
+    #[must_use]
+    pub fn with_all_arcs(
+        broker: Arc<B>,
+        broker_name: &'static str,
+        state_manager: Arc<OrderStateManager>,
+        validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
+        persistence: Arc<StatePersistence>,
+    ) -> Self {
+        Self {
+            broker,
+            state_manager,
+            validator: Arc::new(validator),
+            circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
+            persistence: Some(persistence),
+        }
+    }
+
+    /// Create a new execution gateway with default circuit breaker settings.
+    ///
+    /// Primarily for testing or when circuit breaker config is not needed.
+    #[must_use]
+    pub fn with_defaults(
+        broker: B,
+        state_manager: OrderStateManager,
+        validator: ConstraintValidator,
+    ) -> Self {
+        Self::new(
+            broker,
+            state_manager,
+            validator,
+            CircuitBreakerConfig::default(),
+        )
+    }
+
+    /// Check if persistence is enabled.
+    #[must_use]
+    pub fn has_persistence(&self) -> bool {
+        self.persistence.is_some()
+    }
+
+    /// Get the current circuit breaker state.
+    #[must_use]
+    pub fn circuit_breaker_state(&self) -> crate::resilience::CircuitBreakerState {
+        self.circuit_breaker.state()
+    }
+
+    /// Check if broker calls are currently permitted.
+    #[must_use]
+    pub fn is_broker_available(&self) -> bool {
+        self.circuit_breaker.is_call_permitted()
+    }
+
+    /// Get circuit breaker metrics.
+    #[must_use]
+    pub fn circuit_breaker_metrics(&self) -> crate::resilience::CircuitBreakerMetrics {
+        self.circuit_breaker.metrics()
     }
 
     /// Check constraints for a decision plan using default context.
@@ -236,11 +406,28 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     ///
     /// # Errors
     ///
-    /// Returns an error if order submission fails at the broker level.
+    /// Returns an error if:
+    /// - Circuit breaker is open (broker is unavailable)
+    /// - Order submission fails at the broker level
     pub async fn submit_orders(
         &self,
         request: SubmitOrdersRequest,
     ) -> Result<ExecutionAck, SubmitOrdersError> {
+        // Check circuit breaker first
+        if !self.circuit_breaker.is_call_permitted() {
+            tracing::warn!(
+                cycle_id = %request.cycle_id,
+                broker = %self.broker.broker_name(),
+                circuit_state = %self.circuit_breaker.state(),
+                "Order submission blocked by circuit breaker"
+            );
+            return Err(SubmitOrdersError::CircuitOpen(format!(
+                "Broker {} circuit breaker is {}",
+                self.broker.broker_name(),
+                self.circuit_breaker.state()
+            )));
+        }
+
         tracing::info!(
             cycle_id = %request.cycle_id,
             broker = %self.broker.broker_name(),
@@ -248,33 +435,60 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             "Submitting orders to broker"
         );
 
-        // Submit to broker
-        let ack = self
-            .broker
-            .submit_orders(&request)
-            .await
-            .map_err(|e| SubmitOrdersError::BrokerError(e.to_string()))?;
+        // Submit to broker with circuit breaker tracking
+        let result = self.broker.submit_orders(&request).await;
 
-        // Store order states
-        for order in &ack.orders {
-            self.state_manager.insert(order.clone());
-            tracing::debug!(
-                order_id = %order.order_id,
-                broker_order_id = %order.broker_order_id,
-                instrument = %order.instrument_id,
-                status = ?order.status,
-                "Order state stored"
-            );
+        match result {
+            Ok(ack) => {
+                self.circuit_breaker.record_success();
+
+                // Store order states
+                for order in &ack.orders {
+                    self.state_manager.insert(order.clone());
+                    tracing::debug!(
+                        order_id = %order.order_id,
+                        broker_order_id = %order.broker_order_id,
+                        instrument = %order.instrument_id,
+                        status = ?order.status,
+                        "Order state stored"
+                    );
+
+                    // Persist order to database (best-effort, non-blocking)
+                    if let Some(persistence) = &self.persistence {
+                        let persistence = Arc::clone(persistence);
+                        let order_clone = order.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = persistence.save_order(&order_clone).await {
+                                tracing::warn!(
+                                    order_id = %order_clone.order_id,
+                                    error = %e,
+                                    "Failed to persist order state"
+                                );
+                            }
+                        });
+                    }
+                }
+
+                tracing::info!(
+                    cycle_id = %request.cycle_id,
+                    submitted_count = ack.orders.len(),
+                    error_count = ack.errors.len(),
+                    "Order submission complete"
+                );
+
+                Ok(ack)
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                tracing::error!(
+                    cycle_id = %request.cycle_id,
+                    broker = %self.broker.broker_name(),
+                    error = %e,
+                    "Broker submission failed, circuit breaker recorded failure"
+                );
+                Err(SubmitOrdersError::BrokerError(e.to_string()))
+            }
         }
-
-        tracing::info!(
-            cycle_id = %request.cycle_id,
-            submitted_count = ack.orders.len(),
-            error_count = ack.errors.len(),
-            "Order submission complete"
-        );
-
-        Ok(ack)
     }
 
     /// Get order states by IDs.
@@ -306,10 +520,26 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     /// # Errors
     ///
     /// Returns an error if:
+    /// - Circuit breaker is open (broker is unavailable)
     /// - Order not found in state manager
     /// - Order is already in a terminal state
     /// - Broker API call fails
     pub async fn cancel_order(&self, broker_order_id: &str) -> Result<(), CancelOrderError> {
+        // Check circuit breaker first
+        if !self.circuit_breaker.is_call_permitted() {
+            tracing::warn!(
+                broker_order_id = %broker_order_id,
+                broker = %self.broker.broker_name(),
+                circuit_state = %self.circuit_breaker.state(),
+                "Cancel request blocked by circuit breaker"
+            );
+            return Err(CancelOrderError::CircuitOpen(format!(
+                "Broker {} circuit breaker is {}",
+                self.broker.broker_name(),
+                self.circuit_breaker.state()
+            )));
+        }
+
         tracing::info!(
             broker_order_id = %broker_order_id,
             broker = %self.broker.broker_name(),
@@ -330,27 +560,42 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             )));
         }
 
-        // Submit cancel request to broker
-        self.broker
-            .cancel_order(broker_order_id)
-            .await
-            .map_err(|e| match e {
-                BrokerError::OrderNotFound(msg) => CancelOrderError::OrderNotFound(msg),
-                BrokerError::OrderNotCancelable(msg) => CancelOrderError::OrderNotCancelable(msg),
-                _ => CancelOrderError::BrokerError(e.to_string()),
-            })?;
+        // Submit cancel request to broker with circuit breaker tracking
+        let result = self.broker.cancel_order(broker_order_id).await;
 
-        // Note: Order state will be updated via execution stream or polling
-        // We don't update it immediately here to maintain eventual consistency
-        // with the broker's authoritative state
+        match result {
+            Ok(()) => {
+                self.circuit_breaker.record_success();
 
-        tracing::info!(
-            broker_order_id = %broker_order_id,
-            order_id = %order_state.order_id,
-            "Cancel request submitted"
-        );
+                // Note: Order state will be updated via execution stream or polling
+                // We don't update it immediately here to maintain eventual consistency
+                // with the broker's authoritative state
 
-        Ok(())
+                tracing::info!(
+                    broker_order_id = %broker_order_id,
+                    order_id = %order_state.order_id,
+                    "Cancel request submitted"
+                );
+
+                Ok(())
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                tracing::error!(
+                    broker_order_id = %broker_order_id,
+                    broker = %self.broker.broker_name(),
+                    error = %e,
+                    "Cancel request failed, circuit breaker recorded failure"
+                );
+                match e {
+                    BrokerError::OrderNotFound(msg) => Err(CancelOrderError::OrderNotFound(msg)),
+                    BrokerError::OrderNotCancelable(msg) => {
+                        Err(CancelOrderError::OrderNotCancelable(msg))
+                    }
+                    _ => Err(CancelOrderError::BrokerError(e.to_string())),
+                }
+            }
+        }
     }
 
     /// Refresh order state from broker.
@@ -369,29 +614,58 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the broker API call fails.
+    /// Returns an error if:
+    /// - Circuit breaker is open (broker is unavailable)
+    /// - The broker API call fails
     pub async fn refresh_order_state(&self, broker_order_id: &str) -> Result<OrderState, String> {
+        // Check circuit breaker first
+        if !self.circuit_breaker.is_call_permitted() {
+            tracing::warn!(
+                broker_order_id = %broker_order_id,
+                broker = %self.broker.broker_name(),
+                circuit_state = %self.circuit_breaker.state(),
+                "Refresh state blocked by circuit breaker"
+            );
+            return Err(format!(
+                "Broker {} circuit breaker is {}",
+                self.broker.broker_name(),
+                self.circuit_breaker.state()
+            ));
+        }
+
         tracing::debug!(
             broker_order_id = %broker_order_id,
             "Refreshing order state from broker"
         );
 
-        let order_state = self
-            .broker
-            .get_order_status(broker_order_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        let result = self.broker.get_order_status(broker_order_id).await;
 
-        // Update state manager
-        self.state_manager.update(order_state.clone());
+        match result {
+            Ok(order_state) => {
+                self.circuit_breaker.record_success();
 
-        tracing::debug!(
-            broker_order_id = %broker_order_id,
-            status = ?order_state.status,
-            "Order state refreshed"
-        );
+                // Update state manager
+                self.state_manager.update(order_state.clone());
 
-        Ok(order_state)
+                tracing::debug!(
+                    broker_order_id = %broker_order_id,
+                    status = ?order_state.status,
+                    "Order state refreshed"
+                );
+
+                Ok(order_state)
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                tracing::error!(
+                    broker_order_id = %broker_order_id,
+                    broker = %self.broker.broker_name(),
+                    error = %e,
+                    "Refresh state failed, circuit breaker recorded failure"
+                );
+                Err(e.to_string())
+            }
+        }
     }
 }
 
@@ -405,6 +679,10 @@ pub enum SubmitOrdersError {
     /// Broker returned an error.
     #[error("Broker error: {0}")]
     BrokerError(String),
+
+    /// Circuit breaker is open, broker calls are not permitted.
+    #[error("Circuit breaker open: {0}")]
+    CircuitOpen(String),
 }
 
 /// Errors from order cancellation.
@@ -421,6 +699,10 @@ pub enum CancelOrderError {
     /// Broker returned an error.
     #[error("Broker error: {0}")]
     BrokerError(String),
+
+    /// Circuit breaker is open, broker calls are not permitted.
+    #[error("Circuit breaker open: {0}")]
+    CircuitOpen(String),
 }
 
 #[cfg(test)]
@@ -525,6 +807,11 @@ mod tests {
         fn broker_name(&self) -> &'static str {
             "mock"
         }
+
+        async fn health_check(&self) -> Result<(), BrokerError> {
+            // Mock adapter is always healthy
+            Ok(())
+        }
     }
 
     fn make_gateway() -> ExecutionGateway<MockBrokerAdapter> {
@@ -532,7 +819,7 @@ mod tests {
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
 
-        ExecutionGateway::new(mock, state_manager, validator)
+        ExecutionGateway::with_defaults(mock, state_manager, validator)
     }
 
     // Keep the old function for integration tests that need real Alpaca
@@ -546,7 +833,7 @@ mod tests {
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
 
-        ExecutionGateway::new(alpaca, state_manager, validator)
+        ExecutionGateway::with_defaults(alpaca, state_manager, validator)
     }
 
     fn make_valid_request() -> ConstraintCheckRequest {
@@ -692,5 +979,97 @@ mod tests {
         // Get order states
         let states = gateway.get_order_states(&order_ids);
         assert_eq!(states.len(), order_ids.len());
+    }
+
+    #[test]
+    fn test_has_persistence_disabled_by_default() {
+        let gateway = make_gateway();
+        assert!(!gateway.has_persistence());
+    }
+
+    #[tokio::test]
+    async fn test_gateway_with_persistence() {
+        // Create in-memory persistence for testing
+        let persistence = match StatePersistence::new_in_memory("PAPER").await {
+            Ok(p) => p,
+            Err(e) => panic!("should create in-memory persistence: {e}"),
+        };
+
+        let mock = MockBrokerAdapter::new();
+        let state_manager = OrderStateManager::new();
+        let validator = ConstraintValidator::with_defaults();
+
+        let gateway = ExecutionGateway::with_persistence(
+            mock,
+            state_manager,
+            validator,
+            CircuitBreakerConfig::default(),
+            persistence,
+        );
+
+        assert!(gateway.has_persistence());
+    }
+
+    #[tokio::test]
+    async fn test_submit_orders_with_persistence() {
+        // Create in-memory persistence for testing
+        let persistence = match StatePersistence::new_in_memory("PAPER").await {
+            Ok(p) => p,
+            Err(e) => panic!("should create in-memory persistence: {e}"),
+        };
+        let persistence_arc = Arc::new(persistence);
+        let persistence_check = Arc::clone(&persistence_arc);
+
+        let mock = MockBrokerAdapter::new();
+        let state_manager = OrderStateManager::new();
+        let validator = ConstraintValidator::with_defaults();
+
+        // Manually build gateway with Arc<StatePersistence>
+        let gateway = {
+            let broker_name = mock.broker_name();
+            ExecutionGateway {
+                broker: Arc::new(mock),
+                state_manager: Arc::new(state_manager),
+                validator: Arc::new(validator),
+                circuit_breaker: Arc::new(CircuitBreaker::new(
+                    broker_name,
+                    CircuitBreakerConfig::default(),
+                )),
+                persistence: Some(persistence_arc),
+            }
+        };
+
+        // Submit an order
+        let request = SubmitOrdersRequest {
+            cycle_id: "c1".to_string(),
+            environment: Environment::Paper,
+            plan: make_valid_request().plan,
+        };
+
+        let ack = match gateway.submit_orders(request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
+        assert!(!ack.orders.is_empty());
+
+        // Give async persistence task time to complete
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Verify order was persisted by loading into a fresh state manager
+        let recovery_state_manager = OrderStateManager::new();
+        let loaded_count = match persistence_check
+            .load_active_orders(&recovery_state_manager)
+            .await
+        {
+            Ok(count) => count,
+            Err(e) => panic!("should load active orders: {e}"),
+        };
+
+        assert_eq!(loaded_count, 1);
+
+        // Verify the loaded order matches what was submitted
+        let loaded_orders = recovery_state_manager.get_active_orders();
+        assert_eq!(loaded_orders.len(), 1);
+        assert_eq!(loaded_orders[0].instrument_id, "AAPL");
     }
 }

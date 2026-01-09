@@ -18,6 +18,8 @@
 //! println!("gRPC port: {}", config.server.grpc_port);
 //! ```
 
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -69,6 +71,21 @@ pub struct Config {
     /// Circuit breaker configuration.
     #[serde(default)]
     pub circuit_breaker: CircuitBreakerConfig,
+    /// Persistence configuration.
+    #[serde(default)]
+    pub persistence: PersistenceConfig,
+    /// Recovery configuration for crash recovery.
+    #[serde(default)]
+    pub recovery: RecoveryConfig,
+    /// Reconciliation configuration for periodic broker sync.
+    #[serde(default)]
+    pub reconciliation: ReconciliationConfig,
+    /// Safety configuration for mass cancel on disconnect.
+    #[serde(default)]
+    pub safety: SafetyConfig,
+    /// Stops configuration for stop-loss and take-profit enforcement.
+    #[serde(default)]
+    pub stops: StopsConfigExternal,
     /// Environment configuration.
     #[serde(default)]
     pub environment: EnvironmentConfig,
@@ -570,6 +587,41 @@ impl Default for CircuitBreakerSettings {
     }
 }
 
+impl CircuitBreakerSettings {
+    /// Convert config settings to resilience module's `CircuitBreakerConfig`.
+    #[must_use]
+    pub fn to_resilience_config(&self) -> crate::resilience::CircuitBreakerConfig {
+        crate::resilience::CircuitBreakerConfig {
+            failure_rate_threshold: self.failure_rate_threshold,
+            sliding_window_size: self.sliding_window_size,
+            minimum_calls: self.minimum_calls,
+            wait_duration_in_open: Duration::from_secs(self.wait_duration_secs),
+            permitted_calls_in_half_open: self.permitted_calls_in_half_open,
+            call_timeout: Duration::from_secs(5), // Default timeout
+        }
+    }
+}
+
+impl CircuitBreakerConfig {
+    /// Get the circuit breaker config for Alpaca, falling back to defaults.
+    #[must_use]
+    pub fn alpaca_config(&self) -> crate::resilience::CircuitBreakerConfig {
+        self.alpaca.as_ref().map_or_else(
+            || self.default.to_resilience_config(),
+            CircuitBreakerSettings::to_resilience_config,
+        )
+    }
+
+    /// Get the circuit breaker config for Databento, falling back to defaults.
+    #[must_use]
+    pub fn databento_config(&self) -> crate::resilience::CircuitBreakerConfig {
+        self.databento.as_ref().map_or_else(
+            || self.default.to_resilience_config(),
+            CircuitBreakerSettings::to_resilience_config,
+        )
+    }
+}
+
 const fn default_failure_rate_threshold() -> f64 {
     0.5
 }
@@ -587,6 +639,409 @@ fn default_sliding_window_type() -> String {
 }
 const fn default_sliding_window_size() -> u32 {
     10
+}
+
+/// State persistence configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersistenceConfig {
+    /// Enable state persistence.
+    #[serde(default = "default_persistence_enabled")]
+    pub enabled: bool,
+    /// Database path for state storage.
+    #[serde(default = "default_db_path")]
+    pub db_path: String,
+    /// Snapshot interval in seconds (how often to persist state).
+    #[serde(default = "default_snapshot_interval")]
+    pub snapshot_interval_secs: u64,
+}
+
+impl Default for PersistenceConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_persistence_enabled(),
+            db_path: default_db_path(),
+            snapshot_interval_secs: default_snapshot_interval(),
+        }
+    }
+}
+
+impl PersistenceConfig {
+    /// Check if persistence is enabled based on environment.
+    ///
+    /// Persistence is enabled by default in PAPER/LIVE modes,
+    /// disabled in BACKTEST mode to avoid I/O overhead.
+    #[must_use]
+    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        // Disable persistence for backtest unless explicitly enabled
+        !env.is_backtest()
+    }
+}
+
+const fn default_persistence_enabled() -> bool {
+    true
+}
+
+fn default_db_path() -> String {
+    "./data/orders.db".to_string()
+}
+
+const fn default_snapshot_interval() -> u64 {
+    60
+}
+
+/// Recovery configuration for crash recovery on startup.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecoveryConfig {
+    /// Enable recovery on startup.
+    #[serde(default = "default_recovery_enabled")]
+    pub enabled: bool,
+    /// Automatically resolve orphaned orders (orders in broker but not local).
+    #[serde(default = "default_auto_resolve_orphans")]
+    pub auto_resolve_orphans: bool,
+    /// Sync positions from broker on startup.
+    #[serde(default = "default_sync_positions")]
+    pub sync_positions: bool,
+    /// Abort startup if critical discrepancies are detected (recommended for LIVE).
+    #[serde(default = "default_abort_on_critical")]
+    pub abort_on_critical: bool,
+    /// Position quantity tolerance for reconciliation (e.g., 0.01 = 1 share tolerance).
+    #[serde(default = "default_position_qty_tolerance")]
+    pub position_qty_tolerance: f64,
+    /// Position price variance tolerance as percentage (e.g., 0.01 = 1%).
+    #[serde(default = "default_position_price_tolerance_pct")]
+    pub position_price_tolerance_pct: f64,
+}
+
+impl Default for RecoveryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_recovery_enabled(),
+            auto_resolve_orphans: default_auto_resolve_orphans(),
+            sync_positions: default_sync_positions(),
+            abort_on_critical: default_abort_on_critical(),
+            position_qty_tolerance: default_position_qty_tolerance(),
+            position_price_tolerance_pct: default_position_price_tolerance_pct(),
+        }
+    }
+}
+
+impl RecoveryConfig {
+    /// Check if recovery is enabled based on environment.
+    ///
+    /// Recovery is enabled by default in PAPER/LIVE modes,
+    /// disabled in BACKTEST mode since there's no state to recover.
+    #[must_use]
+    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        // Disable recovery for backtest mode
+        !env.is_backtest()
+    }
+
+    /// Convert to the internal RecoveryConfig type used by the recovery module.
+    #[must_use]
+    pub fn to_recovery_config(&self) -> crate::execution::RecoveryConfig {
+        use rust_decimal::Decimal;
+
+        crate::execution::RecoveryConfig {
+            enabled: self.enabled,
+            auto_resolve_orphans: self.auto_resolve_orphans,
+            sync_positions: self.sync_positions,
+            abort_on_critical: self.abort_on_critical,
+            max_attempts: 3,
+            position_qty_tolerance: Decimal::try_from(self.position_qty_tolerance)
+                .unwrap_or_default(),
+            position_price_tolerance_pct: Decimal::try_from(self.position_price_tolerance_pct)
+                .unwrap_or_else(|_| Decimal::new(1, 2)),
+        }
+    }
+}
+
+const fn default_recovery_enabled() -> bool {
+    true
+}
+
+const fn default_auto_resolve_orphans() -> bool {
+    true
+}
+
+const fn default_sync_positions() -> bool {
+    true
+}
+
+const fn default_abort_on_critical() -> bool {
+    true
+}
+
+const fn default_position_qty_tolerance() -> f64 {
+    0.0
+}
+
+const fn default_position_price_tolerance_pct() -> f64 {
+    0.01 // 1%
+}
+
+/// Reconciliation configuration for periodic broker state sync.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReconciliationConfig {
+    /// Enable periodic reconciliation.
+    #[serde(default = "default_reconciliation_enabled")]
+    pub enabled: bool,
+    /// Reconciliation interval in seconds.
+    #[serde(default = "default_reconciliation_interval")]
+    pub interval_secs: u64,
+    /// Protection window for recent orders (don't mark as orphaned).
+    #[serde(default = "default_protection_window")]
+    pub protection_window_secs: u64,
+    /// Maximum order age for cleanup eligibility.
+    #[serde(default = "default_max_order_age")]
+    pub max_order_age_secs: u64,
+    /// Automatically resolve orphaned orders.
+    #[serde(default = "default_auto_resolve_orphans")]
+    pub auto_resolve_orphans: bool,
+    /// Action on critical discrepancy: "halt", "log_and_continue", or "alert".
+    #[serde(default = "default_critical_action")]
+    pub on_critical_discrepancy: String,
+}
+
+impl Default for ReconciliationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_reconciliation_enabled(),
+            interval_secs: default_reconciliation_interval(),
+            protection_window_secs: default_protection_window(),
+            max_order_age_secs: default_max_order_age(),
+            auto_resolve_orphans: default_auto_resolve_orphans(),
+            on_critical_discrepancy: default_critical_action(),
+        }
+    }
+}
+
+impl ReconciliationConfig {
+    /// Check if reconciliation is enabled based on environment.
+    ///
+    /// Reconciliation is enabled by default in PAPER/LIVE modes,
+    /// disabled in BACKTEST mode since there's no broker to reconcile with.
+    #[must_use]
+    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        // Disable reconciliation for backtest mode
+        !env.is_backtest()
+    }
+
+    /// Convert to the internal ReconciliationConfig type used by the reconciliation module.
+    #[must_use]
+    pub fn to_reconciliation_config(
+        &self,
+    ) -> crate::execution::reconciliation::ReconciliationConfig {
+        use crate::execution::reconciliation::CriticalDiscrepancyAction;
+        use rust_decimal::Decimal;
+
+        let critical_action = match self.on_critical_discrepancy.to_lowercase().as_str() {
+            "halt" => CriticalDiscrepancyAction::Halt,
+            "log_and_continue" => CriticalDiscrepancyAction::LogAndContinue,
+            "alert" => CriticalDiscrepancyAction::Alert,
+            _ => CriticalDiscrepancyAction::Halt, // Default to safest option
+        };
+
+        crate::execution::reconciliation::ReconciliationConfig {
+            on_startup: true,
+            on_reconnect: true,
+            periodic_interval_secs: self.interval_secs,
+            protection_window_secs: self.protection_window_secs,
+            max_order_age_secs: self.max_order_age_secs,
+            position_qty_tolerance: Decimal::ZERO,
+            position_price_tolerance_pct: Decimal::new(1, 2), // 1%
+            on_critical_discrepancy: critical_action,
+            auto_resolve_orphans: self.auto_resolve_orphans,
+        }
+    }
+}
+
+const fn default_reconciliation_enabled() -> bool {
+    true
+}
+
+const fn default_reconciliation_interval() -> u64 {
+    300 // 5 minutes
+}
+
+const fn default_protection_window() -> u64 {
+    1800 // 30 minutes
+}
+
+const fn default_max_order_age() -> u64 {
+    86400 // 24 hours
+}
+
+fn default_critical_action() -> String {
+    "halt".to_string()
+}
+
+/// Safety configuration for mass cancel on broker disconnect.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SafetyConfig {
+    /// Enable mass cancel on disconnect.
+    #[serde(default = "default_safety_enabled")]
+    pub enabled: bool,
+    /// Grace period in seconds before triggering mass cancel.
+    #[serde(default = "default_grace_period")]
+    pub grace_period_seconds: u64,
+    /// Heartbeat interval in milliseconds.
+    #[serde(default = "default_heartbeat_interval")]
+    pub heartbeat_interval_ms: u64,
+    /// Heartbeat timeout in seconds.
+    #[serde(default = "default_heartbeat_timeout")]
+    pub heartbeat_timeout_seconds: u64,
+    /// Policy for GTC order handling: "include" or "exclude".
+    #[serde(default = "default_gtc_policy")]
+    pub gtc_policy: String,
+}
+
+impl Default for SafetyConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_safety_enabled(),
+            grace_period_seconds: default_grace_period(),
+            heartbeat_interval_ms: default_heartbeat_interval(),
+            heartbeat_timeout_seconds: default_heartbeat_timeout(),
+            gtc_policy: default_gtc_policy(),
+        }
+    }
+}
+
+impl SafetyConfig {
+    /// Check if safety features are enabled based on environment.
+    ///
+    /// Safety features are enabled by default in PAPER/LIVE modes,
+    /// disabled in BACKTEST mode since there's no real broker.
+    #[must_use]
+    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        // Disable safety for backtest mode
+        !env.is_backtest()
+    }
+
+    /// Convert to the internal MassCancelConfig type used by the safety module.
+    #[must_use]
+    pub fn to_mass_cancel_config(&self) -> crate::safety::MassCancelConfig {
+        use crate::safety::GtcOrderPolicy;
+
+        let gtc_policy = match self.gtc_policy.to_lowercase().as_str() {
+            "exclude" => GtcOrderPolicy::Exclude,
+            _ => GtcOrderPolicy::Include, // Default to include for safety
+        };
+
+        crate::safety::MassCancelConfig {
+            enabled: self.enabled,
+            grace_period_seconds: self.grace_period_seconds,
+            gtc_policy,
+            heartbeat_interval_ms: self.heartbeat_interval_ms,
+            heartbeat_timeout_seconds: self.heartbeat_timeout_seconds,
+        }
+    }
+}
+
+const fn default_safety_enabled() -> bool {
+    true
+}
+
+const fn default_grace_period() -> u64 {
+    30 // 30 seconds
+}
+
+const fn default_heartbeat_interval() -> u64 {
+    30_000 // 30 seconds
+}
+
+const fn default_heartbeat_timeout() -> u64 {
+    10 // 10 seconds
+}
+
+fn default_gtc_policy() -> String {
+    "include".to_string()
+}
+
+/// Stops configuration for stop-loss and take-profit enforcement.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StopsConfigExternal {
+    /// Enable stops enforcement.
+    #[serde(default = "default_stops_enabled")]
+    pub enabled: bool,
+    /// Priority when both stop and target trigger in same bar: "stop_first", "target_first", "high_low_order".
+    #[serde(default = "default_same_bar_priority")]
+    pub same_bar_priority: String,
+    /// Monitoring interval in milliseconds for price checks.
+    #[serde(default = "default_monitoring_interval")]
+    pub monitoring_interval_ms: u64,
+    /// Whether to use bracket orders when available (for stocks).
+    #[serde(default = "default_use_bracket_orders")]
+    pub use_bracket_orders: bool,
+}
+
+impl Default for StopsConfigExternal {
+    fn default() -> Self {
+        Self {
+            enabled: default_stops_enabled(),
+            same_bar_priority: default_same_bar_priority(),
+            monitoring_interval_ms: default_monitoring_interval(),
+            use_bracket_orders: default_use_bracket_orders(),
+        }
+    }
+}
+
+impl StopsConfigExternal {
+    /// Check if stops enforcement is enabled based on environment.
+    ///
+    /// Stops are enabled by default in all environments.
+    /// In BACKTEST, uses simulation; in PAPER/LIVE, uses bracket orders or price monitoring.
+    #[must_use]
+    pub fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
+        self.enabled
+    }
+
+    /// Convert to the internal StopsConfig type used by the stops module.
+    #[must_use]
+    pub fn to_stops_config(&self) -> crate::execution::stops::StopsConfig {
+        use crate::execution::stops::SameBarPriority;
+
+        let same_bar_priority = match self.same_bar_priority.to_lowercase().as_str() {
+            "target_first" => SameBarPriority::TargetFirst,
+            "high_low_order" => SameBarPriority::HighLowOrder,
+            _ => SameBarPriority::StopFirst, // Default to stop first (pessimistic)
+        };
+
+        crate::execution::stops::StopsConfig {
+            same_bar_priority,
+            monitoring_interval_ms: self.monitoring_interval_ms,
+            min_risk_reward_ratio: None,
+            use_bracket_orders: self.use_bracket_orders,
+        }
+    }
+}
+
+const fn default_stops_enabled() -> bool {
+    true
+}
+
+fn default_same_bar_priority() -> String {
+    "stop_first".to_string()
+}
+
+const fn default_monitoring_interval() -> u64 {
+    100 // 100ms
+}
+
+const fn default_use_bracket_orders() -> bool {
+    true
 }
 
 /// Environment configuration.
@@ -779,6 +1234,11 @@ mod tests {
             constraints: ConstraintsConfig::default(),
             observability: ObservabilityConfig::default(),
             circuit_breaker: CircuitBreakerConfig::default(),
+            persistence: PersistenceConfig::default(),
+            recovery: RecoveryConfig::default(),
+            reconciliation: ReconciliationConfig::default(),
+            safety: SafetyConfig::default(),
+            stops: StopsConfigExternal::default(),
             environment: EnvironmentConfig::default(),
         };
 
@@ -786,6 +1246,9 @@ mod tests {
         assert_eq!(config.server.flight_port, 50052);
         assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "PAPER");
+        assert!(config.persistence.enabled);
+        assert!(config.recovery.enabled);
+        assert!(config.reconciliation.enabled);
     }
 
     #[test]
@@ -965,6 +1428,296 @@ environment:
         assert!((config.portfolio.max_gross_notional - 500_000.0).abs() < 1e-10);
         assert!((config.options.max_portfolio_delta - 500.0).abs() < 1e-10);
         assert!((config.buying_power.min_buying_power_ratio - 0.20).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_recovery_config_defaults() {
+        let config = RecoveryConfig::default();
+        assert!(config.enabled);
+        assert!(config.auto_resolve_orphans);
+        assert!(config.sync_positions);
+        assert!(config.abort_on_critical);
+        assert!((config.position_qty_tolerance - 0.0).abs() < f64::EPSILON);
+        assert!((config.position_price_tolerance_pct - 0.01).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_recovery_config_to_internal() {
+        let config = RecoveryConfig::default();
+        let internal = config.to_recovery_config();
+
+        assert!(internal.enabled);
+        assert!(internal.auto_resolve_orphans);
+        assert!(internal.sync_positions);
+        assert!(internal.abort_on_critical);
+        assert_eq!(internal.max_attempts, 3);
+    }
+
+    #[test]
+    fn test_recovery_config_is_enabled_for_env() {
+        use crate::models::Environment;
+
+        let config = RecoveryConfig::default();
+
+        // Recovery should be enabled for PAPER and LIVE
+        assert!(config.is_enabled_for_env(&Environment::Paper));
+        assert!(config.is_enabled_for_env(&Environment::Live));
+
+        // Recovery should be disabled for BACKTEST
+        assert!(!config.is_enabled_for_env(&Environment::Backtest));
+
+        // Explicitly disabled config
+        let disabled_config = RecoveryConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Paper));
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Live));
+    }
+
+    #[test]
+    fn test_reconciliation_config_defaults() {
+        let config = ReconciliationConfig::default();
+        assert!(config.enabled);
+        assert_eq!(config.interval_secs, 300);
+        assert_eq!(config.protection_window_secs, 1800);
+        assert_eq!(config.max_order_age_secs, 86400);
+        assert!(config.auto_resolve_orphans);
+        assert_eq!(config.on_critical_discrepancy, "halt");
+    }
+
+    #[test]
+    fn test_reconciliation_config_to_internal() {
+        let config = ReconciliationConfig::default();
+        let internal = config.to_reconciliation_config();
+
+        assert!(internal.on_startup);
+        assert!(internal.on_reconnect);
+        assert_eq!(internal.periodic_interval_secs, 300);
+        assert_eq!(internal.protection_window_secs, 1800);
+        assert_eq!(internal.max_order_age_secs, 86400);
+        assert!(internal.auto_resolve_orphans);
+    }
+
+    #[test]
+    fn test_reconciliation_config_critical_action_parsing() {
+        // Test halt
+        let config = ReconciliationConfig {
+            on_critical_discrepancy: "halt".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_reconciliation_config();
+        assert_eq!(
+            internal.on_critical_discrepancy,
+            crate::execution::reconciliation::CriticalDiscrepancyAction::Halt
+        );
+
+        // Test log_and_continue
+        let config = ReconciliationConfig {
+            on_critical_discrepancy: "log_and_continue".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_reconciliation_config();
+        assert_eq!(
+            internal.on_critical_discrepancy,
+            crate::execution::reconciliation::CriticalDiscrepancyAction::LogAndContinue
+        );
+
+        // Test alert
+        let config = ReconciliationConfig {
+            on_critical_discrepancy: "alert".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_reconciliation_config();
+        assert_eq!(
+            internal.on_critical_discrepancy,
+            crate::execution::reconciliation::CriticalDiscrepancyAction::Alert
+        );
+
+        // Test default on unknown
+        let config = ReconciliationConfig {
+            on_critical_discrepancy: "unknown".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_reconciliation_config();
+        assert_eq!(
+            internal.on_critical_discrepancy,
+            crate::execution::reconciliation::CriticalDiscrepancyAction::Halt
+        );
+    }
+
+    #[test]
+    fn test_reconciliation_config_is_enabled_for_env() {
+        use crate::models::Environment;
+
+        let config = ReconciliationConfig::default();
+
+        // Reconciliation should be enabled for PAPER and LIVE
+        assert!(config.is_enabled_for_env(&Environment::Paper));
+        assert!(config.is_enabled_for_env(&Environment::Live));
+
+        // Reconciliation should be disabled for BACKTEST
+        assert!(!config.is_enabled_for_env(&Environment::Backtest));
+
+        // Explicitly disabled config
+        let disabled_config = ReconciliationConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Paper));
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Live));
+    }
+
+    #[test]
+    fn test_safety_config_defaults() {
+        let config = SafetyConfig::default();
+        assert!(config.enabled);
+        assert_eq!(config.grace_period_seconds, 30);
+        assert_eq!(config.heartbeat_interval_ms, 30_000);
+        assert_eq!(config.heartbeat_timeout_seconds, 10);
+        assert_eq!(config.gtc_policy, "include");
+    }
+
+    #[test]
+    fn test_safety_config_to_mass_cancel_config() {
+        use crate::safety::GtcOrderPolicy;
+
+        let config = SafetyConfig::default();
+        let mass_cancel_config = config.to_mass_cancel_config();
+
+        assert!(mass_cancel_config.enabled);
+        assert_eq!(mass_cancel_config.grace_period_seconds, 30);
+        assert_eq!(mass_cancel_config.gtc_policy, GtcOrderPolicy::Include);
+    }
+
+    #[test]
+    fn test_safety_config_gtc_policy_parsing() {
+        use crate::safety::GtcOrderPolicy;
+
+        // Test include
+        let config = SafetyConfig {
+            gtc_policy: "include".to_string(),
+            ..Default::default()
+        };
+        let mass_cancel_config = config.to_mass_cancel_config();
+        assert_eq!(mass_cancel_config.gtc_policy, GtcOrderPolicy::Include);
+
+        // Test exclude
+        let config = SafetyConfig {
+            gtc_policy: "exclude".to_string(),
+            ..Default::default()
+        };
+        let mass_cancel_config = config.to_mass_cancel_config();
+        assert_eq!(mass_cancel_config.gtc_policy, GtcOrderPolicy::Exclude);
+
+        // Test default on unknown
+        let config = SafetyConfig {
+            gtc_policy: "unknown".to_string(),
+            ..Default::default()
+        };
+        let mass_cancel_config = config.to_mass_cancel_config();
+        assert_eq!(mass_cancel_config.gtc_policy, GtcOrderPolicy::Include);
+    }
+
+    #[test]
+    fn test_safety_config_is_enabled_for_env() {
+        use crate::models::Environment;
+
+        let config = SafetyConfig::default();
+
+        // Safety should be enabled for PAPER and LIVE
+        assert!(config.is_enabled_for_env(&Environment::Paper));
+        assert!(config.is_enabled_for_env(&Environment::Live));
+
+        // Safety should be disabled for BACKTEST
+        assert!(!config.is_enabled_for_env(&Environment::Backtest));
+
+        // Explicitly disabled config
+        let disabled_config = SafetyConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Paper));
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Live));
+    }
+
+    #[test]
+    fn test_stops_config_defaults() {
+        let config = StopsConfigExternal::default();
+        assert!(config.enabled);
+        assert_eq!(config.same_bar_priority, "stop_first");
+        assert_eq!(config.monitoring_interval_ms, 100);
+        assert!(config.use_bracket_orders);
+    }
+
+    #[test]
+    fn test_stops_config_to_internal() {
+        use crate::execution::stops::SameBarPriority;
+
+        let config = StopsConfigExternal::default();
+        let internal = config.to_stops_config();
+
+        assert_eq!(internal.same_bar_priority, SameBarPriority::StopFirst);
+        assert_eq!(internal.monitoring_interval_ms, 100);
+        assert!(internal.use_bracket_orders);
+    }
+
+    #[test]
+    fn test_stops_config_same_bar_priority_parsing() {
+        use crate::execution::stops::SameBarPriority;
+
+        // Test stop_first
+        let config = StopsConfigExternal {
+            same_bar_priority: "stop_first".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_stops_config();
+        assert_eq!(internal.same_bar_priority, SameBarPriority::StopFirst);
+
+        // Test target_first
+        let config = StopsConfigExternal {
+            same_bar_priority: "target_first".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_stops_config();
+        assert_eq!(internal.same_bar_priority, SameBarPriority::TargetFirst);
+
+        // Test high_low_order
+        let config = StopsConfigExternal {
+            same_bar_priority: "high_low_order".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_stops_config();
+        assert_eq!(internal.same_bar_priority, SameBarPriority::HighLowOrder);
+
+        // Test default on unknown
+        let config = StopsConfigExternal {
+            same_bar_priority: "unknown".to_string(),
+            ..Default::default()
+        };
+        let internal = config.to_stops_config();
+        assert_eq!(internal.same_bar_priority, SameBarPriority::StopFirst);
+    }
+
+    #[test]
+    fn test_stops_config_is_enabled_for_env() {
+        use crate::models::Environment;
+
+        let config = StopsConfigExternal::default();
+
+        // Stops should be enabled for all environments
+        assert!(config.is_enabled_for_env(&Environment::Paper));
+        assert!(config.is_enabled_for_env(&Environment::Live));
+        assert!(config.is_enabled_for_env(&Environment::Backtest));
+
+        // Explicitly disabled config
+        let disabled_config = StopsConfigExternal {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Paper));
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Live));
+        assert!(!disabled_config.is_enabled_for_env(&Environment::Backtest));
     }
 }
 
@@ -1188,6 +1941,11 @@ mod validation_tests {
             constraints: ConstraintsConfig::default(),
             observability: ObservabilityConfig::default(),
             circuit_breaker: CircuitBreakerConfig::default(),
+            persistence: PersistenceConfig::default(),
+            recovery: RecoveryConfig::default(),
+            reconciliation: ReconciliationConfig::default(),
+            safety: SafetyConfig::default(),
+            stops: StopsConfigExternal::default(),
             environment: EnvironmentConfig::default(),
         }
     }

@@ -218,20 +218,6 @@ impl ApiError {
     pub const fn from_error(error: ExecutionError) -> Self {
         Self(error)
     }
-
-    /// Create a bad request error.
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn bad_request(message: impl Into<String>) -> Self {
-        Self(ExecutionError::invalid_request(message))
-    }
-
-    /// Create an internal error.
-    #[must_use]
-    #[allow(dead_code)]
-    pub fn internal(message: impl Into<String>) -> Self {
-        Self(ExecutionError::internal(message))
-    }
 }
 
 impl From<ExecutionError> for ApiError {
@@ -281,7 +267,7 @@ mod tests {
             };
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
-        let gateway = ExecutionGateway::new(alpaca, state_manager, validator);
+        let gateway = ExecutionGateway::with_defaults(alpaca, state_manager, validator);
 
         ExecutionServer::new(gateway)
     }
