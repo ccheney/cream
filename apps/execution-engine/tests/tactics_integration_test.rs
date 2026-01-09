@@ -109,7 +109,10 @@ fn test_twap_schedule_generation() {
 
     // Each subsequent slice is 60 seconds apart
     for i in 1..schedule.len() {
-        let expected = start_time + Duration::seconds(60 * i as i64);
+        // Wrapping acceptable: i is bounded by schedule.len() which is small
+        #[allow(clippy::cast_possible_wrap)]
+        let multiplier = i as i64;
+        let expected = start_time + Duration::seconds(60 * multiplier);
         assert_eq!(schedule[i], expected);
     }
 }
@@ -353,14 +356,22 @@ fn test_serialization_roundtrip() {
     });
 
     // Serialize to JSON
-    let json = serde_json::to_string(&config).expect("Failed to serialize");
+    let json = match serde_json::to_string(&config) {
+        Ok(j) => j,
+        Err(e) => panic!("Failed to serialize: {e}"),
+    };
 
     // Deserialize back
-    let deserialized: TacticConfig = serde_json::from_str(&json).expect("Failed to deserialize");
+    let deserialized: TacticConfig = match serde_json::from_str(&json) {
+        Ok(d) => d,
+        Err(e) => panic!("Failed to deserialize: {e}"),
+    };
 
     // Verify it matches
     assert_eq!(deserialized.tactic, TacticType::Twap);
-    let twap = deserialized.twap.expect("TWAP config missing");
+    let Some(twap) = deserialized.twap else {
+        panic!("TWAP config missing");
+    };
     assert_eq!(twap.duration_minutes, 120);
     assert_eq!(twap.slice_interval_seconds, 30);
     assert_eq!(

@@ -202,41 +202,62 @@ impl std::fmt::Display for OrphanResolution {
 /// Snapshot of broker order state.
 #[derive(Debug, Clone)]
 pub struct BrokerOrderSnapshot {
+    /// Unique broker-assigned order identifier.
     pub order_id: String,
+    /// Client-provided order identifier for correlation.
     pub client_order_id: Option<String>,
+    /// Trading symbol (e.g., "AAPL", "SPY").
     pub symbol: String,
+    /// Order status (e.g., "new", "filled", "canceled").
     pub status: String,
+    /// Order side ("buy" or "sell").
     pub side: String,
+    /// Total order quantity.
     pub qty: Decimal,
+    /// Quantity already filled.
     pub filled_qty: Decimal,
+    /// Order creation timestamp.
     pub created_at: String,
 }
 
 /// Snapshot of broker position.
 #[derive(Debug, Clone)]
 pub struct BrokerPositionSnapshot {
+    /// Trading symbol (e.g., "AAPL", "SPY").
     pub symbol: String,
+    /// Position quantity (absolute value).
     pub qty: Decimal,
-    pub side: String, // "long" or "short"
+    /// Position direction ("long" or "short").
+    pub side: String,
+    /// Average entry price per share.
     pub avg_entry_price: Decimal,
+    /// Current market value of the position.
     pub market_value: Decimal,
+    /// Unrealized profit/loss at current market price.
     pub unrealized_pl: Decimal,
 }
 
 /// Snapshot of broker account.
 #[derive(Debug, Clone)]
 pub struct BrokerAccountSnapshot {
+    /// Total account equity (cash + positions).
     pub equity: Decimal,
+    /// Available cash balance.
     pub cash: Decimal,
+    /// Available buying power for new trades.
     pub buying_power: Decimal,
 }
 
 /// Complete broker state snapshot.
 #[derive(Debug, Clone)]
 pub struct BrokerStateSnapshot {
+    /// All open and recent orders from the broker.
     pub orders: Vec<BrokerOrderSnapshot>,
+    /// All current positions held at the broker.
     pub positions: Vec<BrokerPositionSnapshot>,
+    /// Current account balance and buying power.
     pub account: BrokerAccountSnapshot,
+    /// Timestamp when this snapshot was captured.
     pub fetched_at: String,
 }
 
@@ -344,7 +365,7 @@ impl ReconciliationManager {
         // Check for orders in broker but not local (UNKNOWN_IN_BROKER)
         for broker_order in &broker_state.orders {
             if !local_order_map.contains_key(broker_order.order_id.as_str()) {
-                let age = self.calculate_order_age(&broker_order.created_at);
+                let age = Self::calculate_order_age(&broker_order.created_at);
 
                 // Check protection window
                 if age < self.config.protection_window_secs {
@@ -385,7 +406,7 @@ impl ReconciliationManager {
             if !local_order.broker_order_id.is_empty()
                 && !broker_order_ids.contains(local_order.broker_order_id.as_str())
             {
-                let age = self.calculate_order_age(&local_order.submitted_at);
+                let age = Self::calculate_order_age(&local_order.submitted_at);
 
                 orphaned_orders.push(OrphanedOrder {
                     orphan_type: OrphanType::MissingInBroker,
@@ -418,10 +439,10 @@ impl ReconciliationManager {
                 let broker_status = &broker_order.status;
 
                 // Map broker status to local status for comparison
-                let statuses_match = self.statuses_match(&local_order.status, broker_status);
+                let statuses_match = Self::statuses_match(&local_order.status, broker_status);
 
                 if !statuses_match {
-                    let age = self.calculate_order_age(&local_order.submitted_at);
+                    let age = Self::calculate_order_age(&local_order.submitted_at);
 
                     // If broker says filled but local says active, this is important
                     let severity = if broker_status == "filled" && local_order.status.is_active() {
@@ -520,6 +541,8 @@ impl ReconciliationManager {
         // Update last reconciliation time
         *self.last_reconciliation.write().await = Some(Instant::now());
 
+        // Truncation acceptable: reconciliation duration in ms fits in u64
+        #[allow(clippy::cast_possible_truncation)]
         let duration_ms = start.elapsed().as_millis() as u64;
 
         let report = ReconciliationReport {
@@ -581,7 +604,7 @@ impl ReconciliationManager {
     }
 
     /// Check if local and broker statuses match.
-    fn statuses_match(&self, local: &OrderStatus, broker: &str) -> bool {
+    fn statuses_match(local: &OrderStatus, broker: &str) -> bool {
         let broker_lower = broker.to_lowercase();
         match local {
             OrderStatus::New => broker_lower == "pending_new" || broker_lower == "new",
@@ -599,14 +622,14 @@ impl ReconciliationManager {
     }
 
     /// Calculate order age in seconds.
-    fn calculate_order_age(&self, created_at: &str) -> u64 {
+    #[allow(clippy::cast_sign_loss)]
+    fn calculate_order_age(created_at: &str) -> u64 {
         let now = chrono::Utc::now();
-        if let Ok(created) = chrono::DateTime::parse_from_rfc3339(created_at) {
+        chrono::DateTime::parse_from_rfc3339(created_at).map_or(0, |created| {
             let created_utc = created.with_timezone(&chrono::Utc);
+            // Sign loss is safe: we already ensure non-negative with .max(0)
             now.signed_duration_since(created_utc).num_seconds().max(0) as u64
-        } else {
-            0
-        }
+        })
     }
 
     /// Get time since last reconciliation.
@@ -620,15 +643,19 @@ impl ReconciliationManager {
             return false;
         }
 
-        match *self.last_reconciliation.read().await {
-            Some(last) => last.elapsed() >= Duration::from_secs(self.config.periodic_interval_secs),
-            None => true,
-        }
+        self.last_reconciliation.read().await.map_or(true, |last| {
+            last.elapsed() >= Duration::from_secs(self.config.periodic_interval_secs)
+        })
     }
 
     /// Execute resolution for an orphaned order.
     ///
     /// Returns `Ok(true)` if resolution was executed, `Ok(false)` if ignored.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the broker API call fails when canceling or
+    /// adopting an orphaned order.
     pub async fn execute_resolution(
         &self,
         orphan: &OrphanedOrder,
@@ -886,6 +913,10 @@ pub enum ReconciliationError {
 ///
 /// This function queries the Alpaca broker for all orders, positions, and account
 /// information, then packages it into a `BrokerStateSnapshot` for reconciliation.
+///
+/// # Errors
+///
+/// Returns an error if any broker API call fails (orders, positions, or account).
 pub async fn fetch_broker_state(
     broker: &AlpacaAdapter,
 ) -> Result<BrokerStateSnapshot, ReconciliationError> {
@@ -1130,14 +1161,35 @@ mod tests {
         let state = Arc::new(OrderStateManager::new());
         let manager = ReconciliationManager::new(config, state);
 
-        assert!(manager.statuses_match(&OrderStatus::Filled, "filled"));
-        assert!(manager.statuses_match(&OrderStatus::Canceled, "canceled"));
-        assert!(manager.statuses_match(&OrderStatus::Canceled, "cancelled"));
-        assert!(manager.statuses_match(&OrderStatus::Accepted, "accepted"));
-        assert!(manager.statuses_match(&OrderStatus::Accepted, "new"));
+        assert!(ReconciliationManager::statuses_match(
+            &OrderStatus::Filled,
+            "filled"
+        ));
+        assert!(ReconciliationManager::statuses_match(
+            &OrderStatus::Canceled,
+            "canceled"
+        ));
+        assert!(ReconciliationManager::statuses_match(
+            &OrderStatus::Canceled,
+            "cancelled"
+        ));
+        assert!(ReconciliationManager::statuses_match(
+            &OrderStatus::Accepted,
+            "accepted"
+        ));
+        assert!(ReconciliationManager::statuses_match(
+            &OrderStatus::Accepted,
+            "new"
+        ));
 
-        assert!(!manager.statuses_match(&OrderStatus::Filled, "accepted"));
-        assert!(!manager.statuses_match(&OrderStatus::Accepted, "filled"));
+        assert!(!ReconciliationManager::statuses_match(
+            &OrderStatus::Filled,
+            "accepted"
+        ));
+        assert!(!ReconciliationManager::statuses_match(
+            &OrderStatus::Accepted,
+            "filled"
+        ));
     }
 
     #[tokio::test]

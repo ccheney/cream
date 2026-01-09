@@ -18,37 +18,27 @@ use crate::models::{Direction, Environment};
 // ============================================================================
 
 /// Denomination of stop/target price levels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RiskLevelDenomination {
     /// Levels are based on the underlying asset price.
+    #[default]
     UnderlyingPrice,
     /// Levels are based on the option premium.
     OptionPrice,
 }
 
-impl Default for RiskLevelDenomination {
-    fn default() -> Self {
-        Self::UnderlyingPrice
-    }
-}
-
 /// Rule for determining priority when both stop and target trigger in same bar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SameBarPriority {
     /// Stop-loss takes priority (pessimistic assumption).
+    #[default]
     StopFirst,
     /// Take-profit takes priority (optimistic assumption).
     TargetFirst,
     /// Determine by candle direction (open → high → low → close or open → low → high → close).
     HighLowOrder,
-}
-
-impl Default for SameBarPriority {
-    fn default() -> Self {
-        Self::StopFirst // Conservative default
-    }
 }
 
 /// Stop and target level specification.
@@ -86,7 +76,7 @@ impl StopTargetLevels {
 
     /// Set the denomination.
     #[must_use]
-    pub fn with_denomination(mut self, denomination: RiskLevelDenomination) -> Self {
+    pub const fn with_denomination(mut self, denomination: RiskLevelDenomination) -> Self {
         self.denomination = denomination;
         self
     }
@@ -540,8 +530,7 @@ impl BacktestStopsSimulator {
 
         if stop_triggered {
             let price = match levels.direction {
-                Direction::Long => levels.stop_loss,
-                Direction::Short => levels.stop_loss,
+                Direction::Long | Direction::Short => levels.stop_loss,
                 Direction::Flat => return TriggerResult::None,
             };
             return TriggerResult::StopLoss {
@@ -552,8 +541,7 @@ impl BacktestStopsSimulator {
 
         if target_triggered {
             let price = match levels.direction {
-                Direction::Long => levels.take_profit,
-                Direction::Short => levels.take_profit,
+                Direction::Long | Direction::Short => levels.take_profit,
                 Direction::Flat => return TriggerResult::None,
             };
             return TriggerResult::TakeProfit {
@@ -719,7 +707,7 @@ impl PriceMonitor {
                 continue;
             }
 
-            let result = self.check_price_trigger(price, &position.levels, &timestamp);
+            let result = Self::check_price_trigger(price, &position.levels, &timestamp);
             if result != TriggerResult::None {
                 triggers.push((position.position_id.clone(), result));
             }
@@ -730,7 +718,6 @@ impl PriceMonitor {
 
     /// Check if a price triggers stop or target.
     fn check_price_trigger(
-        &self,
         price: Decimal,
         levels: &StopTargetLevels,
         timestamp: &str,
@@ -1065,7 +1052,7 @@ mod tests {
 
     #[test]
     fn test_bracket_order_builder() {
-        let order = BracketOrderBuilder::new()
+        let order = match BracketOrderBuilder::new()
             .instrument("AAPL")
             .side("buy")
             .quantity(Decimal::new(100, 0))
@@ -1073,7 +1060,10 @@ mod tests {
             .stop_loss(Decimal::new(14500, 2))
             .take_profit(Decimal::new(16000, 2))
             .build()
-            .expect("should build bracket order");
+        {
+            Ok(o) => o,
+            Err(e) => panic!("should build bracket order: {e}"),
+        };
 
         assert_eq!(order.instrument_id, "AAPL");
         assert_eq!(order.entry.quantity, Decimal::new(100, 0));

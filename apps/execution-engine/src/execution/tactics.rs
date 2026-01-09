@@ -255,11 +255,8 @@ impl VwapConfig {
     /// Check if execution window has ended.
     #[must_use]
     pub fn is_window_ended(&self) -> bool {
-        if let Some(end_time) = self.end_time {
-            Utc::now() >= end_time
-        } else {
-            false
-        }
+        self.end_time
+            .map_or(false, |end_time| Utc::now() >= end_time)
     }
 }
 
@@ -331,7 +328,7 @@ pub struct TacticConfig {
 impl TacticConfig {
     /// Create a `PASSIVE_LIMIT` tactic configuration.
     #[must_use]
-    pub fn passive_limit(config: PassiveLimitConfig) -> Self {
+    pub const fn passive_limit(config: PassiveLimitConfig) -> Self {
         Self {
             tactic: TacticType::PassiveLimit,
             passive_limit: Some(config),
@@ -345,7 +342,7 @@ impl TacticConfig {
 
     /// Create an `AGGRESSIVE_LIMIT` tactic configuration.
     #[must_use]
-    pub fn aggressive_limit(config: AggressiveLimitConfig) -> Self {
+    pub const fn aggressive_limit(config: AggressiveLimitConfig) -> Self {
         Self {
             tactic: TacticType::AggressiveLimit,
             passive_limit: None,
@@ -359,7 +356,7 @@ impl TacticConfig {
 
     /// Create an ICEBERG tactic configuration.
     #[must_use]
-    pub fn iceberg(config: IcebergConfig) -> Self {
+    pub const fn iceberg(config: IcebergConfig) -> Self {
         Self {
             tactic: TacticType::Iceberg,
             passive_limit: None,
@@ -373,7 +370,7 @@ impl TacticConfig {
 
     /// Create a TWAP tactic configuration.
     #[must_use]
-    pub fn twap(config: TwapConfig) -> Self {
+    pub const fn twap(config: TwapConfig) -> Self {
         Self {
             tactic: TacticType::Twap,
             passive_limit: None,
@@ -387,7 +384,7 @@ impl TacticConfig {
 
     /// Create a VWAP tactic configuration.
     #[must_use]
-    pub fn vwap(config: VwapConfig) -> Self {
+    pub const fn vwap(config: VwapConfig) -> Self {
         Self {
             tactic: TacticType::Vwap,
             passive_limit: None,
@@ -401,7 +398,7 @@ impl TacticConfig {
 
     /// Create an ADAPTIVE tactic configuration.
     #[must_use]
-    pub fn adaptive(config: AdaptiveConfig) -> Self {
+    pub const fn adaptive(config: AdaptiveConfig) -> Self {
         Self {
             tactic: TacticType::Adaptive,
             passive_limit: None,

@@ -659,21 +659,29 @@ pub fn load_config_from_string(yaml: &str) -> Result<Config, ConfigError> {
 ///
 /// Supports both `${VAR}` and `${VAR:-default}` syntax.
 fn interpolate_env_vars(input: &str) -> Result<String, ConfigError> {
+    use std::sync::OnceLock;
+
+    static ENV_VAR_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+
     let mut result = input.to_string();
 
     // Match ${VAR} or ${VAR:-default} patterns
-    let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
-        .expect("env var regex pattern is valid");
+    let re = ENV_VAR_REGEX.get_or_init(|| {
+        // This regex pattern is compile-time constant and always valid
+        regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
+            .unwrap_or_else(|_| regex::Regex::new("^$").unwrap())
+    });
 
     for cap in re.captures_iter(input) {
-        let full_match = cap
-            .get(0)
-            .expect("group 0 always exists in captures")
-            .as_str();
-        let var_name = cap
-            .get(1)
-            .expect("group 1 is required by the pattern")
-            .as_str();
+        // Group 0 and group 1 are guaranteed by the regex pattern structure
+        let Some(full_match) = cap.get(0) else {
+            continue;
+        };
+        let Some(var_match) = cap.get(1) else {
+            continue;
+        };
+        let full_match = full_match.as_str();
+        let var_name = var_match.as_str();
         let default_value = cap.get(2).map(|m| m.as_str());
 
         let value = match std::env::var(var_name) {
@@ -782,7 +790,7 @@ mod tests {
 
         assert_eq!(config.server.grpc_port, 50051);
         assert_eq!(config.server.flight_port, 50052);
-        assert_eq!(config.pricing.risk_free_rate, 0.05);
+        assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "PAPER");
     }
 
@@ -794,16 +802,22 @@ server:
   flight_port: 50052
 ";
 
-        let config = load_config_from_string(yaml).expect("should load minimal config");
+        let config = match load_config_from_string(yaml) {
+            Ok(c) => c,
+            Err(e) => panic!("should load minimal config: {e}"),
+        };
         assert_eq!(config.server.grpc_port, 50051);
-        assert_eq!(config.pricing.risk_free_rate, 0.05); // Default value
+        assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON); // Default value
     }
 
     #[test]
     fn test_env_var_with_default_when_missing() {
         // Use a variable name unlikely to exist
         let input = "mode: ${CREAM_CONFIG_TEST_NONEXISTENT_VAR:-PAPER}";
-        let result = interpolate_env_vars(input).expect("should interpolate env vars");
+        let result = match interpolate_env_vars(input) {
+            Ok(r) => r,
+            Err(e) => panic!("should interpolate env vars: {e}"),
+        };
 
         // When env var doesn't exist, should use default value
         assert_eq!(result, "mode: PAPER");
@@ -813,7 +827,10 @@ server:
     fn test_env_var_with_default_uses_existing() {
         // PATH should always exist
         let input = "path: ${PATH:-default}";
-        let result = interpolate_env_vars(input).expect("should interpolate env vars");
+        let result = match interpolate_env_vars(input) {
+            Ok(r) => r,
+            Err(e) => panic!("should interpolate env vars: {e}"),
+        };
 
         // Should not be the default value
         assert_ne!(result, "path: default");
@@ -825,7 +842,10 @@ server:
     fn test_env_var_without_default_becomes_empty() {
         // Use a variable name unlikely to exist
         let input = "api_key: ${CREAM_CONFIG_TEST_UNLIKELY_TO_EXIST}";
-        let result = interpolate_env_vars(input).expect("should interpolate env vars");
+        let result = match interpolate_env_vars(input) {
+            Ok(r) => r,
+            Err(e) => panic!("should interpolate env vars: {e}"),
+        };
 
         // Without default, missing env var becomes empty string
         assert_eq!(result, "api_key: ");
@@ -840,13 +860,10 @@ server:
 ";
 
         let result = load_config_from_string(yaml);
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("must be different")
-        );
+        let Err(err) = result else {
+            panic!("expected error for duplicate ports");
+        };
+        assert!(err.to_string().contains("must be different"));
     }
 
     #[test]
@@ -860,8 +877,10 @@ pricing:
 ";
 
         let result = load_config_from_string(yaml);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("risk_free_rate"));
+        let Err(err) = result else {
+            panic!("expected error for invalid risk_free_rate");
+        };
+        assert!(err.to_string().contains("risk_free_rate"));
     }
 
     #[test]
@@ -875,8 +894,10 @@ environment:
 ";
 
         let result = load_config_from_string(yaml);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("mode"));
+        let Err(err) = result else {
+            panic!("expected error for invalid mode");
+        };
+        assert!(err.to_string().contains("mode"));
     }
 
     #[test]
@@ -929,19 +950,22 @@ environment:
   mode: LIVE
 "#;
 
-        let config = load_config_from_string(yaml).expect("should load full config");
+        let config = match load_config_from_string(yaml) {
+            Ok(c) => c,
+            Err(e) => panic!("should load full config: {e}"),
+        };
 
         assert_eq!(config.server.bind_address, "127.0.0.1");
         assert_eq!(config.feeds.databento.reconnect_delay_ms, 2000);
         assert_eq!(config.brokers.alpaca.base_url, "https://api.alpaca.markets");
-        assert_eq!(config.pricing.risk_free_rate, 0.04);
-        assert_eq!(config.constraints.per_instrument.max_notional, 100_000.0);
-        assert_eq!(config.constraints.portfolio.max_leverage, 3.0);
-        assert_eq!(config.constraints.options.max_portfolio_delta, 1000.0);
+        assert!((config.pricing.risk_free_rate - 0.04).abs() < f64::EPSILON);
+        assert!((config.constraints.per_instrument.max_notional - 100_000.0).abs() < 1e-10);
+        assert!((config.constraints.portfolio.max_leverage - 3.0).abs() < f64::EPSILON);
+        assert!((config.constraints.options.max_portfolio_delta - 1000.0).abs() < 1e-10);
         assert_eq!(config.observability.metrics.endpoint, "0.0.0.0:9091");
-        assert_eq!(config.observability.tracing.sampling_ratio, 0.5);
+        assert!((config.observability.tracing.sampling_ratio - 0.5).abs() < f64::EPSILON);
         assert_eq!(config.observability.logging.level, "debug");
-        assert_eq!(config.circuit_breaker.default.failure_rate_threshold, 0.3);
+        assert!((config.circuit_breaker.default.failure_rate_threshold - 0.3).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "LIVE");
     }
 
@@ -949,11 +973,11 @@ environment:
     fn test_constraint_limits() {
         let config = ConstraintsConfig::default();
 
-        assert_eq!(config.per_instrument.max_notional, 50000.0);
+        assert!((config.per_instrument.max_notional - 50000.0).abs() < 1e-10);
         assert_eq!(config.per_instrument.max_units, 1000);
-        assert_eq!(config.portfolio.max_gross_notional, 500_000.0);
-        assert_eq!(config.options.max_portfolio_delta, 500.0);
-        assert_eq!(config.buying_power.min_buying_power_ratio, 0.20);
+        assert!((config.portfolio.max_gross_notional - 500_000.0).abs() < 1e-10);
+        assert!((config.options.max_portfolio_delta - 500.0).abs() < 1e-10);
+        assert!((config.buying_power.min_buying_power_ratio - 0.20).abs() < f64::EPSILON);
     }
 }
 
@@ -1187,7 +1211,10 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Backtest);
 
         assert!(result.is_ok());
-        let validation = result.expect("backtest should validate without credentials");
+        let validation = match result {
+            Ok(v) => v,
+            Err(e) => panic!("backtest should validate without credentials: {e}"),
+        };
         assert!(validation.valid);
     }
 
@@ -1197,7 +1224,10 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Backtest);
 
         assert!(result.is_ok());
-        let validation = result.expect("backtest with credentials should validate");
+        let validation = match result {
+            Ok(v) => v,
+            Err(e) => panic!("backtest with credentials should validate: {e}"),
+        };
         assert!(validation.valid);
         assert!(!validation.warnings.is_empty());
     }
@@ -1207,8 +1237,9 @@ mod validation_tests {
         let config = make_config_with_credentials("", "");
         let result = validate_startup_environment(&config, Environment::Paper);
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for paper without credentials");
+        };
         assert!(err.to_string().contains("PAPER"));
         assert!(err.to_string().contains("ALPACA_KEY"));
     }
@@ -1226,8 +1257,9 @@ mod validation_tests {
         let config = make_config_with_credentials("", "");
         let result = validate_startup_environment(&config, Environment::Live);
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for live without credentials");
+        };
         assert!(err.to_string().contains("LIVE"));
     }
 
@@ -1248,7 +1280,10 @@ mod validation_tests {
         let result = validate_startup_environment(&config, Environment::Live);
 
         assert!(result.is_ok());
-        let validation = result.expect("live with paper URL should validate with warning");
+        let validation = match result {
+            Ok(v) => v,
+            Err(e) => panic!("live with paper URL should validate with warning: {e}"),
+        };
         assert!(!validation.warnings.is_empty());
         assert!(validation.warnings[0].contains("paper"));
     }
@@ -1262,8 +1297,9 @@ mod validation_tests {
     #[test]
     fn test_require_credentials_paper_missing() {
         let result = require_credentials("", "", Environment::Paper);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for paper missing credentials");
+        };
         assert!(err.contains("PAPER"));
         assert!(err.contains("ALPACA_KEY"));
         assert!(err.contains("ALPACA_SECRET"));
@@ -1272,8 +1308,9 @@ mod validation_tests {
     #[test]
     fn test_require_credentials_paper_partial() {
         let result = require_credentials("key", "", Environment::Paper);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for paper with partial credentials");
+        };
         assert!(err.contains("ALPACA_SECRET"));
         assert!(!err.contains("ALPACA_KEY\n")); // Key should not be listed as missing
     }

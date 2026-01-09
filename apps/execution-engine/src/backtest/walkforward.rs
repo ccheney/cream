@@ -119,9 +119,7 @@ impl WalkForwardWindow {
     /// Check if this window shows signs of overfitting.
     #[must_use]
     pub fn is_overfit(&self, threshold: Decimal) -> bool {
-        self.sharpe_degradation()
-            .map(|d| d > threshold)
-            .unwrap_or(false)
+        self.sharpe_degradation().is_some_and(|d| d > threshold)
     }
 }
 
@@ -246,6 +244,7 @@ pub struct WalkForwardEngine {
 
 impl WalkForwardEngine {
     /// Create a new walk-forward engine.
+    #[must_use]
     pub fn new(config: WalkForwardConfig, start_date: &str, end_date: &str) -> Self {
         Self {
             config,
@@ -289,8 +288,10 @@ impl WalkForwardEngine {
                 }
                 WindowMode::Anchored => {
                     // In anchored mode, IS starts at 0 and grows
-                    is_end = self.config.in_sample_days
-                        + (index as u32 * self.config.out_of_sample_days);
+                    // Truncation acceptable: index is bounded by loop limit (100)
+                    #[allow(clippy::cast_possible_truncation)]
+                    let idx = index as u32;
+                    is_end = self.config.in_sample_days + (idx * self.config.out_of_sample_days);
                     oos_start = is_end;
                     oos_end = oos_start + self.config.out_of_sample_days;
                 }
@@ -302,10 +303,10 @@ impl WalkForwardEngine {
 
             let window = WalkForwardWindow::new(
                 index,
-                &self.offset_date(&self.start_date, is_start),
-                &self.offset_date(&self.start_date, is_end),
-                &self.offset_date(&self.start_date, oos_start),
-                &self.offset_date(&self.start_date, oos_end),
+                &Self::offset_date(&self.start_date, is_start),
+                &Self::offset_date(&self.start_date, is_end),
+                &Self::offset_date(&self.start_date, oos_start),
+                &Self::offset_date(&self.start_date, oos_end),
             );
 
             windows.push(window);
@@ -426,18 +427,18 @@ impl WalkForwardEngine {
         let mut overfit_count = 0;
 
         for window in &windows_with_both {
-            if let Some(is_metrics) = &window.in_sample_metrics {
-                if let Some(sharpe) = is_metrics.sharpe_ratio {
-                    total_is_sharpe += sharpe;
-                    is_sharpe_count += 1;
-                }
+            if let Some(is_metrics) = &window.in_sample_metrics
+                && let Some(sharpe) = is_metrics.sharpe_ratio
+            {
+                total_is_sharpe += sharpe;
+                is_sharpe_count += 1;
             }
 
-            if let Some(oos_metrics) = &window.out_of_sample_metrics {
-                if let Some(sharpe) = oos_metrics.sharpe_ratio {
-                    total_oos_sharpe += sharpe;
-                    oos_sharpe_count += 1;
-                }
+            if let Some(oos_metrics) = &window.out_of_sample_metrics
+                && let Some(sharpe) = oos_metrics.sharpe_ratio
+            {
+                total_oos_sharpe += sharpe;
+                oos_sharpe_count += 1;
             }
 
             if let Some(degradation) = window.sharpe_degradation() {
@@ -527,20 +528,20 @@ impl WalkForwardEngine {
                 .map(|f| Decimal::from_f64_retain(f).unwrap_or(Decimal::ZERO))
                 .collect();
 
-            if numeric_values.len() > 1 {
-                if let Some(variance) = calculate_variance(&numeric_values) {
-                    parameter_variance.insert(param_name.clone(), variance);
+            if numeric_values.len() > 1
+                && let Some(variance) = calculate_variance(&numeric_values)
+            {
+                parameter_variance.insert(param_name.clone(), variance);
 
-                    // Flag as unstable if variance is high relative to mean
-                    let mean = numeric_values.iter().sum::<Decimal>()
-                        / Decimal::from(numeric_values.len() as u64);
+                // Flag as unstable if variance is high relative to mean
+                let mean = numeric_values.iter().sum::<Decimal>()
+                    / Decimal::from(numeric_values.len() as u64);
 
-                    if mean != Decimal::ZERO {
-                        let cv = variance / mean.abs(); // Coefficient of variation
-                        if cv > Decimal::new(5, 1) {
-                            // >50% CV is unstable
-                            unstable_parameters.push(param_name.clone());
-                        }
+                if mean != Decimal::ZERO {
+                    let cv = variance / mean.abs(); // Coefficient of variation
+                    if cv > Decimal::new(5, 1) {
+                        // >50% CV is unstable
+                        unstable_parameters.push(param_name.clone());
                     }
                 }
             }
@@ -609,7 +610,7 @@ impl WalkForwardEngine {
     }
 
     /// Offset a date by a number of days (simplified).
-    fn offset_date(&self, base: &str, days: u32) -> String {
+    fn offset_date(base: &str, days: u32) -> String {
         // Simplified date offset - in production use chrono
         let year: u32 = base[0..4].parse().unwrap_or(2024);
         let month: u32 = base[5..7].parse().unwrap_or(1);
@@ -794,18 +795,22 @@ mod tests {
         assert!(window.sharpe_degradation().is_none());
 
         // Add in-sample metrics with Sharpe = 2.0
-        let mut is_metrics = PerformanceSummary::default();
-        is_metrics.sharpe_ratio = Some(Decimal::new(2, 0));
+        let is_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::new(2, 0)),
+            ..Default::default()
+        };
         window.in_sample_metrics = Some(is_metrics);
 
         // Add out-of-sample metrics with Sharpe = 1.0 (50% degradation)
-        let mut oos_metrics = PerformanceSummary::default();
-        oos_metrics.sharpe_ratio = Some(Decimal::ONE);
+        let oos_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::ONE),
+            ..Default::default()
+        };
         window.out_of_sample_metrics = Some(oos_metrics);
 
-        let degradation = window
-            .sharpe_degradation()
-            .expect("degradation should be calculable with both metrics");
+        let Some(degradation) = window.sharpe_degradation() else {
+            panic!("degradation should be calculable with both metrics");
+        };
         assert_eq!(degradation, Decimal::new(5, 1)); // 0.5 = 50%
     }
 
@@ -814,12 +819,16 @@ mod tests {
         let mut window =
             WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
-        let mut is_metrics = PerformanceSummary::default();
-        is_metrics.sharpe_ratio = Some(Decimal::new(3, 0)); // IS Sharpe = 3.0
+        let is_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::new(3, 0)), // IS Sharpe = 3.0
+            ..Default::default()
+        };
         window.in_sample_metrics = Some(is_metrics);
 
-        let mut oos_metrics = PerformanceSummary::default();
-        oos_metrics.sharpe_ratio = Some(Decimal::ONE); // OOS Sharpe = 1.0
+        let oos_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::ONE), // OOS Sharpe = 1.0
+            ..Default::default()
+        };
         window.out_of_sample_metrics = Some(oos_metrics);
 
         // Degradation = (3-1)/3 = 0.667 > 0.5 threshold
@@ -833,22 +842,26 @@ mod tests {
 
         let mut window1 =
             WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
-        let mut oos1 = PerformanceSummary::default();
-        oos1.total_return = Decimal::new(10, 2); // 10%
-        oos1.sharpe_ratio = Some(Decimal::new(15, 1)); // 1.5
-        oos1.win_rate = Decimal::new(6, 1); // 60%
-        oos1.max_drawdown = Decimal::new(5, 2); // 5%
-        oos1.total_trades = 50;
+        let oos1 = PerformanceSummary {
+            total_return: Decimal::new(10, 2),       // 10%
+            sharpe_ratio: Some(Decimal::new(15, 1)), // 1.5
+            win_rate: Decimal::new(6, 1),            // 60%
+            max_drawdown: Decimal::new(5, 2),        // 5%
+            total_trades: 50,
+            ..Default::default()
+        };
         window1.out_of_sample_metrics = Some(oos1);
 
         let mut window2 =
             WalkForwardWindow::new(1, "2021-01-01", "2021-12-31", "2022-01-01", "2022-03-31");
-        let mut oos2 = PerformanceSummary::default();
-        oos2.total_return = Decimal::new(-5, 2); // -5%
-        oos2.sharpe_ratio = Some(Decimal::new(-5, 1)); // -0.5
-        oos2.win_rate = Decimal::new(4, 1); // 40%
-        oos2.max_drawdown = Decimal::new(15, 2); // 15%
-        oos2.total_trades = 30;
+        let oos2 = PerformanceSummary {
+            total_return: Decimal::new(-5, 2),       // -5%
+            sharpe_ratio: Some(Decimal::new(-5, 1)), // -0.5
+            win_rate: Decimal::new(4, 1),            // 40%
+            max_drawdown: Decimal::new(15, 2),       // 15%
+            total_trades: 30,
+            ..Default::default()
+        };
         window2.out_of_sample_metrics = Some(oos2);
 
         let test_windows = vec![window1, window2];
@@ -872,12 +885,16 @@ mod tests {
         let mut window =
             WalkForwardWindow::new(0, "2020-01-01", "2020-12-31", "2021-01-01", "2021-03-31");
 
-        let mut is_metrics = PerformanceSummary::default();
-        is_metrics.sharpe_ratio = Some(Decimal::new(2, 0));
+        let is_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::new(2, 0)),
+            ..Default::default()
+        };
         window.in_sample_metrics = Some(is_metrics);
 
-        let mut oos_metrics = PerformanceSummary::default();
-        oos_metrics.sharpe_ratio = Some(Decimal::new(8, 1)); // 0.8 (60% degradation)
+        let oos_metrics = PerformanceSummary {
+            sharpe_ratio: Some(Decimal::new(8, 1)), // 0.8 (60% degradation)
+            ..Default::default()
+        };
         window.out_of_sample_metrics = Some(oos_metrics);
 
         let windows = vec![window];
@@ -896,7 +913,9 @@ mod tests {
             Decimal::new(30, 0),
         ];
 
-        let variance = calculate_variance(&values).expect("variance should be calculable");
+        let Some(variance) = calculate_variance(&values) else {
+            panic!("variance should be calculable");
+        };
         // Mean = 20, variance = ((10-20)^2 + (20-20)^2 + (30-20)^2) / 2 = 200/2 = 100
         assert_eq!(variance, Decimal::new(100, 0));
     }

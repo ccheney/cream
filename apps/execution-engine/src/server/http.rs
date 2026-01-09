@@ -276,7 +276,10 @@ mod tests {
 
     fn make_server() -> ExecutionServer {
         let alpaca =
-            AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper).unwrap();
+            match AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper) {
+                Ok(a) => a,
+                Err(e) => panic!("should create Alpaca adapter: {e}"),
+            };
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
         let gateway = ExecutionGateway::new(alpaca, state_manager, validator);
@@ -318,15 +321,14 @@ mod tests {
     async fn test_health_check() {
         let app = create_router(make_server());
 
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let request = match Request::builder().uri("/health").body(Body::empty()) {
+            Ok(r) => r,
+            Err(e) => panic!("should build health check request: {e}"),
+        };
+        let response = match app.oneshot(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("health check should succeed: {e}"),
+        };
 
         assert_eq!(response.status(), StatusCode::OK);
     }
@@ -343,17 +345,23 @@ mod tests {
             plan: make_valid_plan(),
         };
 
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/v1/check-constraints")
-                    .header("content-type", "application/json")
-                    .body(Body::from(serde_json::to_string(&request).unwrap()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let body_str = match serde_json::to_string(&request) {
+            Ok(s) => s,
+            Err(e) => panic!("should serialize request: {e}"),
+        };
+        let http_request = match Request::builder()
+            .method("POST")
+            .uri("/v1/check-constraints")
+            .header("content-type", "application/json")
+            .body(Body::from(body_str))
+        {
+            Ok(r) => r,
+            Err(e) => panic!("should build check-constraints request: {e}"),
+        };
+        let response = match app.oneshot(http_request).await {
+            Ok(r) => r,
+            Err(e) => panic!("check-constraints should succeed: {e}"),
+        };
 
         assert_eq!(response.status(), StatusCode::OK);
     }
@@ -368,17 +376,23 @@ mod tests {
             plan: make_valid_plan(),
         };
 
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/v1/submit-orders")
-                    .header("content-type", "application/json")
-                    .body(Body::from(serde_json::to_string(&request).unwrap()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let body_str = match serde_json::to_string(&request) {
+            Ok(s) => s,
+            Err(e) => panic!("should serialize request: {e}"),
+        };
+        let http_request = match Request::builder()
+            .method("POST")
+            .uri("/v1/submit-orders")
+            .header("content-type", "application/json")
+            .body(Body::from(body_str))
+        {
+            Ok(r) => r,
+            Err(e) => panic!("should build submit-orders request: {e}"),
+        };
+        let response = match app.oneshot(http_request).await {
+            Ok(r) => r,
+            Err(e) => panic!("submit-orders should succeed: {e}"),
+        };
 
         assert_eq!(response.status(), StatusCode::OK);
     }

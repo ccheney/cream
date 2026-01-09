@@ -538,8 +538,11 @@ mod tests {
     // Keep the old function for integration tests that need real Alpaca
     #[allow(dead_code)]
     fn make_alpaca_gateway() -> ExecutionGateway<AlpacaAdapter> {
-        let alpaca = AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper)
-            .expect("should create test alpaca adapter");
+        let alpaca =
+            match AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper) {
+                Ok(a) => a,
+                Err(e) => panic!("should create test alpaca adapter: {e}"),
+            };
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
 
@@ -607,10 +610,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        let result = gateway.submit_orders(request).await;
-        assert!(result.is_ok());
-
-        let ack = result.expect("submit_orders should succeed");
+        let ack = match gateway.submit_orders(request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
         assert_eq!(ack.cycle_id, "c1");
         assert!(!ack.orders.is_empty());
     }
@@ -626,10 +629,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        let ack = gateway
-            .submit_orders(request)
-            .await
-            .expect("submit_orders should succeed");
+        let ack = match gateway.submit_orders(request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
         let order = &ack.orders[0];
 
         // Now cancel it
@@ -643,11 +646,10 @@ mod tests {
 
         // Try to cancel non-existent order
         let result = gateway.cancel_order("nonexistent-order-id").await;
-        assert!(result.is_err());
-        assert!(matches!(
-            result.expect_err("cancel_order should fail for nonexistent order"),
-            CancelOrderError::OrderNotFound(_)
-        ));
+        let Err(err) = result else {
+            panic!("cancel_order should fail for nonexistent order");
+        };
+        assert!(matches!(err, CancelOrderError::OrderNotFound(_)));
     }
 
     #[tokio::test]
@@ -661,10 +663,9 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        gateway
-            .submit_orders(request)
-            .await
-            .expect("submit_orders should succeed");
+        if let Err(e) = gateway.submit_orders(request).await {
+            panic!("submit_orders should succeed: {e}");
+        }
 
         // Get active orders
         let active_orders = gateway.get_active_orders();
@@ -682,10 +683,10 @@ mod tests {
             plan: make_valid_request().plan,
         };
 
-        let ack = gateway
-            .submit_orders(request)
-            .await
-            .expect("submit_orders should succeed");
+        let ack = match gateway.submit_orders(request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
         let order_ids: Vec<String> = ack.orders.iter().map(|o| o.order_id.clone()).collect();
 
         // Get order states

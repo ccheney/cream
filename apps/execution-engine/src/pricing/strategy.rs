@@ -381,6 +381,7 @@ impl StrategyBuilder {
     /// # Errors
     ///
     /// Returns an error if strike configuration is invalid.
+    #[allow(clippy::too_many_arguments)]
     pub fn vertical_spread(
         &self,
         underlying: &str,
@@ -654,6 +655,7 @@ impl StrategyBuilder {
     /// # Errors
     ///
     /// Returns an error if expirations are invalid.
+    #[allow(clippy::too_many_arguments)]
     pub fn calendar_spread(
         &self,
         underlying: &str,
@@ -755,6 +757,7 @@ impl StrategyBuilder {
     /// # Errors
     ///
     /// Returns an error if configuration is invalid.
+    #[allow(clippy::too_many_arguments)]
     pub fn diagonal_spread(
         &self,
         underlying: &str,
@@ -909,6 +912,8 @@ impl StrategyBuilder {
                 leg.contract.strike,
                 leg.contract.option_type,
             );
+            // Wrapping acceptable: u32 quantity fits in i32 for typical option spreads
+            #[allow(clippy::cast_possible_wrap)]
             let quantity = leg.quantity as i32;
             let delta = match leg.direction {
                 LegDirection::Long => quantity,
@@ -921,12 +926,16 @@ impl StrategyBuilder {
         // OR we should have defined risk (long options protect short options)
         // For simplicity, we allow any spread that isn't purely naked shorts
 
+        // Wrapping acceptable: u32 quantity fits in i32 for typical option spreads
+        #[allow(clippy::cast_possible_wrap)]
         let total_shorts: i32 = legs
             .iter()
             .filter(|l| l.direction == LegDirection::Short)
             .map(|l| l.quantity as i32)
             .sum();
 
+        // Wrapping acceptable: u32 quantity fits in i32 for typical option spreads
+        #[allow(clippy::cast_possible_wrap)]
         let total_longs: i32 = legs
             .iter()
             .filter(|l| l.direction == LegDirection::Long)
@@ -950,21 +959,22 @@ mod tests {
     fn test_iron_condor_construction() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .iron_condor(
-                "SPY",
-                "2026-01-17",
-                Decimal::new(450, 0), // Short put at 450
-                Decimal::new(470, 0), // Short call at 470
-                Decimal::new(5, 0),   // $5 wide wings
-                (
-                    Decimal::new(150, 2), // Short put premium $1.50
-                    Decimal::new(50, 2),  // Long put premium $0.50
-                    Decimal::new(140, 2), // Short call premium $1.40
-                    Decimal::new(40, 2),  // Long call premium $0.40
-                ),
-            )
-            .expect("should build valid iron condor strategy");
+        let strategy = match builder.iron_condor(
+            "SPY",
+            "2026-01-17",
+            Decimal::new(450, 0), // Short put at 450
+            Decimal::new(470, 0), // Short call at 470
+            Decimal::new(5, 0),   // $5 wide wings
+            (
+                Decimal::new(150, 2), // Short put premium $1.50
+                Decimal::new(50, 2),  // Long put premium $0.50
+                Decimal::new(140, 2), // Short call premium $1.40
+                Decimal::new(40, 2),  // Long call premium $0.40
+            ),
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid iron condor strategy: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::IronCondor);
         assert_eq!(strategy.legs.len(), 4);
@@ -1005,17 +1015,18 @@ mod tests {
     fn test_bull_call_spread() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .vertical_spread(
-                "AAPL",
-                "2026-02-21",
-                StrategyType::BullCallSpread,
-                Decimal::new(185, 0), // Short call at 185
-                Decimal::new(180, 0), // Long call at 180
-                Decimal::new(200, 2), // Short premium $2.00
-                Decimal::new(450, 2), // Long premium $4.50
-            )
-            .expect("should build valid bull call spread");
+        let strategy = match builder.vertical_spread(
+            "AAPL",
+            "2026-02-21",
+            StrategyType::BullCallSpread,
+            Decimal::new(185, 0), // Short call at 185
+            Decimal::new(180, 0), // Long call at 180
+            Decimal::new(200, 2), // Short premium $2.00
+            Decimal::new(450, 2), // Long premium $4.50
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid bull call spread: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::BullCallSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1028,17 +1039,18 @@ mod tests {
     fn test_bear_put_spread() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .vertical_spread(
-                "AAPL",
-                "2026-02-21",
-                StrategyType::BearPutSpread,
-                Decimal::new(175, 0), // Short put at 175
-                Decimal::new(180, 0), // Long put at 180
-                Decimal::new(150, 2), // Short premium $1.50
-                Decimal::new(300, 2), // Long premium $3.00
-            )
-            .expect("should build valid bear put spread");
+        let strategy = match builder.vertical_spread(
+            "AAPL",
+            "2026-02-21",
+            StrategyType::BearPutSpread,
+            Decimal::new(175, 0), // Short put at 175
+            Decimal::new(180, 0), // Long put at 180
+            Decimal::new(150, 2), // Short premium $1.50
+            Decimal::new(300, 2), // Long premium $3.00
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid bear put spread: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::BearPutSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1048,15 +1060,16 @@ mod tests {
     fn test_straddle() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .straddle(
-                "TSLA",
-                "2026-01-17",
-                Decimal::new(250, 0),  // ATM strike
-                Decimal::new(1200, 2), // Call premium $12.00
-                Decimal::new(1100, 2), // Put premium $11.00
-            )
-            .expect("should build valid straddle strategy");
+        let strategy = match builder.straddle(
+            "TSLA",
+            "2026-01-17",
+            Decimal::new(250, 0),  // ATM strike
+            Decimal::new(1200, 2), // Call premium $12.00
+            Decimal::new(1100, 2), // Put premium $11.00
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid straddle strategy: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::Straddle);
         assert_eq!(strategy.legs.len(), 2);
@@ -1072,16 +1085,17 @@ mod tests {
     fn test_strangle() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .strangle(
-                "TSLA",
-                "2026-01-17",
-                Decimal::new(240, 0), // OTM put strike
-                Decimal::new(260, 0), // OTM call strike
-                Decimal::new(800, 2), // Call premium $8.00
-                Decimal::new(750, 2), // Put premium $7.50
-            )
-            .expect("should build valid strangle strategy");
+        let strategy = match builder.strangle(
+            "TSLA",
+            "2026-01-17",
+            Decimal::new(240, 0), // OTM put strike
+            Decimal::new(260, 0), // OTM call strike
+            Decimal::new(800, 2), // Call premium $8.00
+            Decimal::new(750, 2), // Put premium $7.50
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid strangle strategy: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::Strangle);
         assert_eq!(strategy.legs.len(), 2);
@@ -1152,17 +1166,18 @@ mod tests {
     fn test_calendar_spread() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .calendar_spread(
-                "AAPL",
-                Decimal::new(180, 0), // Same strike for both
-                "2026-01-17",         // Near-term (sold)
-                "2026-02-21",         // Far-term (bought)
-                OptionType::Call,
-                Decimal::new(300, 2), // Near premium $3.00 (received)
-                Decimal::new(500, 2), // Far premium $5.00 (paid)
-            )
-            .expect("should build valid calendar spread");
+        let strategy = match builder.calendar_spread(
+            "AAPL",
+            Decimal::new(180, 0), // Same strike for both
+            "2026-01-17",         // Near-term (sold)
+            "2026-02-21",         // Far-term (bought)
+            OptionType::Call,
+            Decimal::new(300, 2), // Near premium $3.00 (received)
+            Decimal::new(500, 2), // Far premium $5.00 (paid)
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid calendar spread: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::CalendarSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1197,18 +1212,19 @@ mod tests {
     fn test_diagonal_spread() {
         let builder = StrategyBuilder::default();
 
-        let strategy = builder
-            .diagonal_spread(
-                "SPY",
-                Decimal::new(465, 0), // Near strike (OTM call sold)
-                Decimal::new(460, 0), // Far strike (ATM call bought)
-                "2026-01-17",         // Near-term
-                "2026-02-21",         // Far-term
-                OptionType::Call,
-                Decimal::new(200, 2), // Near premium $2.00 (received)
-                Decimal::new(600, 2), // Far premium $6.00 (paid)
-            )
-            .expect("should build valid diagonal spread");
+        let strategy = match builder.diagonal_spread(
+            "SPY",
+            Decimal::new(465, 0), // Near strike (OTM call sold)
+            Decimal::new(460, 0), // Far strike (ATM call bought)
+            "2026-01-17",         // Near-term
+            "2026-02-21",         // Far-term
+            OptionType::Call,
+            Decimal::new(200, 2), // Near premium $2.00 (received)
+            Decimal::new(600, 2), // Far premium $6.00 (paid)
+        ) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid diagonal spread: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::DiagonalSpread);
         assert_eq!(strategy.legs.len(), 2);
@@ -1273,9 +1289,10 @@ mod tests {
             ),
         ];
 
-        let strategy = builder
-            .custom("SPY", "2026-01-17", legs)
-            .expect("should build valid custom strategy");
+        let strategy = match builder.custom("SPY", "2026-01-17", legs) {
+            Ok(s) => s,
+            Err(e) => panic!("should build valid custom strategy: {e}"),
+        };
 
         assert_eq!(strategy.strategy_type, StrategyType::Custom);
         assert_eq!(strategy.legs.len(), 2);

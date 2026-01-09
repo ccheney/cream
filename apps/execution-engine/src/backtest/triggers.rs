@@ -59,29 +59,29 @@ pub enum TriggerType {
 impl TriggerResult {
     /// Check if any trigger occurred.
     #[must_use]
-    pub fn is_triggered(&self) -> bool {
+    pub const fn is_triggered(&self) -> bool {
         !matches!(self, Self::None)
     }
 
     /// Get the fill price if triggered.
     #[must_use]
-    pub fn fill_price(&self) -> Option<Decimal> {
+    pub const fn fill_price(&self) -> Option<Decimal> {
         match self {
             Self::None => None,
-            Self::Stop { price, .. } => Some(*price),
-            Self::Target { price, .. } => Some(*price),
-            Self::BothTriggered { price, .. } => Some(*price),
+            Self::Stop { price, .. }
+            | Self::Target { price, .. }
+            | Self::BothTriggered { price, .. } => Some(*price),
         }
     }
 
     /// Get the order side if triggered.
     #[must_use]
-    pub fn fill_side(&self) -> Option<OrderSide> {
+    pub const fn fill_side(&self) -> Option<OrderSide> {
         match self {
             Self::None => None,
-            Self::Stop { side, .. } => Some(*side),
-            Self::Target { side, .. } => Some(*side),
-            Self::BothTriggered { side, .. } => Some(*side),
+            Self::Stop { side, .. }
+            | Self::Target { side, .. }
+            | Self::BothTriggered { side, .. } => Some(*side),
         }
     }
 }
@@ -122,6 +122,7 @@ pub fn is_target_triggered(
 ///
 /// Handles the case where both stop and target are triggered in the same candle
 /// using the configured priority rule.
+#[must_use]
 pub fn evaluate_triggers(
     direction: PositionDirection,
     stop_level: Option<Decimal>,
@@ -129,13 +130,11 @@ pub fn evaluate_triggers(
     candle: &Candle,
     config: &StopTargetConfig,
 ) -> TriggerResult {
-    let stop_triggered = stop_level
-        .map(|level| is_stop_triggered(direction, level, candle))
-        .unwrap_or(false);
+    let stop_triggered =
+        stop_level.is_some_and(|level| is_stop_triggered(direction, level, candle));
 
-    let target_triggered = target_level
-        .map(|level| is_target_triggered(direction, level, candle))
-        .unwrap_or(false);
+    let target_triggered =
+        target_level.is_some_and(|level| is_target_triggered(direction, level, candle));
 
     // Determine exit side based on position direction
     let exit_side = match direction {
@@ -143,12 +142,9 @@ pub fn evaluate_triggers(
         PositionDirection::Short => OrderSide::Buy,
     };
 
-    match (stop_triggered, target_triggered) {
-        (false, false) => TriggerResult::None,
-
-        (true, false) => {
-            // Safety: stop_triggered is true only when stop_level.is_some()
-            let level = stop_level.expect("stop_level present when stop_triggered is true");
+    // Match on the actual Option values to avoid expect()
+    match (stop_triggered, target_triggered, stop_level, target_level) {
+        (true, false, Some(level), _) => {
             let price = calculate_fill_price(level, exit_side, true, config);
             TriggerResult::Stop {
                 price,
@@ -156,9 +152,7 @@ pub fn evaluate_triggers(
             }
         }
 
-        (false, true) => {
-            // Safety: target_triggered is true only when target_level.is_some()
-            let level = target_level.expect("target_level present when target_triggered is true");
+        (false, true, _, Some(level)) => {
             let price = calculate_fill_price(level, exit_side, false, config);
             TriggerResult::Target {
                 price,
@@ -166,13 +160,12 @@ pub fn evaluate_triggers(
             }
         }
 
-        (true, true) => {
+        (true, true, Some(stop), Some(target)) => {
             // Both triggered - use priority rule
-            // Safety: both levels are Some when both triggers are true
             let (selected, level) = resolve_same_bar_conflict(
                 direction,
-                stop_level.expect("stop_level present when stop_triggered is true"),
-                target_level.expect("target_level present when target_triggered is true"),
+                stop,
+                target,
                 candle,
                 config.same_bar_priority,
             );
@@ -186,6 +179,9 @@ pub fn evaluate_triggers(
                 side: exit_side,
             }
         }
+
+        // No trigger or unreachable cases (e.g., stop_triggered but no stop_level)
+        _ => TriggerResult::None,
     }
 }
 
@@ -244,6 +240,7 @@ fn calculate_fill_price(
 }
 
 /// Evaluate stop trigger and return fill price if triggered.
+#[must_use]
 pub fn evaluate_stop(
     direction: PositionDirection,
     stop_level: Decimal,
@@ -263,6 +260,7 @@ pub fn evaluate_stop(
 }
 
 /// Evaluate target trigger and return fill price if triggered.
+#[must_use]
 pub fn evaluate_target(
     direction: PositionDirection,
     target_level: Decimal,
@@ -488,9 +486,9 @@ mod tests {
         );
 
         // Stop price should be slipped down (worse for the seller)
-        let fill_price = result
-            .fill_price()
-            .expect("stop trigger should have fill price");
+        let Some(fill_price) = result.fill_price() else {
+            panic!("stop trigger should have fill price");
+        };
         assert!(fill_price < Decimal::new(9800, 2));
     }
 

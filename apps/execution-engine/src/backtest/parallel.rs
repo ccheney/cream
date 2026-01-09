@@ -180,9 +180,11 @@ pub enum ParamValue {
 impl ParamValue {
     /// Get as integer if applicable.
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn as_int(&self) -> Option<i64> {
         match self {
             Self::Int(v) => Some(*v),
+            // Truncation acceptable: converting float param to int loses decimal part
             Self::Float(v) => Some(*v as i64),
             _ => None,
         }
@@ -190,8 +192,10 @@ impl ParamValue {
 
     /// Get as float if applicable.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub const fn as_float(&self) -> Option<f64> {
         match self {
+            // Precision loss acceptable: i64 can exceed f64 mantissa but rare for params
             Self::Int(v) => Some(*v as f64),
             Self::Float(v) => Some(*v),
             _ => None,
@@ -318,7 +322,9 @@ impl ParameterGridBuilder {
 
     /// Add a parameter range (inclusive).
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn add_int_range(self, name: &str, start: i64, end: i64, step: i64) -> Self {
+        // Step size truncation acceptable: u64 step is typically small for param ranges
         let values: Vec<i64> = (start..=end)
             .step_by(step.unsigned_abs() as usize)
             .collect();
@@ -415,11 +421,17 @@ impl ProgressTracker {
 
     /// Get current progress.
     #[must_use]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     pub fn progress(&self) -> Progress {
         let completed = self.completed_jobs.load(Ordering::Relaxed);
         let failed = self.failed_jobs.load(Ordering::Relaxed);
         let elapsed = self.start_time.elapsed();
 
+        // Precision loss acceptable for rate calculation (approximate metric)
         let jobs_per_sec = if elapsed.as_secs_f64() > 0.0 {
             completed as f64 / elapsed.as_secs_f64()
         } else {
@@ -427,6 +439,7 @@ impl ProgressTracker {
         };
 
         let remaining = self.total_jobs.saturating_sub(completed);
+        // Truncation acceptable for ETA calculation (approximate metric)
         let eta_secs = if jobs_per_sec > 0.0 {
             (remaining as f64 / jobs_per_sec) as u64
         } else {
@@ -464,10 +477,12 @@ pub struct Progress {
 impl Progress {
     /// Get completion percentage.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn percentage(&self) -> f64 {
         if self.total == 0 {
             100.0
         } else {
+            // Precision loss acceptable for percentage display (approximate metric)
             (self.completed as f64 / self.total as f64) * 100.0
         }
     }
@@ -511,11 +526,13 @@ impl ParallelBacktester {
     /// # Errors
     ///
     /// Returns error if no jobs provided or all jobs fail.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn run_jobs(&self, jobs: &[BacktestJob]) -> Result<ParallelResult, ParallelError> {
         if jobs.is_empty() {
             return Err(ParallelError::NoJobs);
         }
 
+        // Truncation acceptable: job count should reasonably fit in u64
         let tracker = Arc::new(ProgressTracker::new(jobs.len() as u64));
         let start_time = Instant::now();
 
@@ -543,6 +560,7 @@ impl ParallelBacktester {
             final_progress.jobs_per_sec
         );
 
+        // Truncation acceptable: millis and job count fit in u64 for practical use
         Ok(ParallelResult {
             results,
             total_time_ms: elapsed.as_millis() as u64,
@@ -595,6 +613,7 @@ impl ParallelBacktester {
     }
 
     /// Execute a single backtest job.
+    #[allow(clippy::cast_possible_truncation)]
     fn execute_job(&self, job: &BacktestJob) -> BacktestJobResult {
         let _span = span!(Level::DEBUG, "backtest_job", job_id = %job.job_id);
         let start = Instant::now();
@@ -606,6 +625,7 @@ impl ParallelBacktester {
 
         let elapsed = start.elapsed();
 
+        // Truncation acceptable: millis fit in u64 for practical job durations
         match result {
             Ok(performance) => BacktestJobResult {
                 job_id: job.job_id.clone(),
@@ -815,10 +835,12 @@ pub struct ParallelResult {
 impl ParallelResult {
     /// Get the success rate.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn success_rate(&self) -> f64 {
         if self.jobs_executed == 0 {
             0.0
         } else {
+            // Precision loss acceptable for ratio calculation (approximate metric)
             self.jobs_succeeded as f64 / self.jobs_executed as f64
         }
     }
@@ -1041,13 +1063,10 @@ mod tests {
         };
 
         assert!(grid_result.optimal_parameters().is_some());
-        assert_eq!(
-            grid_result
-                .optimal_parameters()
-                .expect("optimal parameters should exist")
-                .get("period"),
-            Some(&ParamValue::Int(20))
-        );
+        let Some(optimal_params) = grid_result.optimal_parameters() else {
+            panic!("optimal parameters should exist");
+        };
+        assert_eq!(optimal_params.get("period"), Some(&ParamValue::Int(20)));
     }
 
     #[test]
@@ -1076,7 +1095,10 @@ mod tests {
             success: false,
         };
 
-        let json = serde_json::to_string(&result).expect("Serialization failed");
+        let json = match serde_json::to_string(&result) {
+            Ok(j) => j,
+            Err(e) => panic!("Serialization failed: {e}"),
+        };
         assert!(json.contains("job_1"));
         assert!(json.contains("Test error"));
     }

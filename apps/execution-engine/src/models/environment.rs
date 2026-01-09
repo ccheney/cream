@@ -91,14 +91,16 @@ mod tests {
 
     #[test]
     fn test_environment_from_str() {
-        assert_eq!(
-            "LIVE".parse::<Environment>().expect("LIVE should parse"),
-            Environment::Live
-        );
-        assert_eq!(
-            "paper".parse::<Environment>().expect("paper should parse"),
-            Environment::Paper
-        );
+        let live: Environment = match "LIVE".parse() {
+            Ok(e) => e,
+            Err(e) => panic!("LIVE should parse: {e}"),
+        };
+        assert_eq!(live, Environment::Live);
+        let paper: Environment = match "paper".parse() {
+            Ok(e) => e,
+            Err(e) => panic!("paper should parse: {e}"),
+        };
+        assert_eq!(paper, Environment::Paper);
         assert!("invalid".parse::<Environment>().is_err());
     }
 }

@@ -74,6 +74,11 @@ pub struct TlsConfig {
 
 impl TlsConfig {
     /// Create TLS config from file paths.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the certificate, key, or CA certificate files
+    /// cannot be read from the filesystem.
     pub fn from_files(
         cert_path: impl AsRef<Path>,
         key_path: impl AsRef<Path>,
@@ -111,6 +116,10 @@ impl TlsConfig {
     }
 
     /// Generate self-signed certificates for development.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key pair or certificate generation fails.
     pub fn generate_self_signed(
         common_name: &str,
         san_dns_names: &[&str],
@@ -154,6 +163,10 @@ impl TlsConfig {
     }
 
     /// Build Tonic `ServerTlsConfig` from this configuration.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible, but returns `Result` for future extensibility.
     pub fn build_server_config(&self) -> Result<ServerTlsConfig, TlsError> {
         let identity = Identity::from_pem(&self.cert, &self.key);
 
@@ -186,11 +199,13 @@ pub struct TlsConfigBuilder {
 
 impl TlsConfigBuilder {
     /// Create a new builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Load configuration from environment variables.
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             enabled: std::env::var("GRPC_TLS_ENABLED")
@@ -206,30 +221,35 @@ impl TlsConfigBuilder {
     }
 
     /// Set whether TLS is enabled.
+    #[must_use = "method returns modified builder"]
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
     }
 
     /// Set the certificate file path.
+    #[must_use = "method returns modified builder"]
     pub fn cert_path(mut self, path: impl Into<String>) -> Self {
         self.cert_path = Some(path.into());
         self
     }
 
     /// Set the private key file path.
+    #[must_use = "method returns modified builder"]
     pub fn key_path(mut self, path: impl Into<String>) -> Self {
         self.key_path = Some(path.into());
         self
     }
 
     /// Set the CA certificate path (for client verification).
+    #[must_use = "method returns modified builder"]
     pub fn ca_path(mut self, path: impl Into<String>) -> Self {
         self.ca_path = Some(path.into());
         self
     }
 
     /// Set whether client authentication is required (mTLS).
+    #[must_use = "method returns modified builder"]
     pub fn client_auth_required(mut self, required: bool) -> Self {
         self.client_auth = required;
         self
@@ -239,6 +259,12 @@ impl TlsConfigBuilder {
     ///
     /// Returns `None` if TLS is disabled.
     /// Generates self-signed certificates if enabled but no paths provided.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Certificate files cannot be read from the configured paths
+    /// - Self-signed certificate generation fails
     pub fn build(self) -> Result<Option<TlsConfig>, TlsError> {
         if !self.enabled {
             tracing::info!("TLS disabled");
@@ -255,7 +281,7 @@ impl TlsConfigBuilder {
                 "Loading TLS certificates from files"
             );
 
-            let ca_path_ref = self.ca_path.as_ref().map(|s| s.as_str());
+            let ca_path_ref = self.ca_path.as_ref().map(String::as_str);
             return TlsConfig::from_files(cert_path, key_path, ca_path_ref, self.client_auth)
                 .map(Some);
         }
@@ -279,6 +305,10 @@ static TLS_CONFIG: std::sync::OnceLock<Option<Arc<TlsConfig>>> = std::sync::Once
 /// Initialize TLS configuration from environment.
 ///
 /// This should be called once at application startup.
+///
+/// # Errors
+///
+/// Returns an error if TLS configuration fails or has already been initialized.
 pub fn init_tls_config() -> Result<Option<Arc<TlsConfig>>, TlsError> {
     let config = TlsConfigBuilder::from_env().build()?;
     let config_arc = config.map(Arc::new);
@@ -294,10 +324,11 @@ pub fn init_tls_config() -> Result<Option<Arc<TlsConfig>>, TlsError> {
 ///
 /// Returns [`None`] if TLS is disabled or not initialized.
 pub fn get_tls_config() -> Option<Arc<TlsConfig>> {
-    TLS_CONFIG.get().and_then(|c| c.clone())
+    TLS_CONFIG.get().and_then(Clone::clone)
 }
 
 /// Check if TLS is enabled.
+#[must_use]
 pub fn is_tls_enabled() -> bool {
     get_tls_config().is_some()
 }
@@ -309,7 +340,10 @@ mod tests {
     #[test]
     fn test_generate_self_signed() {
         let config =
-            TlsConfig::generate_self_signed("test-server", &["localhost", "127.0.0.1"]).unwrap();
+            match TlsConfig::generate_self_signed("test-server", &["localhost", "127.0.0.1"]) {
+                Ok(c) => c,
+                Err(e) => panic!("should generate self-signed certificate: {e}"),
+            };
 
         assert!(config.cert.contains("-----BEGIN CERTIFICATE-----"));
         assert!(config.key.contains("-----BEGIN PRIVATE KEY-----"));
@@ -318,23 +352,30 @@ mod tests {
 
     #[test]
     fn test_builder_disabled() {
-        let config = TlsConfigBuilder::new().enabled(false).build().unwrap();
+        let config = match TlsConfigBuilder::new().enabled(false).build() {
+            Ok(c) => c,
+            Err(e) => panic!("should build disabled TLS config: {e}"),
+        };
 
         assert!(config.is_none());
     }
 
     #[test]
     fn test_builder_enabled_auto_generate() {
-        let config = TlsConfigBuilder::new().enabled(true).build().unwrap();
-
-        assert!(config.is_some());
-        let config = config.unwrap();
+        let config = match TlsConfigBuilder::new().enabled(true).build() {
+            Ok(Some(c)) => c,
+            Ok(None) => panic!("enabled TLS config should be Some"),
+            Err(e) => panic!("should build enabled TLS config: {e}"),
+        };
         assert!(!config.client_auth_required);
     }
 
     #[test]
     fn test_builder_from_pem() {
-        let config = TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
+        let config = match TlsConfig::generate_self_signed("test", &["localhost"]) {
+            Ok(c) => c,
+            Err(e) => panic!("should generate self-signed certificate: {e}"),
+        };
 
         let config2 = TlsConfig::from_pem(&config.cert, &config.key, config.ca_cert.clone(), false);
 
@@ -344,7 +385,10 @@ mod tests {
 
     #[test]
     fn test_build_server_config() {
-        let config = TlsConfig::generate_self_signed("test", &["localhost"]).unwrap();
+        let config = match TlsConfig::generate_self_signed("test", &["localhost"]) {
+            Ok(c) => c,
+            Err(e) => panic!("should generate self-signed certificate: {e}"),
+        };
 
         let server_config = config.build_server_config();
         assert!(server_config.is_ok());

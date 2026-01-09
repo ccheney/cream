@@ -9,7 +9,9 @@
 //! Reference: docs/plans/09-rust-core.md (IV Computation, lines 366-386)
 
 // Black-Scholes uses standard mathematical notation (s, k, t, r, q, sigma)
+// Financial formulas use standard notation where mul_add() obscures meaning
 #![allow(clippy::many_single_char_names)]
+#![allow(clippy::suboptimal_flops)]
 
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
@@ -183,6 +185,7 @@ impl IvSolver {
     /// # Errors
     ///
     /// Returns an error if the solver fails to converge or inputs are invalid.
+    #[allow(clippy::too_many_arguments)]
     pub fn solve(
         &self,
         market_price: f64,
@@ -194,7 +197,7 @@ impl IvSolver {
         kind: OptionKind,
     ) -> Result<f64, IvError> {
         // Validate inputs
-        self.validate_inputs(market_price, s, k, t)?;
+        Self::validate_inputs(market_price, s, k, t)?;
 
         // Check if option has time value
         let intrinsic = match kind {
@@ -230,7 +233,7 @@ impl IvSolver {
     }
 
     /// Validate input parameters.
-    fn validate_inputs(&self, market_price: f64, s: f64, k: f64, t: f64) -> Result<(), IvError> {
+    fn validate_inputs(market_price: f64, s: f64, k: f64, t: f64) -> Result<(), IvError> {
         if market_price <= 0.0 {
             return Err(IvError::InvalidInput {
                 message: format!("Market price must be positive, got: {market_price}"),
@@ -257,6 +260,7 @@ impl IvSolver {
     /// Modified Corrado-Miller initial guess for Newton-Raphson.
     ///
     /// Provides a good starting point that typically converges in 2-4 iterations.
+    #[allow(clippy::too_many_arguments)]
     fn corrado_miller_guess(
         &self,
         market_price: f64,
@@ -303,6 +307,7 @@ impl IvSolver {
     /// Newton-Raphson IV solver.
     ///
     /// Fast convergence (typically 2-4 iterations) when close to solution.
+    #[allow(clippy::too_many_arguments)]
     fn newton_raphson(
         &self,
         market_price: f64,
@@ -352,6 +357,7 @@ impl IvSolver {
     ///
     /// Guaranteed convergence but slower than Newton-Raphson.
     /// Used as fallback for deep ITM/OTM options.
+    #[allow(clippy::too_many_arguments)]
     fn bisection(
         &self,
         market_price: f64,
@@ -412,6 +418,13 @@ impl IvSolver {
     }
 
     /// Solve IV from Decimal inputs (convenience method).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input price is invalid (negative, exceeds intrinsic bounds)
+    /// - The solver fails to converge within the maximum iterations
+    #[allow(clippy::too_many_arguments)]
     pub fn solve_decimal(
         &self,
         market_price: Decimal,
@@ -484,9 +497,10 @@ mod tests {
         let true_iv = 0.25;
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .expect("IV solver should converge for ATM call");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Call) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for ATM call: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -504,9 +518,10 @@ mod tests {
         let true_iv = 0.30;
 
         let market_price = bs_put(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Put)
-            .expect("IV solver should converge for ATM put");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Put) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for ATM put: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.001));
     }
@@ -524,9 +539,10 @@ mod tests {
         let true_iv = 0.35;
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .expect("IV solver should converge for OTM call");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Call) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for OTM call: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -544,9 +560,10 @@ mod tests {
         let true_iv = 0.28;
 
         let market_price = bs_put(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Put)
-            .expect("IV solver should converge for ITM put");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Put) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for ITM put: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }
@@ -606,9 +623,10 @@ mod tests {
         let true_iv = 1.50; // 150% IV
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .expect("IV solver should converge for high IV");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Call) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for high IV: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.02));
     }
@@ -626,9 +644,10 @@ mod tests {
         let true_iv = 0.08; // 8% IV
 
         let market_price = bs_call(s, k, t, r, q, true_iv);
-        let computed_iv = solver
-            .solve(market_price, s, k, t, r, q, OptionKind::Call)
-            .expect("IV solver should converge for low IV");
+        let computed_iv = match solver.solve(market_price, s, k, t, r, q, OptionKind::Call) {
+            Ok(iv) => iv,
+            Err(e) => panic!("IV solver should converge for low IV: {e}"),
+        };
 
         assert!(approx_eq(computed_iv, true_iv, 0.01));
     }

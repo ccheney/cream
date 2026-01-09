@@ -159,16 +159,16 @@ pub struct ConstraintCheckResponse {
 impl ConstraintCheckResponse {
     /// Create a successful response with no violations.
     #[must_use]
-    pub fn success() -> Self {
+    pub const fn success() -> Self {
         Self {
             ok: true,
-            violations: vec![],
+            violations: Vec::new(),
         }
     }
 
     /// Create a failed response with violations.
     #[must_use]
-    pub fn failure(violations: Vec<ConstraintViolation>) -> Self {
+    pub const fn failure(violations: Vec<ConstraintViolation>) -> Self {
         Self {
             ok: false,
             violations,

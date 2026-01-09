@@ -439,8 +439,10 @@ mod tests {
         let request = make_test_request();
         let result = adapter.submit_orders(&request).await;
 
-        assert!(result.is_ok());
-        let ack = result.expect("submit_orders should succeed");
+        let ack = match result {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
 
         assert_eq!(ack.cycle_id, "test-cycle-1");
         assert_eq!(ack.environment, Environment::Backtest);
@@ -460,10 +462,9 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        if let Err(e) = adapter.submit_orders(&request).await {
+            panic!("submit_orders should succeed: {e}");
+        }
 
         let recorded = adapter.submitted_orders();
         assert_eq!(recorded.len(), 1);
@@ -484,9 +485,10 @@ mod tests {
         request.environment = Environment::Paper;
 
         let result = adapter.submit_orders(&request).await;
-        assert!(result.is_err());
-
-        match result.unwrap_err() {
+        let Err(err) = result else {
+            panic!("expected error for environment mismatch");
+        };
+        match err {
             BrokerError::EnvironmentMismatch { expected, actual } => {
                 assert_eq!(expected, "BACKTEST");
                 assert_eq!(actual, "PAPER");
@@ -501,16 +503,16 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        let ack = adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        let ack = match adapter.submit_orders(&request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
 
         let broker_order_id = &ack.orders[0].broker_order_id;
-        let status = adapter.get_order_status(broker_order_id).await;
-
-        assert!(status.is_ok());
-        let order = status.expect("get_order_status should succeed");
+        let order = match adapter.get_order_status(broker_order_id).await {
+            Ok(o) => o,
+            Err(e) => panic!("get_order_status should succeed: {e}"),
+        };
         assert_eq!(order.status, OrderStatus::Filled);
     }
 
@@ -519,8 +521,10 @@ mod tests {
         let adapter = BacktestAdapter::new();
         let result = adapter.get_order_status("nonexistent").await;
 
-        assert!(result.is_err());
-        match result.unwrap_err() {
+        let Err(err) = result else {
+            panic!("expected error for nonexistent order");
+        };
+        match err {
             BrokerError::OrderNotFound(id) => assert_eq!(id, "nonexistent"),
             _ => panic!("Expected OrderNotFound error"),
         }
@@ -532,10 +536,10 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        let ack = adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        let ack = match adapter.submit_orders(&request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
 
         let broker_order_id = &ack.orders[0].broker_order_id;
         let result = adapter.cancel_order(broker_order_id).await;
@@ -548,8 +552,10 @@ mod tests {
         let adapter = BacktestAdapter::new();
         let result = adapter.cancel_order("nonexistent").await;
 
-        assert!(result.is_err());
-        match result.expect_err("cancel_order should fail for nonexistent order") {
+        let Err(err) = result else {
+            panic!("cancel_order should fail for nonexistent order");
+        };
+        match err {
             BrokerError::OrderNotFound(id) => assert_eq!(id, "nonexistent"),
             _ => panic!("Expected OrderNotFound error"),
         }
@@ -561,10 +567,9 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        if let Err(e) = adapter.submit_orders(&request).await {
+            panic!("submit_orders should succeed: {e}");
+        }
 
         assert_eq!(adapter.order_count(), 1);
 
@@ -608,10 +613,10 @@ mod tests {
             },
         };
 
-        let ack = adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        let ack = match adapter.submit_orders(&request).await {
+            Ok(a) => a,
+            Err(e) => panic!("submit_orders should succeed: {e}"),
+        };
 
         // Hold action should not produce an order
         assert!(ack.orders.is_empty());
@@ -625,10 +630,9 @@ mod tests {
         adapter.set_simulated_price(Decimal::new(150, 0));
 
         let request = make_test_request();
-        adapter
-            .submit_orders(&request)
-            .await
-            .expect("submit_orders should succeed");
+        if let Err(e) = adapter.submit_orders(&request).await {
+            panic!("submit_orders should succeed: {e}");
+        }
 
         let cloned = adapter.clone();
 

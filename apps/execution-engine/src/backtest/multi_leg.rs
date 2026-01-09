@@ -132,6 +132,7 @@ impl MultiLegFillResult {
 ///
 /// # Returns
 /// Multi-leg fill result with net price (debit/credit)
+#[must_use]
 pub fn simulate_multi_leg_order(
     legs: &[OrderLeg],
     candles: &HashMap<String, Candle>,
@@ -157,9 +158,12 @@ pub fn simulate_multi_leg_order(
 
     for leg in legs {
         // Safety: we validated all instruments have candle data above
-        let candle = candles
-            .get(&leg.instrument_id)
-            .expect("candle data validated to exist for all legs");
+        let Some(candle) = candles.get(&leg.instrument_id) else {
+            return MultiLegFillResult::rejected(&format!(
+                "Missing candle data for instrument: {}",
+                leg.instrument_id
+            ));
+        };
         let avg_volume = avg_volumes.and_then(|v| v.get(&leg.instrument_id).copied());
 
         let fill = simulate_order(

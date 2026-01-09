@@ -417,6 +417,7 @@ pub fn create_simulation_start_event(
 }
 
 /// Create an order submitted event.
+#[allow(clippy::too_many_arguments)]
 pub fn create_order_submitted_event(
     order_id: impl Into<String>,
     symbol: impl Into<String>,
@@ -457,6 +458,7 @@ pub fn create_data_gap_event(
 }
 
 /// Calculate slippage in basis points.
+#[must_use]
 pub fn calculate_slippage_bps(base_price: Decimal, fill_price: Decimal) -> Decimal {
     if base_price == Decimal::ZERO {
         return Decimal::ZERO;
@@ -466,6 +468,7 @@ pub fn calculate_slippage_bps(base_price: Decimal, fill_price: Decimal) -> Decim
 }
 
 /// Check if slippage is adverse (worse for the trader).
+#[must_use]
 pub fn is_adverse_slippage(side: OrderSide, base_price: Decimal, fill_price: Decimal) -> bool {
     match side {
         OrderSide::Buy => fill_price > base_price,
@@ -486,6 +489,7 @@ pub struct BacktestLogger {
 
 impl BacktestLogger {
     /// Create a new backtest logger.
+    #[must_use]
     pub const fn new(log_to_tracing: bool) -> Self {
         Self {
             events: Vec::new(),
@@ -496,13 +500,13 @@ impl BacktestLogger {
     /// Log an event.
     pub fn log(&mut self, event: BacktestEvent) {
         if self.log_to_tracing {
-            self.emit_to_tracing(&event);
+            Self::emit_to_tracing(&event);
         }
         self.events.push(event);
     }
 
     /// Emit event to tracing.
-    fn emit_to_tracing(&self, event: &BacktestEvent) {
+    fn emit_to_tracing(event: &BacktestEvent) {
         match event {
             BacktestEvent::SimulationStart(e) => log_simulation_start(e),
             BacktestEvent::SimulationEnd(e) => log_simulation_end(e),
@@ -518,11 +522,13 @@ impl BacktestLogger {
     }
 
     /// Get all logged events.
+    #[must_use]
     pub fn events(&self) -> &[BacktestEvent] {
         &self.events
     }
 
     /// Get event count.
+    #[must_use]
     pub const fn event_count(&self) -> usize {
         self.events.len()
     }
@@ -541,6 +547,10 @@ impl BacktestLogger {
     }
 
     /// Export events as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the events cannot be serialized to JSON.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(&self.events)
     }
@@ -693,7 +703,10 @@ mod tests {
             timestamp: "2025-06-01T10:00:00Z".to_string(),
         }));
 
-        let json = logger.to_json().expect("should serialize logger to JSON");
+        let json = match logger.to_json() {
+            Ok(j) => j,
+            Err(e) => panic!("should serialize logger to JSON: {e}"),
+        };
         assert!(json.contains("order_rejected"));
         assert!(json.contains("AAPL"));
         assert!(json.contains("Insufficient funds"));

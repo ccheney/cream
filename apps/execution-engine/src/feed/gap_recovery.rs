@@ -151,7 +151,11 @@ impl GapRecoveryManager {
             if elapsed > self.config.max_gap_duration {
                 result.gap_detected = true;
                 result.gap_type = Some(GapType::TimeBased);
-                result.gap_size = elapsed.as_millis() as u64;
+                // Truncation acceptable: gap duration in ms fits in u64 for practical gaps
+                #[allow(clippy::cast_possible_truncation)]
+                {
+                    result.gap_size = elapsed.as_millis() as u64;
+                }
 
                 warn!(
                     provider = %self.provider,
@@ -163,21 +167,21 @@ impl GapRecoveryManager {
         }
 
         // Check for sequence-based gap
-        if let (Some(current_seq), Some(last_seq)) = (sequence, self.last_sequence) {
-            if current_seq > last_seq + 1 {
-                let gap = current_seq - last_seq - 1;
-                result.gap_detected = true;
-                result.gap_type = Some(GapType::SequenceBased);
-                result.gap_size = gap;
+        if let (Some(current_seq), Some(last_seq)) = (sequence, self.last_sequence)
+            && current_seq > last_seq + 1
+        {
+            let gap = current_seq - last_seq - 1;
+            result.gap_detected = true;
+            result.gap_type = Some(GapType::SequenceBased);
+            result.gap_size = gap;
 
-                warn!(
-                    provider = %self.provider,
-                    last_seq = last_seq,
-                    current_seq = current_seq,
-                    missed = gap,
-                    "Sequence gap detected"
-                );
-            }
+            warn!(
+                provider = %self.provider,
+                last_seq = last_seq,
+                current_seq = current_seq,
+                missed = gap,
+                "Sequence gap detected"
+            );
         }
 
         // Determine action

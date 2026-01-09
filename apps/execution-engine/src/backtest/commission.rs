@@ -25,6 +25,7 @@ pub enum InstrumentType {
 ///
 /// # Returns
 /// Total commission including base commission and regulatory fees.
+#[must_use]
 pub fn calculate_commission(
     config: &CommissionConfig,
     instrument_type: InstrumentType,
@@ -97,6 +98,7 @@ fn calculate_regulatory_fees(
 /// Calculate commission for a multi-leg options order.
 ///
 /// Each leg is charged separately based on its side and quantity.
+#[must_use]
 pub fn calculate_multi_leg_commission(
     config: &CommissionConfig,
     legs: &[(OrderSide, Decimal, Decimal)], // (side, quantity, price)

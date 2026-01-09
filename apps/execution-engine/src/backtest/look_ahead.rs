@@ -113,6 +113,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Create a passing validation result.
+    #[must_use]
     pub const fn pass() -> Self {
         Self {
             valid: true,
@@ -122,6 +123,7 @@ impl ValidationResult {
     }
 
     /// Create a failing validation result.
+    #[must_use]
     pub fn fail(error: LookAheadError) -> Self {
         Self {
             valid: false,
@@ -131,12 +133,14 @@ impl ValidationResult {
     }
 
     /// Add a warning to the result.
+    #[must_use = "method returns modified result"]
     pub fn with_warning(mut self, warning: impl Into<String>) -> Self {
         self.warnings.push(warning.into());
         self
     }
 
     /// Check if there are any warnings.
+    #[must_use]
     pub const fn has_warnings(&self) -> bool {
         !self.warnings.is_empty()
     }
@@ -466,8 +470,7 @@ fn parse_timestamp(timestamp: &str) -> Result<DateTime<Utc>, LookAheadError> {
             // Try parsing as just a date
             NaiveDate::parse_from_str(timestamp, "%Y-%m-%d").map(|d| {
                 d.and_hms_opt(0, 0, 0)
-                    .expect("midnight is always valid for any date")
-                    .and_utc()
+                    .map_or_else(Utc::now, |dt| dt.and_utc())
             })
         })
         .map_err(|e| LookAheadError::InvalidTimestamp {
@@ -529,6 +532,7 @@ pub struct DataAccessRecord {
 
 impl LookAheadChecker {
     /// Create a new look-ahead bias checker.
+    #[must_use]
     pub const fn new(config: LookAheadConfig) -> Self {
         Self {
             config,
@@ -539,6 +543,7 @@ impl LookAheadChecker {
     }
 
     /// Create with default configuration.
+    #[must_use]
     pub fn with_defaults() -> Self {
         Self::new(LookAheadConfig::default())
     }
@@ -607,26 +612,31 @@ impl LookAheadChecker {
     }
 
     /// Get the access log.
+    #[must_use]
     pub fn access_log(&self) -> &[DataAccessRecord] {
         &self.access_log
     }
 
     /// Get the number of warnings issued.
+    #[must_use]
     pub const fn warnings_issued(&self) -> usize {
         self.warnings_issued
     }
 
     /// Get the number of violations found.
+    #[must_use]
     pub const fn violations_found(&self) -> usize {
         self.violations_found
     }
 
     /// Check if any violations were found.
+    #[must_use]
     pub const fn has_violations(&self) -> bool {
         self.violations_found > 0
     }
 
     /// Generate a summary report.
+    #[must_use]
     pub fn summary(&self) -> LookAheadSummary {
         LookAheadSummary {
             total_accesses: self.access_log.len(),
@@ -719,13 +729,17 @@ mod tests {
 
     #[test]
     fn test_check_earnings_availability_valid() {
+        let Some(fiscal_quarter_end) = NaiveDate::from_ymd_opt(2025, 3, 31) else {
+            panic!("valid fiscal quarter end date");
+        };
+        let release_timestamp = match DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z") {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(e) => panic!("valid release timestamp: {e}"),
+        };
         let earnings = EarningsRelease {
             symbol: "AAPL".to_string(),
-            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31)
-                .expect("valid fiscal quarter end date"),
-            release_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .expect("valid release timestamp")
-                .with_timezone(&Utc),
+            fiscal_quarter_end,
+            release_timestamp,
             release_timing: EarningsReleaseTiming::AfterMarketClose,
         };
 
@@ -735,13 +749,17 @@ mod tests {
 
     #[test]
     fn test_check_earnings_availability_before_release() {
+        let Some(fiscal_quarter_end) = NaiveDate::from_ymd_opt(2025, 3, 31) else {
+            panic!("valid fiscal quarter end date");
+        };
+        let release_timestamp = match DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z") {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(e) => panic!("valid release timestamp: {e}"),
+        };
         let earnings = EarningsRelease {
             symbol: "AAPL".to_string(),
-            fiscal_quarter_end: NaiveDate::from_ymd_opt(2025, 3, 31)
-                .expect("valid fiscal quarter end date"),
-            release_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .expect("valid release timestamp")
-                .with_timezone(&Utc),
+            fiscal_quarter_end,
+            release_timestamp,
             release_timing: EarningsReleaseTiming::AfterMarketClose,
         };
 
@@ -755,13 +773,18 @@ mod tests {
 
     #[test]
     fn test_check_fundamental_availability_valid() {
+        let Some(period_end) = NaiveDate::from_ymd_opt(2025, 3, 31) else {
+            panic!("valid period end date");
+        };
+        let available_timestamp = match DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z") {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(e) => panic!("valid available timestamp: {e}"),
+        };
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
-            available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .expect("valid available timestamp")
-                .with_timezone(&Utc),
+            period_end,
+            available_timestamp,
             is_original: true,
         };
         let config = LookAheadConfig::default();
@@ -772,13 +795,18 @@ mod tests {
 
     #[test]
     fn test_check_fundamental_availability_before_publication() {
+        let Some(period_end) = NaiveDate::from_ymd_opt(2025, 3, 31) else {
+            panic!("valid period end date");
+        };
+        let available_timestamp = match DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z") {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(e) => panic!("valid available timestamp: {e}"),
+        };
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
-            available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .expect("valid available timestamp")
-                .with_timezone(&Utc),
+            period_end,
+            available_timestamp,
             is_original: true,
         };
         let config = LookAheadConfig::default();
@@ -793,13 +821,18 @@ mod tests {
 
     #[test]
     fn test_check_fundamental_availability_restated_warning() {
+        let Some(period_end) = NaiveDate::from_ymd_opt(2025, 3, 31) else {
+            panic!("valid period end date");
+        };
+        let available_timestamp = match DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z") {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(e) => panic!("valid available timestamp: {e}"),
+        };
         let data = FundamentalDataAvailability {
             symbol: "AAPL".to_string(),
             metric: "revenue".to_string(),
-            period_end: NaiveDate::from_ymd_opt(2025, 3, 31).expect("valid period end date"),
-            available_timestamp: DateTime::parse_from_rfc3339("2025-05-01T16:30:00Z")
-                .expect("valid available timestamp")
-                .with_timezone(&Utc),
+            period_end,
+            available_timestamp,
             is_original: false, // Restated
         };
         let config = LookAheadConfig {
@@ -815,17 +848,19 @@ mod tests {
     #[test]
     fn test_validate_universe_constituents() {
         let mut actual = HashMap::new();
-        actual.insert(
-            "AAPL".to_string(),
-            NaiveDate::from_ymd_opt(2010, 1, 1).expect("valid AAPL add date"),
-        );
-        actual.insert(
-            "TSLA".to_string(),
-            NaiveDate::from_ymd_opt(2020, 12, 21).expect("valid TSLA add date"),
-        );
+        let Some(aapl_add_date) = NaiveDate::from_ymd_opt(2010, 1, 1) else {
+            panic!("valid AAPL add date");
+        };
+        actual.insert("AAPL".to_string(), aapl_add_date);
+        let Some(tsla_add_date) = NaiveDate::from_ymd_opt(2020, 12, 21) else {
+            panic!("valid TSLA add date");
+        };
+        actual.insert("TSLA".to_string(), tsla_add_date);
 
         let symbols = vec!["AAPL".to_string(), "TSLA".to_string()];
-        let as_of = NaiveDate::from_ymd_opt(2019, 1, 1).expect("valid as_of date");
+        let Some(as_of) = NaiveDate::from_ymd_opt(2019, 1, 1) else {
+            panic!("valid as_of date");
+        };
 
         let result = validate_universe_constituents("SPX", &symbols, as_of, &actual);
         assert!(result.valid); // No errors, just warnings

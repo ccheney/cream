@@ -197,7 +197,10 @@ impl CircuitBreaker {
     #[must_use]
     pub fn state(&self) -> CircuitBreakerState {
         self.check_state_transition();
-        *self.state.read().unwrap_or_else(|e| e.into_inner())
+        *self
+            .state
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Check if a call is permitted.
@@ -205,7 +208,10 @@ impl CircuitBreaker {
     pub fn is_call_permitted(&self) -> bool {
         self.check_state_transition();
 
-        let state = self.state.read().unwrap_or_else(|e| e.into_inner());
+        let state = self
+            .state
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         match *state {
             CircuitBreakerState::Closed => true,
@@ -232,7 +238,10 @@ impl CircuitBreaker {
 
     /// Record call outcome and update state.
     fn record_outcome(&self, outcome: CallOutcome) {
-        let current_state = *self.state.read().unwrap_or_else(|e| e.into_inner());
+        let current_state = *self
+            .state
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         match current_state {
             CircuitBreakerState::Closed => {
@@ -261,7 +270,7 @@ impl CircuitBreaker {
         let mut window = self
             .sliding_window
             .write()
-            .unwrap_or_else(|e| e.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         window.push_back(outcome);
 
@@ -276,7 +285,7 @@ impl CircuitBreaker {
         let window = self
             .sliding_window
             .read()
-            .unwrap_or_else(|e| e.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         // Don't evaluate until minimum calls
         if window.len() < self.config.minimum_calls as usize {
@@ -288,6 +297,8 @@ impl CircuitBreaker {
             .iter()
             .filter(|o| **o == CallOutcome::Failure)
             .count();
+        // Precision loss acceptable for rate calculation (approximate metric)
+        #[allow(clippy::cast_precision_loss)]
         let failure_rate = failures as f64 / window.len() as f64;
 
         if failure_rate >= self.config.failure_rate_threshold {
@@ -314,22 +325,28 @@ impl CircuitBreaker {
 
     /// Check for time-based state transitions (`OPEN` -> `HALF_OPEN`).
     fn check_state_transition(&self) {
-        let state = *self.state.read().unwrap_or_else(|e| e.into_inner());
+        let state = *self
+            .state
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
-        if state == CircuitBreakerState::Open {
-            let opened_at = *self.opened_at.read().unwrap_or_else(|e| e.into_inner());
-
-            if let Some(opened) = opened_at {
-                if opened.elapsed() >= self.config.wait_duration_in_open {
-                    self.transition_to_half_open();
-                }
-            }
+        if state == CircuitBreakerState::Open
+            && let Some(opened) = *self
+                .opened_at
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+            && opened.elapsed() >= self.config.wait_duration_in_open
+        {
+            self.transition_to_half_open();
         }
     }
 
     /// Transition to `OPEN` state.
     fn transition_to_open(&self) {
-        let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
+        let mut state = self
+            .state
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let previous = *state;
 
         if previous != CircuitBreakerState::Open {
@@ -337,7 +354,10 @@ impl CircuitBreaker {
             drop(state);
 
             // Record when circuit opened
-            let mut opened_at = self.opened_at.write().unwrap_or_else(|e| e.into_inner());
+            let mut opened_at = self
+                .opened_at
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             *opened_at = Some(Instant::now());
 
             self.state_transitions.fetch_add(1, Ordering::Relaxed);
@@ -353,7 +373,10 @@ impl CircuitBreaker {
 
     /// Transition to `HALF_OPEN` state.
     fn transition_to_half_open(&self) {
-        let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
+        let mut state = self
+            .state
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let previous = *state;
 
         if previous == CircuitBreakerState::Open {
@@ -377,7 +400,10 @@ impl CircuitBreaker {
 
     /// Transition to CLOSED state.
     fn transition_to_closed(&self) {
-        let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
+        let mut state = self
+            .state
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let previous = *state;
 
         if previous != CircuitBreakerState::Closed {
@@ -388,12 +414,15 @@ impl CircuitBreaker {
             let mut window = self
                 .sliding_window
                 .write()
-                .unwrap_or_else(|e| e.into_inner());
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             window.clear();
             drop(window);
 
             // Clear opened_at
-            let mut opened_at = self.opened_at.write().unwrap_or_else(|e| e.into_inner());
+            let mut opened_at = self
+                .opened_at
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             *opened_at = None;
 
             self.state_transitions.fetch_add(1, Ordering::Relaxed);
@@ -427,11 +456,12 @@ impl CircuitBreaker {
     }
 
     /// Calculate current failure rate from sliding window.
+    #[allow(clippy::cast_precision_loss)]
     fn current_failure_rate(&self) -> f64 {
         let window = self
             .sliding_window
             .read()
-            .unwrap_or_else(|e| e.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         if window.is_empty() {
             return 0.0;
@@ -442,6 +472,7 @@ impl CircuitBreaker {
             .filter(|o| **o == CallOutcome::Failure)
             .count();
 
+        // Precision loss acceptable for rate calculation (approximate metric)
         failures as f64 / window.len() as f64
     }
 

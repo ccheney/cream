@@ -365,26 +365,22 @@ impl MicrostructureTracker {
     /// Check if state is stale.
     #[must_use]
     pub fn is_stale(&self) -> bool {
-        match &self.current_quote {
-            Some(quote) => quote.timestamp.elapsed() > self.staleness_threshold,
-            None => true,
-        }
+        self.current_quote.as_ref().map_or(true, |quote| {
+            quote.timestamp.elapsed() > self.staleness_threshold
+        })
     }
 
     /// Get the current spread in basis points.
     #[must_use]
     pub fn spread_bps(&self) -> Decimal {
-        match &self.current_quote {
-            Some(quote) => {
-                let mid = quote.mid_price();
-                if mid > Decimal::ZERO {
-                    (quote.spread() / mid) * Decimal::new(10000, 0)
-                } else {
-                    Decimal::ZERO
-                }
+        self.current_quote.as_ref().map_or(Decimal::ZERO, |quote| {
+            let mid = quote.mid_price();
+            if mid > Decimal::ZERO {
+                (quote.spread() / mid) * Decimal::new(10000, 0)
+            } else {
+                Decimal::ZERO
             }
-            None => Decimal::ZERO,
-        }
+        })
     }
 
     /// Get the complete microstructure state snapshot.
@@ -393,16 +389,12 @@ impl MicrostructureTracker {
         let now = Instant::now();
         self.expire_old_trades(now);
 
-        let (bid, ask, spread, last_update) = match &self.current_quote {
-            Some(quote) => (quote.bid, quote.ask, quote.spread(), quote.timestamp),
-            None => (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, now),
-        };
+        let (bid, ask, spread, last_update) = self.current_quote.as_ref().map_or(
+            (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO, now),
+            |quote| (quote.bid, quote.ask, quote.spread(), quote.timestamp),
+        );
 
-        let last_trade = self
-            .trade_buffer
-            .back()
-            .map(|t| t.price)
-            .unwrap_or(Decimal::ZERO);
+        let last_trade = self.trade_buffer.back().map_or(Decimal::ZERO, |t| t.price);
 
         MicrostructureState {
             symbol: self.symbol.clone(),
@@ -501,12 +493,17 @@ impl MicrostructureManager {
 
     /// Get snapshot for a symbol.
     pub fn snapshot(&mut self, symbol: &str) -> Option<MicrostructureState> {
-        self.trackers.get_mut(symbol).map(|t| t.snapshot())
+        self.trackers
+            .get_mut(symbol)
+            .map(MicrostructureTracker::snapshot)
     }
 
     /// Get snapshots for all symbols.
     pub fn all_snapshots(&mut self) -> Vec<MicrostructureState> {
-        self.trackers.values_mut().map(|t| t.snapshot()).collect()
+        self.trackers
+            .values_mut()
+            .map(MicrostructureTracker::snapshot)
+            .collect()
     }
 
     /// Get count of tracked symbols.
@@ -745,15 +742,15 @@ mod tests {
 
         assert_eq!(manager.symbol_count(), 2);
 
-        let aapl = manager
-            .snapshot("AAPL")
-            .expect("AAPL snapshot should exist");
+        let Some(aapl) = manager.snapshot("AAPL") else {
+            panic!("AAPL snapshot should exist");
+        };
         assert_eq!(aapl.bid, Decimal::new(15000, 2));
         assert_eq!(aapl.volume, Decimal::new(100, 0));
 
-        let msft = manager
-            .snapshot("MSFT")
-            .expect("MSFT snapshot should exist");
+        let Some(msft) = manager.snapshot("MSFT") else {
+            panic!("MSFT snapshot should exist");
+        };
         assert_eq!(msft.bid, Decimal::new(40000, 2));
         assert_eq!(msft.volume, Decimal::new(50, 0));
     }

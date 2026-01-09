@@ -198,6 +198,13 @@ impl PortfolioRecovery {
     /// 4. Fetches current broker state
     /// 5. Reconciles local vs broker state
     /// 6. Resolves any discrepancies
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Database operations fail (loading state, orders, or positions)
+    /// - Broker API calls fail (fetching state, resolving orphans)
+    /// - Critical discrepancies are detected and `abort_on_critical` is enabled
     pub async fn recover(&self, broker: &AlpacaAdapter) -> Result<RecoveryResult, RecoveryError> {
         let start = std::time::Instant::now();
         let mut result = RecoveryResult::success();
@@ -313,7 +320,11 @@ impl PortfolioRecovery {
             .await?;
         self.persistence.log_reconciliation(&report).await?;
 
-        result.duration_ms = start.elapsed().as_millis() as u64;
+        // Truncation acceptable: recovery duration in ms fits in u64
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            result.duration_ms = start.elapsed().as_millis() as u64;
+        }
         result.success = true;
 
         info!(
@@ -337,15 +348,15 @@ impl PortfolioRecovery {
         let mut synced = 0;
 
         for broker_pos in &broker_state.positions {
-            let needs_sync = match local_positions.get(&broker_pos.symbol) {
-                None => true, // Not in local
-                Some(local) => {
+            let needs_sync = local_positions.get(&broker_pos.symbol).map_or(
+                true, // Not in local
+                |local| {
                     // Check if different
                     local.qty != broker_pos.qty
                         || (local.avg_entry_price - broker_pos.avg_entry_price).abs()
                             > self.config.position_price_tolerance_pct * broker_pos.avg_entry_price
-                }
-            };
+                },
+            );
 
             if needs_sync {
                 let position = LocalPositionSnapshot {
@@ -386,6 +397,10 @@ impl PortfolioRecovery {
     }
 
     /// Quick health check without full recovery.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query for recovery state fails.
     pub async fn health_check(&self, broker: &AlpacaAdapter) -> Result<bool, RecoveryError> {
         let recovery_state = self.persistence.get_recovery_state().await?;
 
@@ -404,6 +419,11 @@ impl PortfolioRecovery {
     }
 
     /// Save current state snapshot (for graceful shutdown).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if saving orders to the database or updating
+    /// recovery state fails.
     pub async fn save_snapshot(&self) -> Result<(), RecoveryError> {
         info!("Saving state snapshot for graceful shutdown");
 
@@ -425,6 +445,10 @@ impl PortfolioRecovery {
     }
 
     /// Mark recovery state as interrupted (for crash simulation/testing).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if updating the recovery state in the database fails.
     pub async fn mark_interrupted(&self, cycle_id: Option<&str>) -> Result<(), RecoveryError> {
         self.persistence
             .update_recovery_state(cycle_id, "interrupted", None)

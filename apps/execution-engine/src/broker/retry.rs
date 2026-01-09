@@ -118,7 +118,9 @@ pub struct ExponentialBackoffCalculator {
 impl ExponentialBackoffCalculator {
     /// Create a new backoff calculator from a retry policy.
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new(policy: &BrokerRetryPolicy) -> Self {
+        // Truncation acceptable: backoff durations in ms fit in u64 for practical use
         Self {
             current_attempt: 0,
             max_attempts: policy.max_attempts,
@@ -147,9 +149,15 @@ impl ExponentialBackoffCalculator {
     }
 
     /// Calculate base exponential backoff without jitter.
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss,
+        clippy::cast_possible_wrap
+    )]
     fn calculate_base_backoff_ms(&self) -> u64 {
+        // Precision loss/wrapping acceptable for backoff calculation (current_attempt is bounded by max_attempts)
         let multiplier = self.backoff_multiplier.powi(self.current_attempt as i32);
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let backoff = (self.initial_backoff_ms as f64 * multiplier) as u64;
         backoff.min(self.max_backoff_ms)
     }
@@ -157,13 +165,18 @@ impl ExponentialBackoffCalculator {
     /// Apply jitter to backoff duration.
     ///
     /// Uses full jitter strategy: random value in [backoff * (1 - jitter), backoff * (1 + jitter)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
     fn apply_jitter(&self, backoff_ms: u64) -> u64 {
+        // Precision loss acceptable for jitter calculation (approximate timing)
         let mut rng = rand::rng();
         let jitter_range = backoff_ms as f64 * self.jitter_factor;
         let min = (backoff_ms as f64 - jitter_range).max(0.0);
         let max = backoff_ms as f64 + jitter_range;
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let jittered = rng.random_range(min..=max) as u64;
         jittered
     }
@@ -312,12 +325,12 @@ impl RetryAfterExtractor {
         backoff: &mut ExponentialBackoffCalculator,
     ) -> Option<Duration> {
         // Prefer Retry-After header if available
-        if let Some(value) = retry_after {
-            if let Some(duration) = Self::parse(value) {
-                // Advance the attempt counter even when using Retry-After
-                backoff.current_attempt += 1;
-                return Some(duration);
-            }
+        if let Some(value) = retry_after
+            && let Some(duration) = Self::parse(value)
+        {
+            // Advance the attempt counter even when using Retry-After
+            backoff.current_attempt += 1;
+            return Some(duration);
         }
 
         // Fall back to exponential backoff
@@ -343,8 +356,8 @@ impl AlpacaErrorHandler {
     pub const fn categorize_status(status_code: u16) -> ErrorCategory {
         match status_code {
             429 => ErrorCategory::RateLimited,
-            400..=499 => ErrorCategory::NonRetryable,
             500..=599 => ErrorCategory::Retryable,
+            // 4xx (except 429) and all other codes are non-retryable
             _ => ErrorCategory::NonRetryable,
         }
     }
@@ -410,9 +423,9 @@ mod tests {
         // Run multiple times to verify jitter is within range
         for _ in 0..100 {
             let mut backoff = ExponentialBackoffCalculator::new(&policy);
-            let duration = backoff
-                .next_backoff()
-                .expect("first backoff should always succeed");
+            let Some(duration) = backoff.next_backoff() else {
+                panic!("first backoff should always succeed");
+            };
 
             // Base is 100ms, jitter is ±20%, so range is 80-120ms
             assert!(

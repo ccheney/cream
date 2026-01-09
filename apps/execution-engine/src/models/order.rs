@@ -368,19 +368,20 @@ impl Default for PartialFillTimeoutConfig {
 impl PartialFillTimeoutConfig {
     /// Get the timeout duration for a given order purpose.
     #[must_use]
-    pub fn timeout_for_purpose(&self, purpose: OrderPurpose) -> u64 {
+    pub const fn timeout_for_purpose(&self, purpose: OrderPurpose) -> u64 {
         match purpose {
             OrderPurpose::Entry | OrderPurpose::ScaleIn => self.entry_timeout_seconds,
-            OrderPurpose::Exit | OrderPurpose::ScaleOut => self.exit_timeout_seconds,
+            OrderPurpose::Exit | OrderPurpose::ScaleOut | OrderPurpose::BracketLeg => {
+                self.exit_timeout_seconds
+            }
             OrderPurpose::StopLoss => self.stop_loss_timeout_seconds,
             OrderPurpose::TakeProfit => self.take_profit_timeout_seconds,
-            OrderPurpose::BracketLeg => self.exit_timeout_seconds,
         }
     }
 
     /// Get the timeout action for a given order purpose.
     #[must_use]
-    pub fn action_for_purpose(&self, purpose: OrderPurpose) -> PartialFillTimeoutAction {
+    pub const fn action_for_purpose(&self, purpose: OrderPurpose) -> PartialFillTimeoutAction {
         match purpose {
             OrderPurpose::Entry | OrderPurpose::ScaleIn => self.on_entry_timeout,
             OrderPurpose::Exit | OrderPurpose::ScaleOut | OrderPurpose::BracketLeg => {

@@ -177,6 +177,7 @@ pub struct MonteCarloSimulator {
 
 impl MonteCarloSimulator {
     /// Create a new Monte Carlo simulator.
+    #[must_use]
     pub fn new(config: MonteCarloConfig, trades: Vec<TradeRecord>) -> Self {
         let rng_state = config.seed.unwrap_or_else(|| {
             // Use time-based seed if not provided
@@ -236,7 +237,7 @@ impl MonteCarloSimulator {
         let drawdown_distribution = calculate_distribution_stats(&drawdowns);
 
         // Luck vs skill analysis
-        let luck_vs_skill = self.analyze_luck_vs_skill(&original_metrics, &iterations);
+        let luck_vs_skill = Self::analyze_luck_vs_skill(&original_metrics, &iterations);
 
         // VaR analysis
         let var_analysis = self.calculate_var(&returns);
@@ -268,7 +269,9 @@ impl MonteCarloSimulator {
         let n = shuffled.len();
 
         for i in (1..n).rev() {
-            let j = self.next_random() as usize % (i + 1);
+            // Random index selection: u64 % (i+1) is safe since i+1 <= n <= trades.len()
+            #[allow(clippy::cast_possible_truncation)]
+            let j = (self.next_random() % (i as u64 + 1)) as usize;
             shuffled.swap(i, j);
         }
 
@@ -281,7 +284,9 @@ impl MonteCarloSimulator {
         let mut sampled = Vec::with_capacity(n);
 
         for _ in 0..n {
-            let idx = self.next_random() as usize % n;
+            // Random index selection: result is bounded by n which fits in usize
+            #[allow(clippy::cast_possible_truncation)]
+            let idx = (self.next_random() % n as u64) as usize;
             sampled.push(self.trades[idx].clone());
         }
 
@@ -329,18 +334,20 @@ impl MonteCarloSimulator {
 
     /// Analyze luck vs skill.
     fn analyze_luck_vs_skill(
-        &self,
         original: &IterationResult,
         iterations: &[IterationResult],
     ) -> LuckVsSkillAnalysis {
         let original_return = original.total_return;
 
         // Count how many simulations beat the original
+        // Count is bounded by iterations.len() which should fit in u32 for practical use
+        #[allow(clippy::cast_possible_truncation)]
         let simulations_better = iterations
             .iter()
             .filter(|r| r.total_return >= original_return)
             .count() as u32;
 
+        #[allow(clippy::cast_possible_truncation)]
         let total = iterations.len() as u32;
 
         // Percentile rank (100 = best, 0 = worst)
@@ -398,6 +405,12 @@ impl MonteCarloSimulator {
 
         // VaR at confidence level (e.g., 5th percentile for 95% confidence)
         let var_percentile = Decimal::ONE - self.config.confidence_level;
+        // Precision loss acceptable for index calculation (approximate percentile)
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         let var_idx = ((Decimal::from(n as u64) * var_percentile)
             .to_f64()
             .unwrap_or(0.0) as usize)
@@ -406,6 +419,8 @@ impl MonteCarloSimulator {
 
         // CVaR (average of returns below VaR)
         let below_var: Vec<Decimal> = sorted.iter().take(var_idx + 1).copied().collect();
+        // Precision loss acceptable: below_var.len() is bounded by returns.len()
+        #[allow(clippy::cast_precision_loss)]
         let cvar = if !below_var.is_empty() {
             below_var.iter().sum::<Decimal>() / Decimal::from(below_var.len() as u64)
         } else {
@@ -413,7 +428,10 @@ impl MonteCarloSimulator {
         };
 
         // Probability of negative returns
+        // Precision loss acceptable: counts fit in reasonable bounds for simulation
+        #[allow(clippy::cast_precision_loss)]
         let negative_count = returns.iter().filter(|r| **r < Decimal::ZERO).count();
+        #[allow(clippy::cast_precision_loss)]
         let prob_negative = Decimal::from(negative_count as u64) / Decimal::from(n as u64);
 
         // Expected shortfall as percentage of initial equity
@@ -434,6 +452,11 @@ impl MonteCarloSimulator {
 }
 
 /// Calculate distribution statistics for a set of values.
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
     if values.is_empty() {
         return DistributionStats::default();
@@ -443,7 +466,7 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
     let mut sorted = values.to_vec();
     sorted.sort();
 
-    // Mean
+    // Mean - precision loss acceptable for statistical calculation
     let sum: Decimal = values.iter().sum();
     let mean = sum / Decimal::from(n as u64);
 
@@ -454,7 +477,7 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
         sorted[n / 2]
     };
 
-    // Standard deviation
+    // Standard deviation - precision loss acceptable for statistical calculation
     let variance_sum: Decimal = values.iter().map(|v| (*v - mean) * (*v - mean)).sum();
     let variance = if n > 1 {
         variance_sum / Decimal::from((n - 1) as u64)
@@ -467,7 +490,7 @@ fn calculate_distribution_stats(values: &[Decimal]) -> DistributionStats {
     let min = sorted[0];
     let max = sorted[n - 1];
 
-    // Percentiles
+    // Percentiles - precision/truncation acceptable for index calculation
     let pctl_05 = sorted[(n as f64 * 0.05) as usize];
     let pctl_25 = sorted[(n as f64 * 0.25) as usize];
     let pctl_75 = sorted[((n as f64 * 0.75) as usize).min(n - 1)];

@@ -83,19 +83,17 @@ impl From<AlpacaError> for BrokerError {
     fn from(err: AlpacaError) -> Self {
         match err {
             AlpacaError::Http(msg) | AlpacaError::Network(msg) | AlpacaError::JsonParse(msg) => {
-                BrokerError::Http(msg)
+                Self::Http(msg)
             }
-            AlpacaError::Api { code, message } => BrokerError::Api { code, message },
-            AlpacaError::OrderRejected(msg) => BrokerError::OrderRejected(msg),
-            AlpacaError::AuthenticationFailed => BrokerError::AuthenticationFailed,
-            AlpacaError::RateLimited { retry_after_secs } => {
-                BrokerError::RateLimited { retry_after_secs }
-            }
+            AlpacaError::Api { code, message } => Self::Api { code, message },
+            AlpacaError::OrderRejected(msg) => Self::OrderRejected(msg),
+            AlpacaError::AuthenticationFailed => Self::AuthenticationFailed,
+            AlpacaError::RateLimited { retry_after_secs } => Self::RateLimited { retry_after_secs },
             AlpacaError::EnvironmentMismatch { expected, actual } => {
-                BrokerError::EnvironmentMismatch { expected, actual }
+                Self::EnvironmentMismatch { expected, actual }
             }
             AlpacaError::MaxRetriesExceeded { attempts: _ } => {
-                BrokerError::Http("Max retries exceeded".to_string())
+                Self::Http("Max retries exceeded".to_string())
             }
         }
     }
@@ -366,10 +364,9 @@ impl AlpacaAdapter {
 
         // Map action to order purpose
         let order_purpose = match decision.action {
-            Action::Buy => OrderPurpose::Entry,
             Action::Sell | Action::Close => OrderPurpose::Exit,
-            // For Hold/NoTrade, default to Entry (shouldn't be called for these)
-            Action::Hold | Action::NoTrade => OrderPurpose::Entry,
+            // Buy, Hold, NoTrade default to Entry (Hold/NoTrade shouldn't be called)
+            Action::Buy | Action::Hold | Action::NoTrade => OrderPurpose::Entry,
         };
 
         // TODO: Get actual ADV from market data
@@ -839,22 +836,27 @@ impl OrderState {
                 alpaca_legs
                     .iter()
                     .enumerate()
-                    .map(|(idx, leg)| OrderLegState {
-                        leg_index: idx as u32,
-                        instrument_id: response.symbol.clone(),
-                        side: if leg.side == "buy" {
-                            OrderSide::Buy
-                        } else {
-                            OrderSide::Sell
-                        },
-                        quantity: leg.qty.parse().unwrap_or(Decimal::ZERO),
-                        filled_quantity: leg.filled_qty.parse().unwrap_or(Decimal::ZERO),
-                        avg_fill_price: leg
-                            .filled_avg_price
-                            .as_ref()
-                            .and_then(|p| p.parse().ok())
-                            .unwrap_or(Decimal::ZERO),
-                        status: parse_order_status(&leg.status),
+                    .map(|(idx, leg)| {
+                        // Truncation acceptable: leg index is bounded by order legs count (typically < 10)
+                        #[allow(clippy::cast_possible_truncation)]
+                        let leg_index = idx as u32;
+                        OrderLegState {
+                            leg_index,
+                            instrument_id: response.symbol.clone(),
+                            side: if leg.side == "buy" {
+                                OrderSide::Buy
+                            } else {
+                                OrderSide::Sell
+                            },
+                            quantity: leg.qty.parse().unwrap_or(Decimal::ZERO),
+                            filled_quantity: leg.filled_qty.parse().unwrap_or(Decimal::ZERO),
+                            avg_fill_price: leg
+                                .filled_avg_price
+                                .as_ref()
+                                .and_then(|p| p.parse().ok())
+                                .unwrap_or(Decimal::ZERO),
+                            status: parse_order_status(&leg.status),
+                        }
                     })
                     .collect()
             })
@@ -992,35 +994,35 @@ impl Position {
 
 fn parse_order_status(status: &str) -> OrderStatus {
     match status {
-        "new" | "pending_new" => OrderStatus::New,
         "accepted" => OrderStatus::Accepted,
         "partially_filled" => OrderStatus::PartiallyFilled,
         "filled" => OrderStatus::Filled,
         "canceled" | "pending_cancel" => OrderStatus::Canceled,
         "rejected" => OrderStatus::Rejected,
         "expired" => OrderStatus::Expired,
+        // "new", "pending_new", and unknown statuses default to New
         _ => OrderStatus::New,
     }
 }
 
 fn parse_order_type(order_type: &str) -> OrderType {
     match order_type {
-        "market" => OrderType::Market,
         "limit" => OrderType::Limit,
         "stop" => OrderType::Stop,
         "stop_limit" => OrderType::StopLimit,
+        // "market" and unknown types default to Market
         _ => OrderType::Market,
     }
 }
 
 fn parse_time_in_force(tif: &str) -> TimeInForce {
     match tif {
-        "day" => TimeInForce::Day,
         "gtc" => TimeInForce::Gtc,
         "ioc" => TimeInForce::Ioc,
         "fok" => TimeInForce::Fok,
         "opg" => TimeInForce::Opg,
         "cls" => TimeInForce::Cls,
+        // "day" and unknown values default to Day
         _ => TimeInForce::Day,
     }
 }
@@ -1237,20 +1239,24 @@ mod tests {
 
     #[test]
     fn test_environment_url() {
-        let adapter = AlpacaAdapter::new(
+        let adapter = match AlpacaAdapter::new(
             "test-key".to_string(),
             "test-secret".to_string(),
             Environment::Paper,
-        )
-        .expect("should create paper adapter");
+        ) {
+            Ok(a) => a,
+            Err(e) => panic!("should create paper adapter: {e}"),
+        };
         assert!(adapter.base_url.contains("paper"));
 
-        let live_adapter = AlpacaAdapter::new(
+        let live_adapter = match AlpacaAdapter::new(
             "test-key".to_string(),
             "test-secret".to_string(),
             Environment::Live,
-        )
-        .expect("should create live adapter");
+        ) {
+            Ok(a) => a,
+            Err(e) => panic!("should create live adapter: {e}"),
+        };
         assert!(!live_adapter.base_url.contains("paper"));
     }
 
@@ -1282,8 +1288,9 @@ mod tests {
     #[test]
     fn test_options_tif_gtc_rejected() {
         let result = OptionsOrderValidator::validate_time_in_force(TimeInForce::Gtc);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for GTC on options");
+        };
         if let AlpacaError::Api { code, .. } = err {
             assert_eq!(code, "INVALID_TIF_FOR_OPTIONS");
         } else {
@@ -1312,8 +1319,9 @@ mod tests {
     #[test]
     fn test_bracket_rejected_for_options() {
         let result = OptionsOrderValidator::validate_no_bracket_oco(true, true);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let Err(err) = result else {
+            panic!("expected error for bracket order on options");
+        };
         if let AlpacaError::Api { code, .. } = err {
             assert_eq!(code, "BRACKET_NOT_SUPPORTED_FOR_OPTIONS");
         } else {

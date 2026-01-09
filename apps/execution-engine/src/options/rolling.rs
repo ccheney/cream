@@ -354,26 +354,31 @@ impl RollOrderBuilder {
 
     /// Set the roll reason.
     #[must_use]
-    pub fn reason(mut self, reason: RollReason) -> Self {
+    pub const fn reason(mut self, reason: RollReason) -> Self {
         self.reason = Some(reason);
         self
     }
 
     /// Set whether to prefer atomic orders.
     #[must_use]
-    pub fn prefer_atomic(mut self, prefer: bool) -> Self {
+    pub const fn prefer_atomic(mut self, prefer: bool) -> Self {
         self.prefer_atomic = prefer;
         self
     }
 
     /// Set whether broker supports atomic orders.
     #[must_use]
-    pub fn broker_supports_atomic(mut self, supports: bool) -> Self {
+    pub const fn broker_supports_atomic(mut self, supports: bool) -> Self {
         self.broker_supports_atomic = supports;
         self
     }
 
     /// Build the roll order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if required fields are missing (position ID, close legs,
+    /// open legs, or roll reason).
     pub fn build(self) -> Result<RollOrder, RollError> {
         let position_id = self
             .position_id
@@ -631,12 +636,10 @@ pub fn evaluate_partial_fill(
         // Filled - no action needed
         (RollExecutionState::Filled, _, _) => PartialFillAction::Wait,
 
-        // Critical assignment risk - cancel immediately
-        (_, _, AssignmentRiskLevel::Critical) => PartialFillAction::Cancel,
-
-        // Timeout exceeded
-        (RollExecutionState::Pending, true, _) => PartialFillAction::Cancel,
-        (RollExecutionState::PartialFill, true, _) => PartialFillAction::Cancel,
+        // Critical assignment risk or timeout exceeded for pending/partial orders - cancel
+        (_, _, AssignmentRiskLevel::Critical)
+        | (RollExecutionState::Pending, true, _)
+        | (RollExecutionState::PartialFill, true, _) => PartialFillAction::Cancel,
 
         // Close complete but open stalled
         (RollExecutionState::CloseComplete, true, _) => PartialFillAction::ManualIntervention,
@@ -838,7 +841,7 @@ mod tests {
 
     #[test]
     fn test_roll_order_builder() {
-        let order = RollOrderBuilder::new()
+        let order = match RollOrderBuilder::new()
             .position_id("pos-1")
             .close_leg(RollLeg {
                 ticker: "AAPL260130C00150000".to_string(),
@@ -862,7 +865,10 @@ mod tests {
             })
             .reason(RollReason::CreditDteThreshold)
             .build()
-            .expect("should build roll order");
+        {
+            Ok(o) => o,
+            Err(e) => panic!("should build roll order: {e}"),
+        };
 
         assert_eq!(order.position_id, "pos-1");
         assert_eq!(order.close_legs.len(), 1);

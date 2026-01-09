@@ -48,7 +48,8 @@ pub struct ConfigSecurityScan {
 
 impl ConfigSecurityScan {
     /// Create a passing scan result.
-    pub fn pass() -> Self {
+    #[must_use]
+    pub const fn pass() -> Self {
         Self {
             passed: true,
             warnings: Vec::new(),
@@ -57,12 +58,14 @@ impl ConfigSecurityScan {
     }
 
     /// Add a warning.
+    #[must_use = "method returns modified result"]
     pub fn with_warning(mut self, warning: SecurityWarning) -> Self {
         self.warnings.push(warning);
         self
     }
 
     /// Add an error.
+    #[must_use = "method returns modified result"]
     pub fn with_error(mut self, error: SecurityError) -> Self {
         self.passed = false;
         self.errors.push(error);
@@ -96,6 +99,7 @@ pub struct SecurityError {
 ///
 /// Checks for common patterns that indicate API keys, passwords, etc.
 /// that should not be stored in plain text configs.
+#[must_use]
 pub fn scan_config_for_secrets(config_text: &str) -> ConfigSecurityScan {
     let mut result = ConfigSecurityScan::pass();
     let lower = config_text.to_lowercase();
@@ -143,7 +147,7 @@ fn check_has_secret_value(text: &str, pattern: &str) -> bool {
         }
 
         // Check if followed by non-empty value
-        if after_trimmed.chars().take(5).any(|c| c.is_alphanumeric()) {
+        if after_trimmed.chars().take(5).any(char::is_alphanumeric) {
             return true;
         }
     }
@@ -170,7 +174,12 @@ fn find_pattern_context(text: &str, pattern: &str) -> String {
 
 /// Validate that a path is safe (no path traversal attacks).
 ///
-/// Returns `Err` if the path contains traversal attempts.
+/// # Errors
+///
+/// Returns an error if:
+/// - The path cannot be canonicalized (invalid or does not exist)
+/// - The allowed root cannot be canonicalized
+/// - The path attempts to traverse outside the allowed root directory
 pub fn validate_safe_path(path: &Path, allowed_root: &Path) -> Result<PathBuf, PathSecurityError> {
     // Canonicalize to resolve any .. or symlinks
     let canonical = path
@@ -193,6 +202,12 @@ pub fn validate_safe_path(path: &Path, allowed_root: &Path) -> Result<PathBuf, P
 }
 
 /// Check if a path contains suspicious patterns (without resolving).
+///
+/// # Errors
+///
+/// Returns an error if the path contains suspicious patterns such as:
+/// - Parent directory references (`..`)
+/// - Null bytes (can bypass security checks)
 pub fn check_path_patterns(path: &Path) -> Result<(), PathSecurityError> {
     let path_str = path.to_string_lossy();
 
@@ -417,6 +432,7 @@ impl AuditLogger {
     }
 
     /// Get logged events.
+    #[must_use]
     pub fn events(&self) -> &[AuditEvent] {
         &self.events
     }
@@ -452,6 +468,7 @@ pub struct DataAccessControl {
 
 impl DataAccessControl {
     /// Create with default allowed sources.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             allowed_sources: HashSet::new(),
@@ -470,6 +487,7 @@ impl DataAccessControl {
     }
 
     /// Check if a data source is allowed.
+    #[must_use]
     pub fn is_allowed(&self, source: &str) -> bool {
         // Check denied patterns first
         for pattern in &self.denied_patterns {
@@ -556,12 +574,17 @@ mod tests {
 
     #[test]
     fn test_validate_safe_path() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let root = dir.path();
 
         // Create a file inside the root
         let file_path = root.join("test.json");
-        std::fs::write(&file_path, "{}").expect("should write test file");
+        if let Err(e) = std::fs::write(&file_path, "{}") {
+            panic!("should write test file: {e}");
+        }
 
         // Valid path should work
         let result = validate_safe_path(&file_path, root);
@@ -570,18 +593,24 @@ mod tests {
 
     #[test]
     fn test_validate_safe_path_traversal() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let root = dir.path();
 
         // Attempt to access parent (may not exist, but pattern should fail)
         let path = root.join("../etc/passwd");
         let result = validate_safe_path(&path, root);
         // This might fail for different reasons, but should not succeed
+        let Some(parent) = root.parent() else {
+            panic!("temp dir should have parent");
+        };
         assert!(
             result.is_err()
                 || !result
-                    .expect("result is Ok in this branch")
-                    .starts_with(root.parent().expect("temp dir should have parent"))
+                    .unwrap_or_else(|_| panic!("result is Ok in this branch"))
+                    .starts_with(parent)
         );
     }
 

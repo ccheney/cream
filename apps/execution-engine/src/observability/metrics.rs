@@ -36,7 +36,10 @@ pub struct MetricsConfig {
 impl Default for MetricsConfig {
     fn default() -> Self {
         Self {
-            listen_addr: "0.0.0.0:9090".parse().expect("valid default address"),
+            // Default metrics address - falls back to localhost if parsing somehow fails
+            listen_addr: "0.0.0.0:9090"
+                .parse()
+                .unwrap_or_else(|_| SocketAddr::from(([127, 0, 0, 1], 9090))),
             // Latency buckets from 100us to 1s
             latency_buckets: vec![
                 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
@@ -417,7 +420,10 @@ mod tests {
 
     #[test]
     fn test_config_with_addr() {
-        let addr: SocketAddr = "127.0.0.1:8080".parse().expect("should parse socket addr");
+        let addr: SocketAddr = match "127.0.0.1:8080".parse() {
+            Ok(a) => a,
+            Err(e) => panic!("should parse socket addr: {e}"),
+        };
         let config = MetricsConfig::with_addr(addr);
         assert_eq!(config.listen_addr.port(), 8080);
     }

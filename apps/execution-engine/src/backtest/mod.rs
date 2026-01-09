@@ -503,13 +503,13 @@ impl SimulationEngine {
 
     /// Cancel an order.
     pub fn cancel_order(&mut self, order_id: &str) -> bool {
-        if let Some(order) = self.open_orders.get_mut(order_id) {
-            if !order.is_terminal() {
-                order.state = SimOrderState::Cancelled;
-                order.updated_at = chrono::Utc::now().to_rfc3339();
-                info!(order_id = %order_id, "Order cancelled");
-                return true;
-            }
+        if let Some(order) = self.open_orders.get_mut(order_id)
+            && !order.is_terminal()
+        {
+            order.state = SimOrderState::Cancelled;
+            order.updated_at = chrono::Utc::now().to_rfc3339();
+            info!(order_id = %order_id, "Order cancelled");
+            return true;
         }
         false
     }
@@ -886,9 +886,9 @@ mod tests {
 
         let order_id = engine.submit_order(order);
 
-        let submitted = engine
-            .get_order(&order_id)
-            .expect("submitted order should exist");
+        let Some(submitted) = engine.get_order(&order_id) else {
+            panic!("submitted order should exist");
+        };
         assert_eq!(submitted.state, SimOrderState::Pending);
     }
 
@@ -911,15 +911,15 @@ mod tests {
 
         engine.process_candle("AAPL", &candle);
 
-        let filled = engine
-            .get_order(&order_id)
-            .expect("filled order should exist");
+        let Some(filled) = engine.get_order(&order_id) else {
+            panic!("filled order should exist");
+        };
         assert_eq!(filled.state, SimOrderState::Filled);
         assert!(filled.filled_quantity() > Decimal::ZERO);
 
-        let position = engine
-            .get_position("AAPL")
-            .expect("position should exist after fill");
+        let Some(position) = engine.get_position("AAPL") else {
+            panic!("position should exist after fill");
+        };
         assert_eq!(position.quantity, Decimal::new(100, 0));
     }
 
@@ -944,18 +944,18 @@ mod tests {
         let candle1 = make_candle(15000, 15100, 14900, 15050);
         engine.process_candle("AAPL", &candle1);
 
-        let order = engine
-            .get_order(&order_id)
-            .expect("pending order should exist");
+        let Some(order) = engine.get_order(&order_id) else {
+            panic!("pending order should exist");
+        };
         assert_eq!(order.state, SimOrderState::Pending);
 
         // Second candle fills (low = $147.00)
         let candle2 = make_candle(15000, 15100, 14700, 14900);
         engine.process_candle("AAPL", &candle2);
 
-        let filled = engine
-            .get_order(&order_id)
-            .expect("filled order should exist");
+        let Some(filled) = engine.get_order(&order_id) else {
+            panic!("filled order should exist");
+        };
         assert_eq!(filled.state, SimOrderState::Filled);
     }
 
@@ -977,9 +977,9 @@ mod tests {
         let order_id = engine.submit_order(order);
         assert!(engine.cancel_order(&order_id));
 
-        let cancelled = engine
-            .get_order(&order_id)
-            .expect("cancelled order should exist");
+        let Some(cancelled) = engine.get_order(&order_id) else {
+            panic!("cancelled order should exist");
+        };
         assert_eq!(cancelled.state, SimOrderState::Cancelled);
     }
 
@@ -1002,9 +1002,9 @@ mod tests {
         let candle1 = make_candle(15000, 15100, 14900, 15050);
         engine.process_candle("AAPL", &candle1);
 
-        let position = engine
-            .get_position("AAPL")
-            .expect("position should exist after buy");
+        let Some(position) = engine.get_position("AAPL") else {
+            panic!("position should exist after buy");
+        };
         assert_eq!(position.quantity, Decimal::new(100, 0));
         assert!(position.avg_entry_price > Decimal::ZERO);
 
@@ -1022,9 +1022,9 @@ mod tests {
         let candle2 = make_candle(15100, 15200, 15000, 15150);
         engine.process_candle("AAPL", &candle2);
 
-        let position = engine
-            .get_position("AAPL")
-            .expect("position should exist after partial sell");
+        let Some(position) = engine.get_position("AAPL") else {
+            panic!("position should exist after partial sell");
+        };
         assert_eq!(position.quantity, Decimal::new(50, 0));
     }
 
@@ -1048,7 +1048,9 @@ mod tests {
 
         // Buy has no fees for equity (commission-free broker)
         // But position should track commission for consistency
-        let position = engine.get_position("AAPL").expect("position should exist");
+        let Some(position) = engine.get_position("AAPL") else {
+            panic!("position should exist");
+        };
         assert!(position.commission_paid >= Decimal::ZERO);
     }
 

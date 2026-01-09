@@ -129,12 +129,24 @@ pub enum SizingError {
     /// Invalid input (zero or negative price, etc.).
     InvalidInput(String),
     /// Position would exceed maximum allowed size.
-    ExceedsMaxPosition { requested: u64, max: u64 },
+    ExceedsMaxPosition {
+        /// Number of shares requested.
+        requested: u64,
+        /// Maximum allowed position size.
+        max: u64,
+    },
     /// Position is below minimum order size.
-    BelowMinimum { calculated: u64, min: u64 },
+    BelowMinimum {
+        /// Calculated position size in shares.
+        calculated: u64,
+        /// Minimum required order size.
+        min: u64,
+    },
     /// Insufficient cash for the position.
     InsufficientCash {
+        /// Amount of cash required for the trade.
         required: Decimal,
+        /// Amount of cash currently available.
         available: Decimal,
     },
     /// Zero equity for percentage-based sizing.
@@ -196,17 +208,9 @@ impl Default for PositionSizerConfig {
 }
 
 /// Position sizer implementing deterministic sizing logic.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PositionSizer {
     config: PositionSizerConfig,
-}
-
-impl Default for PositionSizer {
-    fn default() -> Self {
-        Self {
-            config: PositionSizerConfig::default(),
-        }
-    }
 }
 
 impl PositionSizer {
@@ -226,10 +230,10 @@ impl PositionSizer {
     /// - Insufficient cash (if `check_cash` is enabled)
     pub fn calculate(&self, input: &SizingInput) -> Result<SizingResult, SizingError> {
         // Validate input
-        self.validate_input(input)?;
+        Self::validate_input(input)?;
 
         // Calculate raw quantity based on sizing unit
-        let raw_quantity = self.calculate_raw_quantity(input)?;
+        let raw_quantity = Self::calculate_raw_quantity(input)?;
 
         // Round to integer
         let mut quantity = self.round_quantity(raw_quantity);
@@ -239,19 +243,20 @@ impl PositionSizer {
         let mut constraint_reason = None;
 
         // Apply maximum position constraint
-        if self.config.enforce_maximum && input.max_position_size > 0 {
-            if quantity > input.max_position_size {
-                was_constrained = true;
-                constraint_reason = Some(format!(
-                    "Reduced from {} to max {}",
-                    quantity, input.max_position_size
-                ));
-                quantity = input.max_position_size;
-            }
+        if self.config.enforce_maximum
+            && input.max_position_size > 0
+            && quantity > input.max_position_size
+        {
+            was_constrained = true;
+            constraint_reason = Some(format!(
+                "Reduced from {} to max {}",
+                quantity, input.max_position_size
+            ));
+            quantity = input.max_position_size;
         }
 
         // Calculate notional value
-        let notional = self.calculate_notional(quantity, input);
+        let notional = Self::calculate_notional(quantity, input);
 
         // Check cash availability
         if self.config.check_cash && notional > input.available_cash {
@@ -267,7 +272,7 @@ impl PositionSizer {
         }
 
         // Recalculate notional after potential reduction
-        let notional = self.calculate_notional(quantity, input);
+        let notional = Self::calculate_notional(quantity, input);
 
         // Check minimum order size
         if self.config.enforce_minimum && quantity < input.min_order_size {
@@ -356,7 +361,7 @@ impl PositionSizer {
 
     // Private helper methods
 
-    fn validate_input(&self, input: &SizingInput) -> Result<(), SizingError> {
+    fn validate_input(input: &SizingInput) -> Result<(), SizingError> {
         if input.current_price <= Decimal::ZERO {
             return Err(SizingError::InvalidInput(
                 "Price must be positive".to_string(),
@@ -376,7 +381,7 @@ impl PositionSizer {
         Ok(())
     }
 
-    fn calculate_raw_quantity(&self, input: &SizingInput) -> Result<Decimal, SizingError> {
+    fn calculate_raw_quantity(input: &SizingInput) -> Result<Decimal, SizingError> {
         match input.sizing_unit {
             SizingUnit::Shares | SizingUnit::Contracts => {
                 // Direct value, no conversion needed
@@ -414,7 +419,7 @@ impl PositionSizer {
         }
     }
 
-    fn calculate_notional(&self, quantity: u64, input: &SizingInput) -> Decimal {
+    fn calculate_notional(quantity: u64, input: &SizingInput) -> Decimal {
         let qty = Decimal::from(quantity);
         if input.is_options {
             qty * input.current_price * Decimal::from(input.contract_multiplier)
@@ -472,10 +477,17 @@ impl PositionSizer {
 pub fn apply_dte_sizing_adjustment(base_size: u32, dte: u32) -> u32 {
     if dte < 7 {
         // 50% reduction for very short-dated options
-        (base_size as f64 * 0.5).floor() as u32
+        // Use From for infallible u32 -> f64 conversion, truncation safe after floor
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            (f64::from(base_size) * 0.5).floor() as u32
+        }
     } else if dte < 30 {
         // 25% reduction for options with < 30 DTE
-        (base_size as f64 * 0.75).floor() as u32
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            (f64::from(base_size) * 0.75).floor() as u32
+        }
     } else {
         // No reduction for longer-dated options
         base_size
@@ -513,7 +525,11 @@ pub fn apply_dte_sizing_adjustment(base_size: u32, dte: u32) -> u32 {
 pub fn apply_iv_sizing_adjustment(base_size: u32, iv_rank: f64) -> u32 {
     if iv_rank < 0.25 {
         // 25% reduction for low IV environments
-        (base_size as f64 * 0.75).floor() as u32
+        // Use From for infallible u32 -> f64 conversion, truncation safe after floor
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            (f64::from(base_size) * 0.75).floor() as u32
+        }
     } else {
         // No reduction for normal or high IV
         base_size
@@ -567,7 +583,8 @@ pub fn apply_combined_sizing_adjustment(base_size: u32, dte: u32, iv_rank: f64) 
 /// Maximum potential loss in dollars
 #[must_use]
 pub fn calculate_max_loss_long_option(contracts: u32, premium_paid: f64, multiplier: u32) -> f64 {
-    contracts as f64 * premium_paid * multiplier as f64
+    // Use From for infallible u32 -> f64 conversion
+    f64::from(contracts) * premium_paid * f64::from(multiplier)
 }
 
 // ============================================================================
@@ -598,7 +615,10 @@ mod tests {
         let sizer = PositionSizer::default();
         let input = default_input();
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate shares sizing: {e}"),
+        };
         assert_eq!(result.quantity, 100);
         assert_eq!(result.notional_value, dec!(5000)); // 100 * 50
         assert!(!result.was_constrained);
@@ -613,7 +633,10 @@ mod tests {
         input.is_options = true;
         input.current_price = dec!(3); // Option premium
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate contracts sizing: {e}"),
+        };
         assert_eq!(result.quantity, 5);
         assert_eq!(result.notional_value, dec!(1500)); // 5 * 3 * 100
     }
@@ -625,7 +648,10 @@ mod tests {
         input.sizing_value = dec!(10000);
         input.sizing_unit = SizingUnit::Dollars;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate dollars sizing: {e}"),
+        };
         assert_eq!(result.quantity, 200); // 10000 / 50 = 200 shares
         assert_eq!(result.notional_value, dec!(10000));
     }
@@ -637,7 +663,10 @@ mod tests {
         input.sizing_value = dec!(5); // 5% of equity
         input.sizing_unit = SizingUnit::PctEquity;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate pct equity sizing: {e}"),
+        };
         // 5% of 100k = 5000, 5000 / 50 = 100 shares
         assert_eq!(result.quantity, 100);
         assert_eq!(result.notional_value, dec!(5000));
@@ -651,7 +680,10 @@ mod tests {
         input.sizing_value = dec!(2000); // Exceeds max of 1000
         input.max_position_size = 1000;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate with max position constraint: {e}"),
+        };
         assert_eq!(result.quantity, 1000);
         assert!(result.was_constrained);
         assert!(result.constraint_reason.is_some());
@@ -666,7 +698,10 @@ mod tests {
         input.available_cash = dec!(10000); // Only 10k available
         input.max_position_size = 0; // No max
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate with cash constraint: {e}"),
+        };
         // Should be constrained to 10000 / 50 = 200 shares
         assert_eq!(result.quantity, 200);
         assert!(result.was_constrained);
@@ -714,7 +749,10 @@ mod tests {
         input.current_price = dec!(3); // Option premium
         input.contract_multiplier = 100;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate options dollars sizing: {e}"),
+        };
         // 3000 / (3 * 100) = 10 contracts
         assert_eq!(result.quantity, 10);
         assert_eq!(result.notional_value, dec!(3000));
@@ -731,7 +769,10 @@ mod tests {
         input.contract_multiplier = 100;
         input.total_equity = dec!(100000);
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate options pct equity sizing: {e}"),
+        };
         // 2% of 100k = 2000, 2000 / (5 * 100) = 4 contracts
         assert_eq!(result.quantity, 4);
     }
@@ -743,7 +784,10 @@ mod tests {
         input.sizing_value = dec!(7777); // 7777 dollars
         input.sizing_unit = SizingUnit::Dollars;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate with rounding down: {e}"),
+        };
         // 7777 / 50 = 155.54, rounds down to 155
         assert_eq!(result.quantity, 155);
     }
@@ -759,7 +803,10 @@ mod tests {
         input.sizing_value = dec!(7777);
         input.sizing_unit = SizingUnit::Dollars;
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate with rounding nearest: {e}"),
+        };
         // 7777 / 50 = 155.54, rounds to 156
         assert_eq!(result.quantity, 156);
     }
@@ -777,9 +824,10 @@ mod tests {
         let delta = dec!(0.5); // 50 delta call
         let underlying_price = dec!(100);
 
-        let result = sizer
-            .calculate_options_delta_adjusted(&input, delta, underlying_price)
-            .unwrap();
+        let result = match sizer.calculate_options_delta_adjusted(&input, delta, underlying_price) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate delta-adjusted sizing: {e}"),
+        };
 
         // Effective exposure = contracts * 100 * 0.5 * 100 = contracts * 5000
         // For $5000 exposure: contracts = 5000 / 5000 = 1
@@ -801,7 +849,10 @@ mod tests {
         input.max_position_size = 100;
         input.available_cash = dec!(1000); // Not enough cash
 
-        let result = sizer.calculate(&input).unwrap();
+        let result = match sizer.calculate(&input) {
+            Ok(r) => r,
+            Err(e) => panic!("should calculate with no constraints: {e}"),
+        };
         // No constraints applied
         assert_eq!(result.quantity, 5000);
         assert!(!result.was_constrained);
@@ -925,24 +976,24 @@ mod tests {
     #[test]
     fn test_max_loss_long_option() {
         // 5 contracts × $2.50 premium × 100 multiplier = $1,250
-        assert_eq!(calculate_max_loss_long_option(5, 2.50, 100), 1250.0);
+        assert!((calculate_max_loss_long_option(5, 2.50, 100) - 1250.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_max_loss_single_contract() {
         // 1 contract × $5.00 premium × 100 multiplier = $500
-        assert_eq!(calculate_max_loss_long_option(1, 5.0, 100), 500.0);
+        assert!((calculate_max_loss_long_option(1, 5.0, 100) - 500.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_max_loss_mini_option() {
         // Mini options have multiplier of 10
         // 5 contracts × $2.50 premium × 10 multiplier = $125
-        assert_eq!(calculate_max_loss_long_option(5, 2.50, 10), 125.0);
+        assert!((calculate_max_loss_long_option(5, 2.50, 10) - 125.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_max_loss_zero_contracts() {
-        assert_eq!(calculate_max_loss_long_option(0, 5.0, 100), 0.0);
+        assert!((calculate_max_loss_long_option(0, 5.0, 100) - 0.0).abs() < 1e-10);
     }
 }

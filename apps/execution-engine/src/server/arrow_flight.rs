@@ -59,6 +59,7 @@ struct MarketDataSnapshot {
 
 impl CreamFlightService {
     /// Create a new Flight service.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             market_data: Arc::new(RwLock::new(HashMap::new())),
@@ -116,7 +117,7 @@ impl CreamFlightService {
                 timestamps,
             ],
         )
-        .map_err(|e| arrow_flight::error::FlightError::from(e))
+        .map_err(arrow_flight::error::FlightError::from)
     }
 
     /// Parse market data from Arrow `RecordBatch`.
@@ -506,6 +507,7 @@ impl arrow_flight::flight_service_server::FlightService for CreamFlightService {
 }
 
 /// Create Arrow Flight server.
+#[must_use]
 pub fn build_flight_server() -> FlightServiceServer<CreamFlightService> {
     FlightServiceServer::new(CreamFlightService::new())
 }
@@ -537,35 +539,32 @@ mod tests {
             },
         ];
 
-        let batch = CreamFlightService::market_data_to_record_batch(snapshots.clone()).unwrap();
+        let batch = match CreamFlightService::market_data_to_record_batch(snapshots.clone()) {
+            Ok(b) => b,
+            Err(e) => panic!("should convert market data to record batch: {e}"),
+        };
 
         assert_eq!(batch.num_rows(), 2);
         assert_eq!(batch.num_columns(), 6);
 
         // Verify symbols
-        let symbols = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
+        let Some(symbols) = batch.column(0).as_any().downcast_ref::<StringArray>() else {
+            panic!("column 0 should be StringArray");
+        };
         assert_eq!(symbols.value(0), "AAPL");
         assert_eq!(symbols.value(1), "GOOGL");
 
         // Verify bid prices
-        let bid_prices = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<Float64Array>()
-            .unwrap();
-        assert_eq!(bid_prices.value(0), 150.0);
-        assert_eq!(bid_prices.value(1), 2800.0);
+        let Some(bid_prices) = batch.column(1).as_any().downcast_ref::<Float64Array>() else {
+            panic!("column 1 should be Float64Array");
+        };
+        assert!((bid_prices.value(0) - 150.0).abs() < 1e-10);
+        assert!((bid_prices.value(1) - 2800.0).abs() < 1e-10);
 
         // Verify volumes
-        let volumes = batch
-            .column(4)
-            .as_any()
-            .downcast_ref::<UInt64Array>()
-            .unwrap();
+        let Some(volumes) = batch.column(4).as_any().downcast_ref::<UInt64Array>() else {
+            panic!("column 4 should be UInt64Array");
+        };
         assert_eq!(volumes.value(0), 1000);
         assert_eq!(volumes.value(1), 500);
     }
@@ -588,7 +587,7 @@ mod tests {
         let volumes: ArrayRef = Arc::new(UInt64Array::from(vec![1000, 500]));
         let timestamps: ArrayRef = Arc::new(Int64Array::from(vec![1_234_567_890, 1_234_567_891]));
 
-        let batch = RecordBatch::try_new(
+        let batch = match RecordBatch::try_new(
             schema,
             vec![
                 symbols,
@@ -598,17 +597,22 @@ mod tests {
                 volumes,
                 timestamps,
             ],
-        )
-        .unwrap();
+        ) {
+            Ok(b) => b,
+            Err(e) => panic!("should create record batch: {e}"),
+        };
 
-        let snapshots = CreamFlightService::parse_market_data_batch(&batch).unwrap();
+        let snapshots = match CreamFlightService::parse_market_data_batch(&batch) {
+            Ok(s) => s,
+            Err(e) => panic!("should parse market data batch: {e}"),
+        };
 
         assert_eq!(snapshots.len(), 2);
         assert_eq!(snapshots[0].symbol, "AAPL");
-        assert_eq!(snapshots[0].bid_price, 150.0);
+        assert!((snapshots[0].bid_price - 150.0).abs() < 1e-10);
         assert_eq!(snapshots[0].volume, 1000);
         assert_eq!(snapshots[1].symbol, "GOOGL");
-        assert_eq!(snapshots[1].ask_price, 2801.0);
+        assert!((snapshots[1].ask_price - 2801.0).abs() < 1e-10);
     }
 
     #[tokio::test]
@@ -644,8 +648,10 @@ mod tests {
         assert_eq!(data.len(), 1);
         assert!(data.contains_key("AAPL"));
 
-        let aapl = data.get("AAPL").unwrap();
-        assert_eq!(aapl.bid_price, 150.0);
+        let Some(aapl) = data.get("AAPL") else {
+            panic!("AAPL should be in market data");
+        };
+        assert!((aapl.bid_price - 150.0).abs() < 1e-10);
         assert_eq!(aapl.volume, 1000);
     }
 
@@ -656,15 +662,27 @@ mod tests {
         let service = CreamFlightService::new();
         let request = tonic::Request::new(arrow_flight::Criteria::default());
 
-        let response = service.list_flights(request).await.unwrap();
+        let response = match service.list_flights(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("list_flights should succeed: {e}"),
+        };
         let mut stream = response.into_inner();
 
         // Should have at least market_data flight
-        let flight = stream.next().await.unwrap().unwrap();
+        let flight = match stream.next().await {
+            Some(Ok(f)) => f,
+            Some(Err(e)) => panic!("first flight should be valid: {e}"),
+            None => panic!("stream should have first item"),
+        };
         assert!(flight.flight_descriptor.is_some());
 
-        let descriptor = flight.flight_descriptor.unwrap();
-        assert_eq!(descriptor.path.first().unwrap(), "market_data");
+        let Some(descriptor) = flight.flight_descriptor else {
+            panic!("flight should have descriptor");
+        };
+        let Some(first_path) = descriptor.path.first() else {
+            panic!("path should have element");
+        };
+        assert_eq!(first_path, "market_data");
     }
 
     #[tokio::test]
@@ -674,13 +692,20 @@ mod tests {
         let service = CreamFlightService::new();
         let request = tonic::Request::new(arrow_flight::Empty::default());
 
-        let response = service.list_actions(request).await.unwrap();
+        let response = match service.list_actions(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("list_actions should succeed: {e}"),
+        };
         let mut stream = response.into_inner();
 
         // Collect all actions
         let mut action_types = Vec::new();
         while let Some(action) = stream.next().await {
-            action_types.push(action.unwrap().r#type);
+            let action = match action {
+                Ok(a) => a,
+                Err(e) => panic!("action should be valid: {e}"),
+            };
+            action_types.push(action.r#type);
         }
 
         assert!(action_types.contains(&"clear_cache".to_string()));
@@ -699,11 +724,21 @@ mod tests {
         };
         let request = tonic::Request::new(action);
 
-        let response = service.do_action(request).await.unwrap();
+        let response = match service.do_action(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("do_action should succeed: {e}"),
+        };
         let mut stream = response.into_inner();
 
-        let result = stream.next().await.unwrap().unwrap();
-        let body = String::from_utf8(result.body.to_vec()).unwrap();
+        let result = match stream.next().await {
+            Some(Ok(r)) => r,
+            Some(Err(e)) => panic!("result should be valid: {e}"),
+            None => panic!("stream should have result"),
+        };
+        let body = match String::from_utf8(result.body.to_vec()) {
+            Ok(b) => b,
+            Err(e) => panic!("body should be valid UTF-8: {e}"),
+        };
 
         assert!(body.contains("healthy"));
         assert!(body.contains("cache_size"));
@@ -741,9 +776,16 @@ mod tests {
         };
         let request = tonic::Request::new(action);
 
-        let response = service.do_action(request).await.unwrap();
+        let response = match service.do_action(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("do_action should succeed: {e}"),
+        };
         let mut stream = response.into_inner();
-        let _ = stream.next().await.unwrap().unwrap();
+        match stream.next().await {
+            Some(Ok(_)) => {}
+            Some(Err(e)) => panic!("result should be valid: {e}"),
+            None => panic!("stream should have result"),
+        };
 
         // Verify cache is cleared
         assert_eq!(service.market_data.read().await.len(), 0);
@@ -761,9 +803,10 @@ mod tests {
         let request = tonic::Request::new(action);
 
         let result = service.do_action(request).await;
-        assert!(result.is_err());
-
-        let status = result.err().unwrap();
+        let status = match result {
+            Err(s) => s,
+            Ok(_) => panic!("should fail for unknown action"),
+        };
         assert_eq!(status.code(), tonic::Code::InvalidArgument);
     }
 
@@ -775,7 +818,10 @@ mod tests {
         let descriptor = arrow_flight::FlightDescriptor::new_path(vec!["market_data".to_string()]);
         let request = tonic::Request::new(descriptor);
 
-        let response = service.poll_flight_info(request).await.unwrap();
+        let response = match service.poll_flight_info(request).await {
+            Ok(r) => r,
+            Err(e) => panic!("poll_flight_info should succeed: {e}"),
+        };
         let poll_info = response.into_inner();
 
         // poll_info should contain flight info

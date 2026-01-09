@@ -46,13 +46,13 @@ pub enum PersistenceError {
 
 impl From<TursoError> for PersistenceError {
     fn from(err: TursoError) -> Self {
-        PersistenceError::Connection(err.to_string())
+        Self::Connection(err.to_string())
     }
 }
 
 impl From<serde_json::Error> for PersistenceError {
     fn from(err: serde_json::Error) -> Self {
-        PersistenceError::Serialization(err.to_string())
+        Self::Serialization(err.to_string())
     }
 }
 
@@ -99,6 +99,7 @@ pub struct OrderSnapshot {
 
 impl OrderSnapshot {
     /// Create snapshot from `OrderState`.
+    #[must_use]
     pub fn from_order_state(order: &OrderState) -> Self {
         Self {
             order_id: order.order_id.clone(),
@@ -121,6 +122,7 @@ impl OrderSnapshot {
     }
 
     /// Convert snapshot back to `OrderState`.
+    #[must_use]
     pub fn to_order_state(&self) -> OrderState {
         OrderState {
             order_id: self.order_id.clone(),
@@ -173,6 +175,10 @@ pub struct StatePersistence {
 
 impl StatePersistence {
     /// Create a new persistence manager with local database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database cannot be opened or migrations fail.
     pub async fn new_local(db_path: &str, environment: &str) -> Result<Self, PersistenceError> {
         let db = Builder::new_local(db_path).build().await?;
 
@@ -186,6 +192,10 @@ impl StatePersistence {
     }
 
     /// Create a new persistence manager (for testing with in-memory db).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the in-memory database cannot be created or migrations fail.
     pub async fn new_in_memory(environment: &str) -> Result<Self, PersistenceError> {
         let db = Builder::new_local(":memory:").build().await?;
 
@@ -257,6 +267,10 @@ impl StatePersistence {
     }
 
     /// Save current order state to database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database connection fails or the insert query fails.
     pub async fn save_order(&self, order: &OrderState) -> Result<(), PersistenceError> {
         let conn = self.db.connect()?;
         let snapshot = OrderSnapshot::from_order_state(order);
@@ -274,12 +288,10 @@ impl StatePersistence {
             Value::Text(snapshot.avg_fill_price.to_string()),
             snapshot
                 .limit_price
-                .map(|p| Value::Text(p.to_string()))
-                .unwrap_or(Value::Null),
+                .map_or(Value::Null, |p| Value::Text(p.to_string())),
             snapshot
                 .stop_price
-                .map(|p| Value::Text(p.to_string()))
-                .unwrap_or(Value::Null),
+                .map_or(Value::Null, |p| Value::Text(p.to_string())),
             Value::Text(snapshot.submitted_at.clone()),
             Value::Text(snapshot.last_update_at.clone()),
             Value::Text(snapshot.status_message.clone()),
@@ -304,6 +316,10 @@ impl StatePersistence {
     }
 
     /// Save all orders from state manager to database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any order fails to save to the database.
     pub async fn save_all_orders(
         &self,
         state_manager: &OrderStateManager,
@@ -321,6 +337,10 @@ impl StatePersistence {
     }
 
     /// Load active orders from database into state manager.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or row parsing fails.
     pub async fn load_active_orders(
         &self,
         state_manager: &OrderStateManager,
@@ -348,7 +368,7 @@ impl StatePersistence {
             .await
             .map_err(|e| PersistenceError::Query(e.to_string()))?
         {
-            let snapshot = self.row_to_order_snapshot(&row)?;
+            let snapshot = Self::row_to_order_snapshot(&row)?;
             let order_state = snapshot.to_order_state();
             state_manager.insert(order_state);
             count += 1;
@@ -359,7 +379,7 @@ impl StatePersistence {
     }
 
     /// Convert database row to `OrderSnapshot`.
-    fn row_to_order_snapshot(&self, row: &Row) -> Result<OrderSnapshot, PersistenceError> {
+    fn row_to_order_snapshot(row: &Row) -> Result<OrderSnapshot, PersistenceError> {
         Ok(OrderSnapshot {
             order_id: row
                 .get::<String>(0)
@@ -411,6 +431,10 @@ impl StatePersistence {
     }
 
     /// Save position snapshot.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database connection or insert query fails.
     pub async fn save_position(
         &self,
         position: &LocalPositionSnapshot,
@@ -438,6 +462,10 @@ impl StatePersistence {
     }
 
     /// Load positions from database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or row parsing fails.
     pub async fn load_positions(
         &self,
     ) -> Result<HashMap<String, LocalPositionSnapshot>, PersistenceError> {
@@ -488,6 +516,10 @@ impl StatePersistence {
     }
 
     /// Update recovery state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database connection or update query fails.
     pub async fn update_recovery_state(
         &self,
         cycle_id: Option<&str>,
@@ -498,13 +530,9 @@ impl StatePersistence {
 
         let params: Vec<Value> = vec![
             Value::Text(self.environment.clone()),
-            cycle_id
-                .map(|s| Value::Text(s.to_string()))
-                .unwrap_or(Value::Null),
+            cycle_id.map_or(Value::Null, |s| Value::Text(s.to_string())),
             Value::Text(status.to_string()),
-            error_message
-                .map(|s| Value::Text(s.to_string()))
-                .unwrap_or(Value::Null),
+            error_message.map_or(Value::Null, |s| Value::Text(s.to_string())),
         ];
 
         conn.execute(
@@ -521,6 +549,10 @@ impl StatePersistence {
     }
 
     /// Get recovery state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn get_recovery_state(&self) -> Result<RecoveryState, PersistenceError> {
         let conn = self.db.connect()?;
 
@@ -553,6 +585,10 @@ impl StatePersistence {
     }
 
     /// Log reconciliation completion.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database update query fails.
     pub async fn log_reconciliation(
         &self,
         report: &ReconciliationReport,
@@ -591,6 +627,11 @@ impl StatePersistence {
     }
 
     /// Sync with remote (no-op for local database).
+    ///
+    /// # Errors
+    ///
+    /// Currently always succeeds. For remote databases, would return an error
+    /// if synchronization with the remote server fails.
     pub async fn sync(&self) -> Result<(), PersistenceError> {
         // Note: Turso local databases don't need sync
         // For remote sync, we'd need a different builder configuration
@@ -631,11 +672,13 @@ impl Default for RecoveryState {
 
 impl RecoveryState {
     /// Check if recovery is needed.
+    #[must_use]
     pub fn needs_recovery(&self) -> bool {
         self.status == "error" || self.status == "interrupted" || self.status == "unknown"
     }
 
     /// Check if state is healthy.
+    #[must_use]
     pub fn is_healthy(&self) -> bool {
         self.status == "healthy"
     }
@@ -647,43 +690,43 @@ impl RecoveryState {
 
 fn parse_order_status(s: &str) -> OrderStatus {
     match s {
-        "New" => OrderStatus::New,
         "Accepted" => OrderStatus::Accepted,
         "PartiallyFilled" => OrderStatus::PartiallyFilled,
         "Filled" => OrderStatus::Filled,
         "Canceled" => OrderStatus::Canceled,
         "Rejected" => OrderStatus::Rejected,
         "Expired" => OrderStatus::Expired,
+        // "New" and unknown statuses default to New
         _ => OrderStatus::New,
     }
 }
 
 fn parse_order_side(s: &str) -> OrderSide {
     match s {
-        "Buy" => OrderSide::Buy,
         "Sell" => OrderSide::Sell,
+        // "Buy" and unknown sides default to Buy
         _ => OrderSide::Buy,
     }
 }
 
 fn parse_order_type(s: &str) -> OrderType {
     match s {
-        "Market" => OrderType::Market,
         "Limit" => OrderType::Limit,
         "Stop" => OrderType::Stop,
         "StopLimit" => OrderType::StopLimit,
+        // "Market" and unknown types default to Market
         _ => OrderType::Market,
     }
 }
 
 fn parse_time_in_force(s: &str) -> TimeInForce {
     match s {
-        "Day" => TimeInForce::Day,
         "Gtc" => TimeInForce::Gtc,
         "Ioc" => TimeInForce::Ioc,
         "Fok" => TimeInForce::Fok,
         "Opg" => TimeInForce::Opg,
         "Cls" => TimeInForce::Cls,
+        // "Day" and unknown values default to Day
         _ => TimeInForce::Day,
     }
 }

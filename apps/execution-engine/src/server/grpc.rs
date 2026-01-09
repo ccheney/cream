@@ -127,7 +127,11 @@ impl ExecutionServiceImpl {
     }
 
     /// Create with default configuration (paper trading).
-    pub fn with_defaults() -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Alpaca adapter cannot be created.
+    pub fn with_defaults() -> Result<Self, crate::execution::AlpacaError> {
         use crate::execution::AlpacaAdapter;
 
         // Create paper trading adapter with credentials from environment
@@ -135,8 +139,7 @@ impl ExecutionServiceImpl {
             std::env::var("ALPACA_KEY").unwrap_or_else(|_| "paper-key".to_string()),
             std::env::var("ALPACA_SECRET").unwrap_or_else(|_| "paper-secret".to_string()),
             Environment::Paper,
-        )
-        .expect("Failed to create Alpaca adapter");
+        )?;
 
         let state_manager = OrderStateManager::new();
         let validator = ConstraintValidator::with_defaults();
@@ -147,21 +150,20 @@ impl ExecutionServiceImpl {
             std::env::var("ALPACA_KEY").unwrap_or_else(|_| "paper-key".to_string()),
             std::env::var("ALPACA_SECRET").unwrap_or_else(|_| "paper-secret".to_string()),
             Environment::Paper,
-        )
-        .expect("Failed to create Alpaca adapter for gateway");
+        )?;
 
         let gateway_state_manager = OrderStateManager::new();
         let gateway_validator = ConstraintValidator::with_defaults();
         let gateway =
             ExecutionGateway::new(gateway_alpaca, gateway_state_manager, gateway_validator);
 
-        Self {
+        Ok(Self {
             validator: Arc::new(validator),
             state_manager: Arc::new(state_manager),
             gateway: Arc::new(gateway),
             alpaca: Arc::new(alpaca),
             cache: Arc::new(RwLock::new(AlpacaCache::default())),
-        }
+        })
     }
 
     /// Get cached account state or fetch fresh data if cache is stale.
@@ -169,11 +171,11 @@ impl ExecutionServiceImpl {
         // Check cache first
         {
             let cache = self.cache.read().await;
-            if let Some(cached) = &cache.account {
-                if cached.fetched_at.elapsed() < ACCOUNT_CACHE_TTL {
-                    tracing::trace!("Using cached account state");
-                    return Ok(cached.state.clone());
-                }
+            if let Some(cached) = &cache.account
+                && cached.fetched_at.elapsed() < ACCOUNT_CACHE_TTL
+            {
+                tracing::trace!("Using cached account state");
+                return Ok(cached.state.clone());
             }
         }
 
@@ -206,11 +208,11 @@ impl ExecutionServiceImpl {
         // Check cache first
         {
             let cache = self.cache.read().await;
-            if let Some(cached) = &cache.positions {
-                if cached.fetched_at.elapsed() < POSITIONS_CACHE_TTL {
-                    tracing::trace!("Using cached positions");
-                    return Ok(cached.positions.clone());
-                }
+            if let Some(cached) = &cache.positions
+                && cached.fetched_at.elapsed() < POSITIONS_CACHE_TTL
+            {
+                tracing::trace!("Using cached positions");
+                return Ok(cached.positions.clone());
             }
         }
 
@@ -597,6 +599,7 @@ pub struct MarketDataServiceImpl {}
 
 impl MarketDataServiceImpl {
     /// Create a new market data service.
+    #[must_use]
     pub fn new() -> Self {
         Self {}
     }
@@ -678,12 +681,13 @@ fn convert_decision_plan(
         .map(|(idx, d)| {
             // Convert action from proto enum
             let action = match proto::cream::v1::Action::try_from(d.action) {
-                Ok(proto::cream::v1::Action::Buy) => Action::Buy,
-                Ok(proto::cream::v1::Action::Sell) => Action::Sell,
-                Ok(proto::cream::v1::Action::Hold) => Action::Hold,
-                Ok(proto::cream::v1::Action::Increase) => Action::Buy,
-                Ok(proto::cream::v1::Action::Reduce) => Action::Sell,
-                Ok(proto::cream::v1::Action::NoTrade) => Action::Hold,
+                Ok(proto::cream::v1::Action::Buy | proto::cream::v1::Action::Increase) => {
+                    Action::Buy
+                }
+                Ok(proto::cream::v1::Action::Sell | proto::cream::v1::Action::Reduce) => {
+                    Action::Sell
+                }
+                // Hold, NoTrade, and unknown actions default to Hold
                 _ => Action::Hold,
             };
 
@@ -711,8 +715,8 @@ fn convert_decision_plan(
                 .as_ref()
                 .map_or((Decimal::ZERO, SizeUnit::Shares), |s| {
                     let unit = match proto::cream::v1::SizeUnit::try_from(s.unit) {
-                        Ok(proto::cream::v1::SizeUnit::Shares) => SizeUnit::Shares,
                         Ok(proto::cream::v1::SizeUnit::Contracts) => SizeUnit::Contracts,
+                        // Shares and unknown units default to Shares
                         _ => SizeUnit::Shares,
                     };
                     (Decimal::from(s.quantity), unit)
@@ -772,7 +776,10 @@ fn convert_decision_plan(
             .as_of_timestamp
             .as_ref()
             .map(|t| {
-                chrono::DateTime::from_timestamp(t.seconds, t.nanos as u32)
+                // Truncation acceptable: nanos value from proto is already within u32 range
+                #[allow(clippy::cast_sign_loss)]
+                let nanos = t.nanos as u32;
+                chrono::DateTime::from_timestamp(t.seconds, nanos)
                     .map(|dt| dt.to_rfc3339())
                     .unwrap_or_default()
             })
@@ -811,20 +818,20 @@ fn convert_order_side(side: crate::models::OrderSide) -> i32 {
 fn convert_order_type(order_type: crate::models::OrderType) -> i32 {
     use crate::models::OrderType;
     match order_type {
-        OrderType::Market => proto::cream::v1::OrderType::Market.into(),
-        OrderType::Limit => proto::cream::v1::OrderType::Limit.into(),
-        // Proto doesn't have Stop/StopLimit yet, map to Market for now
-        OrderType::Stop => proto::cream::v1::OrderType::Market.into(),
-        OrderType::StopLimit => proto::cream::v1::OrderType::Limit.into(),
+        // Proto doesn't have Stop/StopLimit yet, map to Market/Limit for now
+        OrderType::Market | OrderType::Stop => proto::cream::v1::OrderType::Market.into(),
+        OrderType::Limit | OrderType::StopLimit => proto::cream::v1::OrderType::Limit.into(),
     }
 }
 
 /// Parse ISO 8601 timestamp string to protobuf Timestamp.
+#[allow(clippy::cast_possible_wrap)]
 fn parse_timestamp(timestamp_str: &str) -> Option<prost_types::Timestamp> {
     chrono::DateTime::parse_from_rfc3339(timestamp_str)
         .ok()
         .map(|dt| prost_types::Timestamp {
             seconds: dt.timestamp(),
+            // Wrapping acceptable: subsec_nanos is always 0..999_999_999, fits in i32
             nanos: dt.timestamp_subsec_nanos() as i32,
         })
 }
@@ -834,23 +841,36 @@ fn parse_timestamp(timestamp_str: &str) -> Option<prost_types::Timestamp> {
 // ============================================
 
 /// Run the gRPC server on the specified address (without TLS).
-pub async fn run_grpc_server(addr: std::net::SocketAddr) -> Result<(), tonic::transport::Error> {
+///
+/// # Errors
+///
+/// Returns an error if the execution service fails to initialize or
+/// the server fails to bind to the address.
+pub async fn run_grpc_server(addr: std::net::SocketAddr) -> anyhow::Result<()> {
     tracing::info!(%addr, "Starting gRPC server (no TLS)");
 
-    let execution_service = ExecutionServiceImpl::with_defaults();
+    let execution_service = ExecutionServiceImpl::with_defaults()?;
     let market_data_service = MarketDataServiceImpl::new();
 
     let router = tonic::transport::Server::builder()
         .add_service(ExecutionServiceServer::new(execution_service))
         .add_service(MarketDataServiceServer::new(market_data_service));
 
-    router.serve(addr).await
+    router.serve(addr).await?;
+    Ok(())
 }
 
 /// Run the gRPC server with TLS support.
 ///
 /// TLS configuration is loaded from the provided `TlsConfig`.
 /// If TLS config is `None`, the server runs without TLS (equivalent to `run_grpc_server`).
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - TLS configuration fails to build (invalid certificates or keys)
+/// - The server fails to bind to the address
+/// - A transport error occurs during operation
 ///
 /// # Example
 ///
@@ -868,7 +888,7 @@ pub async fn run_grpc_server_with_tls(
     addr: std::net::SocketAddr,
     tls_config: Option<super::tls::TlsConfig>,
 ) -> anyhow::Result<()> {
-    let execution_service = ExecutionServiceImpl::with_defaults();
+    let execution_service = ExecutionServiceImpl::with_defaults()?;
     let market_data_service = MarketDataServiceImpl::new();
 
     match tls_config {
@@ -908,17 +928,24 @@ pub async fn run_grpc_server_with_tls(
 }
 
 /// Build the gRPC services for testing or custom server setup.
-pub fn build_grpc_services() -> (
-    ExecutionServiceServer<ExecutionServiceImpl>,
-    MarketDataServiceServer<MarketDataServiceImpl>,
-) {
-    let execution_service = ExecutionServiceImpl::with_defaults();
+///
+/// # Errors
+///
+/// Returns an error if the execution service fails to initialize.
+pub fn build_grpc_services() -> Result<
+    (
+        ExecutionServiceServer<ExecutionServiceImpl>,
+        MarketDataServiceServer<MarketDataServiceImpl>,
+    ),
+    crate::execution::AlpacaError,
+> {
+    let execution_service = ExecutionServiceImpl::with_defaults()?;
     let market_data_service = MarketDataServiceImpl::new();
 
-    (
+    Ok((
         ExecutionServiceServer::new(execution_service),
         MarketDataServiceServer::new(market_data_service),
-    )
+    ))
 }
 
 #[cfg(test)]
@@ -927,7 +954,10 @@ mod tests {
 
     #[test]
     fn test_execution_service_creation() {
-        let service = ExecutionServiceImpl::with_defaults();
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
         assert!(Arc::strong_count(&service.validator) == 1);
     }
 
@@ -946,13 +976,18 @@ mod tests {
             return;
         }
 
-        let service = ExecutionServiceImpl::with_defaults();
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
         let request = Request::new(GetAccountStateRequest { account_id: None });
 
         let response = service.get_account_state(request).await;
         match response {
             Ok(resp) => {
-                let state = resp.into_inner().account_state.unwrap();
+                let Some(state) = resp.into_inner().account_state else {
+                    panic!("should have account state");
+                };
                 // Account ID should be set (not necessarily "default" anymore)
                 assert!(!state.account_id.is_empty());
                 // Equity should be positive for a funded account
@@ -974,7 +1009,10 @@ mod tests {
             return;
         }
 
-        let service = ExecutionServiceImpl::with_defaults();
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
         let request = Request::new(GetPositionsRequest {
             account_id: None,
             symbols: vec!["AAPL".to_string()],

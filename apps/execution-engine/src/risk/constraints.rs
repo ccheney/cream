@@ -71,7 +71,7 @@ impl BuyingPowerInfo {
 }
 
 /// Extended request with optional Greeks and buying power.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExtendedConstraintContext {
     /// Portfolio Greeks snapshot (optional, for options validation).
     pub greeks: Option<GreeksSnapshot>,
@@ -82,17 +82,6 @@ pub struct ExtendedConstraintContext {
     /// Historical position sizes for sizing sanity check.
     /// List of recent position notional values.
     pub historical_position_sizes: Vec<Decimal>,
-}
-
-impl Default for ExtendedConstraintContext {
-    fn default() -> Self {
-        Self {
-            greeks: None,
-            buying_power: BuyingPowerInfo::default(),
-            current_positions: HashMap::new(),
-            historical_position_sizes: Vec::new(),
-        }
-    }
 }
 
 /// Sizing sanity warning (not an error, just a warning).
@@ -280,7 +269,7 @@ impl ConstraintValidator {
                 .push((idx, decision.action, decision.direction));
 
             // Calculate notional value for the decision
-            let notional = self.calculate_notional(decision, &request.account_equity);
+            let notional = Self::calculate_notional(decision, &request.account_equity);
 
             // Check per-instrument notional limit
             if notional > self.limits.per_instrument.max_notional {
@@ -372,10 +361,10 @@ impl ConstraintValidator {
         }
 
         // Detect conflicting orders (same instrument with opposing actions)
-        self.check_conflicting_orders(&instrument_actions, context, &mut violations);
+        Self::check_conflicting_orders(&instrument_actions, context, &mut violations);
 
         // Calculate portfolio-level metrics
-        let (total_gross, total_net) = self.calculate_portfolio_exposure(request);
+        let (total_gross, total_net) = Self::calculate_portfolio_exposure(request);
 
         // Check gross notional
         if total_gross > self.limits.portfolio.max_gross_notional {
@@ -449,7 +438,7 @@ impl ConstraintValidator {
         }
 
         // Check buying power if provided
-        self.check_buying_power(request, context, &mut violations);
+        Self::check_buying_power(request, context, &mut violations);
 
         // Check Greeks limits if provided
         if let Some(greeks) = &context.greeks {
@@ -465,7 +454,6 @@ impl ConstraintValidator {
 
     /// Check for conflicting orders on the same instrument.
     fn check_conflicting_orders(
-        &self,
         instrument_actions: &HashMap<String, Vec<(usize, Action, Direction)>>,
         context: &ExtendedConstraintContext,
         violations: &mut Vec<ConstraintViolation>,
@@ -542,12 +530,11 @@ impl ConstraintValidator {
 
     /// Check buying power / margin requirements.
     fn check_buying_power(
-        &self,
         request: &ConstraintCheckRequest,
         context: &ExtendedConstraintContext,
         violations: &mut Vec<ConstraintViolation>,
     ) {
-        let (total_gross, _) = self.calculate_portfolio_exposure(request);
+        let (total_gross, _) = Self::calculate_portfolio_exposure(request);
 
         // Simple margin requirement: 50% of gross for equities (Reg T)
         // This is a simplification - real margin calc is more complex
@@ -647,11 +634,7 @@ impl ConstraintValidator {
     }
 
     /// Calculate notional value for a decision.
-    fn calculate_notional(
-        &self,
-        decision: &crate::models::Decision,
-        account_equity: &Decimal,
-    ) -> Decimal {
+    fn calculate_notional(decision: &crate::models::Decision, account_equity: &Decimal) -> Decimal {
         match decision.size.unit {
             SizeUnit::Dollars => decision.size.quantity,
             SizeUnit::PctEquity => decision.size.quantity * account_equity,
@@ -666,11 +649,10 @@ impl ConstraintValidator {
 
     /// Calculate signed notional for a decision (positive for long, negative for short).
     fn calculate_signed_notional(
-        &self,
         decision: &crate::models::Decision,
         account_equity: &Decimal,
     ) -> Decimal {
-        let notional = self.calculate_notional(decision, account_equity);
+        let notional = Self::calculate_notional(decision, account_equity);
         match decision.direction {
             Direction::Long => notional,
             Direction::Short => -notional,
@@ -683,7 +665,7 @@ impl ConstraintValidator {
     /// Returns (`gross_notional`, `net_notional`) where:
     /// - gross = sum of absolute notional values
     /// - net = sum of signed notional values (long positive, short negative)
-    fn calculate_portfolio_exposure(&self, request: &ConstraintCheckRequest) -> (Decimal, Decimal) {
+    fn calculate_portfolio_exposure(request: &ConstraintCheckRequest) -> (Decimal, Decimal) {
         let mut gross = Decimal::ZERO;
         let mut net = Decimal::ZERO;
 
@@ -692,8 +674,8 @@ impl ConstraintValidator {
                 continue;
             }
 
-            let notional = self.calculate_notional(decision, &request.account_equity);
-            let signed = self.calculate_signed_notional(decision, &request.account_equity);
+            let notional = Self::calculate_notional(decision, &request.account_equity);
+            let signed = Self::calculate_signed_notional(decision, &request.account_equity);
 
             gross += notional.abs();
             net += signed;
@@ -915,17 +897,17 @@ pub fn calculate_correlation_adjustment(
         for j in (i + 1)..instruments.len() {
             if let (Some(returns_i), Some(returns_j)) =
                 (returns.get(instruments[i]), returns.get(instruments[j]))
+                && let Some(corr) = pearson_correlation(returns_i, returns_j)
             {
-                if let Some(corr) = pearson_correlation(returns_i, returns_j) {
-                    total_correlation += corr.abs();
-                    pair_count += 1;
-                }
+                total_correlation += corr.abs();
+                pair_count += 1;
             }
         }
     }
 
     let average_correlation = if pair_count > 0 {
-        total_correlation / pair_count as f64
+        // Use From for infallible i32 -> f64 conversion
+        total_correlation / f64::from(pair_count)
     } else {
         0.0
     };
@@ -946,13 +928,14 @@ pub fn calculate_correlation_adjustment(
 }
 
 /// Calculate Pearson correlation coefficient between two series.
-#[allow(dead_code)]
+#[allow(dead_code, clippy::cast_precision_loss)]
 fn pearson_correlation(x: &[f64], y: &[f64]) -> Option<f64> {
     let n = x.len().min(y.len());
     if n < 2 {
         return None;
     }
 
+    // Precision loss acceptable for statistical calculation (approximate metric)
     let mean_x: f64 = x.iter().take(n).sum::<f64>() / n as f64;
     let mean_y: f64 = y.iter().take(n).sum::<f64>() / n as f64;
 
@@ -1772,8 +1755,9 @@ mod tests {
 
         // Proposed $50k is ~4.5x median $11k - exceeds 3x threshold
         let result = super::check_sizing_sanity(Decimal::new(50_000, 0), &historical, threshold);
-        assert!(result.is_some());
-        let warning = result.unwrap();
+        let Some(warning) = result else {
+            panic!("sizing sanity check should detect warning");
+        };
         assert!(warning.size_multiplier > Decimal::new(4, 0));
         assert_eq!(warning.threshold, Decimal::new(30, 1));
     }
@@ -1904,8 +1888,8 @@ mod tests {
         let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
 
         assert!(!result.exceeds_threshold);
-        assert_eq!(result.size_multiplier, 1.0);
-        assert_eq!(result.average_correlation, 0.0);
+        assert!((result.size_multiplier - 1.0).abs() < f64::EPSILON);
+        assert!((result.average_correlation - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -1918,7 +1902,7 @@ mod tests {
         let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
 
         assert!(result.exceeds_threshold);
-        assert_eq!(result.size_multiplier, 0.5);
+        assert!((result.size_multiplier - 0.5).abs() < f64::EPSILON);
         assert!(result.average_correlation > 0.7);
     }
 
@@ -1932,7 +1916,7 @@ mod tests {
         let result = calculate_correlation_adjustment(&returns, 0.7, 0.5);
 
         assert!(!result.exceeds_threshold);
-        assert_eq!(result.size_multiplier, 1.0);
+        assert!((result.size_multiplier - 1.0).abs() < f64::EPSILON);
         assert!(result.average_correlation < 0.7);
     }
 
@@ -1942,9 +1926,10 @@ mod tests {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 
-        let corr = super::pearson_correlation(&x, &y);
-        assert!(corr.is_some());
-        assert!((corr.unwrap() - 1.0).abs() < 0.001);
+        let Some(corr) = super::pearson_correlation(&x, &y) else {
+            panic!("correlation should be computable for valid data");
+        };
+        assert!((corr - 1.0).abs() < 0.001);
     }
 
     #[test]
@@ -1953,9 +1938,10 @@ mod tests {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![5.0, 4.0, 3.0, 2.0, 1.0];
 
-        let corr = super::pearson_correlation(&x, &y);
-        assert!(corr.is_some());
-        assert!((corr.unwrap() + 1.0).abs() < 0.001);
+        let Some(corr) = super::pearson_correlation(&x, &y) else {
+            panic!("correlation should be computable for valid data");
+        };
+        assert!((corr + 1.0).abs() < 0.001);
     }
 
     #[test]
@@ -1984,10 +1970,9 @@ mod tests {
         decision.stop_loss_level = Decimal::new(90, 0); // 10% stop
 
         // 10% risk on $50k = $5k = 5% of $100k equity (exceeds 2% limit)
-        let violation = validate_per_trade_risk(&decision, Decimal::new(100_000, 0), &config);
-
-        assert!(violation.is_some());
-        let v = violation.unwrap();
+        let Some(v) = validate_per_trade_risk(&decision, Decimal::new(100_000, 0), &config) else {
+            panic!("should detect per-trade risk violation");
+        };
         assert_eq!(v.code, "PER_TRADE_RISK_EXCEEDED");
     }
 
@@ -1999,10 +1984,9 @@ mod tests {
         decision.stop_loss_level = Decimal::new(95, 0);
         decision.take_profit_level = Decimal::new(103, 0); // 3/5 = 0.6 ratio
 
-        let violation = validate_risk_reward_ratio(&decision, &config);
-
-        assert!(violation.is_some());
-        let v = violation.unwrap();
+        let Some(v) = validate_risk_reward_ratio(&decision, &config) else {
+            panic!("should detect insufficient risk-reward ratio");
+        };
         assert_eq!(v.code, "INSUFFICIENT_RISK_REWARD");
     }
 

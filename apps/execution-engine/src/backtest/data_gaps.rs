@@ -119,6 +119,7 @@ pub struct GapValidationResult {
 
 impl GapValidationResult {
     /// Create a valid result.
+    #[must_use]
     pub const fn valid() -> Self {
         Self {
             valid: true,
@@ -128,6 +129,7 @@ impl GapValidationResult {
     }
 
     /// Create an invalid result with a single gap.
+    #[must_use]
     pub fn invalid(error: DataGapError) -> Self {
         Self {
             valid: false,
@@ -382,6 +384,7 @@ pub fn validate_spread_data(
 ///
 /// # Returns
 /// Validation result with all detected gaps.
+#[must_use]
 pub fn validate_order_data(
     candle: &Candle,
     volume: Decimal,
@@ -426,6 +429,7 @@ pub struct GapStatistics {
 
 impl GapStatistics {
     /// Create new statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -444,6 +448,8 @@ impl GapStatistics {
         *self.by_symbol.entry(gap.symbol.clone()).or_insert(0) += 1;
 
         // Update percentage
+        // Precision loss acceptable for gap percentage calculation (approximate metric)
+        #[allow(clippy::cast_precision_loss)]
         if self.total_candles > 0 {
             self.gap_percentage = (self.gaps_detected as f64 / self.total_candles as f64) * 100.0;
         }
@@ -623,13 +629,10 @@ mod tests {
         assert_eq!(stats.total_candles, 3);
         assert_eq!(stats.gaps_detected, 1);
         assert!((stats.gap_percentage - 33.33).abs() < 1.0);
-        assert_eq!(
-            *stats
-                .by_symbol
-                .get("AAPL")
-                .expect("AAPL should be in gap statistics"),
-            1
-        );
+        let Some(aapl_count) = stats.by_symbol.get("AAPL") else {
+            panic!("AAPL should be in gap statistics");
+        };
+        assert_eq!(*aapl_count, 1);
     }
 
     #[test]

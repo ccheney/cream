@@ -95,6 +95,8 @@ impl Default for MassCancelConfig {
 impl MassCancelConfig {
     /// Validate configuration for the given environment.
     ///
+    /// # Errors
+    ///
     /// Returns an error if:
     /// - Mass cancel is disabled in LIVE environment
     /// - Grace period is too long (> 60 seconds)
@@ -233,12 +235,16 @@ pub struct DisconnectHandler {
 
 impl DisconnectHandler {
     /// Create a new disconnect handler.
+    #[must_use]
     pub fn new(config: MassCancelConfig) -> (Self, mpsc::Receiver<MassCancelEvent>) {
         let (event_tx, event_rx) = mpsc::channel(100);
+        // Sign loss is safe: timestamp_millis returns positive values for current time
+        #[allow(clippy::cast_sign_loss)]
+        let initial_heartbeat = chrono::Utc::now().timestamp_millis() as u64;
         let handler = Self {
             config,
             connected: AtomicBool::new(true),
-            last_heartbeat_ms: AtomicU64::new(chrono::Utc::now().timestamp_millis() as u64),
+            last_heartbeat_ms: AtomicU64::new(initial_heartbeat),
             grace_period_active: AtomicBool::new(false),
             event_tx,
             shutdown: AtomicBool::new(false),
@@ -247,7 +253,9 @@ impl DisconnectHandler {
     }
 
     /// Record a successful heartbeat.
+    #[allow(clippy::cast_sign_loss)]
     pub fn record_heartbeat(&self) {
+        // Sign loss is safe: timestamp_millis returns positive values for current time
         let now_ms = chrono::Utc::now().timestamp_millis() as u64;
         self.last_heartbeat_ms.store(now_ms, Ordering::SeqCst);
 
@@ -284,12 +292,14 @@ impl DisconnectHandler {
     }
 
     /// Check if the connection is healthy based on heartbeat.
+    #[allow(clippy::cast_sign_loss)]
     pub fn is_connection_healthy(&self) -> bool {
         if !self.connected.load(Ordering::SeqCst) {
             return false;
         }
 
         let last_heartbeat_ms = self.last_heartbeat_ms.load(Ordering::SeqCst);
+        // Sign loss is safe: timestamp_millis returns positive values for current time
         let now_ms = chrono::Utc::now().timestamp_millis() as u64;
         let timeout_ms = self.config.heartbeat_timeout_seconds * 1000;
 

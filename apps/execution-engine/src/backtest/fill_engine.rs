@@ -129,6 +129,7 @@ impl FillResult {
 /// Simulate a market order fill.
 ///
 /// Market orders fill at the candle open with slippage applied.
+#[must_use]
 pub fn simulate_market_order(
     side: OrderSide,
     quantity: Decimal,
@@ -171,6 +172,7 @@ pub fn simulate_market_order(
 ///
 /// Limit orders fill at the limit price if the candle touches that level.
 /// Optionally requires price to penetrate beyond the limit for verification.
+#[must_use]
 pub fn simulate_limit_order(
     side: OrderSide,
     quantity: Decimal,
@@ -230,6 +232,7 @@ pub fn simulate_limit_order(
 /// Simulate a stop order fill.
 ///
 /// Stop orders become market orders when the stop price is reached.
+#[must_use]
 pub fn simulate_stop_order(
     side: OrderSide,
     quantity: Decimal,
@@ -278,6 +281,7 @@ pub fn simulate_stop_order(
 /// Simulate a stop-limit order fill.
 ///
 /// Stop-limit becomes a limit order when stop is reached.
+#[must_use]
 pub fn simulate_stop_limit_order(
     side: OrderSide,
     quantity: Decimal,
@@ -301,6 +305,8 @@ pub fn simulate_stop_limit_order(
 }
 
 /// Simulate any order type.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn simulate_order(
     order_type: OrderType,
     side: OrderSide,
@@ -377,7 +383,7 @@ fn try_partial_fill(
             .to_string()
             .parse::<f64>()
             .unwrap_or(0.9);
-        let fill_frac = min_frac + hash_value * (max_frac - min_frac);
+        let fill_frac = hash_value.mul_add(max_frac - min_frac, min_frac);
 
         let fill_frac_decimal = Decimal::try_from(fill_frac).unwrap_or(config.min_fill_fraction);
         let filled_qty = quantity * fill_frac_decimal;
@@ -409,7 +415,11 @@ fn compute_deterministic_hash(candle: &Candle) -> f64 {
     candle.volume.to_string().hash(&mut hasher);
 
     let hash = hasher.finish();
-    (hash as f64) / (u64::MAX as f64)
+    // Precision loss acceptable: we need a [0, 1) range for probability
+    #[allow(clippy::cast_precision_loss)]
+    {
+        (hash as f64) / (u64::MAX as f64)
+    }
 }
 
 #[cfg(test)]
@@ -448,7 +458,9 @@ mod tests {
         assert!(result.filled);
         assert!(result.price.is_some());
         // Buy should have slippage applied (price > candle.open)
-        let fill_price = result.price.expect("filled order should have price");
+        let Some(fill_price) = result.price else {
+            panic!("filled order should have price");
+        };
         assert!(fill_price >= candle.open);
     }
 
@@ -468,7 +480,9 @@ mod tests {
 
         assert!(result.filled);
         // Sell should have slippage applied (price < candle.open)
-        let fill_price = result.price.expect("filled order should have price");
+        let Some(fill_price) = result.price else {
+            panic!("filled order should have price");
+        };
         assert!(fill_price <= candle.open);
     }
 
@@ -583,7 +597,10 @@ mod tests {
 
         assert!(result.filled);
         // Price should have slippage applied
-        assert!(result.price.expect("filled order should have price") < Decimal::new(9900, 2));
+        let Some(fill_price) = result.price else {
+            panic!("filled order should have price");
+        };
+        assert!(fill_price < Decimal::new(9900, 2));
     }
 
     #[test]
@@ -603,7 +620,10 @@ mod tests {
         );
 
         assert!(result.filled);
-        assert!(result.price.expect("filled order should have price") > Decimal::new(10100, 2));
+        let Some(fill_price) = result.price else {
+            panic!("filled order should have price");
+        };
+        assert!(fill_price > Decimal::new(10100, 2));
     }
 
     #[test]

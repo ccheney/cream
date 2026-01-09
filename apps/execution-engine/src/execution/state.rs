@@ -66,10 +66,10 @@ impl OrderStateManager {
             orders.insert(order_id.clone(), order);
         }
 
-        if !broker_order_id.is_empty() {
-            if let Ok(mut map) = self.broker_id_map.write() {
-                map.insert(broker_order_id, order_id);
-            }
+        if !broker_order_id.is_empty()
+            && let Ok(mut map) = self.broker_id_map.write()
+        {
+            map.insert(broker_order_id, order_id);
         }
     }
 
@@ -166,18 +166,18 @@ impl OrderStateManager {
         };
 
         // Synchronize with OrderState
-        if let Ok(mut orders) = self.orders.write() {
-            if let Some(order) = orders.get_mut(order_id) {
-                order.filled_quantity = updated_state.cum_qty;
-                order.avg_fill_price = updated_state.avg_px;
-                order.last_update_at = chrono::Utc::now().to_rfc3339();
+        if let Ok(mut orders) = self.orders.write()
+            && let Some(order) = orders.get_mut(order_id)
+        {
+            order.filled_quantity = updated_state.cum_qty;
+            order.avg_fill_price = updated_state.avg_px;
+            order.last_update_at = chrono::Utc::now().to_rfc3339();
 
-                // Update status based on fill state
-                if updated_state.is_filled() {
-                    order.status = OrderStatus::Filled;
-                } else if updated_state.is_partial() {
-                    order.status = OrderStatus::PartiallyFilled;
-                }
+            // Update status based on fill state
+            if updated_state.is_filled() {
+                order.status = OrderStatus::Filled;
+            } else if updated_state.is_partial() {
+                order.status = OrderStatus::PartiallyFilled;
             }
         }
 
@@ -233,6 +233,8 @@ impl OrderStateManager {
             let timeout_secs = self.timeout_config.timeout_for_purpose(state.order_purpose);
             let elapsed = now.signed_duration_since(created_at);
 
+            // Wrapping acceptable: u64 seconds fit in i64 for practical timeout values
+            #[allow(clippy::cast_possible_wrap)]
             if elapsed > chrono::Duration::seconds(timeout_secs as i64) {
                 let action = self.timeout_config.action_for_purpose(state.order_purpose);
                 results.push(TimeoutResult {
@@ -308,7 +310,10 @@ mod tests {
 
         let retrieved = manager.get("ord-1");
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.expect("order should exist").order_id, "ord-1");
+        let Some(retrieved_order) = retrieved else {
+            panic!("order should exist");
+        };
+        assert_eq!(retrieved_order.order_id, "ord-1");
     }
 
     #[test]
@@ -320,10 +325,10 @@ mod tests {
 
         let retrieved = manager.get_by_broker_id("broker-1");
         assert!(retrieved.is_some());
-        assert_eq!(
-            retrieved.expect("order should exist by broker_id").order_id,
-            "ord-1"
-        );
+        let Some(retrieved_order) = retrieved else {
+            panic!("order should exist by broker_id");
+        };
+        assert_eq!(retrieved_order.order_id, "ord-1");
     }
 
     #[test]
@@ -366,9 +371,9 @@ mod tests {
             OrderPurpose::Entry,
         );
 
-        let state = manager.get_partial_fill_state("ord-1");
-        assert!(state.is_some());
-        let state = state.expect("partial fill state should exist");
+        let Some(state) = manager.get_partial_fill_state("ord-1") else {
+            panic!("partial fill state should exist");
+        };
         assert_eq!(state.order_qty, Decimal::new(100, 0));
         assert_eq!(state.cum_qty, Decimal::ZERO);
         assert_eq!(state.leaves_qty, Decimal::new(100, 0));
@@ -386,15 +391,17 @@ mod tests {
         );
 
         // Apply first fill
-        let result = manager.apply_fill("ord-1", make_fill("f1", 40, 15000));
-        assert!(result.is_some());
-        let state = result.expect("apply_fill should return state");
+        let Some(state) = manager.apply_fill("ord-1", make_fill("f1", 40, 15000)) else {
+            panic!("apply_fill should return state");
+        };
         assert_eq!(state.cum_qty, Decimal::new(40, 0));
         assert_eq!(state.leaves_qty, Decimal::new(60, 0));
         assert!(state.verify_fix_invariant());
 
         // Verify OrderState is synchronized
-        let order = manager.get("ord-1").expect("order should exist");
+        let Some(order) = manager.get("ord-1") else {
+            panic!("order should exist");
+        };
         assert_eq!(order.filled_quantity, Decimal::new(40, 0));
         assert_eq!(order.status, OrderStatus::PartiallyFilled);
     }
@@ -413,7 +420,9 @@ mod tests {
         // Fill completely
         manager.apply_fill("ord-1", make_fill("f1", 100, 15000));
 
-        let order = manager.get("ord-1").expect("order should exist");
+        let Some(order) = manager.get("ord-1") else {
+            panic!("order should exist");
+        };
         assert_eq!(order.status, OrderStatus::Filled);
         assert_eq!(order.filled_quantity, Decimal::new(100, 0));
     }
@@ -436,7 +445,9 @@ mod tests {
         // VWAP = (40 * 150 + 60 * 151) / 100 = 150.60
         manager.apply_fill("ord-1", make_fill("f2", 60, 15100));
 
-        let order = manager.get("ord-1").expect("order should exist");
+        let Some(order) = manager.get("ord-1") else {
+            panic!("order should exist");
+        };
         assert_eq!(order.avg_fill_price, Decimal::new(15060, 2));
     }
 

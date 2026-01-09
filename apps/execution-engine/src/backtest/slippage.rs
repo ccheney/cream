@@ -20,6 +20,8 @@ const BPS_DIVISOR: Decimal = Decimal::from_parts(10000, 0, 0, false, 0);
 /// * `ask` - Ask price (required for spread-based model)
 /// * `order_size` - Order size (required for volume impact model)
 /// * `avg_volume` - Average volume (required for volume impact model)
+#[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn apply_slippage(
     price: Decimal,
     side: OrderSide,
@@ -132,6 +134,7 @@ fn apply_volume_impact_slippage(
 ///
 /// Stops typically have more slippage than targets due to urgency
 /// and potential for market impact when many stops trigger.
+#[must_use]
 pub fn apply_stop_target_slippage(
     level: Decimal,
     side: OrderSide,
@@ -148,15 +151,10 @@ pub fn apply_stop_target_slippage(
 
     // For stops: slippage works against us
     // For targets: slippage is typically less severe
-    match (side, is_stop) {
-        // Stop on long position (selling): price slips down
-        (OrderSide::Sell, true) => level * (Decimal::ONE - multiplier),
-        // Stop on short position (buying): price slips up
-        (OrderSide::Buy, true) => level * (Decimal::ONE + multiplier),
-        // Target on long position (selling): small slip down
-        (OrderSide::Sell, false) => level * (Decimal::ONE - multiplier),
-        // Target on short position (buying): small slip up
-        (OrderSide::Buy, false) => level * (Decimal::ONE + multiplier),
+    // In both cases, sells slip down and buys slip up
+    match side {
+        OrderSide::Sell => level * (Decimal::ONE - multiplier),
+        OrderSide::Buy => level * (Decimal::ONE + multiplier),
     }
 }
 

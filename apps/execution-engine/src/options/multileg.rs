@@ -475,9 +475,9 @@ pub fn assess_early_exercise_risk(
         .ok()
         .flatten();
 
-    let days_to_expiration = expiration
-        .map(|exp| (exp - current_time).num_days() as i32)
-        .unwrap_or(365);
+    // Truncation acceptable: days to expiration typically < 365*10, fits in i32
+    #[allow(clippy::cast_possible_truncation)]
+    let days_to_expiration = expiration.map_or(365, |exp| (exp - current_time).num_days() as i32);
 
     // Calculate ITM percentage
     let intrinsic_value = match contract.option_type {
@@ -495,12 +495,10 @@ pub fn assess_early_exercise_risk(
 
     // Check for dividend risk (calls near ex-dividend date)
     let dividend_risk = if contract.option_type == OptionType::Call {
-        ex_dividend_date
-            .map(|ex_div| {
-                let days_to_ex_div = (ex_div - current_time).num_days();
-                days_to_ex_div >= 0 && days_to_ex_div <= 2
-            })
-            .unwrap_or(false)
+        ex_dividend_date.is_some_and(|ex_div| {
+            let days_to_ex_div = (ex_div - current_time).num_days();
+            days_to_ex_div >= 0 && days_to_ex_div <= 2
+        })
     } else {
         false
     };
@@ -831,6 +829,8 @@ impl PositionTracker {
         }
 
         // Check position count per underlying
+        // Truncation acceptable: position count is bounded by practical limits
+        #[allow(clippy::cast_possible_truncation)]
         let positions_for_underlying = self
             .positions
             .values()
@@ -859,6 +859,8 @@ impl PositionTracker {
             ));
         }
 
+        // Truncation acceptable: position count is bounded by practical limits
+        #[allow(clippy::cast_possible_truncation)]
         if self.positions.len() as u32 + 1 > self.limits.max_total_positions {
             return Some(format!(
                 "Would exceed max total positions ({} + 1 > {})",
@@ -1299,8 +1301,10 @@ mod tests {
 
     #[test]
     fn test_position_tracker_contract_limit() {
-        let mut limits = PositionLimits::default();
-        limits.max_contracts_per_underlying = 3; // Low limit for testing
+        let limits = PositionLimits {
+            max_contracts_per_underlying: 3, // Low limit for testing
+            ..Default::default()
+        };
         let mut tracker = PositionTracker::new(limits);
 
         // Add position with 2 contracts (2 legs x 1 qty each)
@@ -1310,18 +1314,18 @@ mod tests {
         // Try to add another with 2 contracts (total 4 > 3 limit)
         let position2 = make_test_position("P2", "AAPL");
         let result = tracker.add_position(position2);
-        assert!(result.is_some());
-        assert!(
-            result
-                .expect("should have error message")
-                .contains("max contracts per underlying")
-        );
+        let Some(error_msg) = result else {
+            panic!("should have error message");
+        };
+        assert!(error_msg.contains("max contracts per underlying"));
     }
 
     #[test]
     fn test_position_tracker_delta_limit() {
-        let mut limits = PositionLimits::default();
-        limits.max_delta = Decimal::new(10, 0); // Low limit for testing
+        let limits = PositionLimits {
+            max_delta: Decimal::new(10, 0), // Low limit for testing
+            ..Default::default()
+        };
         let mut tracker = PositionTracker::new(limits);
 
         // Add position with high delta
@@ -1329,12 +1333,10 @@ mod tests {
         position.greeks.delta = Decimal::new(15, 0); // Exceeds limit
 
         let result = tracker.add_position(position);
-        assert!(result.is_some());
-        assert!(
-            result
-                .expect("should have error message")
-                .contains("max delta")
-        );
+        let Some(error_msg) = result else {
+            panic!("should have error message");
+        };
+        assert!(error_msg.contains("max delta"));
     }
 
     // ============ Helper Functions ============

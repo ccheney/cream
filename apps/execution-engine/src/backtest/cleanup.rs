@@ -99,6 +99,7 @@ pub struct CleanupResult {
 
 impl CleanupResult {
     /// Create an empty result.
+    #[must_use]
     pub const fn empty() -> Self {
         Self {
             files_deleted: 0,
@@ -150,6 +151,11 @@ pub struct StorageUsage {
 // ============================================
 
 /// Scan the results directory and return file information.
+///
+/// # Errors
+///
+/// Returns an error if the results directory cannot be read or if any
+/// file metadata cannot be accessed due to permission issues.
 pub fn scan_results_dir(config: &CleanupConfig) -> io::Result<Vec<ResultFileInfo>> {
     let mut files = Vec::new();
     let now = SystemTime::now();
@@ -175,22 +181,23 @@ fn scan_directory(
 
         if path.is_dir() {
             scan_directory(&path, files, now, config)?;
-        } else if path.is_file() {
-            if let Ok(metadata) = entry.metadata() {
-                let modified = metadata.modified().unwrap_or(now);
-                let age = now.duration_since(modified).unwrap_or(Duration::ZERO);
-                let age_days = (age.as_secs() / 86_400) as u32;
+        } else if path.is_file()
+            && let Ok(metadata) = entry.metadata()
+        {
+            let modified = metadata.modified().unwrap_or(now);
+            let age = now.duration_since(modified).unwrap_or(Duration::ZERO);
+            // Age in days is safe to truncate: u64::MAX / 86_400 >> u32::MAX
+            let age_days = u32::try_from(age.as_secs() / 86_400).unwrap_or(u32::MAX);
 
-                let is_important = is_important_file(&path, config);
+            let is_important = is_important_file(&path, config);
 
-                files.push(ResultFileInfo {
-                    path,
-                    size: metadata.len(),
-                    modified,
-                    age_days,
-                    is_important,
-                });
-            }
+            files.push(ResultFileInfo {
+                path,
+                size: metadata.len(),
+                modified,
+                age_days,
+                is_important,
+            });
         }
     }
     Ok(())
@@ -255,6 +262,7 @@ fn matches_pattern(filename: &str, pattern: &str) -> bool {
 }
 
 /// Calculate storage usage.
+#[must_use]
 pub fn calculate_storage_usage(files: &[ResultFileInfo], config: &CleanupConfig) -> StorageUsage {
     let total_bytes: u64 = files.iter().map(|f| f.size).sum();
     let total_mb = total_bytes / (1024 * 1024);
@@ -263,12 +271,16 @@ pub fn calculate_storage_usage(files: &[ResultFileInfo], config: &CleanupConfig)
     let oldest_age_days = files.iter().map(|f| f.age_days).max().unwrap_or(0);
     let newest_age_days = files.iter().map(|f| f.age_days).min().unwrap_or(0);
 
+    // Precision loss acceptable for percentage calculation (approximate metric)
+    #[allow(clippy::cast_precision_loss)]
     let soft_quota_pct = if config.soft_quota_mb > 0 {
         (total_mb as f64 / config.soft_quota_mb as f64) * 100.0
     } else {
         0.0
     };
 
+    // Precision loss acceptable for percentage calculation (approximate metric)
+    #[allow(clippy::cast_precision_loss)]
     let hard_quota_pct = if config.hard_quota_mb > 0 {
         (total_mb as f64 / config.hard_quota_mb as f64) * 100.0
     } else {
@@ -287,6 +299,7 @@ pub fn calculate_storage_usage(files: &[ResultFileInfo], config: &CleanupConfig)
 }
 
 /// Identify files that should be cleaned up based on retention policy.
+#[must_use]
 pub fn identify_cleanup_candidates<'a>(
     files: &'a [ResultFileInfo],
     config: &CleanupConfig,
@@ -315,6 +328,13 @@ pub fn identify_cleanup_candidates<'a>(
 /// # Returns
 ///
 /// Result with cleanup statistics.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The results directory cannot be scanned
+/// - File deletion fails (partial cleanup may have occurred)
+/// - File archival fails when `archive_before_delete` is enabled
 pub fn perform_cleanup(config: &CleanupConfig, dry_run: bool) -> io::Result<CleanupResult> {
     let files = scan_results_dir(config)?;
     let usage = calculate_storage_usage(&files, config);
@@ -414,6 +434,11 @@ fn archive_file(source: &Path, archive_dir: &Path) -> io::Result<()> {
 }
 
 /// Check storage quota and return warnings/errors.
+///
+/// # Errors
+///
+/// Returns an error if the results directory cannot be scanned or if
+/// file metadata cannot be read.
 pub fn check_storage_quota(config: &CleanupConfig) -> io::Result<QuotaStatus> {
     let files = scan_results_dir(config)?;
     let usage = calculate_storage_usage(&files, config);
@@ -448,17 +473,35 @@ pub fn check_storage_quota(config: &CleanupConfig) -> io::Result<QuotaStatus> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QuotaStatus {
     /// Storage is within limits.
-    Ok { usage_mb: u64, available_mb: u64 },
+    Ok {
+        /// Current storage usage in megabytes.
+        usage_mb: u64,
+        /// Remaining available storage in megabytes.
+        available_mb: u64,
+    },
     /// Approaching soft limit (80%+).
     ApproachingLimit {
+        /// Current storage usage in megabytes.
         usage_mb: u64,
+        /// Configured soft limit in megabytes.
         limit_mb: u64,
+        /// Percentage of soft limit currently used.
         pct: f64,
     },
     /// Soft limit exceeded.
-    SoftLimitExceeded { usage_mb: u64, limit_mb: u64 },
+    SoftLimitExceeded {
+        /// Current storage usage in megabytes.
+        usage_mb: u64,
+        /// Configured soft limit in megabytes.
+        limit_mb: u64,
+    },
     /// Hard limit exceeded (automatic cleanup required).
-    HardLimitExceeded { usage_mb: u64, limit_mb: u64 },
+    HardLimitExceeded {
+        /// Current storage usage in megabytes.
+        usage_mb: u64,
+        /// Configured hard limit in megabytes.
+        limit_mb: u64,
+    },
 }
 
 impl std::fmt::Display for QuotaStatus {
@@ -505,14 +548,22 @@ mod tests {
 
     fn create_test_file(dir: &Path, name: &str, age_days: u64) -> PathBuf {
         let path = dir.join(name);
-        let mut file = File::create(&path).expect("should create test file");
-        writeln!(file, "test content").expect("should write test content");
+        let mut file = match File::create(&path) {
+            Ok(f) => f,
+            Err(e) => panic!("should create test file: {e}"),
+        };
+        if let Err(e) = writeln!(file, "test content") {
+            panic!("should write test content: {e}");
+        }
 
         // Set modified time to simulate age
         if age_days > 0 {
             let mtime = SystemTime::now() - Duration::from_secs(age_days * 86_400);
-            filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(mtime))
-                .expect("should set file modification time");
+            if let Err(e) =
+                filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(mtime))
+            {
+                panic!("should set file modification time: {e}");
+            }
         }
 
         path
@@ -538,19 +589,28 @@ mod tests {
 
     #[test]
     fn test_scan_empty_directory() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let config = CleanupConfig {
             results_dir: dir.path().to_path_buf(),
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).expect("should scan results directory");
+        let files = match scan_results_dir(&config) {
+            Ok(f) => f,
+            Err(e) => panic!("should scan results directory: {e}"),
+        };
         assert!(files.is_empty());
     }
 
     #[test]
     fn test_scan_with_files() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         create_test_file(dir.path(), "test1.json", 0);
         create_test_file(dir.path(), "test2.csv", 0);
 
@@ -559,13 +619,19 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).expect("should scan results directory");
+        let files = match scan_results_dir(&config) {
+            Ok(f) => f,
+            Err(e) => panic!("should scan results directory: {e}"),
+        };
         assert_eq!(files.len(), 2);
     }
 
     #[test]
     fn test_calculate_storage_usage() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         create_test_file(dir.path(), "test1.json", 5);
         create_test_file(dir.path(), "test2.json", 10);
 
@@ -574,7 +640,10 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).expect("should scan results directory");
+        let files = match scan_results_dir(&config) {
+            Ok(f) => f,
+            Err(e) => panic!("should scan results directory: {e}"),
+        };
         let usage = calculate_storage_usage(&files, &config);
 
         assert_eq!(usage.file_count, 2);
@@ -583,7 +652,10 @@ mod tests {
 
     #[test]
     fn test_identify_cleanup_candidates() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         create_test_file(dir.path(), "old.json", 60); // Old, should be deleted
         create_test_file(dir.path(), "new.json", 5); // New, should be kept
 
@@ -593,24 +665,28 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).expect("should scan results directory");
+        let files = match scan_results_dir(&config) {
+            Ok(f) => f,
+            Err(e) => panic!("should scan results directory: {e}"),
+        };
         let candidates = identify_cleanup_candidates(&files, &config);
 
         assert_eq!(candidates.len(), 1);
-        assert!(
-            candidates[0]
-                .path
-                .file_name()
-                .expect("path should have file name")
-                .to_str()
-                .expect("file name should be valid UTF-8")
-                .contains("old")
-        );
+        let Some(file_name) = candidates[0].path.file_name() else {
+            panic!("path should have file name");
+        };
+        let Some(file_name_str) = file_name.to_str() else {
+            panic!("file name should be valid UTF-8");
+        };
+        assert!(file_name_str.contains("old"));
     }
 
     #[test]
     fn test_important_file_excluded() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         create_test_file(dir.path(), "starred_result.json", 60); // Old but important
 
         let config = CleanupConfig {
@@ -620,7 +696,10 @@ mod tests {
             ..Default::default()
         };
 
-        let files = scan_results_dir(&config).expect("should scan results directory");
+        let files = match scan_results_dir(&config) {
+            Ok(f) => f,
+            Err(e) => panic!("should scan results directory: {e}"),
+        };
         assert!(files[0].is_important);
 
         let candidates = identify_cleanup_candidates(&files, &config);
@@ -629,7 +708,10 @@ mod tests {
 
     #[test]
     fn test_dry_run_cleanup() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let path = create_test_file(dir.path(), "old.json", 60);
 
         let config = CleanupConfig {
@@ -638,7 +720,10 @@ mod tests {
             ..Default::default()
         };
 
-        let result = perform_cleanup(&config, true).expect("should perform dry run cleanup");
+        let result = match perform_cleanup(&config, true) {
+            Ok(r) => r,
+            Err(e) => panic!("should perform dry run cleanup: {e}"),
+        };
 
         // File should still exist (dry run)
         assert!(path.exists());
@@ -647,7 +732,10 @@ mod tests {
 
     #[test]
     fn test_actual_cleanup() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let path = create_test_file(dir.path(), "old.json", 60);
 
         let config = CleanupConfig {
@@ -657,7 +745,10 @@ mod tests {
             ..Default::default()
         };
 
-        let result = perform_cleanup(&config, false).expect("should perform actual cleanup");
+        let result = match perform_cleanup(&config, false) {
+            Ok(r) => r,
+            Err(e) => panic!("should perform actual cleanup: {e}"),
+        };
 
         // File should be deleted
         assert!(!path.exists());
@@ -682,7 +773,10 @@ mod tests {
 
     #[test]
     fn test_check_storage_quota() {
-        let dir = tempdir().expect("should create temp directory");
+        let dir = match tempdir() {
+            Ok(d) => d,
+            Err(e) => panic!("should create temp directory: {e}"),
+        };
         let config = CleanupConfig {
             results_dir: dir.path().to_path_buf(),
             soft_quota_mb: 1024,
@@ -690,7 +784,10 @@ mod tests {
             ..Default::default()
         };
 
-        let status = check_storage_quota(&config).expect("should check storage quota");
+        let status = match check_storage_quota(&config) {
+            Ok(s) => s,
+            Err(e) => panic!("should check storage quota: {e}"),
+        };
         assert!(matches!(status, QuotaStatus::Ok { .. }));
     }
 

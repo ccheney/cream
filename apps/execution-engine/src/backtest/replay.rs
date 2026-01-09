@@ -226,6 +226,11 @@ impl Default for ReplayProgress {
 /// Data source trait for loading candle data.
 pub trait CandleDataSource: Send + Sync {
     /// Load candles for an instrument within the date range.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the candle data cannot be loaded, for example
+    /// if the instrument is not found or the data source is unavailable.
     fn load_candles(
         &self,
         instrument_id: &str,
@@ -335,6 +340,11 @@ impl ReplayEngine {
     }
 
     /// Initialize the replay engine by loading data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if candle data cannot be loaded from the data source
+    /// for any of the configured instruments.
     pub fn initialize(&mut self) -> Result<(), ReplayError> {
         if self.initialized {
             return Ok(());
@@ -427,24 +437,26 @@ impl ReplayEngine {
     }
 
     /// Update progress metrics.
+    #[allow(clippy::cast_precision_loss)]
     fn update_progress(&mut self) {
         let elapsed = self.start_time.elapsed().as_secs_f64();
         self.progress.elapsed_seconds = elapsed;
 
+        // Precision loss acceptable for rate/progress calculations (approximate metrics)
         if elapsed > 0.0 {
             self.progress.events_per_second = self.progress.events_processed as f64 / elapsed;
         }
 
-        if let Some(total) = self.progress.events_total {
-            if total > 0 {
-                self.progress.progress_pct = self.progress.events_processed as f64 / total as f64;
+        if let Some(total) = self.progress.events_total
+            && total > 0
+        {
+            self.progress.progress_pct = self.progress.events_processed as f64 / total as f64;
 
-                // Estimate remaining time
-                let remaining = total.saturating_sub(self.progress.events_processed);
-                if self.progress.events_per_second > 0.0 {
-                    self.progress.eta_seconds =
-                        Some(remaining as f64 / self.progress.events_per_second);
-                }
+            // Estimate remaining time
+            let remaining = total.saturating_sub(self.progress.events_processed);
+            if self.progress.events_per_second > 0.0 {
+                self.progress.eta_seconds =
+                    Some(remaining as f64 / self.progress.events_per_second);
             }
         }
     }
@@ -456,6 +468,10 @@ impl ReplayEngine {
     }
 
     /// Reset the replay engine to start over.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if re-initialization fails due to data source errors.
     pub fn reset(&mut self) -> Result<(), ReplayError> {
         self.event_queue.clear();
         self.sequence_counter = 0;
@@ -470,11 +486,11 @@ impl Iterator for ReplayEngine {
     type Item = CandleEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.initialized {
-            if let Err(e) = self.initialize() {
-                warn!(error = %e, "Failed to initialize replay engine");
-                return None;
-            }
+        if !self.initialized
+            && let Err(e) = self.initialize()
+        {
+            warn!(error = %e, "Failed to initialize replay engine");
+            return None;
         }
 
         self.next_event()
@@ -583,6 +599,7 @@ pub struct SynchronizedReplay {
 
 impl SynchronizedReplay {
     /// Create a new synchronized replay wrapper.
+    #[must_use]
     pub const fn new(engine: ReplayEngine) -> Self {
         Self {
             engine,
@@ -595,11 +612,11 @@ impl SynchronizedReplay {
     ///
     /// Returns all candles at the same timestamp.
     pub fn next_batch(&mut self) -> Option<(String, Vec<CandleEvent>)> {
-        if !self.engine.initialized {
-            if let Err(e) = self.engine.initialize() {
-                warn!(error = %e, "Failed to initialize replay engine");
-                return None;
-            }
+        if !self.engine.initialized
+            && let Err(e) = self.engine.initialize()
+        {
+            warn!(error = %e, "Failed to initialize replay engine");
+            return None;
         }
 
         loop {
@@ -617,13 +634,10 @@ impl SynchronizedReplay {
                             // Same timestamp - add to buffer
                             self.buffer.push(event);
                         }
-                        Some(_) => {
+                        Some(current_ts) => {
                             // New timestamp - return buffered events and start new batch
-                            // Safety: current_timestamp is Some in this branch
-                            let result_timestamp = self
-                                .current_timestamp
-                                .take()
-                                .expect("current_timestamp set in this branch");
+                            let result_timestamp = current_ts.clone();
+                            self.current_timestamp = None;
                             let result_events = std::mem::take(&mut self.buffer);
 
                             self.current_timestamp = Some(event_timestamp);
@@ -635,12 +649,9 @@ impl SynchronizedReplay {
                 }
                 None => {
                     // No more events - return any remaining buffered events
-                    if !self.buffer.is_empty() {
-                        // Safety: current_timestamp is always set when buffer is non-empty
-                        let result_timestamp = self
-                            .current_timestamp
-                            .take()
-                            .expect("current_timestamp set when buffer is non-empty");
+                    if let Some(result_timestamp) = self.current_timestamp.take()
+                        && !self.buffer.is_empty()
+                    {
                         let result_events = std::mem::take(&mut self.buffer);
                         return Some((result_timestamp, result_events));
                     }
@@ -725,9 +736,9 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine
-            .initialize()
-            .expect("replay engine should initialize");
+        if let Err(e) = engine.initialize() {
+            panic!("replay engine should initialize: {e}");
+        }
 
         assert!(engine.initialized);
         assert_eq!(engine.progress().events_total, Some(6));
@@ -790,9 +801,9 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine
-            .initialize()
-            .expect("replay engine should initialize");
+        if let Err(e) = engine.initialize() {
+            panic!("replay engine should initialize: {e}");
+        }
 
         // Process some events
         engine.next_event();
@@ -856,16 +867,18 @@ mod tests {
         };
 
         let mut engine = ReplayEngine::new(config, source);
-        engine
-            .initialize()
-            .expect("replay engine should initialize");
+        if let Err(e) = engine.initialize() {
+            panic!("replay engine should initialize: {e}");
+        }
 
         // Consume some events
         engine.next_event();
         engine.next_event();
 
         // Reset
-        engine.reset().expect("replay engine should reset");
+        if let Err(e) = engine.reset() {
+            panic!("replay engine should reset: {e}");
+        }
 
         // Should be able to iterate again
         let events: Vec<CandleEvent> = engine.collect();
@@ -897,9 +910,11 @@ mod tests {
             ],
         );
 
-        let candles = source
-            .load_candles("AAPL", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
-            .expect("should load candles from in-memory source");
+        let candles =
+            match source.load_candles("AAPL", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z") {
+                Ok(c) => c,
+                Err(e) => panic!("should load candles from in-memory source: {e}"),
+            };
 
         assert_eq!(candles.len(), 2);
     }
@@ -918,6 +933,6 @@ mod tests {
         let progress = ReplayProgress::default();
 
         assert_eq!(progress.events_processed, 0);
-        assert_eq!(progress.progress_pct, 0.0);
+        assert!((progress.progress_pct - 0.0).abs() < f64::EPSILON);
     }
 }

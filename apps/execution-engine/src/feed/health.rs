@@ -220,6 +220,12 @@ impl FeedHealthTracker {
 
         latencies.sort();
 
+        // Precision/truncation acceptable for percentile index calculation
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         let index = ((latencies.len() as f64) * percentile / 100.0).ceil() as usize;
         let index = index.saturating_sub(1).min(latencies.len() - 1);
 
@@ -227,10 +233,12 @@ impl FeedHealthTracker {
     }
 
     /// Calculate messages per second.
+    #[allow(clippy::cast_precision_loss)]
     fn messages_per_second(&self) -> f64 {
         let elapsed = Instant::now().duration_since(self.window_start);
         let seconds = elapsed.as_secs_f64();
 
+        // Precision loss acceptable for rate calculation (approximate metric)
         if seconds > 0.0 {
             self.message_count as f64 / seconds
         } else {
@@ -240,17 +248,15 @@ impl FeedHealthTracker {
 
     /// Check if feed is stale.
     fn is_stale(&self) -> bool {
-        match self.last_message_time {
-            Some(last) => last.elapsed() > self.config.staleness_threshold,
-            None => true,
-        }
+        self.last_message_time.map_or(true, |last| {
+            last.elapsed() > self.config.staleness_threshold
+        })
     }
 
     /// Get the last message age.
     fn last_message_age(&self) -> Duration {
         self.last_message_time
-            .map(|t| t.elapsed())
-            .unwrap_or(Duration::MAX)
+            .map_or(Duration::MAX, |t| t.elapsed())
     }
 
     /// Get current health metrics snapshot.
@@ -284,6 +290,8 @@ impl FeedHealthTracker {
         }
 
         // More than 10% gaps in current window is concerning
+        // Precision loss acceptable for rate calculation (approximate metric)
+        #[allow(clippy::cast_precision_loss)]
         let gap_rate = if self.message_count > 0 {
             self.recent_gaps as f64 / self.message_count as f64
         } else {
@@ -298,13 +306,17 @@ impl FeedHealthTracker {
         let health_score = health_score.max(0.0);
         let is_healthy = issues.is_empty();
 
+        // Truncation acceptable: message age in ms fits in u64
+        #[allow(clippy::cast_possible_truncation)]
+        let last_message_age_ms = if last_message_age == Duration::MAX {
+            u64::MAX
+        } else {
+            last_message_age.as_millis() as u64
+        };
+
         FeedHealthMetrics {
             provider: self.provider.clone(),
-            last_message_age_ms: if last_message_age == Duration::MAX {
-                u64::MAX
-            } else {
-                last_message_age.as_millis() as u64
-            },
+            last_message_age_ms,
             messages_per_second,
             gap_count: self.gap_count,
             latency_p50_ms: latency_p50.as_secs_f64() * 1000.0,
@@ -365,7 +377,7 @@ mod tests {
         let config = FeedHealthConfig::default();
         assert_eq!(config.max_latency_p99, Duration::from_millis(100));
         assert_eq!(config.staleness_threshold, Duration::from_secs(5));
-        assert_eq!(config.min_messages_per_second, 1.0);
+        assert!((config.min_messages_per_second - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -509,7 +521,7 @@ mod tests {
         }
 
         let metrics = tracker.metrics();
-        assert_eq!(metrics.health_score, 1.0);
+        assert!((metrics.health_score - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
