@@ -116,7 +116,7 @@ CREAM_ENV=BACKTEST           # BACKTEST | PAPER | LIVE
 CREAM_BROKER=ALPACA          # Broker (default: ALPACA)
 
 # Database
-TURSO_DATABASE_URL=          # Turso/libsql URL (default: http://localhost:8080)
+TURSO_DATABASE_URL=          # Turso URL (default: http://localhost:8080)
 TURSO_AUTH_TOKEN=            # Turso Cloud auth token
 HELIX_URL=                   # HelixDB URL (default: http://localhost:6969)
 HELIX_HOST=                  # HelixDB host (alternative)
@@ -244,7 +244,7 @@ import { GenericContainer, StartedTestContainer } from "testcontainers";
 let container: StartedTestContainer;
 
 beforeAll(async () => {
-  container = await new GenericContainer("turso/libsql:latest")
+  container = await new GenericContainer("ghcr.io/tursodatabase/turso:latest")
     .withExposedPorts(8080)
     .start();
 
@@ -275,11 +275,11 @@ afterAll(async () => {
 - All trading decisions flow through the 8-agent consensus network
 - DecisionPlans require: action, direction, size with unit, stop-loss, take-profit
 
-## Database Limitations (Turso/libSQL)
+## Database Limitations (Turso)
 
 **IMPORTANT: Do NOT use CHECK constraints in SQL migrations.**
 
-Turso's libsql-server does not support CHECK constraints. Migrations using `CHECK (...)` will fail with:
+Turso does not support CHECK constraints. Migrations using `CHECK (...)` will fail with:
 ```
 SqliteError: prepare failed: Parse error: CHECK constraints are not supported yet
 ```

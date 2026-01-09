@@ -1278,7 +1278,7 @@ pytest                      # Python (in service directories)
 
 | Service | Image | Ports |
 |---------|-------|-------|
-| turso | ghcr.io/tursodatabase/libsql-server | 8080, 5001 |
+| turso | ghcr.io/tursodatabase/turso | 8080, 5001 |
 | prometheus | prom/prometheus:v3.4.0 | 9090 |
 | alertmanager | prom/alertmanager:v0.28.0 | 9093 |
 | otel-collector | otel/opentelemetry-collector-contrib:0.122.0 | 4317, 4318 |

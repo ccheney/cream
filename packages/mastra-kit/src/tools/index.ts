@@ -5,14 +5,14 @@
  * real-time data and perform calculations.
  *
  * Implementation status:
- * - getQuotes: Uses gRPC MarketDataService (falls back to mock if unavailable)
- * - getPortfolioState: Uses gRPC ExecutionService (falls back to mock if unavailable)
- * - getOptionChain: Uses gRPC MarketDataService (falls back to mock if unavailable)
- * - getGreeks: Uses gRPC MarketDataService GetOptionChain (falls back to mock if unavailable)
+ * - getQuotes: Uses gRPC MarketDataService
+ * - getPortfolioState: Uses gRPC ExecutionService or Alpaca broker client
+ * - getOptionChain: Uses gRPC MarketDataService
+ * - getGreeks: Uses gRPC MarketDataService GetOptionChain
  * - recalcIndicator: Uses gRPC for bars + @cream/indicators for calculation
- * - helixQuery: Uses @cream/helix HelixDB client (falls back to empty on error)
- * - economicCalendar: Uses FMP API for economic events (falls back to empty if unavailable)
- * - searchNews: Uses FMP API for news with keyword-based sentiment (falls back to empty if unavailable)
+ * - helixQuery: Uses @cream/helix HelixDB client
+ * - economicCalendar: Uses FMP API for economic events
+ * - searchNews: Uses FMP API for news with keyword-based sentiment
  *
  * @see docs/plans/05-agents.md
  */
@@ -23,10 +23,13 @@ import {
   createBrokerClient,
 } from "@cream/broker";
 import { type ExecutionContext, isBacktest } from "@cream/domain";
-
-// Note: gRPC clients are loaded dynamically to avoid module resolution issues in CI
-// where @cream/schema-gen subpath exports don't resolve correctly.
-// See: packages/domain/src/grpc/__tests__/grpc-client.test.ts for context.
+import {
+  createExecutionClient,
+  createMarketDataClient,
+  type ExecutionServiceClient,
+  GrpcError,
+  type MarketDataServiceClient,
+} from "@cream/domain/grpc";
 import { createHelixClientFromEnv, type HelixClient, HelixError } from "@cream/helix";
 import {
   type Candle,
@@ -145,48 +148,19 @@ export interface HelixQueryResult {
 const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50052";
 const DEFAULT_EXECUTION_URL = process.env.EXECUTION_SERVICE_URL ?? "http://localhost:50051";
 
-// Using 'any' for client types since we use dynamic imports to avoid CI module resolution issues
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
-let marketDataClient: any = null;
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
-let executionClient: any = null;
-// biome-ignore lint/suspicious/noExplicitAny: Dynamic import types
-let grpcModule: any = null;
+let marketDataClient: MarketDataServiceClient | null = null;
+let executionClient: ExecutionServiceClient | null = null;
 
-async function getGrpcModule() {
-  if (!grpcModule) {
-    grpcModule = await import("@cream/domain/grpc");
-  }
-  return grpcModule;
-}
-
-/**
- * Check if an error is a GrpcError with UNIMPLEMENTED code.
- * Used instead of instanceof since gRPC module is dynamically imported.
- */
-function isGrpcUnimplementedError(error: unknown): boolean {
-  return (
-    error !== null &&
-    typeof error === "object" &&
-    "name" in error &&
-    error.name === "GrpcError" &&
-    "code" in error &&
-    error.code === "UNIMPLEMENTED"
-  );
-}
-
-async function getMarketDataClient() {
+function getMarketDataClient(): MarketDataServiceClient {
   if (!marketDataClient) {
-    const grpc = await getGrpcModule();
-    marketDataClient = grpc.createMarketDataClient(DEFAULT_MARKET_DATA_URL);
+    marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
   }
   return marketDataClient;
 }
 
-async function getExecutionClient() {
+function getExecutionClient(): ExecutionServiceClient {
   if (!executionClient) {
-    const grpc = await getGrpcModule();
-    executionClient = grpc.createExecutionClient(DEFAULT_EXECUTION_URL);
+    executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
   }
   return executionClient;
 }
@@ -226,21 +200,6 @@ function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
   return brokerClient;
 }
 
-/**
- * Generate mock quote for a symbol
- */
-function createMockQuote(symbol: string): Quote {
-  const basePrice = 100 + Math.random() * 100;
-  return {
-    symbol,
-    bid: basePrice - 0.02,
-    ask: basePrice + 0.03,
-    last: basePrice,
-    volume: Math.floor(Math.random() * 1000000),
-    timestamp: new Date().toISOString(),
-  };
-}
-
 // ============================================
 // Tool Implementations
 // ============================================
@@ -248,73 +207,49 @@ function createMockQuote(symbol: string): Quote {
 /**
  * Get real-time quotes for instruments
  *
- * Uses gRPC MarketDataService when available, falls back to mock data.
+ * Uses gRPC MarketDataService.
  *
  * @param ctx - ExecutionContext
  * @param instruments - Array of instrument symbols
  * @returns Array of quotes
+ * @throws Error if gRPC call fails or backtest mode is used
  */
 export async function getQuotes(ctx: ExecutionContext, instruments: string[]): Promise<Quote[]> {
-  // In backtest mode, always return mock data for performance
   if (isBacktest(ctx)) {
-    return instruments.map(createMockQuote);
+    throw new Error("getQuotes is not available in BACKTEST mode - use historical data instead");
   }
 
-  try {
-    const client = await getMarketDataClient();
-    const response = await client.getSnapshot({
-      symbols: instruments,
-      includeBars: false,
-      barTimeframes: [],
-    });
+  const client = getMarketDataClient();
+  const response = await client.getSnapshot({
+    symbols: instruments,
+    includeBars: false,
+    barTimeframes: [],
+  });
 
-    // Map protobuf quotes to tool Quote format
-    const quotes: Quote[] = [];
-    for (const symbolSnapshot of response.data.snapshot?.symbols ?? []) {
-      const quote = symbolSnapshot.quote;
-      if (quote) {
-        quotes.push({
-          symbol: quote.symbol,
-          bid: quote.bid,
-          ask: quote.ask,
-          last: quote.last,
-          volume: Number(quote.volume),
-          timestamp: quote.timestamp?.toDate?.().toISOString() ?? new Date().toISOString(),
-        });
-      }
+  // Map protobuf quotes to tool Quote format
+  const quotes: Quote[] = [];
+  for (const symbolSnapshot of response.data.snapshot?.symbols ?? []) {
+    const quote = symbolSnapshot.quote;
+    if (quote) {
+      quotes.push({
+        symbol: quote.symbol,
+        bid: quote.bid,
+        ask: quote.ask,
+        last: quote.last,
+        volume: Number(quote.volume),
+        timestamp: quote.timestamp?.toDate?.().toISOString() ?? new Date().toISOString(),
+      });
     }
-
-    // Return mock for any missing symbols
-    const foundSymbols = new Set(quotes.map((q) => q.symbol));
-    for (const symbol of instruments) {
-      if (!foundSymbols.has(symbol)) {
-        quotes.push(createMockQuote(symbol));
-      }
-    }
-
-    return quotes;
-  } catch (error) {
-    // Fall back to mock data if gRPC fails
-    if (isGrpcUnimplementedError(error)) {
-      // Expected during development - silently fall back
-      return instruments.map(createMockQuote);
-    }
-    // Unexpected errors - silently fall back to mock data
-    return instruments.map(createMockQuote);
   }
-}
 
-/**
- * Create mock portfolio state for backtest/fallback
- */
-function createMockPortfolioState(): PortfolioStateResponse {
-  return {
-    positions: [],
-    buyingPower: 100000,
-    totalEquity: 100000,
-    dayPnL: 0,
-    totalPnL: 0,
-  };
+  // Verify all requested symbols were returned
+  const foundSymbols = new Set(quotes.map((q) => q.symbol));
+  const missingSymbols = instruments.filter((s) => !foundSymbols.has(s));
+  if (missingSymbols.length > 0) {
+    throw new Error(`Missing quotes for symbols: ${missingSymbols.join(", ")}`);
+  }
+
+  return quotes;
 }
 
 /**
@@ -323,20 +258,19 @@ function createMockPortfolioState(): PortfolioStateResponse {
  * Priority order:
  * 1. gRPC ExecutionService (when Rust backend is running)
  * 2. Alpaca broker client (direct API access)
- * 3. Mock data (for development/testing)
  *
  * @param ctx - ExecutionContext
  * @returns Portfolio state including positions and buying power
+ * @throws Error if gRPC call fails and broker is unavailable, or in backtest mode
  */
 export async function getPortfolioState(ctx: ExecutionContext): Promise<PortfolioStateResponse> {
-  // In backtest mode, always return mock data for performance
   if (isBacktest(ctx)) {
-    return createMockPortfolioState();
+    throw new Error("getPortfolioState is not available in BACKTEST mode");
   }
 
   // Try gRPC first
   try {
-    const client = await getExecutionClient();
+    const client = getExecutionClient();
 
     // Fetch account state and positions in parallel
     const [accountResponse, positionsResponse] = await Promise.all([
@@ -349,8 +283,7 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 
     // Calculate total unrealized P&L
     let totalPnL = 0;
-    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
-    const mappedPositions: PortfolioPosition[] = positions.map((pos: any) => {
+    const mappedPositions: PortfolioPosition[] = positions.map((pos) => {
       totalPnL += pos.unrealizedPnl ?? 0;
       return {
         symbol: pos.instrument?.instrumentId ?? "",
@@ -369,178 +302,138 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
       totalPnL,
     };
   } catch (error) {
-    // gRPC failed - try broker client
-    if (isGrpcUnimplementedError(error)) {
+    // gRPC failed - try broker client as fallback
+    if (error instanceof GrpcError && error.code === "UNAVAILABLE") {
       return getPortfolioStateFromBroker(ctx);
     }
-    // Other gRPC errors - also try broker
-    return getPortfolioStateFromBroker(ctx);
+    throw error;
   }
 }
 
 /**
  * Get portfolio state directly from Alpaca broker API
+ * @throws Error if broker credentials are not configured or API call fails
  */
 async function getPortfolioStateFromBroker(ctx: ExecutionContext): Promise<PortfolioStateResponse> {
   const client = getBrokerClient(ctx);
   if (!client) {
-    // No broker credentials - fall back to mock data
-    return createMockPortfolioState();
+    throw new Error("Broker credentials not configured (ALPACA_KEY, ALPACA_SECRET required)");
   }
 
-  try {
-    // Fetch account and positions in parallel
-    const [account, positions] = await Promise.all([client.getAccount(), client.getPositions()]);
+  // Fetch account and positions in parallel
+  const [account, positions] = await Promise.all([client.getAccount(), client.getPositions()]);
 
-    // Map positions to our format
-    let totalPnL = 0;
-    const mappedPositions: PortfolioPosition[] = positions.map((pos: BrokerPosition) => {
-      const unrealizedPnL = pos.unrealizedPl;
-      totalPnL += unrealizedPnL;
-      return {
-        symbol: pos.symbol,
-        quantity: pos.qty,
-        averageCost: pos.avgEntryPrice,
-        marketValue: pos.marketValue,
-        unrealizedPnL,
-      };
-    });
-
+  // Map positions to our format
+  let totalPnL = 0;
+  const mappedPositions: PortfolioPosition[] = positions.map((pos: BrokerPosition) => {
+    const unrealizedPnL = pos.unrealizedPl;
+    totalPnL += unrealizedPnL;
     return {
-      positions: mappedPositions,
-      buyingPower: account.buyingPower,
-      totalEquity: account.equity,
-      dayPnL: account.equity - account.lastEquity,
-      totalPnL,
+      symbol: pos.symbol,
+      quantity: pos.qty,
+      averageCost: pos.avgEntryPrice,
+      marketValue: pos.marketValue,
+      unrealizedPnL,
     };
-  } catch {
-    // Broker failed - fall back to mock data
-    return createMockPortfolioState();
-  }
-}
+  });
 
-/**
- * Create mock option chain for backtest/fallback
- */
-function createMockOptionChain(underlying: string): OptionChainResponse {
   return {
-    underlying,
-    expirations: [],
+    positions: mappedPositions,
+    buyingPower: account.buyingPower,
+    totalEquity: account.equity,
+    dayPnL: account.equity - account.lastEquity,
+    totalPnL,
   };
 }
 
 /**
  * Get option chain for an underlying
  *
- * Uses gRPC MarketDataService when available, falls back to mock data.
+ * Uses gRPC MarketDataService.
  *
  * @param ctx - ExecutionContext
  * @param underlying - Underlying symbol
  * @returns Option chain with expirations and strikes
+ * @throws Error if gRPC call fails or backtest mode is used
  */
 export async function getOptionChain(
   ctx: ExecutionContext,
   underlying: string
 ): Promise<OptionChainResponse> {
-  // In backtest mode, always return mock data for performance
   if (isBacktest(ctx)) {
-    return createMockOptionChain(underlying);
+    throw new Error("getOptionChain is not available in BACKTEST mode");
   }
 
-  try {
-    const client = await getMarketDataClient();
-    const response = await client.getOptionChain({
-      underlying,
-    });
+  const client = getMarketDataClient();
+  const response = await client.getOptionChain({
+    underlying,
+  });
 
-    const chain = response.data.chain;
-    if (!chain || !chain.options || chain.options.length === 0) {
-      return createMockOptionChain(underlying);
+  const chain = response.data.chain;
+  if (!chain || !chain.options || chain.options.length === 0) {
+    throw new Error(`No options found for underlying: ${underlying}`);
+  }
+
+  // Group options by expiration
+  const expirationMap = new Map<string, OptionExpiration>();
+
+  for (const opt of chain.options) {
+    const contract = opt.contract;
+    const quote = opt.quote;
+    if (!contract || !quote) {
+      continue;
     }
 
-    // Group options by expiration
-    const expirationMap = new Map<string, OptionExpiration>();
+    const expiration = contract.expiration ?? ""; // Already in YYYY-MM-DD format
+    const optionType = contract.optionType === 1 ? "call" : "put"; // 1 = CALL, 2 = PUT
 
-    for (const opt of chain.options) {
-      const contract = opt.contract;
-      const quote = opt.quote;
-      if (!contract || !quote) {
-        continue;
-      }
+    // Construct a symbol from underlying, expiration, type, strike
+    const typeChar = optionType === "call" ? "C" : "P";
+    const expirationShort = expiration.replace(/-/g, "").slice(2); // YYMMDD
+    const strikeStr = Math.floor(contract.strike * 1000)
+      .toString()
+      .padStart(8, "0");
+    const constructedSymbol = `${contract.underlying.padEnd(6)}${expirationShort}${typeChar}${strikeStr}`;
 
-      const expiration = contract.expiration ?? ""; // Already in YYYY-MM-DD format
-      const optionType = contract.optionType === 1 ? "call" : "put"; // 1 = CALL, 2 = PUT
-
-      // Construct a symbol from underlying, expiration, type, strike
-      const typeChar = optionType === "call" ? "C" : "P";
-      const expirationShort = expiration.replace(/-/g, "").slice(2); // YYMMDD
-      const strikeStr = Math.floor(contract.strike * 1000)
-        .toString()
-        .padStart(8, "0");
-      const constructedSymbol = `${contract.underlying.padEnd(6)}${expirationShort}${typeChar}${strikeStr}`;
-
-      const optContract: OptionContract = {
-        symbol: constructedSymbol,
-        strike: contract.strike,
-        expiration,
-        type: optionType,
-        bid: quote.bid,
-        ask: quote.ask,
-        last: quote.last,
-        volume: Number(quote.volume),
-        openInterest: opt.openInterest ?? 0,
-      };
-
-      let expData = expirationMap.get(expiration);
-      if (!expData) {
-        expData = { expiration, calls: [], puts: [] };
-        expirationMap.set(expiration, expData);
-      }
-
-      if (optionType === "call") {
-        expData.calls.push(optContract);
-      } else {
-        expData.puts.push(optContract);
-      }
-    }
-
-    // Sort expirations and convert to array
-    const sortedExpirations = Array.from(expirationMap.values()).sort((a, b) =>
-      a.expiration.localeCompare(b.expiration)
-    );
-
-    // Sort calls/puts by strike
-    for (const exp of sortedExpirations) {
-      exp.calls.sort((a, b) => a.strike - b.strike);
-      exp.puts.sort((a, b) => a.strike - b.strike);
-    }
-
-    return {
-      underlying,
-      expirations: sortedExpirations,
+    const optContract: OptionContract = {
+      symbol: constructedSymbol,
+      strike: contract.strike,
+      expiration,
+      type: optionType,
+      bid: quote.bid,
+      ask: quote.ask,
+      last: quote.last,
+      volume: Number(quote.volume),
+      openInterest: opt.openInterest ?? 0,
     };
-  } catch (error) {
-    // Fall back to mock data if gRPC fails
-    if (isGrpcUnimplementedError(error)) {
-      // Expected during development - silently fall back
-      return createMockOptionChain(underlying);
-    }
-    // Unexpected errors - silently fall back to mock data
-    return createMockOptionChain(underlying);
-  }
-}
 
-/**
- * Create mock Greeks for backtest/fallback
- */
-function createMockGreeks(): Greeks {
+    let expData = expirationMap.get(expiration);
+    if (!expData) {
+      expData = { expiration, calls: [], puts: [] };
+      expirationMap.set(expiration, expData);
+    }
+
+    if (optionType === "call") {
+      expData.calls.push(optContract);
+    } else {
+      expData.puts.push(optContract);
+    }
+  }
+
+  // Sort expirations and convert to array
+  const sortedExpirations = Array.from(expirationMap.values()).sort((a, b) =>
+    a.expiration.localeCompare(b.expiration)
+  );
+
+  // Sort calls/puts by strike
+  for (const exp of sortedExpirations) {
+    exp.calls.sort((a, b) => a.strike - b.strike);
+    exp.puts.sort((a, b) => a.strike - b.strike);
+  }
+
   return {
-    delta: 0.5,
-    gamma: 0.05,
-    theta: -0.02,
-    vega: 0.15,
-    rho: 0.01,
-    iv: 0.25,
+    underlying,
+    expirations: sortedExpirations,
   };
 }
 
@@ -592,95 +485,70 @@ function parseOSISymbol(
  * Get Greeks for an option contract
  *
  * Uses gRPC MarketDataService GetOptionChain to find the specific contract
- * and extract its Greeks. Falls back to mock data if unavailable.
+ * and extract its Greeks.
  *
  * @param ctx - ExecutionContext
  * @param contractSymbol - Option contract symbol (OSI format)
  * @returns Greeks (delta, gamma, theta, vega, rho, IV)
+ * @throws Error if contract not found, invalid symbol, or gRPC fails
  */
 export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): Promise<Greeks> {
-  // In backtest mode, always return mock data for performance
   if (isBacktest(ctx)) {
-    return createMockGreeks();
+    throw new Error("getGreeks is not available in BACKTEST mode");
   }
 
   // Parse the OSI symbol to extract components
   const parsed = parseOSISymbol(contractSymbol);
   if (!parsed) {
-    return createMockGreeks();
+    throw new Error(`Invalid OSI symbol format: ${contractSymbol}`);
   }
 
-  try {
-    const client = await getMarketDataClient();
+  const client = getMarketDataClient();
 
-    // Get option chain for the underlying
-    const response = await client.getOptionChain({
-      underlying: parsed.underlying,
-    });
+  // Get option chain for the underlying
+  const response = await client.getOptionChain({
+    underlying: parsed.underlying,
+  });
 
-    const chain = response.data.chain;
-    if (!chain || !chain.options) {
-      return createMockGreeks();
-    }
-
-    // Find the specific contract by matching underlying, expiration, type, and strike
-    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
-    const option = chain.options.find((opt: any) => {
-      const contract = opt.contract;
-      if (!contract) {
-        return false;
-      }
-
-      const matchesUnderlying =
-        contract.underlying.toUpperCase().trim() === parsed.underlying.toUpperCase();
-      const matchesExpiration = contract.expiration === parsed.expiration;
-      const matchesType =
-        (parsed.type === "call" && contract.optionType === 1) ||
-        (parsed.type === "put" && contract.optionType === 2);
-      // Allow small tolerance for strike matching (floating point)
-      const matchesStrike = Math.abs(contract.strike - parsed.strike) < 0.01;
-
-      return matchesUnderlying && matchesExpiration && matchesType && matchesStrike;
-    });
-
-    if (!option) {
-      return createMockGreeks();
-    }
-
-    return {
-      delta: option.delta ?? 0.5,
-      gamma: option.gamma ?? 0.05,
-      theta: option.theta ?? -0.02,
-      vega: option.vega ?? 0.15,
-      rho: option.rho ?? 0.01,
-      iv: option.impliedVolatility ?? 0.25,
-    };
-  } catch (error) {
-    // Fall back to mock data if gRPC fails
-    if (isGrpcUnimplementedError(error)) {
-      // Expected during development - silently fall back
-      return createMockGreeks();
-    }
-    // Unexpected errors - silently fall back to mock data
-    return createMockGreeks();
+  const chain = response.data.chain;
+  if (!chain || !chain.options) {
+    throw new Error(`No option chain found for underlying: ${parsed.underlying}`);
   }
-}
 
-/**
- * Create mock indicator result for backtest/fallback
- */
-function createMockIndicatorResult(indicator: string, symbol: string): IndicatorResult {
+  // Find the specific contract by matching underlying, expiration, type, and strike
+  const option = chain.options.find((opt) => {
+    const contract = opt.contract;
+    if (!contract) {
+      return false;
+    }
+
+    const matchesUnderlying =
+      contract.underlying.toUpperCase().trim() === parsed.underlying.toUpperCase();
+    const matchesExpiration = contract.expiration === parsed.expiration;
+    const matchesType =
+      (parsed.type === "call" && contract.optionType === 1) ||
+      (parsed.type === "put" && contract.optionType === 2);
+    // Allow small tolerance for strike matching (floating point)
+    const matchesStrike = Math.abs(contract.strike - parsed.strike) < 0.01;
+
+    return matchesUnderlying && matchesExpiration && matchesType && matchesStrike;
+  });
+
+  if (!option) {
+    throw new Error(`Contract not found: ${contractSymbol}`);
+  }
+
+  if (option.delta === undefined || option.gamma === undefined) {
+    throw new Error(`Greeks not available for contract: ${contractSymbol}`);
+  }
+
   return {
-    indicator,
-    symbol,
-    values: [50, 51, 52, 53, 54],
-    timestamps: [
-      new Date(Date.now() - 4 * 3600000).toISOString(),
-      new Date(Date.now() - 3 * 3600000).toISOString(),
-      new Date(Date.now() - 2 * 3600000).toISOString(),
-      new Date(Date.now() - 1 * 3600000).toISOString(),
-      new Date().toISOString(),
-    ],
+    delta: option.delta,
+    gamma: option.gamma,
+    theta: option.theta ?? 0,
+    vega: option.vega ?? 0,
+    rho: option.rho ?? 0,
+    iv: option.impliedVolatility ?? 0,
   };
 }
 
@@ -809,7 +677,7 @@ export async function recalcIndicator(
   }
 
   try {
-    const client = await getMarketDataClient();
+    const client = getMarketDataClient();
 
     // Fetch bars from MarketDataService
     // Request 1-hour bars (timeframe 60) for the symbol
@@ -821,8 +689,7 @@ export async function recalcIndicator(
     });
 
     // Extract bars and convert to Candle format
-    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
-    const symbolSnapshot = response.data.snapshot?.symbols?.find((s: any) => s.symbol === symbol);
+    const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
     const bars = symbolSnapshot?.bars ?? [];
 
     if (bars.length === 0) {
@@ -830,8 +697,7 @@ export async function recalcIndicator(
     }
 
     // Convert protobuf bars to Candle format
-    // biome-ignore lint/suspicious/noExplicitAny: gRPC response type
-    const candles: Candle[] = bars.map((bar: any) => ({
+    const candles: Candle[] = bars.map((bar) => ({
       timestamp: bar.timestamp?.toDate?.()?.getTime() ?? Date.now(),
       open: bar.open,
       high: bar.high,
@@ -854,7 +720,7 @@ export async function recalcIndicator(
     };
   } catch (error) {
     // Fall back to mock data if gRPC fails
-    if (isGrpcUnimplementedError(error)) {
+    if (error instanceof GrpcError && error.code === "UNIMPLEMENTED") {
       // Expected during development - silently fall back
       return createMockIndicatorResult(indicator, symbol);
     }

@@ -120,7 +120,7 @@ async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
     process.exit(1);
   }
 
-  // Use libsql HTTP API for simplicity in CI
+  // Use Turso HTTP API for simplicity in CI
   const url = new URL(dbUrl.replace("libsql://", "https://"));
   url.pathname = "/v2/pipeline";
 

@@ -59,7 +59,7 @@ The system uses an 8-agent network with parallel and sequential execution phases
 | **Agent Orchestration** | Mastra | 0.24+ |
 | **LLM Provider** | Google Gemini | gemini-3-pro-preview, gemini-3-flash-preview |
 | **Graph + Vector DB** | HelixDB | HNSW indexing, 3072D embeddings |
-| **Relational DB** | Turso (SQLite) | libsql-server |
+| **Relational DB** | Turso (SQLite) | turso |
 | **Serialization** | Protobuf (Buf CLI) + Zod v4 | - |
 | **Monorepo** | Turborepo | 2.7+ |
 | **Linting** | Biome (TS), Clippy (Rust), Ruff (Python) | - |

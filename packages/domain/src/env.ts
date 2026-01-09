@@ -62,7 +62,7 @@ const envSchema = z.object({
   TURSO_DATABASE_URL: urlSchema
     .optional()
     .default("http://localhost:8080")
-    .describe("Turso/libsql database URL"),
+    .describe("Turso database URL"),
   TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
   HELIX_URL: urlSchema.optional().default("http://localhost:6969").describe("HelixDB server URL"),
   // Alternative HelixDB config (host:port vs URL)
@@ -387,7 +387,7 @@ export function getEnvVarDocumentation(): Array<{
 }> {
   return [
     { name: "CREAM_BROKER", required: "no", description: "Broker to use (default: ALPACA)" },
-    { name: "TURSO_DATABASE_URL", required: "no", description: "Turso/libsql database URL" },
+    { name: "TURSO_DATABASE_URL", required: "no", description: "Turso database URL" },
     { name: "TURSO_AUTH_TOKEN", required: "no", description: "Turso Cloud authentication token" },
     { name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
     { name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },

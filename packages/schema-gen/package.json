@@ -5,63 +5,56 @@
   "type": "module",
   "description": "Generated code from Protobuf schemas",
   "scripts": {
-    "build": "test -f ts/cream/v1/execution_pb.ts || (echo 'Missing generated files!' && exit 1)",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
     "test": "echo 'No tests for generated files'"
   },
   "exports": {
     "./cream/v1/common": {
-      "bun": "./ts/cream/v1/common_pb.ts",
-      "types": "./ts/cream/v1/common_pb.ts",
-      "import": "./ts/cream/v1/common_pb.ts",
-      "default": "./ts/cream/v1/common_pb.ts"
+      "types": "./dist/cream/v1/common_pb.d.ts",
+      "import": "./dist/cream/v1/common_pb.js",
+      "default": "./dist/cream/v1/common_pb.js"
     },
     "./cream/v1/decision": {
-      "bun": "./ts/cream/v1/decision_pb.ts",
-      "types": "./ts/cream/v1/decision_pb.ts",
-      "import": "./ts/cream/v1/decision_pb.ts",
-      "default": "./ts/cream/v1/decision_pb.ts"
+      "types": "./dist/cream/v1/decision_pb.d.ts",
+      "import": "./dist/cream/v1/decision_pb.js",
+      "default": "./dist/cream/v1/decision_pb.js"
     },
     "./cream/v1/events": {
-      "bun": "./ts/cream/v1/events_pb.ts",
-      "types": "./ts/cream/v1/events_pb.ts",
-      "import": "./ts/cream/v1/events_pb.ts",
-      "default": "./ts/cream/v1/events_pb.ts"
+      "types": "./dist/cream/v1/events_pb.d.ts",
+      "import": "./dist/cream/v1/events_pb.js",
+      "default": "./dist/cream/v1/events_pb.js"
     },
     "./cream/v1/execution": {
-      "bun": "./ts/cream/v1/execution_pb.ts",
-      "types": "./ts/cream/v1/execution_pb.ts",
-      "import": "./ts/cream/v1/execution_pb.ts",
-      "default": "./ts/cream/v1/execution_pb.ts"
+      "types": "./dist/cream/v1/execution_pb.d.ts",
+      "import": "./dist/cream/v1/execution_pb.js",
+      "default": "./dist/cream/v1/execution_pb.js"
     },
     "./cream/v1/execution_connect": {
-      "bun": "./ts/cream/v1/execution_connect.ts",
-      "types": "./ts/cream/v1/execution_connect.ts",
-      "import": "./ts/cream/v1/execution_connect.ts",
-      "default": "./ts/cream/v1/execution_connect.ts"
+      "types": "./dist/cream/v1/execution_connect.d.ts",
+      "import": "./dist/cream/v1/execution_connect.js",
+      "default": "./dist/cream/v1/execution_connect.js"
     },
     "./cream/v1/market_snapshot": {
-      "bun": "./ts/cream/v1/market_snapshot_pb.ts",
-      "types": "./ts/cream/v1/market_snapshot_pb.ts",
-      "import": "./ts/cream/v1/market_snapshot_pb.ts",
-      "default": "./ts/cream/v1/market_snapshot_pb.ts"
+      "types": "./dist/cream/v1/market_snapshot_pb.d.ts",
+      "import": "./dist/cream/v1/market_snapshot_pb.js",
+      "default": "./dist/cream/v1/market_snapshot_pb.js"
     },
     "./cream/v1/market_snapshot_connect": {
-      "bun": "./ts/cream/v1/market_snapshot_connect.ts",
-      "types": "./ts/cream/v1/market_snapshot_connect.ts",
-      "import": "./ts/cream/v1/market_snapshot_connect.ts",
-      "default": "./ts/cream/v1/market_snapshot_connect.ts"
+      "types": "./dist/cream/v1/market_snapshot_connect.d.ts",
+      "import": "./dist/cream/v1/market_snapshot_connect.js",
+      "default": "./dist/cream/v1/market_snapshot_connect.js"
     },
     "./arrow/flight/protocol": {
-      "bun": "./ts/arrow/flight/protocol/flight_pb.ts",
-      "types": "./ts/arrow/flight/protocol/flight_pb.ts",
-      "import": "./ts/arrow/flight/protocol/flight_pb.ts",
-      "default": "./ts/arrow/flight/protocol/flight_pb.ts"
+      "types": "./dist/arrow/flight/protocol/flight_pb.d.ts",
+      "import": "./dist/arrow/flight/protocol/flight_pb.js",
+      "default": "./dist/arrow/flight/protocol/flight_pb.js"
     },
     "./arrow/flight/protocol_connect": {
-      "bun": "./ts/arrow/flight/protocol/flight_connect.ts",
-      "types": "./ts/arrow/flight/protocol/flight_connect.ts",
-      "import": "./ts/arrow/flight/protocol/flight_connect.ts",
-      "default": "./ts/arrow/flight/protocol/flight_connect.ts"
+      "types": "./dist/arrow/flight/protocol/flight_connect.d.ts",
+      "import": "./dist/arrow/flight/protocol/flight_connect.js",
+      "default": "./dist/arrow/flight/protocol/flight_connect.js"
     }
   },
   "dependencies": {
@@ -69,6 +62,6 @@
     "@connectrpc/connect": "^1.6.1"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260106.1"
+    "typescript": "^5.7.2"
   }
 }

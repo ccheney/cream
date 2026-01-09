@@ -3,7 +3,7 @@
 # This file configures local development infrastructure.
 #
 # Services:
-# - turso: SQLite-compatible database (libsql-server)
+# - turso: SQLite-compatible database
 # - helix: Graph + Vector database (HelixDB)
 # - prometheus: Metrics collection and alerting
 # - otel-collector: OpenTelemetry trace/metrics collection
@@ -21,9 +21,9 @@
 
 services:
   # Turso - SQLite-compatible database with HTTP protocol
-  # https://github.com/tursodatabase/libsql
+  # https://github.com/tursodatabase/turso
   turso:
-    image: ghcr.io/tursodatabase/libsql-server:latest
+    image: ghcr.io/tursodatabase/turso:latest
     container_name: cream-turso
     ports:
       - "8080:8080"     # HTTP endpoint for libsql client
