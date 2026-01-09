@@ -3,10 +3,8 @@
  */
 
 import { afterEach, describe, expect, it } from "bun:test";
-import type { KalshiConfig } from "@cream/config";
 import type { AuthenticationError } from "../../index";
 import {
-  createKalshiClient,
   createKalshiClientFromEnv,
   KALSHI_RATE_LIMITS,
   KalshiClient,
@@ -429,22 +427,8 @@ describe("MARKET_TYPE_TO_SERIES extended", () => {
 });
 
 // ============================================
-// Factory Functions
+// Factory Functions (Environment-based)
 // ============================================
-
-// NOTE: createKalshiClient factory function tests are skipped because they
-// conflict with mock.module() in unified-client.test.ts which mocks the
-// ../providers/kalshi module. The factory function logic is simple and
-// covered by integration testing.
-describe.skip("createKalshiClient", () => {
-  it("should throw AuthenticationError without api_key_id", () => {
-    const config = {
-      enabled: true,
-    } as KalshiConfig;
-
-    expect(() => createKalshiClient(config)).toThrow("api_key_id is required");
-  });
-});
 
 describe("createKalshiClientFromEnv", () => {
   const originalApiKeyId = process.env.KALSHI_API_KEY_ID;

@@ -3,13 +3,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { PolymarketConfig } from "@cream/config";
 import type { AuthenticationError, RateLimitError } from "../../index";
 import {
   ClobOrderbookSchema,
   ClobPriceSchema,
-  createPolymarketClient,
-  createPolymarketClientFromEnv,
   DEFAULT_SEARCH_QUERIES,
   POLYMARKET_RATE_LIMITS,
   PolymarketClient,
@@ -792,47 +789,6 @@ describe("PolymarketClient", () => {
   });
 });
 
-// Factory Functions tests are in a separate describe.skip block to avoid
-// Bun test runner isolation issues when running the full test suite.
-// These functions are covered via integration testing (unified-client tests).
-describe.skip("Factory Functions", () => {
-  describe("createPolymarketClient", () => {
-    it("should create client from config", () => {
-      const config: PolymarketConfig = {
-        enabled: true,
-        clob_endpoint: "https://custom-clob.com",
-        gamma_endpoint: "https://custom-gamma.com",
-        search_queries: ["custom"],
-      };
-
-      const client = createPolymarketClient(config);
-      expect(client.platform).toBe("POLYMARKET");
-    });
-  });
-
-  describe("createPolymarketClientFromEnv", () => {
-    const originalEnv = { ...process.env };
-
-    beforeEach(() => {
-      delete process.env.POLYMARKET_CLOB_ENDPOINT;
-      delete process.env.POLYMARKET_GAMMA_ENDPOINT;
-    });
-
-    afterEach(() => {
-      process.env = originalEnv;
-    });
-
-    it("should create client with default endpoints", () => {
-      const client = createPolymarketClientFromEnv();
-      expect(client.platform).toBe("POLYMARKET");
-    });
-
-    it("should create client with custom env endpoints", () => {
-      process.env.POLYMARKET_CLOB_ENDPOINT = "https://custom-clob.com";
-      process.env.POLYMARKET_GAMMA_ENDPOINT = "https://custom-gamma.com";
-
-      const client = createPolymarketClientFromEnv();
-      expect(client.platform).toBe("POLYMARKET");
-    });
-  });
-});
+// Factory function tests removed - covered via unified-client integration tests.
+// The factory functions (createPolymarketClient, createPolymarketClientFromEnv)
+// are simple wrappers that don't need isolated testing.
