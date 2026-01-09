@@ -68,7 +68,7 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 // ============================================
 
 export default function FeedPage() {
-  const { isConnected, lastMessage } = useWebSocket();
+  const { connected, lastMessage } = useWebSocket();
   const { stats, recordEvent } = useFeedStats();
   const [events, setEvents] = useState<NormalizedEvent[]>([]);
   const [filters, setFilters] = useState<Record<EventType, boolean>>(() => {
@@ -146,11 +146,11 @@ export default function FeedPage() {
           <div className="flex items-center gap-1">
             <div
               className={`w-2 h-2 rounded-full ${
-                isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                connected ? "bg-green-500 animate-pulse" : "bg-red-500"
               }`}
             />
             <span className="text-sm text-cream-500 dark:text-cream-400">
-              {isConnected ? "Live" : "Disconnected"}
+              {connected ? "Live" : "Disconnected"}
             </span>
           </div>
           <button
@@ -259,7 +259,7 @@ export default function FeedPage() {
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-cream-400">
-              {isConnected ? "Waiting for events..." : "Connect to receive events"}
+              {connected ? "Waiting for events..." : "Connect to receive events"}
             </div>
           )}
         </div>

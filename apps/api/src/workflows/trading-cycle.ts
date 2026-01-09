@@ -23,7 +23,11 @@ import {
   withAgentTimeout,
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
-
+import {
+  FIXTURE_TIMESTAMP,
+  getCandleFixtures,
+  getSnapshotFixture,
+} from "../../fixtures/market/index.js";
 import {
   type AgentConfigEntry,
   type AgentContext,
@@ -38,7 +42,12 @@ import {
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
-import { getRegimeLabelsRepo, getRuntimeConfigService, type RuntimeEnvironment } from "../db.js";
+import {
+  getHelixClient,
+  getRegimeLabelsRepo,
+  getRuntimeConfigService,
+  type RuntimeEnvironment,
+} from "../db.js";
 
 // ============================================
 // Types
@@ -71,10 +80,37 @@ export interface WorkflowInput {
   externalContext?: ExternalContext;
 }
 
+/**
+ * Candle data structure (OHLCV).
+ */
+export interface CandleData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/**
+ * Quote data structure with bid/ask prices.
+ */
+export interface QuoteData {
+  bid: number;
+  ask: number;
+  bidSize: number;
+  askSize: number;
+  timestamp: number;
+}
+
 export interface MarketSnapshot {
   instruments: string[];
-  candles: Record<string, unknown>;
-  quotes: Record<string, unknown>;
+  /** Candle data keyed by symbol */
+  candles: Record<string, CandleData[]>;
+  /** Quote data keyed by symbol */
+  quotes: Record<string, QuoteData>;
+  /** Timestamp when the snapshot was created */
+  timestamp: number;
 }
 
 export interface RegimeData {
@@ -260,28 +296,159 @@ function buildAgentConfigs(
 }
 
 // ============================================
-// Stub Implementations (for BACKTEST mode)
+// Market Data Functions
 // ============================================
 
-async function fetchMarketSnapshot(instruments: string[]): Promise<MarketSnapshot> {
-  // STUB: Return mock market data
+/**
+ * Fetch market snapshot for the given instruments.
+ *
+ * In BACKTEST mode, uses deterministic fixture data for reproducible behavior.
+ * In PAPER/LIVE mode, will fetch real market data (currently uses fixtures as placeholder).
+ *
+ * @param instruments - Array of ticker symbols
+ * @param ctx - Execution context for environment detection
+ * @returns Market snapshot with candles and quotes for each instrument
+ */
+async function fetchMarketSnapshot(
+  instruments: string[],
+  ctx?: ExecutionContext
+): Promise<MarketSnapshot> {
+  const timestamp = ctx && isBacktest(ctx) ? FIXTURE_TIMESTAMP : Date.now();
+  const candles: Record<string, CandleData[]> = {};
+  const quotes: Record<string, QuoteData> = {};
+
+  for (const symbol of instruments) {
+    // Get candle fixture data (120 candles to support long indicator periods)
+    const candleData = getCandleFixtures(symbol, 120);
+    candles[symbol] = candleData;
+
+    // Get quote from snapshot fixture
+    const snapshot = getSnapshotFixture(symbol);
+    if (snapshot.lastQuote) {
+      quotes[symbol] = {
+        bid: snapshot.lastQuote.bid,
+        ask: snapshot.lastQuote.ask,
+        bidSize: snapshot.lastQuote.bidSize,
+        askSize: snapshot.lastQuote.askSize,
+        timestamp: snapshot.lastQuote.timestamp,
+      };
+    } else {
+      // Fallback quote derived from last trade price
+      const lastPrice = snapshot.lastTrade?.price ?? snapshot.open;
+      const spread = lastPrice * 0.0002; // 2 basis point spread
+      quotes[symbol] = {
+        bid: Number((lastPrice - spread / 2).toFixed(2)),
+        ask: Number((lastPrice + spread / 2).toFixed(2)),
+        bidSize: 100,
+        askSize: 100,
+        timestamp,
+      };
+    }
+  }
+
+  // TODO: In PAPER/LIVE mode, wire up real market data providers:
+  // - Polygon for candles and quotes
+  // - Databento for real-time execution-grade data
+  // For now, fixture data is used as a placeholder for all environments.
+
   return {
     instruments,
-    candles: {},
-    quotes: {},
+    candles,
+    quotes,
+    timestamp,
   };
 }
 
-async function loadMemoryContext(snapshot: MarketSnapshot): Promise<MemoryContext> {
-  // STUB: Return mock memory context with default regime
+/**
+ * Load memory context including relevant historical cases from HelixDB.
+ *
+ * Retrieves similar trade decisions from HelixDB using Case-Based Reasoning (CBR).
+ * Falls back to empty context if HelixDB is unavailable.
+ *
+ * @param snapshot - Market snapshot with instrument data
+ * @param ctx - Execution context for environment detection
+ * @returns Memory context with relevant cases and initial regime labels
+ */
+async function loadMemoryContext(
+  snapshot: MarketSnapshot,
+  ctx?: ExecutionContext
+): Promise<MemoryContext> {
+  // Initialize regime labels with defaults (will be refined by computeAndStoreRegimes)
+  const regimeLabels: Record<string, RegimeData> = {};
+  for (const symbol of snapshot.instruments) {
+    regimeLabels[symbol] = {
+      regime: "RANGE",
+      confidence: 0.3,
+      reasoning: "Initial default - pending classification",
+    };
+  }
+
+  // Try to retrieve relevant cases from HelixDB
+  const relevantCases: unknown[] = [];
+
+  // In BACKTEST mode, skip HelixDB queries for faster execution
+  if (ctx && isBacktest(ctx)) {
+    return {
+      relevantCases: [],
+      regimeLabels,
+    };
+  }
+
+  // Try to connect to HelixDB and retrieve similar cases
+  try {
+    const helixClient = getHelixClient();
+    if (helixClient) {
+      // Query for similar trade decisions for each instrument
+      // Using the SearchSimilarDecisions query if available
+      for (const symbol of snapshot.instruments) {
+        try {
+          // Build a simple query text from the market context
+          const candles = snapshot.candles[symbol];
+          const lastCandle = candles?.[candles.length - 1];
+          const queryText = lastCandle
+            ? `Trading ${symbol} at price ${lastCandle.close.toFixed(2)}`
+            : `Trading ${symbol}`;
+
+          const result = await helixClient.query<
+            Array<{
+              decision_id: string;
+              instrument_id: string;
+              action: string;
+              regime_label: string;
+              rationale_text: string;
+              similarity_score?: number;
+            }>
+          >("SearchSimilarDecisions", {
+            query_text: queryText,
+            instrument_id: symbol,
+            limit: 5,
+          });
+
+          if (result.data && result.data.length > 0) {
+            relevantCases.push(
+              ...result.data.map((d) => ({
+                caseId: d.decision_id,
+                symbol: d.instrument_id,
+                action: d.action,
+                regime: d.regime_label,
+                rationale: d.rationale_text,
+                similarity: d.similarity_score ?? 0,
+              }))
+            );
+          }
+        } catch {
+          // Continue with other instruments if one query fails
+        }
+      }
+    }
+  } catch {
+    // HelixDB unavailable - continue with empty cases
+    // This is expected in BACKTEST mode or when HelixDB is not running
+  }
+
   return {
-    relevantCases: [],
-    regimeLabels: Object.fromEntries(
-      snapshot.instruments.map((i) => [
-        i,
-        { regime: "RANGE", confidence: 0.5, reasoning: "Stub default regime" },
-      ])
-    ),
+    relevantCases,
+    regimeLabels,
   };
 }
 
@@ -523,10 +690,10 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
   const configVersion = runtimeConfig?.trading.id ?? null;
 
   // Observe Phase
-  const marketSnapshot = await fetchMarketSnapshot(instruments);
+  const marketSnapshot = await fetchMarketSnapshot(instruments, context);
 
   // Orient Phase
-  const _memoryContext = await loadMemoryContext(marketSnapshot);
+  const _memoryContext = await loadMemoryContext(marketSnapshot, context);
 
   // Decide Phase - Analysts (Parallel)
   const [_technicalAnalysis, _sentimentAnalysis, _fundamentalsAnalysis] = await Promise.all([
@@ -596,11 +763,11 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   const agentConfigs = buildAgentConfigs(runtimeConfig);
 
   // Observe Phase
-  const marketSnapshot = await fetchMarketSnapshot(instruments);
+  const marketSnapshot = await fetchMarketSnapshot(instruments, context);
 
   // Orient Phase - Load memory and compute regimes in parallel
   const [memoryContext, regimeLabels] = await Promise.all([
-    loadMemoryContext(marketSnapshot),
+    loadMemoryContext(marketSnapshot, context),
     computeAndStoreRegimes(marketSnapshot),
   ]);
 

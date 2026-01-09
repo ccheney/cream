@@ -24,8 +24,6 @@ interface WebSocketContextValue {
   connectionState: ConnectionState;
   /** Whether connected */
   connected: boolean;
-  /** Alias for connected (for backwards compatibility) */
-  isConnected: boolean;
   /** Whether reconnecting */
   reconnecting: boolean;
   /** Last received message */
@@ -131,7 +129,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     () => ({
       connectionState,
       connected,
-      isConnected: connected,
       reconnecting,
       lastMessage,
       sendMessage,

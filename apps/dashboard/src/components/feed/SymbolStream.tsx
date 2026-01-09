@@ -57,7 +57,7 @@ export function SymbolStream({
   maxEvents = DEFAULT_MAX_EVENTS,
   className = "",
 }: SymbolStreamProps) {
-  const { isConnected, lastMessage } = useWebSocket();
+  const { connected, lastMessage } = useWebSocket();
   const [events, setEvents] = useState<NormalizedEvent[]>([]);
   const [latestQuote, setLatestQuote] = useState<{
     bid: number;
@@ -178,11 +178,11 @@ export function SymbolStream({
         <div className="flex items-center gap-1">
           <div
             className={`w-2 h-2 rounded-full ${
-              isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+              connected ? "bg-green-500 animate-pulse" : "bg-red-500"
             }`}
           />
           <span className="text-xs text-cream-500 dark:text-cream-400">
-            {isConnected ? "Live" : "Offline"}
+            {connected ? "Live" : "Offline"}
           </span>
         </div>
       </div>
@@ -221,7 +221,7 @@ export function SymbolStream({
           </div>
         ) : (
           <div className="flex items-center justify-center h-32 text-sm text-cream-400">
-            {isConnected ? `Waiting for ${symbol} events...` : "Not connected"}
+            {connected ? `Waiting for ${symbol} events...` : "Not connected"}
           </div>
         )}
       </div>
