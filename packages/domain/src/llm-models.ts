@@ -4,7 +4,7 @@
  * All Mastra agents and LLM-based services use a single global model selection.
  * Only two models are allowed: gemini-3-pro-preview and gemini-3-flash-preview.
  *
- * Exception: claudeCodeIndicator uses claude-sonnet-4-5 (hardcoded).
+ * Exception: claudeCodeIndicator uses claude-opus-4-5-20251101 (hardcoded).
  */
 
 import { z } from "zod";

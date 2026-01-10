@@ -421,7 +421,7 @@ describe("implementIndicator with mock SDK", () => {
     });
 
     expect(capturedOptions.value).not.toBeNull();
-    expect(capturedOptions.value?.model).toBe("claude-sonnet-4-20250514");
+    expect(capturedOptions.value?.model).toBe("claude-opus-4-5-20251101");
     expect(capturedOptions.value?.maxTurns).toBe(20);
     expect(capturedOptions.value?.allowedTools).toContain("Read");
     expect(capturedOptions.value?.allowedTools).toContain("Write");
