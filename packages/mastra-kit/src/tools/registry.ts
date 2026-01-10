@@ -1,0 +1,59 @@
+/**
+ * Tool Registry
+ *
+ * Central registry for all agent tools.
+ */
+
+import { checkIndicatorTrigger } from "./checkIndicatorTrigger.js";
+import { implementIndicator } from "./claudeCodeIndicator.js";
+import {
+  getEconomicCalendar,
+  getGreeks,
+  getOptionChain,
+  getPortfolioState,
+  getQuotes,
+  helixQuery,
+  recalcIndicator,
+  searchNews,
+} from "./implementations/index.js";
+import { searchFilings } from "./searchFilings.js";
+import { webSearch } from "./webSearch.js";
+
+// ============================================
+// Tool Registry
+// ============================================
+
+export const TOOL_REGISTRY = {
+  get_quotes: getQuotes,
+  get_portfolio_state: getPortfolioState,
+  option_chain: getOptionChain,
+  get_greeks: getGreeks,
+  recalc_indicator: recalcIndicator,
+  economic_calendar: getEconomicCalendar,
+  news_search: searchNews,
+  search_filings: searchFilings,
+  helix_query: helixQuery,
+  web_search: webSearch,
+  check_indicator_trigger: checkIndicatorTrigger,
+  implement_indicator: implementIndicator,
+} as const;
+
+export type ToolName = keyof typeof TOOL_REGISTRY;
+
+/**
+ * Get a tool function by name
+ */
+export function getTool(name: ToolName): (typeof TOOL_REGISTRY)[ToolName] {
+  const tool = TOOL_REGISTRY[name];
+  if (!tool) {
+    throw new Error(`Unknown tool: ${name}`);
+  }
+  return tool;
+}
+
+/**
+ * Get all available tool names
+ */
+export function getAvailableTools(): ToolName[] {
+  return Object.keys(TOOL_REGISTRY) as ToolName[];
+}
