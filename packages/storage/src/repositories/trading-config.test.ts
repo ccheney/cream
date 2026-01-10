@@ -29,6 +29,7 @@ async function setupTables(client: TursoClient): Promise<void> {
       kelly_fraction REAL DEFAULT 0.5,
       trading_cycle_interval_ms INTEGER DEFAULT 3600000,
       prediction_markets_interval_ms INTEGER DEFAULT 900000,
+      global_model TEXT NOT NULL DEFAULT 'gemini-3-flash-preview',
       status TEXT NOT NULL DEFAULT 'draft',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
