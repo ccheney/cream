@@ -6,7 +6,7 @@
  * - System prompts optimized for Gemini
  * - Consensus gate with dual-approval (Risk Manager + Critic)
  * - Agent tools (stubbed until gRPC ready)
- * - Evaluation framework integrations (LangSmith, Braintrust, Promptfoo)
+ * - Evaluation framework integrations (LangSmith, Promptfoo)
  * - Tracing infrastructure
  *
  * @see docs/plans/05-agents.md
@@ -24,7 +24,6 @@ export * from "./agents/index.js";
 export * from "./chaos.js";
 export * from "./consensus.js";
 export * from "./escalation.js";
-export * from "./loadtest.js";
 export * from "./outcomeScoring.js";
 export * from "./planScoring.js";
 export * from "./prompts/index.js";
@@ -49,12 +48,6 @@ export * from "./observability/index.js";
 // ============================================
 
 export * from "./mcp/index.js";
-
-// ============================================
-// Evaluation Framework Exports
-// ============================================
-
-export { default as braintrustConfig } from "../braintrust.config.js";
 
 // ============================================
 // Agent Types
@@ -100,7 +93,7 @@ export interface EvalResult {
   metrics: Record<string, number>;
 
   /** Evaluation framework used */
-  framework: "deepeval" | "langsmith" | "braintrust" | "promptfoo";
+  framework: "deepeval" | "langsmith" | "promptfoo";
 
   /** Timestamp */
   timestamp: string;
