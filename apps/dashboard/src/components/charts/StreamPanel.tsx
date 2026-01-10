@@ -169,7 +169,7 @@ export function StreamToggleButton({ isOpen, onClick }: StreamToggleButtonProps)
           ? "bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900"
           : "bg-cream-300 dark:bg-night-700 text-stone-600 dark:text-night-300 hover:bg-cream-200 dark:hover:bg-night-800"
       }`}
-      title="Toggle event stream (Shift+E)"
+      title="Toggle events panel (Shift+E)"
     >
       <svg
         className="w-4 h-4"
@@ -177,9 +177,9 @@ export function StreamToggleButton({ isOpen, onClick }: StreamToggleButtonProps)
         stroke="currentColor"
         viewBox="0 0 24 24"
         role="img"
-        aria-label="Stream"
+        aria-label="Events"
       >
-        <title>Stream</title>
+        <title>Events</title>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -187,7 +187,7 @@ export function StreamToggleButton({ isOpen, onClick }: StreamToggleButtonProps)
           d="M13 10V3L4 14h7v7l9-11h-7z"
         />
       </svg>
-      <span>Stream</span>
+      <span>Events</span>
     </button>
   );
 }

@@ -49,6 +49,8 @@ export const DEFAULT_CHART_OPTIONS: DeepPartial<ChartOptions> = {
       labelBackgroundColor: CHART_COLORS.primary,
     },
   },
+  handleScroll: false, // Disable drag/pan - fit all data in view
+  handleScale: false, // Disable zoom (mouse wheel, pinch)
   timeScale: {
     borderColor: CHART_COLORS.grid,
     timeVisible: true,
@@ -56,6 +58,11 @@ export const DEFAULT_CHART_OPTIONS: DeepPartial<ChartOptions> = {
   },
   rightPriceScale: {
     borderColor: CHART_COLORS.grid,
+    scaleMargins: {
+      top: 0.1, // 10% padding at top
+      bottom: 0.2, // 20% padding at bottom (for volume)
+    },
+    autoScale: false, // Disable auto-scale to prevent Y-axis jumping
   },
 };
 

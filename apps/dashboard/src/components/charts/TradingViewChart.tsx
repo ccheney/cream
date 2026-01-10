@@ -16,6 +16,7 @@ import {
   HistogramSeries,
   type IChartApi,
   type ISeriesApi,
+  LineSeries,
   type LineWidth,
   type Time,
 } from "lightweight-charts";
@@ -27,16 +28,30 @@ import {
   type PriceLineConfig,
   type TradeMarker,
 } from "@/lib/chart-config";
+import type { MAOverlay } from "@/lib/chart-indicators";
+
+export interface SessionBoundaries {
+  /** Market open timestamps (9:30 AM ET) */
+  openTimes: number[];
+  /** Market close timestamps (4:00 PM ET) */
+  closeTimes: number[];
+}
 
 export interface TradingViewChartProps {
   /** OHLCV data for the chart */
   data: OHLCVData[];
+
+  /** Moving average overlay lines */
+  maOverlays?: MAOverlay[];
 
   /** Trade markers to display */
   markers?: TradeMarker[];
 
   /** Price lines (stop-loss, take-profit) */
   priceLines?: PriceLineConfig[];
+
+  /** Session boundary markers (market open/close vertical lines) */
+  sessionBoundaries?: SessionBoundaries;
 
   /** Chart width (defaults to 100%) */
   width?: number | string;
@@ -62,8 +77,10 @@ export interface TradingViewChartProps {
  */
 function TradingViewChartComponent({
   data,
+  maOverlays = [],
   markers = [],
   priceLines = [],
+  sessionBoundaries,
   width = "100%",
   height = 400,
   autoResize = true,
@@ -75,6 +92,8 @@ function TradingViewChartComponent({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const maSeriesRefs = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
+  const sessionSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const markersRef = useRef<ReturnType<typeof createSeriesMarkers<Time>> | null>(null);
   // biome-ignore lint/suspicious/noExplicitAny: lightweight-charts IPriceLine type
   const priceLineRefs = useRef<Map<string, any>>(new Map());
@@ -161,6 +180,8 @@ function TradingViewChartComponent({
       chartRef.current = null;
       seriesRef.current = null;
       volumeSeriesRef.current = null;
+      sessionSeriesRef.current = null;
+      maSeriesRefs.current.clear();
       markersRef.current = null;
       priceLineRefs.current.clear();
     };
@@ -195,22 +216,6 @@ function TradingViewChartComponent({
   }, [data]);
 
   useEffect(() => {
-    if (!markersRef.current) {
-      return;
-    }
-
-    const formattedMarkers = markers.map((m) => ({
-      time: m.time as Time,
-      position: m.position,
-      color: m.color,
-      shape: m.shape,
-      text: m.text,
-    }));
-
-    markersRef.current.setMarkers(formattedMarkers);
-  }, [markers]);
-
-  useEffect(() => {
     if (!seriesRef.current) {
       return;
     }
@@ -232,6 +237,77 @@ function TradingViewChartComponent({
       priceLineRefs.current.set(`${config.title}-${config.price}`, priceLine);
     }
   }, [priceLines]);
+
+  // MA overlays effect
+  useEffect(() => {
+    if (!chartRef.current) {
+      return;
+    }
+
+    const chart = chartRef.current;
+    const currentIds = new Set(maOverlays.map((o) => o.id));
+
+    // Remove series that are no longer in overlays
+    for (const [id, series] of maSeriesRefs.current) {
+      if (!currentIds.has(id)) {
+        chart.removeSeries(series);
+        maSeriesRefs.current.delete(id);
+      }
+    }
+
+    // Add or update series
+    for (const overlay of maOverlays) {
+      let series = maSeriesRefs.current.get(overlay.id);
+
+      if (!series) {
+        // Create new line series
+        series = chart.addSeries(LineSeries, {
+          color: overlay.color,
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: false,
+        }) as ISeriesApi<"Line">;
+        maSeriesRefs.current.set(overlay.id, series);
+      } else {
+        // Update color if changed
+        series.applyOptions({ color: overlay.color });
+      }
+
+      // Set data
+      const formattedData = overlay.data.map((d) => ({
+        time: d.time as Time,
+        value: d.value,
+      }));
+      series.setData(formattedData);
+    }
+  }, [maOverlays]);
+
+  // Regular markers effect
+  useEffect(() => {
+    if (!markersRef.current) {
+      return;
+    }
+
+    const formattedMarkers = markers.map((m) => ({
+      time: m.time as Time,
+      position: m.position,
+      color: m.color,
+      shape: m.shape,
+      text: m.text,
+    }));
+
+    markersRef.current.setMarkers(formattedMarkers);
+  }, [markers]);
+
+  // Session boundary vertical bars effect (market open/close)
+  useEffect(() => {
+    // Session bars disabled
+    if (sessionSeriesRef.current && chartRef.current) {
+      chartRef.current.removeSeries(sessionSeriesRef.current);
+      sessionSeriesRef.current = null;
+    }
+  }, [data, sessionBoundaries]);
 
   const handleResize = useCallback(() => {
     if (!chartRef.current || !containerRef.current || !autoResize) {

@@ -95,35 +95,28 @@ function calculateChange(
 // ============================================
 
 interface DepthBarProps {
-  size: number;
-  maxSize: number;
-  side: "bid" | "ask";
-  price: number;
+  bidSize: number;
+  askSize: number;
 }
 
-const DepthBar = memo(function DepthBar({ size, maxSize, side, price }: DepthBarProps) {
-  const percentage = maxSize > 0 ? (size / maxSize) * 100 : 0;
-  const isBid = side === "bid";
+const DepthBar = memo(function DepthBar({ bidSize, askSize }: DepthBarProps) {
+  const total = bidSize + askSize;
+  const bidPercent = total > 0 ? (bidSize / total) * 100 : 50;
 
   return (
-    <div className={`flex items-center gap-2 ${isBid ? "flex-row-reverse" : "flex-row"}`}>
-      {/* Price and Size */}
-      <div className={`text-sm font-mono ${isBid ? "text-right" : "text-left"} min-w-[120px]`}>
-        <span className="text-cream-900 dark:text-cream-100">{formatPrice(price)}</span>
-        <span className="text-cream-500 dark:text-cream-400 ml-1">× {size.toLocaleString()}</span>
-      </div>
-
-      {/* Bar */}
-      <div
-        className={`flex-1 h-5 bg-cream-100 dark:bg-night-700 rounded overflow-hidden ${isBid ? "flex justify-end" : ""}`}
-      >
-        <motion.div
-          className={`h-full ${isBid ? "bg-green-500/40 dark:bg-green-400/30" : "bg-red-500/40 dark:bg-red-400/30"}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        />
-      </div>
+    <div className="h-1.5 bg-cream-200 dark:bg-night-600 rounded-full overflow-hidden flex">
+      <motion.div
+        className="h-full bg-green-500/60 dark:bg-green-400/50"
+        initial={{ width: "50%" }}
+        animate={{ width: `${bidPercent}%` }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      />
+      <motion.div
+        className="h-full bg-red-500/60 dark:bg-red-400/50 flex-1"
+        initial={{ width: "50%" }}
+        animate={{ width: `${100 - bidPercent}%` }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      />
     </div>
   );
 });
@@ -212,13 +205,6 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
     [quote.last, quote.previousClose]
   );
 
-  // Calculate max size for depth bars
-  const maxSize = useMemo(() => {
-    const bidSize = quote.bidSize ?? 0;
-    const askSize = quote.askSize ?? 0;
-    return Math.max(bidSize, askSize, 1);
-  }, [quote.bidSize, quote.askSize]);
-
   // Volume percentage of average
   const volumePercent = useMemo(() => {
     if (!quote.avgVolume || quote.avgVolume === 0) {
@@ -292,25 +278,48 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
         )}
       </div>
 
-      {/* Depth Visualization */}
+      {/* Bid × Ask with optional depth */}
       {showDepth && quote.bid != null && quote.ask != null && (
-        <div className="mb-4 p-3 bg-cream-50 dark:bg-night-700/50 rounded-lg">
-          <div className="text-xs font-medium text-cream-500 dark:text-cream-400 mb-2 text-center">
-            QUOTE DEPTH
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Bid Side */}
-            <div>
-              <div className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Bid</div>
-              <DepthBar price={quote.bid} size={quote.bidSize ?? 0} maxSize={maxSize} side="bid" />
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Bid */}
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Bid</span>
+              <span className="font-mono text-sm text-cream-900 dark:text-cream-100">
+                {formatPrice(quote.bid)}
+              </span>
+              {(quote.bidSize ?? 0) > 0 && (
+                <span className="text-xs text-cream-500 dark:text-cream-400">
+                  ×{quote.bidSize?.toLocaleString()}
+                </span>
+              )}
             </div>
 
-            {/* Ask Side */}
-            <div>
-              <div className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">Ask</div>
-              <DepthBar price={quote.ask} size={quote.askSize ?? 0} maxSize={maxSize} side="ask" />
+            {/* Spread */}
+            <div className="text-xs text-cream-400 dark:text-cream-500 font-mono">
+              {((quote.ask - quote.bid) * 100).toFixed(0)}¢ spread
+            </div>
+
+            {/* Ask */}
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xs text-red-600 dark:text-red-400 font-medium">Ask</span>
+              <span className="font-mono text-sm text-cream-900 dark:text-cream-100">
+                {formatPrice(quote.ask)}
+              </span>
+              {(quote.askSize ?? 0) > 0 && (
+                <span className="text-xs text-cream-500 dark:text-cream-400">
+                  ×{quote.askSize?.toLocaleString()}
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Depth balance bar - only show if we have size data */}
+          {((quote.bidSize ?? 0) > 0 || (quote.askSize ?? 0) > 0) && (
+            <div className="mt-2">
+              <DepthBar bidSize={quote.bidSize ?? 0} askSize={quote.askSize ?? 0} />
+            </div>
+          )}
         </div>
       )}
 
