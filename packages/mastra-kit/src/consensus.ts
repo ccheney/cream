@@ -87,9 +87,33 @@ const DEFAULT_ESCALATION: EscalationConfig = {
 };
 
 const DEFAULT_LOGGER: ConsensusLogger = {
-  info: (_message, _data) => {},
-  warn: (_message, _data) => {},
-  error: (_message, _data) => {},
+  info: (message, data) => {
+    if (data) {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.info(`[consensus] ${message}`, data);
+    } else {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.info(`[consensus] ${message}`);
+    }
+  },
+  warn: (message, data) => {
+    if (data) {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.warn(`[consensus] ${message}`, data);
+    } else {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.warn(`[consensus] ${message}`);
+    }
+  },
+  error: (message, data) => {
+    if (data) {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.error(`[consensus] ${message}`, data);
+    } else {
+      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
+      console.error(`[consensus] ${message}`);
+    }
+  },
 };
 
 const DEFAULT_CONFIG: ConsensusGateConfig = {
@@ -544,34 +568,46 @@ export function getFallbackAction(
 // ============================================
 
 /**
+ * Result types for withAgentTimeout
+ */
+export type AgentTimeoutResult<T> =
+  | { result: T; timedOut: false; errored: false }
+  | { result: null; timedOut: true; errored: false; agentName: string }
+  | { result: null; timedOut: false; errored: true; agentName: string; error: string };
+
+/**
  * Execute a promise with per-agent timeout.
- * Returns the result or throws on timeout.
+ * Returns the result, or indicates timeout/error with details preserved.
  */
 export async function withAgentTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   agentName: string
-): Promise<{ result: T; timedOut: false } | { result: null; timedOut: true; agentName: string }> {
+): Promise<AgentTimeoutResult<T>> {
   return new Promise((resolve) => {
-    let timedOut = false;
+    let completed = false;
 
     const timer = setTimeout(() => {
-      timedOut = true;
-      resolve({ result: null, timedOut: true, agentName });
+      if (!completed) {
+        completed = true;
+        resolve({ result: null, timedOut: true, errored: false, agentName });
+      }
     }, timeoutMs);
 
     promise
       .then((result) => {
-        if (!timedOut) {
+        if (!completed) {
+          completed = true;
           clearTimeout(timer);
-          resolve({ result, timedOut: false });
+          resolve({ result, timedOut: false, errored: false });
         }
       })
-      .catch(() => {
-        if (!timedOut) {
+      .catch((error: unknown) => {
+        if (!completed) {
+          completed = true;
           clearTimeout(timer);
-          // Treat errors as timeout for safety
-          resolve({ result: null, timedOut: true, agentName });
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          resolve({ result: null, timedOut: false, errored: true, agentName, error: errorMessage });
         }
       });
   });
@@ -627,6 +663,16 @@ export async function runConsensusLoop(
       riskManager = createTimeoutRiskOutput();
       critic = createTimeoutCriticOutput();
       timeoutStatus = "RISK_MANAGER_TIMEOUT"; // Generic timeout
+    } else if (approvalResult.errored) {
+      // Agents errored - treat as reject with error info
+      riskManager = createTimeoutRiskOutput();
+      critic = createTimeoutCriticOutput();
+      timeoutStatus = "RISK_MANAGER_TIMEOUT"; // Use timeout status for now
+      // biome-ignore lint/suspicious/noConsole: Log agent errors for debugging
+      console.error("[consensus] Approval agents failed", {
+        error: approvalResult.error,
+        agent: approvalResult.agentName,
+      });
     } else {
       riskManager = approvalResult.result.riskManager;
       critic = approvalResult.result.critic;
