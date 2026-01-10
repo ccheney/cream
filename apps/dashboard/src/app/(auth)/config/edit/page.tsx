@@ -288,7 +288,7 @@ interface TradingConfigFormProps {
 function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfigFormProps) {
   const [formData, setFormData] = useState<Partial<RuntimeTradingConfig>>({});
 
-  const handleChange = (field: keyof RuntimeTradingConfig, value: number) => {
+  const handleChange = (field: keyof RuntimeTradingConfig, value: number | string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     onChange();
   };
@@ -304,6 +304,10 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
     return (formData[field] as number) ?? (config[field] as number);
   };
 
+  const getGlobalModel = (): string => {
+    return (formData.globalModel as string) ?? config.globalModel ?? "gemini-3-flash-preview";
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -316,6 +320,30 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         >
           {isSaving ? "Saving..." : "Save Changes"}
         </button>
+      </div>
+
+      {/* Global LLM Model Selection */}
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <label
+          htmlFor="global-model"
+          className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
+        >
+          Global LLM Model
+          <span className="ml-2 text-cream-400 font-normal">(used by all agents)</span>
+        </label>
+        <select
+          id="global-model"
+          value={getGlobalModel()}
+          onChange={(e) => handleChange("globalModel", e.target.value)}
+          className="w-full max-w-md px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+        >
+          <option value="gemini-3-flash-preview">Gemini 3 Flash (faster)</option>
+          <option value="gemini-3-pro-preview">Gemini 3 Pro (more capable)</option>
+        </select>
+        <p className="mt-2 text-xs text-cream-500 dark:text-cream-400">
+          All 8 trading agents will use this model. Claude Code indicators use a separate fixed
+          model.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -442,13 +470,6 @@ const AGENT_DISPLAY_NAMES: Record<RuntimeAgentType, string> = {
   critic: "Critic",
 };
 
-const MODEL_OPTIONS = [
-  { value: "gemini-3.0-pro", label: "Gemini 3.0 Pro" },
-  { value: "gemini-3.0-flash", label: "Gemini 3.0 Flash" },
-  { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-  { value: "claude-opus-4-20250514", label: "Claude Opus 4" },
-];
-
 function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigListProps) {
   const [expandedAgent, setExpandedAgent] = useState<RuntimeAgentType | null>(null);
   const [formData, setFormData] = useState<Record<string, Partial<RuntimeAgentConfig>>>({});
@@ -514,7 +535,6 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-cream-500 dark:text-cream-400">{agent.model}</span>
                   <svg
                     className={`w-5 h-5 text-cream-400 transition-transform ${
                       isExpanded ? "rotate-180" : ""
@@ -536,40 +556,18 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
 
               {isExpanded && (
                 <div className="p-4 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor={`${agentType}-model`}
-                        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-                      >
-                        Model
-                      </label>
-                      <select
-                        id={`${agentType}-model`}
-                        value={(formData[agentType]?.model as string) ?? agent.model}
-                        onChange={(e) => handleChange(agentType, "model", e.target.value)}
-                        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
-                      >
-                        {MODEL_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex items-center">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(formData[agentType]?.enabled as boolean) ?? agent.enabled}
-                          onChange={(e) => handleChange(agentType, "enabled", e.target.checked)}
-                          className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-cream-700 dark:text-cream-300">
-                          Enabled
-                        </span>
-                      </label>
-                    </div>
+                  <div className="flex items-center mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(formData[agentType]?.enabled as boolean) ?? agent.enabled}
+                        onChange={(e) => handleChange(agentType, "enabled", e.target.checked)}
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-cream-700 dark:text-cream-300">
+                        Enabled
+                      </span>
+                    </label>
                   </div>
 
                   <div className="mt-4">

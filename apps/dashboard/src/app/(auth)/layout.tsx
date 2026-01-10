@@ -14,7 +14,7 @@
 
 import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { AddSymbolModal } from "@/components/ui/add-symbol-modal";
 import { GlobalLoadingIndicator } from "@/components/ui/GlobalLoadingIndicator";
@@ -42,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   const handleSymbolClick = useCallback(
     (symbol: string) => {
-      router.push(`/charts?symbol=${symbol}`);
+      router.push(`/charts/${symbol}`);
     },
     [router]
   );
@@ -129,11 +129,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
 
         {/* Main Content - with bottom padding for nav bar */}
-        <Suspense fallback={<LoadingFallback />}>
-          <div id="main-content" className="flex-1 p-4 pb-20 overflow-auto" tabIndex={-1}>
-            {children}
-          </div>
-        </Suspense>
+        <div id="main-content" className="flex-1 p-4 pb-20 overflow-auto" tabIndex={-1}>
+          {children}
+        </div>
 
         {/* Bottom Navigation */}
         <MobileNav onMoreClick={() => setDrawerOpen(true)} />
@@ -195,11 +193,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
 
         {/* Main Content */}
-        <Suspense fallback={<LoadingFallback />}>
-          <main id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
-            {children}
-          </main>
-        </Suspense>
+        <main id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
+          {children}
+        </main>
 
         {/* Navigation Drawer */}
         <NavDrawer
@@ -251,11 +247,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
 
         {/* Page content */}
-        <Suspense fallback={<LoadingFallback />}>
-          <div id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
-            {children}
-          </div>
-        </Suspense>
+        <div id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
+          {children}
+        </div>
       </main>
 
       {/* Add Symbol Modal */}
@@ -297,13 +291,5 @@ function EnvBadge() {
     <span className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
       {displayEnv}
     </span>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <Spinner size="lg" />
-    </div>
   );
 }

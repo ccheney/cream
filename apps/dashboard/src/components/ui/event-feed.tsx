@@ -4,7 +4,11 @@
  * Real-time event feed with virtualized scrolling, auto-scroll behavior,
  * color-coded borders, and relative timestamps.
  *
+ * Design: Implements "Precision Warmth" aesthetic with The Cream Glow,
+ * layered surfaces, and living indicators.
+ *
  * @see docs/plans/ui/31-realtime-patterns.md lines 46-67
+ * @see docs/plans/ui/20-design-philosophy.md
  */
 
 "use client";
@@ -54,27 +58,34 @@ export interface EventFeedProps {
 // Constants
 // ============================================
 
-const EVENT_ITEM_HEIGHT = 48; // Fixed height for virtualization
+const EVENT_ITEM_HEIGHT = 52; // Slightly more generous for visual breathing room
 
-const EVENT_TYPE_CONFIG: Record<EventType, { color: string; icon: string; label: string }> = {
+const EVENT_TYPE_CONFIG: Record<
+  EventType,
+  { color: string; bgAlpha: string; icon: string; label: string }
+> = {
   QUOTE: {
-    color: "var(--chart-blue, #3b82f6)",
-    icon: "●",
+    color: "var(--color-info, #6366f1)",
+    bgAlpha: "rgba(99, 102, 241, 0.12)",
+    icon: "◉",
     label: "QUOTE",
   },
   FILL: {
-    color: "var(--profit, #22c55e)",
+    color: "var(--color-profit, #22c55e)",
+    bgAlpha: "rgba(34, 197, 94, 0.12)",
     icon: "✓",
     label: "FILL",
   },
   ORDER: {
-    color: "var(--neutral, #eab308)",
+    color: "var(--color-active, #f5a623)",
+    bgAlpha: "rgba(245, 166, 35, 0.12)",
     icon: "▸",
     label: "ORDER",
   },
   DECISION: {
-    color: "var(--chart-purple, #a855f7)",
-    icon: "★",
+    color: "var(--color-agent-technical, #8b5cf6)",
+    bgAlpha: "rgba(139, 92, 246, 0.12)",
+    icon: "◆",
     label: "DECISION",
   },
 };
@@ -96,64 +107,58 @@ const EventItem = memo(function EventItem({ event, onClick }: EventItemProps) {
     onClick?.(event);
   }, [event, onClick]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        onClick?.(event);
-      }
-    },
-    [event, onClick]
-  );
-
   return (
-    <div
-      className="flex items-center gap-3 px-3 py-2 border-l-4 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer transition-colors"
-      style={{ borderLeftColor: config.color }}
+    <button
+      type="button"
+      className="group w-full flex items-center gap-3 px-4 py-2.5 border-l-[3px] transition-all duration-150 ease-out cursor-pointer hover:bg-cream-100 dark:hover:bg-night-800/60 text-left"
+      style={{
+        borderLeftColor: config.color,
+        boxShadow: "inset 0 -1px 0 var(--border-subtle, rgba(0,0,0,0.06))",
+      }}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
       aria-label={`${event.type} event: ${event.message}`}
       data-event-id={event.id}
     >
-      {/* Icon */}
+      {/* Icon with subtle glow on hover */}
       <span
-        className="flex-shrink-0 w-5 text-center font-medium"
-        style={{ color: config.color }}
+        className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-sm transition-shadow duration-150"
+        style={{
+          color: config.color,
+          backgroundColor: config.bgAlpha,
+        }}
         aria-hidden="true"
       >
         {config.icon}
       </span>
 
-      {/* Timestamp */}
-      <span className="flex-shrink-0 w-12 text-xs font-mono text-stone-500 dark:text-stone-400 tabular-nums">
+      {/* Timestamp - monospace for data */}
+      <span className="flex-shrink-0 w-14 text-xs font-mono text-stone-500 dark:text-night-400 tabular-nums tracking-tight">
         {formatted}
       </span>
 
-      {/* Type Badge */}
+      {/* Type Badge - refined pill shape */}
       <span
-        className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium rounded"
+        className="flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full"
         style={{
-          backgroundColor: `${config.color}20`,
+          backgroundColor: config.bgAlpha,
           color: config.color,
         }}
       >
         {config.label}
       </span>
 
-      {/* Symbol (if present) */}
+      {/* Symbol (if present) - emphasized */}
       {event.symbol && (
-        <span className="flex-shrink-0 font-mono font-medium text-sm text-stone-700 dark:text-stone-300">
+        <span className="flex-shrink-0 font-mono font-semibold text-sm text-stone-800 dark:text-night-100">
           {event.symbol}
         </span>
       )}
 
-      {/* Message */}
-      <span className="flex-1 text-sm text-stone-600 dark:text-stone-300 truncate">
+      {/* Message - truncated with fade */}
+      <span className="flex-1 text-sm text-stone-600 dark:text-night-300 truncate group-hover:text-stone-800 dark:group-hover:text-night-100 transition-colors">
         {event.message}
       </span>
-    </div>
+    </button>
   );
 });
 
@@ -174,15 +179,15 @@ const NewEventsButton = memo(function NewEventsButton({ count, onClick }: NewEve
   return (
     <button
       type="button"
-      className="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-full shadow-lg transition-all animate-slide-down"
+      className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-stone-600 dark:text-night-200 bg-cream-100/95 dark:bg-night-800/95 backdrop-blur-sm border-b border-stone-200/60 dark:border-night-700/60 hover:bg-cream-200/95 dark:hover:bg-night-700/95 transition-colors cursor-pointer"
       onClick={onClick}
       aria-label={`Show ${count} new ${count === 1 ? "event" : "events"}`}
     >
-      <span className="inline-flex items-center gap-1">
-        <span aria-hidden="true">↓</span>
-        <span>
-          {count} new {count === 1 ? "event" : "events"}
-        </span>
+      <span className="text-stone-500 dark:text-night-400" aria-hidden="true">
+        ↓
+      </span>
+      <span>
+        {count} new {count === 1 ? "event" : "events"}
       </span>
     </button>
   );
@@ -194,11 +199,21 @@ const NewEventsButton = memo(function NewEventsButton({ count, onClick }: NewEve
 
 const EmptyState = memo(function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-stone-500 dark:text-stone-400">
-      <span className="text-2xl mb-2" aria-hidden="true">
-        📭
+    <div className="flex flex-col items-center justify-center h-full text-stone-500 dark:text-night-400">
+      {/* Minimal activity indicator */}
+      <div className="relative mb-4">
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-stone-300 dark:border-night-600 flex items-center justify-center">
+          <div className="w-2 h-2 rounded-full bg-stone-300 dark:bg-night-600" />
+        </div>
+        {/* Subtle pulse ring */}
+        <div className="absolute inset-0 rounded-full border-2 border-stone-200 dark:border-night-700 animate-ping opacity-20" />
+      </div>
+      <span className="text-sm font-medium text-stone-500 dark:text-night-400">
+        Awaiting events
       </span>
-      <span className="text-sm">No events yet</span>
+      <span className="text-xs text-stone-400 dark:text-night-500 mt-1">
+        Activity will appear here
+      </span>
     </div>
   );
 });
@@ -277,7 +292,7 @@ export const EventFeed = memo(function EventFeed({
   if (displayEvents.length === 0) {
     return (
       <div
-        className={`relative ${className}`}
+        className={`relative surface-1 ${className}`}
         style={{ height: containerHeight }}
         data-testid={testId}
       >
@@ -288,17 +303,17 @@ export const EventFeed = memo(function EventFeed({
 
   return (
     <div
-      className={`relative ${className}`}
+      className={`relative overflow-hidden rounded-xl border border-stone-200/80 dark:border-night-700/60 shadow-sm bg-cream-50 dark:bg-night-900 ${className}`}
       style={{ height: containerHeight }}
       data-testid={testId}
     >
-      {/* New Events Button */}
+      {/* New Events Button - positioned at top of container */}
       <NewEventsButton count={newItemCount} onClick={scrollToBottom} />
 
       {/* Virtualized List */}
       <div
         ref={containerRef}
-        className="h-full overflow-auto bg-white dark:bg-stone-900 rounded-lg border border-stone-200 dark:border-stone-700"
+        className="h-full overflow-y-auto"
         onScroll={onScroll}
         role="log"
         aria-live="polite"
@@ -335,13 +350,18 @@ export const EventFeed = memo(function EventFeed({
         </div>
       </div>
 
-      {/* Auto-scroll Indicator */}
+      {/* Living "Live" Indicator with Cream Glow */}
       {isAutoScrolling && (
         <div
-          className="absolute bottom-2 right-2 px-2 py-1 bg-stone-800/80 text-white text-xs rounded"
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-night-900/90 dark:bg-night-800/95 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-md"
           aria-hidden="true"
         >
-          Live
+          {/* Pulsing dot - the "Living Indicator" */}
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          <span className="tracking-wide">LIVE</span>
         </div>
       )}
     </div>

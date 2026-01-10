@@ -27,7 +27,8 @@ export interface AddSymbolModalProps {
 }
 
 const POPULAR_SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "SPY", "QQQ"];
-const SYMBOL_REGEX = /^[A-Z]{1,5}$/;
+// Supports standard tickers (AAPL) and share classes (BRK.B, BF.A)
+const SYMBOL_REGEX = /^[A-Z]{1,5}(\.[A-Z])?$/;
 
 export const AddSymbolModal = memo(function AddSymbolModal({
   isOpen,
@@ -66,7 +67,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
       }
 
       if (!SYMBOL_REGEX.test(upperValue)) {
-        return "Symbol must be 1-5 letters";
+        return "Invalid symbol format (e.g., AAPL, BRK.B)";
       }
 
       if (existingSymbols.includes(upperValue)) {

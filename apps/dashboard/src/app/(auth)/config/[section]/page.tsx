@@ -722,28 +722,17 @@ function AgentsEditor() {
             </div>
           ) : config ? (
             <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="agent-model-select"
-                  className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-                >
-                  Model
-                </label>
-                {editing ? (
-                  <select
-                    id="agent-model-select"
-                    value={formData.model || ""}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+              {/* Note: Model is now global, configured in Trading settings */}
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  All agents use the global LLM model configured in{" "}
+                  <a
+                    href="/config/edit"
+                    className="underline hover:text-blue-900 dark:hover:text-blue-100"
                   >
-                    <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro</option>
-                    <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-                    <option value="claude-opus-4-20250514">Claude Opus 4</option>
-                  </select>
-                ) : (
-                  <div className="px-3 py-2 text-cream-900 dark:text-cream-100">{config.model}</div>
-                )}
+                    Trading Settings
+                  </a>
+                </p>
               </div>
 
               <div>

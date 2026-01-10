@@ -7,7 +7,27 @@
 
 import Link from "next/link";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEquityCurve, usePortfolioSummary, usePositions } from "@/hooks/queries";
+
+function TableHeaderTooltip({
+  label,
+  tooltip,
+  align = "left",
+}: {
+  label: string;
+  tooltip: string;
+  align?: "left" | "right";
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger className={`cursor-help ${align === "right" ? "w-full text-right" : ""}`}>
+        <span>{label}</span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export default function PortfolioPage() {
   const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
@@ -40,16 +60,19 @@ export default function PortfolioPage() {
         <div className="grid grid-cols-4 gap-4">
           <MetricCard
             label="Total NAV"
+            tooltip="Net Asset Value: total portfolio value including cash and positions"
             value={summaryLoading ? "--" : formatCurrency(summary?.nav ?? 0)}
             isLoading={summaryLoading}
           />
           <MetricCard
             label="Cash"
+            tooltip="Available cash for trading"
             value={summaryLoading ? "--" : formatCurrency(summary?.cash ?? 0)}
             isLoading={summaryLoading}
           />
           <MetricCard
             label="Unrealized P&L"
+            tooltip="Profit/loss on open positions (not yet realized through sale)"
             value={summaryLoading ? "--" : formatCurrency(summary?.totalPnl ?? 0)}
             change={summaryLoading ? undefined : formatPct(summary?.totalPnlPct ?? 0)}
             valueColor={(summary?.totalPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
@@ -57,6 +80,7 @@ export default function PortfolioPage() {
           />
           <MetricCard
             label="Day P&L"
+            tooltip="Today's profit/loss across all positions"
             value={summaryLoading ? "--" : formatCurrency(summary?.todayPnl ?? 0)}
             change={summaryLoading ? undefined : formatPct(summary?.todayPnlPct ?? 0)}
             valueColor={(summary?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
@@ -94,14 +118,61 @@ export default function PortfolioPage() {
                 <thead className="bg-cream-50 dark:bg-night-750">
                   <tr className="text-left text-sm text-cream-500 dark:text-cream-400">
                     <th className="px-4 py-3 font-medium">Symbol</th>
-                    <th className="px-4 py-3 font-medium">Side</th>
-                    <th className="px-4 py-3 font-medium text-right">Qty</th>
-                    <th className="px-4 py-3 font-medium text-right">Avg Entry</th>
-                    <th className="px-4 py-3 font-medium text-right">Current</th>
-                    <th className="px-4 py-3 font-medium text-right">Market Value</th>
-                    <th className="px-4 py-3 font-medium text-right">P&L</th>
-                    <th className="px-4 py-3 font-medium text-right">P&L %</th>
-                    <th className="px-4 py-3 font-medium text-right">Days Held</th>
+                    <th className="px-4 py-3 font-medium">
+                      <TableHeaderTooltip
+                        label="Side"
+                        tooltip="Position direction: LONG or SHORT"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="Qty"
+                        tooltip="Number of shares held"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="Avg Entry"
+                        tooltip="Average purchase price per share"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="Current"
+                        tooltip="Current market price"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="Market Value"
+                        tooltip="Current total value (Qty × Current)"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="P&L"
+                        tooltip="Unrealized profit/loss in dollars"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="P&L %"
+                        tooltip="Unrealized profit/loss as percentage"
+                        align="right"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium text-right">
+                      <TableHeaderTooltip
+                        label="Days Held"
+                        tooltip="Calendar days since position opened"
+                        align="right"
+                      />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-cream-100 dark:divide-night-700">
@@ -214,12 +285,14 @@ function MetricCard({
   value,
   change,
   valueColor,
+  tooltip,
   isLoading,
 }: {
   label: string;
   value: string;
   change?: string;
   valueColor?: string;
+  tooltip?: string;
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -231,9 +304,18 @@ function MetricCard({
     );
   }
 
+  const labelElement = <span className="text-sm text-cream-500 dark:text-cream-400">{label}</span>;
+
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger className="cursor-help">{labelElement}</TooltipTrigger>
+          <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <div>{labelElement}</div>
+      )}
       <div className="flex items-baseline gap-2">
         <div
           className={`mt-1 text-2xl font-semibold ${

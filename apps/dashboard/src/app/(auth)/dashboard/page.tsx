@@ -5,10 +5,11 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { Rss } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CycleProgress } from "@/components/dashboard/CycleProgress";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
+import { EventFeed, type FeedEvent as EventFeedEvent } from "@/components/ui/event-feed";
 import { LiveDataIndicator, StreamingBadge } from "@/components/ui/RefreshIndicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -21,11 +22,46 @@ import {
   useTriggerCycle,
 } from "@/hooks/queries";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
-import { useRealTimeFeed } from "@/stores/ui-store";
+import { type CyclePhase, useActiveCycle, useCycleActions } from "@/stores/cycle-store";
+import { type FeedEvent as StoreFeedEvent, useEventFeedStore } from "@/stores/event-feed-store";
+
+/**
+ * Convert store event type to EventFeed component type.
+ */
+function mapEventType(storeType: StoreFeedEvent["type"]): EventFeedEvent["type"] {
+  switch (storeType) {
+    case "order_placed":
+    case "order_cancelled":
+    case "order_rejected":
+      return "ORDER";
+    case "order_filled":
+    case "trade_executed":
+      return "FILL";
+    case "agent_decision":
+      return "DECISION";
+    default:
+      return "QUOTE";
+  }
+}
+
+/**
+ * Convert store events to EventFeed component format.
+ */
+function convertEvents(storeEvents: StoreFeedEvent[]): EventFeedEvent[] {
+  return storeEvents.map((event) => ({
+    id: event.id,
+    type: mapEventType(event.type),
+    timestamp: event.timestamp,
+    symbol: event.symbol,
+    message: event.message,
+    metadata: event.metadata,
+  }));
+}
 
 export default function DashboardPage() {
   const { connected } = useWebSocketContext();
-  const { visible: feedVisible, toggle: toggleFeed } = useRealTimeFeed();
+  const storeEvents = useEventFeedStore((s) => s.events);
+  const feedEvents = convertEvents(storeEvents);
   const { data: status, isLoading: statusLoading, isFetching: statusFetching } = useSystemStatus();
   const { data: portfolio, isLoading: portfolioLoading } = usePortfolioSummary();
   const {
@@ -39,9 +75,34 @@ export default function DashboardPage() {
   const pauseSystem = usePauseSystem();
   const triggerCycle = useTriggerCycle();
 
-  // Active cycle state
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  // Use cycle-store for persistent cycle state across navigation
+  const { cycle: activeCycle, isRunning: cycleIsRunning } = useActiveCycle();
+  const { setCycle, reset: resetCycle } = useCycleActions();
+  const activeCycleId = activeCycle?.id ?? null;
+
   const [useDraftConfig, setUseDraftConfig] = useState(false);
+
+  // Sync running cycle from server to store on mount/status change
+  // This handles the case where we navigate away and back while a cycle is running
+  useEffect(() => {
+    if (status?.runningCycle && !activeCycle) {
+      // Server has a running cycle but store doesn't - sync it
+      setCycle({
+        id: status.runningCycle.cycleId,
+        phase: status.runningCycle.phase ?? "observe",
+        progress: 0, // Progress will be updated via WebSocket
+        startedAt: status.runningCycle.startedAt,
+      });
+    } else if (!status?.runningCycle && activeCycle && cycleIsRunning) {
+      // Server shows no running cycle but store does - cycle must have finished
+      // Reset after a brief delay to allow completion state to show
+      const timer = setTimeout(() => {
+        resetCycle();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [status?.runningCycle, activeCycle, cycleIsRunning, setCycle, resetCycle]);
 
   const handleTriggerCycle = () => {
     if (!status?.environment) {
@@ -55,14 +116,24 @@ export default function DashboardPage() {
       },
       {
         onSuccess: (data) => {
-          setActiveCycleId(data.cycleId);
+          // Initialize cycle in store
+          setCycle({
+            id: data.cycleId,
+            phase: "observe",
+            progress: 0,
+            startedAt: data.startedAt,
+          });
         },
       }
     );
   };
 
   const handleCycleComplete = () => {
-    setActiveCycleId(null);
+    // Cycle store is updated via WebSocket, but we can trigger a reset after a delay
+    // to clear the UI after showing the completion state
+    setTimeout(() => {
+      resetCycle();
+    }, 3000);
   };
 
   const handleCycleError = () => {
@@ -70,7 +141,7 @@ export default function DashboardPage() {
     // User can dismiss by triggering another cycle
   };
 
-  const cycleInProgress = triggerCycle.isPending || activeCycleId !== null;
+  const cycleInProgress = triggerCycle.isPending || cycleIsRunning;
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -121,22 +192,6 @@ export default function DashboardPage() {
               </span>
             </TooltipTrigger>
             <TooltipContent>Time until next OODA trading cycle starts</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger>
-              <button
-                type="button"
-                onClick={toggleFeed}
-                className={`p-2 rounded-md transition-colors ${
-                  feedVisible
-                    ? "bg-cream-100 text-cream-700 dark:bg-night-700 dark:text-cream-300"
-                    : "text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
-                }`}
-              >
-                <Rss className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{feedVisible ? "Hide event feed" : "Show event feed"}</TooltipContent>
           </Tooltip>
           <div className="flex items-center gap-2">
             {status?.status === "STOPPED" && (
@@ -261,22 +316,26 @@ export default function DashboardPage() {
         <div className="grid grid-cols-4 gap-4 mt-6">
           <OODAPhaseCard
             phase="Observe"
-            status={getOODAPhaseStatus("observe", status?.lastCycleId)}
+            currentPhase={activeCycle?.phase}
+            isRunning={cycleIsRunning}
             isLoading={statusLoading}
           />
           <OODAPhaseCard
             phase="Orient"
-            status={getOODAPhaseStatus("orient", status?.lastCycleId)}
+            currentPhase={activeCycle?.phase}
+            isRunning={cycleIsRunning}
             isLoading={statusLoading}
           />
           <OODAPhaseCard
             phase="Decide"
-            status={getOODAPhaseStatus("decide", status?.lastCycleId)}
+            currentPhase={activeCycle?.phase}
+            isRunning={cycleIsRunning}
             isLoading={statusLoading}
           />
           <OODAPhaseCard
             phase="Act"
-            status={getOODAPhaseStatus("act", status?.lastCycleId)}
+            currentPhase={activeCycle?.phase}
+            isRunning={cycleIsRunning}
             isLoading={statusLoading}
           />
         </div>
@@ -358,9 +417,10 @@ export default function DashboardPage() {
           ) : decisions?.items && decisions.items.length > 0 ? (
             <div className="space-y-2">
               {decisions.items.map((decision) => (
-                <div
+                <Link
                   key={decision.id}
-                  className="flex items-center justify-between py-2 border-b border-cream-100 dark:border-night-700 last:border-0"
+                  href={`/decisions?cycle=${decision.cycleId}`}
+                  className="flex items-center justify-between py-2 border-b border-cream-100 dark:border-night-700 last:border-0 hover:bg-cream-50 dark:hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -401,7 +461,7 @@ export default function DashboardPage() {
                       })}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -409,20 +469,57 @@ export default function DashboardPage() {
           )}
         </div>
       </QueryErrorBoundary>
+
+      {/* Real-time Event Feed */}
+      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Event Feed</h2>
+          <span className="text-sm text-cream-500 dark:text-cream-400">
+            {feedEvents.length} events
+          </span>
+        </div>
+        <EventFeed events={feedEvents} height={300} data-testid="dashboard-event-feed" />
+      </div>
     </div>
   );
 }
 
+/**
+ * Compute OODA phase status based on current cycle phase.
+ *
+ * Phase order: observe → orient → decide → act → complete
+ * - Phases before current: complete
+ * - Current phase: active
+ * - Phases after current: idle (waiting)
+ */
 function getOODAPhaseStatus(
-  _phase: string,
-  lastCycleId: string | null | undefined
+  cardPhase: string,
+  currentPhase: CyclePhase | undefined,
+  isRunning: boolean
 ): "idle" | "active" | "complete" {
-  // In a real implementation, this would check the actual cycle state
-  // For now, return idle if no cycle, complete otherwise
-  if (!lastCycleId) {
+  if (!isRunning || !currentPhase) {
     return "idle";
   }
-  return "complete";
+
+  const phaseOrder: CyclePhase[] = ["observe", "orient", "decide", "act", "complete"];
+  const cardIndex = phaseOrder.indexOf(cardPhase.toLowerCase() as CyclePhase);
+  const currentIndex = phaseOrder.indexOf(currentPhase);
+
+  if (cardIndex === -1 || currentIndex === -1) {
+    return "idle";
+  }
+
+  if (currentPhase === "complete") {
+    // Cycle complete - all phases are complete
+    return "complete";
+  }
+
+  if (cardIndex < currentIndex) {
+    return "complete";
+  } else if (cardIndex === currentIndex) {
+    return "active";
+  }
+  return "idle";
 }
 
 /** Environment descriptions for tooltips */
@@ -518,11 +615,13 @@ const OODA_DESCRIPTIONS: Record<string, string> = {
 
 function OODAPhaseCard({
   phase,
-  status,
+  currentPhase,
+  isRunning,
   isLoading,
 }: {
   phase: string;
-  status: "idle" | "active" | "complete";
+  currentPhase: CyclePhase | undefined;
+  isRunning: boolean;
   isLoading: boolean;
 }) {
   // Only show skeleton on initial load
@@ -534,6 +633,9 @@ function OODAPhaseCard({
       </div>
     );
   }
+
+  // Compute status based on current phase from cycle-store
+  const status = getOODAPhaseStatus(phase, currentPhase, isRunning);
 
   const statusColors = {
     idle: "text-cream-500 dark:text-cream-400",
@@ -547,18 +649,34 @@ function OODAPhaseCard({
     complete: "✓",
   };
 
+  const statusLabels = {
+    idle: "Waiting",
+    active: "Active",
+    complete: "Complete",
+  };
+
   return (
     <Tooltip>
       <TooltipTrigger>
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
-          {/* Live data indicator - always visible */}
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          {/* Pulsing indicator only when this phase is active */}
+          {status === "active" && (
+            <span className="absolute top-2 right-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+              </span>
+            </span>
+          )}
+          {status === "complete" && (
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500" />
+          )}
           <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
           <div
             className={`mt-1 text-lg font-medium flex items-center gap-2 ${statusColors[status]}`}
           >
             <span>{statusIcons[status]}</span>
-            <span className="capitalize">{status}</span>
+            <span>{statusLabels[status]}</span>
           </div>
         </div>
       </TooltipTrigger>
