@@ -19,6 +19,22 @@ export {
   updateExternalEvents,
 } from "./helixMemoryUpdate";
 
+// HelixDB Orchestrator
+export {
+  type ActContext,
+  createDisabledOrchestrator,
+  createHelixOrchestrator,
+  DEFAULT_ORCHESTRATOR_CONFIG,
+  type HelixMetrics,
+  HelixOrchestrator,
+  type HelixOrchestratorConfig,
+  type HelixPerformanceTargets,
+  type OrchestratorResult,
+  type OrientContext,
+  toMemoryUpdateInput,
+  toRetrievalInput,
+} from "./helixOrchestrator";
+
 // HelixDB Retrieval (GraphRAG)
 export {
   DEFAULT_RETRIEVAL_CONFIG,
@@ -31,6 +47,7 @@ export {
   retrieveSimilarDecisions,
   retrieveVectorOnly,
 } from "./helixRetrieval";
+
 // Market Snapshot Builder
 export {
   buildHistoricalSnapshot,
