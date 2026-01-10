@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "uv run pytest",
+    "test": "uv run --extra dev pytest",
     "format": "ruff format .",
     "lint": "ruff check .",
     "clean": "rm -rf .pytest_cache __pycache__ .ruff_cache"

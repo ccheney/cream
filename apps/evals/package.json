@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "echo 'Run: uv run deepeval test run'",
-    "test": "uv run pytest",
+    "test": "uv run --extra dev pytest",
     "format": "ruff format .",
     "lint": "ruff check .",
     "clean": "rm -rf .pytest_cache __pycache__ .ruff_cache"
