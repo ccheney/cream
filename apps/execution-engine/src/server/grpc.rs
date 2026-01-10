@@ -74,11 +74,12 @@ use proto::cream::v1::{
     CheckConstraintsResponse, ConstraintCheck, ConstraintResult, ConstraintViolation,
     GetAccountStateRequest, GetAccountStateResponse, GetOptionChainRequest, GetOptionChainResponse,
     GetOrderStateRequest, GetOrderStateResponse, GetPositionsRequest, GetPositionsResponse,
-    GetSnapshotRequest, GetSnapshotResponse, MarketSnapshot, Position, StreamExecutionsRequest,
-    StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse, SubscribeMarketDataRequest,
-    SubscribeMarketDataResponse, SymbolSnapshot, ViolationSeverity,
+    GetSnapshotRequest, GetSnapshotResponse, MarketSnapshot, Position, Quote,
+    StreamExecutionsRequest, StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse,
+    SubscribeMarketDataRequest, SubscribeMarketDataResponse, SymbolSnapshot, ViolationSeverity,
     execution_service_server::{ExecutionService, ExecutionServiceServer},
     market_data_service_server::{MarketDataService, MarketDataServiceServer},
+    subscribe_market_data_response,
 };
 
 // ============================================
@@ -598,18 +599,23 @@ impl ExecutionService for ExecutionServiceImpl {
 
 /// Market data service implementation.
 ///
-/// Provides market data from the Alpaca Market Data API.
+/// Provides market data from Alpaca and Databento feeds.
 pub struct MarketDataServiceImpl {
     /// Alpaca adapter for market data queries.
     alpaca: Arc<crate::execution::AlpacaAdapter>,
     /// Trading environment.
     environment: Environment,
+    /// Feed controller for Databento (optional).
+    feed_controller: Option<Arc<crate::feed::FeedController>>,
+    /// Shutdown sender for feed lifecycle.
+    shutdown_tx: Option<tokio::sync::broadcast::Sender<()>>,
 }
 
 impl std::fmt::Debug for MarketDataServiceImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MarketDataServiceImpl")
             .field("environment", &self.environment)
+            .field("has_feed_controller", &self.feed_controller.is_some())
             .finish()
     }
 }
@@ -621,6 +627,24 @@ impl MarketDataServiceImpl {
         Self {
             alpaca: Arc::new(alpaca),
             environment,
+            feed_controller: None,
+            shutdown_tx: None,
+        }
+    }
+
+    /// Create a new market data service with a feed controller.
+    #[must_use]
+    pub fn with_feed_controller(
+        alpaca: crate::execution::AlpacaAdapter,
+        environment: Environment,
+        feed_controller: Arc<crate::feed::FeedController>,
+        shutdown_tx: tokio::sync::broadcast::Sender<()>,
+    ) -> Self {
+        Self {
+            alpaca: Arc::new(alpaca),
+            environment,
+            feed_controller: Some(feed_controller),
+            shutdown_tx: Some(shutdown_tx),
         }
     }
 }
@@ -635,16 +659,85 @@ impl MarketDataService for MarketDataServiceImpl {
         request: Request<SubscribeMarketDataRequest>,
     ) -> Result<Response<Self::SubscribeMarketDataStream>, Status> {
         let req = request.into_inner();
+        let symbols = req.symbols;
+
+        tracing::info!(
+            symbol_count = symbols.len(),
+            symbols = ?symbols,
+            "SubscribeMarketData called"
+        );
 
         // Create a channel for streaming market data
         let (tx, rx) = mpsc::channel(128);
 
-        // Spawn a task to send market data updates
-        let symbols = req.symbols;
-        tokio::spawn(async move {
-            tracing::info!(symbol_count = symbols.len(), "Market data stream started");
-            let _ = tx;
-        });
+        // Start the Databento feed if we have a controller
+        if let (Some(feed_controller), Some(shutdown_tx)) =
+            (&self.feed_controller, &self.shutdown_tx)
+        {
+            let shutdown_rx = shutdown_tx.subscribe();
+            let started = feed_controller.start(symbols.clone(), shutdown_rx);
+            if started {
+                tracing::info!("Started Databento feed for subscription");
+            } else {
+                tracing::debug!("Feed already running or unavailable");
+            }
+
+            // Spawn a task to stream microstructure updates
+            let microstructure = feed_controller.microstructure();
+            let stream_symbols = symbols.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
+
+                loop {
+                    interval.tick().await;
+
+                    // Get snapshots for all subscribed symbols
+                    let snapshots = {
+                        let mut manager = microstructure.lock();
+                        stream_symbols
+                            .iter()
+                            .filter_map(|s| manager.snapshot(s))
+                            .collect::<Vec<_>>()
+                    };
+
+                    // Stream each snapshot as a Quote
+                    for state in snapshots {
+                        let quote = Quote {
+                            symbol: state.symbol,
+                            bid: decimal_to_f64(state.bid),
+                            ask: decimal_to_f64(state.ask),
+                            bid_size: decimal_to_i32(state.bid_depth),
+                            ask_size: decimal_to_i32(state.ask_depth),
+                            last: decimal_to_f64(state.last_trade),
+                            last_size: 0,
+                            volume: decimal_to_i64(state.volume),
+                            timestamp: Some(prost_types::Timestamp::from(
+                                std::time::SystemTime::now(),
+                            )),
+                        };
+
+                        let response = SubscribeMarketDataResponse {
+                            update: Some(subscribe_market_data_response::Update::Quote(quote)),
+                        };
+
+                        if tx.send(Ok(response)).await.is_err() {
+                            tracing::debug!("Market data stream client disconnected");
+                            return;
+                        }
+                    }
+                }
+            });
+        } else {
+            // No feed controller - just log and return empty stream
+            tracing::warn!("No feed controller available - market data streaming unavailable");
+            tokio::spawn(async move {
+                tracing::info!(
+                    symbol_count = symbols.len(),
+                    "Market data stream started (no feed)"
+                );
+                let _ = tx;
+            });
+        }
 
         let stream = ReceiverStream::new(rx);
         Ok(Response::new(Box::pin(stream)))
@@ -833,6 +926,27 @@ impl MarketDataService for MarketDataServiceImpl {
 // ============================================
 // Helper Functions
 // ============================================
+
+/// Convert a Decimal to f64.
+#[inline]
+fn decimal_to_f64(d: rust_decimal::Decimal) -> f64 {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_f64().unwrap_or(0.0)
+}
+
+/// Convert a Decimal to i32.
+#[inline]
+fn decimal_to_i32(d: rust_decimal::Decimal) -> i32 {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_i32().unwrap_or(0)
+}
+
+/// Convert a Decimal to i64.
+#[inline]
+fn decimal_to_i64(d: rust_decimal::Decimal) -> i64 {
+    use rust_decimal::prelude::ToPrimitive;
+    d.to_i64().unwrap_or(0)
+}
 
 /// Convert proto `DecisionPlan` to internal format.
 fn convert_decision_plan(proto: &proto::cream::v1::DecisionPlan) -> crate::models::DecisionPlan {
@@ -1131,6 +1245,47 @@ pub fn build_grpc_services() -> Result<
         Environment::Paper,
     )?;
     let market_data_service = MarketDataServiceImpl::new(market_data_alpaca, Environment::Paper);
+
+    Ok((
+        ExecutionServiceServer::new(execution_service),
+        MarketDataServiceServer::new(market_data_service),
+    ))
+}
+
+/// Build gRPC services with a feed controller for Databento streaming.
+///
+/// # Arguments
+///
+/// * `feed_controller` - Feed controller for managing Databento feed
+/// * `shutdown_tx` - Shutdown broadcast sender for feed lifecycle
+///
+/// # Errors
+///
+/// Returns an error if the execution service fails to initialize.
+pub fn build_grpc_services_with_feed(
+    feed_controller: Arc<crate::feed::FeedController>,
+    shutdown_tx: tokio::sync::broadcast::Sender<()>,
+) -> Result<
+    (
+        ExecutionServiceServer<ExecutionServiceImpl>,
+        MarketDataServiceServer<MarketDataServiceImpl>,
+    ),
+    crate::execution::AlpacaError,
+> {
+    let execution_service = ExecutionServiceImpl::with_defaults()?;
+
+    // Create adapter for market data service
+    let market_data_alpaca = crate::execution::AlpacaAdapter::new(
+        std::env::var("ALPACA_KEY").unwrap_or_else(|_| "paper-key".to_string()),
+        std::env::var("ALPACA_SECRET").unwrap_or_else(|_| "paper-secret".to_string()),
+        Environment::Paper,
+    )?;
+    let market_data_service = MarketDataServiceImpl::with_feed_controller(
+        market_data_alpaca,
+        Environment::Paper,
+        feed_controller,
+        shutdown_tx,
+    );
 
     Ok((
         ExecutionServiceServer::new(execution_service),

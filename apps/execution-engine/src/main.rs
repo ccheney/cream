@@ -31,7 +31,6 @@
 //! - **BACKTEST**: Uses `BacktestAdapter` for deterministic order simulation
 //! - **PAPER/LIVE**: Uses `AlpacaAdapter` with required credentials
 
-use parking_lot::Mutex;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,13 +40,10 @@ use execution_engine::{
     OrderStateManager, StatePersistence,
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
-    feed::{
-        DatabentoFeed, DatabentoFeedConfig, FeedProcessor, MicrostructureManager,
-        create_feed_channel,
-    },
+    feed::FeedController,
     observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
     safety::ConnectionMonitor,
-    server::{build_flight_server, create_router},
+    server::{build_flight_server, build_grpc_services_with_feed, create_router},
 };
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -204,9 +200,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // Start Databento market data feed
-    let feed_shutdown_rx = shutdown_tx.subscribe();
-    let _microstructure_manager = start_databento_feed(&config, cream_env, feed_shutdown_rx);
+    // Create Databento feed controller (feed starts when SubscribeMarketData is called)
+    let feed_controller = create_feed_controller(&config, cream_env);
 
     // Create HTTP router
     let app = create_router(components.execution_server);
@@ -244,18 +239,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
 
     let grpc_shutdown_tx = shutdown_tx.clone();
+    let feed_controller_for_grpc = feed_controller.clone();
     let grpc_handle = tokio::spawn(async move {
         let mut shutdown_rx = grpc_shutdown_tx.subscribe();
 
-        // Build gRPC services
-        let (execution_service, market_data_service) =
-            match execution_engine::server::grpc::build_grpc_services() {
-                Ok(services) => services,
-                Err(e) => {
-                    tracing::error!("Failed to build gRPC services: {e}");
-                    return;
+        // Build gRPC services with feed controller if available
+        let (execution_service, market_data_service) = match feed_controller_for_grpc {
+            Some(controller) => {
+                match build_grpc_services_with_feed(controller, grpc_shutdown_tx.clone()) {
+                    Ok(services) => services,
+                    Err(e) => {
+                        tracing::error!("Failed to build gRPC services: {e}");
+                        return;
+                    }
                 }
-            };
+            }
+            None => {
+                match execution_engine::server::grpc::build_grpc_services() {
+                    Ok(services) => services,
+                    Err(e) => {
+                        tracing::error!("Failed to build gRPC services: {e}");
+                        return;
+                    }
+                }
+            }
+        };
 
         let server = tonic::transport::Server::builder()
             .add_service(execution_service)
@@ -552,86 +560,38 @@ async fn reconciliation_loop(
     }
 }
 
-/// Start the Databento market data feed.
+/// Create a `FeedController` for managing the Databento market data feed.
 ///
-/// Creates the microstructure manager and feed processor, then starts the feed
-/// with symbols from the runtime config (passed via gRPC from TypeScript).
+/// The controller manages the feed lifecycle dynamically - the feed is started
+/// when TypeScript calls `SubscribeMarketData` with symbols from runtime config.
 ///
 /// # Returns
 ///
-/// The shared microstructure manager for use by gRPC services.
-fn start_databento_feed(
-    config: &Config,
-    env: Environment,
-    shutdown_rx: broadcast::Receiver<()>,
-) -> Option<Arc<Mutex<MicrostructureManager>>> {
+/// The feed controller for use by gRPC services, or None in BACKTEST mode.
+fn create_feed_controller(config: &Config, env: Environment) -> Option<Arc<FeedController>> {
     // Skip feed in BACKTEST mode
     if env == Environment::Backtest {
         tracing::info!("Databento feed disabled in BACKTEST mode");
         return None;
     }
 
-    // Check if API key is configured
+    // Create feed controller with Databento config
+    let controller = Arc::new(FeedController::new(config.feeds.databento.clone()));
+
+    // Log status based on API key availability
     if config.feeds.databento.api_key.is_empty() {
         tracing::warn!(
             "DATABENTO_KEY not set - Databento feed will not start. \
-             Market data will be unavailable until symbols are subscribed via gRPC."
+             Set the environment variable and call SubscribeMarketData."
         );
-        // Still create the microstructure manager for future use
-        let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
-        return Some(manager);
-    }
-
-    // Check if symbols are configured
-    if config.feeds.databento.symbols.is_empty() {
+    } else {
         tracing::info!(
-            "No symbols configured for Databento feed. \
-             Feed will start when symbols are subscribed via gRPC SubscribeMarketData."
+            dataset = %config.feeds.databento.dataset,
+            "Databento feed controller ready - waiting for SubscribeMarketData call"
         );
-        let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
-        return Some(manager);
     }
 
-    // Create feed configuration
-    let feed_config = DatabentoFeedConfig::from(&config.feeds.databento);
-    let symbols = config.feeds.databento.symbols.clone();
-
-    // Create shared microstructure manager
-    let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
-    let manager_for_processor = Arc::clone(&manager);
-
-    // Create feed channel
-    let (tx, rx) = create_feed_channel(Some(10_000));
-
-    // Spawn feed processor
-    let processor = FeedProcessor::new(rx, manager_for_processor);
-    tokio::spawn(async move {
-        processor.run().await;
-    });
-
-    // Spawn feed consumer
-    let feed = DatabentoFeed::new(feed_config, tx);
-    let mut shutdown = shutdown_rx;
-    tokio::spawn(async move {
-        tokio::select! {
-            result = feed.start(symbols) => {
-                if let Err(e) = result {
-                    tracing::error!(error = %e, "Databento feed error");
-                }
-            }
-            _ = shutdown.recv() => {
-                tracing::info!("Databento feed shutting down");
-            }
-        }
-    });
-
-    tracing::info!(
-        dataset = %config.feeds.databento.dataset,
-        symbol_count = config.feeds.databento.symbols.len(),
-        "Databento feed started"
-    );
-
-    Some(manager)
+    Some(controller)
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).

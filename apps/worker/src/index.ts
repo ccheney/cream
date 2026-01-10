@@ -16,6 +16,7 @@ import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
 import { createContext, isBacktest, requireEnv, validateEnvironmentOrExit } from "@cream/domain";
 import { getRuntimeConfigService, resetRuntimeConfigService, validateHelixDBOrExit } from "./db";
+import { getSubscriptionStatus, startMarketDataSubscription, stopMarketDataSubscription } from "./marketdata";
 
 // ============================================
 // Worker State
@@ -290,6 +291,7 @@ function startHealthServer(): void {
         const intervals = getIntervals();
         const uptime = Date.now() - state.startedAt.getTime();
 
+        const marketDataStatus = getSubscriptionStatus();
         const health = {
           status: "ok",
           uptime_ms: uptime,
@@ -307,6 +309,12 @@ function startHealthServer(): void {
           running: {
             trading_cycle: state.running.tradingCycle,
             prediction_markets: state.running.predictionMarkets,
+          },
+          market_data: {
+            active: marketDataStatus.active,
+            symbols: marketDataStatus.symbols,
+            last_update: marketDataStatus.lastUpdate?.toISOString() ?? null,
+            update_count: marketDataStatus.updateCount,
           },
           started_at: state.startedAt.toISOString(),
         };
@@ -411,6 +419,19 @@ async function main() {
   // biome-ignore lint/suspicious/noConsole: Startup info is intentional
   console.log(`🏥 Health endpoint listening on port ${HEALTH_PORT}`);
 
+  // Start market data subscription to execution engine
+  // This triggers the Rust side to start the Databento feed
+  const instruments = getInstruments();
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(`📡 Starting market data subscription for ${instruments.length} symbols...`);
+  await startMarketDataSubscription(instruments).catch((error) => {
+    // biome-ignore lint/suspicious/noConsole: Non-fatal error is intentional
+    console.warn(
+      `⚠️  Market data subscription failed: ${error instanceof Error ? error.message : "Unknown error"}. ` +
+        `Execution engine may not be running.`
+    );
+  });
+
   // Skip scheduling if disabled (dev mode)
   if (state.schedulerDisabled) {
     // biome-ignore lint/suspicious/noConsole: Startup info is intentional
@@ -438,11 +459,13 @@ async function main() {
   // Handle shutdown
   process.on("SIGINT", () => {
     stopScheduler();
+    stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
     stopScheduler();
+    stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });
 }

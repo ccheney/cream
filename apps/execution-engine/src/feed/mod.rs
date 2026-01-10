@@ -3,12 +3,14 @@
 //! This module handles real-time market data ingestion, microstructure tracking,
 //! gap recovery, and feed health monitoring.
 
+pub mod controller;
 pub mod databento;
 pub mod gap_recovery;
 pub mod health;
 pub mod microstructure;
 pub mod processor;
 
+pub use controller::FeedController;
 pub use databento::{
     DatabentoError, DatabentoFeed, DatabentoFeedConfig, DatabentoMessage, create_feed_channel,
 };
