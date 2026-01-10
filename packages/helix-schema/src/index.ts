@@ -935,3 +935,20 @@ export {
   type ThesisMemoryRetrievalOptions,
   type ThesisOutcome,
 } from "./thesisMemory";
+
+// ============================================
+// Temporal Edge Properties (Bi-Temporal Model)
+// ============================================
+
+export {
+  addTemporalPropertiesToEdge,
+  calculateTemporalStats,
+  createTemporalEdge,
+  expireEdge,
+  isEdgeActiveAt,
+  matchesTemporalQuery,
+  type TemporalEdgeProperties,
+  type TemporalEdgeStats,
+  type TemporalQueryOptions,
+  wasEdgeKnownAt,
+} from "./temporal";

@@ -72,6 +72,8 @@ export {
   // Constants
   EDGE_TYPE_THRESHOLDS,
   filterAndPrioritizeEdges,
+  // Temporal traversal (point-in-time queries)
+  filterEdgesByTime,
   type GraphEdge,
   type GraphNode,
   type GraphPath,
@@ -84,14 +86,19 @@ export {
   getNeighbors,
   getNode,
   getNodesByType,
+  isEdgeActiveAtTime,
   MENTION_TYPE_WEIGHTS,
   shouldFollowEdge,
   sortEdgesByPriority,
+  type TemporalTraversalOptions,
+  type TemporalTraversalResponse,
   type TraversalOptions,
   type TraversalResponse,
   traverse,
+  traverseAtTime,
   // Weighted traversal
   type WeightedTraversalResponse,
+  wasEdgeRecordedBy,
   weightedTraverse,
 } from "./queries/graph";
 // Mutations
