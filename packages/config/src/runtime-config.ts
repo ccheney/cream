@@ -71,7 +71,6 @@ export interface RuntimeAgentConfig {
   id: string;
   environment: TradingEnvironment;
   agentType: RuntimeAgentType;
-  model: string;
   systemPromptOverride: string | null;
   enabled: boolean;
   createdAt: string;

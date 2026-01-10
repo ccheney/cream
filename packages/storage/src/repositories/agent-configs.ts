@@ -4,8 +4,7 @@
  * Data access for agent_configs table. Manages per-agent prompt
  * configuration and enabled/disabled status.
  *
- * NOTE: Model selection is now global via trading_config.global_model.
- * The model column remains for backward compatibility but is not used.
+ * NOTE: Model selection is global via trading_config.global_model.
  *
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
@@ -56,7 +55,6 @@ export interface AgentConfig {
   id: string;
   environment: AgentEnvironment;
   agentType: AgentType;
-  model: string;
   systemPromptOverride: string | null;
   enabled: boolean;
   createdAt: string;
@@ -65,7 +63,6 @@ export interface AgentConfig {
 
 /**
  * Create agent config input
- * NOTE: model is deprecated - use global model in trading_config instead
  */
 export interface CreateAgentConfigInput {
   id: string;
@@ -77,7 +74,6 @@ export interface CreateAgentConfigInput {
 
 /**
  * Update agent config input (partial)
- * NOTE: model is deprecated - use global model in trading_config instead
  */
 export interface UpdateAgentConfigInput {
   systemPromptOverride?: string | null;
@@ -93,7 +89,6 @@ function mapAgentConfigRow(row: Row): AgentConfig {
     id: row.id as string,
     environment: row.environment as AgentEnvironment,
     agentType: row.agent_type as AgentType,
-    model: row.model as string,
     systemPromptOverride: row.system_prompt_override as string | null,
     enabled: toBoolean(row.enabled),
     createdAt: row.created_at as string,
@@ -115,8 +110,6 @@ export class AgentConfigsRepository {
 
   /**
    * Create a new agent config
-   * NOTE: model column is populated with placeholder for backward compat.
-   * Actual model selection comes from trading_config.global_model.
    */
   async create(input: CreateAgentConfigInput): Promise<AgentConfig> {
     const now = new Date().toISOString();
@@ -124,14 +117,13 @@ export class AgentConfigsRepository {
     try {
       await this.client.run(
         `INSERT INTO ${this.table} (
-          id, environment, agent_type, model,
+          id, environment, agent_type,
           system_prompt_override, enabled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           input.id,
           input.environment,
           input.agentType,
-          "global", // Placeholder - actual model from trading_config.global_model
           input.systemPromptOverride ?? null,
           fromBoolean(input.enabled !== false),
           now,
@@ -218,7 +210,6 @@ export class AgentConfigsRepository {
 
   /**
    * Update agent config
-   * NOTE: model is no longer updatable - use trading_config.global_model instead
    */
   async update(id: string, input: UpdateAgentConfigInput): Promise<AgentConfig> {
     await this.findByIdOrThrow(id);
@@ -281,7 +272,6 @@ export class AgentConfigsRepository {
 
   /**
    * Reset agent to default values
-   * NOTE: Model is now global via trading_config.global_model
    */
   async resetToDefaults(environment: AgentEnvironment, agentType: AgentType): Promise<AgentConfig> {
     const existing = await this.get(environment, agentType);
@@ -295,7 +285,7 @@ export class AgentConfigsRepository {
       });
     }
 
-    // Update to defaults (model is now global, so just reset prompt and enabled)
+    // Update to defaults
     return this.update(existing.id, {
       systemPromptOverride: null,
       enabled: true,
@@ -324,7 +314,6 @@ export class AgentConfigsRepository {
 
   /**
    * Clone configs from one environment to another
-   * NOTE: Model is now global via trading_config.global_model
    */
   async cloneToEnvironment(
     sourceEnvironment: AgentEnvironment,

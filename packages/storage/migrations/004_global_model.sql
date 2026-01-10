@@ -15,6 +15,4 @@ CREATE TABLE IF NOT EXISTS _migration_004_check (dummy INTEGER);
 -- Clean up check table
 DROP TABLE IF EXISTS _migration_004_check;
 
--- Note: agent_configs.model column is left in place for backward compatibility
--- but will no longer be used by the application. The global_model in trading_config
--- takes precedence for all agents.
+-- Note: agent_configs.model column was removed in migration 007
