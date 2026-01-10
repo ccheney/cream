@@ -31,8 +31,8 @@ import { createTursoClient } from "./turso.js";
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 const DEFAULT_TRADING_CONFIG = {
   maxConsensusIterations: 3,
-  agentTimeoutMs: 30_000,
-  totalConsensusTimeoutMs: 300_000,
+  agentTimeoutMs: 180_000, // 3 minutes - LLMs need time to generate decisions
+  totalConsensusTimeoutMs: 600_000, // 10 minutes total for full consensus
 
   convictionDeltaHold: 0.2,
   convictionDeltaAction: 0.3,
