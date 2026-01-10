@@ -395,7 +395,6 @@ export interface AgentStatus {
 
 export interface AgentConfig {
   type: string;
-  model: string;
   systemPrompt: string;
   enabled: boolean;
 }

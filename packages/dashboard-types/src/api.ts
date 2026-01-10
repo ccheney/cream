@@ -250,7 +250,6 @@ export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 
 export const AgentConfigSchema = z.object({
   type: z.string(),
-  model: z.string(),
   systemPrompt: z.string(),
   enabled: z.boolean(),
 });

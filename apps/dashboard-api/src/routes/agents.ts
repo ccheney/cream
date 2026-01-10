@@ -57,7 +57,6 @@ const AgentOutputSchema = z.object({
 
 const AgentConfigSchema = z.object({
   type: z.string(),
-  model: z.string(),
   systemPrompt: z.string(),
   enabled: z.boolean(),
 });
@@ -272,19 +271,16 @@ app.openapi(getConfigRoute, async (c) => {
   const dbConfig = await repo.get(env, dbType);
 
   // Return config from database if exists, otherwise return defaults
-  // Note: model is now global (configured in trading settings), but we return a value for backward compatibility
   const defaultPrompt =
     DEFAULT_PROMPTS[type] ?? `You are the ${type} agent for the Cream trading system.`;
   const config: z.infer<typeof AgentConfigSchema> = dbConfig
     ? {
         type,
-        model: dbConfig.model || "global", // Model is now global, this is for backward compat
         systemPrompt: dbConfig.systemPromptOverride ?? defaultPrompt,
         enabled: dbConfig.enabled,
       }
     : {
         type,
-        model: "global", // Model is now global (configured in trading settings)
         systemPrompt: defaultPrompt,
         enabled: true,
       };
@@ -337,7 +333,6 @@ app.openapi(updateConfigRoute, async (c) => {
   const repo = await getAgentConfigsRepo();
 
   // Upsert the config (creates if not exists, updates if exists)
-  // Note: model is ignored since all agents now use the global model
   const dbConfig = await repo.upsert(env, dbType, {
     systemPromptOverride:
       updates.systemPrompt !== DEFAULT_PROMPTS[type] ? updates.systemPrompt : null,
@@ -348,7 +343,6 @@ app.openapi(updateConfigRoute, async (c) => {
     DEFAULT_PROMPTS[type] ?? `You are the ${type} agent for the Cream trading system.`;
   const result: z.infer<typeof AgentConfigSchema> = {
     type,
-    model: "global", // Model is now global (configured in trading settings)
     systemPrompt: dbConfig.systemPromptOverride ?? defaultPrompt,
     enabled: dbConfig.enabled,
   };

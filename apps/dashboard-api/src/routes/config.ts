@@ -90,7 +90,6 @@ const AgentConfigSchema = z.object({
   id: z.string(),
   environment: EnvironmentSchema,
   agentType: AgentTypeSchema,
-  model: z.string(),
   systemPromptOverride: z.string().nullable(),
   enabled: z.boolean(),
   createdAt: z.string(),
@@ -854,46 +853,6 @@ app.openapi(updateConstraintsRoute, async (c) => {
       },
     });
     return c.json(updated.constraints, 200);
-  } catch (err) {
-    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
-      return c.json({ error: err.message, code: err.code }, 404);
-    }
-    throw err;
-  }
-});
-
-// ============================================
-// Legacy Routes (Backwards Compatibility)
-// ============================================
-
-// GET / - Redirect to /active
-const getLegacyRoute = createRoute({
-  method: "get",
-  path: "/",
-  request: {
-    query: z.object({
-      env: EnvironmentSchema.optional(),
-    }),
-  },
-  responses: {
-    200: {
-      content: { "application/json": { schema: FullConfigSchema } },
-      description: "Current configuration (alias for /active)",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorResponseSchema } },
-      description: "No active configuration found",
-    },
-  },
-  tags: ["Config"],
-});
-
-app.openapi(getLegacyRoute, async (c) => {
-  const environment = getEnvironment(c);
-  try {
-    const service = await getRuntimeConfigService();
-    const config = await service.getActiveConfig(environment);
-    return c.json(config, 200);
   } catch (err) {
     if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
       return c.json({ error: err.message, code: err.code }, 404);
