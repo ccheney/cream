@@ -223,14 +223,16 @@ export function Overlay({
 
   const zClass = type === "modal" ? "z-modal" : type === "drawer" ? "z-drawer" : "z-popover";
 
+  const dialogProps =
+    type === "modal" ? { role: "dialog" as const, "aria-modal": true as const } : {};
+
   return (
     <div
       className={`
         fixed ${positionClasses} ${zClass}
         ${className}
       `.trim()}
-      role={type === "modal" ? "dialog" : undefined}
-      aria-modal={type === "modal" ? true : undefined}
+      {...dialogProps}
       {...props}
     >
       {children}

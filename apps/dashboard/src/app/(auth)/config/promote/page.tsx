@@ -253,14 +253,12 @@ export default function ConfigPromotePage() {
               <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
                 Phase: {cycleProgress.phase}
               </span>
-              <span className="text-sm text-cream-500">
-                {Math.round(cycleProgress.progress * 100)}%
-              </span>
+              <span className="text-sm text-cream-500">{Math.round(cycleProgress.progress)}%</span>
             </div>
             <div className="w-full bg-cream-200 dark:bg-night-600 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${cycleProgress.progress * 100}%` }}
+                style={{ width: `${Math.min(cycleProgress.progress, 100)}%` }}
               />
             </div>
             {currentStep && <p className="mt-2 text-xs text-cream-500">{currentStep}</p>}

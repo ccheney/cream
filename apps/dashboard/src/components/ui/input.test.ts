@@ -85,10 +85,10 @@ describe("InputProps Type", () => {
       "radio",
     ];
 
-    types.forEach((type) => {
+    for (const type of types) {
       const props: InputProps = { type: type as InputProps["type"] };
       expect(props.type).toBe(type);
-    });
+    }
   });
 });
 

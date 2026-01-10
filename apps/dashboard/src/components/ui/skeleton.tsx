@@ -346,6 +346,7 @@ export function SkeletonContainer({
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading states
     <div role="status" aria-live="polite" aria-busy="true" aria-label={label} data-testid={testId}>
       <span className="sr-only">{label}</span>
       {children}
@@ -382,6 +383,7 @@ export function SkeletonTableRow({
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
       {Array.from({ length: columns }, (_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: Static column count, index is stable
         <Skeleton key={i} width={`${100 / columns}%`} height={16} testId={`${testId}-cell-${i}`} />
       ))}
     </div>

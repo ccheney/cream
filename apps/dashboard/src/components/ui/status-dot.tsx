@@ -112,6 +112,7 @@ export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
     const isDotAnimated = config.animation !== "";
 
     return (
+      // biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for status indicator
       <span
         ref={ref}
         role="status"

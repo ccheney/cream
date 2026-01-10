@@ -23,10 +23,10 @@ describe("SpinnerProps Type", () => {
 
   it("supports size prop with valid values", () => {
     const sizes: SpinnerSize[] = ["xs", "sm", "md", "lg"];
-    sizes.forEach((size) => {
+    for (const size of sizes) {
       const props: SpinnerProps = { size };
       expect(props.size).toBe(size);
-    });
+    }
   });
 
   it("supports sizePx prop as number", () => {

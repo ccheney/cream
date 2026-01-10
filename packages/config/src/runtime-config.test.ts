@@ -358,17 +358,39 @@ describe("RuntimeConfigService", () => {
   });
 
   describe("getHistory", () => {
-    test("returns config history", async () => {
+    test("returns config history with full context", async () => {
+      const mockConfig1 = createMockTradingConfig({
+        id: "tc-1",
+        version: 2,
+        maxConsensusIterations: 5,
+        status: "active",
+      });
+      const mockConfig2 = createMockTradingConfig({
+        id: "tc-2",
+        version: 1,
+        maxConsensusIterations: 3,
+      });
+
       (tradingRepo.getHistory as ReturnType<typeof mock>).mockResolvedValue([
-        createMockTradingConfig({ version: 2, maxConsensusIterations: 5 }),
-        createMockTradingConfig({ version: 1, maxConsensusIterations: 3 }),
+        mockConfig1,
+        mockConfig2,
       ]);
+      (tradingRepo.getActive as ReturnType<typeof mock>).mockResolvedValue(mockConfig1);
 
       const history = await service.getHistory("PAPER", 10);
 
       expect(history).toHaveLength(2);
-      expect(history[0].tradingConfig.version).toBe(2);
-      expect(history[0].changedFields).toContain("maxConsensusIterations");
+      expect(history[0]?.id).toBe("tc-1");
+      expect(history[0]?.version).toBe(2);
+      expect(history[0]?.config.trading.version).toBe(2);
+      expect(history[0]?.isActive).toBe(true);
+      expect(history[0]?.changedFields).toContain("maxConsensusIterations");
+      expect(history[0]?.createdAt).toBeDefined();
+      expect(history[0]?.description).toBeDefined();
+
+      expect(history[1]?.id).toBe("tc-2");
+      expect(history[1]?.version).toBe(1);
+      expect(history[1]?.isActive).toBe(false);
     });
   });
 

@@ -8,8 +8,9 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ConfigDiff } from "@/components/config/ConfigDiff";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useActiveConfig, useDraftConfig, useSaveDraft, useValidateDraft } from "@/hooks/queries";
 import type {
   FullRuntimeConfig,
@@ -19,6 +20,50 @@ import type {
   RuntimeUniverseConfig,
   SaveDraftInput,
 } from "@/lib/api/types";
+
+// Helper icon for tooltips
+function InfoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 7v4M8 5.5v-.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Label with tooltip helper
+function LabelWithTooltip({
+  htmlFor,
+  label,
+  tooltip,
+}: {
+  htmlFor: string;
+  label: string;
+  tooltip: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 mb-1">
+      <label
+        htmlFor={htmlFor}
+        className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+      >
+        {label}
+      </label>
+      <Tooltip>
+        <TooltipTrigger>
+          <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+        </TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
 
 // ============================================
 // Main Page Component
@@ -324,13 +369,23 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
 
       {/* Global LLM Model Selection */}
       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <label
-          htmlFor="global-model"
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
-        >
-          Global LLM Model
-          <span className="ml-2 text-cream-400 font-normal">(used by all agents)</span>
-        </label>
+        <div className="flex items-center gap-1.5 mb-2">
+          <label
+            htmlFor="global-model"
+            className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+          >
+            Global LLM Model
+            <span className="ml-2 text-cream-400 font-normal">(used by all agents)</span>
+          </label>
+          <Tooltip>
+            <TooltipTrigger>
+              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              The AI model powering all trading agents' reasoning and decision-making
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <select
           id="global-model"
           value={getGlobalModel()}
@@ -347,38 +402,39 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField
+        <DurationField
           label="Trading Cycle Interval"
-          hint="Time between trading cycles"
+          hint="Time between cycles"
+          tooltip="How often the OODA loop runs to evaluate positions and make decisions"
           value={getValue("tradingCycleIntervalMs")}
           onChange={(v) => handleChange("tradingCycleIntervalMs", v)}
-          suffix="ms"
-          min={60000}
-          max={86400000}
+          minMs={60000}
+          maxMs={86400000}
         />
-        <FormField
+        <DurationField
           label="Prediction Markets Interval"
+          tooltip="How often prediction market data (Kalshi, Polymarket) is refreshed"
           value={getValue("predictionMarketsIntervalMs")}
           onChange={(v) => handleChange("predictionMarketsIntervalMs", v)}
-          suffix="ms"
-          min={60000}
+          minMs={60000}
         />
-        <FormField
+        <DurationField
           label="Agent Timeout"
+          tooltip="Maximum time allowed for a single agent to complete its analysis"
           value={getValue("agentTimeoutMs")}
           onChange={(v) => handleChange("agentTimeoutMs", v)}
-          suffix="ms"
-          min={5000}
+          minMs={5000}
         />
-        <FormField
+        <DurationField
           label="Total Consensus Timeout"
+          tooltip="Maximum time for all agents to reach a trading consensus"
           value={getValue("totalConsensusTimeoutMs")}
           onChange={(v) => handleChange("totalConsensusTimeoutMs", v)}
-          suffix="ms"
-          min={10000}
+          minMs={10000}
         />
         <FormField
           label="Max Consensus Iterations"
+          tooltip="Maximum discussion rounds agents can have before forcing a decision"
           value={getValue("maxConsensusIterations")}
           onChange={(v) => handleChange("maxConsensusIterations", v)}
           min={1}
@@ -387,6 +443,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         <FormField
           label="Conviction Delta (Hold)"
           hint="Threshold to maintain position"
+          tooltip="Minimum conviction score difference to keep an existing position open"
           value={getValue("convictionDeltaHold")}
           onChange={(v) => handleChange("convictionDeltaHold", v)}
           step={0.01}
@@ -396,6 +453,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         <FormField
           label="Conviction Delta (Action)"
           hint="Threshold to take action"
+          tooltip="Minimum conviction score to open a new position or close an existing one"
           value={getValue("convictionDeltaAction")}
           onChange={(v) => handleChange("convictionDeltaAction", v)}
           step={0.01}
@@ -404,6 +462,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         />
         <FormField
           label="High Conviction %"
+          tooltip="Portfolio allocation percentage for high-confidence trades"
           value={getValue("highConvictionPct")}
           onChange={(v) => handleChange("highConvictionPct", v)}
           step={0.01}
@@ -412,6 +471,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         />
         <FormField
           label="Medium Conviction %"
+          tooltip="Portfolio allocation percentage for medium-confidence trades"
           value={getValue("mediumConvictionPct")}
           onChange={(v) => handleChange("mediumConvictionPct", v)}
           step={0.01}
@@ -420,6 +480,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         />
         <FormField
           label="Low Conviction %"
+          tooltip="Portfolio allocation percentage for low-confidence trades"
           value={getValue("lowConvictionPct")}
           onChange={(v) => handleChange("lowConvictionPct", v)}
           step={0.01}
@@ -428,6 +489,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         />
         <FormField
           label="Min Risk/Reward Ratio"
+          tooltip="Minimum potential profit vs potential loss required to enter a trade"
           value={getValue("minRiskRewardRatio")}
           onChange={(v) => handleChange("minRiskRewardRatio", v)}
           step={0.1}
@@ -437,6 +499,7 @@ function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfig
         <FormField
           label="Kelly Fraction"
           hint="Position sizing multiplier"
+          tooltip="Fraction of Kelly criterion used for position sizing (1.0 = full Kelly, 0.5 = half Kelly)"
           value={getValue("kellyFraction")}
           onChange={(v) => handleChange("kellyFraction", v)}
           step={0.01}
@@ -556,7 +619,7 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
 
               {isExpanded && (
                 <div className="p-4 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center gap-1.5 mb-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -568,15 +631,22 @@ function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentConfigList
                         Enabled
                       </span>
                     </label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Whether this agent participates in trading consensus decisions
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
 
                   <div className="mt-4">
-                    <label
+                    <LabelWithTooltip
                       htmlFor={`${agentType}-systemPrompt`}
-                      className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-                    >
-                      System Prompt Override
-                    </label>
+                      label="System Prompt Override"
+                      tooltip="Custom instructions that replace the agent's default system prompt. Leave empty to use defaults."
+                    />
                     <textarea
                       id={`${agentType}-systemPrompt`}
                       rows={3}
@@ -627,6 +697,21 @@ interface UniverseConfigFormProps {
 function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConfigFormProps) {
   const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
 
+  // Track raw text for array textareas to allow typing commas
+  const [rawText, setRawText] = useState({
+    staticSymbols: (config.staticSymbols || []).join(", "),
+    includeList: config.includeList.join(", "),
+    excludeList: config.excludeList.join(", "),
+  });
+
+  // Fix existing configs with source="index" but no indexSource
+  useEffect(() => {
+    if (config.source === "index" && !config.indexSource) {
+      setFormData((prev) => ({ ...prev, indexSource: "SPY" }));
+      onChange();
+    }
+  }, [config.source, config.indexSource, onChange]);
+
   const handleChange = <K extends keyof RuntimeUniverseConfig>(
     field: K,
     value: RuntimeUniverseConfig[K]
@@ -644,6 +729,28 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
 
   const getValue = <K extends keyof RuntimeUniverseConfig>(field: K): RuntimeUniverseConfig[K] => {
     return (formData[field] as RuntimeUniverseConfig[K]) ?? config[field];
+  };
+
+  // Parse comma-separated text into array of uppercase symbols
+  const parseSymbolList = (text: string): string[] =>
+    text
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+
+  // Handle blur for array textareas - commit parsed value to formData
+  const handleArrayTextBlur = (field: "staticSymbols" | "includeList" | "excludeList") => {
+    const parsed = parseSymbolList(rawText[field]);
+    handleChange(field, field === "staticSymbols" ? (parsed.length > 0 ? parsed : null) : parsed);
+  };
+
+  // Handle source type change with defaults
+  const handleSourceChange = (source: "static" | "index" | "screener") => {
+    handleChange("source", source);
+    // Set default indexSource when switching to index if not already set
+    if (source === "index" && !getValue("indexSource")) {
+      handleChange("indexSource", "SPY");
+    }
   };
 
   return (
@@ -665,9 +772,20 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
       <div className="space-y-4">
         {/* Source Type */}
         <fieldset>
-          <legend className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
-            Universe Source
-          </legend>
+          <div className="flex items-center gap-1.5 mb-2">
+            <legend className="block text-sm font-medium text-cream-700 dark:text-cream-300">
+              Universe Source
+            </legend>
+            <Tooltip>
+              <TooltipTrigger>
+                <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                How symbols are selected for trading: Static (manual list), Index (ETF
+                constituents), or Screener (filtered by criteria)
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <div className="flex gap-4">
             {(["static", "index", "screener"] as const).map((source) => (
               <label key={source} className="flex items-center gap-2 cursor-pointer">
@@ -676,7 +794,7 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
                   name="source"
                   value={source}
                   checked={getValue("source") === source}
-                  onChange={() => handleChange("source", source)}
+                  onChange={() => handleSourceChange(source)}
                   className="w-4 h-4 text-blue-600"
                 />
                 <span className="text-sm text-cream-700 dark:text-cream-300 capitalize">
@@ -690,25 +808,20 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
         {/* Static Symbols */}
         {getValue("source") === "static" && (
           <div>
-            <label
+            <LabelWithTooltip
               htmlFor="static-symbols"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-            >
-              Static Symbols
-            </label>
+              label="Static Symbols"
+              tooltip="Comma-separated list of stock tickers to include in the trading universe"
+            />
             <textarea
               id="static-symbols"
               rows={3}
-              value={(getValue("staticSymbols") || []).join(", ")}
-              onChange={(e) =>
-                handleChange(
-                  "staticSymbols",
-                  e.target.value
-                    .split(",")
-                    .map((s) => s.trim().toUpperCase())
-                    .filter(Boolean)
-                )
-              }
+              value={rawText.staticSymbols}
+              onChange={(e) => {
+                setRawText((prev) => ({ ...prev, staticSymbols: e.target.value.toUpperCase() }));
+                onChange();
+              }}
+              onBlur={() => handleArrayTextBlur("staticSymbols")}
               placeholder="AAPL, MSFT, GOOGL, ..."
               className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
             />
@@ -718,12 +831,11 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
         {/* Index Source */}
         {getValue("source") === "index" && (
           <div>
-            <label
+            <LabelWithTooltip
               htmlFor="index-source"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-            >
-              Index Source
-            </label>
+              label="Index Source"
+              tooltip="ETF whose constituents will be used as the trading universe"
+            />
             <select
               id="index-source"
               value={getValue("indexSource") || "SPY"}
@@ -742,17 +854,19 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
         <div className="grid grid-cols-2 gap-4">
           <FormField
             label="Min Volume"
+            tooltip="Minimum average daily trading volume. Filters out illiquid stocks."
             value={getValue("minVolume") || 0}
             onChange={(v) => handleChange("minVolume", v || null)}
           />
           <FormField
             label="Min Market Cap"
+            tooltip="Minimum market capitalization in dollars. Filters out small-cap stocks."
             value={getValue("minMarketCap") || 0}
             onChange={(v) => handleChange("minMarketCap", v || null)}
           />
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -764,54 +878,52 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
               Optionable Symbols Only
             </span>
           </label>
+          <Tooltip>
+            <TooltipTrigger>
+              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              Only include stocks that have listed options contracts available for trading
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Include/Exclude Lists */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label
+            <LabelWithTooltip
               htmlFor="include-list"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-            >
-              Always Include
-            </label>
+              label="Always Include"
+              tooltip="Symbols always added to universe regardless of filters or source"
+            />
             <textarea
               id="include-list"
               rows={2}
-              value={getValue("includeList").join(", ")}
-              onChange={(e) =>
-                handleChange(
-                  "includeList",
-                  e.target.value
-                    .split(",")
-                    .map((s) => s.trim().toUpperCase())
-                    .filter(Boolean)
-                )
-              }
+              value={rawText.includeList}
+              onChange={(e) => {
+                setRawText((prev) => ({ ...prev, includeList: e.target.value.toUpperCase() }));
+                onChange();
+              }}
+              onBlur={() => handleArrayTextBlur("includeList")}
               placeholder="AAPL, MSFT, ..."
               className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
             />
           </div>
           <div>
-            <label
+            <LabelWithTooltip
               htmlFor="exclude-list"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-            >
-              Always Exclude
-            </label>
+              label="Always Exclude"
+              tooltip="Symbols always removed from universe regardless of source"
+            />
             <textarea
               id="exclude-list"
               rows={2}
-              value={getValue("excludeList").join(", ")}
-              onChange={(e) =>
-                handleChange(
-                  "excludeList",
-                  e.target.value
-                    .split(",")
-                    .map((s) => s.trim().toUpperCase())
-                    .filter(Boolean)
-                )
-              }
+              value={rawText.excludeList}
+              onChange={(e) => {
+                setRawText((prev) => ({ ...prev, excludeList: e.target.value.toUpperCase() }));
+                onChange();
+              }}
+              onBlur={() => handleArrayTextBlur("excludeList")}
               placeholder="GME, AMC, ..."
               className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
             />
@@ -829,6 +941,7 @@ function UniverseConfigForm({ config, onSave, onChange, isSaving }: UniverseConf
 interface FormFieldProps {
   label: string;
   hint?: string;
+  tooltip?: string;
   value: number;
   onChange: (value: number) => void;
   suffix?: string;
@@ -841,6 +954,7 @@ interface FormFieldProps {
 function FormField({
   label,
   hint,
+  tooltip,
   value,
   onChange,
   suffix,
@@ -853,13 +967,23 @@ function FormField({
   const inputId = id ?? `field-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
   return (
     <div>
-      <label
-        htmlFor={inputId}
-        className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
-      >
-        {label}
-        {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
-      </label>
+      <div className="flex items-center gap-1.5 mb-1">
+        <label
+          htmlFor={inputId}
+          className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+        >
+          {label}
+          {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
+        </label>
+        {tooltip && (
+          <Tooltip>
+            <TooltipTrigger>
+              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>{tooltip}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
       <div className="relative">
         <input
           id={inputId}
@@ -876,6 +1000,123 @@ function FormField({
             {suffix}
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Duration Field Component (user-friendly time input)
+// ============================================
+
+type TimeUnit = "seconds" | "minutes" | "hours";
+
+interface DurationFieldProps {
+  label: string;
+  hint?: string;
+  tooltip?: string;
+  /** Value in milliseconds */
+  value: number;
+  /** Callback with value in milliseconds */
+  onChange: (valueMs: number) => void;
+  /** Minimum value in milliseconds */
+  minMs?: number;
+  /** Maximum value in milliseconds */
+  maxMs?: number;
+  id?: string;
+}
+
+const TIME_UNIT_MS: Record<TimeUnit, number> = {
+  seconds: 1000,
+  minutes: 60 * 1000,
+  hours: 60 * 60 * 1000,
+};
+
+/**
+ * Determine the best display unit for a millisecond value
+ */
+function getBestUnit(ms: number): TimeUnit {
+  if (ms >= TIME_UNIT_MS.hours && ms % TIME_UNIT_MS.hours === 0) {
+    return "hours";
+  }
+  if (ms >= TIME_UNIT_MS.minutes && ms % TIME_UNIT_MS.minutes === 0) {
+    return "minutes";
+  }
+  return "seconds";
+}
+
+function DurationField({
+  label,
+  hint,
+  tooltip,
+  value,
+  onChange,
+  minMs = 0,
+  maxMs,
+  id,
+}: DurationFieldProps) {
+  const inputId = id ?? `field-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+
+  // Track the selected unit (default based on value)
+  const [unit, setUnit] = useState<TimeUnit>(() => getBestUnit(value));
+
+  // Convert ms to display value
+  const displayValue = value / TIME_UNIT_MS[unit];
+
+  const handleValueChange = (newDisplayValue: number) => {
+    const newMs = Math.round(newDisplayValue * TIME_UNIT_MS[unit]);
+    onChange(newMs);
+  };
+
+  const handleUnitChange = (newUnit: TimeUnit) => {
+    setUnit(newUnit);
+    // Value in ms stays the same, just the display changes
+  };
+
+  // Calculate min/max in current unit
+  const minDisplay = minMs / TIME_UNIT_MS[unit];
+  const maxDisplay = maxMs ? maxMs / TIME_UNIT_MS[unit] : undefined;
+
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <label
+          htmlFor={inputId}
+          className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+        >
+          {label}
+          {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
+        </label>
+        {tooltip && (
+          <Tooltip>
+            <TooltipTrigger>
+              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>{tooltip}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <input
+          id={inputId}
+          type="number"
+          value={displayValue}
+          onChange={(e) => handleValueChange(parseFloat(e.target.value) || 0)}
+          min={minDisplay}
+          max={maxDisplay}
+          step={unit === "hours" ? 0.5 : 1}
+          className="flex-1 px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+        />
+        <select
+          value={unit}
+          onChange={(e) => handleUnitChange(e.target.value as TimeUnit)}
+          className="px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          aria-label="Time unit"
+        >
+          <option value="seconds">seconds</option>
+          <option value="minutes">minutes</option>
+          <option value="hours">hours</option>
+        </select>
       </div>
     </div>
   );

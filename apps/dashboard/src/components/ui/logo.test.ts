@@ -23,10 +23,10 @@ describe("LogoProps Type", () => {
 
   it("supports size prop with valid values", () => {
     const sizes: LogoSize[] = ["xs", "sm", "md", "lg", "xl"];
-    sizes.forEach((size) => {
+    for (const size of sizes) {
       const props: LogoProps = { size };
       expect(props.size).toBe(size);
-    });
+    }
   });
 
   it("supports sizePx prop as number", () => {
@@ -36,10 +36,10 @@ describe("LogoProps Type", () => {
 
   it("supports variant prop", () => {
     const variants: LogoVariant[] = ["full", "icon"];
-    variants.forEach((variant) => {
+    for (const variant of variants) {
       const props: LogoProps = { variant };
       expect(props.variant).toBe(variant);
-    });
+    }
   });
 
   it("supports pulse prop", () => {

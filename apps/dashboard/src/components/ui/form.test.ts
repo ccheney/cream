@@ -372,10 +372,10 @@ describe("Integration Patterns", () => {
       "Invalid email",
     ];
 
-    zodErrors.forEach((message) => {
+    for (const message of zodErrors) {
       const props: FormErrorProps = { message };
       expect(props.message).toBe(message);
-    });
+    }
   });
 
   it("works with React Hook Form error objects conceptually", () => {

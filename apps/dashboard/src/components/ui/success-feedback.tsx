@@ -172,6 +172,7 @@ export function Checkmark({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       {animated && <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />}
       <svg
         viewBox="0 0 24 24"
@@ -211,7 +212,9 @@ export function SuccessText({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
+      {/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for feedback */}
       <span role="status" aria-live="polite" data-testid={testId} style={styles}>
         <Checkmark size={16} />
         <span>{children}</span>
@@ -338,6 +341,7 @@ export function SuccessButton({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
       <button
         type="button"
@@ -353,6 +357,7 @@ export function SuccessButton({
 
         {/* Screen reader announcement */}
         {state === "success" && (
+          // biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for feedback
           <span className="sr-only" role="status" aria-live="polite">
             Form submitted successfully
           </span>
@@ -501,7 +506,9 @@ export function InlineSuccess({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
+      {/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for feedback */}
       <span role="status" aria-live="polite" data-testid={testId} style={styles}>
         <Checkmark size={14} />
         <span>{text}</span>

@@ -203,6 +203,7 @@ export const FormLabel = forwardRef<HTMLLabelElement, FormLabelProps>(
     const { formItemId, error } = useFormField();
 
     return (
+      // biome-ignore lint/a11y/noLabelWithoutControl: Label is associated via htmlFor
       <label
         ref={ref}
         htmlFor={formItemId}
@@ -231,6 +232,7 @@ export function FormControl({ children }: { children: React.ReactElement }) {
     id: formItemId,
     "aria-describedby": describedBy,
     "aria-invalid": !!error,
+    // biome-ignore lint/suspicious/noExplicitAny: cloneElement requires any for arbitrary prop spreading
   } as any);
 }
 

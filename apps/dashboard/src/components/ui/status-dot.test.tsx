@@ -32,11 +32,11 @@ describe("StatusDot", () => {
     ];
 
     it("supports all status variants", () => {
-      statuses.forEach((status) => {
+      for (const status of statuses) {
         const element = render({ status });
         expect(element).toBeDefined();
         expect(element.type).toBe(StatusDot);
-      });
+      }
     });
 
     it("creates element for active status", () => {
@@ -74,11 +74,11 @@ describe("StatusDot", () => {
     const sizes: StatusDotSize[] = ["xs", "sm", "md", "lg"];
 
     it("supports all size variants", () => {
-      sizes.forEach((size) => {
+      for (const size of sizes) {
         const element = render({ status: "active", size });
         expect(element).toBeDefined();
         expect(element.props.size).toBe(size);
-      });
+      }
     });
 
     it("uses sm size by default", () => {

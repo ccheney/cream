@@ -293,12 +293,25 @@ export interface RuntimeValidationResult {
 }
 
 /**
- * Config history entry with diff
+ * Config history entry with diff and full context
  */
 export interface ConfigHistoryEntry {
-  tradingConfig: RuntimeTradingConfig;
-  changedAt: string;
+  /** Unique version identifier (trading config id) */
+  id: string;
+  /** Version number (sequential) */
+  version: number;
+  /** Full configuration snapshot */
+  config: FullRuntimeConfig;
+  /** When this version was created */
+  createdAt: string;
+  /** Who created this version (from auth, if available) */
+  createdBy?: string;
+  /** Whether this is the active version */
+  isActive: boolean;
+  /** Changed fields from previous version */
   changedFields: string[];
+  /** Optional description of the change */
+  description?: string;
 }
 
 /**
@@ -676,7 +689,7 @@ export class RuntimeConfigService {
   }
 
   /**
-   * Get configuration history
+   * Get configuration history with full context
    */
   async getHistory(environment: RuntimeEnvironment, limit = 20): Promise<ConfigHistoryEntry[]> {
     const history = await this.tradingConfigRepo.getHistory(
@@ -684,43 +697,185 @@ export class RuntimeConfigService {
       limit
     );
 
-    return history.map((config, index) => {
+    // Get current active config to determine isActive status
+    const activeTradingConfig = await this.tradingConfigRepo.getActive(
+      environment as TradingEnvironment
+    );
+
+    // Get current agents and universe for building full configs
+    // (agents/universe aren't version-tracked independently, so use current active)
+    const [agentConfigs, universe, constraints] = await Promise.all([
+      this.agentConfigsRepo.getAll(environment as TradingEnvironment),
+      this.universeConfigsRepo.getActive(environment as TradingEnvironment),
+      this.constraintsConfigRepo?.getActive(environment as TradingEnvironment),
+    ]);
+    const agents = this.buildAgentsMap(agentConfigs);
+
+    if (!universe) {
+      throw new RuntimeConfigError("No active universe config", "NOT_SEEDED", environment);
+    }
+
+    return history.map((tradingConfig, index) => {
       const changedFields: string[] = [];
 
       // Compare with previous version to find changes
       if (index < history.length - 1) {
         const prev = history[index + 1];
         if (prev) {
-          if (config.maxConsensusIterations !== prev.maxConsensusIterations) {
+          if (tradingConfig.globalModel !== prev.globalModel) {
+            changedFields.push("globalModel");
+          }
+          if (tradingConfig.maxConsensusIterations !== prev.maxConsensusIterations) {
             changedFields.push("maxConsensusIterations");
           }
-          if (config.agentTimeoutMs !== prev.agentTimeoutMs) {
+          if (tradingConfig.agentTimeoutMs !== prev.agentTimeoutMs) {
             changedFields.push("agentTimeoutMs");
           }
-          if (config.convictionDeltaHold !== prev.convictionDeltaHold) {
+          if (tradingConfig.totalConsensusTimeoutMs !== prev.totalConsensusTimeoutMs) {
+            changedFields.push("totalConsensusTimeoutMs");
+          }
+          if (tradingConfig.convictionDeltaHold !== prev.convictionDeltaHold) {
             changedFields.push("convictionDeltaHold");
           }
-          if (config.convictionDeltaAction !== prev.convictionDeltaAction) {
+          if (tradingConfig.convictionDeltaAction !== prev.convictionDeltaAction) {
             changedFields.push("convictionDeltaAction");
           }
-          if (config.highConvictionPct !== prev.highConvictionPct) {
+          if (tradingConfig.highConvictionPct !== prev.highConvictionPct) {
             changedFields.push("highConvictionPct");
           }
-          if (config.kellyFraction !== prev.kellyFraction) {
+          if (tradingConfig.mediumConvictionPct !== prev.mediumConvictionPct) {
+            changedFields.push("mediumConvictionPct");
+          }
+          if (tradingConfig.lowConvictionPct !== prev.lowConvictionPct) {
+            changedFields.push("lowConvictionPct");
+          }
+          if (tradingConfig.minRiskRewardRatio !== prev.minRiskRewardRatio) {
+            changedFields.push("minRiskRewardRatio");
+          }
+          if (tradingConfig.kellyFraction !== prev.kellyFraction) {
             changedFields.push("kellyFraction");
           }
-          if (config.tradingCycleIntervalMs !== prev.tradingCycleIntervalMs) {
+          if (tradingConfig.tradingCycleIntervalMs !== prev.tradingCycleIntervalMs) {
             changedFields.push("tradingCycleIntervalMs");
+          }
+          if (tradingConfig.predictionMarketsIntervalMs !== prev.predictionMarketsIntervalMs) {
+            changedFields.push("predictionMarketsIntervalMs");
           }
         }
       }
 
-      return {
-        tradingConfig: config,
-        changedAt: config.createdAt,
+      // Build full config snapshot (use default constraints if not available)
+      const fullConfig: FullRuntimeConfig = {
+        trading: tradingConfig,
+        agents,
+        universe,
+        constraints: constraints ?? this.getDefaultConstraints(environment),
+      };
+
+      // Generate human-readable description from changed fields
+      const description = this.generateChangeDescription(
         changedFields,
+        tradingConfig,
+        history[index + 1]
+      );
+
+      return {
+        id: tradingConfig.id,
+        version: tradingConfig.version,
+        config: fullConfig,
+        createdAt: tradingConfig.createdAt,
+        isActive: activeTradingConfig?.id === tradingConfig.id,
+        changedFields,
+        description,
       };
     });
+  }
+
+  /**
+   * Generate a human-readable description of config changes
+   */
+  private generateChangeDescription(
+    changedFields: string[],
+    current: RuntimeTradingConfig,
+    previous?: RuntimeTradingConfig
+  ): string | undefined {
+    if (changedFields.length === 0) {
+      if (current.promotedFrom) {
+        return "Rollback to previous configuration";
+      }
+      return "Initial configuration";
+    }
+
+    if (changedFields.length === 1) {
+      const field = changedFields[0];
+      if (!field || !previous) {
+        return undefined;
+      }
+      return this.describeFieldChange(field, current, previous);
+    }
+
+    if (changedFields.length <= 3) {
+      return `Updated ${changedFields.join(", ")}`;
+    }
+
+    return `Updated ${changedFields.length} configuration settings`;
+  }
+
+  /**
+   * Describe a single field change
+   */
+  private describeFieldChange(
+    field: string,
+    current: RuntimeTradingConfig,
+    previous: RuntimeTradingConfig
+  ): string {
+    const fieldDescriptions: Record<string, string> = {
+      globalModel: "Changed LLM model",
+      maxConsensusIterations: "Adjusted consensus iterations",
+      agentTimeoutMs: "Changed agent timeout",
+      totalConsensusTimeoutMs: "Changed total consensus timeout",
+      convictionDeltaHold: "Adjusted hold conviction threshold",
+      convictionDeltaAction: "Adjusted action conviction threshold",
+      highConvictionPct: "Changed high conviction percentage",
+      mediumConvictionPct: "Changed medium conviction percentage",
+      lowConvictionPct: "Changed low conviction percentage",
+      minRiskRewardRatio: "Updated minimum risk/reward ratio",
+      kellyFraction: "Adjusted Kelly fraction for position sizing",
+      tradingCycleIntervalMs: "Changed trading cycle interval",
+      predictionMarketsIntervalMs: "Changed prediction markets interval",
+    };
+
+    const base = fieldDescriptions[field] ?? `Updated ${field}`;
+
+    // Add before/after for numeric fields
+    const currentVal = current[field as keyof RuntimeTradingConfig];
+    const prevVal = previous[field as keyof RuntimeTradingConfig];
+
+    if (typeof currentVal === "number" && typeof prevVal === "number") {
+      if (field.endsWith("Ms")) {
+        // Format milliseconds as seconds/minutes
+        const formatMs = (ms: number) => {
+          if (ms >= 60000) {
+            return `${ms / 60000}m`;
+          }
+          if (ms >= 1000) {
+            return `${ms / 1000}s`;
+          }
+          return `${ms}ms`;
+        };
+        return `${base}: ${formatMs(prevVal)} → ${formatMs(currentVal)}`;
+      }
+      if (field.endsWith("Pct")) {
+        return `${base}: ${prevVal}% → ${currentVal}%`;
+      }
+      return `${base}: ${prevVal} → ${currentVal}`;
+    }
+
+    if (typeof currentVal === "string" && typeof prevVal === "string") {
+      return `${base}: ${prevVal} → ${currentVal}`;
+    }
+
+    return base;
   }
 
   /**

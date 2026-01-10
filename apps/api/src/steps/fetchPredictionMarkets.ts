@@ -91,7 +91,11 @@ function buildConfigFromEnv(): PredictionMarketsConfig {
   if (hasKalshi) {
     config.kalshi.enabled = true;
     config.kalshi.api_key_id = process.env.KALSHI_API_KEY_ID;
-    config.kalshi.private_key_path = process.env.KALSHI_PRIVATE_KEY_PATH;
+    // Resolve relative paths from project root
+    const keyPath = process.env.KALSHI_PRIVATE_KEY_PATH ?? "";
+    config.kalshi.private_key_path = keyPath.startsWith("/")
+      ? keyPath
+      : `${process.cwd()}/${keyPath}`;
   } else {
     config.kalshi.enabled = false;
   }

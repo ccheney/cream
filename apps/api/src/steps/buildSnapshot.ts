@@ -178,8 +178,8 @@ export const buildSnapshotStep = createStep({
     // Calculate date range for candle fetching (last 7 days)
     const toDate = new Date();
     const fromDate = new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const from = fromDate.toISOString().split("T")[0]!;
-    const to = toDate.toISOString().split("T")[0]!;
+    const from = fromDate.toISOString().split("T")[0] ?? "";
+    const to = toDate.toISOString().split("T")[0] ?? "";
 
     for (const symbol of allSymbols) {
       const snapshot = await createSnapshotFromAdapter(adapter, symbol, timestamp, from, to);

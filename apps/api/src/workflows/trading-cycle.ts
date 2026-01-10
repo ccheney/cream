@@ -1142,6 +1142,40 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   }
   analystOutputs = analystsResult.result;
 
+  // Validate analyst outputs - LLM may return undefined if structured output fails
+  if (!analystOutputs.technical || !analystOutputs.news || !analystOutputs.fundamentals) {
+    const missing = [
+      !analystOutputs.technical && "technical",
+      !analystOutputs.news && "news",
+      !analystOutputs.fundamentals && "fundamentals",
+    ].filter(Boolean);
+    log.error({ cycleId, phase: "analysts", missing }, "Analyst agents returned undefined outputs");
+    emitAgentEvent("technical_analyst", "error", {
+      error: !analystOutputs.technical ? "Returned undefined" : undefined,
+      durationMs: analystDuration,
+    });
+    emitAgentEvent("news_analyst", "error", {
+      error: !analystOutputs.news ? "Returned undefined" : undefined,
+      durationMs: analystDuration,
+    });
+    emitAgentEvent("fundamentals_analyst", "error", {
+      error: !analystOutputs.fundamentals ? "Returned undefined" : undefined,
+      durationMs: analystDuration,
+    });
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: {
+        submitted: false,
+        orderIds: [],
+        errors: [`Analyst agents returned undefined outputs: ${missing.join(", ")}`],
+      },
+      mode: "LLM",
+      configVersion,
+    };
+  }
+
   // Emit complete events for analyst agents
   emitAgentEvent("technical_analyst", "complete", { durationMs: analystDuration });
   emitAgentEvent("news_analyst", "complete", { durationMs: analystDuration });
@@ -1226,6 +1260,35 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     };
   }
   debateOutputs = debateResult.result;
+
+  // Validate debate outputs - LLM may return undefined if structured output fails
+  if (!debateOutputs.bullish || !debateOutputs.bearish) {
+    const missing = [
+      !debateOutputs.bullish && "bullish",
+      !debateOutputs.bearish && "bearish",
+    ].filter(Boolean);
+    log.error({ cycleId, phase: "debate", missing }, "Research agents returned undefined outputs");
+    emitAgentEvent("bullish_researcher", "error", {
+      error: !debateOutputs.bullish ? "Returned undefined" : undefined,
+      durationMs: debateDuration,
+    });
+    emitAgentEvent("bearish_researcher", "error", {
+      error: !debateOutputs.bearish ? "Returned undefined" : undefined,
+      durationMs: debateDuration,
+    });
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: {
+        submitted: false,
+        orderIds: [],
+        errors: [`Research agents returned undefined outputs: ${missing.join(", ")}`],
+      },
+      mode: "LLM",
+      configVersion,
+    };
+  }
 
   // Emit complete events for debate agents
   emitAgentEvent("bullish_researcher", "complete", { durationMs: debateDuration });

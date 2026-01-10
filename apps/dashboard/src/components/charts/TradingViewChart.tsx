@@ -80,7 +80,7 @@ function TradingViewChartComponent({
   maOverlays = [],
   markers = [],
   priceLines = [],
-  sessionBoundaries,
+  sessionBoundaries: _sessionBoundaries,
   width = "100%",
   height = 400,
   autoResize = true,
@@ -307,7 +307,7 @@ function TradingViewChartComponent({
       chartRef.current.removeSeries(sessionSeriesRef.current);
       sessionSeriesRef.current = null;
     }
-  }, [data, sessionBoundaries]);
+  }, []);
 
   const handleResize = useCallback(() => {
     if (!chartRef.current || !containerRef.current || !autoResize) {

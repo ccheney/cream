@@ -76,3 +76,7 @@ lcov.info
 
 # Turborepo
 .turbo
+
+# Kalshi private key
+.kalshi-key.pem
+.kalshi-key-pkcs8.pem

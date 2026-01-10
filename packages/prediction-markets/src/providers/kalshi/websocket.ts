@@ -7,10 +7,42 @@
  * @see https://docs.kalshi.com/websockets/introduction
  */
 
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
 import { z } from "zod";
 
-export const KALSHI_WEBSOCKET_URL = "wss://trading-api.kalshi.com/trade-api/ws/v2";
+export const KALSHI_WEBSOCKET_URL = "wss://api.elections.kalshi.com/trade-api/ws/v2";
 export const KALSHI_DEMO_WEBSOCKET_URL = "wss://demo-api.kalshi.co/trade-api/ws/v2";
+
+// ============================================
+// Authentication
+// ============================================
+
+function signPssText(privateKeyPem: string, text: string): string {
+  const sign = crypto.createSign("RSA-SHA256");
+  sign.update(text);
+  sign.end();
+  const signature = sign.sign({
+    key: privateKeyPem,
+    padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST,
+  });
+  return signature.toString("base64");
+}
+
+function generateAuthHeaders(apiKeyId: string, privateKeyPem: string): Record<string, string> {
+  const timestamp = Date.now().toString();
+  const method = "GET";
+  const path = "/trade-api/ws/v2";
+  const msgString = timestamp + method + path;
+  const signature = signPssText(privateKeyPem, msgString);
+
+  return {
+    "KALSHI-ACCESS-KEY": apiKeyId,
+    "KALSHI-ACCESS-SIGNATURE": signature,
+    "KALSHI-ACCESS-TIMESTAMP": timestamp,
+  };
+}
 
 /** Heartbeat interval in milliseconds */
 export const HEARTBEAT_INTERVAL_MS = 10000;
@@ -193,8 +225,12 @@ export class MarketStateCache {
 export type KalshiWebSocketCallback = (message: KalshiWebSocketMessage) => void;
 
 export interface KalshiWebSocketConfig {
-  /** API key for authentication */
-  apiKey?: string;
+  /** API key ID for authentication */
+  apiKeyId?: string;
+  /** Path to RSA private key file */
+  privateKeyPath?: string;
+  /** RSA private key as PEM string */
+  privateKeyPem?: string;
   /** Use demo environment */
   demo?: boolean;
   /** Auto-reconnect on disconnect */
@@ -219,7 +255,12 @@ export class KalshiWebSocketClient {
   private reconnectAttempts = 0;
   private reconnectTimer: Timer | null = null;
   private heartbeatTimer: Timer | null = null;
-  private readonly config: Required<Omit<KalshiWebSocketConfig, "reconnect">> & {
+  private readonly config: {
+    apiKeyId: string;
+    privateKeyPem: string;
+    demo: boolean;
+    autoReconnect: boolean;
+    cacheTtlMs: number;
     reconnect: Required<NonNullable<KalshiWebSocketConfig["reconnect"]>>;
   };
   private readonly cache: MarketStateCache;
@@ -234,8 +275,15 @@ export class KalshiWebSocketClient {
   private onErrorCallbacks: Set<(error: Error) => void> = new Set();
 
   constructor(config: KalshiWebSocketConfig = {}) {
+    // Load private key from file if path provided
+    let privateKeyPem = config.privateKeyPem ?? "";
+    if (!privateKeyPem && config.privateKeyPath) {
+      privateKeyPem = fs.readFileSync(config.privateKeyPath, "utf-8");
+    }
+
     this.config = {
-      apiKey: config.apiKey ?? "",
+      apiKeyId: config.apiKeyId ?? "",
+      privateKeyPem,
       demo: config.demo ?? false,
       autoReconnect: config.autoReconnect ?? true,
       cacheTtlMs: config.cacheTtlMs ?? 5 * 60 * 1000,
@@ -249,6 +297,10 @@ export class KalshiWebSocketClient {
     };
 
     this.cache = new MarketStateCache(this.config.cacheTtlMs);
+  }
+
+  isAuthenticated(): boolean {
+    return Boolean(this.config.apiKeyId && this.config.privateKeyPem);
   }
 
   getConnectionState(): ConnectionState {
@@ -269,7 +321,12 @@ export class KalshiWebSocketClient {
 
     return new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(url);
+        // Create WebSocket with auth headers if authenticated
+        const wsOptions = this.isAuthenticated()
+          ? { headers: generateAuthHeaders(this.config.apiKeyId, this.config.privateKeyPem) }
+          : undefined;
+
+        this.ws = new WebSocket(url, wsOptions);
 
         this.ws.onopen = () => {
           this.connectionState = "connected";

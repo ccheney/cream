@@ -16,7 +16,6 @@ function getClientEnv(): "BACKTEST" | "PAPER" | "LIVE" {
     return "BACKTEST";
   }
   if (!["BACKTEST", "PAPER", "LIVE"].includes(env)) {
-    console.warn(`Invalid NEXT_PUBLIC_CREAM_ENV value: "${env}". Defaulting to BACKTEST.`);
     return "BACKTEST";
   }
   return env as "BACKTEST" | "PAPER" | "LIVE";

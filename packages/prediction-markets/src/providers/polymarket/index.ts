@@ -25,3 +25,21 @@ export {
   type PolymarketMarket,
   PolymarketMarketSchema,
 } from "./client";
+
+export {
+  type BookMessage,
+  BookMessageSchema,
+  type CachedMarketState,
+  type ConnectionState,
+  createPolymarketWebSocketClient,
+  type LastTradePriceMessage,
+  LastTradePriceMessageSchema,
+  MarketStateCache,
+  POLYMARKET_WEBSOCKET_URL,
+  type PolymarketWebSocketCallback,
+  PolymarketWebSocketClient,
+  type PolymarketWebSocketConfig,
+  type PolymarketWebSocketMessage,
+  type PriceChangeMessage,
+  PriceChangeMessageSchema,
+} from "./websocket";

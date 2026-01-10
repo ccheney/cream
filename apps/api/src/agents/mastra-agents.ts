@@ -732,7 +732,9 @@ Regime context should inform your setup classification and technical thesis.`;
     options
   );
 
-  return response.object as TechnicalAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = response.object as TechnicalAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -760,7 +762,9 @@ Cycle ID: ${context.cycleId}`;
 
   const response = await newsAnalystAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as SentimentAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = response.object as SentimentAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -815,7 +819,9 @@ ${
     options
   );
 
-  return response.object as FundamentalsAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = response.object as FundamentalsAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -871,7 +877,9 @@ Cycle ID: ${context.cycleId}`;
     options
   );
 
-  return response.object as BullishResearchOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = response.object as BullishResearchOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -910,7 +918,9 @@ Cycle ID: ${context.cycleId}`;
     options
   );
 
-  return response.object as BearishResearchOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = response.object as BearishResearchOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -1186,7 +1196,9 @@ Regime context should inform your setup classification and technical thesis.`;
     }
   }
 
-  return (await stream.object) as TechnicalAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = (await stream.object) as TechnicalAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -1255,7 +1267,9 @@ Cycle ID: ${context.cycleId}`;
     }
   }
 
-  return (await stream.object) as SentimentAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = (await stream.object) as SentimentAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -1349,7 +1363,9 @@ ${
     }
   }
 
-  return (await stream.object) as FundamentalsAnalysisOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = (await stream.object) as FundamentalsAnalysisOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -1445,7 +1461,9 @@ Cycle ID: ${context.cycleId}`;
     }
   }
 
-  return (await stream.object) as BullishResearchOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = (await stream.object) as BullishResearchOutput[] | undefined;
+  return result ?? [];
 }
 
 /**
@@ -1521,7 +1539,9 @@ Cycle ID: ${context.cycleId}`;
     }
   }
 
-  return (await stream.object) as BearishResearchOutput[];
+  // Ensure we always return an array, even if structured output parsing fails
+  const result = (await stream.object) as BearishResearchOutput[] | undefined;
+  return result ?? [];
 }
 
 /**

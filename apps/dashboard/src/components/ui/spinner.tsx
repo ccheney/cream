@@ -109,7 +109,9 @@ export function Spinner({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
+      {/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading spinner */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -173,7 +175,9 @@ export function SpinnerDots({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
+      {/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading spinner */}
       <div
         role="status"
         aria-label={label}
@@ -234,7 +238,9 @@ export function SpinnerBar({
 
   return (
     <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
       <style dangerouslySetInnerHTML={{ __html: slideKeyframes }} />
+      {/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading spinner */}
       <div
         role="status"
         aria-label={label}

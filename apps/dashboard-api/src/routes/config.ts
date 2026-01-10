@@ -144,9 +144,22 @@ const ValidationResultSchema = z.object({
 });
 
 const ConfigHistoryEntrySchema = z.object({
-  tradingConfig: TradingConfigSchema,
-  changedAt: z.string(),
+  /** Unique version identifier (trading config id) */
+  id: z.string(),
+  /** Version number (sequential) */
+  version: z.number(),
+  /** Full configuration snapshot */
+  config: FullConfigSchema,
+  /** When this version was created */
+  createdAt: z.string(),
+  /** Who created this version (from auth, if available) */
+  createdBy: z.string().optional(),
+  /** Whether this is the active version */
+  isActive: z.boolean(),
+  /** Changed fields from previous version */
   changedFields: z.array(z.string()),
+  /** Human-readable description of the change */
+  description: z.string().optional(),
 });
 
 const ErrorResponseSchema = z.object({

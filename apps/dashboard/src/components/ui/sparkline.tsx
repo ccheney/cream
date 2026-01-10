@@ -120,7 +120,9 @@ export const Sparkline = memo(function Sparkline({
     if (data.length < 2) {
       return true;
     }
-    return data[data.length - 1]! >= data[0]!;
+    const last = data[data.length - 1];
+    const first = data[0];
+    return last !== undefined && first !== undefined ? last >= first : true;
   }, [data]);
 
   // Generate SVG paths
@@ -158,7 +160,9 @@ export const Sparkline = memo(function Sparkline({
   }
 
   // Calculate percentage change for ARIA label
-  const percentChange = ((data[data.length - 1]! - data[0]!) / data[0]!) * 100;
+  const lastVal = data[data.length - 1] ?? 0;
+  const firstVal = data[0] ?? 1;
+  const percentChange = ((lastVal - firstVal) / firstVal) * 100;
   const ariaLabel = `Price trend: ${isPositive ? "up" : "down"} ${Math.abs(percentChange).toFixed(1)}% over ${data.length} points`;
 
   return (

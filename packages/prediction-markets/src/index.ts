@@ -203,3 +203,41 @@ export {
   type SignalAccuracyReport,
   type SignalCorrelation,
 } from "./backtest";
+
+// ============================================
+// Streaming Exports
+// ============================================
+
+export {
+  createStreamingServiceFromConfig,
+  createUnifiedStreamingService,
+  type Platform as StreamingPlatform,
+  type StreamingCallback,
+  type StreamingConfig,
+  type StreamingMarketUpdate,
+  UnifiedStreamingService,
+} from "./streaming";
+
+// ============================================
+// WebSocket Exports
+// ============================================
+
+export {
+  createKalshiWebSocketClient,
+  KALSHI_DEMO_WEBSOCKET_URL,
+  KALSHI_WEBSOCKET_URL,
+  type KalshiWebSocketCallback,
+  type KalshiWebSocketChannel,
+  KalshiWebSocketClient,
+  type KalshiWebSocketConfig,
+  type KalshiWebSocketMessage,
+} from "./providers/kalshi/websocket";
+
+export {
+  createPolymarketWebSocketClient,
+  POLYMARKET_WEBSOCKET_URL,
+  type PolymarketWebSocketCallback,
+  PolymarketWebSocketClient,
+  type PolymarketWebSocketConfig,
+  type PolymarketWebSocketMessage,
+} from "./providers/polymarket/websocket";
