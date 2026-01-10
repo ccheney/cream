@@ -1,16 +1,14 @@
 /**
- * @cream/mastra-kit - Agent Prompts, Tools, and Evaluation Utilities
+ * @cream/mastra-kit - Agent Prompts and Tools
  *
  * This package provides:
  * - Agent configurations for the 8-agent network
  * - System prompts optimized for Gemini
  * - Consensus gate with dual-approval (Risk Manager + Critic)
- * - Agent tools (stubbed until gRPC ready)
- * - Evaluation framework integrations (LangSmith, Promptfoo)
+ * - Agent tools
  * - Tracing infrastructure
  *
  * @see docs/plans/05-agents.md
- * @see docs/plans/14-testing.md
  */
 
 export const PACKAGE_NAME = "@cream/mastra-kit";
@@ -68,67 +66,3 @@ export const AGENT_TYPES = [
 ] as const;
 
 export type AgentType = (typeof AGENT_TYPES)[number];
-
-// ============================================
-// Evaluation Types
-// ============================================
-
-/**
- * Evaluation result from any framework.
- */
-export interface EvalResult {
-  /** Test case identifier */
-  testId: string;
-
-  /** Agent being evaluated */
-  agentType: AgentType;
-
-  /** Score (0-1) */
-  score: number;
-
-  /** Pass/fail based on threshold */
-  passed: boolean;
-
-  /** Detailed metrics */
-  metrics: Record<string, number>;
-
-  /** Evaluation framework used */
-  framework: "deepeval" | "langsmith" | "promptfoo";
-
-  /** Timestamp */
-  timestamp: string;
-
-  /** Additional metadata */
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * Batch evaluation results.
- */
-export interface BatchEvalResults {
-  /** Individual results */
-  results: EvalResult[];
-
-  /** Aggregate statistics */
-  stats: {
-    total: number;
-    passed: number;
-    failed: number;
-    mean: number;
-    min: number;
-    max: number;
-    p50: number;
-    p90: number;
-    p95: number;
-  };
-
-  /** Evaluation configuration */
-  config: {
-    threshold: number;
-    framework: string;
-    agentType: AgentType;
-  };
-
-  /** Timestamp */
-  timestamp: string;
-}
