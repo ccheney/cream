@@ -6,8 +6,7 @@
  * of the standard 8-agent trading network - it operates independently
  * when indicator generation is triggered.
  *
- * NOTE: This agent now uses the global model from trading_config.global_model
- * instead of hardcoded Claude models.
+ * NOTE: This agent now uses the global model from trading_config.global_model.
  *
  * @see docs/plans/19-dynamic-indicator-synthesis.md (lines 276-343)
  */
@@ -87,7 +86,7 @@ export interface IndicatorResearcherConfig {
   /** Role description */
   role: string;
 
-  /** Model to use (Claude Sonnet recommended) */
+  /** Model to use */
   model: SpecializedAgentModel;
 
   /** System prompt for hypothesis generation */

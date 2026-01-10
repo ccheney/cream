@@ -93,7 +93,6 @@ Returns full extraction results with:
 - eventType: classification for event-driven analysis
 - scores: sentimentScore, importanceScore, surpriseScore
 
-Requires ANTHROPIC_API_KEY for extraction.
 Requires FMP_KEY for news fetching.`,
   inputSchema: ExtractNewsContextInputSchema,
   outputSchema: ExtractNewsContextOutputSchema,
@@ -159,7 +158,6 @@ Extracts and scores the full transcript:
 - Scores sentiment, importance, and surprise vs expectations
 - Links mentioned entities to ticker symbols
 
-Requires ANTHROPIC_API_KEY for extraction.
 Requires FMP_KEY for transcript fetching.`,
   inputSchema: ExtractTranscriptInputSchema,
   outputSchema: ExtractTranscriptOutputSchema,
@@ -232,9 +230,7 @@ Runs the full extraction pipeline:
 Returns:
 - extraction: Full extraction result (sentiment, entities, dataPoints, eventType, keyInsights)
 - scores: Numeric scores for sentiment, importance, surprise
-- relatedSymbols: Ticker symbols identified from entities
-
-Requires ANTHROPIC_API_KEY for extraction.`,
+- relatedSymbols: Ticker symbols identified from entities`,
   inputSchema: AnalyzeContentInputSchema,
   outputSchema: AnalyzeContentOutputSchema,
   execute: async ({ context }): Promise<AnalyzeContentOutput> => {
