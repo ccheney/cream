@@ -131,7 +131,7 @@ export const TickerItem = memo(function TickerItem({
     // biome-ignore lint/a11y/useSemanticElements: Custom ticker item with complex nested content and remove button requires div structure
     <div
       className={`
-        group relative flex flex-col gap-0.5 px-3 py-2 min-w-[140px]
+        group relative flex flex-col gap-0.5 px-3 py-2
         border-r border-cream-200 dark:border-night-700
         cursor-pointer hover:bg-cream-50 dark:hover:bg-night-800
         transition-colors duration-150
@@ -155,19 +155,19 @@ export const TickerItem = memo(function TickerItem({
           onClick={handleRemove}
           className="
             absolute -top-1 -right-1 p-0.5
-            bg-cream-200 dark:bg-night-600 rounded-full
+            bg-stone-500 dark:bg-night-400 rounded-full
             opacity-0 group-hover:opacity-100
-            hover:bg-red-200 dark:hover:bg-red-800
+            hover:bg-stone-600 dark:hover:bg-night-300
             transition-opacity duration-150
           "
           aria-label={`Remove ${symbol}`}
         >
-          <X className="w-3 h-3 text-cream-600 dark:text-cream-300" />
+          <X className="w-3 h-3 text-white dark:text-night-900" />
         </button>
       )}
 
       {/* Row 1: Symbol + Price + Change */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 whitespace-nowrap">
         <span className="text-xs font-semibold text-cream-700 dark:text-cream-200">{symbol}</span>
         <AnimatedNumber
           value={price}
@@ -189,7 +189,7 @@ export const TickerItem = memo(function TickerItem({
 
       {/* Row 2: Bid × Ask */}
       {quote?.bid !== undefined && quote?.ask !== undefined && (
-        <div className="text-xs text-cream-500 dark:text-cream-400 font-mono">
+        <div className="text-xs text-cream-500 dark:text-cream-400 font-mono whitespace-nowrap">
           {quote.bid.toFixed(2)} × {quote.ask.toFixed(2)}
         </div>
       )}

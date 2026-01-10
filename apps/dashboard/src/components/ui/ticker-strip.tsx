@@ -12,6 +12,7 @@
 import { Plus, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMultiTickHistory } from "@/hooks/useTickHistory";
+import { get } from "@/lib/api/client";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 import type { Quote } from "./ticker-item";
 import { TickerItem } from "./ticker-item";
@@ -63,7 +64,7 @@ export interface TickerStripProps {
  * ```tsx
  * <TickerStrip
  *   symbols={['AAPL', 'NVDA', 'SPY', 'MSFT']}
- *   onSymbolClick={(sym) => router.push(`/charts?symbol=${sym}`)}
+ *   onSymbolClick={(sym) => router.push(`/charts/${sym}`)}
  *   onSymbolRemove={(sym) => removeFromWatchlist(sym)}
  *   onSymbolAdd={() => setShowAddModal(true)}
  *   showSparkline
@@ -89,6 +90,56 @@ export const TickerStrip = memo(function TickerStrip({
   const { subscribe, subscribeSymbols, connected } = useWebSocketContext();
   const { getTicks, getPriceHistory, recordTick } = useMultiTickHistory();
 
+  // Fetch initial quotes from REST API when symbols change
+  useEffect(() => {
+    if (symbols.length === 0) {
+      return;
+    }
+
+    const fetchInitialQuotes = async () => {
+      try {
+        const { data } = await get<
+          Array<{
+            symbol: string;
+            bid: number;
+            ask: number;
+            last: number;
+            volume: number;
+            prevClose?: number;
+            changePercent?: number;
+            timestamp: string;
+          }>
+        >("/api/market/quotes", { params: { symbols: symbols.join(",") } });
+
+        setQuotes((prev) => {
+          const updated = new Map(prev);
+          for (const quote of data) {
+            // Only set if we don't already have a quote (WebSocket may have updated first)
+            if (!updated.has(quote.symbol)) {
+              updated.set(quote.symbol, {
+                symbol: quote.symbol,
+                bid: quote.bid,
+                ask: quote.ask,
+                last: quote.last,
+                volume: quote.volume,
+                prevClose: quote.prevClose,
+                changePercent: quote.changePercent,
+                timestamp: new Date(quote.timestamp),
+              });
+              // Record initial tick
+              recordTick(quote.symbol, quote.last);
+            }
+          }
+          return updated;
+        });
+      } catch {
+        // Silently fail - WebSocket will provide data when available
+      }
+    };
+
+    fetchInitialQuotes();
+  }, [symbols, recordTick]);
+
   // Subscribe to symbols when they change
   useEffect(() => {
     if (!connected || symbols.length === 0) {
@@ -103,16 +154,6 @@ export const TickerStrip = memo(function TickerStrip({
       // Cleanup: unsubscribe handled by provider on disconnect
     };
   }, [connected, symbols, subscribe, subscribeSymbols]);
-
-  // Handle quote updates from WebSocket
-  useEffect(() => {
-    if (!connected) {
-      return;
-    }
-
-    // TODO: Wire up WebSocket message handler for quote updates
-    // The WebSocketProvider should expose onQuoteUpdate callback
-  }, [connected]);
 
   // Handle incoming quote update
   const handleQuoteUpdate = useCallback(
@@ -130,7 +171,18 @@ export const TickerStrip = memo(function TickerStrip({
           });
         }
 
-        updated.set(newQuote.symbol, newQuote);
+        // Preserve prevClose from existing data if new quote doesn't have it
+        const prevClose = newQuote.prevClose ?? existing?.prevClose;
+        // Recalculate changePercent if we have prevClose but quote doesn't have changePercent
+        const changePercent =
+          newQuote.changePercent ??
+          (prevClose && prevClose > 0 ? ((newQuote.last - prevClose) / prevClose) * 100 : 0);
+
+        updated.set(newQuote.symbol, {
+          ...newQuote,
+          prevClose,
+          changePercent,
+        });
         return updated;
       });
 
@@ -142,18 +194,43 @@ export const TickerStrip = memo(function TickerStrip({
     [recordTick]
   );
 
-  // Expose handleQuoteUpdate for external use
+  // Get lastMessage from context for quote updates
+  const { lastMessage } = useWebSocketContext();
+
+  // Handle quote updates from WebSocket
   useEffect(() => {
-    // Make handler available to WebSocket provider
-    // This would typically be done through context or props
-    (
-      window as unknown as { __tickerQuoteHandler?: typeof handleQuoteUpdate }
-    ).__tickerQuoteHandler = handleQuoteUpdate;
-    return () => {
-      delete (window as unknown as { __tickerQuoteHandler?: typeof handleQuoteUpdate })
-        .__tickerQuoteHandler;
-    };
-  }, [handleQuoteUpdate]);
+    if (!connected || !lastMessage) {
+      return;
+    }
+
+    // Check if this is a quote message for a subscribed symbol
+    if (lastMessage.type === "quote" && lastMessage.data) {
+      const quoteData = lastMessage.data as {
+        symbol: string;
+        bid: number;
+        ask: number;
+        last: number;
+        volume?: number;
+        prevClose?: number;
+        changePercent?: number;
+        timestamp?: string;
+      };
+
+      // Only update if we're subscribed to this symbol
+      if (symbols.includes(quoteData.symbol)) {
+        handleQuoteUpdate({
+          symbol: quoteData.symbol,
+          bid: quoteData.bid,
+          ask: quoteData.ask,
+          last: quoteData.last,
+          volume: quoteData.volume,
+          prevClose: quoteData.prevClose,
+          changePercent: quoteData.changePercent,
+          timestamp: quoteData.timestamp ? new Date(quoteData.timestamp) : new Date(),
+        });
+      }
+    }
+  }, [connected, lastMessage, symbols, handleQuoteUpdate]);
 
   // Scroll handlers
   const [canScrollLeft, setCanScrollLeft] = useState(false);

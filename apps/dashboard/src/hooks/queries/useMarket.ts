@@ -6,7 +6,7 @@
  * Other market data (candles, indicators) still uses REST API.
  */
 
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { get } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
@@ -77,13 +77,12 @@ export function useQuotes(symbols: string[]) {
 }
 
 /**
- * Get single quote via WebSocket streaming only.
+ * Get single quote with REST initial fetch and WebSocket streaming.
  *
- * Data is populated exclusively by WebSocket messages updating the query cache.
- * No REST API calls are made for quotes.
+ * Fetches initial data from REST API once, then WebSocket messages update the cache.
+ * No polling - WebSocket is the only update mechanism after initial fetch.
  */
 export function useQuote(symbol: string) {
-  const queryClient = useQueryClient();
   const { connected, subscribeSymbols } = useWebSocketContext();
 
   // Subscribe symbol to WebSocket when connected
@@ -95,23 +94,20 @@ export function useQuote(symbol: string) {
 
   const query = useQuery({
     queryKey: queryKeys.market.quote(symbol),
-    // No queryFn - data is set directly by WebSocket messages
-    queryFn: () => queryClient.getQueryData<Quote>(queryKeys.market.quote(symbol)) ?? null,
+    queryFn: async () => {
+      const { data } = await get<Quote>(`/api/market/quote/${symbol}`);
+      return data;
+    },
     staleTime: Infinity, // Never stale - WebSocket keeps it fresh
     gcTime: CACHE_TIMES.MARKET,
-    refetchInterval: false, // No polling - WebSocket only
-    refetchOnMount: false,
+    refetchInterval: false, // No polling
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
     enabled: Boolean(symbol),
+    placeholderData: keepPreviousData,
   });
 
   return {
     ...query,
-    // Override loading/error states to reflect WebSocket connection
-    isLoading: !connected || (query.isLoading && !query.data),
-    isError: !connected,
-    error: !connected ? new Error("WebSocket not connected") : query.error,
     connected,
   };
 }
@@ -209,6 +205,7 @@ export function useCandles(
     staleTime: STALE_TIMES.CHART,
     gcTime: CACHE_TIMES.CHART,
     enabled: Boolean(symbol),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -230,6 +227,7 @@ export function useIndicators(
     staleTime: STALE_TIMES.CHART,
     gcTime: CACHE_TIMES.CHART,
     enabled: Boolean(symbol),
+    placeholderData: keepPreviousData,
   });
 }
 

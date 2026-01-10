@@ -15,8 +15,26 @@ import {
   type MassiveQuoteMessage,
   type MassiveTradeMessage,
   type MassiveWebSocketClient,
+  PolygonClient,
 } from "@cream/marketdata";
 import { broadcastAggregate, broadcastQuote, broadcastTrade } from "../websocket/handler.js";
+
+// Polygon client for fetching previous close
+let polygonClient: PolygonClient | null = null;
+
+function getPolygonClient(): PolygonClient | null {
+  if (polygonClient) {
+    return polygonClient;
+  }
+  const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  const tier =
+    (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "starter";
+  polygonClient = new PolygonClient({ apiKey, tier });
+  return polygonClient;
+}
 
 // ============================================
 // State
@@ -45,6 +63,7 @@ const quoteCache = new Map<
     ask: number;
     last: number;
     volume: number;
+    prevClose: number;
     timestamp: Date;
   }
 >();
@@ -111,8 +130,14 @@ function handleMassiveEvent(event: MassiveEvent): void {
     case "authenticated":
       // Resubscribe to active symbols after reconnection
       if (activeSymbols.size > 0) {
-        // Subscribe to both aggregates (AM) and trades (T)
-        const subscriptions = Array.from(activeSymbols).flatMap((s) => [`AM.${s}`, `T.${s}`]);
+        // Subscribe to aggregates (AM), trades (T), and quotes (Q)
+        // Q channel provides extended hours (pre-market/after-hours) bid/ask updates
+        const subscriptions = Array.from(activeSymbols).flatMap((s) => [
+          `AM.${s}`,
+          `T.${s}`,
+          `Q.${s}`,
+        ]);
+        // biome-ignore lint/suspicious/noConsole: Error logging for subscribe failure
         massiveClient?.subscribe(subscriptions).catch(console.error);
       }
       break;
@@ -154,15 +179,16 @@ function handleMassiveEvent(event: MassiveEvent): void {
 function handleAggregateMessage(msg: MassiveAggregateMessage): void {
   const symbol = msg.sym.toUpperCase();
 
-  // Update cache
+  // Update cache - preserve prevClose if we have it, otherwise use open price
   const cached = quoteCache.get(symbol);
-  const prevClose = cached?.last ?? msg.o; // Use previous close or open price
+  const prevClose = cached?.prevClose ?? msg.o; // Use cached prevClose or open price as fallback
 
   quoteCache.set(symbol, {
     bid: msg.c, // Use close as proxy for bid (no bid in aggregates)
     ask: msg.c, // Use close as proxy for ask
     last: msg.c,
     volume: msg.v,
+    prevClose,
     timestamp: new Date(msg.e),
   });
 
@@ -208,21 +234,22 @@ function handleAggregateMessage(msg: MassiveAggregateMessage): void {
 function handleQuoteMessage(msg: MassiveQuoteMessage): void {
   const symbol = msg.sym.toUpperCase();
 
-  // Get cached data for last price and volume
+  // Get cached data for last price, volume, and prevClose
   const cached = quoteCache.get(symbol);
+  const last = cached?.last ?? (msg.bp + msg.ap) / 2; // Use mid if no last
+  const prevClose = cached?.prevClose ?? last; // Use cached prevClose or current price as fallback
 
   // Update cache
   quoteCache.set(symbol, {
     bid: msg.bp,
     ask: msg.ap,
-    last: cached?.last ?? (msg.bp + msg.ap) / 2, // Use mid if no last
+    last,
     volume: cached?.volume ?? 0,
+    prevClose,
     timestamp: new Date(msg.t / 1e6), // Nanoseconds to milliseconds
   });
 
-  // Calculate change percent from previous close
-  const prevClose = cached?.last ?? (msg.bp + msg.ap) / 2;
-  const last = cached?.last ?? (msg.bp + msg.ap) / 2;
+  // Calculate change percent from previous day's close
   const changePercent = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : 0;
 
   // Broadcast to subscribed clients
@@ -273,6 +300,7 @@ function handleTradeMessage(msg: MassiveTradeMessage): void {
 /**
  * Subscribe to market data for a symbol.
  * Called when a dashboard client subscribes to quotes for a symbol.
+ * Fetches previous close to enable accurate change percent calculation.
  */
 export async function subscribeSymbol(symbol: string): Promise<void> {
   const upperSymbol = symbol.toUpperCase();
@@ -283,14 +311,52 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
 
   activeSymbols.add(upperSymbol);
 
+  // Fetch recent daily bars to seed the cache with proper prevClose
+  const client = getPolygonClient();
+  if (client && !quoteCache.has(upperSymbol)) {
+    const recentFrom = new Date();
+    recentFrom.setDate(recentFrom.getDate() - 7);
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const todayNY = formatter.format(new Date());
+
+    client
+      .getAggregates(upperSymbol, 1, "day", recentFrom.toISOString().slice(0, 10), todayNY, {
+        limit: 5,
+        sort: "desc",
+      })
+      .then((response) => {
+        const bars = response.results ?? [];
+        if (bars.length >= 1 && !quoteCache.has(upperSymbol)) {
+          const latestBar = bars[0];
+          const prevBar = bars[1];
+          quoteCache.set(upperSymbol, {
+            bid: latestBar?.c ?? 0,
+            ask: latestBar?.c ?? 0,
+            last: latestBar?.c ?? 0,
+            volume: latestBar?.v ?? 0,
+            prevClose: prevBar?.c ?? latestBar?.c ?? 0,
+            timestamp: latestBar ? new Date(latestBar.t) : new Date(),
+          });
+        }
+      })
+      .catch(() => {});
+  }
+
   if (massiveClient?.isConnected()) {
-    // Subscribe to both aggregates (AM) and trades (T)
-    await massiveClient.subscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
+    // Subscribe to aggregates (AM), trades (T), and quotes (Q)
+    // Q channel provides extended hours (pre-market/after-hours) bid/ask updates
+    await massiveClient.subscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`, `Q.${upperSymbol}`]);
   }
 }
 
 /**
  * Subscribe to multiple symbols at once.
+ * Fetches previous close for new symbols to enable accurate change percent calculation.
  */
 export async function subscribeSymbols(symbols: string[]): Promise<void> {
   const newSymbols = symbols.map((s) => s.toUpperCase()).filter((s) => !activeSymbols.has(s));
@@ -303,9 +369,55 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
     activeSymbols.add(symbol);
   }
 
+  // Fetch recent daily bars for new symbols to seed the cache with proper prevClose
+  const client = getPolygonClient();
+  if (client) {
+    const recentFrom = new Date();
+    recentFrom.setDate(recentFrom.getDate() - 7);
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const todayNY = formatter.format(new Date());
+
+    // Fetch in parallel but don't block subscription
+    Promise.all(
+      newSymbols.map(async (symbol) => {
+        try {
+          const response = await client.getAggregates(
+            symbol,
+            1,
+            "day",
+            recentFrom.toISOString().slice(0, 10),
+            todayNY,
+            { limit: 5, sort: "desc" }
+          );
+          const bars = response.results ?? [];
+          if (bars.length >= 1 && !quoteCache.has(symbol)) {
+            const latestBar = bars[0];
+            const prevBar = bars[1];
+            quoteCache.set(symbol, {
+              bid: latestBar?.c ?? 0,
+              ask: latestBar?.c ?? 0,
+              last: latestBar?.c ?? 0,
+              volume: latestBar?.v ?? 0,
+              prevClose: prevBar?.c ?? latestBar?.c ?? 0,
+              timestamp: latestBar ? new Date(latestBar.t) : new Date(),
+            });
+          }
+        } catch {
+          // Ignore errors - streaming will provide data
+        }
+      })
+    ).catch(() => {});
+  }
+
   if (massiveClient?.isConnected()) {
-    // Subscribe to both aggregates (AM) and trades (T) for each symbol
-    const subscriptions = newSymbols.flatMap((s) => [`AM.${s}`, `T.${s}`]);
+    // Subscribe to aggregates (AM), trades (T), and quotes (Q) for each symbol
+    // Q channel provides extended hours (pre-market/after-hours) bid/ask updates
+    const subscriptions = newSymbols.flatMap((s) => [`AM.${s}`, `T.${s}`, `Q.${s}`]);
     await massiveClient.subscribe(subscriptions);
   }
 }
@@ -325,8 +437,8 @@ export async function unsubscribeSymbol(symbol: string): Promise<void> {
   quoteCache.delete(upperSymbol);
 
   if (massiveClient?.isConnected()) {
-    // Unsubscribe from both aggregates (AM) and trades (T)
-    await massiveClient.unsubscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`]);
+    // Unsubscribe from aggregates (AM), trades (T), and quotes (Q)
+    await massiveClient.unsubscribe([`AM.${upperSymbol}`, `T.${upperSymbol}`, `Q.${upperSymbol}`]);
   }
 }
 
@@ -338,6 +450,7 @@ export function getCachedQuote(symbol: string): {
   ask: number;
   last: number;
   volume: number;
+  prevClose: number;
   timestamp: Date;
 } | null {
   return quoteCache.get(symbol.toUpperCase()) ?? null;
