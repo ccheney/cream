@@ -1,0 +1,282 @@
+"use client";
+
+/**
+ * Agent Streaming Hook
+ *
+ * Manages real-time streaming state from trading agents including
+ * tool calls, tool results, reasoning deltas, and text deltas.
+ *
+ * Uses Zustand store to persist state across navigation.
+ *
+ * @see docs/plans/ui/06-websocket.md
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useWebSocketContext } from "@/providers/WebSocketProvider";
+import {
+  AGENT_TYPES,
+  type AgentStreamingState,
+  type AgentType,
+  type ToolCall,
+  useAgentStreamingActions,
+  useAllAgentStreaming,
+} from "@/stores/agent-streaming-store";
+
+// Re-export types for convenience
+export type { AgentType, AgentStreamingState, ToolCall };
+export { AGENT_TYPES };
+
+export type AgentStatus = "idle" | "processing" | "complete" | "error";
+
+// ============================================
+// Message Types
+// ============================================
+
+interface ToolCallMessage {
+  type: "agent_tool_call";
+  data: {
+    cycleId: string;
+    agentType: AgentType;
+    toolName: string;
+    toolArgs: string;
+    toolCallId: string;
+    timestamp: string;
+  };
+}
+
+interface ToolResultMessage {
+  type: "agent_tool_result";
+  data: {
+    cycleId: string;
+    agentType: AgentType;
+    toolName: string;
+    toolCallId: string;
+    resultSummary: string;
+    success: boolean;
+    durationMs?: number;
+    timestamp: string;
+  };
+}
+
+interface ReasoningMessage {
+  type: "agent_reasoning";
+  data: {
+    cycleId: string;
+    agentType: AgentType;
+    text: string;
+    timestamp: string;
+  };
+}
+
+interface TextDeltaMessage {
+  type: "agent_text_delta";
+  data: {
+    cycleId: string;
+    agentType: AgentType;
+    text: string;
+    timestamp: string;
+  };
+}
+
+interface AgentOutputMessage {
+  type: "agent_output";
+  data: {
+    cycleId: string;
+    agentType: AgentType;
+    status: "running" | "complete" | "error";
+    output?: string;
+    error?: string;
+    durationMs?: number;
+    timestamp: string;
+  };
+}
+
+type AgentStreamMessage =
+  | ToolCallMessage
+  | ToolResultMessage
+  | ReasoningMessage
+  | TextDeltaMessage
+  | AgentOutputMessage;
+
+// ============================================
+// Options & Return Types
+// ============================================
+
+export interface UseAgentStreamingOptions {
+  /** Only track streaming for a specific cycle */
+  cycleId?: string | null;
+  /** Auto-subscribe on mount (default: true) */
+  autoSubscribe?: boolean;
+}
+
+export interface UseAgentStreamingReturn {
+  /** Streaming state per agent type */
+  agents: Map<AgentType, AgentStreamingState>;
+  /** Get streaming state for a specific agent */
+  getAgent: (agentType: AgentType) => AgentStreamingState | undefined;
+  /** Whether subscribed to streaming channel */
+  isSubscribed: boolean;
+  /** Current cycle ID being tracked */
+  currentCycleId: string | null;
+  /** Clear all streaming state */
+  clear: () => void;
+}
+
+// ============================================
+// Hook
+// ============================================
+
+export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAgentStreamingReturn {
+  const { cycleId = null, autoSubscribe = true } = options;
+
+  const { lastMessage, subscribe, unsubscribe, connected } = useWebSocketContext();
+
+  // Use Zustand store for persistent state
+  const { agents, currentCycleId, getAgent } = useAllAgentStreaming();
+  const {
+    addToolCall,
+    updateToolCallResult,
+    appendReasoning,
+    appendTextOutput,
+    updateAgentStatus,
+    setCycleId,
+    clear,
+  } = useAgentStreamingActions();
+
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Ref for stable cycleId access in callbacks
+  const cycleIdRef = useRef(cycleId);
+  cycleIdRef.current = cycleId;
+
+  // Handle incoming WebSocket messages
+  const handleMessage = useCallback(
+    (message: AgentStreamMessage) => {
+      if (!("data" in message) || !message.data) {
+        return;
+      }
+
+      const { cycleId: msgCycleId, agentType: msgAgentType } = message.data;
+
+      // Filter by cycle ID if specified
+      if (cycleIdRef.current && msgCycleId !== cycleIdRef.current) {
+        return;
+      }
+
+      // Track the cycle we're receiving messages for
+      if (msgCycleId !== currentCycleId) {
+        setCycleId(msgCycleId);
+      }
+
+      const agentType = msgAgentType as AgentType;
+      if (!AGENT_TYPES.includes(agentType)) {
+        return;
+      }
+
+      switch (message.type) {
+        case "agent_tool_call": {
+          const toolCallData = message.data;
+          const toolCall: ToolCall = {
+            toolCallId: toolCallData.toolCallId,
+            toolName: toolCallData.toolName,
+            toolArgs: toolCallData.toolArgs,
+            status: "pending",
+            timestamp: toolCallData.timestamp,
+          };
+          addToolCall(agentType, toolCall);
+          break;
+        }
+
+        case "agent_tool_result": {
+          const resultData = message.data;
+          updateToolCallResult(agentType, resultData.toolCallId, {
+            success: resultData.success,
+            resultSummary: resultData.resultSummary,
+            durationMs: resultData.durationMs,
+          });
+          break;
+        }
+
+        case "agent_reasoning": {
+          const reasoningData = message.data;
+          appendReasoning(agentType, reasoningData.text, reasoningData.timestamp);
+          break;
+        }
+
+        case "agent_text_delta": {
+          const textData = message.data;
+          appendTextOutput(agentType, textData.text, textData.timestamp);
+          break;
+        }
+
+        case "agent_output": {
+          const outputData = message.data;
+          const status =
+            outputData.status === "running"
+              ? "processing"
+              : outputData.status === "complete"
+                ? "complete"
+                : "error";
+          updateAgentStatus(agentType, status, outputData.error);
+          break;
+        }
+      }
+    },
+    [
+      currentCycleId,
+      setCycleId,
+      addToolCall,
+      updateToolCallResult,
+      appendReasoning,
+      appendTextOutput,
+      updateAgentStatus,
+    ]
+  );
+
+  // Process incoming WebSocket messages
+  useEffect(() => {
+    if (!lastMessage) {
+      return;
+    }
+
+    const message = lastMessage as unknown as AgentStreamMessage;
+    if (
+      message.type === "agent_tool_call" ||
+      message.type === "agent_tool_result" ||
+      message.type === "agent_reasoning" ||
+      message.type === "agent_text_delta" ||
+      message.type === "agent_output"
+    ) {
+      handleMessage(message);
+    }
+  }, [lastMessage, handleMessage]);
+
+  // Subscribe/unsubscribe to cycles channel
+  useEffect(() => {
+    if (!autoSubscribe || !connected) {
+      setIsSubscribed(false);
+      return;
+    }
+
+    subscribe(["cycles"]);
+    setIsSubscribed(true);
+
+    return () => {
+      unsubscribe(["cycles"]);
+      setIsSubscribed(false);
+    };
+  }, [autoSubscribe, connected, subscribe, unsubscribe]);
+
+  return useMemo(
+    () => ({
+      agents,
+      getAgent,
+      isSubscribed,
+      currentCycleId,
+      clear,
+    }),
+    [agents, getAgent, isSubscribed, currentCycleId, clear]
+  );
+}
+
+export default useAgentStreaming;
