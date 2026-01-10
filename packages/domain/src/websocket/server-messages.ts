@@ -18,7 +18,11 @@ import {
   OrderDataSchema,
   PortfolioDataSchema,
   QuoteDataSchema,
+  ReasoningChunkDataSchema,
   SystemStatusDataSchema,
+  TextDeltaChunkDataSchema,
+  ToolCallChunkDataSchema,
+  ToolResultChunkDataSchema,
 } from "./data-payloads.js";
 
 // ============================================
@@ -273,6 +277,62 @@ export const AgentOutputMessageSchema = z.object({
 });
 
 export type AgentOutputMessage = z.infer<typeof AgentOutputMessageSchema>;
+
+// ============================================
+// Agent Streaming Messages
+// ============================================
+
+/**
+ * Agent tool call event - emitted when an agent invokes a tool.
+ *
+ * @example
+ * { type: "agent_tool_call", data: { agentType: "technical_analyst", toolName: "get_quotes", ... } }
+ */
+export const AgentToolCallMessageSchema = z.object({
+  type: z.literal("agent_tool_call"),
+  data: ToolCallChunkDataSchema,
+});
+
+export type AgentToolCallMessage = z.infer<typeof AgentToolCallMessageSchema>;
+
+/**
+ * Agent tool result event - emitted when a tool execution completes.
+ *
+ * @example
+ * { type: "agent_tool_result", data: { agentType: "technical_analyst", toolName: "get_quotes", success: true, ... } }
+ */
+export const AgentToolResultMessageSchema = z.object({
+  type: z.literal("agent_tool_result"),
+  data: ToolResultChunkDataSchema,
+});
+
+export type AgentToolResultMessage = z.infer<typeof AgentToolResultMessageSchema>;
+
+/**
+ * Agent reasoning event - incremental reasoning/thought output.
+ *
+ * @example
+ * { type: "agent_reasoning", data: { agentType: "trader", text: "Analyzing price action...", ... } }
+ */
+export const AgentReasoningMessageSchema = z.object({
+  type: z.literal("agent_reasoning"),
+  data: ReasoningChunkDataSchema,
+});
+
+export type AgentReasoningMessage = z.infer<typeof AgentReasoningMessageSchema>;
+
+/**
+ * Agent text delta event - incremental text output.
+ *
+ * @example
+ * { type: "agent_text_delta", data: { agentType: "trader", text: "The ", ... } }
+ */
+export const AgentTextDeltaMessageSchema = z.object({
+  type: z.literal("agent_text_delta"),
+  data: TextDeltaChunkDataSchema,
+});
+
+export type AgentTextDeltaMessage = z.infer<typeof AgentTextDeltaMessageSchema>;
 
 // ============================================
 // Cycle Progress Message
@@ -609,6 +669,10 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   DecisionMessageSchema,
   DecisionPlanMessageSchema,
   AgentOutputMessageSchema,
+  AgentToolCallMessageSchema,
+  AgentToolResultMessageSchema,
+  AgentReasoningMessageSchema,
+  AgentTextDeltaMessageSchema,
   CycleProgressMessageSchema,
   CycleResultMessageSchema,
   AlertMessageSchema,

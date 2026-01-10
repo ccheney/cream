@@ -45,8 +45,16 @@ export {
   PortfolioDataSchema,
   type QuoteData,
   QuoteDataSchema,
+  type ReasoningChunkData,
+  ReasoningChunkDataSchema,
   type SystemStatusData,
   SystemStatusDataSchema,
+  type TextDeltaChunkData,
+  TextDeltaChunkDataSchema,
+  type ToolCallChunkData,
+  ToolCallChunkDataSchema,
+  type ToolResultChunkData,
+  ToolResultChunkDataSchema,
 } from "./data-payloads.js";
 
 // ============================================
@@ -87,6 +95,14 @@ export {
 export {
   type AgentOutputMessage,
   AgentOutputMessageSchema,
+  type AgentReasoningMessage,
+  AgentReasoningMessageSchema,
+  type AgentTextDeltaMessage,
+  AgentTextDeltaMessageSchema,
+  type AgentToolCallMessage,
+  AgentToolCallMessageSchema,
+  type AgentToolResultMessage,
+  AgentToolResultMessageSchema,
   type AlertMessage,
   AlertMessageSchema,
   type BacktestCompletedData,

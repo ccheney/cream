@@ -439,3 +439,101 @@ export const PortfolioDataSchema = z.object({
 });
 
 export type PortfolioData = z.infer<typeof PortfolioDataSchema>;
+
+// ============================================
+// Agent Streaming Chunk Data
+// ============================================
+
+/**
+ * Tool call chunk data - emitted when an agent invokes a tool.
+ */
+export const ToolCallChunkDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Agent type */
+  agentType: AgentType,
+
+  /** Tool name being called */
+  toolName: z.string(),
+
+  /** Tool arguments (JSON string for display) */
+  toolArgs: z.string(),
+
+  /** Unique tool call ID */
+  toolCallId: z.string(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type ToolCallChunkData = z.infer<typeof ToolCallChunkDataSchema>;
+
+/**
+ * Tool result chunk data - emitted when tool execution completes.
+ */
+export const ToolResultChunkDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Agent type */
+  agentType: AgentType,
+
+  /** Tool name */
+  toolName: z.string(),
+
+  /** Tool call ID (matches ToolCallChunkData) */
+  toolCallId: z.string(),
+
+  /** Result summary (truncated for display) */
+  resultSummary: z.string(),
+
+  /** Whether tool succeeded */
+  success: z.boolean(),
+
+  /** Execution duration in milliseconds */
+  durationMs: z.number().int().nonnegative().optional(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type ToolResultChunkData = z.infer<typeof ToolResultChunkDataSchema>;
+
+/**
+ * Reasoning chunk data - incremental reasoning/thought output.
+ */
+export const ReasoningChunkDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Agent type */
+  agentType: AgentType,
+
+  /** Incremental reasoning text */
+  text: z.string(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type ReasoningChunkData = z.infer<typeof ReasoningChunkDataSchema>;
+
+/**
+ * Text delta chunk data - incremental text output.
+ */
+export const TextDeltaChunkDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Agent type */
+  agentType: AgentType,
+
+  /** Incremental text */
+  text: z.string(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type TextDeltaChunkData = z.infer<typeof TextDeltaChunkDataSchema>;
