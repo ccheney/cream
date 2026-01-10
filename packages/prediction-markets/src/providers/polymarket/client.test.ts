@@ -254,7 +254,7 @@ describe("PolymarketClient", () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve([mockPolymarketEvent]),
+        json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
       } as Response)
     );
 
@@ -273,13 +273,15 @@ describe("PolymarketClient", () => {
       return Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            {
-              ...mockPolymarketEvent,
-              id: `event-${callCount}`,
-              markets: [{ ...mockPolymarketEvent.markets[0], id: `market-${callCount}` }],
-            },
-          ]),
+          Promise.resolve({
+            events: [
+              {
+                ...mockPolymarketEvent,
+                id: `event-${callCount}`,
+                markets: [{ ...mockPolymarketEvent.markets[0], id: `market-${callCount}` }],
+              },
+            ],
+          }),
       } as Response);
     });
 
@@ -294,14 +296,14 @@ describe("PolymarketClient", () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve([mockPolymarketEvent]),
+        json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
       } as Response)
     );
 
     const client = new PolymarketClient({
       searchQueries: ["default query"],
     });
-    await client.fetchMarkets(["GEOPOLITICAL"]); // Has empty queries
+    await client.fetchMarkets(["GEOPOLITICAL"]); // Has queries for tariff, trade war, sanctions
 
     expect(mockFetch).toHaveBeenCalled();
   });
@@ -310,7 +312,7 @@ describe("PolymarketClient", () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve([mockPolymarketEvent]),
+        json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
       } as Response)
     );
 
@@ -540,7 +542,7 @@ describe("PolymarketClient", () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve([mockPolymarketEvent]),
+        json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
       } as Response)
     );
 
@@ -570,10 +572,12 @@ describe("PolymarketClient", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            mockPolymarketEvent,
-            { invalid: "event" }, // Missing required fields
-          ]),
+          Promise.resolve({
+            events: [
+              mockPolymarketEvent,
+              { invalid: "event" }, // Missing required fields
+            ],
+          }),
       } as Response)
     );
 
@@ -717,19 +721,21 @@ describe("PolymarketClient", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            {
-              id: "event-1",
-              title: "Test Event",
-              markets: [
-                {
-                  id: "market-1",
-                  question: "Test question?",
-                  // No outcomes - should use defaults
-                },
-              ],
-            },
-          ]),
+          Promise.resolve({
+            events: [
+              {
+                id: "event-1",
+                title: "Test Event",
+                markets: [
+                  {
+                    id: "market-1",
+                    question: "Test question?",
+                    // No outcomes - should use defaults
+                  },
+                ],
+              },
+            ],
+          }),
       } as Response)
     );
 
@@ -744,12 +750,14 @@ describe("PolymarketClient", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            {
-              id: "event-no-markets",
-              title: "Event Without Markets",
-            },
-          ]),
+          Promise.resolve({
+            events: [
+              {
+                id: "event-no-markets",
+                title: "Event Without Markets",
+              },
+            ],
+          }),
       } as Response)
     );
 
@@ -765,20 +773,22 @@ describe("PolymarketClient", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            {
-              id: "event-1",
-              title: "High Liquidity Event",
-              markets: [
-                {
-                  id: "market-1",
-                  question: "High liquidity?",
-                  volume24hr: "200000", // $200k - high volume
-                  liquidity: "100000", // $100k - high liquidity
-                },
-              ],
-            },
-          ]),
+          Promise.resolve({
+            events: [
+              {
+                id: "event-1",
+                title: "High Liquidity Event",
+                markets: [
+                  {
+                    id: "market-1",
+                    question: "High liquidity?",
+                    volume24hr: "200000", // $200k - high volume
+                    liquidity: "100000", // $100k - high liquidity
+                  },
+                ],
+              },
+            ],
+          }),
       } as Response)
     );
 

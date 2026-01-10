@@ -331,7 +331,7 @@ describe("Message Schemas", () => {
 
 describe("Constants", () => {
   it("should have correct WebSocket URLs", () => {
-    expect(KALSHI_WEBSOCKET_URL).toBe("wss://trading-api.kalshi.com/trade-api/ws/v2");
+    expect(KALSHI_WEBSOCKET_URL).toBe("wss://api.elections.kalshi.com/trade-api/ws/v2");
     expect(KALSHI_DEMO_WEBSOCKET_URL).toBe("wss://demo-api.kalshi.co/trade-api/ws/v2");
   });
 
