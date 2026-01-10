@@ -10,7 +10,7 @@ Reference: https://arxiv.org/html/2402.05131v2
 from dataclasses import dataclass
 from typing import Any
 
-from .models import FilingType, ParsedFiling
+from .models import ParsedFiling
 
 
 @dataclass
@@ -88,7 +88,9 @@ def split_text_with_overlap(
             chunks.append(current_chunk.strip())
 
             # Start new chunk with overlap from end of previous
-            overlap_text = current_chunk[-overlap:] if len(current_chunk) > overlap else current_chunk
+            overlap_text = (
+                current_chunk[-overlap:] if len(current_chunk) > overlap else current_chunk
+            )
             current_chunk = overlap_text + "\n\n" + para
         else:
             if current_chunk:
@@ -183,17 +185,19 @@ def chunk_parsed_filing(parsed: ParsedFiling) -> list[FilingChunk]:
 
             full_text = chunk_header + chunk_text
 
-            chunks.append(FilingChunk(
-                chunk_id=create_chunk_id(filing_id, section_key, chunk_index),
-                filing_id=filing_id,
-                company_symbol=company_symbol,
-                filing_type=filing_type,
-                filing_date=filing_date,
-                section_name=section_name,
-                chunk_index=chunk_index,
-                chunk_text=full_text,
-                total_chunks=0,  # Will be updated after all chunks created
-            ))
+            chunks.append(
+                FilingChunk(
+                    chunk_id=create_chunk_id(filing_id, section_key, chunk_index),
+                    filing_id=filing_id,
+                    company_symbol=company_symbol,
+                    filing_type=filing_type,
+                    filing_date=filing_date,
+                    section_name=section_name,
+                    chunk_index=chunk_index,
+                    chunk_text=full_text,
+                    total_chunks=0,  # Will be updated after all chunks created
+                )
+            )
             chunk_index += 1
 
     # Update total chunks count
