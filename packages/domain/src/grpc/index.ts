@@ -7,7 +7,7 @@
  * ```typescript
  * import { createExecutionClient } from "@cream/domain/grpc";
  *
- * const client = createExecutionClient("http://localhost:50051");
+ * const client = createExecutionClient("http://localhost:50053");
  *
  * // Check constraints
  * const result = await client.checkConstraints({

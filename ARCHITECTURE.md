@@ -2,8 +2,8 @@
 
 > Agentic trading system for US equities and options combining LLM reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act).
 
-**Version:** 0.1.0
-**Last Updated:** 2026-01-06
+**Version:** 0.2.0
+**Last Updated:** 2026-01-10
 **License:** AGPL-3.0-only
 
 ---
@@ -11,19 +11,21 @@
 ## Table of Contents
 
 1. [System Overview](#1-system-overview)
-2. [Technology Stack](#2-technology-stack)
-3. [Monorepo Structure](#3-monorepo-structure)
-4. [Agent Architecture](#4-agent-architecture)
-5. [Data Flow & OODA Loop](#5-data-flow--ooda-loop)
-6. [Protobuf Schema Layer](#6-protobuf-schema-layer)
-7. [Database Layer](#7-database-layer)
-8. [Rust Execution Engine](#8-rust-execution-engine)
-9. [Trading Packages](#9-trading-packages)
-10. [Dashboard & API](#10-dashboard--api)
-11. [Python Services](#11-python-services)
-12. [Testing Strategy](#12-testing-strategy)
-13. [Observability](#13-observability)
-14. [Build & Deployment](#14-build--deployment)
+2. [Service Architecture & DAG](#2-service-architecture--dag)
+3. [Technology Stack](#3-technology-stack)
+4. [Monorepo Structure](#4-monorepo-structure)
+5. [Package Dependency Graph](#5-package-dependency-graph)
+6. [Agent Architecture](#6-agent-architecture)
+7. [Data Flow & OODA Loop](#7-data-flow--ooda-loop)
+8. [Protobuf Schema Layer](#8-protobuf-schema-layer)
+9. [Database Layer](#9-database-layer)
+10. [Rust Execution Engine](#10-rust-execution-engine)
+11. [Trading Packages](#11-trading-packages)
+12. [Dashboard & API](#12-dashboard--api)
+13. [Worker & Scheduling](#13-worker--scheduling)
+14. [Python Services](#14-python-services)
+15. [Testing Strategy](#15-testing-strategy)
+16. [Build & Deployment](#16-build--deployment)
 
 ---
 
@@ -36,35 +38,116 @@ Cream is a multi-language monorepo implementing an autonomous trading system wit
 - **Hourly OODA Cycles**: Scheduled trading cycles with checkpoint-based recovery
 - **Multi-Asset Support**: US equities and options (up to 4-leg strategies)
 - **Environment Isolation**: Complete separation of BACKTEST, PAPER, and LIVE modes
+- **GraphRAG Memory**: HelixDB stores trade decisions for case-based reasoning
 
 ### High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              CREAM TRADING SYSTEM                               │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │   Dashboard  │◄──►│ Dashboard-API│◄──►│   Mastra     │◄──►│  Execution   │  │
-│  │   (Next.js)  │    │   (Hono/WS)  │    │   Agents     │    │   Engine     │   │
-│  │   Port 3000  │    │   Port 3001  │    │  (Gemini)    │    │   (Rust)     │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘   │
-│                                                  │                   │          │
-│                                                  ▼                   ▼          │
-│  ┌──────────────────────────────────────────────────────────────────────────┐   │
-│  │                           DATA LAYER                                     │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │   │
-│  │  │  Turso   │  │ HelixDB  │  │ Polygon  │  │ Alpaca   │  │  Redis   │    │   │
-│  │  │ (SQLite) │  │ (Graph)  │  │ (Market) │  │ (Broker) │  │ (Cache)  │    │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │   │
-│  └──────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                               CREAM TRADING SYSTEM                                   │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  ┌────────────────┐    ┌────────────────┐    ┌────────────────┐    ┌─────────────┐ │
+│  │   Dashboard    │◄──►│  Dashboard-API │◄──►│    Worker      │◄──►│  Execution  │ │
+│  │   (Next.js)    │    │   (Hono/WS)    │    │  (Scheduler)   │    │   Engine    │ │
+│  │   Port 3000    │    │   Port 3001    │    │   Port 3002    │    │   (Rust)    │ │
+│  └────────────────┘    └────────────────┘    └────────────────┘    └─────────────┘ │
+│         │                     │                     │                    │          │
+│         │                     │                     │                    │          │
+│         ▼                     ▼                     ▼                    ▼          │
+│  ┌──────────────────────────────────────────────────────────────────────────────┐  │
+│  │                              DATA LAYER                                       │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │  │
+│  │  │  Turso   │  │ HelixDB  │  │Databento │  │ Alpaca   │  │  Redis   │       │  │
+│  │  │ (SQLite) │  │ (Graph)  │  │(Market)  │  │ (Broker) │  │ (Cache)  │       │  │
+│  │  │ :8080    │  │ :6969    │  │          │  │          │  │ :6379    │       │  │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │  │
+│  └──────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Technology Stack
+## 2. Service Architecture & DAG
+
+### Service Dependency Graph
+
+```
+                              ┌─────────────────┐
+                              │    Dashboard    │
+                              │   (Next.js 16)  │
+                              │   Port 3000     │
+                              └────────┬────────┘
+                                       │ HTTP
+                                       ▼
+                              ┌─────────────────┐
+                              │  Dashboard-API  │
+                              │  (Hono + Bun)   │
+                              │   Port 3001     │
+                              └────────┬────────┘
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    │ HTTP             │ gRPC             │ HTTP
+                    ▼                  ▼                  ▼
+           ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+           │    Turso     │   │  Execution   │   │   HelixDB    │
+           │   (SQLite)   │   │   Engine     │   │ (Graph+Vec)  │
+           │   :8080      │   │ (Rust/Tonic) │   │   :6969      │
+           └──────────────┘   │  :50051/53/55│   └──────────────┘
+                              └──────┬───────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │ gRPC           │ HTTP           │ gRPC
+                    ▼                ▼                ▼
+           ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+           │   Databento  │  │    Alpaca    │  │    Turso     │
+           │ (Market Data)│  │   (Broker)   │  │  (State DB)  │
+           └──────────────┘  └──────────────┘  └──────────────┘
+
+
+                              ┌─────────────────┐
+                              │     Worker      │
+                              │  (Scheduler)    │
+                              │   Port 3002     │
+                              └────────┬────────┘
+                                       │
+              ┌────────────────────────┼────────────────────────┐
+              │ Direct Import          │ gRPC                   │ HTTP
+              ▼                        ▼                        ▼
+     ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+     │   @cream/api │         │  Execution   │         │   HelixDB    │
+     │  (Workflows) │         │   Engine     │         │ (Memory)     │
+     └──────────────┘         └──────────────┘         └──────────────┘
+```
+
+### Inter-Service Communication Matrix
+
+| From → To | Protocol | Port | Purpose |
+|-----------|----------|------|---------|
+| Dashboard → Dashboard-API | HTTP/WebSocket | 3001 | REST API + real-time streaming |
+| Dashboard-API → Turso | HTTP (libsql) | 8080 | Config, decisions, orders |
+| Dashboard-API → HelixDB | HTTP REST | 6969 | Memory queries |
+| Dashboard-API → Execution Engine | gRPC | 50053 | Market data, order state |
+| Worker → @cream/api | Direct import | N/A | Workflow execution |
+| Worker → Execution Engine | gRPC | 50053 | Market data subscription |
+| Worker → Turso | HTTP | 8080 | Config loading |
+| Worker → HelixDB | HTTP | 6969 | CBR memory persistence |
+| Execution Engine → Alpaca | HTTPS | 443 | Order routing |
+| Execution Engine → Databento | gRPC | varies | Real-time market data |
+| Execution Engine → Turso | HTTP | 8080 | Order state persistence |
+
+### Execution Engine Ports
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 50051 | HTTP (Axum) | REST API: /health, /v1/check-constraints, /v1/submit-orders |
+| 50053 | gRPC (Tonic) | ExecutionService + MarketDataService |
+| 50055 | Arrow Flight | High-performance market data transport |
+
+---
+
+## 3. Technology Stack
 
 | Layer | Technology | Version | Purpose |
 |-------|------------|---------|---------|
@@ -72,24 +155,29 @@ Cream is a multi-language monorepo implementing an autonomous trading system wit
 | | tsgo (native-preview) | 7.0 | Native TypeScript compilation |
 | | Biome | 2.3.11 | Linting and formatting |
 | **Rust** | Edition 2024 | stable | Execution engine |
-| | cargo-llvm-cov | - | Coverage reporting |
-| | Clippy | - | Linting |
+| | Tokio | 1.49 | Async runtime |
+| | Tonic | 0.14.2 | gRPC server |
+| | Arrow Flight | 57.0 | High-performance data transport |
 | **Python** | CPython | 3.14+ | Research and analytics |
 | | uv | - | Package management |
 | | Ruff | - | Linting and formatting |
-| | MyPy | strict | Type checking |
 | **Orchestration** | Mastra | 0.24+ | Agent framework |
 | | Turborepo | 2.7+ | Monorepo build |
-| **Databases** | Turso | 0.4 | SQLite-compatible (HTTP/gRPC) |
+| **Databases** | Turso | 0.4 | SQLite-compatible (HTTP) |
 | | HelixDB | - | Graph + vector database |
 | | Redis | 7 | Caching and rate limiting |
 | **Messaging** | Protobuf | v3 | Cross-language serialization |
 | | Buf CLI | v2 | Code generation |
-| **Observability** | tracing-subscriber | 0.3 | Console logging |
+| **Frontend** | Next.js | 16 | React framework |
+| | React | 19 | UI library |
+| | Zustand | 5.0 | State management |
+| **API** | Hono | 4.11 | HTTP framework |
+| | Connect-ES | 2.1 | gRPC client |
+| **Auth** | better-auth | 1.4 | Google OAuth + sessions |
 
 ---
 
-## 3. Monorepo Structure
+## 4. Monorepo Structure
 
 ```
 cream/
@@ -99,28 +187,27 @@ cream/
 │   ├── dashboard/              # Next.js 16 trading UI
 │   ├── dashboard-api/          # Hono REST + WebSocket API
 │   ├── execution-engine/       # Rust gRPC server
-│   ├── evals/                  # Python DeepEval evaluations
-│   ├── filings-service/        # Python SEC filings ingestion
 │   └── vision-service/         # Python chart analysis
 │
 ├── packages/
 │   ├── domain/                 # Core types, Zod schemas, env handling
-│   ├── config/                 # Runtime config service, Zod schemas, secrets
+│   ├── config/                 # Runtime config service, validation
 │   ├── schema/                 # Protobuf definitions (.proto)
 │   ├── schema-gen/             # Generated stubs (TS/Rust/Python)
-│   ├── storage/                # Turso client wrapper
-│   ├── helix/                  # HelixDB client
-│   ├── helix-schema/           # Graph schema definitions
+│   ├── storage/                # Turso client wrapper, migrations
+│   ├── helix/                  # HelixDB client (GraphRAG)
+│   ├── helix-schema/           # Graph schema type definitions
 │   ├── broker/                 # Alpaca Markets integration
-│   ├── marketdata/             # Polygon/Massive/Databento adapters
+│   ├── marketdata/             # Polygon/Databento adapters
 │   ├── universe/               # Trading universe resolution
 │   ├── indicators/             # Technical indicators (RSI, ATR, SMA)
 │   ├── regime/                 # Market regime classification
 │   ├── metrics/                # Risk-adjusted performance metrics
-│   ├── mastra-kit/             # Agent prompts, tools, evaluations
-│   ├── external-context/       # News, sentiment, fundamentals
+│   ├── mastra-kit/             # Agent prompts, tools, consensus gate
+│   ├── external-context/       # News, sentiment extraction (Claude)
+│   ├── filings/                # SEC EDGAR filing ingestion
 │   ├── prediction-markets/     # Kalshi/Polymarket integration
-│   ├── validation/             # Schema parity validation
+│   ├── logger/                 # Pino logging wrapper
 │   ├── dashboard-types/        # Shared dashboard/API types
 │   ├── tsconfig/               # Shared TypeScript configs
 │   ├── infra/                  # OpenTofu infrastructure
@@ -134,7 +221,55 @@ cream/
 └── package.json                # Root workspace
 ```
 
-### Package Dependencies
+---
+
+## 5. Package Dependency Graph
+
+```
+FOUNDATION LAYER (No internal dependencies)
+├── @cream/tsconfig
+├── @cream/schema (generates schema-gen)
+├── @cream/schema-gen ← protobuf, connectrpc
+├── @cream/metrics (pure calculations)
+└── @cream/logger ← pino
+    │
+    ▼
+CORE LAYER
+├── @cream/domain ← schema-gen, zod
+└── @cream/config ← domain, zod
+    │
+    ▼
+DATA LAYER
+├── @cream/storage ← domain, config, @libsql/*
+├── @cream/helix-schema ← domain, config, @google/genai
+├── @cream/indicators ← storage
+├── @cream/regime ← config, indicators
+├── @cream/universe ← domain, config, storage
+└── @cream/marketdata ← domain, config, indicators, regime, universe
+    │
+    ▼
+INFRASTRUCTURE LAYER
+├── @cream/broker ← domain, config
+├── @cream/helix ← domain, config, helix-schema, helix-ts
+├── @cream/filings ← domain, helix, helix-schema, storage
+├── @cream/external-context ← domain, config, @anthropic-ai/sdk
+└── @cream/prediction-markets ← domain, config, storage, kalshi-typescript
+    │
+    ▼
+AGENT LAYER
+└── @cream/mastra-kit ← broker, config, domain, helix, helix-schema,
+                         indicators, logger, storage, universe,
+                         external-context, @mastra/core
+    │
+    ▼
+APPLICATION LAYER
+├── @cream/api (apps/api) ← mastra-kit, workflows
+├── @cream/worker (apps/worker) ← api, filings
+├── @cream/dashboard (apps/dashboard) ← dashboard-types
+└── @cream/dashboard-api (apps/dashboard-api) ← domain, storage, helix
+```
+
+### Simplified View
 
 ```
                      ┌─────────────────┐
@@ -145,7 +280,8 @@ cream/
           │                   │                   │
           ▼                   ▼                   ▼
     ┌──────────┐        ┌──────────┐        ┌──────────┐
-    │  broker  │        │marketdata│        │  config  │
+    │ storage  │        │  config  │        │  helix-  │
+    │          │        │          │        │  schema  │
     └────┬─────┘        └────┬─────┘        └────┬─────┘
          │                   │                   │
          └───────────────────┼───────────────────┘
@@ -154,20 +290,29 @@ cream/
           │                  │                  │
           ▼                  ▼                  ▼
     ┌──────────┐       ┌──────────┐       ┌──────────┐
-    │indicators│       │  regime  │       │ universe │
+    │indicators│       │  helix   │       │ universe │
     └────┬─────┘       └────┬─────┘       └────┬─────┘
          │                  │                  │
          └──────────────────┼──────────────────┘
                             │
-                            ▼
-                    ┌──────────────┐
-                    │  mastra-kit  │  (Agent coordination)
-                    └──────────────┘
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+    ┌──────────┐      ┌──────────┐      ┌──────────┐
+    │  broker  │      │marketdata│      │  regime  │
+    └────┬─────┘      └────┬─────┘      └────┬─────┘
+         │                 │                 │
+         └─────────────────┼─────────────────┘
+                           │
+                           ▼
+                   ┌──────────────┐
+                   │  mastra-kit  │  (Agent coordination)
+                   └──────────────┘
 ```
 
 ---
 
-## 4. Agent Architecture
+## 6. Agent Architecture
 
 ### 8-Agent Consensus Network
 
@@ -191,7 +336,7 @@ The system implements a multi-agent debate architecture organized in 4 execution
             │                    │                    │
             ▼                    ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         PHASE 2: RESEARCH (Parallel)                        │
+│                         PHASE 2: DEBATE (Parallel)                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │         ┌─────────────────────┐      ┌─────────────────────┐               │
@@ -226,7 +371,7 @@ The system implements a multi-agent debate architecture organized in 4 execution
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     PHASE 4: APPROVAL (Dual-Gate)                           │
+│                     PHASE 4: APPROVAL (Dual-Gate Loop)                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │       ┌─────────────────────┐          ┌─────────────────────┐             │
@@ -247,7 +392,7 @@ The system implements a multi-agent debate architecture organized in 4 execution
 │                       YES         NO                                        │
 │                        │           │                                        │
 │                        ▼           ▼                                        │
-│                    EXECUTE     ITERATE (max 3x)                             │
+│                    EXECUTE     REVISE (max 3x)                              │
 │                                    │                                        │
 │                                    └──► NO_TRADE (safety default)           │
 │                                                                             │
@@ -291,7 +436,7 @@ Always:
 
 ---
 
-## 5. Data Flow & OODA Loop
+## 7. Data Flow & OODA Loop
 
 ### Trading Cycle (Hourly)
 
@@ -303,47 +448,46 @@ Always:
 OBSERVE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━►
     │
     ├── fetchMarketSnapshot()
-    │   ├── OHLCV candles (1m, 5m, 15m, 1h, 1d)
+    │   ├── OHLCV candles (1h, 120 bars)
     │   ├── Real-time quotes (bid/ask/volume)
     │   └── Option chains (if enabled)
     │
-    └── fetchExternalEvents()
-        ├── News articles (FMP, Benzinga)
+    └── fetchExternalContext()
+        ├── News articles (FMP)
         ├── Earnings calendars
         └── Macro releases (CPI, NFP, FOMC)
 
 ORIENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━►
     │
     ├── loadMemoryContext()
-    │   └── HelixDB: Similar historical trades
+    │   └── HelixDB: GraphRAG retrieval of similar trades
     │
-    ├── buildFeatureSnapshot()
-    │   ├── Technical indicators (RSI, ATR, SMA, BB)
-    │   ├── Regime classification
-    │   └── Normalized features (z-scores, percentiles)
+    ├── computeAndStoreRegimes()
+    │   ├── Rule-based classifier (SMA crossover + ATR percentile)
+    │   └── Store to regime_labels table
     │
-    └── fetchPredictionMarkets()
+    └── fetchPredictionMarkets() [15-min workflow]
         ├── Kalshi (Fed rates, macro events)
         └── Polymarket (elections, geopolitical)
 
 DECIDE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━►
     │
-    ├── runAnalysts() [Parallel]
+    ├── runAnalystsParallel() [with timeout]
     │   ├── Technical Analyst → TechnicalAnalysisOutput
     │   ├── News Analyst → SentimentAnalysisOutput
     │   └── Fundamentals Analyst → FundamentalsAnalysisOutput
     │
-    ├── runResearchers() [Parallel]
+    ├── runDebateParallel() [with timeout]
     │   ├── Bullish Researcher → BullishResearchOutput
     │   └── Bearish Researcher → BearishResearchOutput
     │
-    ├── runTrader() [Sequential]
+    ├── runTrader() [sequential]
     │   └── DecisionPlan (actions, sizes, stops, rationales)
     │
-    └── runApproval() [Dual-Gate Loop]
+    └── runConsensusLoop() [Dual-Gate, max 3 iterations]
         ├── Risk Manager → APPROVE/REJECT
         ├── Critic → APPROVE/REJECT
-        └── Iterate up to 3x if rejected
+        └── revisePlan() if rejected
 
 ACT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━►
     │
@@ -354,69 +498,77 @@ ACT ━━━━━━━━━━━━━━━━━━━━━━━━━�
     │   ├── Market/Limit orders
     │   └── Multi-leg options (up to 4 legs)
     │
-    └── saveCheckpoint()
-        └── Turso: Cycle state for recovery
+    ├── persistDecisions() [Turso]
+    │   └── Store decisions with metadata for audit
+    │
+    └── updateHelixDBMemory()
+        └── Store trade decision embeddings for future retrieval
+```
+
+### Workflow Execution Timeline
+
+```
+Worker Scheduler
+    │
+    ├── Trading Cycle (Hourly, aligned to candle close)
+    │   └── tradingCycleWorkflow.execute()
+    │
+    ├── Prediction Markets (Every 15 minutes)
+    │   └── predictionMarketsWorkflow.execute()
+    │
+    └── SEC Filings Sync (Daily at 6 AM EST)
+        └── FilingsIngestionService.syncFilings()
 ```
 
 ### Feature Snapshot Structure
 
 ```typescript
-interface FeatureSnapshot {
-  symbol: string;
+interface MarketSnapshot {
+  instruments: string[];
+  candles: Record<string, CandleData[]>;  // Symbol → 120 hourly candles
+  quotes: Record<string, QuoteData>;       // Symbol → bid/ask
   timestamp: number;
+}
 
-  // Multi-timeframe candles
-  candlesByTimeframe: {
-    "1m"?: Candle[];
-    "5m"?: Candle[];
-    "15m"?: Candle[];
-    "1h"?: Candle[];
-    "1d"?: Candle[];
-  };
+interface RegimeData {
+  regime: "BULL_TREND" | "BEAR_TREND" | "RANGE_BOUND" | "HIGH_VOLATILITY" | "LOW_VOLATILITY" | "CRISIS";
+  confidence: number;  // 0-1
+  reasoning: string;
+}
 
-  // Computed indicators (key format: {indicator}_{param}_{timeframe})
-  indicators: {
-    "rsi_14_1h": number;
-    "atr_14_1d": number;
-    "sma_20_1d": number;
-    "sma_50_1d": number;
-    // ...
-  };
-
-  // Normalized values (z-scores, percentiles)
-  normalized: {
-    "zscore_rsi_14_1h": number;
-    "percentile_volume_1d": number;
-    // ...
-  };
-
-  // Market state
-  regime: RegimeClassification;
-  externalEvents: ExternalEventSummary[];
-  metadata: UniverseMetadata;
+interface MemoryContext {
+  relevantCases: Array<{
+    caseId: string;
+    symbol: string;
+    action: string;
+    regime: string;
+    rationale: string;
+    similarity: number;
+  }>;
+  regimeLabels: Record<string, RegimeData>;
 }
 ```
 
 ---
 
-## 6. Protobuf Schema Layer
+## 8. Protobuf Schema Layer
 
 ### Schema Structure
 
 ```
 packages/schema/cream/v1/
-├── common.proto          # Enums, shared messages
-├── decision.proto        # DecisionPlan, Decision, RiskLevels
-├── execution.proto       # Orders, positions, gRPC service
-├── events.proto          # External events (news, earnings, macro)
-└── market_snapshot.proto # Quotes, bars, option chains
+├── common.proto          # Enums (Environment, Action, Direction), shared messages
+├── decision.proto        # DecisionPlan, Decision, RiskLevels, OrderPlan
+├── execution.proto       # ExecutionService, orders, positions, constraints
+├── events.proto          # ExternalEvent (16 types), payloads
+└── market_snapshot.proto # Quote, Bar, OptionQuote, MarketDataService
 ```
 
 ### Code Generation (buf.gen.yaml)
 
 ```yaml
 plugins:
-  # TypeScript (ESM)
+  # TypeScript (Protobuf-ES v2)
   - buf.build/bufbuild/es          → packages/schema-gen/ts
   - buf.build/bufbuild/connect-es  → packages/schema-gen/ts
 
@@ -424,42 +576,22 @@ plugins:
   - buf.build/protocolbuffers/python → packages/schema-gen/python
   - buf.build/protocolbuffers/pyi    → packages/schema-gen/python
 
-  # Rust
+  # Rust (Prost + Tonic)
   - buf.build/community/neoeinstein-prost → packages/schema-gen/rust
   - buf.build/community/neoeinstein-tonic → packages/schema-gen/rust
 ```
 
-### Key Message Types
+### Key Enums (common.proto)
 
 ```protobuf
-// DecisionPlan - Output of Trader agent
-message DecisionPlan {
-  string cycle_id = 1;
-  google.protobuf.Timestamp as_of_timestamp = 2;
-  Environment environment = 3;
-  repeated Decision decisions = 4;
-  optional string portfolio_notes = 5;
-}
-
-// Decision - Single trading action
-message Decision {
-  Instrument instrument = 1;
-  Action action = 2;              // BUY, SELL, HOLD, INCREASE, REDUCE
-  Size size = 3;                  // Quantity + unit (SHARES, CONTRACTS)
-  OrderPlan order_plan = 4;
-  RiskLevels risk_levels = 5;     // MANDATORY: stop_loss + take_profit
-  StrategyFamily strategy_family = 6;
-  string rationale = 7;
-  double confidence = 8;
-  References references = 9;
-}
-
-// RiskLevels - Required for every decision
-message RiskLevels {
-  double stop_loss_level = 1;
-  double take_profit_level = 2;
-  RiskDenomination denomination = 3;  // UNDERLYING_PRICE or OPTION_PRICE
-}
+enum Environment { BACKTEST = 0; PAPER = 1; LIVE = 2; }
+enum Action { BUY = 0; SELL = 1; HOLD = 2; INCREASE = 3; REDUCE = 4; NO_TRADE = 5; }
+enum Direction { LONG = 0; SHORT = 1; FLAT = 2; }
+enum InstrumentType { EQUITY = 0; OPTION = 1; }
+enum OptionType { CALL = 0; PUT = 1; }
+enum OrderType { LIMIT = 0; MARKET = 1; }
+enum TimeInForce { DAY = 0; GTC = 1; IOC = 2; FOK = 3; OPG = 4; CLS = 5; }
+enum Regime { BULL_TREND = 0; BEAR_TREND = 1; RANGE_BOUND = 2; HIGH_VOLATILITY = 3; LOW_VOLATILITY = 4; CRISIS = 5; }
 ```
 
 ### gRPC Services
@@ -482,40 +614,51 @@ service MarketDataService {
 }
 ```
 
+### TypeScript gRPC Client
+
+```typescript
+// apps/api/src/grpc/client.ts
+interface ExecutionEngineClient {
+  checkConstraints(request: CheckConstraintsRequest): Promise<CheckConstraintsResponse>;
+  submitOrder(request: SubmitOrderRequest): Promise<SubmitOrderResponse>;
+  getOrderState(request: GetOrderStateRequest): Promise<GetOrderStateResponse>;
+  cancelOrder(request: CancelOrderRequest): Promise<CancelOrderResponse>;
+  getAccountState(request?: GetAccountStateRequest): Promise<GetAccountStateResponse>;
+  getPositions(request?: GetPositionsRequest): Promise<GetPositionsResponse>;
+}
+
+// Features:
+// - Automatic retries with exponential backoff (3 attempts, 100ms base)
+// - Retryable codes: UNAVAILABLE, RESOURCE_EXHAUSTED, ABORTED, DEADLINE_EXCEEDED
+// - 30-second default timeout
+// - Singleton management via getExecutionEngineClient()
+```
+
 ---
 
-## 7. Database Layer
+## 9. Database Layer
 
 ### Turso (SQLite-compatible)
 
-**Purpose:** Transactional storage for positions, orders, cycles, decisions
+**Purpose:** Transactional storage for config, decisions, orders, cycles
 
-**Connection:** HTTP (port 8080) or gRPC (port 5001)
+**Connection:** HTTP (port 8080) via libsql client
 
 **Key Tables:**
 
 ```sql
--- Runtime configuration (Plan 22)
+-- Runtime configuration
 CREATE TABLE trading_config (
   id TEXT PRIMARY KEY,
   environment TEXT NOT NULL,
   version INTEGER NOT NULL,
   max_consensus_iterations INTEGER DEFAULT 3,
-  conviction_delta_hold REAL DEFAULT 0.2,
-  conviction_delta_action REAL DEFAULT 0.3,
-  min_risk_reward_ratio REAL DEFAULT 1.5,
+  agent_timeout_ms INTEGER DEFAULT 1800000,
+  total_consensus_timeout_ms INTEGER DEFAULT 300000,
+  trading_cycle_interval_ms INTEGER DEFAULT 3600000,
+  prediction_markets_interval_ms INTEGER DEFAULT 900000,
   status TEXT DEFAULT 'draft',  -- draft | testing | active | archived
   created_at TEXT NOT NULL
-);
-
-CREATE TABLE agent_configs (
-  id TEXT PRIMARY KEY,
-  environment TEXT NOT NULL,
-  agent_type TEXT NOT NULL,
-  model TEXT NOT NULL,
-  temperature REAL NOT NULL,
-  system_prompt_override TEXT,
-  enabled INTEGER DEFAULT 1
 );
 
 CREATE TABLE universe_configs (
@@ -523,40 +666,31 @@ CREATE TABLE universe_configs (
   environment TEXT NOT NULL,
   source TEXT NOT NULL,  -- static | index | screener
   static_symbols TEXT,   -- JSON array
-  status TEXT DEFAULT 'draft'
-);
-
--- Cycle tracking
-CREATE TABLE cycles (
-  id TEXT PRIMARY KEY,
-  environment TEXT NOT NULL,
-  started_at TEXT NOT NULL,
-  completed_at TEXT,
-  status TEXT NOT NULL DEFAULT 'started'
-);
-
--- Checkpoints for recovery
-CREATE TABLE checkpoints (
-  id TEXT PRIMARY KEY,
-  cycle_id TEXT NOT NULL REFERENCES cycles(id),
-  phase TEXT NOT NULL,
-  data TEXT NOT NULL,  -- JSON serialized state
+  status TEXT DEFAULT 'draft',
   created_at TEXT NOT NULL
 );
 
 -- Decision history
 CREATE TABLE decisions (
   id TEXT PRIMARY KEY,
-  cycle_id TEXT NOT NULL REFERENCES cycles(id),
-  instrument_id TEXT NOT NULL,
+  cycle_id TEXT NOT NULL,
+  symbol TEXT NOT NULL,
   action TEXT NOT NULL,
   direction TEXT NOT NULL,
-  size_value REAL NOT NULL,
+  size REAL NOT NULL,
   size_unit TEXT NOT NULL,
-  stop_loss REAL NOT NULL,
-  take_profit REAL NOT NULL,
-  confidence REAL NOT NULL,
-  rationale TEXT NOT NULL,
+  entry_price REAL,
+  stop_price REAL,
+  target_price REAL,
+  status TEXT NOT NULL,  -- approved | rejected | executed | cancelled
+  strategy_family TEXT,
+  time_horizon TEXT,
+  rationale TEXT,
+  bullish_factors TEXT,   -- JSON array
+  bearish_factors TEXT,   -- JSON array
+  confidence_score REAL,
+  metadata TEXT,          -- JSON object
+  environment TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
 
@@ -564,8 +698,8 @@ CREATE TABLE decisions (
 CREATE TABLE orders (
   id TEXT PRIMARY KEY,
   broker_order_id TEXT,
-  decision_id TEXT REFERENCES decisions(id),
-  instrument_id TEXT NOT NULL,
+  decision_id TEXT,
+  symbol TEXT NOT NULL,
   side TEXT NOT NULL,
   quantity INTEGER NOT NULL,
   order_type TEXT NOT NULL,
@@ -573,136 +707,149 @@ CREATE TABLE orders (
   status TEXT NOT NULL,
   filled_quantity INTEGER DEFAULT 0,
   avg_fill_price REAL,
+  environment TEXT NOT NULL,
   submitted_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+);
+
+-- Regime labels (computed hourly)
+CREATE TABLE regime_labels (
+  id TEXT PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  timestamp TEXT NOT NULL,
+  timeframe TEXT NOT NULL,
+  regime TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  model_name TEXT NOT NULL,
+  model_version TEXT NOT NULL,
+  UNIQUE(symbol, timestamp, timeframe)
 );
 ```
 
 ### HelixDB (Graph + Vector)
 
-**Purpose:** Memory storage for pattern matching and semantic search
+**Purpose:** GraphRAG memory for case-based reasoning
 
-**Connection:** HTTP (port 6969)
+**Connection:** HTTP REST (port 6969)
 
-**Schema (schema.hx):**
+**Node Types:**
 
 ```
-// Trade memory for pattern matching
-Node TradeMemory {
-  trade_id: String @unique
+TradeDecision {
+  decision_id: String @unique
+  cycle_id: String
+  instrument_id: String @index
+  underlying_symbol: String @index
+  regime_label: String
+  action: String  // BUY | SELL | HOLD | NO_TRADE
+  decision_json: String
+  rationale_text: String
+  rationale_embedding: Vector[768]  // text-embedding-004
+  snapshot_reference: String
+  environment: String
+  created_at: DateTime
+}
+
+ExternalEvent {
+  event_id: String @unique
+  type: String  // EARNINGS | NEWS | MACRO | etc.
+  summary: String
+  sentiment: Float
+  importance: Float
+  related_symbols: [String]
+  event_time: DateTime
+}
+
+FilingChunk {
+  chunk_id: String @unique
+  filing_id: String
   symbol: String @index
-  entry_date: DateTime
-  exit_date: DateTime?
-  direction: String  // "LONG" | "SHORT"
-  entry_price: Float
-  exit_price: Float?
-  pnl_pct: Float?
-  regime: String
-  rationale: String
-  rationale_embedding: Vector[1536]  // For semantic search
-  outcome: String  // "WIN" | "LOSS" | "OPEN"
-}
-
-// Market pattern nodes
-Node MarketPattern {
-  pattern_id: String @unique
-  pattern_type: String  // "BREAKOUT" | "REVERSAL" | "TREND"
-  symbols: [String]
-  detected_at: DateTime
-  confidence: Float
-  features_embedding: Vector[1536]
-}
-
-// Edges for relationships
-Edge SimilarTo {
-  from: TradeMemory
-  to: TradeMemory
-  similarity: Float
-}
-
-Edge TriggeredBy {
-  from: TradeMemory
-  to: MarketPattern
+  section: String
+  content: String
+  content_embedding: Vector[768]
+  created_at: DateTime
 }
 ```
 
-**Query Examples:**
+**Edge Types:**
+
+```
+INFLUENCED_DECISION { from: ExternalEvent, to: TradeDecision, weight: Float }
+SIMILAR_TO { from: TradeDecision, to: TradeDecision, similarity: Float }
+HAS_FILING { from: Company, to: FilingChunk }
+```
+
+**GraphRAG Retrieval:**
 
 ```typescript
-// Find similar past trades
-const similarTrades = await helix.query(`
-  MATCH (t:TradeMemory)
-  WHERE t.symbol = $symbol
-    AND t.regime = $regime
-  ORDER BY vector_similarity(t.rationale_embedding, $embedding) DESC
-  LIMIT 5
-`, { symbol: "AAPL", regime: "BULL_TREND", embedding });
-
-// Pattern matching
-const patterns = await helix.vectorSearch("MarketPattern", {
-  vector: currentFeaturesEmbedding,
-  topK: 10,
-  filter: { confidence: { $gte: 0.7 } }
+// Orient phase: retrieve similar past decisions
+const result = await helixOrchestrator.orient({
+  queryEmbedding: situationEmbedding,
+  instrumentId: symbol,
+  regime: currentRegime,
+  topK: 5,
 });
+// Returns: decisions with relevanceScore, linked events
 ```
 
 ---
 
-## 8. Rust Execution Engine
+## 10. Rust Execution Engine
 
 ### Architecture
 
 ```
 apps/execution-engine/src/
-├── main.rs              # Entry point, server startup
+├── main.rs              # Entry point, multi-server startup
 ├── lib.rs               # Library exports
-├── config.rs            # Configuration loading
+├── config.rs            # Environment-based configuration
 ├── server/
 │   ├── mod.rs           # Server module
-│   ├── http.rs          # Axum HTTP server
-│   └── grpc.rs          # Tonic gRPC server
+│   ├── http.rs          # Axum HTTP server (:50051)
+│   └── grpc.rs          # Tonic gRPC server (:50053)
 ├── execution/
-│   ├── mod.rs           # Order routing
+│   ├── mod.rs           # Order routing, ExecutionGateway
 │   ├── alpaca.rs        # Alpaca broker adapter
-│   └── backtest.rs      # Backtest adapter
+│   └── order_state.rs   # OrderStateManager
 ├── risk/
 │   ├── mod.rs           # Risk validation
 │   ├── constraints.rs   # Constraint definitions
-│   └── validator.rs     # Constraint checking
-├── models/
-│   ├── mod.rs           # Domain models
-│   ├── order.rs         # Order types
-│   └── position.rs      # Position tracking
-└── backtest/
-    ├── mod.rs           # Backtest simulation
-    └── engine.rs        # Event-driven backtester
+│   └── validator.rs     # ConstraintValidator
+├── broker/
+│   ├── mod.rs           # Broker interface
+│   └── alpaca.rs        # AlpacaAdapter with circuit breaker
+├── feed/
+│   ├── mod.rs           # Market data feed
+│   └── databento.rs     # Databento subscription
+├── safety/
+│   └── connection_monitor.rs  # Mass cancel on disconnect
+└── models/
+    ├── order.rs         # Order, OrderState
+    └── position.rs      # Position tracking
 ```
 
 ### Key Dependencies
 
 ```toml
 [dependencies]
-# Async runtime
 tokio = { version = "1.49", features = ["full"] }
-
-# gRPC
-tonic = { version = "0.14.2", features = ["tls-ring", "tls-native-roots"] }
+tonic = { version = "0.14.2", features = ["tls-ring"] }
 prost = "0.14.1"
-
-# High-performance data transport
 arrow = { version = "57.0.0", features = ["ipc", "json"] }
 arrow-flight = { version = "57.0.0", features = ["flight-sql-experimental"] }
-
-# Financial precision
-rust_decimal = { version = "1.39", features = ["serde", "serde-with-str"] }
-
-# Database
-turso = "0.4.0-pre.19"
-
-# Observability (console logging)
+rust_decimal = { version = "1.39", features = ["serde"] }
+reqwest = "0.13"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ```
+
+### Environment-Based Behavior
+
+| Mode | Broker | Feed | Reconciliation | Safety |
+|------|--------|------|----------------|--------|
+| **BACKTEST** | Mock adapter | None | Disabled | Disabled |
+| **PAPER** | Alpaca (paper) | Databento | Optional | Optional |
+| **LIVE** | Alpaca (live) | Databento | Required | Required |
 
 ### Constraint Validation
 
@@ -713,281 +860,161 @@ pub struct ConstraintValidator {
 
 impl ConstraintValidator {
     pub fn validate(&self, request: &CheckConstraintsRequest) -> CheckConstraintsResponse {
-        let mut checks = vec![];
         let mut violations = vec![];
 
         // Position size limits
-        checks.push(self.check_position_size(&request.decision_plan, &request.account_state));
+        self.check_position_size(&request.decision_plan, &request.account_state, &mut violations);
 
         // Sector concentration
-        checks.push(self.check_sector_exposure(&request.decision_plan, &request.positions));
+        self.check_sector_exposure(&request.decision_plan, &request.positions, &mut violations);
 
-        // Options Greeks limits
-        checks.push(self.check_greeks_limits(&request.decision_plan, &request.positions));
+        // Options Greeks limits (portfolio delta/gamma/vega)
+        self.check_greeks_limits(&request.decision_plan, &request.positions, &mut violations);
 
-        // PDT rule
-        checks.push(self.check_pdt_compliance(&request.account_state));
+        // PDT rule compliance
+        self.check_pdt_compliance(&request.account_state, &mut violations);
 
-        // Stop-loss validation
+        // Stop-loss required for every decision
         for decision in &request.decision_plan.decisions {
             if decision.risk_levels.is_none() {
                 violations.push(ConstraintViolation {
-                    code: "MISSING_STOP_LOSS".to_string(),
-                    severity: ViolationSeverity::Critical,
-                    message: "Every decision must have stop-loss levels".to_string(),
-                    instrument_id: Some(decision.instrument.instrument_id.clone()),
-                    ..Default::default()
+                    code: "MISSING_STOP_LOSS",
+                    severity: Critical,
+                    message: "Every decision must have stop-loss levels",
                 });
             }
         }
 
         CheckConstraintsResponse {
             approved: violations.is_empty(),
-            checks,
             violations,
-            validated_at: Some(Timestamp::now()),
-            rejection_reason: if violations.is_empty() { None } else {
-                Some(format!("{} constraint violations", violations.len()))
-            },
         }
     }
 }
 ```
 
-### Lint Configuration
+### Caching Strategy
 
-```toml
-[lints.rust]
-unsafe_code = "forbid"      # No unsafe Rust allowed
-missing_docs = "warn"
-
-[lints.clippy]
-pedantic = "warn"
-nursery = "warn"
-unwrap_used = "warn"        # Prefer expect() or ?
-expect_used = "warn"        # Prefer proper error handling
-```
+- **Account state cache**: 30-second TTL
+- **Positions cache**: 60-second TTL
+- **Thread-safe**: `Arc<RwLock<AlpacaCache>>`
 
 ---
 
-## 9. Trading Packages
+## 11. Trading Packages
 
-### packages/broker/ - Alpaca Integration
+### @cream/broker - Alpaca Integration
 
 ```typescript
 interface AlpacaClient {
-  // Account
   getAccount(): Promise<Account>;
-
-  // Positions
   getPositions(): Promise<Position[]>;
-  getPosition(symbol: string): Promise<Position | null>;
-  closePosition(symbol: string, qty?: number): Promise<Order>;
-  closeAllPositions(): Promise<Order[]>;
-
-  // Orders
   submitOrder(request: OrderRequest): Promise<Order>;
   cancelOrder(orderId: string): Promise<void>;
-  getOrder(orderId: string): Promise<Order | null>;
-  getOrders(status?: "open" | "closed" | "all"): Promise<Order[]>;
-
-  // Market
   isMarketOpen(): Promise<boolean>;
-  getEnvironment(): TradingEnvironment;
 }
 
-// Multi-leg options support (up to 4 legs)
+// Multi-leg options (up to 4 legs)
 interface OrderRequest {
   clientOrderId: string;
   symbol?: string;           // Single-leg
-  legs?: OrderLeg[];         // Multi-leg (2-4 legs)
+  legs?: OrderLeg[];         // Multi-leg
   qty: number;
   side: OrderSide;
   type: OrderType;
   timeInForce: TimeInForce;
   limitPrice?: number;
-  extendedHours?: boolean;
-}
-
-interface OrderLeg {
-  symbol: string;
-  ratio: number;             // Positive = buy, negative = sell
-  optionType?: "call" | "put";
-  strike?: number;
-  expiration?: string;
 }
 ```
 
-### packages/marketdata/ - Multi-Provider Data
+### @cream/marketdata - Multi-Provider
 
-**Providers:**
-- **Polygon** - REST API for aggregates, snapshots
-- **Databento** - Execution-grade real-time feed
-- **FMP** - Fundamentals, transcripts
-- **AlphaVantage** - Macro indicators
-- **Massive** - WebSocket streaming
-
-**Key Features:**
-- Rate limiting with token bucket
-- Exponential backoff retry
-- Corporate action adjustments
-- Options Greeks (Black-Scholes)
-- Anomaly detection
+**Providers:** Databento, Polygon, FMP, AlphaVantage
 
 ```typescript
-// Greeks calculation
-interface OptionGreeks {
-  delta: number;
-  gamma: number;
-  theta: number;     // Per day
-  vega: number;
-  rho: number;
-  theoreticalPrice: number;
+interface MarketDataAdapter {
+  getCandles(symbol: string, timeframe: string, from: string, to: string): Promise<Candle[]>;
+  getQuotes(symbols: string[]): Promise<Map<string, Quote>>;
+  getOptionChain(symbol: string): Promise<OptionContract[]>;
 }
 
-function calculateGreeks(position: OptionPosition): OptionGreeks;
-function calculateOptionsExposure(positions: OptionPosition[]): OptionsExposure;
+// Features:
+// - Rate limiting with token bucket
+// - Exponential backoff retry
+// - Corporate action adjustments
+// - Options Greeks (Black-Scholes)
 ```
 
-### packages/indicators/ - Technical Analysis
+### @cream/indicators - Technical Analysis
 
 ```typescript
 // Momentum
-function calculateRSI(candles: Candle[], params?: { period: number }): RSIResult[];
-function calculateStochastic(candles: Candle[], params: StochasticParams): StochasticResult[];
+calculateRSI(candles, { period: 14 }): RSIResult[];
+calculateMACD(candles, { fast: 12, slow: 26, signal: 9 }): MACDResult[];
 
 // Trend
-function calculateSMA(candles: Candle[], params?: { period: number }): MAResult[];
-function calculateEMA(candles: Candle[], params: { period: number }): MAResult[];
+calculateSMA(candles, { period: 20 }): MAResult[];
+calculateEMA(candles, { period: 20 }): MAResult[];
 
 // Volatility
-function calculateATR(candles: Candle[], params?: { period: number }): ATRResult[];
-function calculateBollingerBands(candles: Candle[], params: BollingerParams): BollingerBandsResult[];
+calculateATR(candles, { period: 14 }): ATRResult[];
+calculateBollingerBands(candles, { period: 20, stdDev: 2 }): BollingerResult[];
 
-// Volume
-function calculateVolumeSMA(candles: Candle[], params: { period: number }): VolumeSMAResult[];
-
-// Pipeline orchestration
-function calculateIndicators(
-  candles: Candle[],
-  timeframe: Timeframe,
-  config: IndicatorPipelineConfig
-): IndicatorSnapshot;
-
-function calculateMultiTimeframeIndicators(
-  candlesByTimeframe: Record<Timeframe, Candle[]>,
-  config: IndicatorPipelineConfig
-): Record<Timeframe, IndicatorSnapshot>;
+// Pipeline
+calculateIndicators(candles, timeframe, config): IndicatorSnapshot;
 ```
 
-### packages/regime/ - Market Classification
+### @cream/regime - Market Classification
 
 ```typescript
-type RegimeLabel =
-  | "BULL_TREND"
-  | "BEAR_TREND"
-  | "RANGE_BOUND"
-  | "HIGH_VOL"
-  | "LOW_VOL"
-  | "UNKNOWN";
+type RegimeLabel = "BULL_TREND" | "BEAR_TREND" | "RANGE_BOUND" | "HIGH_VOL" | "LOW_VOL" | "CRISIS";
 
 interface RegimeClassification {
   regime: RegimeLabel;
-  confidence: number;          // 0-1
+  confidence: number;  // 0-1
   reasoning: string;
-  metrics: {
-    fastMa: number;
-    slowMa: number;
-    maDiff: number;
-    maDiffPct: number;
-    currentAtr: number;
-    atrPercentile: number;
-  };
+  metrics: { fastMa, slowMa, maDiffPct, atrPercentile };
 }
 
 // Rule-based classifier
-function classifyRegime(input: RegimeInput, config?: RuleBasedConfig): RegimeClassification;
-
-// GMM classifier (for backtesting)
-function trainGMM(candles: Candle[], config: GMMConfig): GMMModel;
-function classifyWithGMM(model: GMMModel, candles: Candle[]): GMMClassification;
+classifyRegime(input: RegimeInput): RegimeClassification;
 ```
 
-### packages/metrics/ - Performance Analytics
+### @cream/external-context - News Extraction
 
 ```typescript
-interface PerformanceMetrics {
-  rawReturn: number;          // Cumulative %
-  sharpe: number | null;      // Risk-adjusted return
-  sortino: number | null;     // Downside risk-adjusted
-  calmar: number | null;      // Return / max drawdown
-  window: string;             // "1d", "1w", "1m"
-  timestamp: string;
-}
-
-// Core calculations
-function calculateSharpe(returns: number[], riskFreeRate: number, periodsPerYear: number): number | null;
-function calculateSortino(returns: number[], targetReturn: number, periodsPerYear: number): number | null;
-function calculateCalmar(returns: number[], periodsPerYear: number): number | null;
-function calculateMaxDrawdown(values: number[]): number;
-```
-
-### packages/external-context/ - News & Sentiment
-
-```typescript
-// Extraction pipeline
 class ExtractionPipeline {
   async processNews(articles: FMPNewsArticle[]): Promise<PipelineResult>;
   async processTranscripts(transcripts: FMPTranscript[]): Promise<PipelineResult>;
   async processMacroReleases(releases: FMPEconomicEvent[]): Promise<PipelineResult>;
 }
 
-// Scoring system
+// Uses Claude for structured extraction
 interface ContentScores {
-  sentiment: number;          // -1 to 1
-  surprise: number;           // 0 to 1
-  importance: number;         // 0 to 1
-  recency: number;            // 0 to 1
-  reliability: number;        // 0 to 1
-}
-
-// Entity linking
-class EntityLinker {
-  async linkEntity(entityName: string, type: EntityType): Promise<EntityLink | null>;
+  sentiment: number;   // -1 to 1
+  surprise: number;    // 0 to 1
+  importance: number;  // 0 to 1
 }
 ```
 
-### packages/prediction-markets/ - Kalshi & Polymarket
+### @cream/prediction-markets - Kalshi/Polymarket
 
 ```typescript
-interface PredictionMarketScores {
-  // Fed policy
-  fedRateCut: number;
-  fedRateHike: number;
-
-  // Economic data
-  strongJobs: number;
-  inflationHigh: number;
-  gdpGrowth: number;
-
-  // Risk signals
-  recessionProbability: number;
-  macroUncertainty: number;    // 0-1
-
-  // Aggregate
-  riskDirection: "UP" | "DOWN" | "NEUTRAL";
-}
-
-// Unified client
 class UnifiedPredictionMarketClient {
   async fetchAggregated(marketTypes: MarketType[]): Promise<UnifiedMarketData>;
-  async getArbitrageOpportunities(): Promise<ArbitrageAlert[]>;
+}
+
+interface PredictionMarketSignals {
+  fedCutProbability?: number;
+  fedHikeProbability?: number;
+  recessionProbability12m?: number;
+  macroUncertaintyIndex?: number;
 }
 ```
 
 ---
 
-## 10. Dashboard & API
+## 12. Dashboard & API
 
 ### Dashboard (Next.js 16)
 
@@ -995,56 +1022,47 @@ class UnifiedPredictionMarketClient {
 apps/dashboard/src/
 ├── app/
 │   ├── page.tsx              # Main dashboard
-│   ├── portfolio/            # Position management
-│   ├── decisions/            # Decision history
-│   ├── agents/               # Agent monitoring
-│   └── settings/             # Configuration
+│   ├── (auth)/
+│   │   ├── dashboard/        # Protected trading view
+│   │   ├── config/           # Configuration management
+│   │   │   ├── edit/         # Draft config editing
+│   │   │   └── promote/      # Config promotion workflow
+│   │   ├── portfolio/        # Position management
+│   │   └── decisions/        # Decision history
+│   └── login/                # OAuth redirect
 ├── components/
-│   ├── charts/               # TradingView-style charts
-│   ├── portfolio/            # Portfolio widgets
-│   ├── agents/               # Agent status cards
-│   └── ui/                   # Design system components
+│   ├── charts/               # Lightweight-charts
+│   ├── portfolio/            # Position widgets
+│   └── ui/                   # Design system
 └── stores/
-    ├── portfolio.ts          # Zustand portfolio state
-    ├── websocket.ts          # WebSocket connection
-    └── decisions.ts          # Decision history
+    ├── portfolio.ts          # Zustand state
+    └── websocket.ts          # WebSocket connection
 ```
 
 ### Dashboard API (Hono)
 
 ```typescript
 // apps/dashboard-api/src/index.ts
-const app = new Hono()
-  .basePath("/api")
-  .route("/market", marketRoutes)
-  .route("/portfolio", portfolioRoutes)
-  .route("/decisions", decisionsRoutes)
-  .route("/agents", agentsRoutes)
-  .route("/settings", settingsRoutes);
-
-// WebSocket streaming
-export const websocket = {
-  open(ws: ServerWebSocket<WebSocketData>) {
-    ws.subscribe("market");
-    ws.subscribe("portfolio");
+Bun.serve({
+  fetch: async (req, server) => {
+    if (url.pathname === "/ws") {
+      return server.upgrade(req);  // WebSocket upgrade
+    }
+    return app.fetch(req);  // HTTP via Hono
   },
-  message(ws, message) {
-    // Handle subscriptions
-  },
-  close(ws) {
-    ws.unsubscribe("market");
-    ws.unsubscribe("portfolio");
-  },
-};
-
-// Market data streaming
-class MarketDataStreamer {
-  async startStreaming(symbols: string[]) {
-    // Connect to Massive WebSocket
-    // Broadcast to dashboard clients
-  }
-}
+  websocket: websocketHandler
+});
 ```
+
+### WebSocket Channels
+
+| Channel | Purpose |
+|---------|---------|
+| QUOTES | Real-time market data |
+| OPTIONS | Options chain streaming |
+| DECISIONS | Trade decisions from OODA |
+| ALERTS | System alerts |
+| BACKTEST | Backtest progress streaming |
 
 ### API Routes
 
@@ -1052,125 +1070,159 @@ class MarketDataStreamer {
 |-------|--------|-------------|
 | `/api/market/snapshot` | GET | Current market snapshot |
 | `/api/market/quotes/:symbol` | GET | Real-time quote |
-| `/api/portfolio/positions` | GET | Current positions |
-| `/api/portfolio/orders` | GET | Order history |
-| `/api/decisions/history` | GET | Past decisions |
-| `/api/decisions/:cycleId` | GET | Specific cycle |
-| `/api/agents/status` | GET | Agent health |
-| `/api/settings` | GET/PUT | Configuration |
+| `/api/portfolio` | GET | Current positions |
+| `/api/decisions` | GET | Decision history |
+| `/api/decisions/:id` | GET | Decision detail + agent outputs |
+| `/api/config/active` | GET | Active trading config |
 | `/api/config/draft` | GET/PUT | Draft config editing |
-| `/api/config/promote` | POST | Promote config (PAPER → LIVE) |
+| `/api/config/promote` | POST | Promote draft to active |
 | `/api/system/trigger-cycle` | POST | On-demand OODA cycle |
-| `/api/backtest` | POST | Create & execute backtest |
+| `/api/backtests/run` | POST | Execute VectorBT backtest |
+| `/health` | GET | Service health |
 
 ---
 
-## 11. Python Services
+## 13. Worker & Scheduling
 
-### packages/research/ - Backtesting
+### Worker Architecture
 
-**VectorBT Runner** (`cream/backtest/runner.py`):
-- Standalone Python script spawned as subprocess
-- Streams JSON events over stdout (progress, trades, equity, completion)
-- No gRPC required - works in docker-compose
+```typescript
+// apps/worker/src/index.ts
+interface WorkerState {
+  config: FullRuntimeConfig;      // Loaded from Turso
+  environment: RuntimeEnvironment;
+  timers: {
+    tradingCycle: Timer | null;
+    predictionMarkets: Timer | null;
+    filingsSync: Timer | null;
+  };
+  running: {
+    tradingCycle: boolean;
+    predictionMarkets: boolean;
+    filingsSync: boolean;
+  };
+}
+```
+
+### Scheduling
+
+| Workflow | Schedule | Alignment |
+|----------|----------|-----------|
+| Trading Cycle | Configurable (default: 1h) | Hour boundary |
+| Prediction Markets | Configurable (default: 15m) | 15-minute boundary |
+| SEC Filings Sync | Daily | 6 AM EST |
+
+### Health Endpoint
+
+```json
+GET :3002/health
+{
+  "status": "ok",
+  "environment": "PAPER",
+  "config_id": "trading-config-v5",
+  "intervals": {
+    "trading_cycle_ms": 3600000,
+    "prediction_markets_ms": 900000
+  },
+  "instruments": ["NVDA", "TSLA", "AAPL"],
+  "last_run": {
+    "trading_cycle": "2026-01-10T15:00:00Z",
+    "prediction_markets": "2026-01-10T15:15:00Z"
+  },
+  "running": { "trading_cycle": false },
+  "market_data": { "active": true, "symbols": 20 }
+}
+```
+
+### Signal Handling
+
+- **SIGHUP**: Hot-reload configuration from database
+- **SIGINT/SIGTERM**: Graceful shutdown, stop timers
+
+---
+
+## 14. Python Services
+
+### apps/vision-service - Chart Analysis
 
 ```python
-# Usage (called from dashboard-api)
+# Pattern detection + support/resistance
+class ChartAnalyzer:
+    def analyze(self, candles: list[Candle], symbol: str) -> ChartAnalysisResult:
+        patterns = self.pattern_detector.detect(candles)
+        support, resistance = self.level_detector.detect(candles)
+        return ChartAnalysisResult(
+            patterns=patterns,
+            support_levels=support,
+            resistance_levels=resistance,
+            overall_signal=self._calculate_signal(patterns, support, resistance),
+        )
+```
+
+### packages/research - VectorBT Backtesting
+
+```python
+# Standalone subprocess runner
+# Called from dashboard-api, streams JSON events over stdout
 python -m cream.backtest.runner --config '{"backtestId": "...", "dataPath": "..."}'
 
-# Output: One JSON object per line
+# Output format (one JSON per line):
 {"type": "progress", "pct": 30, "phase": "running_simulation"}
-{"type": "trade", "timestamp": "...", "symbol": "AAPL", ...}
-{"type": "completed", "metrics": {"sharpeRatio": 1.2, ...}}
+{"type": "trade", "timestamp": "...", "symbol": "AAPL", "pnl": 150.0}
+{"type": "completed", "metrics": {"sharpeRatio": 1.2, "maxDrawdown": -0.15}}
 ```
 
-### apps/filings-service/ - SEC Ingestion
+### packages/filings - SEC EDGAR Ingestion
 
-```python
-# SEC EDGAR pipeline
-class FilingsService:
-    async def fetch_10k(self, cik: str) -> Filing:
-        """Fetch annual report."""
-        pass
-
-    async def fetch_10q(self, cik: str) -> Filing:
-        """Fetch quarterly report."""
-        pass
-
-    async def extract_financials(self, filing: Filing) -> Financials:
-        """Extract key financial metrics."""
-        pass
-```
-
-### packages/research/ - Backtesting
-
-```python
-# VectorBT integration
-from vectorbt import Portfolio
-
-class VectorBTRunner:
-    def run_backtest(
-        self,
-        signals: pd.DataFrame,
-        prices: pd.DataFrame,
-        config: BacktestConfig
-    ) -> BacktestResult:
-        """Run vectorized backtest."""
-        portfolio = Portfolio.from_signals(
-            close=prices,
-            entries=signals["entry"],
-            exits=signals["exit"],
-            fees=config.commission_pct,
-        )
-        return BacktestResult(
-            total_return=portfolio.total_return(),
-            sharpe_ratio=portfolio.sharpe_ratio(),
-            max_drawdown=portfolio.max_drawdown(),
-        )
-
-# NautilusTrader integration
-from nautilus_trader.backtest import BacktestEngine
-
-class NautilusRunner:
-    def run_event_driven(
-        self,
-        strategy: Strategy,
-        data: MarketData,
-        config: BacktestConfig
-    ) -> BacktestResult:
-        """Run event-driven backtest."""
-        pass
+```typescript
+// TypeScript package (not Python)
+class FilingsIngestionService {
+  async syncFilings(options: {
+    symbols: string[];
+    filingTypes: ("10-K" | "10-Q" | "8-K")[];
+    limitPerSymbol: number;
+  }): Promise<{
+    filingsIngested: number;
+    chunksCreated: number;
+    durationMs: number;
+  }>;
+}
+// Chunks filings and stores in HelixDB with embeddings
 ```
 
 ---
 
-## 12. Testing Strategy
+## 15. Testing Strategy
 
 ### Test Pyramid
 
 ```
                     ┌─────────────────────┐
-                    │   Agent Evals       │  (LLM-as-Judge)
-                    │   (Golden Dataset)  │
+                    │   Integration       │  (Testcontainers)
+                    │  (HelixDB, Turso)   │
                     └──────────┬──────────┘
                                │
               ┌────────────────┼────────────────┐
               │                │                │
               ▼                ▼                ▼
        ┌──────────┐     ┌──────────┐     ┌──────────┐
-       │Integration│     │Integration│     │Integration│
-       │  (Turso)  │     │ (HelixDB) │     │  (gRPC)  │
-       └─────┬─────┘     └─────┬─────┘     └─────┬─────┘
-             │                 │                 │
-             └─────────────────┼─────────────────┘
-                               │
-    ┌──────────────────────────┼──────────────────────────┐
-    │                          │                          │
-    ▼                          ▼                          ▼
-┌──────────┐            ┌──────────┐            ┌──────────┐
-│  Unit    │            │  Unit    │            │  Unit    │
-│   (TS)   │            │  (Rust)  │            │  (Python)│
-└──────────┘            └──────────┘            └──────────┘
+       │  Unit    │     │  Unit    │     │  Unit    │
+       │   (TS)   │     │  (Rust)  │     │ (Python) │
+       │ bun:test │     │  cargo   │     │  pytest  │
+       └──────────┘     └──────────┘     └──────────┘
+```
+
+### Running Tests
+
+```bash
+# TypeScript (always BACKTEST mode)
+NODE_ENV=test CREAM_ENV=BACKTEST bun test
+
+# Rust
+cargo test --workspace
+
+# Python
+pytest apps/vision-service
 ```
 
 ### CI Workflows
@@ -1178,59 +1230,43 @@ class NautilusRunner:
 | Workflow | Trigger | Jobs |
 |----------|---------|------|
 | `test.yml` | Push/PR | TS tests, Rust tests, Python tests, Lint |
-| `buf-check.yml` | Push/PR | Proto lint, breaking changes, codegen |
+| `buf-check.yml` | Push/PR | Proto lint, breaking changes |
 
 ---
 
-## 13. Observability
-
-### Logging
-
-All services emit structured JSON logs via tracing-subscriber for console output.
-
-```yaml
-# SLO targets
-Order Execution Success: 99.9% (43.2 min/month error budget)
-Order Execution P99: <500ms
-Market Data Availability: 99.95% (21.6 min/month error budget)
-Market Data P99: <10ms
-```
-
----
-
-## 14. Build & Deployment
+## 16. Build & Deployment
 
 ### Local Development
 
 ```bash
 # Start infrastructure
-docker-compose up -d
+docker compose up -d
 
 # Install dependencies
 bun install
 
+# Seed database configuration
+bun run db:seed
+
 # Start all services
 bun run dev
-
-# Run tests
-bun test                    # TypeScript
-cargo test --workspace      # Rust
-pytest                      # Python (in service directories)
 ```
 
 ### Docker Compose Services
 
 | Service | Image | Ports |
 |---------|-------|-------|
-| turso | ghcr.io/tursodatabase/turso | 8080, 5001 |
+| turso | ghcr.io/tursodatabase/libsql-server | 8080 |
 | redis | redis:7-alpine | 6379 |
 | dashboard | apps/dashboard/Dockerfile | 3000 |
 | dashboard-api | apps/dashboard-api/Dockerfile | 3001 |
 
+Note: HelixDB runs via CLI (`helix deploy local` on port 6969)
+
 ### Environment Variables
 
 ```bash
-# Core
+# Core (required)
 CREAM_ENV=BACKTEST|PAPER|LIVE
 
 # Database
@@ -1242,12 +1278,21 @@ POLYGON_KEY=xxx
 DATABENTO_KEY=xxx
 FMP_KEY=xxx
 
-# Broker
+# Broker (required for PAPER/LIVE)
 ALPACA_KEY=xxx
 ALPACA_SECRET=xxx
 
-# LLM
-GOOGLE_API_KEY=xxx
+# LLM (required for PAPER/LIVE)
+GOOGLE_GENERATIVE_AI_API_KEY=xxx
+
+# Auth (required for PAPER/LIVE)
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
+BETTER_AUTH_URL=http://localhost:3001
+
+# Prediction Markets
+KALSHI_API_KEY_ID=xxx
+KALSHI_PRIVATE_KEY_PATH=xxx
 ```
 
 ### Turborepo Pipeline
@@ -1261,9 +1306,9 @@ GOOGLE_API_KEY=xxx
       "env": ["CREAM_ENV"]
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build", "build"],
       "outputs": ["coverage/**"],
-      "passThroughEnv": ["CREAM_ENV"]
+      "env": ["CREAM_ENV"]
     },
     "dev": {
       "cache": false,
@@ -1281,9 +1326,9 @@ GOOGLE_API_KEY=xxx
 
 ```bash
 # Development
-bun run dev                 # All services
+bun run dev                 # All services via Turborepo
 cargo build --workspace     # Rust
-buf generate                # Protobuf
+buf generate                # Protobuf codegen
 
 # Testing
 CREAM_ENV=BACKTEST bun test
@@ -1291,31 +1336,46 @@ cargo test --workspace
 pytest
 
 # Linting
-bun run lint                # All
-biome check .               # TS
-cargo clippy --all-targets  # Rust
-ruff check                  # Python
+bun run lint                # All (TS + Rust + Python)
+biome check .               # TS only
+cargo clippy --all-targets  # Rust only
+ruff check                  # Python only
 
-# Coverage
-cargo cov                   # Rust → lcov.info
-cargo cov-html              # Rust → coverage/
+# Database
+bun run db:migrate          # Run migrations
+bun run db:seed             # Seed configuration
+bun run db:status           # Migration status
 ```
 
 ### Key File Locations
 
 | Component | Path |
 |-----------|------|
-| Agent definitions | `/packages/mastra-kit/src/agents/index.ts` |
-| Consensus logic | `/packages/mastra-kit/src/consensus.ts` |
+| Trading cycle workflow | `/apps/api/src/workflows/trading-cycle.ts` |
+| Agent definitions | `/apps/api/src/agents/mastra-agents.ts` |
+| Consensus gate | `/packages/mastra-kit/src/consensus.ts` |
+| gRPC client | `/apps/api/src/grpc/client.ts` |
 | Proto schemas | `/packages/schema/cream/v1/*.proto` |
 | Rust engine | `/apps/execution-engine/src/` |
-| Dashboard | `/apps/dashboard/src/` |
-| API routes | `/apps/dashboard-api/src/routes/` |
-| Runtime config service | `/packages/config/src/runtime-config.ts` |
-| Backtest runner | `/packages/research/cream/backtest/runner.py` |
-| Config editor | `/apps/dashboard/src/app/(auth)/config/edit/` |
-| Config promotion | `/apps/dashboard/src/app/(auth)/config/promote/` |
+| Worker scheduler | `/apps/worker/src/index.ts` |
+| Dashboard routes | `/apps/dashboard-api/src/routes/` |
+| HelixDB orchestrator | `/apps/api/src/workflows/steps/helixOrchestrator.ts` |
+| Regime classifier | `/packages/regime/src/rule-based.ts` |
+
+### Service Ports
+
+| Service | Port | Protocol |
+|---------|------|----------|
+| Dashboard | 3000 | HTTP |
+| Dashboard-API | 3001 | HTTP + WebSocket |
+| Worker (health) | 3002 | HTTP |
+| Turso | 8080 | HTTP (libsql) |
+| HelixDB | 6969 | HTTP REST |
+| Execution Engine | 50051 | HTTP (Axum) |
+| Execution Engine | 50053 | gRPC (Tonic) |
+| Execution Engine | 50055 | Arrow Flight |
+| Redis | 6379 | Redis protocol |
 
 ---
 
-*This document is auto-maintained. Last generated: 2026-01-08*
+*This document is auto-maintained. Last generated: 2026-01-10*

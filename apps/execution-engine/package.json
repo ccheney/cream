@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "set -a && source ../../.env 2>/dev/null && set +a && cargo run",
+    "dev": "set -a && . ../../.env 2>/dev/null && set +a && cargo run",
     "build": "cargo build --release",
     "test": "cargo test",
     "format": "cargo fmt",

@@ -153,7 +153,7 @@ services:
       - CREAM_BROKER=ALPACA
       - TURSO_DATABASE_URL=http://turso:8080
       - HELIX_URL=http://helix:6969
-      - RUST_GRPC_URL=execution-engine:50051
+      - RUST_GRPC_URL=execution-engine:50053
       - MASTRA_API_URL=http://api:4111
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}

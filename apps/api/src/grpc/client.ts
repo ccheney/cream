@@ -2,7 +2,7 @@
  * gRPC Client for Rust Execution Engine
  *
  * Uses Connect with gRPC transport to call the Rust execution engine
- * at localhost:50051. Provides full type safety via Protobuf-ES generated types.
+ * at localhost:50053. Provides full type safety via Protobuf-ES generated types.
  */
 
 import {
@@ -34,7 +34,7 @@ import {
 // ============================================
 
 /** Default execution engine address */
-const DEFAULT_ADDRESS = "http://localhost:50051";
+const DEFAULT_ADDRESS = "http://localhost:50053";
 
 /** Default timeout for unary calls (30 seconds) */
 const DEFAULT_TIMEOUT_MS = 30_000;

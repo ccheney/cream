@@ -1128,7 +1128,7 @@ app.openapi(healthRoute, async (c) => {
     try {
       // Check if execution engine is running by attempting connection
       const host = process.env.EXECUTION_ENGINE_HOST ?? "localhost";
-      const port = process.env.EXECUTION_ENGINE_PORT ?? "50051";
+      const port = process.env.EXECUTION_ENGINE_PORT ?? "50053";
       // Simple TCP check via fetch to gRPC-Web endpoint (if available)
       // For now, just check if env is configured
       const isConfigured =

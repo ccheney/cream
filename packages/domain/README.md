@@ -46,7 +46,7 @@ validateEnvironmentOrExit(ctx, "my-service", ["TURSO_DATABASE_URL"]);
 ```typescript
 import { createExecutionClient } from "@cream/domain/grpc";
 
-const client = createExecutionClient("http://localhost:50051");
+const client = createExecutionClient("http://localhost:50053");
 const result = await client.checkConstraints({ decisionPlan, accountState });
 ```
 

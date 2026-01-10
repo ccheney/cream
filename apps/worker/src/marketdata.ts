@@ -15,7 +15,13 @@ import {
 // Configuration
 // ============================================
 
-const GRPC_BASE_URL = process.env.EXECUTION_ENGINE_GRPC_URL ?? "http://localhost:50051";
+const GRPC_BASE_URL = process.env.EXECUTION_ENGINE_GRPC_URL ?? "http://localhost:50053";
+
+/** Max retries for initial connection (execution-engine may be starting) */
+const MAX_CONNECTION_RETRIES = 30;
+
+/** Initial retry delay in ms (doubles each retry, max 30s) */
+const INITIAL_RETRY_DELAY_MS = 1000;
 
 // ============================================
 // Client Singleton
@@ -106,41 +112,71 @@ export async function startMarketDataSubscription(
 }
 
 /**
- * Run the subscription loop, receiving market data updates
+ * Run the subscription loop, receiving market data updates.
+ * Includes retry logic for when execution-engine is still starting.
  */
 async function runSubscriptionLoop(
   client: MarketDataServiceClient,
   symbols: string[],
   onUpdate?: (quote: Quote) => void
 ): Promise<void> {
-  try {
-    for await (const result of client.subscribeMarketData({ symbols })) {
-      subscriptionState.lastUpdate = new Date();
-      subscriptionState.updateCount++;
+  let retryCount = 0;
+  let retryDelay = INITIAL_RETRY_DELAY_MS;
 
-      // Extract quote from the update
-      const response = result.data;
-      if (response.update?.case === "quote" && onUpdate) {
-        onUpdate(response.update.value);
+  while (subscriptionState.active) {
+    try {
+      for await (const result of client.subscribeMarketData({ symbols })) {
+        // Reset retry count on successful connection
+        retryCount = 0;
+        retryDelay = INITIAL_RETRY_DELAY_MS;
+
+        subscriptionState.lastUpdate = new Date();
+        subscriptionState.updateCount++;
+
+        // Extract quote from the update
+        const response = result.data;
+        if (response.update?.case === "quote" && onUpdate) {
+          onUpdate(response.update.value);
+        }
+
+        // Log periodic updates (every 100 updates)
+        if (subscriptionState.updateCount % 100 === 0) {
+          // biome-ignore lint/suspicious/noConsole: Intentional logging
+          console.log(`[MarketData] Received ${subscriptionState.updateCount} updates`);
+        }
+
+        // Check if we should stop
+        if (!subscriptionState.active) {
+          return;
+        }
       }
-
-      // Log periodic updates (every 100 updates)
-      if (subscriptionState.updateCount % 100 === 0) {
-        // biome-ignore lint/suspicious/noConsole: Intentional logging
-        console.log(`[MarketData] Received ${subscriptionState.updateCount} updates`);
-      }
-
-      // Check if we should stop
+    } catch (error) {
       if (!subscriptionState.active) {
-        break;
+        // Expected - subscription was stopped
+        return;
       }
+
+      // Check if this is a connection error (execution-engine not ready)
+      const isConnectionError =
+        error instanceof Error &&
+        (error.message.includes("UNAVAILABLE") ||
+          error.message.includes("ECONNREFUSED") ||
+          error.cause?.toString().includes("ECONNREFUSED"));
+
+      if (isConnectionError && retryCount < MAX_CONNECTION_RETRIES) {
+        retryCount++;
+        // biome-ignore lint/suspicious/noConsole: Intentional logging
+        console.log(
+          `[MarketData] Execution engine not ready, retrying in ${retryDelay}ms (attempt ${retryCount}/${MAX_CONNECTION_RETRIES})...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        // Exponential backoff with max 30s
+        retryDelay = Math.min(retryDelay * 2, 30000);
+        continue;
+      }
+
+      throw error;
     }
-  } catch (error) {
-    if (!subscriptionState.active) {
-      // Expected - subscription was stopped
-      return;
-    }
-    throw error;
   }
 }
 

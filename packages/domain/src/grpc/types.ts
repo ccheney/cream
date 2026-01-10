@@ -8,7 +8,7 @@
  * gRPC client configuration
  */
 export interface GrpcClientConfig {
-  /** Base URL for the gRPC server (e.g., "http://localhost:50051") */
+  /** Base URL for the gRPC server (e.g., "http://localhost:50053") */
   baseUrl: string;
 
   /** Request timeout in milliseconds (default: 30000) */

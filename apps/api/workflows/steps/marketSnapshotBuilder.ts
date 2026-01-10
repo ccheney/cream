@@ -120,7 +120,7 @@ export const PERFORMANCE_TARGETS = {
  */
 const GRPC_CONFIG = {
   /** gRPC server URL (from env or default) */
-  baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50051",
+  baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50053",
   /** Connection timeout */
   timeoutMs: 5000,
   /** Max retries */
