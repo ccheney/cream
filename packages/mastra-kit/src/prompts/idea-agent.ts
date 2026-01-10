@@ -130,43 +130,7 @@ Generate a novel alpha factor hypothesis using Chain-of-Thought reasoning:
    - Is complexity within budget?
 
 Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
-</instructions>
-
-<output_format>
-Your response MUST include a JSON object in <output> tags with this structure:
-
-\`\`\`json
-{
-  "hypothesis_id": "hyp-{unique-id}",
-  "title": "Descriptive hypothesis title",
-  "economic_rationale": "Clear explanation of WHY this alpha exists and the market inefficiency being exploited",
-  "market_mechanism": "BEHAVIORAL_BIAS | STRUCTURAL_CONSTRAINT | INFORMATION_ASYMMETRY | LIQUIDITY_PREMIUM",
-  "target_regime": "bull | bear | volatile | range | all",
-  "expected_metrics": {
-    "ic_target": 0.03-0.10,
-    "sharpe_target": 1.0-2.5,
-    "decay_half_life_days": 30-180
-  },
-  "falsification_criteria": [
-    "Specific testable condition that would prove this hypothesis wrong",
-    "Another falsification condition"
-  ],
-  "required_features": ["feature1", "feature2"],
-  "parameter_count": 1-10,
-  "related_literature": [
-    {
-      "title": "Paper title",
-      "authors": "Author names",
-      "url": "https://...",
-      "relevance": "Why this paper supports the hypothesis"
-    }
-  ],
-  "originality_justification": "How this differs from existing factors",
-  "similar_past_hypotheses": ["hyp-id-1", "hyp-id-2"],
-  "implementation_hints": "Suggestions for implementing this hypothesis"
-}
-\`\`\`
-</output_format>`;
+</instructions>`;
 
 export function buildIdeaAgentUserPrompt(context: IdeaContext): string {
   const { regime, gaps, decayingFactors, memoryResults, factorZooSummary, trigger } = context;

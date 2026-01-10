@@ -159,11 +159,11 @@ describe("IDEA_AGENT_SYSTEM_PROMPT", () => {
     expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("helix_query");
   });
 
-  test("contains output format", () => {
-    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<output_format>");
-    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("hypothesis_id");
-    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("economic_rationale");
-    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("market_mechanism");
+  test("contains instructions for structured output", () => {
+    // Output format handled by Gemini structured output - no <output_format> tag needed
+    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<instructions>");
+    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<output>");
+    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("Chain-of-Thought");
   });
 });
 
