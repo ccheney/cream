@@ -31,6 +31,9 @@ feeds:
     # Reconnection settings
     reconnect_delay_ms: 1000
     max_reconnect_attempts: 5
+    # Symbols are managed via runtime config (@cream/config)
+    # TypeScript sends symbols via gRPC SubscribeMarketData
+    symbols: []
 
 # Broker Configuration
 # Trading broker connections

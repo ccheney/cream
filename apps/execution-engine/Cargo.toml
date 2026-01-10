@@ -97,6 +97,13 @@ rust_decimal_macros = "1.39.0"
 # Parallel processing
 rayon = "1.11"
 
+# Databento market data feed
+databento = { version = "0.38", features = ["live"] }
+time = "0.3"  # Required by databento for heartbeat_interval
+
+# Concurrency primitives
+parking_lot = "0.12"
+
 [dev-dependencies]
 # Testing
 tokio-test = "0.4.5"

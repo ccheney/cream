@@ -31,6 +31,7 @@
 //! - **BACKTEST**: Uses `BacktestAdapter` for deterministic order simulation
 //! - **PAPER/LIVE**: Uses `AlpacaAdapter` with required credentials
 
+use parking_lot::Mutex;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -40,6 +41,10 @@ use execution_engine::{
     OrderStateManager, StatePersistence,
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
+    feed::{
+        DatabentoFeed, DatabentoFeedConfig, FeedProcessor, MicrostructureManager,
+        create_feed_channel,
+    },
     observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
     safety::ConnectionMonitor,
     server::{build_flight_server, create_router},
@@ -198,6 +203,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Connection monitor disabled for this environment"
         );
     }
+
+    // Start Databento market data feed
+    let feed_shutdown_rx = shutdown_tx.subscribe();
+    let _microstructure_manager = start_databento_feed(&config, cream_env, feed_shutdown_rx);
 
     // Create HTTP router
     let app = create_router(components.execution_server);
@@ -541,6 +550,88 @@ async fn reconciliation_loop(
             }
         }
     }
+}
+
+/// Start the Databento market data feed.
+///
+/// Creates the microstructure manager and feed processor, then starts the feed
+/// with symbols from the runtime config (passed via gRPC from TypeScript).
+///
+/// # Returns
+///
+/// The shared microstructure manager for use by gRPC services.
+fn start_databento_feed(
+    config: &Config,
+    env: Environment,
+    shutdown_rx: broadcast::Receiver<()>,
+) -> Option<Arc<Mutex<MicrostructureManager>>> {
+    // Skip feed in BACKTEST mode
+    if env == Environment::Backtest {
+        tracing::info!("Databento feed disabled in BACKTEST mode");
+        return None;
+    }
+
+    // Check if API key is configured
+    if config.feeds.databento.api_key.is_empty() {
+        tracing::warn!(
+            "DATABENTO_KEY not set - Databento feed will not start. \
+             Market data will be unavailable until symbols are subscribed via gRPC."
+        );
+        // Still create the microstructure manager for future use
+        let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
+        return Some(manager);
+    }
+
+    // Check if symbols are configured
+    if config.feeds.databento.symbols.is_empty() {
+        tracing::info!(
+            "No symbols configured for Databento feed. \
+             Feed will start when symbols are subscribed via gRPC SubscribeMarketData."
+        );
+        let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
+        return Some(manager);
+    }
+
+    // Create feed configuration
+    let feed_config = DatabentoFeedConfig::from(&config.feeds.databento);
+    let symbols = config.feeds.databento.symbols.clone();
+
+    // Create shared microstructure manager
+    let manager = Arc::new(Mutex::new(MicrostructureManager::new()));
+    let manager_for_processor = Arc::clone(&manager);
+
+    // Create feed channel
+    let (tx, rx) = create_feed_channel(Some(10_000));
+
+    // Spawn feed processor
+    let processor = FeedProcessor::new(rx, manager_for_processor);
+    tokio::spawn(async move {
+        processor.run().await;
+    });
+
+    // Spawn feed consumer
+    let feed = DatabentoFeed::new(feed_config, tx);
+    let mut shutdown = shutdown_rx;
+    tokio::spawn(async move {
+        tokio::select! {
+            result = feed.start(symbols) => {
+                if let Err(e) = result {
+                    tracing::error!(error = %e, "Databento feed error");
+                }
+            }
+            _ = shutdown.recv() => {
+                tracing::info!("Databento feed shutting down");
+            }
+        }
+    });
+
+    tracing::info!(
+        dataset = %config.feeds.databento.dataset,
+        symbol_count = config.feeds.databento.symbols.len(),
+        "Databento feed started"
+    );
+
+    Some(manager)
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).

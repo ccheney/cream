@@ -155,6 +155,9 @@ pub struct DatabentoConfig {
     /// Maximum reconnection attempts.
     #[serde(default = "default_max_reconnect_attempts")]
     pub max_reconnect_attempts: u32,
+    /// Symbols to subscribe to.
+    #[serde(default = "default_databento_symbols")]
+    pub symbols: Vec<String>,
 }
 
 impl Default for DatabentoConfig {
@@ -164,6 +167,7 @@ impl Default for DatabentoConfig {
             dataset: default_databento_dataset(),
             reconnect_delay_ms: default_reconnect_delay(),
             max_reconnect_attempts: default_max_reconnect_attempts(),
+            symbols: default_databento_symbols(),
         }
     }
 }
@@ -176,6 +180,13 @@ const fn default_reconnect_delay() -> u64 {
 }
 const fn default_max_reconnect_attempts() -> u32 {
     5
+}
+fn default_databento_symbols() -> Vec<String> {
+    // No default symbols - must be configured via config.yaml or runtime config.
+    // In production, symbols come from the runtime config system (@cream/config)
+    // which supports static lists, index constituents, ETF holdings, and screeners.
+    // See: packages/config/src/schemas/universe.ts
+    Vec::new()
 }
 
 /// Broker configuration.
