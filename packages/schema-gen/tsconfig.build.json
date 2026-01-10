@@ -19,8 +19,7 @@
     "noEmit": false,
 
     "outDir": "./dist",
-    "rootDir": "./ts",
-    "baseUrl": "."
+    "rootDir": "./ts"
   },
   "include": ["ts/**/*.ts"],
   "exclude": ["node_modules", "dist"]

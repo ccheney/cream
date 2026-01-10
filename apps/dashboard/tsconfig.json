@@ -26,8 +26,7 @@
       "@lib/*": ["./src/lib/*"],
       "@stores/*": ["./src/stores/*"],
       "@types/*": ["./src/types/*"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
