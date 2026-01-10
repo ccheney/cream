@@ -9,8 +9,6 @@
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use crate::observability::record_feed_gap;
-
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -188,7 +186,6 @@ impl GapRecoveryManager {
         if result.gap_detected {
             self.gap_count += 1;
             self.consecutive_gaps += 1;
-            record_feed_gap(&self.provider);
 
             result.action = self.determine_action(&result);
         } else {

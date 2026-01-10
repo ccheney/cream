@@ -23,8 +23,8 @@ pub mod tls;
 
 pub use arrow_flight::{CreamFlightService, build_flight_server};
 pub use grpc::{
-    ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services, build_grpc_services_with_feed,
-    run_grpc_server, run_grpc_server_with_tls,
+    ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services,
+    build_grpc_services_with_feed, run_grpc_server, run_grpc_server_with_tls,
 };
 pub use http::{ExecutionServer, create_router};
 pub use tls::{

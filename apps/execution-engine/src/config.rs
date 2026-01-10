@@ -437,91 +437,12 @@ const fn default_margin_buffer() -> f64 {
     0.10
 }
 
-/// Observability configuration.
+/// Observability configuration (logging only, OpenTelemetry removed).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ObservabilityConfig {
-    /// Metrics configuration.
-    #[serde(default)]
-    pub metrics: MetricsConfig,
-    /// Tracing configuration.
-    #[serde(default)]
-    pub tracing: TracingConfig,
     /// Logging configuration.
     #[serde(default)]
     pub logging: LoggingConfig,
-}
-
-/// Prometheus metrics configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MetricsConfig {
-    /// Enable metrics collection.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    /// Metrics endpoint.
-    #[serde(default = "default_metrics_endpoint")]
-    pub endpoint: String,
-    /// Optional push gateway URL.
-    #[serde(default)]
-    pub push_gateway: Option<String>,
-}
-
-impl Default for MetricsConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            endpoint: default_metrics_endpoint(),
-            push_gateway: None,
-        }
-    }
-}
-
-fn default_metrics_endpoint() -> String {
-    "0.0.0.0:9090".to_string()
-}
-
-/// OpenTelemetry tracing configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TracingConfig {
-    /// Enable distributed tracing.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    /// OTLP endpoint for trace export.
-    #[serde(default = "default_otlp_endpoint")]
-    pub otlp_endpoint: String,
-    /// Sampling ratio (0.0 - 1.0).
-    #[serde(default = "default_sampling_ratio")]
-    pub sampling_ratio: f64,
-    /// Batch export size.
-    #[serde(default = "default_batch_size")]
-    pub batch_size: usize,
-    /// Batch export timeout in milliseconds.
-    #[serde(default = "default_batch_timeout")]
-    pub batch_timeout_ms: u64,
-}
-
-impl Default for TracingConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            otlp_endpoint: default_otlp_endpoint(),
-            sampling_ratio: default_sampling_ratio(),
-            batch_size: default_batch_size(),
-            batch_timeout_ms: default_batch_timeout(),
-        }
-    }
-}
-
-fn default_otlp_endpoint() -> String {
-    "http://otel-collector:4317".to_string()
-}
-const fn default_sampling_ratio() -> f64 {
-    1.0
-}
-const fn default_batch_size() -> usize {
-    512
-}
-const fn default_batch_timeout() -> u64 {
-    5000
 }
 
 /// Logging configuration.
@@ -1214,15 +1135,6 @@ fn validate_config(config: &Config) -> Result<(), ConfigError> {
         ));
     }
 
-    // Validate observability settings
-    if config.observability.tracing.sampling_ratio < 0.0
-        || config.observability.tracing.sampling_ratio > 1.0
-    {
-        return Err(ConfigError::ValidationError(
-            "tracing.sampling_ratio must be between 0.0 and 1.0".to_string(),
-        ));
-    }
-
     // Validate circuit breaker settings
     let cb = &config.circuit_breaker.default;
     if cb.failure_rate_threshold < 0.0 || cb.failure_rate_threshold > 1.0 {
@@ -1410,11 +1322,6 @@ constraints:
     max_portfolio_delta: 1000
 
 observability:
-  metrics:
-    enabled: true
-    endpoint: "0.0.0.0:9091"
-  tracing:
-    sampling_ratio: 0.5
   logging:
     level: "debug"
     format: "pretty"
@@ -1440,8 +1347,6 @@ environment:
         assert!((config.constraints.per_instrument.max_notional - 100_000.0).abs() < 1e-10);
         assert!((config.constraints.portfolio.max_leverage - 3.0).abs() < f64::EPSILON);
         assert!((config.constraints.options.max_portfolio_delta - 1000.0).abs() < 1e-10);
-        assert_eq!(config.observability.metrics.endpoint, "0.0.0.0:9091");
-        assert!((config.observability.tracing.sampling_ratio - 0.5).abs() < f64::EPSILON);
         assert_eq!(config.observability.logging.level, "debug");
         assert!((config.circuit_breaker.default.failure_rate_threshold - 0.3).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "LIVE");

@@ -108,28 +108,8 @@ constraints:
     margin_buffer: 0.10  # 10% margin safety buffer
 
 # Observability Configuration
-# Metrics, tracing, and logging settings
+# Logging settings (OpenTelemetry removed)
 observability:
-  # Prometheus Metrics
-  metrics:
-    enabled: true
-    # Endpoint for Prometheus scraping (use 9091 to avoid conflict with Prometheus server)
-    endpoint: "0.0.0.0:9091"
-    # Optional push gateway for batch jobs (empty = disabled)
-    push_gateway: ""
-
-  # OpenTelemetry Tracing
-  tracing:
-    enabled: true
-    # OTLP endpoint for trace export
-    otlp_endpoint: "http://otel-collector:4317"
-    # Sampling ratio (1.0 = 100% sampling)
-    sampling_ratio: 1.0
-    # Batch export settings
-    batch_size: 512
-    batch_timeout_ms: 5000
-
-  # Logging
   logging:
     # Log level: trace, debug, info, warn, error
     level: "info"

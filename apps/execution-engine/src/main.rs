@@ -41,7 +41,6 @@ use execution_engine::{
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
     feed::FeedController,
-    observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
     safety::ConnectionMonitor,
     server::{build_flight_server, build_grpc_services_with_feed, create_router},
 };
@@ -68,15 +67,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // Initialize tracing first (so we can log everything else)
-    let tracing_config = TracingConfig::default().service_name("execution-engine");
-    let _tracing_guard = match init_tracing(&tracing_config) {
-        Ok(guard) => guard,
-        Err(e) => {
-            eprintln!("Failed to initialize tracing: {e}");
-            std::process::exit(1);
-        }
-    };
+    // Initialize tracing (console logging only)
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
 
     tracing::info!("Starting Cream Execution Engine");
     tracing::info!(
@@ -86,30 +83,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         flight_port = config.server.flight_port,
         "Configuration loaded"
     );
-
-    // Initialize metrics from config
-    let metrics_config = if config.observability.metrics.enabled {
-        config
-            .observability
-            .metrics
-            .endpoint
-            .parse()
-            .map(MetricsConfig::with_addr)
-            .unwrap_or_default()
-    } else {
-        MetricsConfig::default()
-    };
-
-    if config.observability.metrics.enabled {
-        if let Err(e) = init_metrics(&metrics_config) {
-            tracing::warn!("Failed to initialize metrics: {e}");
-            // Non-fatal - continue without metrics
-        } else {
-            tracing::info!(endpoint = %metrics_config.listen_addr, "Metrics endpoint initialized");
-        }
-    } else {
-        tracing::info!("Metrics disabled in configuration");
-    }
 
     // Create shutdown channel
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
@@ -254,15 +227,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            None => {
-                match execution_engine::server::grpc::build_grpc_services() {
-                    Ok(services) => services,
-                    Err(e) => {
-                        tracing::error!("Failed to build gRPC services: {e}");
-                        return;
-                    }
+            None => match execution_engine::server::grpc::build_grpc_services() {
+                Ok(services) => services,
+                Err(e) => {
+                    tracing::error!("Failed to build gRPC services: {e}");
+                    return;
                 }
-            }
+            },
         };
 
         let server = tonic::transport::Server::builder()

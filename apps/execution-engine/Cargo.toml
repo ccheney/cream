@@ -71,16 +71,6 @@ uuid = { version = "1.19", features = ["v4"] }
 # Random number generation (for jitter in backoff)
 rand = "0.9"
 
-# Metrics (Prometheus)
-metrics = "0.24.3"
-metrics-exporter-prometheus = { version = "0.18.1", features = ["http-listener"] }
-
-# OpenTelemetry (Distributed Tracing)
-opentelemetry = "0.31"
-opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "trace"] }
-tracing-opentelemetry = "0.32"
-
 # Configuration
 config = "0.15.19"
 regex = "1.12.2"
