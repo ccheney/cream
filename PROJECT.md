@@ -380,11 +380,6 @@ MASTRA_API_URL=http://localhost:4111
 - Proto linting and breaking change detection
 - Code generation verification
 
-**agent-evals.yml**:
-- Deterministic tests (mock LLM)
-- LLM-as-Judge evaluations (non-draft PRs)
-- Semantic similarity validation
-
 ---
 
 ## Decision Plan Schema

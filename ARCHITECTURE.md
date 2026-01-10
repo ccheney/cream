@@ -1196,7 +1196,6 @@ class NautilusRunner:
 |----------|---------|------|
 | `test.yml` | Push/PR | TS tests, Rust tests, Python tests, Lint |
 | `buf-check.yml` | Push/PR | Proto lint, breaking changes, codegen |
-| `agent-evals.yml` | PR | Deterministic tests, LLM evaluations, regression |
 
 ---
 
