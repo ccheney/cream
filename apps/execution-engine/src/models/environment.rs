@@ -41,6 +41,15 @@ impl Environment {
             Self::Paper | Self::Backtest => "https://paper-api.alpaca.markets",
         }
     }
+
+    /// Returns the Alpaca historical data API URL.
+    ///
+    /// The data API uses the same URL for all environments - authentication
+    /// determines access level (free vs paid data).
+    #[must_use]
+    pub const fn alpaca_data_url(&self) -> &'static str {
+        "https://data.alpaca.markets"
+    }
 }
 
 impl std::fmt::Display for Environment {
@@ -86,6 +95,22 @@ mod tests {
         assert_eq!(
             Environment::Paper.alpaca_base_url(),
             "https://paper-api.alpaca.markets"
+        );
+    }
+
+    #[test]
+    fn test_environment_alpaca_data_url() {
+        assert_eq!(
+            Environment::Live.alpaca_data_url(),
+            "https://data.alpaca.markets"
+        );
+        assert_eq!(
+            Environment::Paper.alpaca_data_url(),
+            "https://data.alpaca.markets"
+        );
+        assert_eq!(
+            Environment::Backtest.alpaca_data_url(),
+            "https://data.alpaca.markets"
         );
     }
 

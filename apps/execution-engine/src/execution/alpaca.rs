@@ -9,6 +9,7 @@
 use reqwest::{Client, StatusCode};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 use thiserror::Error;
 
@@ -124,8 +125,10 @@ pub struct AlpacaAdapter {
     api_secret: String,
     /// Trading environment.
     environment: Environment,
-    /// Base URL for API calls.
+    /// Base URL for trading API calls.
     base_url: String,
+    /// Base URL for market data API calls.
+    data_url: String,
     /// HTTP client.
     client: Client,
     /// Retry policy.
@@ -156,6 +159,7 @@ impl AlpacaAdapter {
         }
 
         let base_url = environment.alpaca_base_url().to_string();
+        let data_url = environment.alpaca_data_url().to_string();
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
@@ -166,6 +170,7 @@ impl AlpacaAdapter {
             api_secret,
             environment,
             base_url,
+            data_url,
             client,
             retry_policy: BrokerRetryPolicy::default(),
             tactic_selector: TacticSelector::default(),
@@ -295,6 +300,114 @@ impl AlpacaAdapter {
                             message = %error_message,
                             delay_ms = delay.as_millis(),
                             "Retryable error, retrying"
+                        );
+                        tokio::time::sleep(delay).await;
+                        continue;
+                    }
+                    return Err(AlpacaError::MaxRetriesExceeded {
+                        attempts: backoff.current_attempt(),
+                    });
+                }
+                ErrorCategory::NonRetryable => {
+                    return match status {
+                        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                            Err(AlpacaError::AuthenticationFailed)
+                        }
+                        _ => Err(AlpacaError::Api {
+                            code: error_code,
+                            message: error_message,
+                        }),
+                    };
+                }
+            }
+        }
+    }
+
+    /// Make an authenticated HTTP GET request to the data API with retry logic.
+    ///
+    /// Similar to `request()` but uses `data_url` for market data endpoints.
+    #[allow(clippy::too_many_lines)]
+    async fn data_request<T: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+    ) -> Result<T, AlpacaError> {
+        let url = format!("{}{}", self.data_url, path);
+        let mut backoff = ExponentialBackoffCalculator::new(&self.retry_policy);
+
+        loop {
+            let request = self
+                .client
+                .get(&url)
+                .header("APCA-API-KEY-ID", &self.api_key)
+                .header("APCA-API-SECRET-KEY", &self.api_secret);
+
+            let response = match request.send().await {
+                Ok(resp) => resp,
+                Err(e) => {
+                    if let Some(delay) = backoff.next_backoff() {
+                        tracing::warn!(
+                            error = %e,
+                            delay_ms = delay.as_millis(),
+                            attempt = backoff.current_attempt(),
+                            "Data API network error, retrying"
+                        );
+                        tokio::time::sleep(delay).await;
+                        continue;
+                    }
+                    return Err(AlpacaError::MaxRetriesExceeded {
+                        attempts: backoff.current_attempt(),
+                    });
+                }
+            };
+
+            let status = response.status();
+
+            if status.is_success() {
+                let text = response.text().await?;
+                return Ok(serde_json::from_str(&text)?);
+            }
+
+            let category = AlpacaErrorHandler::categorize_status(status.as_u16());
+            let retry_after = response
+                .headers()
+                .get("Retry-After")
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+
+            let error_body = response.text().await.unwrap_or_default();
+            let (error_code, error_message) =
+                match serde_json::from_str::<AlpacaErrorResponse>(&error_body) {
+                    Ok(err) => (
+                        err.code.unwrap_or_else(|| status.as_u16().to_string()),
+                        err.message,
+                    ),
+                    Err(_) => (status.as_u16().to_string(), error_body.clone()),
+                };
+
+            match category {
+                ErrorCategory::RateLimited => {
+                    if let Some(delay) =
+                        RetryAfterExtractor::get_delay(retry_after.as_deref(), &mut backoff)
+                    {
+                        tracing::warn!(
+                            code = %error_code,
+                            delay_ms = delay.as_millis(),
+                            "Data API rate limited, retrying"
+                        );
+                        tokio::time::sleep(delay).await;
+                        continue;
+                    }
+                    return Err(AlpacaError::RateLimited {
+                        retry_after_secs: 60,
+                    });
+                }
+                ErrorCategory::Retryable => {
+                    if let Some(delay) = backoff.next_backoff() {
+                        tracing::warn!(
+                            code = %error_code,
+                            message = %error_message,
+                            delay_ms = delay.as_millis(),
+                            "Data API retryable error, retrying"
                         );
                         tokio::time::sleep(delay).await;
                         continue;
@@ -609,6 +722,62 @@ impl AlpacaAdapter {
             Err(e) => Err(e),
         }
     }
+
+    /// Get historical bars for symbols from the Alpaca Market Data API.
+    ///
+    /// Fetches OHLCV bars from the `/v2/stocks/bars` endpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbols` - List of stock symbols to fetch bars for
+    /// * `timeframe` - Bar timeframe: "1Min", "5Min", "15Min", "1Hour", "1Day"
+    /// * `start` - Start time in RFC3339 format (optional, defaults to market open)
+    /// * `end` - End time in RFC3339 format (optional, defaults to now)
+    /// * `limit` - Maximum number of bars per symbol (optional, max 10000)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails.
+    pub async fn get_bars(
+        &self,
+        symbols: &[String],
+        timeframe: &str,
+        start: Option<&str>,
+        end: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<AlpacaBarsResponse, AlpacaError> {
+        if symbols.is_empty() {
+            return Ok(AlpacaBarsResponse {
+                bars: HashMap::new(),
+                next_page_token: None,
+            });
+        }
+
+        // Build query parameters
+        let symbols_param = symbols.join(",");
+        let mut query = format!(
+            "/v2/stocks/bars?symbols={}&timeframe={}",
+            symbols_param, timeframe
+        );
+
+        if let Some(s) = start {
+            query.push_str(&format!("&start={s}"));
+        }
+        if let Some(e) = end {
+            query.push_str(&format!("&end={e}"));
+        }
+        if let Some(l) = limit {
+            query.push_str(&format!("&limit={l}"));
+        }
+
+        tracing::debug!(
+            symbols = ?symbols,
+            timeframe = %timeframe,
+            "Fetching bars from Alpaca data API"
+        );
+
+        self.data_request(&query).await
+    }
 }
 
 // Implement BrokerAdapter trait for AlpacaAdapter
@@ -645,6 +814,42 @@ impl super::gateway::BrokerAdapter for AlpacaAdapter {
 // ============================================================================
 // Alpaca API Request/Response Types
 // ============================================================================
+
+// ----- Market Data Types -----
+
+/// Response from GET /v2/stocks/bars endpoint.
+#[derive(Debug, Deserialize)]
+pub struct AlpacaBarsResponse {
+    /// Map of symbol to bars.
+    pub bars: HashMap<String, Vec<AlpacaBar>>,
+    /// Token for pagination (if more results available).
+    pub next_page_token: Option<String>,
+}
+
+/// Single OHLCV bar from Alpaca market data API.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AlpacaBar {
+    /// Timestamp in RFC3339 format.
+    pub t: String,
+    /// Open price.
+    pub o: f64,
+    /// High price.
+    pub h: f64,
+    /// Low price.
+    pub l: f64,
+    /// Close price.
+    pub c: f64,
+    /// Volume.
+    pub v: i64,
+    /// Volume-weighted average price.
+    #[serde(default)]
+    pub vw: Option<f64>,
+    /// Number of trades.
+    #[serde(default)]
+    pub n: Option<i32>,
+}
+
+// ----- Trading API Types -----
 
 #[derive(Debug, Serialize, Deserialize)]
 struct AlpacaErrorResponse {
@@ -1283,6 +1488,48 @@ mod tests {
             Err(e) => panic!("should create live adapter: {e}"),
         };
         assert!(!live_adapter.base_url.contains("paper"));
+    }
+
+    #[test]
+    fn test_data_url() {
+        let adapter = match AlpacaAdapter::new(
+            "test-key".to_string(),
+            "test-secret".to_string(),
+            Environment::Paper,
+        ) {
+            Ok(a) => a,
+            Err(e) => panic!("should create adapter: {e}"),
+        };
+        assert_eq!(adapter.data_url, "https://data.alpaca.markets");
+
+        let live_adapter = match AlpacaAdapter::new(
+            "test-key".to_string(),
+            "test-secret".to_string(),
+            Environment::Live,
+        ) {
+            Ok(a) => a,
+            Err(e) => panic!("should create live adapter: {e}"),
+        };
+        assert_eq!(live_adapter.data_url, "https://data.alpaca.markets");
+    }
+
+    #[tokio::test]
+    async fn test_get_bars_empty_symbols() {
+        let adapter = match AlpacaAdapter::new(
+            "test-key".to_string(),
+            "test-secret".to_string(),
+            Environment::Paper,
+        ) {
+            Ok(a) => a,
+            Err(e) => panic!("should create adapter: {e}"),
+        };
+
+        // Empty symbols should return empty response without API call
+        let result = adapter.get_bars(&[], "1Hour", None, None, None).await;
+        assert!(result.is_ok());
+        let response = result.expect("should succeed");
+        assert!(response.bars.is_empty());
+        assert!(response.next_page_token.is_none());
     }
 
     #[test]
