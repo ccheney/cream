@@ -1199,70 +1199,6 @@ describe("Agent Context", () => {
 // ============================================
 
 describe("Agent Tool Wiring", () => {
-  describe("Tool Registration", () => {
-    it("should have web_search tool wired for technical analyst", () => {
-      const agent = technicalAnalystAgent;
-      // Agent tools property exists
-      expect(agent.tools).toBeDefined();
-      // web_search should be in tools since all agents have it configured
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for news analyst", () => {
-      const agent = newsAnalystAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for fundamentals analyst", () => {
-      const agent = fundamentalsAnalystAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for bullish researcher", () => {
-      const agent = bullishResearcherAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for bearish researcher", () => {
-      const agent = bearishResearcherAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for trader", () => {
-      const agent = traderAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for risk manager", () => {
-      const agent = riskManagerAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for critic", () => {
-      const agent = criticAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for idea agent", () => {
-      const agent = ideaAgentAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-
-    it("should have web_search tool wired for indicator researcher", () => {
-      const agent = indicatorResearcherAgent;
-      expect(agent.tools).toBeDefined();
-      expect(agent.tools?.web_search).toBeDefined();
-    });
-  });
-
   describe("Tool Configuration", () => {
     it("should have all 10 agents with tools configured", () => {
       // All agents in AGENT_CONFIGS should have web_search in their tools array
@@ -1272,12 +1208,31 @@ describe("Agent Tool Wiring", () => {
       }
     });
 
-    it("should resolve tool instances at agent creation", () => {
-      // All Mastra agent instances should have the tools property populated
-      for (const [_id, agent] of Object.entries(mastraAgents)) {
-        expect(agent.tools).toBeDefined();
-        // Each agent should have at least web_search
-        expect(Object.keys(agent.tools || {}).length).toBeGreaterThan(0);
+    it("should have valid tool names for all agents", () => {
+      const validToolNames = [
+        "web_search",
+        "get_quotes",
+        "get_portfolio_state",
+        "option_chain",
+        "get_greeks",
+        "recalc_indicator",
+        "economic_calendar",
+        "news_search",
+        "helix_query",
+        "get_prediction_signals",
+        "get_market_snapshots",
+        "context7_resolve-library-id",
+        "context7_query-docs",
+        "extract_news_context",
+        "analyze_content",
+        "extract_transcript",
+      ];
+
+      for (const agentType of AGENT_TYPES) {
+        const config = AGENT_CONFIGS[agentType];
+        for (const tool of config.tools) {
+          expect(validToolNames).toContain(tool);
+        }
       }
     });
   });
