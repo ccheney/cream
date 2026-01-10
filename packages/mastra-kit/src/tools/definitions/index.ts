@@ -78,6 +78,16 @@ export {
   type UpdateDailyWeightsOutput,
   UpdateDailyWeightsOutputSchema,
 } from "./factorZoo.js";
+// Prediction market tools
+export {
+  GetMarketSnapshotsInputSchema,
+  GetMarketSnapshotsOutputSchema,
+  GetPredictionSignalsInputSchema,
+  GetPredictionSignalsOutputSchema,
+  getMarketSnapshotsTool,
+  getPredictionSignalsTool,
+  setPredictionMarketsRepoProvider,
+} from "./predictionMarketTools.js";
 // Research trigger tools (require FactorZooRepository dependency injection)
 export {
   type CheckResearchStatusInput,
