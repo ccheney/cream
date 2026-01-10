@@ -23,6 +23,7 @@ import {
   AgentConfigsRepository,
   type AgentType,
 } from "./repositories/agent-configs.js";
+import { ConstraintsConfigRepository } from "./repositories/constraints-config.js";
 import { TradingConfigRepository, type TradingEnvironment } from "./repositories/trading-config.js";
 import { UniverseConfigsRepository } from "./repositories/universe-configs.js";
 import { createTursoClient } from "./turso.js";
@@ -131,6 +132,7 @@ interface SeedResult {
   trading: "created" | "skipped" | "replaced";
   agents: "created" | "skipped" | "replaced";
   universe: "created" | "skipped" | "replaced";
+  constraints: "created" | "skipped" | "replaced";
 }
 
 async function seedEnvironment(
@@ -138,6 +140,7 @@ async function seedEnvironment(
   tradingRepo: TradingConfigRepository,
   agentRepo: AgentConfigsRepository,
   universeRepo: UniverseConfigsRepository,
+  constraintsRepo: ConstraintsConfigRepository,
   force: boolean
 ): Promise<SeedResult> {
   const result: SeedResult = {
@@ -145,11 +148,13 @@ async function seedEnvironment(
     trading: "skipped",
     agents: "skipped",
     universe: "skipped",
+    constraints: "skipped",
   };
 
   const existingTrading = await tradingRepo.getActive(environment);
   const existingUniverse = await universeRepo.getActive(environment);
   const existingAgents = await agentRepo.getAll(environment);
+  const existingConstraints = await constraintsRepo.getActive(environment);
 
   if (!existingTrading || force) {
     if (existingTrading && force) {
@@ -195,6 +200,23 @@ async function seedEnvironment(
     await universeRepo.setStatus(draft.id, "active");
   }
 
+  // Seed constraints config with defaults
+  if (!existingConstraints || force) {
+    if (existingConstraints && force) {
+      await constraintsRepo.setStatus(existingConstraints.id, "archived");
+      result.constraints = "replaced";
+    } else {
+      result.constraints = "created";
+    }
+
+    const configId = `cc_${environment.toLowerCase()}_v1_seed`;
+    await constraintsRepo.create({
+      id: configId,
+      environment,
+      status: "active",
+    });
+  }
+
   return result;
 }
 
@@ -215,6 +237,7 @@ async function main(): Promise<void> {
   const tradingRepo = new TradingConfigRepository(client);
   const agentRepo = new AgentConfigsRepository(client);
   const universeRepo = new UniverseConfigsRepository(client);
+  const constraintsRepo = new ConstraintsConfigRepository(client);
 
   const results: SeedResult[] = [];
 
@@ -227,6 +250,7 @@ async function main(): Promise<void> {
         tradingRepo,
         agentRepo,
         universeRepo,
+        constraintsRepo,
         options.force
       );
       results.push(result);
@@ -248,11 +272,13 @@ async function main(): Promise<void> {
     // biome-ignore lint/suspicious/noConsole: CLI script requires console output
     console.log(`\n${result.environment}:`);
     // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Trading config: ${formatStatus(result.trading)}`);
+    console.log(`  Trading config:     ${formatStatus(result.trading)}`);
     // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Agent configs:  ${formatStatus(result.agents)}`);
+    console.log(`  Agent configs:      ${formatStatus(result.agents)}`);
     // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Universe config: ${formatStatus(result.universe)}`);
+    console.log(`  Universe config:    ${formatStatus(result.universe)}`);
+    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
+    console.log(`  Constraints config: ${formatStatus(result.constraints)}`);
   }
 
   // biome-ignore lint/suspicious/noConsole: CLI script requires console output
