@@ -85,9 +85,7 @@ Cream is a multi-language monorepo implementing an autonomous trading system wit
 | | Redis | 7 | Caching and rate limiting |
 | **Messaging** | Protobuf | v3 | Cross-language serialization |
 | | Buf CLI | v2 | Code generation |
-| **Observability** | Prometheus | 3.4 | Metrics |
-| | Alertmanager | 0.28 | Alert routing |
-| | OpenTelemetry | 0.31 | Distributed tracing |
+| **Observability** | tracing-subscriber | 0.3 | Console logging |
 
 ---
 
@@ -125,7 +123,7 @@ cream/
 │   ├── validation/             # Schema parity validation
 │   ├── dashboard-types/        # Shared dashboard/API types
 │   ├── tsconfig/               # Shared TypeScript configs
-│   ├── infra/                  # Prometheus/Alertmanager configs
+│   ├── infra/                  # OpenTofu infrastructure
 │   └── research/               # Python backtesting (VectorBT)
 │
 ├── .github/workflows/          # CI/CD pipelines
@@ -701,10 +699,9 @@ rust_decimal = { version = "1.39", features = ["serde", "serde-with-str"] }
 # Database
 turso = "0.4.0-pre.19"
 
-# Observability
+# Observability (console logging)
 tracing = "0.1.44"
-metrics = "0.24.3"
-opentelemetry = "0.31"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ```
 
 ### Constraint Validation
@@ -1205,51 +1202,16 @@ class NautilusRunner:
 
 ## 13. Observability
 
-### Prometheus Metrics
+### Logging
+
+All services emit structured JSON logs via tracing-subscriber for console output.
 
 ```yaml
-# Scrape targets
-- execution-engine:9090
-- otel-collector:8888
-- prometheus:9090
-
 # SLO targets
 Order Execution Success: 99.9% (43.2 min/month error budget)
 Order Execution P99: <500ms
 Market Data Availability: 99.95% (21.6 min/month error budget)
 Market Data P99: <10ms
-```
-
-### Alert Rules
-
-```yaml
-# Fast burn (critical)
-- alert: OrderExecutionFastBurn
-  expr: |
-    (
-      sum(rate(order_execution_errors_total[1h])) /
-      sum(rate(order_execution_total[1h]))
-    ) > (14.4 * (1 - 0.999))
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: "Order execution error budget burning fast"
-
-# Operational alerts
-- alert: OrderRejectionRate
-  expr: |
-    sum(rate(order_rejections_total[5m])) /
-    sum(rate(order_submissions_total[5m])) > 0.01
-  for: 5m
-```
-
-### Alert Routing
-
-```yaml
-# Critical → PagerDuty + Slack (1h repeat)
-# SLO Violations → Slack #alerts-slo (2h repeat)
-# Warnings → Email (12h repeat)
 ```
 
 ---
@@ -1279,9 +1241,6 @@ pytest                      # Python (in service directories)
 | Service | Image | Ports |
 |---------|-------|-------|
 | turso | ghcr.io/tursodatabase/turso | 8080, 5001 |
-| prometheus | prom/prometheus:v3.4.0 | 9090 |
-| alertmanager | prom/alertmanager:v0.28.0 | 9093 |
-| otel-collector | otel/opentelemetry-collector-contrib:0.122.0 | 4317, 4318 |
 | redis | redis:7-alpine | 6379 |
 | dashboard | apps/dashboard/Dockerfile | 3000 |
 | dashboard-api | apps/dashboard-api/Dockerfile | 3001 |
@@ -1370,7 +1329,6 @@ cargo cov-html              # Rust → coverage/
 | Rust engine | `/apps/execution-engine/src/` |
 | Dashboard | `/apps/dashboard/src/` |
 | API routes | `/apps/dashboard-api/src/routes/` |
-| Alerts | `/packages/infra/prometheus/alerts.yml` |
 | Runtime config service | `/packages/config/src/runtime-config.ts` |
 | Backtest runner | `/packages/research/cream/backtest/runner.py` |
 | Config editor | `/apps/dashboard/src/app/(auth)/config/edit/` |

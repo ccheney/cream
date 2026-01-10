@@ -100,7 +100,7 @@ cream/
 │   ├── validation/                 # Schema parity validation
 │   ├── dashboard-types/            # Shared dashboard/API types
 │   ├── tsconfig/                   # Shared TypeScript configs
-│   ├── infra/                      # Prometheus, Alertmanager configs
+│   ├── infra/                      # OpenTofu infrastructure
 │   └── research/                   # Python backtesting (VectorBT, NautilusTrader)
 │
 └── docs/plans/                     # Architecture documentation
@@ -292,7 +292,7 @@ buf generate                        # Protobuf → TS + Rust + Python stubs
 
 ### Docker
 ```bash
-docker compose up -d                # Start infrastructure (Turso, Prometheus, Redis)
+docker compose up -d                # Start infrastructure (Turso, Redis)
 docker compose logs -f              # View logs
 docker compose down -v              # Stop and remove
 ```

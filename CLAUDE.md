@@ -27,7 +27,6 @@ apps/
   dashboard-api/        # Hono REST + WebSocket API
   execution-engine/     # Rust gRPC server (order routing, risk)
   evals/                # Python DeepEval agent evaluations
-  filings-service/      # Python SEC filings ingestion
   vision-service/       # Python chart analysis
 
 packages/
@@ -46,11 +45,12 @@ packages/
   metrics/              # Risk-adjusted performance metrics
   mastra-kit/           # Agent prompts, tools, evaluations
   external-context/     # News, sentiment, fundamentals extraction
+  filings/              # SEC EDGAR filing ingestion (10-K, 10-Q, 8-K)
   prediction-markets/   # Kalshi integration
   validation/           # Schema parity validation
   dashboard-types/      # Shared dashboard/API types
   tsconfig/             # Shared TypeScript configs
-  infra/                # Prometheus, Alertmanager configs
+  infra/                # OpenTelemetry, OpenTofu infrastructure
   research/             # Python backtesting (VectorBT subprocess runner)
 ```
 
