@@ -33,23 +33,39 @@ export const POLYMARKET_RATE_LIMITS = {
 };
 
 /**
+ * Helper to parse JSON-encoded string arrays from Polymarket API
+ * The API returns outcomes/outcomePrices as JSON strings like "[\"Yes\", \"No\"]"
+ */
+const jsonStringArray = z.union([z.array(z.string()), z.string()]).transform((val): string[] => {
+  if (Array.isArray(val)) {
+    return val;
+  }
+  try {
+    const parsed = JSON.parse(val);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+});
+
+/**
  * Polymarket market response schema (from Gamma API)
  */
 export const PolymarketMarketSchema = z.object({
   id: z.string(),
   question: z.string(),
   slug: z.string().optional(),
-  outcomes: z.array(z.string()).optional(),
-  outcomePrices: z.array(z.string()).optional(),
-  volume: z.string().optional(),
-  volume24hr: z.string().optional(),
-  liquidity: z.string().optional(),
+  outcomes: jsonStringArray.optional(),
+  outcomePrices: jsonStringArray.optional(),
+  volume: z.union([z.string(), z.number()]).optional().nullable(),
+  volume24hr: z.union([z.string(), z.number()]).optional().nullable(),
+  liquidity: z.union([z.string(), z.number()]).optional().nullable(),
   active: z.boolean().optional(),
   closed: z.boolean().optional(),
   endDate: z.string().optional(),
   createdAt: z.string().optional(),
-  // Token IDs for CLOB API queries
-  clobTokenIds: z.array(z.string()).optional(),
+  // Token IDs for CLOB API queries (also JSON-encoded string from API)
+  clobTokenIds: jsonStringArray.optional(),
 });
 export type PolymarketMarket = z.infer<typeof PolymarketMarketSchema>;
 
@@ -278,23 +294,28 @@ export class PolymarketClient implements PredictionMarketProvider {
     await this.enforceRateLimit();
 
     try {
+      // Use /public-search endpoint with 'q' parameter for text search
+      // Filter for open events only (events_status=open)
       const params = new URLSearchParams({
-        _q: query,
-        active: "true",
+        q: query,
+        events_status: "open",
       });
 
-      const response = await fetch(`${this.gammaEndpoint}/events?${params}`);
+      const response = await fetch(`${this.gammaEndpoint}/public-search?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
+      const data = (await response.json()) as { events?: unknown[] };
+
+      // /public-search returns { events: [...], tags: [...], profiles: [...] }
+      const eventData = data.events;
+      if (!Array.isArray(eventData)) {
         return [];
       }
 
       const events: PolymarketEvent[] = [];
-      for (const item of data) {
+      for (const item of eventData) {
         const parsed = PolymarketEventSchema.safeParse(item);
         if (parsed.success) {
           events.push(parsed.data);
@@ -376,7 +397,11 @@ export class PolymarketClient implements PredictionMarketProvider {
         outcome: name,
         probability: price,
         price: price,
-        volume24h: market.volume24hr ? Number.parseFloat(market.volume24hr) : undefined,
+        volume24h: market.volume24hr
+          ? typeof market.volume24hr === "string"
+            ? Number.parseFloat(market.volume24hr)
+            : market.volume24hr
+          : undefined,
       });
     }
 
@@ -391,7 +416,11 @@ export class PolymarketClient implements PredictionMarketProvider {
         marketQuestion: market.question,
         outcomes,
         lastUpdated: new Date().toISOString(),
-        volume24h: market.volume24hr ? Number.parseFloat(market.volume24hr) : undefined,
+        volume24h: market.volume24hr
+          ? typeof market.volume24hr === "string"
+            ? Number.parseFloat(market.volume24hr)
+            : market.volume24hr
+          : undefined,
         liquidityScore: this.calculateLiquidityScore(market),
       },
       relatedInstrumentIds: this.getRelatedInstruments(marketType),
@@ -419,13 +448,19 @@ export class PolymarketClient implements PredictionMarketProvider {
     let score = 0;
 
     if (market.volume24hr) {
-      const volume = Number.parseFloat(market.volume24hr);
+      const volume =
+        typeof market.volume24hr === "string"
+          ? Number.parseFloat(market.volume24hr)
+          : market.volume24hr;
       // $100k volume considered high liquidity
       score += Math.min(volume / 100000, 0.5);
     }
 
     if (market.liquidity) {
-      const liquidity = Number.parseFloat(market.liquidity);
+      const liquidity =
+        typeof market.liquidity === "string"
+          ? Number.parseFloat(market.liquidity)
+          : market.liquidity;
       // $50k liquidity considered high
       score += Math.min(liquidity / 50000, 0.5);
     }
