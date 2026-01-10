@@ -877,6 +877,48 @@ export function broadcastCycleResult(message: ServerMessage): number {
   return broadcast("cycles", message);
 }
 
+/**
+ * Broadcast agent output message to connections subscribed to cycles channel.
+ */
+export function broadcastAgentOutput(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast agent tool call message to connections subscribed to cycles channel.
+ */
+export function broadcastAgentToolCall(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast agent tool result message to connections subscribed to cycles channel.
+ */
+export function broadcastAgentToolResult(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast agent reasoning message to connections subscribed to cycles channel.
+ */
+export function broadcastAgentReasoning(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast agent text delta message to connections subscribed to cycles channel.
+ */
+export function broadcastAgentTextDelta(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast decision plan message to connections subscribed to cycles channel.
+ */
+export function broadcastDecisionPlan(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
 // ============================================
 // Connection Lifecycle
 // ============================================
@@ -1066,6 +1108,7 @@ export default {
   broadcastAll,
   broadcastCycleProgress,
   broadcastCycleResult,
+  broadcastAgentOutput,
   broadcastToBacktest,
   sendMessage,
   sendError,

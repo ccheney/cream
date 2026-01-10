@@ -74,16 +74,27 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
 // ============================================
 
 /**
- * Agent types in the trading system.
+ * Agent type abbreviations for WebSocket streaming.
+ * These abbreviated names are used for dashboard display and filtering.
+ *
+ * Mapping from internal names:
+ * - technical_analyst → technical
+ * - news_analyst → news
+ * - fundamentals_analyst → fundamentals
+ * - bullish_researcher → bullish
+ * - bearish_researcher → bearish
+ * - trader → trader
+ * - risk_manager → risk
+ * - critic → critic
  */
 export const AgentType = z.enum([
-  "technical_analyst",
-  "news_analyst",
-  "fundamentals_analyst",
-  "bullish_researcher",
-  "bearish_researcher",
+  "technical",
+  "news",
+  "fundamentals",
+  "bullish",
+  "bearish",
   "trader",
-  "risk_manager",
+  "risk",
   "critic",
 ]);
 

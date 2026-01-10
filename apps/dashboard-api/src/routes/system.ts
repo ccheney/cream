@@ -6,12 +6,31 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-import { tradingCycleWorkflow } from "@cream/api";
+import { type AgentStatusEvent, type AgentStreamChunk, tradingCycleWorkflow } from "@cream/api";
 import { createContext, requireEnv } from "@cream/domain";
-import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
+import type {
+  AgentType,
+  CyclePhase,
+  CycleProgressData,
+  CycleResultData,
+} from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getRuntimeConfigService } from "../db.js";
-import { broadcastCycleProgress, broadcastCycleResult } from "../websocket/handler.js";
+import {
+  getAlertsRepo,
+  getDecisionsRepo,
+  getOrdersRepo,
+  getPositionsRepo,
+  getRuntimeConfigService,
+} from "../db.js";
+import {
+  broadcastAgentOutput,
+  broadcastAgentReasoning,
+  broadcastAgentTextDelta,
+  broadcastAgentToolCall,
+  broadcastAgentToolResult,
+  broadcastCycleProgress,
+  broadcastCycleResult,
+} from "../websocket/handler.js";
 
 // ============================================
 // Schemas
@@ -131,6 +150,40 @@ const systemState: SystemState = {
 
 /** Rate limit in milliseconds (5 minutes) */
 const TRIGGER_RATE_LIMIT_MS = 5 * 60 * 1000;
+
+/** Max length for tool result summaries */
+const MAX_RESULT_SUMMARY_LENGTH = 500;
+
+/**
+ * Map full agent type names to abbreviated names for WebSocket streaming.
+ * The backend uses full names (technical_analyst) but the dashboard expects abbreviated names (technical).
+ */
+const AGENT_TYPE_MAP: Record<string, AgentType> = {
+  technical_analyst: "technical",
+  news_analyst: "news",
+  fundamentals_analyst: "fundamentals",
+  bullish_researcher: "bullish",
+  bearish_researcher: "bearish",
+  trader: "trader",
+  risk_manager: "risk",
+  critic: "critic",
+};
+
+function mapAgentType(fullName: string): AgentType {
+  return AGENT_TYPE_MAP[fullName] ?? (fullName as AgentType);
+}
+
+/** Truncate tool result to a reasonable summary for WebSocket broadcast */
+function truncateResult(result: unknown): string {
+  if (result === undefined || result === null) {
+    return "";
+  }
+  const str = typeof result === "string" ? result : JSON.stringify(result);
+  if (str.length <= MAX_RESULT_SUMMARY_LENGTH) {
+    return str;
+  }
+  return `${str.slice(0, MAX_RESULT_SUMMARY_LENGTH)}...`;
+}
 
 // ============================================
 // Routes
@@ -628,6 +681,80 @@ app.openapi(triggerCycleRoute, async (c) => {
     broadcastCycleResult({ type: "cycle_result", data: resultData });
   };
 
+  // Helper to emit agent events via WebSocket
+  const emitAgentEvent = (event: AgentStatusEvent) => {
+    broadcastAgentOutput({
+      type: "agent_output",
+      data: {
+        cycleId: event.cycleId,
+        agentType: mapAgentType(event.agentType),
+        status: event.status,
+        output: event.output ?? "",
+        error: event.error,
+        durationMs: event.durationMs,
+        timestamp: event.timestamp,
+      },
+    });
+  };
+
+  // Helper to emit agent streaming chunks via WebSocket
+  const emitStreamChunk = (chunk: AgentStreamChunk) => {
+    const timestamp = chunk.timestamp;
+    const agentType = mapAgentType(chunk.agentType);
+
+    switch (chunk.type) {
+      case "tool-call":
+        broadcastAgentToolCall({
+          type: "agent_tool_call",
+          data: {
+            cycleId,
+            agentType,
+            toolName: chunk.payload.toolName ?? "",
+            toolArgs: JSON.stringify(chunk.payload.toolArgs ?? {}),
+            toolCallId: chunk.payload.toolCallId ?? "",
+            timestamp,
+          },
+        });
+        break;
+      case "tool-result":
+        broadcastAgentToolResult({
+          type: "agent_tool_result",
+          data: {
+            cycleId,
+            agentType,
+            toolName: chunk.payload.toolName ?? "",
+            toolCallId: chunk.payload.toolCallId ?? "",
+            resultSummary: truncateResult(chunk.payload.result),
+            success: chunk.payload.success ?? true,
+            timestamp,
+          },
+        });
+        break;
+      case "reasoning-delta":
+        broadcastAgentReasoning({
+          type: "agent_reasoning",
+          data: {
+            cycleId,
+            agentType,
+            text: chunk.payload.text ?? "",
+            timestamp,
+          },
+        });
+        break;
+      case "text-delta":
+        broadcastAgentTextDelta({
+          type: "agent_text_delta",
+          data: {
+            cycleId,
+            agentType,
+            text: chunk.payload.text ?? "",
+            timestamp,
+          },
+        });
+        break;
+    }
+  };
+
   // Trigger workflow asynchronously (non-blocking)
   const runCycle = async () => {
     const startTime = Date.now();
@@ -651,6 +778,8 @@ app.openapi(triggerCycleRoute, async (c) => {
           context: ctx,
           instruments: symbols,
           useDraftConfig,
+          onAgentEvent: emitAgentEvent,
+          onStreamChunk: emitStreamChunk,
         },
       });
 
@@ -667,6 +796,28 @@ app.openapi(triggerCycleRoute, async (c) => {
         : `Cycle completed: ${workflowResult.iterations} iteration(s), plan rejected`;
       emitProgress("complete", 100, "done", statusMessage);
       emitResult("completed", Date.now() - startTime, workflowResult);
+
+      // Broadcast notification that decisions are ready
+      // (Dashboard fetches full decisions via REST API)
+      try {
+        const decisionsRepo = await getDecisionsRepo();
+        const decisionsResult = await decisionsRepo.findMany({ cycleId, environment });
+        if (decisionsResult.data.length > 0) {
+          broadcastCycleProgress({
+            type: "cycle_progress",
+            data: {
+              cycleId,
+              phase: "complete" as const,
+              step: "decisions_ready",
+              progress: 100,
+              message: `${decisionsResult.data.length} decision(s) ready`,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      } catch {
+        // Decision broadcast is non-critical - don't fail the cycle
+      }
     } catch (error) {
       cycleState.status = "failed";
       cycleState.completedAt = new Date().toISOString();

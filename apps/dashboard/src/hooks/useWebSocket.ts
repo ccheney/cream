@@ -390,7 +390,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       }
     };
 
-    ws.onerror = (_event) => {
+    ws.onerror = () => {
       if (isUnmountedRef.current) {
         return;
       }
@@ -478,9 +478,10 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedChannelsRef.current.add(channel);
       }
       setSubscribedChannels(Array.from(subscribedChannelsRef.current));
-      sendMessage("subscribe", { channels });
+      // Send directly with correct schema format (not wrapped in payload)
+      send({ type: "subscribe", channels });
     },
-    [sendMessage]
+    [send]
   );
 
   // Unsubscribe from channels
@@ -491,9 +492,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedChannelsRef.current.delete(channel);
       }
       setSubscribedChannels(Array.from(subscribedChannelsRef.current));
-      sendMessage("unsubscribe", { channels });
+      send({ type: "unsubscribe", channels });
     },
-    [sendMessage]
+    [send]
   );
 
   // Subscribe to symbols
@@ -504,9 +505,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedSymbolsRef.current.add(symbol);
       }
       setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
-      sendMessage("subscribe_symbols", { symbols });
+      send({ type: "subscribe_symbols", symbols });
     },
-    [sendMessage]
+    [send]
   );
 
   // Unsubscribe from symbols
@@ -517,9 +518,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedSymbolsRef.current.delete(symbol);
       }
       setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
-      sendMessage("unsubscribe_symbols", { symbols });
+      send({ type: "unsubscribe_symbols", symbols });
     },
-    [sendMessage]
+    [send]
   );
 
   // Subscribe to options contracts
@@ -530,9 +531,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedContractsRef.current.add(contract);
       }
       setSubscribedContracts(Array.from(subscribedContractsRef.current));
-      sendMessage("subscribe_options", { contracts });
+      send({ type: "subscribe_options", contracts });
     },
-    [sendMessage]
+    [send]
   );
 
   // Unsubscribe from options contracts
@@ -543,9 +544,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
         subscribedContractsRef.current.delete(contract);
       }
       setSubscribedContracts(Array.from(subscribedContractsRef.current));
-      sendMessage("unsubscribe_options", { contracts });
+      send({ type: "unsubscribe_options", contracts });
     },
-    [sendMessage]
+    [send]
   );
 
   // Subscribe to a backtest for progress updates
@@ -554,9 +555,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       // Track subscription for replay
       subscribedBacktestsRef.current.add(backtestId);
       setSubscribedBacktests(Array.from(subscribedBacktestsRef.current));
-      sendMessage("subscribe_backtest", { backtestId });
+      send({ type: "subscribe_backtest", backtestId });
     },
-    [sendMessage]
+    [send]
   );
 
   // Unsubscribe from a backtest
@@ -565,9 +566,9 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       // Remove from tracking
       subscribedBacktestsRef.current.delete(backtestId);
       setSubscribedBacktests(Array.from(subscribedBacktestsRef.current));
-      sendMessage("unsubscribe_backtest", { backtestId });
+      send({ type: "unsubscribe_backtest", backtestId });
     },
-    [sendMessage]
+    [send]
   );
 
   // Visibility change handler
