@@ -18,6 +18,46 @@ import { useParams, useRouter } from "next/navigation";
 import { useDecisionDetail } from "@/hooks/queries";
 import type { AgentOutput, Citation, ExecutionDetail } from "@/lib/api/types";
 
+const formatSizeUnit = (unit: string): string => {
+  const map: Record<string, string> = {
+    PCT_EQUITY: "% equity",
+    SHARES: "shares",
+    CONTRACTS: "contracts",
+    DOLLARS: "",
+  };
+  return map[unit] ?? unit.toLowerCase().replace(/_/g, " ");
+};
+
+const formatSize = (size: number, unit: string): string => {
+  if (unit === "DOLLARS") {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(size);
+  }
+  return `${size} ${formatSizeUnit(unit)}`;
+};
+
+const formatStrategy = (strategy: string | null): string => {
+  if (!strategy) {
+    return "—";
+  }
+  return strategy
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const formatTimeHorizon = (horizon: string | null): string => {
+  if (!horizon) {
+    return "—";
+  }
+  const map: Record<string, string> = {
+    SCALP: "Scalp",
+    DAY: "Day Trade",
+    SWING: "Swing",
+    POSITION: "Position",
+  };
+  return map[horizon] ?? horizon;
+};
+
 export default function DecisionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -129,33 +169,19 @@ export default function DecisionDetailPage() {
           <div>
             <span className="text-sm text-cream-500 dark:text-cream-400">Size</span>
             <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
-              {decision.size} {decision.sizeUnit.toLowerCase()}
+              {formatSize(decision.size, decision.sizeUnit)}
             </div>
-          </div>
-          <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Entry Price</span>
-            <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
-              {formatPrice(decision.entry)}
-            </div>
-          </div>
-          <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Stop Loss</span>
-            <div className="text-lg font-medium text-red-600">{formatPrice(decision.stop)}</div>
-          </div>
-          <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Target</span>
-            <div className="text-lg font-medium text-green-600">{formatPrice(decision.target)}</div>
           </div>
           <div>
             <span className="text-sm text-cream-500 dark:text-cream-400">Strategy</span>
             <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
-              {decision.strategyFamily}
+              {formatStrategy(decision.strategyFamily)}
             </div>
           </div>
           <div>
             <span className="text-sm text-cream-500 dark:text-cream-400">Time Horizon</span>
             <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
-              {decision.timeHorizon}
+              {formatTimeHorizon(decision.timeHorizon)}
             </div>
           </div>
           <div>
@@ -164,6 +190,28 @@ export default function DecisionDetailPage() {
               {decision.consensusCount}/8 agents
             </div>
           </div>
+          {decision.entry && (
+            <div>
+              <span className="text-sm text-cream-500 dark:text-cream-400">Entry Price</span>
+              <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
+                {formatPrice(decision.entry)}
+              </div>
+            </div>
+          )}
+          {decision.stop && (
+            <div>
+              <span className="text-sm text-cream-500 dark:text-cream-400">Stop Loss</span>
+              <div className="text-lg font-medium text-red-600">{formatPrice(decision.stop)}</div>
+            </div>
+          )}
+          {decision.target && (
+            <div>
+              <span className="text-sm text-cream-500 dark:text-cream-400">Target</span>
+              <div className="text-lg font-medium text-green-600">
+                {formatPrice(decision.target)}
+              </div>
+            </div>
+          )}
           <div>
             <span className="text-sm text-cream-500 dark:text-cream-400">Created</span>
             <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
@@ -173,7 +221,7 @@ export default function DecisionDetailPage() {
         </div>
 
         {/* Rationale */}
-        {decision.rationale && (
+        {(decision.bullishFactors?.length > 0 || decision.bearishFactors?.length > 0) && (
           <div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
             <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">
               Rationale
@@ -182,7 +230,7 @@ export default function DecisionDetailPage() {
               <div>
                 <h4 className="text-xs font-medium text-green-600 mb-2">Bullish Factors</h4>
                 <ul className="space-y-1">
-                  {decision.rationale.bullishFactors.map((factor, i) => (
+                  {(decision.bullishFactors ?? []).map((factor, i) => (
                     <li
                       key={`bull-${i}`}
                       className="text-sm text-cream-700 dark:text-cream-300 flex items-start gap-2"
@@ -196,7 +244,7 @@ export default function DecisionDetailPage() {
               <div>
                 <h4 className="text-xs font-medium text-red-600 mb-2">Bearish Factors</h4>
                 <ul className="space-y-1">
-                  {decision.rationale.bearishFactors.map((factor, i) => (
+                  {(decision.bearishFactors ?? []).map((factor, i) => (
                     <li
                       key={`bear-${i}`}
                       className="text-sm text-cream-700 dark:text-cream-300 flex items-start gap-2"

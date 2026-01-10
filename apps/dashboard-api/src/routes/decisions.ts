@@ -23,11 +23,12 @@ const DecisionSchema = z.object({
   direction: DecisionDirectionSchema,
   size: z.number(),
   sizeUnit: SizeUnitSchema,
-  entryPrice: z.number().nullable(),
-  stopPrice: z.number().nullable(),
-  targetPrice: z.number().nullable(),
+  entry: z.number().nullable(),
+  stop: z.number().nullable(),
+  target: z.number().nullable(),
   status: DecisionStatusSchema,
-  confidenceScore: z.number().nullable(),
+  consensusCount: z.number(),
+  pnl: z.number().nullable(),
   createdAt: z.string(),
 });
 
@@ -78,10 +79,11 @@ const DecisionDetailSchema = DecisionSchema.extend({
 });
 
 const PaginatedDecisionsSchema = z.object({
-  decisions: z.array(DecisionSchema),
+  items: z.array(DecisionSchema),
   total: z.number(),
   limit: z.number(),
   offset: z.number(),
+  hasMore: z.boolean(),
 });
 
 const DecisionQuerySchema = z.object({
@@ -136,8 +138,11 @@ app.openapi(listRoute, async (c) => {
     }
   );
 
+  const offset = (result.page - 1) * result.pageSize;
+  const hasMore = offset + result.data.length < result.total;
+
   return c.json({
-    decisions: result.data.map((d) => ({
+    items: result.data.map((d) => ({
       id: d.id,
       cycleId: d.cycleId,
       symbol: d.symbol,
@@ -145,16 +150,18 @@ app.openapi(listRoute, async (c) => {
       direction: d.direction,
       size: d.size,
       sizeUnit: d.sizeUnit,
-      entryPrice: d.entryPrice,
-      stopPrice: d.stopPrice,
-      targetPrice: d.targetPrice,
-      status: d.status,
-      confidenceScore: d.confidenceScore,
+      entry: d.entryPrice,
+      stop: d.stopPrice,
+      target: d.targetPrice,
+      status: d.status.toUpperCase(),
+      consensusCount: 8, // All 8 agents participate in consensus
+      pnl: null, // PnL calculated when position is closed
       createdAt: d.createdAt,
     })),
     total: result.total,
     limit: result.pageSize,
-    offset: (result.page - 1) * result.pageSize,
+    offset,
+    hasMore,
   });
 });
 
@@ -234,11 +241,12 @@ app.openapi(detailRoute, async (c) => {
     direction: decision.direction,
     size: decision.size,
     sizeUnit: decision.sizeUnit as "SHARES" | "CONTRACTS" | "DOLLARS" | "PCT_EQUITY",
-    entryPrice: decision.entryPrice,
-    stopPrice: decision.stopPrice,
-    targetPrice: decision.targetPrice,
+    entry: decision.entryPrice,
+    stop: decision.stopPrice,
+    target: decision.targetPrice,
     status: decision.status,
-    confidenceScore: decision.confidenceScore,
+    consensusCount: agentOutputs.length || 8,
+    pnl: null,
     createdAt: decision.createdAt,
     strategyFamily: decision.strategyFamily,
     timeHorizon: decision.timeHorizon,
