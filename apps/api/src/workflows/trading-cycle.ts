@@ -423,7 +423,6 @@ function buildAgentConfigs(
   const result: Partial<Record<AgentType, AgentConfigEntry>> = {};
   for (const [agentType, config] of Object.entries(runtimeConfig.agents)) {
     result[agentType as AgentType] = {
-      model: config.model,
       enabled: config.enabled,
       systemPromptOverride: config.systemPromptOverride,
     };

@@ -460,7 +460,6 @@ export type MastraAgentRegistry = typeof mastraAgents;
  * Agent configuration from runtime config
  */
 export interface AgentConfigEntry {
-  model: string;
   enabled: boolean;
   systemPromptOverride?: string | null;
 }
@@ -555,6 +554,7 @@ interface AgentRuntimeSettings {
 
 /**
  * Get runtime settings for an agent from context config.
+ * Note: model is now global via trading_config.global_model, not per-agent.
  */
 function getAgentRuntimeSettings(
   agentType: AgentType,
@@ -563,7 +563,6 @@ function getAgentRuntimeSettings(
   const config = agentConfigs?.[agentType];
   if (config) {
     return {
-      model: config.model,
       systemPromptOverride: config.systemPromptOverride,
     };
   }

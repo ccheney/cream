@@ -66,6 +66,13 @@ export const riskManager = createStubAgent("risk_manager");
 export const critic = createStubAgent("critic");
 
 // ============================================
+// Research Agents (AlphaForge)
+// ============================================
+
+export const ideaAgent = createStubAgent("idea_agent");
+export const indicatorResearcher = createStubAgent("indicator_researcher");
+
+// ============================================
 // All Agents Registry
 // ============================================
 
@@ -78,6 +85,8 @@ export const agents = {
   trader,
   riskManager,
   critic,
+  ideaAgent,
+  indicatorResearcher,
 };
 
 export type AgentRegistry = typeof agents;

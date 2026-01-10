@@ -1,7 +1,7 @@
 /**
  * Agent Unit Tests
  *
- * Tests for all 8 agents in the trading consensus network:
+ * Tests for all 10 agents in the trading network:
  * - Technical Analyst
  * - News & Sentiment Analyst
  * - Fundamentals & Macro Analyst
@@ -10,6 +10,8 @@
  * - Trader
  * - Risk Manager
  * - Critic
+ * - Idea Agent (alpha factor hypothesis generation)
+ * - Indicator Researcher (indicator hypothesis formulation)
  *
  * Tests cover:
  * - Agent configuration and factory
@@ -41,6 +43,8 @@ import {
   bullishResearcherAgent,
   criticAgent,
   fundamentalsAnalystAgent,
+  ideaAgentAgent,
+  indicatorResearcherAgent,
   mastraAgents,
   newsAnalystAgent,
   riskManagerAgent,
@@ -53,6 +57,8 @@ import {
   bullishResearcher,
   critic,
   fundamentalsAnalyst,
+  ideaAgent,
+  indicatorResearcher,
   newsAnalyst,
   riskManager,
   agents as stubAgents,
@@ -416,8 +422,8 @@ function createValidAgentContext(): AgentContext {
 
 describe("Agent Configuration", () => {
   describe("AGENT_TYPES", () => {
-    it("should have exactly 8 agent types", () => {
-      expect(AGENT_TYPES).toHaveLength(8);
+    it("should have exactly 10 agent types", () => {
+      expect(AGENT_TYPES).toHaveLength(10);
     });
 
     it("should include all expected agent types", () => {
@@ -430,6 +436,8 @@ describe("Agent Configuration", () => {
         "trader",
         "risk_manager",
         "critic",
+        "idea_agent",
+        "indicator_researcher",
       ];
       expect(AGENT_TYPES).toEqual(expectedTypes);
     });
@@ -511,9 +519,19 @@ describe("Mastra Agent Instances", () => {
     expect(criticAgent.id).toBe("critic");
   });
 
+  it("should create idea agent", () => {
+    expect(ideaAgentAgent).toBeDefined();
+    expect(ideaAgentAgent.id).toBe("idea_agent");
+  });
+
+  it("should create indicator researcher agent", () => {
+    expect(indicatorResearcherAgent).toBeDefined();
+    expect(indicatorResearcherAgent.id).toBe("indicator_researcher");
+  });
+
   describe("Agent Registry", () => {
-    it("should have all 8 agents in registry", () => {
-      expect(Object.keys(mastraAgents)).toHaveLength(8);
+    it("should have all 10 agents in registry", () => {
+      expect(Object.keys(mastraAgents)).toHaveLength(10);
     });
 
     it("should have correct agent ids in registry", () => {
@@ -526,6 +544,8 @@ describe("Mastra Agent Instances", () => {
         "trader",
         "risk_manager",
         "critic",
+        "idea_agent",
+        "indicator_researcher",
       ];
 
       for (const id of expectedIds) {
@@ -583,9 +603,19 @@ describe("Stub Agents", () => {
     expect(critic.id).toBe("critic");
   });
 
+  it("should create idea agent stub", () => {
+    expect(ideaAgent).toBeDefined();
+    expect(ideaAgent.id).toBe("idea_agent");
+  });
+
+  it("should create indicator researcher stub", () => {
+    expect(indicatorResearcher).toBeDefined();
+    expect(indicatorResearcher.id).toBe("indicator_researcher");
+  });
+
   describe("Stub Agent Registry", () => {
-    it("should have all 8 agents in stub registry", () => {
-      expect(Object.keys(stubAgents)).toHaveLength(8);
+    it("should have all 10 agents in stub registry", () => {
+      expect(Object.keys(stubAgents)).toHaveLength(10);
     });
 
     it("should match Mastra config for all stubs", () => {
@@ -593,7 +623,6 @@ describe("Stub Agents", () => {
         const config = AGENT_CONFIGS[stub.id];
         expect(stub.name).toBe(config.name);
         expect(stub.role).toBe(config.role);
-        expect(stub.model).toBe(config.model);
       }
     });
   });
@@ -1220,10 +1249,22 @@ describe("Agent Tool Wiring", () => {
       expect(agent.tools).toBeDefined();
       expect(agent.tools?.web_search).toBeDefined();
     });
+
+    it("should have web_search tool wired for idea agent", () => {
+      const agent = ideaAgentAgent;
+      expect(agent.tools).toBeDefined();
+      expect(agent.tools?.web_search).toBeDefined();
+    });
+
+    it("should have web_search tool wired for indicator researcher", () => {
+      const agent = indicatorResearcherAgent;
+      expect(agent.tools).toBeDefined();
+      expect(agent.tools?.web_search).toBeDefined();
+    });
   });
 
   describe("Tool Configuration", () => {
-    it("should have all 8 agents with tools configured", () => {
+    it("should have all 10 agents with tools configured", () => {
       // All agents in AGENT_CONFIGS should have web_search in their tools array
       for (const agentType of AGENT_TYPES) {
         const config = AGENT_CONFIGS[agentType];
