@@ -537,3 +537,38 @@ export const TextDeltaChunkDataSchema = z.object({
 });
 
 export type TextDeltaChunkData = z.infer<typeof TextDeltaChunkDataSchema>;
+
+// ============================================
+// Agent Status Data
+// ============================================
+
+/**
+ * Agent status data for real-time status updates.
+ */
+export const AgentStatusDataSchema = z.object({
+  /** Agent type */
+  type: AgentType,
+
+  /** Human-readable display name */
+  displayName: z.string(),
+
+  /** Current processing status */
+  status: z.enum(["idle", "processing", "error"]),
+
+  /** Last output timestamp (null if never) */
+  lastOutputAt: z.string().datetime().nullable(),
+
+  /** Number of outputs today */
+  outputsToday: z.number().int().nonnegative(),
+
+  /** Average confidence score (0-1) */
+  avgConfidence: z.number().min(0).max(1),
+
+  /** Approval rate (0-1) */
+  approvalRate: z.number().min(0).max(1),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type AgentStatusData = z.infer<typeof AgentStatusDataSchema>;

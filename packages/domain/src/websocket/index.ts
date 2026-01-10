@@ -29,6 +29,8 @@ export {
 export {
   type AgentOutputData,
   AgentOutputDataSchema,
+  type AgentStatusData,
+  AgentStatusDataSchema,
   type AlertData,
   AlertDataSchema,
   type CycleProgressData,
@@ -97,6 +99,8 @@ export {
   AgentOutputMessageSchema,
   type AgentReasoningMessage,
   AgentReasoningMessageSchema,
+  type AgentStatusMessage,
+  AgentStatusMessageSchema,
   type AgentTextDeltaMessage,
   AgentTextDeltaMessageSchema,
   type AgentToolCallMessage,

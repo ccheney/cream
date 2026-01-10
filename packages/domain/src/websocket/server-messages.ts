@@ -11,6 +11,7 @@ import { DecisionPlanSchema, DecisionSchema } from "../decision.js";
 import { Channel } from "./channel.js";
 import {
   AgentOutputDataSchema,
+  AgentStatusDataSchema,
   AggregateDataSchema,
   AlertDataSchema,
   CycleProgressDataSchema,
@@ -333,6 +334,23 @@ export const AgentTextDeltaMessageSchema = z.object({
 });
 
 export type AgentTextDeltaMessage = z.infer<typeof AgentTextDeltaMessageSchema>;
+
+// ============================================
+// Agent Status Message
+// ============================================
+
+/**
+ * Agent status update - real-time status for dashboard display.
+ *
+ * @example
+ * { type: "agent_status", data: { type: "technical", displayName: "Technical Analyst", status: "idle", ... } }
+ */
+export const AgentStatusMessageSchema = z.object({
+  type: z.literal("agent_status"),
+  data: AgentStatusDataSchema,
+});
+
+export type AgentStatusMessage = z.infer<typeof AgentStatusMessageSchema>;
 
 // ============================================
 // Cycle Progress Message
@@ -673,6 +691,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   AgentToolResultMessageSchema,
   AgentReasoningMessageSchema,
   AgentTextDeltaMessageSchema,
+  AgentStatusMessageSchema,
   CycleProgressMessageSchema,
   CycleResultMessageSchema,
   AlertMessageSchema,

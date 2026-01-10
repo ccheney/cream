@@ -13,7 +13,8 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { AgentStreamingCard } from "@/components/agents/AgentStreamingCard";
 import { AgentStreamingDetail } from "@/components/agents/AgentStreamingDetail";
-import { useAgentOutputs, useAgentStatuses } from "@/hooks/queries";
+import { useAgentOutputs } from "@/hooks/queries";
+import { useAgentStatus } from "@/hooks/useAgentStatus";
 import { type AgentType, useAgentStreaming } from "@/hooks/useAgentStreaming";
 
 // ============================================
@@ -47,11 +48,13 @@ const AGENT_NAMES: Record<string, string> = {
 // ============================================
 
 export default function AgentsPage() {
-  const { data: _statuses, isLoading: statusesLoading } = useAgentStatuses();
   const [selectedAgent, setSelectedAgent] = useState<AgentType | null>(null);
   const { data: outputs, isLoading: outputsLoading } = useAgentOutputs(selectedAgent ?? "", 20);
 
-  // Real-time streaming state
+  // Real-time status via WebSocket (replaces HTTP polling)
+  const { isSubscribed: statusSubscribed, hasData: hasStatusData } = useAgentStatus();
+
+  // Real-time streaming state (tool calls, reasoning)
   const { agents: streamingAgents, currentCycleId, isSubscribed } = useAgentStreaming();
 
   const selectedState = selectedAgent ? streamingAgents.get(selectedAgent) : undefined;
@@ -67,13 +70,13 @@ export default function AgentsPage() {
               Cycle: {currentCycleId.slice(0, 16)}...
             </span>
           )}
-          {isSubscribed && (
+          {(isSubscribed || statusSubscribed) && (
             <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              Connected
+              Live
             </span>
           )}
         </div>
@@ -95,8 +98,8 @@ export default function AgentsPage() {
             ))}
           </div>
 
-          {/* Fallback: Show loading skeleton if no streaming and statuses loading */}
-          {statusesLoading && streamingAgents.size === 0 && (
+          {/* Fallback: Show loading skeleton while waiting for WebSocket data */}
+          {!hasStatusData && streamingAgents.size === 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
               {[...Array(8)].map((_, i) => (
                 <div

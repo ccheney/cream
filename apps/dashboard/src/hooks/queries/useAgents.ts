@@ -11,6 +11,10 @@ import type { AgentConfig, AgentOutput, AgentStatus } from "@/lib/api/types";
 
 /**
  * Get all agent statuses.
+ *
+ * Note: This is kept as a fallback for initial load and when WebSocket is disconnected.
+ * The primary source should be the useAgentStatus WebSocket hook.
+ * Polling has been disabled - use WebSocket for real-time updates.
  */
 export function useAgentStatuses() {
   return useQuery({
@@ -21,7 +25,7 @@ export function useAgentStatuses() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
-    refetchInterval: 5000,
+    // Polling disabled - use WebSocket useAgentStatus hook for real-time updates
   });
 }
 

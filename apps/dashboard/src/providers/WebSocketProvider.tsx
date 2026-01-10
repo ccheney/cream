@@ -28,6 +28,8 @@ interface WebSocketContextValue {
   reconnecting: boolean;
   /** Last received message */
   lastMessage: WSMessage | null;
+  /** Send raw message data */
+  send: (data: unknown) => boolean;
   /** Send a typed message */
   sendMessage: (type: string, payload: unknown) => boolean;
   /** Subscribe to channels */
@@ -102,6 +104,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     connectionState,
     connected,
     reconnecting,
+    send,
     sendMessage,
     subscribe,
     unsubscribe,
@@ -138,6 +141,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       connected,
       reconnecting,
       lastMessage,
+      send,
       sendMessage,
       subscribe,
       unsubscribe,
@@ -156,6 +160,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       connected,
       reconnecting,
       lastMessage,
+      send,
       sendMessage,
       subscribe,
       unsubscribe,
