@@ -1084,23 +1084,6 @@ python -m cream.backtest.runner --config '{"backtestId": "...", "dataPath": "...
 {"type": "completed", "metrics": {"sharpeRatio": 1.2, ...}}
 ```
 
-### apps/evals/ - Agent Evaluations
-
-```python
-# DeepEval integration
-from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase
-
-class AgentEvaluator:
-    def evaluate_decision_quality(self, decision: DecisionPlan) -> EvalResult:
-        """Evaluate decision against golden dataset."""
-        pass
-
-    def evaluate_rationale_coherence(self, rationale: str) -> float:
-        """LLM-as-judge for rationale quality."""
-        pass
-```
-
 ### apps/filings-service/ - SEC Ingestion
 
 ```python

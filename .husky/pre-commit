@@ -35,19 +35,19 @@ if [ -n "$HAS_TS_FILES" ]; then
 fi
 
 # 3. Ruff: Format Python (all Python dirs, if they exist)
-if [ -d "apps/vision-service" ] || [ -d "apps/evals" ] || [ -d "packages/research" ]; then
+if [ -d "apps/vision-service" ] || [ -d "packages/research" ]; then
   echo "🐍 Ruff: Formatting Python files..."
-  ruff format apps/vision-service apps/evals packages/research 2>/dev/null || true
+  ruff format apps/vision-service packages/research 2>/dev/null || true
 
   # 4. Ruff: Lint Python with auto-fix
   echo "🐍 Ruff: Linting Python files..."
-  ruff check --fix apps/vision-service apps/evals packages/research 2>/dev/null || true
+  ruff check --fix apps/vision-service packages/research 2>/dev/null || true
 
   # 5. Mypy: Type checking Python (if Python files are staged)
   if [ -n "$HAS_PY_FILES" ]; then
     echo "🐍 Mypy: Running type checker..."
     # Run mypy on each Python project that has staged files
-    for dir in packages/research apps/vision-service apps/evals; do
+    for dir in packages/research apps/vision-service; do
       if [ -d "$dir" ] && echo "$STAGED_FILES" | grep -q "^$dir/"; then
         echo "  → Checking $dir..."
         (cd "$dir" && uv run mypy . 2>/dev/null) || {

@@ -148,7 +148,7 @@ Hono REST + WebSocket API with JWT auth and OpenAPI docs.
 Rust gRPC server for deterministic order validation and routing (~36,115 lines).
 
 **Entry**: `cargo run --bin execution-engine`
-**Ports**: 50051 (gRPC), 50052 (Arrow Flight)
+**Ports**: 50051 (HTTP), 50053 (gRPC), 50052 (Arrow Flight)
 
 **Capabilities**:
 - DecisionPlan validation against risk constraints
@@ -158,12 +158,6 @@ Rust gRPC server for deterministic order validation and routing (~36,115 lines).
 - Execution tactics (PASSIVE_LIMIT, TWAP, VWAP, ICEBERG)
 - Backtest simulation with fill models
 - Crash recovery and reconciliation
-
-### Evals (`apps/evals`)
-DeepEval agent evaluation framework with LLM-as-Judge.
-
-**Entry**: `pytest tests/`
-**Framework**: DeepEval, Google Gemini/GPT-4o as judge
 
 ### Python Services
 - **filings-service**: SEC EDGAR filing retrieval (10-K, 10-Q, 8-K)
@@ -333,7 +327,7 @@ GOOGLE_API_KEY=                     # Gemini models
 ```bash
 PORT=3001                           # Server port
 JWT_SECRET=                         # Auth secret
-RUST_GRPC_URL=http://localhost:50051
+RUST_GRPC_URL=http://localhost:50053
 MASTRA_API_URL=http://localhost:4111
 ```
 
