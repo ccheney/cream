@@ -189,11 +189,13 @@ function transformSnapshotToContract(
     return null;
   }
 
+  const lastPrice = snapshot.day?.close ?? null;
+
   return {
     symbol: snapshot.details.ticker,
-    bid: snapshot.last_quote?.bid ?? null,
-    ask: snapshot.last_quote?.ask ?? null,
-    last: snapshot.day?.close ?? null,
+    bid: snapshot.last_quote?.bid ?? lastPrice,
+    ask: snapshot.last_quote?.ask ?? lastPrice,
+    last: lastPrice,
     volume: snapshot.day?.volume ?? null,
     openInterest: snapshot.open_interest ?? null,
     impliedVolatility: snapshot.implied_volatility ?? null,
