@@ -45,7 +45,11 @@ export class GrpcError extends Error {
   static fromConnectError(error: unknown, requestId?: string): GrpcError {
     // Handle Connect errors
     if (error && typeof error === "object" && "code" in error) {
-      const connectError = error as { code: string; message?: string; rawMessage?: string };
+      const connectError = error as {
+        code: string | number;
+        message?: string;
+        rawMessage?: string;
+      };
       const code = mapConnectCodeToGrpcCode(connectError.code);
       const message = connectError.rawMessage || connectError.message || "Unknown gRPC error";
 
@@ -117,8 +121,31 @@ export class GrpcError extends Error {
 /**
  * Map Connect error code to GrpcErrorCode
  */
-function mapConnectCodeToGrpcCode(code: string): GrpcErrorCode {
-  // Connect uses numeric codes internally but exposes string names
+function mapConnectCodeToGrpcCode(code: string | number): GrpcErrorCode {
+  // Handle numeric codes (gRPC standard codes)
+  if (typeof code === "number") {
+    const numericMap: Record<number, GrpcErrorCode> = {
+      1: GrpcErrorCode.CANCELLED,
+      2: GrpcErrorCode.UNKNOWN,
+      3: GrpcErrorCode.INVALID_ARGUMENT,
+      4: GrpcErrorCode.DEADLINE_EXCEEDED,
+      5: GrpcErrorCode.NOT_FOUND,
+      6: GrpcErrorCode.ALREADY_EXISTS,
+      7: GrpcErrorCode.PERMISSION_DENIED,
+      8: GrpcErrorCode.RESOURCE_EXHAUSTED,
+      9: GrpcErrorCode.FAILED_PRECONDITION,
+      10: GrpcErrorCode.ABORTED,
+      11: GrpcErrorCode.OUT_OF_RANGE,
+      12: GrpcErrorCode.UNIMPLEMENTED,
+      13: GrpcErrorCode.INTERNAL,
+      14: GrpcErrorCode.UNAVAILABLE,
+      15: GrpcErrorCode.DATA_LOSS,
+      16: GrpcErrorCode.UNAUTHENTICATED,
+    };
+    return numericMap[code] ?? GrpcErrorCode.UNKNOWN;
+  }
+
+  // Handle string codes
   const codeMap: Record<string, GrpcErrorCode> = {
     canceled: GrpcErrorCode.CANCELLED,
     unknown: GrpcErrorCode.UNKNOWN,
@@ -138,7 +165,7 @@ function mapConnectCodeToGrpcCode(code: string): GrpcErrorCode {
     unauthenticated: GrpcErrorCode.UNAUTHENTICATED,
   };
 
-  const normalizedCode = code.toLowerCase().replace(/-/g, "_");
+  const normalizedCode = String(code).toLowerCase().replace(/-/g, "_");
   return codeMap[normalizedCode] || GrpcErrorCode.UNKNOWN;
 }
 
