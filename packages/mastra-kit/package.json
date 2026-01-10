@@ -21,6 +21,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
     "@cream/broker": "workspace:*",
+    "@cream/external-context": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/helix": "workspace:*",
@@ -30,8 +31,7 @@
     "@cream/storage": "workspace:*",
     "@cream/universe": "workspace:*",
     "@mastra/core": "^0.24.9",
-    "@mastra/mcp": "0.14.5",
-    "prom-client": "^15.1.3"
+    "@mastra/mcp": "0.14.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
