@@ -42,7 +42,7 @@ use execution_engine::{
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
     observability::{MetricsConfig, TracingConfig, init_metrics, init_tracing},
     safety::ConnectionMonitor,
-    server::create_router,
+    server::{build_flight_server, create_router},
 };
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -80,18 +80,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Starting Cream Execution Engine");
     tracing::info!(
         environment = %config.environment.mode,
+        http_port = config.server.http_port,
         grpc_port = config.server.grpc_port,
         flight_port = config.server.flight_port,
         "Configuration loaded"
     );
 
-    // Initialize metrics
-    let metrics_config = MetricsConfig::default();
-    if let Err(e) = init_metrics(&metrics_config) {
-        tracing::warn!("Failed to initialize metrics: {e}");
-        // Non-fatal - continue without metrics
+    // Initialize metrics from config
+    let metrics_config = if config.observability.metrics.enabled {
+        config
+            .observability
+            .metrics
+            .endpoint
+            .parse()
+            .map(MetricsConfig::with_addr)
+            .unwrap_or_default()
     } else {
-        tracing::info!(endpoint = %metrics_config.listen_addr, "Metrics endpoint initialized");
+        MetricsConfig::default()
+    };
+
+    if config.observability.metrics.enabled {
+        if let Err(e) = init_metrics(&metrics_config) {
+            tracing::warn!("Failed to initialize metrics: {e}");
+            // Non-fatal - continue without metrics
+        } else {
+            tracing::info!(endpoint = %metrics_config.listen_addr, "Metrics endpoint initialized");
+        }
+    } else {
+        tracing::info!("Metrics disabled in configuration");
     }
 
     // Create shutdown channel
@@ -186,33 +202,108 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create HTTP router
     let app = create_router(components.execution_server);
 
-    // Build server address
-    let addr: SocketAddr =
-        format!("{}:{}", config.server.bind_address, config.server.grpc_port).parse()?;
+    // Build HTTP server address
+    let http_addr: SocketAddr =
+        format!("{}:{}", config.server.bind_address, config.server.http_port).parse()?;
 
-    tracing::info!(%addr, "HTTP server starting");
+    tracing::info!(%http_addr, "HTTP server starting");
     tracing::info!("Endpoints:");
     tracing::info!("  GET  /health");
     tracing::info!("  POST /v1/check-constraints");
     tracing::info!("  POST /v1/submit-orders");
     tracing::info!("  POST /v1/order-state");
 
-    // Start server with graceful shutdown
-    let listener = TcpListener::bind(addr).await?;
-    let server =
+    // Start HTTP server with graceful shutdown
+    let listener = TcpListener::bind(http_addr).await?;
+    let http_server =
         axum::serve(listener, app).with_graceful_shutdown(shutdown_signal(shutdown_tx.clone()));
 
-    // Spawn server task
-    let server_handle = tokio::spawn(async move {
+    // Spawn HTTP server task
+    let http_handle = tokio::spawn(async move {
+        if let Err(e) = http_server.await {
+            tracing::error!("HTTP server error: {e}");
+        }
+    });
+
+    // Start gRPC server for MarketDataService and ExecutionService
+    let grpc_addr: SocketAddr =
+        format!("{}:{}", config.server.bind_address, config.server.grpc_port).parse()?;
+
+    tracing::info!(%grpc_addr, "gRPC server starting");
+    tracing::info!("gRPC services:");
+    tracing::info!("  MarketDataService - GetSnapshot, GetOptionChain, SubscribeMarketData");
+    tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
+
+    let grpc_shutdown_tx = shutdown_tx.clone();
+    let grpc_handle = tokio::spawn(async move {
+        let mut shutdown_rx = grpc_shutdown_tx.subscribe();
+
+        // Build gRPC services
+        let (execution_service, market_data_service) =
+            match execution_engine::server::grpc::build_grpc_services() {
+                Ok(services) => services,
+                Err(e) => {
+                    tracing::error!("Failed to build gRPC services: {e}");
+                    return;
+                }
+            };
+
+        let server = tonic::transport::Server::builder()
+            .add_service(execution_service)
+            .add_service(market_data_service)
+            .serve_with_shutdown(grpc_addr, async move {
+                let _ = shutdown_rx.recv().await;
+                tracing::info!("gRPC server shutting down");
+            });
+
         if let Err(e) = server.await {
-            tracing::error!("Server error: {e}");
+            tracing::error!("gRPC server error: {e}");
+        }
+    });
+
+    // Start Arrow Flight server for high-performance data transport
+    let flight_addr: SocketAddr = format!(
+        "{}:{}",
+        config.server.bind_address, config.server.flight_port
+    )
+    .parse()?;
+    let flight_service = build_flight_server();
+
+    tracing::info!(%flight_addr, "Arrow Flight server starting");
+    tracing::info!("Flight endpoints:");
+    tracing::info!("  DoGet market_data - Get market data snapshots");
+    tracing::info!("  DoPut market_data - Ingest market data");
+    tracing::info!("  DoAction clear_cache/health_check/get_cache_stats");
+
+    let flight_shutdown_tx = shutdown_tx.clone();
+    let flight_handle = tokio::spawn(async move {
+        let mut shutdown_rx = flight_shutdown_tx.subscribe();
+        let server = tonic::transport::Server::builder()
+            .add_service(flight_service)
+            .serve_with_shutdown(flight_addr, async move {
+                let _ = shutdown_rx.recv().await;
+                tracing::info!("Arrow Flight server shutting down");
+            });
+
+        if let Err(e) = server.await {
+            tracing::error!("Arrow Flight server error: {e}");
         }
     });
 
     tracing::info!("Execution engine ready");
 
-    // Wait for server to complete
-    let _ = server_handle.await;
+    // Wait for all servers to complete
+    tokio::select! {
+        _ = http_handle => {
+            tracing::info!("HTTP server stopped");
+        }
+        _ = grpc_handle => {
+            tracing::info!("gRPC server stopped");
+        }
+        _ = flight_handle => {
+            tracing::info!("Arrow Flight server stopped");
+        }
+    }
 
     tracing::info!("Execution engine stopped");
     Ok(())

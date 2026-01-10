@@ -6,10 +6,12 @@
 # Optional variables have default values shown below.
 
 # Server Configuration
-# Ports for gRPC and Arrow Flight services
+# Ports for HTTP, gRPC, and Arrow Flight services
 server:
-  # gRPC server port for execution and market data services
-  grpc_port: 50051
+  # HTTP server port for REST endpoints (/health, /v1/*)
+  http_port: 50051
+  # gRPC server port for MarketDataService and ExecutionService
+  grpc_port: 50053
   # Arrow Flight server port for high-performance data streaming
   flight_port: 50052
   # Bind address (0.0.0.0 for all interfaces, 127.0.0.1 for localhost only)
@@ -21,7 +23,7 @@ feeds:
   databento:
     # Databento API key (REQUIRED for LIVE/PAPER)
     # Register at: https://databento.com/
-    api_key: ${DATABENTO_KEY}
+    api_key: "${DATABENTO_KEY:-}"
     # Dataset for market data
     # XNAS.ITCH = Nasdaq TotalView-ITCH (full depth order book)
     # XNYS.ITCH = NYSE TotalView (coming soon)
@@ -36,8 +38,8 @@ brokers:
   alpaca:
     # Alpaca API credentials (REQUIRED for LIVE/PAPER)
     # Get from: https://alpaca.markets/
-    api_key: ${ALPACA_KEY}
-    api_secret: ${ALPACA_SECRET}
+    api_key: "${ALPACA_KEY:-}"
+    api_secret: "${ALPACA_SECRET:-}"
     # Base URL: paper or live trading
     # Paper: https://paper-api.alpaca.markets
     # Live:  https://api.alpaca.markets
@@ -108,10 +110,10 @@ observability:
   # Prometheus Metrics
   metrics:
     enabled: true
-    # Endpoint for Prometheus scraping
-    endpoint: "0.0.0.0:9090"
-    # Optional push gateway for batch jobs
-    push_gateway: null
+    # Endpoint for Prometheus scraping (use 9091 to avoid conflict with Prometheus server)
+    endpoint: "0.0.0.0:9091"
+    # Optional push gateway for batch jobs (empty = disabled)
+    push_gateway: ""
 
   # OpenTelemetry Tracing
   tracing:
@@ -161,6 +163,13 @@ circuit_breaker:
     failure_rate_threshold: 0.4
     wait_duration_secs: 30
     minimum_calls: 5
+
+# Persistence Configuration
+# State persistence for crash recovery
+persistence:
+  enabled: true
+  db_path: "./data/orders.db"
+  snapshot_interval_secs: 60
 
 # Environment Configuration
 # Runtime environment settings

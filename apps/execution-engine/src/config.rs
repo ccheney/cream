@@ -94,7 +94,10 @@ pub struct Config {
 /// Server configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
-    /// gRPC server port.
+    /// HTTP server port for REST endpoints (/health, /v1/*).
+    #[serde(default = "default_http_port")]
+    pub http_port: u16,
+    /// gRPC server port for MarketDataService and ExecutionService.
     #[serde(default = "default_grpc_port")]
     pub grpc_port: u16,
     /// Arrow Flight server port.
@@ -108,6 +111,7 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
+            http_port: default_http_port(),
             grpc_port: default_grpc_port(),
             flight_port: default_flight_port(),
             bind_address: default_bind_address(),
@@ -115,8 +119,11 @@ impl Default for ServerConfig {
     }
 }
 
-const fn default_grpc_port() -> u16 {
+const fn default_http_port() -> u16 {
     50051
+}
+const fn default_grpc_port() -> u16 {
+    50053
 }
 const fn default_flight_port() -> u16 {
     50052
@@ -1153,10 +1160,14 @@ fn interpolate_env_vars(input: &str) -> String {
 
 /// Validate configuration values.
 fn validate_config(config: &Config) -> Result<(), ConfigError> {
-    // Validate server ports
-    if config.server.grpc_port == config.server.flight_port {
+    // Validate server ports (all three must be different)
+    let http = config.server.http_port;
+    let grpc = config.server.grpc_port;
+    let flight = config.server.flight_port;
+
+    if http == grpc || http == flight || grpc == flight {
         return Err(ConfigError::ValidationError(
-            "grpc_port and flight_port must be different".to_string(),
+            "http_port, grpc_port, and flight_port must all be different".to_string(),
         ));
     }
 
@@ -1242,7 +1253,8 @@ mod tests {
             environment: EnvironmentConfig::default(),
         };
 
-        assert_eq!(config.server.grpc_port, 50051);
+        assert_eq!(config.server.http_port, 50051);
+        assert_eq!(config.server.grpc_port, 50053);
         assert_eq!(config.server.flight_port, 50052);
         assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "PAPER");
@@ -1255,7 +1267,8 @@ mod tests {
     fn test_load_minimal_config() {
         let yaml = r"
 server:
-  grpc_port: 50051
+  http_port: 50051
+  grpc_port: 50053
   flight_port: 50052
 ";
 
@@ -1263,7 +1276,7 @@ server:
             Ok(c) => c,
             Err(e) => panic!("should load minimal config: {e}"),
         };
-        assert_eq!(config.server.grpc_port, 50051);
+        assert_eq!(config.server.http_port, 50051);
         assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON); // Default value
     }
 
@@ -1305,22 +1318,24 @@ server:
     fn test_validation_same_ports() {
         let yaml = r"
 server:
+  http_port: 50051
   grpc_port: 50051
-  flight_port: 50051
+  flight_port: 50052
 ";
 
         let result = load_config_from_string(yaml);
         let Err(err) = result else {
             panic!("expected error for duplicate ports");
         };
-        assert!(err.to_string().contains("must be different"));
+        assert!(err.to_string().contains("must all be different"));
     }
 
     #[test]
     fn test_validation_invalid_risk_free_rate() {
         let yaml = r"
 server:
-  grpc_port: 50051
+  http_port: 50051
+  grpc_port: 50053
   flight_port: 50052
 pricing:
   risk_free_rate: 1.5
@@ -1337,7 +1352,8 @@ pricing:
     fn test_validation_invalid_environment_mode() {
         let yaml = r"
 server:
-  grpc_port: 50051
+  http_port: 50051
+  grpc_port: 50053
   flight_port: 50052
 environment:
   mode: INVALID
@@ -1354,7 +1370,8 @@ environment:
     fn test_full_config_parse() {
         let yaml = r#"
 server:
-  grpc_port: 50051
+  http_port: 50051
+  grpc_port: 50053
   flight_port: 50052
   bind_address: "127.0.0.1"
 
