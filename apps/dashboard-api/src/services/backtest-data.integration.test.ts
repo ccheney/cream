@@ -15,16 +15,30 @@ import { prepareSignals } from "./backtest-data";
 // Environment Check
 // ============================================
 
-function checkUvAvailable(): boolean {
+/**
+ * Check if Python with required dependencies (pandas, pyarrow) is available.
+ * This is more robust than just checking for uv, as CI may have uv
+ * but not the Python dependencies installed.
+ */
+function checkPythonDepsAvailable(): boolean {
   try {
-    const proc = Bun.spawnSync(["which", "uv"]);
+    // First check if uv is available
+    const uvCheck = Bun.spawnSync(["which", "uv"]);
+    if (uvCheck.exitCode !== 0) {
+      return false;
+    }
+
+    // Check if pandas and pyarrow are importable
+    const proc = Bun.spawnSync(["uv", "run", "python", "-c", "import pandas; import pyarrow"], {
+      cwd: `${import.meta.dir}/../../../../packages/research`,
+    });
     return proc.exitCode === 0;
   } catch {
     return false;
   }
 }
 
-const UV_AVAILABLE = checkUvAvailable();
+const PYTHON_DEPS_AVAILABLE = checkPythonDepsAvailable();
 
 // ============================================
 // Mock Setup
@@ -77,7 +91,7 @@ function createTestBacktest(overrides?: Partial<Backtest>): Backtest {
 // Integration Tests
 // ============================================
 
-describe.skipIf(!UV_AVAILABLE)("Signal Generation Integration", () => {
+describe.skipIf(!PYTHON_DEPS_AVAILABLE)("Signal Generation Integration", () => {
   beforeEach(() => {
     mockGetAggregates.mockClear();
   });
