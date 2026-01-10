@@ -36,14 +36,20 @@ import {
 import {
   type AgentConfigEntry,
   type AgentContext,
+  type AgentStreamChunk,
   type BearishResearchOutput,
   type BullishResearchOutput,
   type FundamentalsAnalysisOutput,
+  type OnStreamChunk,
   revisePlan,
   runAnalystsParallel,
+  runAnalystsParallelStreaming,
   runApprovalParallel,
+  runApprovalParallelStreaming,
   runDebateParallel,
+  runDebateParallelStreaming,
   runTrader,
+  runTraderStreaming,
   type SentimentAnalysisOutput,
   type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
@@ -85,6 +91,27 @@ export interface ExternalContext {
   macroIndicators: Record<string, number>;
 }
 
+/**
+ * Agent status event for WebSocket streaming.
+ */
+export interface AgentStatusEvent {
+  cycleId: string;
+  agentType:
+    | "technical_analyst"
+    | "news_analyst"
+    | "fundamentals_analyst"
+    | "bullish_researcher"
+    | "bearish_researcher"
+    | "trader"
+    | "risk_manager"
+    | "critic";
+  status: "running" | "complete" | "error";
+  output?: string;
+  error?: string;
+  durationMs?: number;
+  timestamp: string;
+}
+
 export interface WorkflowInput {
   cycleId: string;
   /** ExecutionContext with environment and source */
@@ -96,6 +123,10 @@ export interface WorkflowInput {
   useDraftConfig?: boolean;
   /** External context from gatherExternalContext step */
   externalContext?: ExternalContext;
+  /** Optional callback for agent status events (WebSocket streaming) */
+  onAgentEvent?: (event: AgentStatusEvent) => void;
+  /** Optional callback for streaming agent chunks (tool calls, reasoning) */
+  onStreamChunk?: OnStreamChunk;
 }
 
 /**
@@ -245,7 +276,7 @@ export interface WorkflowResult {
 // Default Timeout Configuration (fallback if DB not available)
 // ============================================
 
-const DEFAULT_AGENT_TIMEOUT_MS = 30_000; // 30 seconds per agent
+const DEFAULT_AGENT_TIMEOUT_MS = 180_000; // 3 minutes per agent (LLMs need time)
 const DEFAULT_TOTAL_CONSENSUS_TIMEOUT_MS = 300_000; // 5 minutes total
 const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
 
@@ -930,7 +961,38 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     instruments = ["AAPL", "MSFT", "GOOGL"],
     externalContext,
     useDraftConfig = false,
+    onAgentEvent,
+    onStreamChunk,
   } = input;
+
+  // Helper to emit agent events if callback is provided
+  const emitAgentEvent = (
+    agentType: AgentStatusEvent["agentType"],
+    status: AgentStatusEvent["status"],
+    options?: { output?: string; error?: string; durationMs?: number }
+  ) => {
+    if (onAgentEvent) {
+      onAgentEvent({
+        cycleId,
+        agentType,
+        status,
+        output: options?.output,
+        error: options?.error,
+        durationMs: options?.durationMs,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  };
+
+  // Whether to use streaming agent functions
+  const useStreaming = Boolean(onStreamChunk);
+
+  // Wrapper to forward stream chunks to callback
+  const streamChunkHandler: OnStreamChunk = (chunk: AgentStreamChunk) => {
+    if (onStreamChunk) {
+      onStreamChunk(chunk);
+    }
+  };
 
   log.info(
     {
@@ -987,11 +1049,21 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   log.info({ cycleId, instruments, phase: "analysts" }, "Starting analyst phase");
 
+  // Emit running events for all analyst agents
+  const analystStartTime = Date.now();
+  emitAgentEvent("technical_analyst", "running");
+  emitAgentEvent("news_analyst", "running");
+  emitAgentEvent("fundamentals_analyst", "running");
+
   const analystsResult = await withAgentTimeout(
-    runAnalystsParallel(agentContext),
+    useStreaming
+      ? runAnalystsParallelStreaming(agentContext, streamChunkHandler)
+      : runAnalystsParallel(agentContext),
     agentTimeoutMs * 3, // 3 agents running
     "analysts"
   );
+
+  const analystDuration = Date.now() - analystStartTime;
 
   let analystOutputs: {
     technical: TechnicalAnalysisOutput[];
@@ -1001,6 +1073,15 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
 
   if (analystsResult.timedOut) {
     log.warn({ cycleId, phase: "analysts" }, "Analyst agents timed out");
+    emitAgentEvent("technical_analyst", "error", {
+      error: "Timed out",
+      durationMs: analystDuration,
+    });
+    emitAgentEvent("news_analyst", "error", { error: "Timed out", durationMs: analystDuration });
+    emitAgentEvent("fundamentals_analyst", "error", {
+      error: "Timed out",
+      durationMs: analystDuration,
+    });
     return {
       cycleId,
       approved: false,
@@ -1012,6 +1093,18 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   }
   if (analystsResult.errored) {
     log.error({ cycleId, phase: "analysts", error: analystsResult.error }, "Analyst agents failed");
+    emitAgentEvent("technical_analyst", "error", {
+      error: analystsResult.error,
+      durationMs: analystDuration,
+    });
+    emitAgentEvent("news_analyst", "error", {
+      error: analystsResult.error,
+      durationMs: analystDuration,
+    });
+    emitAgentEvent("fundamentals_analyst", "error", {
+      error: analystsResult.error,
+      durationMs: analystDuration,
+    });
     return {
       cycleId,
       approved: false,
@@ -1026,6 +1119,11 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     };
   }
   analystOutputs = analystsResult.result;
+
+  // Emit complete events for analyst agents
+  emitAgentEvent("technical_analyst", "complete", { durationMs: analystDuration });
+  emitAgentEvent("news_analyst", "complete", { durationMs: analystDuration });
+  emitAgentEvent("fundamentals_analyst", "complete", { durationMs: analystDuration });
 
   log.info(
     {
@@ -1043,11 +1141,20 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   log.info({ cycleId, phase: "debate" }, "Starting debate phase");
 
+  // Emit running events for debate agents
+  const debateStartTime = Date.now();
+  emitAgentEvent("bullish_researcher", "running");
+  emitAgentEvent("bearish_researcher", "running");
+
   const debateResult = await withAgentTimeout(
-    runDebateParallel(agentContext, analystOutputs),
+    useStreaming
+      ? runDebateParallelStreaming(agentContext, analystOutputs, streamChunkHandler)
+      : runDebateParallel(agentContext, analystOutputs),
     agentTimeoutMs * 2, // 2 agents running
     "debate"
   );
+
+  const debateDuration = Date.now() - debateStartTime;
 
   let debateOutputs: {
     bullish: BullishResearchOutput[];
@@ -1056,6 +1163,14 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
 
   if (debateResult.timedOut) {
     log.warn({ cycleId, phase: "debate" }, "Research agents timed out");
+    emitAgentEvent("bullish_researcher", "error", {
+      error: "Timed out",
+      durationMs: debateDuration,
+    });
+    emitAgentEvent("bearish_researcher", "error", {
+      error: "Timed out",
+      durationMs: debateDuration,
+    });
     return {
       cycleId,
       approved: false,
@@ -1067,6 +1182,14 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   }
   if (debateResult.errored) {
     log.error({ cycleId, phase: "debate", error: debateResult.error }, "Research agents failed");
+    emitAgentEvent("bullish_researcher", "error", {
+      error: debateResult.error,
+      durationMs: debateDuration,
+    });
+    emitAgentEvent("bearish_researcher", "error", {
+      error: debateResult.error,
+      durationMs: debateDuration,
+    });
     return {
       cycleId,
       approved: false,
@@ -1081,6 +1204,10 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     };
   }
   debateOutputs = debateResult.result;
+
+  // Emit complete events for debate agents
+  emitAgentEvent("bullish_researcher", "complete", { durationMs: debateDuration });
+  emitAgentEvent("bearish_researcher", "complete", { durationMs: debateDuration });
 
   log.info(
     {
@@ -1097,14 +1224,23 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   log.info({ cycleId, phase: "trader" }, "Starting trader phase");
 
+  // Emit running event for trader agent
+  const traderStartTime = Date.now();
+  emitAgentEvent("trader", "running");
+
   const traderResult = await withAgentTimeout(
-    runTrader(agentContext, debateOutputs),
+    useStreaming
+      ? runTraderStreaming(agentContext, debateOutputs, streamChunkHandler)
+      : runTrader(agentContext, debateOutputs),
     agentTimeoutMs,
     "trader"
   );
 
+  const traderDuration = Date.now() - traderStartTime;
+
   if (traderResult.timedOut) {
     log.warn({ cycleId, phase: "trader" }, "Trader agent timed out");
+    emitAgentEvent("trader", "error", { error: "Timed out", durationMs: traderDuration });
     return {
       cycleId,
       approved: false,
@@ -1116,6 +1252,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   }
   if (traderResult.errored) {
     log.error({ cycleId, phase: "trader", error: traderResult.error }, "Trader agent failed");
+    emitAgentEvent("trader", "error", { error: traderResult.error, durationMs: traderDuration });
     return {
       cycleId,
       approved: false,
@@ -1130,6 +1267,9 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     };
   }
   const initialPlan = traderResult.result;
+
+  // Emit complete event for trader agent
+  emitAgentEvent("trader", "complete", { durationMs: traderDuration });
 
   log.info(
     {
@@ -1155,6 +1295,11 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     "Starting consensus phase"
   );
 
+  // Emit running events for consensus agents
+  const consensusStartTime = Date.now();
+  emitAgentEvent("risk_manager", "running");
+  emitAgentEvent("critic", "running");
+
   const gate = new ConsensusGate({
     maxIterations: maxConsensusIterations,
     logRejections: true,
@@ -1172,15 +1317,26 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     initialPlan,
     // getApproval function (passes agent configs for model settings)
     async (plan: DecisionPlan) => {
-      const result = await runApprovalParallel(
-        plan,
-        analystOutputs,
-        debateOutputs,
-        undefined, // portfolioState
-        undefined, // constraints
-        undefined, // factorZooContext
-        agentConfigs
-      );
+      const result = useStreaming
+        ? await runApprovalParallelStreaming(
+            plan,
+            analystOutputs,
+            debateOutputs,
+            streamChunkHandler,
+            undefined, // portfolioState
+            undefined, // constraints
+            undefined, // factorZooContext
+            agentConfigs
+          )
+        : await runApprovalParallel(
+            plan,
+            analystOutputs,
+            debateOutputs,
+            undefined, // portfolioState
+            undefined, // constraints
+            undefined, // factorZooContext
+            agentConfigs
+          );
       return result;
     },
     // revisePlan function (passes agent configs for model settings)
@@ -1188,6 +1344,12 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       return revisePlan(plan, rejectionReasons, analystOutputs, debateOutputs, agentConfigs);
     }
   );
+
+  const consensusDuration = Date.now() - consensusStartTime;
+
+  // Emit complete events for consensus agents
+  emitAgentEvent("risk_manager", "complete", { durationMs: consensusDuration });
+  emitAgentEvent("critic", "complete", { durationMs: consensusDuration });
 
   log.info(
     {

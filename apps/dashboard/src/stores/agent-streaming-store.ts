@@ -6,6 +6,7 @@
  */
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 
 // ============================================
@@ -113,118 +114,164 @@ const initialState: AgentStreamingStoreState = {
 // Store
 // ============================================
 
-export const useAgentStreamingStore = create<AgentStreamingStore>()((set, get) => ({
-  ...initialState,
+// Persisted state type (only state, not actions)
+type PersistedState = Pick<AgentStreamingStoreState, "agents" | "currentCycleId">;
 
-  addToolCall: (agentType, toolCall) => {
-    set((state) => {
-      const newAgents = new Map(state.agents);
-      const current = newAgents.get(agentType) ?? createInitialAgentState();
-      newAgents.set(agentType, {
-        ...current,
-        status: "processing",
-        toolCalls: [...current.toolCalls, toolCall],
-        lastUpdate: toolCall.timestamp,
-      });
-      return { agents: newAgents };
-    });
-  },
+// Custom storage to handle Map serialization
+type SerializedState = {
+  agents: [AgentType, AgentStreamingState][];
+  currentCycleId: string | null;
+};
 
-  updateToolCallResult: (agentType, toolCallId, result) => {
-    set((state) => {
-      const newAgents = new Map(state.agents);
-      const current = newAgents.get(agentType);
-      if (!current) {
-        return state;
-      }
-
-      const updatedToolCalls = current.toolCalls.map((tc) =>
-        tc.toolCallId === toolCallId
-          ? {
-              ...tc,
-              status: result.success ? ("complete" as const) : ("error" as const),
-              resultSummary: result.resultSummary,
-              durationMs: result.durationMs,
-            }
-          : tc
-      );
-
-      newAgents.set(agentType, {
-        ...current,
-        toolCalls: updatedToolCalls,
-        lastUpdate: new Date().toISOString(),
-      });
-      return { agents: newAgents };
-    });
-  },
-
-  appendReasoning: (agentType, text, timestamp) => {
-    set((state) => {
-      const newAgents = new Map(state.agents);
-      const current = newAgents.get(agentType) ?? createInitialAgentState();
-      newAgents.set(agentType, {
-        ...current,
-        status: "processing",
-        reasoningText: current.reasoningText + text,
-        lastUpdate: timestamp,
-      });
-      return { agents: newAgents };
-    });
-  },
-
-  appendTextOutput: (agentType, text, timestamp) => {
-    set((state) => {
-      const newAgents = new Map(state.agents);
-      const current = newAgents.get(agentType) ?? createInitialAgentState();
-      newAgents.set(agentType, {
-        ...current,
-        status: "processing",
-        textOutput: current.textOutput + text,
-        lastUpdate: timestamp,
-      });
-      return { agents: newAgents };
-    });
-  },
-
-  updateAgentStatus: (agentType, status, error) => {
-    set((state) => {
-      const newAgents = new Map(state.agents);
-      const current = newAgents.get(agentType) ?? createInitialAgentState();
-      newAgents.set(agentType, {
-        ...current,
-        status,
-        error,
-        lastUpdate: new Date().toISOString(),
-      });
-      return { agents: newAgents };
-    });
-  },
-
-  setCycleId: (cycleId) => {
-    const current = get().currentCycleId;
-    if (current !== cycleId) {
-      set({
-        agents: new Map(),
-        currentCycleId: cycleId,
-      });
+const storage = createJSONStorage<PersistedState>(() => sessionStorage, {
+  reviver: (_key, value: unknown) => {
+    // Convert serialized agents array back to Map
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "agents" in value &&
+      Array.isArray((value as SerializedState).agents)
+    ) {
+      return {
+        ...value,
+        agents: new Map((value as SerializedState).agents),
+      };
     }
+    return value;
   },
+  replacer: (_key, value: unknown) => {
+    // Convert Map to array for serialization
+    if (value instanceof Map) {
+      return Array.from(value.entries());
+    }
+    return value;
+  },
+});
 
-  getAgent: (agentType) => {
-    return get().agents.get(agentType);
-  },
+export const useAgentStreamingStore = create<AgentStreamingStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
-  clear: () => {
-    set({
-      agents: new Map(),
-      currentCycleId: null,
-    });
-  },
+      addToolCall: (agentType, toolCall) => {
+        set((state) => {
+          const newAgents = new Map(state.agents);
+          const current = newAgents.get(agentType) ?? createInitialAgentState();
+          newAgents.set(agentType, {
+            ...current,
+            status: "processing",
+            toolCalls: [...current.toolCalls, toolCall],
+            lastUpdate: toolCall.timestamp,
+          });
+          return { agents: newAgents };
+        });
+      },
 
-  reset: () => {
-    set(initialState);
-  },
-}));
+      updateToolCallResult: (agentType, toolCallId, result) => {
+        set((state) => {
+          const newAgents = new Map(state.agents);
+          const current = newAgents.get(agentType);
+          if (!current) {
+            return state;
+          }
+
+          const updatedToolCalls = current.toolCalls.map((tc) =>
+            tc.toolCallId === toolCallId
+              ? {
+                  ...tc,
+                  status: result.success ? ("complete" as const) : ("error" as const),
+                  resultSummary: result.resultSummary,
+                  durationMs: result.durationMs,
+                }
+              : tc
+          );
+
+          newAgents.set(agentType, {
+            ...current,
+            toolCalls: updatedToolCalls,
+            lastUpdate: new Date().toISOString(),
+          });
+          return { agents: newAgents };
+        });
+      },
+
+      appendReasoning: (agentType, text, timestamp) => {
+        set((state) => {
+          const newAgents = new Map(state.agents);
+          const current = newAgents.get(agentType) ?? createInitialAgentState();
+          newAgents.set(agentType, {
+            ...current,
+            status: "processing",
+            reasoningText: current.reasoningText + text,
+            lastUpdate: timestamp,
+          });
+          return { agents: newAgents };
+        });
+      },
+
+      appendTextOutput: (agentType, text, timestamp) => {
+        set((state) => {
+          const newAgents = new Map(state.agents);
+          const current = newAgents.get(agentType) ?? createInitialAgentState();
+          newAgents.set(agentType, {
+            ...current,
+            status: "processing",
+            textOutput: current.textOutput + text,
+            lastUpdate: timestamp,
+          });
+          return { agents: newAgents };
+        });
+      },
+
+      updateAgentStatus: (agentType, status, error) => {
+        set((state) => {
+          const newAgents = new Map(state.agents);
+          const current = newAgents.get(agentType) ?? createInitialAgentState();
+          newAgents.set(agentType, {
+            ...current,
+            status,
+            error,
+            lastUpdate: new Date().toISOString(),
+          });
+          return { agents: newAgents };
+        });
+      },
+
+      setCycleId: (cycleId) => {
+        const current = get().currentCycleId;
+        if (current !== cycleId) {
+          set({
+            agents: new Map(),
+            currentCycleId: cycleId,
+          });
+        }
+      },
+
+      getAgent: (agentType) => {
+        return get().agents.get(agentType);
+      },
+
+      clear: () => {
+        set({
+          agents: new Map(),
+          currentCycleId: null,
+        });
+      },
+
+      reset: () => {
+        set(initialState);
+      },
+    }),
+    {
+      name: "agent-streaming-storage",
+      storage,
+      partialize: (state) => ({
+        agents: state.agents,
+        currentCycleId: state.currentCycleId,
+      }),
+    }
+  )
+);
 
 // ============================================
 // Selectors & Hooks
