@@ -247,6 +247,13 @@ export function applyTheme(theme: "light" | "dark"): void {
 
   document.documentElement.setAttribute("data-theme", theme);
 
+  // Toggle .dark class for Tailwind dark: variants
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   if (metaThemeColor) {
     metaThemeColor.setAttribute("content", theme === "dark" ? "#0c0a09" : "#f5f5f4");
