@@ -9,24 +9,15 @@
 
 "use client";
 
-import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ExpirationTabs,
-  OptionsChainTable,
-  type OptionsOrderRequest,
-  PositionBuilderModal,
-} from "@/components/options";
+import { ExpirationTabs, OptionsChainTable } from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Spinner } from "@/components/ui/spinner";
 import { useQuote } from "@/hooks/queries/useMarket";
-import {
-  useOptionsChain,
-  useOptionsExpirations,
-  useOptionsOrder,
-} from "@/hooks/queries/useOptions";
-import type { OptionsContract } from "@/lib/api/types";
+import { useOptionsChain, useOptionsExpirations } from "@/hooks/queries/useOptions";
+import { getTickerName } from "@/lib/ticker-names";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
@@ -54,6 +45,7 @@ export default function OptionsChainPage({ params }: OptionsChainPageProps) {
 
 function OptionsChainContent({ underlying }: { underlying: string }) {
   const upperUnderlying = underlying.toUpperCase();
+  const companyName = getTickerName(upperUnderlying);
 
   const watchlistSymbols = useWatchlistStore((s) => s.symbols);
   const addSymbol = useWatchlistStore((s) => s.addSymbol);
@@ -68,12 +60,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   const subscribedContractsRef = useRef<Set<string>>(new Set());
 
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedContract, setSelectedContract] = useState<OptionsContract | null>(null);
-  const [selectedContractType, setSelectedContractType] = useState<"call" | "put" | null>(null);
-  const [selectedStrike, setSelectedStrike] = useState<number | null>(null);
-
-  const { mutateAsync: submitOrder } = useOptionsOrder();
   const { data: quote, connected: wsConnected } = useQuote(upperUnderlying);
   const { data: expirationsData, isLoading: expirationsLoading } =
     useOptionsExpirations(upperUnderlying);
@@ -88,12 +74,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     }
   }, [expirationsData, selectedExpiration]);
 
-  const {
-    data: chainData,
-    isLoading: chainLoading,
-    isFetching: chainFetching,
-    refetch: refetchChain,
-  } = useOptionsChain(upperUnderlying, {
+  const { data: chainData, isLoading: chainLoading } = useOptionsChain(upperUnderlying, {
     expiration: selectedExpiration ?? undefined,
     strikeRange: 25,
     enabled: Boolean(selectedExpiration),
@@ -102,30 +83,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   const handleExpirationSelect = useCallback((date: string) => {
     setSelectedExpiration(date);
   }, []);
-
-  const handleContractClick = useCallback(
-    (contract: OptionsContract, type: "call" | "put", strike: number) => {
-      setSelectedContract(contract);
-      setSelectedContractType(type);
-      setSelectedStrike(strike);
-      setModalOpen(true);
-    },
-    []
-  );
-
-  const handleModalClose = useCallback(() => {
-    setModalOpen(false);
-    setSelectedContract(null);
-    setSelectedContractType(null);
-    setSelectedStrike(null);
-  }, []);
-
-  const handleSubmitOrder = useCallback(
-    async (order: OptionsOrderRequest) => {
-      await submitOrder(order);
-    },
-    [submitOrder]
-  );
 
   const handleVisibleRowsChange = useCallback(
     (startIndex: number, endIndex: number) => {
@@ -210,7 +167,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
           <div className="flex items-center gap-4">
             <Link
               href="/options"
-              className="p-1.5 -ml-1.5 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700"
+              className="p-1.5 -ml-1.5 rounded-md text-stone-500 hover:bg-cream-100 dark:hover:bg-night-700"
               aria-label="Back to options"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -218,11 +175,14 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold text-cream-800 dark:text-cream-100">
+                <h1 className="text-xl font-semibold text-stone-900 dark:text-cream-100">
                   {upperUnderlying}
                 </h1>
+                {companyName && (
+                  <span className="text-sm text-stone-500 dark:text-night-400">{companyName}</span>
+                )}
                 {quote?.last && (
-                  <span className="text-lg font-mono text-cream-700 dark:text-cream-200">
+                  <span className="text-lg font-mono text-stone-700 dark:text-night-200">
                     <AnimatedNumber value={quote.last} format="currency" decimals={2} />
                   </span>
                 )}
@@ -250,25 +210,21 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            {chainFetching && <Spinner size="sm" />}
-            <button
-              type="button"
-              onClick={() => refetchChain()}
-              disabled={chainFetching}
-              className="p-2 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700 disabled:opacity-50"
-              aria-label="Refresh chain"
+            <Link
+              href={`/charts/${upperUnderlying}`}
+              className="px-3 py-1.5 text-sm font-medium text-stone-600 dark:text-night-200 border border-cream-200 dark:border-night-700 rounded-md hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${chainFetching ? "animate-spin" : ""}`} />
-            </button>
+              ← Chart
+            </Link>
             {!isInWatchlist && (
               <button
                 type="button"
                 onClick={handleAddToWatchlist}
                 className="
                   flex items-center gap-1.5 px-3 py-1.5
-                  text-sm font-medium text-accent-warm
-                  border border-accent-warm rounded-md
-                  hover:bg-accent-warm/10
+                  text-sm font-medium text-primary
+                  border border-primary rounded-md
+                  hover:bg-primary/10
                   transition-colors duration-150
                 "
               >
@@ -302,12 +258,11 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
             chain={chainData.chain}
             atmStrike={chainData.atmStrike}
             underlyingPrice={chainData.underlyingPrice}
-            onContractClick={handleContractClick}
             onVisibleRowsChange={handleVisibleRowsChange}
             className="h-full"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-64 text-cream-500 dark:text-cream-400">
+          <div className="flex flex-col items-center justify-center h-64 text-stone-500 dark:text-night-300">
             <p>No options data available for {upperUnderlying}</p>
             {selectedExpiration && <p className="text-sm mt-1">Expiration: {selectedExpiration}</p>}
           </div>
@@ -316,13 +271,13 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
       {/* Legend */}
       <div className="shrink-0 px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-800">
-        <div className="flex items-center gap-4 text-xs text-cream-500 dark:text-cream-400">
+        <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             Streaming live
           </span>
           <span className="flex items-center gap-1">
-            <span className="text-accent-warm">★</span>
+            <span className="text-primary">★</span>
             At-the-money
           </span>
           <span className="flex items-center gap-1">
@@ -335,19 +290,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
           </span>
         </div>
       </div>
-
-      {/* Position Builder Modal */}
-      <PositionBuilderModal
-        isOpen={modalOpen}
-        onClose={handleModalClose}
-        contract={selectedContract}
-        contractType={selectedContractType}
-        strike={selectedStrike}
-        underlying={upperUnderlying}
-        expiration={selectedExpiration}
-        onSubmit={handleSubmitOrder}
-        data-testid="position-builder-modal"
-      />
     </div>
   );
 }

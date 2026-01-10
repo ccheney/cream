@@ -4,6 +4,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { OptionsChainRow as ChainRow, OptionsContract } from "@/lib/api/types";
 import { OptionsChainRow } from "./OptionsChainRow";
 
@@ -21,27 +22,38 @@ export interface OptionsChainTableProps {
 const ROW_HEIGHT = 44;
 const OVERSCAN = 5;
 
+function HeaderWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger className="text-right cursor-help w-full">
+        <span>{label}</span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 const ChainHeader = memo(function ChainHeader() {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center sticky top-0 z-10 bg-cream-100 dark:bg-night-700 border-b border-cream-200 dark:border-night-600">
-      <div className="grid grid-cols-5 gap-1 px-2 py-2 text-xs font-semibold text-cream-600 dark:text-cream-300">
-        <span className="text-right">Bid</span>
-        <span className="text-right">Ask</span>
-        <span className="text-right">Last</span>
-        <span className="text-right">Vol</span>
-        <span className="text-right">OI</span>
+      <div className="grid grid-cols-5 gap-1 px-2 py-2 text-xs font-semibold text-stone-600 dark:text-night-300">
+        <HeaderWithTooltip label="Bid" tooltip="Best bid price for this contract" />
+        <HeaderWithTooltip label="Ask" tooltip="Best ask price for this contract" />
+        <HeaderWithTooltip label="Last" tooltip="Last traded price" />
+        <HeaderWithTooltip label="Vol" tooltip="Today's trading volume" />
+        <HeaderWithTooltip label="OI" tooltip="Open Interest: total outstanding contracts" />
       </div>
 
-      <div className="px-4 py-2 min-w-[80px] text-center text-xs font-semibold text-cream-600 dark:text-cream-300 border-x border-cream-200 dark:border-night-600">
+      <div className="px-4 py-2 min-w-[80px] text-center text-xs font-semibold text-stone-600 dark:text-night-300 border-x border-cream-200 dark:border-night-600">
         Strike
       </div>
 
-      <div className="grid grid-cols-5 gap-1 px-2 py-2 text-xs font-semibold text-cream-600 dark:text-cream-300">
-        <span className="text-right">Bid</span>
-        <span className="text-right">Ask</span>
-        <span className="text-right">Last</span>
-        <span className="text-right">Vol</span>
-        <span className="text-right">OI</span>
+      <div className="grid grid-cols-5 gap-1 px-2 py-2 text-xs font-semibold text-stone-600 dark:text-night-300">
+        <HeaderWithTooltip label="Bid" tooltip="Best bid price for this contract" />
+        <HeaderWithTooltip label="Ask" tooltip="Best ask price for this contract" />
+        <HeaderWithTooltip label="Last" tooltip="Last traded price" />
+        <HeaderWithTooltip label="Vol" tooltip="Today's trading volume" />
+        <HeaderWithTooltip label="OI" tooltip="Open Interest: total outstanding contracts" />
       </div>
     </div>
   );
@@ -112,7 +124,7 @@ export const OptionsChainTable = memo(function OptionsChainTable({
   if (chain.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center p-8 text-cream-500 dark:text-cream-400 ${className}`}
+        className={`flex items-center justify-center p-8 text-stone-500 dark:text-night-300 ${className}`}
         data-testid={testId}
       >
         No options data available

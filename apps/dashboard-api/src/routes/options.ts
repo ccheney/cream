@@ -147,15 +147,24 @@ const ErrorSchema = z.object({
 // Helper Functions
 // ============================================
 
+/**
+ * Parse a YYYY-MM-DD date string as local time (not UTC).
+ * This avoids timezone issues where "2026-01-16" becomes Jan 15 in US timezones.
+ */
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+}
+
 function calculateDte(expirationDate: string): number {
-  const expDate = new Date(expirationDate);
+  const expDate = parseLocalDate(expirationDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function classifyExpirationType(date: string): "weekly" | "monthly" | "quarterly" {
-  const d = new Date(date);
+  const d = parseLocalDate(date);
   const dayOfWeek = d.getDay();
   const dayOfMonth = d.getDate();
 
@@ -389,6 +398,8 @@ app.openapi(expirationsRoute, async (c) => {
 
   try {
     // Fetch option contracts to get all expiration dates
+    // Polygon API caps at 1000 per request - for high-volume symbols this may only show
+    // nearby expirations. Pagination would be needed for full LEAPS coverage.
     const contractsResponse = await client.getOptionContracts(upperUnderlying, {
       limit: 1000,
     });
@@ -430,6 +441,8 @@ app.openapi(expirationsRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
+    // biome-ignore lint/suspicious/noConsole: debug logging for API errors
+    console.error(`[Options] Failed to fetch expirations for ${upperUnderlying}:`, error);
     throw new HTTPException(503, {
       message: `Failed to fetch expirations for ${upperUnderlying}: ${message}`,
     });

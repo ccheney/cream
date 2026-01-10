@@ -40,7 +40,7 @@ export function useOptionsChain(underlying: string, options: UseOptionsChainOpti
       }
       params.set("strikeRange", strikeRange.toString());
 
-      const url = `/options/chain/${underlying.toUpperCase()}?${params.toString()}`;
+      const url = `/api/options/chain/${underlying.toUpperCase()}?${params.toString()}`;
       const { data } = await get<OptionsChainResponse>(url);
       return data;
     },
@@ -64,7 +64,7 @@ export function useOptionsExpirations(underlying: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.options.expirations(underlying),
     queryFn: async () => {
-      const url = `/options/expirations/${underlying.toUpperCase()}`;
+      const url = `/api/options/expirations/${underlying.toUpperCase()}`;
       const { data } = await get<ExpirationsResponse>(url);
       return data;
     },
@@ -87,7 +87,7 @@ export function useOptionQuote(contract: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.options.quote(contract),
     queryFn: async () => {
-      const url = `/options/quote/${contract.toUpperCase()}`;
+      const url = `/api/options/quote/${contract.toUpperCase()}`;
       const { data } = await get<OptionsQuoteDetail>(url);
       return data;
     },

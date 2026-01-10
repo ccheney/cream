@@ -128,7 +128,7 @@ const ContractCell = memo(function ContractCell({
 
       <span className="text-right text-red-600 dark:text-red-400">{formatPrice(contract.ask)}</span>
 
-      <span className="text-right text-cream-700 dark:text-cream-200">
+      <span className="text-right text-stone-700 dark:text-night-200">
         {contract.last !== null ? (
           <AnimatedNumber value={contract.last} format="decimal" decimals={2} />
         ) : (
@@ -136,11 +136,11 @@ const ContractCell = memo(function ContractCell({
         )}
       </span>
 
-      <span className="text-right text-cream-500 dark:text-cream-400">
+      <span className="text-right text-stone-500 dark:text-night-300">
         {formatVolume(contract.volume)}
       </span>
 
-      <span className="text-right text-cream-500 dark:text-cream-400">
+      <span className="text-right text-stone-500 dark:text-night-300">
         {formatOI(contract.openInterest)}
       </span>
 
@@ -170,7 +170,7 @@ export const OptionsChainRow = memo(function OptionsChainRow({
       className={`
         grid grid-cols-[1fr_auto_1fr] items-center
         border-b border-cream-100 dark:border-night-700
-        ${isAtm ? "bg-accent-warm/10 dark:bg-accent-warm/20" : ""}
+        ${isAtm ? "bg-primary/10 dark:bg-primary/20" : ""}
       `}
       data-testid={testId}
     >
@@ -190,8 +190,8 @@ export const OptionsChainRow = memo(function OptionsChainRow({
           border-x border-cream-200 dark:border-night-600
           ${
             isAtm
-              ? "bg-accent-warm text-white"
-              : "bg-cream-50 dark:bg-night-800 text-cream-700 dark:text-cream-200"
+              ? "bg-primary text-white"
+              : "bg-cream-50 dark:bg-night-800 text-stone-700 dark:text-night-200"
           }
         `}
       >

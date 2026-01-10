@@ -39,13 +39,11 @@ export default function OptionsPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold text-cream-800 dark:text-cream-100 mb-6">
-        Options Chain
-      </h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold text-cream-800 dark:text-cream-100">Options Chain</h1>
 
       {/* Search */}
-      <form onSubmit={handleSearchSubmit} className="mb-8">
+      <form onSubmit={handleSearchSubmit}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cream-400" />
           <input
@@ -82,7 +80,7 @@ export default function OptionsPage() {
 
       {/* Watchlist Quick Select */}
       {watchlistSymbols.length > 0 && (
-        <div className="mb-8">
+        <div>
           <h2 className="text-sm font-medium text-cream-600 dark:text-cream-400 mb-3">
             From Watchlist
           </h2>
