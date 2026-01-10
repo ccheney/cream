@@ -1,8 +1,11 @@
 /**
  * Agent Configs Repository
  *
- * Data access for agent_configs table. Manages per-agent model and prompt
- * configuration with environment-specific overrides.
+ * Data access for agent_configs table. Manages per-agent prompt
+ * configuration and enabled/disabled status.
+ *
+ * NOTE: Model selection is now global via trading_config.global_model.
+ * The model column remains for backward compatibility but is not used.
  *
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
@@ -62,43 +65,24 @@ export interface AgentConfig {
 
 /**
  * Create agent config input
+ * NOTE: model is deprecated - use global model in trading_config instead
  */
 export interface CreateAgentConfigInput {
   id: string;
   environment: AgentEnvironment;
   agentType: AgentType;
-  model?: string;
   systemPromptOverride?: string | null;
   enabled?: boolean;
 }
 
 /**
  * Update agent config input (partial)
+ * NOTE: model is deprecated - use global model in trading_config instead
  */
 export interface UpdateAgentConfigInput {
-  model?: string;
   systemPromptOverride?: string | null;
   enabled?: boolean;
 }
-
-// ============================================
-// Default Values
-// ============================================
-
-/**
- * Default models for different agent types
- * Complex reasoning agents get the larger model
- */
-const DEFAULT_MODELS: Record<AgentType, string> = {
-  technical_analyst: "gemini-2.5-flash-preview-05-20",
-  news_analyst: "gemini-2.5-flash-preview-05-20",
-  fundamentals_analyst: "gemini-2.5-pro-preview-05-06",
-  bullish_researcher: "gemini-2.5-pro-preview-05-06",
-  bearish_researcher: "gemini-2.5-pro-preview-05-06",
-  trader: "gemini-2.5-pro-preview-05-06",
-  risk_manager: "gemini-2.5-pro-preview-05-06",
-  critic: "gemini-2.5-pro-preview-05-06",
-};
 
 // ============================================
 // Row Mapper
@@ -131,10 +115,11 @@ export class AgentConfigsRepository {
 
   /**
    * Create a new agent config
+   * NOTE: model column is populated with placeholder for backward compat.
+   * Actual model selection comes from trading_config.global_model.
    */
   async create(input: CreateAgentConfigInput): Promise<AgentConfig> {
     const now = new Date().toISOString();
-    const defaultModel = DEFAULT_MODELS[input.agentType];
 
     try {
       await this.client.run(
@@ -146,7 +131,7 @@ export class AgentConfigsRepository {
           input.id,
           input.environment,
           input.agentType,
-          input.model ?? defaultModel,
+          "global", // Placeholder - actual model from trading_config.global_model
           input.systemPromptOverride ?? null,
           fromBoolean(input.enabled !== false),
           now,
@@ -233,6 +218,7 @@ export class AgentConfigsRepository {
 
   /**
    * Update agent config
+   * NOTE: model is no longer updatable - use trading_config.global_model instead
    */
   async update(id: string, input: UpdateAgentConfigInput): Promise<AgentConfig> {
     await this.findByIdOrThrow(id);
@@ -241,10 +227,6 @@ export class AgentConfigsRepository {
     const updateFields: string[] = [];
     const updateValues: unknown[] = [];
 
-    if (input.model !== undefined) {
-      updateFields.push("model = ?");
-      updateValues.push(input.model);
-    }
     if (input.systemPromptOverride !== undefined) {
       updateFields.push("system_prompt_override = ?");
       updateValues.push(input.systemPromptOverride);
@@ -299,6 +281,7 @@ export class AgentConfigsRepository {
 
   /**
    * Reset agent to default values
+   * NOTE: Model is now global via trading_config.global_model
    */
   async resetToDefaults(environment: AgentEnvironment, agentType: AgentType): Promise<AgentConfig> {
     const existing = await this.get(environment, agentType);
@@ -312,9 +295,8 @@ export class AgentConfigsRepository {
       });
     }
 
-    // Update to defaults
+    // Update to defaults (model is now global, so just reset prompt and enabled)
     return this.update(existing.id, {
-      model: DEFAULT_MODELS[agentType],
       systemPromptOverride: null,
       enabled: true,
     });
@@ -342,6 +324,7 @@ export class AgentConfigsRepository {
 
   /**
    * Clone configs from one environment to another
+   * NOTE: Model is now global via trading_config.global_model
    */
   async cloneToEnvironment(
     sourceEnvironment: AgentEnvironment,
@@ -352,7 +335,6 @@ export class AgentConfigsRepository {
 
     for (const source of sourceConfigs) {
       const newConfig = await this.upsert(targetEnvironment, source.agentType, {
-        model: source.model,
         systemPromptOverride: source.systemPromptOverride,
         enabled: source.enabled,
       });
@@ -360,23 +342,5 @@ export class AgentConfigsRepository {
     }
 
     return results;
-  }
-
-  /**
-   * Get model usage statistics across environments
-   */
-  async getModelStats(): Promise<{ model: string; count: number; environments: string[] }[]> {
-    const rows = await this.client.execute<Row>(
-      `SELECT model, COUNT(*) as count, GROUP_CONCAT(DISTINCT environment) as environments
-       FROM ${this.table}
-       GROUP BY model
-       ORDER BY count DESC`
-    );
-
-    return rows.map((row) => ({
-      model: row.model as string,
-      count: row.count as number,
-      environments: (row.environments as string).split(",") as AgentEnvironment[],
-    }));
   }
 }

@@ -32,10 +32,13 @@ const app = new OpenAPIHono();
 
 const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 
+const GlobalModelSchema = z.enum(["gemini-3-flash-preview", "gemini-3-pro-preview"]);
+
 const TradingConfigSchema = z.object({
   id: z.string(),
   environment: EnvironmentSchema,
   version: z.number(),
+  globalModel: GlobalModelSchema,
   maxConsensusIterations: z.number(),
   agentTimeoutMs: z.number(),
   totalConsensusTimeoutMs: z.number(),
@@ -607,6 +610,7 @@ app.openapi(compareRoute, async (c) => {
   // Find differences
   const differences: { field: string; value1: unknown; value2: unknown }[] = [];
   const fieldsToCompare = [
+    "globalModel",
     "maxConsensusIterations",
     "agentTimeoutMs",
     "totalConsensusTimeoutMs",

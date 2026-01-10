@@ -90,9 +90,12 @@ export async function loadSDKProvider(): Promise<SDKProvider | null> {
 
 /**
  * Configuration for Claude Code execution
+ *
+ * NOTE: This is the ONLY component that uses Claude models.
+ * All other LLM usage goes through the global model (Gemini).
  */
 export interface ClaudeCodeConfig {
-  /** Model to use (default: claude-sonnet-4-20250514) */
+  /** Model to use (default: claude-sonnet-4-5-20251101) */
   model?: string;
   /** Maximum turns for implementation (default: 20) */
   maxTurns?: number;
@@ -105,7 +108,7 @@ export interface ClaudeCodeConfig {
 }
 
 const DEFAULT_CONFIG: Required<Omit<ClaudeCodeConfig, "sdkProvider">> = {
-  model: "claude-sonnet-4-20250514",
+  model: "claude-sonnet-4-5-20251101",
   maxTurns: 20,
   timeout: 5 * 60 * 1000, // 5 minutes
   workingDirectory: process.cwd(),

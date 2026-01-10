@@ -1,12 +1,18 @@
 /**
- * Claude Extraction Client
+ * Extraction Client
  *
- * Uses Anthropic Claude with tool use to extract structured
- * data from unstructured text content.
+ * Uses LLM with tool use to extract structured data from unstructured text content.
+ *
+ * TODO: Migrate from Anthropic SDK to Gemini SDK to use global model.
+ * Currently uses Claude for extraction due to tool use API compatibility.
+ * When migrating, update to use @google/generative-ai with function calling.
+ *
+ * @see trading_config.global_model for target model selection
  */
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tool, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages.js";
+import { DEFAULT_GLOBAL_MODEL } from "@cream/domain";
 import { type ContentSourceType, type ExtractionResult, ExtractionResultSchema } from "../types.js";
 
 /**
@@ -15,7 +21,10 @@ import { type ContentSourceType, type ExtractionResult, ExtractionResultSchema }
 export interface ExtractionClientConfig {
   /** Anthropic API key */
   apiKey?: string;
-  /** Model to use (default: claude-sonnet-4-5-20250929) */
+  /**
+   * Model to use
+   * TODO: Currently ignored - uses Claude. Migrate to Gemini to use global model.
+   */
   model?: string;
   /** Maximum tokens for response (default: 2048) */
   maxTokens?: number;
@@ -25,9 +34,12 @@ export interface ExtractionClientConfig {
   timeout?: number;
 }
 
+/**
+ * TODO: Migrate to Gemini. Currently uses Claude for tool use compatibility.
+ */
 const DEFAULT_CONFIG: Required<ExtractionClientConfig> = {
   apiKey: "",
-  model: "claude-sonnet-4-5-20250929",
+  model: DEFAULT_GLOBAL_MODEL, // Target model (not yet used - still on Claude)
   maxTokens: 2048,
   temperature: 0.1,
   timeout: 60000,

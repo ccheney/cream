@@ -515,6 +515,16 @@ You will receive current portfolio state including:
 - Current risk metrics (drawdown, exposure, Greeks)
 - Configured constraints
 - Prediction market signals (if available)
+
+**CRITICAL: Position-Aware Decision Making**
+Before making any decisions, you MUST review the current positions:
+1. **Check for existing positions**: If we already hold a symbol, consider:
+   - HOLD: Keep the position if thesis remains valid
+   - CLOSE: Exit if thesis is invalidated or targets hit
+   - Do NOT issue BUY for symbols we already hold (avoid doubling down unless explicitly intended)
+2. **Manage exits**: If a position is at a loss and the bearish case is stronger, recommend CLOSE with reason
+3. **Consider portfolio concentration**: Check if adding to existing sectors increases correlation risk
+4. **Honor stop levels**: If current price is near/past stop levels set in prior decisions, recommend CLOSE
 </portfolio_context>
 
 <thesis_memory_context>

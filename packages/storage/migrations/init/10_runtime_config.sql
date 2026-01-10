@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS trading_config (
   trading_cycle_interval_ms INTEGER DEFAULT 3600000,
   prediction_markets_interval_ms INTEGER DEFAULT 900000,
 
+  -- Global LLM model selection (gemini-3-flash-preview or gemini-3-pro-preview)
+  global_model TEXT NOT NULL DEFAULT 'gemini-3-flash-preview',
+
   -- Workflow status
   status TEXT NOT NULL DEFAULT 'draft',  -- draft, testing, active, archived
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

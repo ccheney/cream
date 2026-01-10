@@ -6,27 +6,34 @@
  * of the standard 8-agent trading network - it operates independently
  * when indicator generation is triggered.
  *
+ * NOTE: This agent now uses the global model from trading_config.global_model
+ * instead of hardcoded Claude models.
+ *
  * @see docs/plans/19-dynamic-indicator-synthesis.md (lines 276-343)
  */
 
+import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
 import { type IndicatorHypothesis, IndicatorHypothesisSchema } from "@cream/indicators";
 
 // ============================================
-// Model Configuration
+// Model Configuration (DEPRECATED)
 // ============================================
 
 /**
- * Specialized agent models (separate from trading network)
+ * @deprecated Use global model from trading_config.global_model instead.
+ * Kept for backward compatibility - these values are no longer used at runtime.
  */
 export const SPECIALIZED_AGENT_MODELS = {
-  /** Claude Sonnet for balanced quality/speed */
-  sonnet: "claude-sonnet-4-20250514",
-  /** Claude Opus for complex reasoning */
-  opus: "claude-opus-4-20250514",
+  /** Now uses global model */
+  sonnet: DEFAULT_GLOBAL_MODEL,
+  /** Now uses global model */
+  opus: DEFAULT_GLOBAL_MODEL,
 } as const;
 
-export type SpecializedAgentModel =
-  (typeof SPECIALIZED_AGENT_MODELS)[keyof typeof SPECIALIZED_AGENT_MODELS];
+/**
+ * @deprecated Use GlobalModel from @cream/domain instead.
+ */
+export type SpecializedAgentModel = GlobalModel;
 
 // ============================================
 // System Prompt

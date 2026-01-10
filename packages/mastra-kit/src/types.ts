@@ -4,6 +4,9 @@
  * Defines agent types, output schemas, and consensus types
  * for the 8-agent trading network.
  *
+ * NOTE: Model selection is now global via trading_config.global_model.
+ * All agents use the same model (gemini-3-flash-preview or gemini-3-pro-preview).
+ *
  * @see docs/plans/05-agents.md
  */
 
@@ -24,15 +27,6 @@ export const AGENT_TYPES = [
 
 export type AgentType = (typeof AGENT_TYPES)[number];
 
-export const AGENT_MODELS = {
-  /** Complex reasoning tasks */
-  pro: "gemini-3-pro-preview",
-  /** Fast/simple tasks */
-  flash: "gemini-3-flash-preview",
-} as const;
-
-export type AgentModel = (typeof AGENT_MODELS)[keyof typeof AGENT_MODELS];
-
 // ============================================
 // Agent Configuration
 // ============================================
@@ -46,9 +40,6 @@ export interface AgentConfig {
 
   /** Short description of role */
   role: string;
-
-  /** Model to use */
-  model: AgentModel;
 
   /** Personality traits for consistent behavior */
   personality: string[];

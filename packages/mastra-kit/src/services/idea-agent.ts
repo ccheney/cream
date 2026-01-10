@@ -6,11 +6,19 @@
  *
  * Pipeline: Trigger Detection → **Idea Agent** → Implementation Agent → Validation Agent
  *
+ * NOTE: This agent now uses the global model from trading_config.global_model.
+ *
  * @see docs/plans/20-research-to-production-pipeline.md - Phase 1: Idea Generation
  * @see https://arxiv.org/html/2502.16789v2 - AlphaAgent paper
  */
 
-import type { Factor, Hypothesis, NewHypothesis, ResearchTrigger } from "@cream/domain";
+import {
+  DEFAULT_GLOBAL_MODEL,
+  type Factor,
+  type Hypothesis,
+  type NewHypothesis,
+  type ResearchTrigger,
+} from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
 import {
   buildFactorZooSummary,
@@ -190,10 +198,11 @@ export class IdeaAgent {
     }
 
     const userPrompt = buildIdeaAgentUserPrompt(context);
+    // Use global model (caller should set via config, defaults to flash)
     const rawOutput = await this.llmProvider.generate({
       systemPrompt: IDEA_AGENT_SYSTEM_PROMPT,
       userPrompt,
-      model: "claude-sonnet-4-5-20251101",
+      model: DEFAULT_GLOBAL_MODEL,
     });
 
     const jsonStr = extractJsonFromOutput(rawOutput);

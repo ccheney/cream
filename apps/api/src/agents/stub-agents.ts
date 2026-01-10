@@ -18,12 +18,12 @@ import { AGENT_CONFIGS, AGENT_PROMPTS, type AgentType } from "@cream/mastra-kit"
 /**
  * Stub agent configuration.
  * In Phase 8, these will be replaced with real Mastra Agents.
+ * Note: model is now global (configured in trading settings), not per-agent.
  */
 export interface StubAgent {
   id: AgentType;
   name: string;
   role: string;
-  model: string;
   systemPrompt: string;
 }
 
@@ -38,7 +38,6 @@ function createStubAgent(agentType: AgentType): StubAgent {
     id: agentType,
     name: config.name,
     role: config.role,
-    model: config.model,
     systemPrompt,
   };
 }

@@ -30,6 +30,8 @@ import { createTursoClient } from "./turso.js";
 
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 const DEFAULT_TRADING_CONFIG = {
+  globalModel: "gemini-3-flash-preview" as const, // Global model for all agents
+
   maxConsensusIterations: 3,
   agentTimeoutMs: 1_800_000, // 30 minutes - LLMs can be slow
   totalConsensusTimeoutMs: 7_200_000, // 2 hours total for full consensus
@@ -48,45 +50,24 @@ const DEFAULT_TRADING_CONFIG = {
   predictionMarketsIntervalMs: 15 * 60 * 1000,
 };
 
+/**
+ * Default agent configs - model is now global (in trading config)
+ * Only enabled/disabled and prompt overrides are per-agent
+ */
 const DEFAULT_AGENT_CONFIGS: Record<
   AgentType,
   {
-    model: string;
     enabled: boolean;
   }
 > = {
-  technical_analyst: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  news_analyst: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  fundamentals_analyst: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  bullish_researcher: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  bearish_researcher: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  trader: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  risk_manager: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
-  critic: {
-    model: "gemini-3-pro-preview",
-    enabled: true,
-  },
+  technical_analyst: { enabled: true },
+  news_analyst: { enabled: true },
+  fundamentals_analyst: { enabled: true },
+  bullish_researcher: { enabled: true },
+  bearish_researcher: { enabled: true },
+  trader: { enabled: true },
+  risk_manager: { enabled: true },
+  critic: { enabled: true },
 };
 
 const DEFAULT_UNIVERSE_CONFIG = {
@@ -183,7 +164,6 @@ async function seedEnvironment(
     for (const agentType of AGENT_TYPES) {
       const defaults = DEFAULT_AGENT_CONFIGS[agentType];
       await agentRepo.upsert(environment, agentType, {
-        model: defaults.model,
         enabled: defaults.enabled,
         systemPromptOverride: null,
       });

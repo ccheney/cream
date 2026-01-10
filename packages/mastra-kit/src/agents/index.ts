@@ -4,14 +4,16 @@
  * Each agent has:
  * - Unique type identifier
  * - Display name and role description
- * - Model assignment (pro/flash)
  * - Personality traits for consistent behavior
  * - Tool access permissions
+ *
+ * NOTE: Model selection is now global via trading_config.global_model.
+ * All agents use the same model at runtime.
  *
  * @see docs/plans/05-agents.md
  */
 
-import { AGENT_MODELS, AGENT_TYPES, type AgentConfig, type AgentType } from "../types.js";
+import { AGENT_TYPES, type AgentConfig, type AgentType } from "../types.js";
 
 // Re-export specialized agents (not part of trading network)
 export {
@@ -35,7 +37,6 @@ export const TECHNICAL_ANALYST_CONFIG: AgentConfig = {
   type: "technical_analyst",
   name: "Technical Analyst",
   role: "Analyze price action, technical indicators, and market structure to identify trading setups",
-  model: AGENT_MODELS.pro,
   personality: [
     "Methodical and data-driven",
     "Pattern recognition expert",
@@ -49,7 +50,6 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
   type: "news_analyst",
   name: "News & Sentiment Analyst",
   role: "Assess the market impact of news events and social sentiment signals",
-  model: AGENT_MODELS.pro,
   personality: [
     "Discerning between noise and signal",
     "Calibrated on confidence levels",
@@ -63,7 +63,6 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
   type: "fundamentals_analyst",
   name: "Fundamentals & Macro Analyst",
   role: "Assess fundamental valuation and macroeconomic context for trading decisions",
-  model: AGENT_MODELS.pro,
   personality: [
     "Rigorous about data quality",
     "Separates facts from interpretation",
@@ -83,7 +82,6 @@ export const BULLISH_RESEARCHER_CONFIG: AgentConfig = {
   type: "bullish_researcher",
   name: "Bullish Research Analyst",
   role: "Construct the strongest possible case for LONG exposure",
-  model: AGENT_MODELS.pro,
   personality: [
     "Advocate for the long side",
     "Finds reasons to be optimistic",
@@ -97,7 +95,6 @@ export const BEARISH_RESEARCHER_CONFIG: AgentConfig = {
   type: "bearish_researcher",
   name: "Bearish Research Analyst",
   role: "Construct the strongest possible case for SHORT exposure or avoiding",
-  model: AGENT_MODELS.pro,
   personality: [
     "Advocate for caution",
     "Finds reasons to be skeptical",
@@ -111,7 +108,6 @@ export const TRADER_CONFIG: AgentConfig = {
   type: "trader",
   name: "Head Trader",
   role: "Synthesize all analyst outputs into concrete portfolio adjustment plans",
-  model: AGENT_MODELS.pro,
   personality: [
     "Decisive under uncertainty",
     "Balances conviction with risk management",
@@ -133,7 +129,6 @@ export const RISK_MANAGER_CONFIG: AgentConfig = {
   type: "risk_manager",
   name: "Chief Risk Officer",
   role: "Validate trading plans against risk constraints before execution",
-  model: AGENT_MODELS.flash, // Fast model for constraint checking
   personality: [
     "Conservative and protective",
     "Focused on downside prevention",
@@ -147,7 +142,6 @@ export const CRITIC_CONFIG: AgentConfig = {
   type: "critic",
   name: "Internal Auditor",
   role: "Validate logical consistency and evidentiary basis of trading plans",
-  model: AGENT_MODELS.flash, // Fast model for consistency checking
   personality: [
     "Skeptical and thorough",
     "Evidence-based validator",

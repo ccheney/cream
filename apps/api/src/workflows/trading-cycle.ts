@@ -22,6 +22,8 @@ import { createMarketDataAdapter } from "@cream/marketdata";
 import {
   ConsensusGate,
   type DecisionPlan,
+  getPortfolioState,
+  type PortfolioStateResponse,
   runConsensusLoop,
   withAgentTimeout,
 } from "@cream/mastra-kit";
@@ -1244,14 +1246,41 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   log.info({ cycleId, phase: "trader" }, "Starting trader phase");
 
+  // Fetch current portfolio state for position-aware decisions
+  // This allows the trader to consider existing positions when making decisions
+  let portfolioState: PortfolioStateResponse | undefined;
+  if (!isBacktest(context)) {
+    try {
+      portfolioState = await getPortfolioState(context);
+      log.info(
+        {
+          cycleId,
+          phase: "trader",
+          positionCount: portfolioState.positions.length,
+          buyingPower: portfolioState.buyingPower,
+        },
+        "Fetched portfolio state for trader"
+      );
+    } catch (error) {
+      // Portfolio state is non-critical - continue without it
+      log.warn(
+        { cycleId, phase: "trader", error: error instanceof Error ? error.message : String(error) },
+        "Failed to fetch portfolio state, continuing without position context"
+      );
+    }
+  }
+
   // Emit running event for trader agent
   const traderStartTime = Date.now();
   emitAgentEvent("trader", "running");
 
+  // Cast to Record for agent functions (serialized to JSON in prompts)
+  const portfolioStateRecord = portfolioState as Record<string, unknown> | undefined;
+
   const traderResult = await withAgentTimeout(
     useStreaming
-      ? runTraderStreaming(agentContext, debateOutputs, streamChunkHandler)
-      : runTrader(agentContext, debateOutputs),
+      ? runTraderStreaming(agentContext, debateOutputs, streamChunkHandler, portfolioStateRecord)
+      : runTrader(agentContext, debateOutputs, portfolioStateRecord),
     agentTimeoutMs,
     "trader"
   );
@@ -1343,7 +1372,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
             analystOutputs,
             debateOutputs,
             streamChunkHandler,
-            undefined, // portfolioState
+            portfolioStateRecord, // Pass portfolio state for risk validation
             undefined, // constraints
             undefined, // factorZooContext
             agentConfigs
@@ -1352,7 +1381,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
             plan,
             analystOutputs,
             debateOutputs,
-            undefined, // portfolioState
+            portfolioStateRecord, // Pass portfolio state for risk validation
             undefined, // constraints
             undefined, // factorZooContext
             agentConfigs

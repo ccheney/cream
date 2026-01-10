@@ -4,15 +4,20 @@
  * Creates actual Mastra Agent instances configured with Google Gemini models.
  * These agents use the prompts and configs from @cream/mastra-kit.
  *
- * Model routing:
- * - Pro model (gemini-3-pro-preview): Complex reasoning (analysts, researchers, trader)
- * - Flash model (gemini-3-flash-preview): Fast validation (risk manager, critic)
+ * All agents use a single global model selected via trading_config.global_model:
+ * - gemini-3-flash-preview (default, faster)
+ * - gemini-3-pro-preview (more capable reasoning)
  *
- * Gemini 3 models support tools + structured output together (unlike 2.x models).
+ * The global model is passed via RuntimeContext.set("model", globalModel).
  *
  * @see docs/plans/05-agents.md
  */
 
+import {
+  DEFAULT_GLOBAL_MODEL,
+  type GlobalModel,
+  getModelId as getGlobalModelId,
+} from "@cream/domain";
 import {
   AGENT_CONFIGS,
   AGENT_PROMPTS,
@@ -59,26 +64,20 @@ export type {
 // ============================================
 
 /**
- * Model mapping from internal names to Mastra provider/model IDs.
- * Maps our configuration model names to the actual provider format.
+ * Get the Mastra-compatible model ID for the global model setting.
+ * Uses the getModelId from @cream/domain which maps:
+ * - gemini-3-flash-preview -> google/gemini-3-flash-preview
+ * - gemini-3-pro-preview -> google/gemini-3-pro-preview
+ *
+ * Falls back to default (flash) if invalid model is passed.
  */
-const MODEL_MAP: Record<string, string> = {
-  "gemini-3-pro-preview": "google/gemini-3-flash-preview",
-  "gemini-3-flash-preview": "google/gemini-3-flash-preview",
-  "claude-opus-4": "anthropic/claude-opus-4-5",
-};
-
-/** Default model when no mapping found */
-const DEFAULT_MODEL = "google/gemini-3-flash-preview";
-
-/**
- * Map internal model names to Mastra model identifiers.
- */
-function getModelId(internalModel: string): string {
-  if (internalModel.includes("/")) {
-    return internalModel;
+function getModelIdForRuntime(model: string | undefined): string {
+  // If it's already in provider format, return as-is
+  if (model?.includes("/")) {
+    return model;
   }
-  return MODEL_MAP[internalModel] ?? DEFAULT_MODEL;
+  // Use the domain function to map global model names
+  return getGlobalModelId((model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL);
 }
 
 // ============================================
@@ -311,8 +310,11 @@ const CriticOutputSchema = z.object({
 
 /**
  * Create a Mastra Agent from our config.
- * Uses dynamic model selection to allow runtime model override via RequestContext.
+ * Uses dynamic model selection to allow runtime model override via RuntimeContext.
  * Resolves tool instances from TOOL_INSTANCES registry based on config.tools.
+ *
+ * NOTE: All agents now use the global model from trading_config.global_model.
+ * The global model is passed via RuntimeContext.set("model", globalModel).
  */
 function createAgent(agentType: AgentType): Agent {
   const config = AGENT_CONFIGS[agentType];
@@ -333,14 +335,11 @@ function createAgent(agentType: AgentType): Agent {
     }
   }
 
-  // Use dynamic model function to allow runtime model override via RuntimeContext
-  // If 'model' is set in RuntimeContext, use it; otherwise use the default from config
+  // Use dynamic model function to get the global model from RuntimeContext
+  // The global model is set via runtimeContext.set("model", globalModel) by the caller
   const dynamicModel = ({ runtimeContext }: { runtimeContext: RuntimeContext }) => {
     const runtimeModel = runtimeContext?.get("model") as string | undefined;
-    if (runtimeModel) {
-      return getModelId(runtimeModel);
-    }
-    return getModelId(config.model);
+    return getModelIdForRuntime(runtimeModel);
   };
 
   return new Agent({

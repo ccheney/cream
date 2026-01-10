@@ -56,7 +56,6 @@ describe("AgentConfigsRepository", () => {
         id: "ac-001",
         environment: "PAPER",
         agentType: "technical_analyst",
-        model: "claude-sonnet-4",
         systemPromptOverride: "Custom prompt for testing",
         enabled: true,
       };
@@ -66,7 +65,6 @@ describe("AgentConfigsRepository", () => {
       expect(result.id).toBe("ac-001");
       expect(result.environment).toBe("PAPER");
       expect(result.agentType).toBe("technical_analyst");
-      expect(result.model).toBe("claude-sonnet-4");
       expect(result.systemPromptOverride).toBe("Custom prompt for testing");
       expect(result.enabled).toBe(true);
     });
@@ -78,29 +76,8 @@ describe("AgentConfigsRepository", () => {
         agentType: "trader",
       });
 
-      expect(result.model).toBe("gemini-2.5-pro-preview-05-06");
       expect(result.systemPromptOverride).toBeNull();
       expect(result.enabled).toBe(true);
-    });
-
-    test("uses flash model for technical analyst", async () => {
-      const result = await repo.create({
-        id: "ac-flash",
-        environment: "PAPER",
-        agentType: "technical_analyst",
-      });
-
-      expect(result.model).toBe("gemini-2.5-flash-preview-05-20");
-    });
-
-    test("uses pro model for trader", async () => {
-      const result = await repo.create({
-        id: "ac-pro",
-        environment: "PAPER",
-        agentType: "trader",
-      });
-
-      expect(result.model).toBe("gemini-2.5-pro-preview-05-06");
     });
 
     test("throws on duplicate ID", async () => {
@@ -175,20 +152,20 @@ describe("AgentConfigsRepository", () => {
         id: "ac-paper",
         environment: "PAPER",
         agentType: "trader",
-        model: "model-paper",
+        systemPromptOverride: "paper prompt",
       });
       await repo.create({
         id: "ac-live",
         environment: "LIVE",
         agentType: "trader",
-        model: "model-live",
+        systemPromptOverride: "live prompt",
       });
 
       const paperConfig = await repo.get("PAPER", "trader");
       const liveConfig = await repo.get("LIVE", "trader");
 
-      expect(paperConfig!.model).toBe("model-paper");
-      expect(liveConfig!.model).toBe("model-live");
+      expect(paperConfig!.systemPromptOverride).toBe("paper prompt");
+      expect(liveConfig!.systemPromptOverride).toBe("live prompt");
     });
   });
 
@@ -247,14 +224,6 @@ describe("AgentConfigsRepository", () => {
   });
 
   describe("update", () => {
-    test("updates model", async () => {
-      await repo.create({ id: "ac-upd", environment: "PAPER", agentType: "trader" });
-
-      const updated = await repo.update("ac-upd", { model: "claude-opus-4" });
-
-      expect(updated.model).toBe("claude-opus-4");
-    });
-
     test("updates systemPromptOverride", async () => {
       await repo.create({ id: "ac-prompt", environment: "PAPER", agentType: "trader" });
 
@@ -288,28 +257,29 @@ describe("AgentConfigsRepository", () => {
       await repo.create({ id: "ac-multi", environment: "PAPER", agentType: "trader" });
 
       const updated = await repo.update("ac-multi", {
-        model: "claude-opus-4",
         systemPromptOverride: "Custom prompt",
+        enabled: false,
       });
 
-      expect(updated.model).toBe("claude-opus-4");
       expect(updated.systemPromptOverride).toBe("Custom prompt");
+      expect(updated.enabled).toBe(false);
     });
 
     test("throws for non-existent ID", async () => {
-      await expect(repo.update("nonexistent", { model: "x" })).rejects.toThrow(RepositoryError);
+      await expect(repo.update("nonexistent", { enabled: false })).rejects.toThrow(RepositoryError);
     });
   });
 
   describe("upsert", () => {
     test("creates new config when none exists", async () => {
       const config = await repo.upsert("PAPER", "trader", {
-        model: "claude-sonnet-4",
+        systemPromptOverride: "Custom prompt",
+        enabled: true,
       });
 
       expect(config.environment).toBe("PAPER");
       expect(config.agentType).toBe("trader");
-      expect(config.model).toBe("claude-sonnet-4");
+      expect(config.systemPromptOverride).toBe("Custom prompt");
     });
 
     test("updates existing config", async () => {
@@ -317,15 +287,15 @@ describe("AgentConfigsRepository", () => {
         id: "ac-existing",
         environment: "PAPER",
         agentType: "trader",
-        model: "old-model",
+        systemPromptOverride: "Old prompt",
       });
 
       const config = await repo.upsert("PAPER", "trader", {
-        model: "new-model",
+        systemPromptOverride: "New prompt",
       });
 
       expect(config.id).toBe("ac-existing");
-      expect(config.model).toBe("new-model");
+      expect(config.systemPromptOverride).toBe("New prompt");
     });
   });
 
@@ -358,7 +328,6 @@ describe("AgentConfigsRepository", () => {
         id: "ac-reset",
         environment: "PAPER",
         agentType: "trader",
-        model: "custom-model",
         systemPromptOverride: "Custom prompt",
         enabled: false,
       });
@@ -366,7 +335,6 @@ describe("AgentConfigsRepository", () => {
       const reset = await repo.resetToDefaults("PAPER", "trader");
 
       expect(reset.id).toBe("ac-reset");
-      expect(reset.model).toBe("gemini-2.5-pro-preview-05-06");
       expect(reset.systemPromptOverride).toBeNull();
       expect(reset.enabled).toBe(true);
     });
@@ -376,7 +344,6 @@ describe("AgentConfigsRepository", () => {
 
       expect(config.environment).toBe("PAPER");
       expect(config.agentType).toBe("news_analyst");
-      expect(config.model).toBe("gemini-2.5-flash-preview-05-20");
       expect(config.enabled).toBe(true);
     });
   });
@@ -427,13 +394,13 @@ describe("AgentConfigsRepository", () => {
         id: "ac-src-1",
         environment: "PAPER",
         agentType: "trader",
-        model: "claude-sonnet-4",
+        systemPromptOverride: "trader prompt",
       });
       await repo.create({
         id: "ac-src-2",
         environment: "PAPER",
         agentType: "critic",
-        model: "claude-opus-4",
+        systemPromptOverride: "critic prompt",
       });
 
       const cloned = await repo.cloneToEnvironment("PAPER", "LIVE");
@@ -442,11 +409,11 @@ describe("AgentConfigsRepository", () => {
 
       const liveTrader = await repo.get("LIVE", "trader");
       expect(liveTrader).not.toBeNull();
-      expect(liveTrader!.model).toBe("claude-sonnet-4");
+      expect(liveTrader!.systemPromptOverride).toBe("trader prompt");
 
       const liveCritic = await repo.get("LIVE", "critic");
       expect(liveCritic).not.toBeNull();
-      expect(liveCritic!.model).toBe("claude-opus-4");
+      expect(liveCritic!.systemPromptOverride).toBe("critic prompt");
     });
 
     test("updates existing configs in target environment", async () => {
@@ -454,44 +421,20 @@ describe("AgentConfigsRepository", () => {
         id: "ac-src",
         environment: "PAPER",
         agentType: "trader",
-        model: "model-paper",
+        systemPromptOverride: "prompt-paper",
       });
       await repo.create({
         id: "ac-existing",
         environment: "LIVE",
         agentType: "trader",
-        model: "model-live",
+        systemPromptOverride: "prompt-live",
       });
 
       await repo.cloneToEnvironment("PAPER", "LIVE");
 
       const liveTrader = await repo.get("LIVE", "trader");
       expect(liveTrader!.id).toBe("ac-existing");
-      expect(liveTrader!.model).toBe("model-paper");
-    });
-  });
-
-  describe("getModelStats", () => {
-    test("returns model usage statistics", async () => {
-      await repo.create({ id: "ac-1", environment: "PAPER", agentType: "trader" });
-      await repo.create({ id: "ac-2", environment: "PAPER", agentType: "critic" });
-      await repo.create({ id: "ac-3", environment: "LIVE", agentType: "trader" });
-      await repo.create({
-        id: "ac-4",
-        environment: "PAPER",
-        agentType: "news_analyst",
-        model: "gemini-2.5-flash-preview-05-20",
-      });
-
-      const stats = await repo.getModelStats();
-
-      expect(stats.length).toBeGreaterThan(0);
-
-      const proStats = stats.find((s) => s.model === "gemini-2.5-pro-preview-05-06");
-      expect(proStats).toBeDefined();
-      expect(proStats!.count).toBe(3);
-      expect(proStats!.environments).toContain("PAPER");
-      expect(proStats!.environments).toContain("LIVE");
+      expect(liveTrader!.systemPromptOverride).toBe("prompt-paper");
     });
   });
 

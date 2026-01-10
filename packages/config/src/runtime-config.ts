@@ -7,6 +7,8 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 2)
  */
 
+import type { GlobalModel } from "@cream/domain";
+
 // ============================================
 // Repository Interface Types
 // ============================================
@@ -42,6 +44,7 @@ export interface RuntimeTradingConfig {
   kellyFraction: number;
   tradingCycleIntervalMs: number;
   predictionMarketsIntervalMs: number;
+  globalModel: GlobalModel;
   status: RuntimeTradingConfigStatus;
   createdAt: string;
   updatedAt: string;
@@ -471,6 +474,7 @@ export class RuntimeConfigService {
         kellyFraction: config.trading.kellyFraction,
         tradingCycleIntervalMs: config.trading.tradingCycleIntervalMs,
         predictionMarketsIntervalMs: config.trading.predictionMarketsIntervalMs,
+        globalModel: config.trading.globalModel,
       });
     }
 
@@ -488,12 +492,11 @@ export class RuntimeConfigService {
       });
     }
 
-    // Update agent configs
+    // Update agent configs (model is now global via trading.globalModel)
     if (config.agents) {
       for (const [agentType, agentConfig] of Object.entries(config.agents)) {
         if (agentConfig) {
           await this.agentConfigsRepo.upsert(environment, agentType as RuntimeAgentType, {
-            model: agentConfig.model,
             systemPromptOverride: agentConfig.systemPromptOverride,
             enabled: agentConfig.enabled,
           });
@@ -884,7 +887,7 @@ export class RuntimeConfigService {
   private validateAgentConfigs(
     agents: Record<RuntimeAgentType, RuntimeAgentConfig>,
     errors: ValidationError[],
-    warnings: string[]
+    _warnings: string[]
   ): void {
     const enabledAgents = Object.values(agents).filter((a) => a.enabled);
 
@@ -896,12 +899,7 @@ export class RuntimeConfigService {
         value: enabledAgents.length,
       });
     }
-
-    // Warnings for model consistency
-    const models = new Set(enabledAgents.map((a) => a.model));
-    if (models.size > 3) {
-      warnings.push("Using more than 3 different models may increase latency and costs");
-    }
+    // Note: Model consistency warning removed - all agents now use global model
   }
 
   private validateCrossConfig(

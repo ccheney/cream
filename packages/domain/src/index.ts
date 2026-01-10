@@ -479,6 +479,17 @@ export {
   type WalkForwardPeriod,
   WalkForwardPeriodSchema,
 } from "./indicator-synthesis";
+// Global LLM model configuration
+export {
+  ALLOWED_MODELS,
+  DEFAULT_GLOBAL_MODEL,
+  type GlobalModel,
+  GlobalModelSchema,
+  getModelId,
+  isValidModel,
+  MODEL_ID_MAP,
+  parseModel,
+} from "./llm-models";
 // LLM parsing with retry logic
 export {
   type AgentType,

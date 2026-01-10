@@ -29,6 +29,45 @@ interface CacheEntry<T> {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 const CACHE_TTL_MS = 60000; // 60 seconds
+const CACHE_VERSION = "v6"; // Bump this to invalidate cache
+
+// Market hours in ET (extended hours: 2.5 hrs before open, 1 hr after close)
+const MARKET_OPEN_HOUR = 7;
+const MARKET_OPEN_MINUTE = 0; // 7:00 AM ET (pre-market starts at 4 AM, but 7 AM captures most activity)
+const MARKET_CLOSE_HOUR = 17;
+const MARKET_CLOSE_MINUTE = 0; // 5:00 PM ET (after-hours ends at 8 PM, but 5 PM captures most activity)
+
+/**
+ * Check if a timestamp falls within extended market hours (ET).
+ * Returns true for 7:00 AM - 5:00 PM ET on weekdays.
+ */
+function isMarketHours(timestamp: Date): boolean {
+  // Use Intl.DateTimeFormat to get ET components directly
+  const etFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+
+  const parts = etFormatter.formatToParts(timestamp);
+  const weekday = parts.find((p) => p.type === "weekday")?.value;
+  const hour = Number.parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const minute = Number.parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+
+  // Skip weekends
+  if (weekday === "Sat" || weekday === "Sun") {
+    return false;
+  }
+
+  // Check time range
+  const timeInMinutes = hour * 60 + minute;
+  const openInMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
+  const closeInMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+
+  return timeInMinutes >= openInMinutes && timeInMinutes <= closeInMinutes;
+}
 
 function getCached<T>(key: string): T | undefined {
   const entry = cache.get(key);
@@ -86,6 +125,8 @@ const QuoteSchema = z.object({
   ask: z.number(),
   last: z.number(),
   volume: z.number(),
+  prevClose: z.number().optional(),
+  changePercent: z.number().optional(),
   timestamp: z.string(),
 });
 
@@ -157,6 +198,15 @@ app.openapi(quotesRoute, async (c) => {
   const symbolList = symbols.split(",").map((s) => s.trim().toUpperCase());
   const client = getPolygonClient();
 
+  // Get today's date in NY timezone for intraday data
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayNY = formatter.format(new Date());
+
   // Process sequentially to avoid rate limiting, use cache
   const results: Array<z.infer<typeof QuoteSchema> | { symbol: string; error: string }> = [];
   for (const symbol of symbolList) {
@@ -168,20 +218,62 @@ app.openapi(quotesRoute, async (c) => {
     }
 
     try {
-      const response = await client.getPreviousClose(symbol);
-      const bar = response.results?.[0];
-      if (!bar) {
+      // Get recent daily bars to calculate change (need 2 days for weekend/holiday handling)
+      const recentFrom = new Date();
+      recentFrom.setDate(recentFrom.getDate() - 7); // Look back 7 days to handle holidays
+      const recentBarsResponse = await client.getAggregates(
+        symbol,
+        1,
+        "day",
+        recentFrom.toISOString().slice(0, 10),
+        todayNY,
+        { limit: 5, sort: "desc" }
+      );
+
+      const recentBars = recentBarsResponse.results ?? [];
+      if (recentBars.length === 0) {
         results.push({ symbol, error: "No data available" });
         continue;
       }
-      const spread = bar.c * 0.001;
+
+      // Most recent bar is the current/last price
+      const latestBar = recentBars[0];
+      // Second most recent bar gives us the previous close
+      const prevBar = recentBars[1];
+
+      let lastPrice = latestBar?.c ?? 0;
+      let lastVolume = latestBar?.v ?? 0;
+      let lastTimestamp = latestBar ? new Date(latestBar.t) : new Date();
+      const prevClose = prevBar?.c ?? lastPrice; // Fall back to latest if no previous
+
+      // Try to get today's intraday price (more recent than daily bar)
+      try {
+        const todayResponse = await client.getAggregates(symbol, 1, "minute", todayNY, todayNY, {
+          limit: 1,
+          sort: "desc",
+        });
+        const todayBar = todayResponse.results?.[0];
+        if (todayBar) {
+          lastPrice = todayBar.c;
+          lastVolume = todayBar.v;
+          lastTimestamp = new Date(todayBar.t);
+        }
+      } catch {
+        // If today's intraday data unavailable, use daily bar
+      }
+
+      const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
+      const spread = lastPrice * 0.001;
+
       const quote = {
         symbol,
-        bid: Math.round((bar.c - spread) * 100) / 100,
-        ask: Math.round((bar.c + spread) * 100) / 100,
-        last: bar.c,
-        volume: bar.v,
-        timestamp: new Date(bar.t).toISOString(),
+        bid: Math.round((lastPrice - spread) * 100) / 100,
+        ask: Math.round((lastPrice + spread) * 100) / 100,
+        last: lastPrice,
+        volume: lastVolume,
+        prevClose,
+        changePercent: Math.round(changePercent * 100) / 100,
+        timestamp: lastTimestamp.toISOString(),
       };
       setCache(cacheKey, quote);
       results.push(quote);
@@ -238,22 +330,73 @@ app.openapi(quoteRoute, async (c) => {
 
   const client = getPolygonClient();
 
+  // Get today's date in NY timezone for intraday data
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayNY = formatter.format(new Date());
+
   try {
-    const response = await client.getPreviousClose(upperSymbol);
-    const bar = response.results?.[0];
-    if (!bar) {
+    // Get recent daily bars to calculate change (need 2 days for weekend/holiday handling)
+    const recentFrom = new Date();
+    recentFrom.setDate(recentFrom.getDate() - 7); // Look back 7 days to handle holidays
+    const recentBarsResponse = await client.getAggregates(
+      upperSymbol,
+      1,
+      "day",
+      recentFrom.toISOString().slice(0, 10),
+      todayNY,
+      { limit: 5, sort: "desc" }
+    );
+
+    const recentBars = recentBarsResponse.results ?? [];
+    if (recentBars.length === 0) {
       throw new HTTPException(503, {
         message: `No market data available for ${upperSymbol}`,
       });
     }
-    const spread = bar.c * 0.001;
+
+    // Most recent bar is the current/last price
+    const latestBar = recentBars[0];
+    // Second most recent bar gives us the previous close
+    const prevBar = recentBars[1];
+
+    let lastPrice = latestBar?.c ?? 0;
+    let lastVolume = latestBar?.v ?? 0;
+    let lastTimestamp = latestBar ? new Date(latestBar.t) : new Date();
+    const prevClose = prevBar?.c ?? lastPrice; // Fall back to latest if no previous
+
+    // Try to get today's intraday price (more recent than daily bar)
+    try {
+      const todayResponse = await client.getAggregates(upperSymbol, 1, "minute", todayNY, todayNY, {
+        limit: 1,
+        sort: "desc",
+      });
+      const todayBar = todayResponse.results?.[0];
+      if (todayBar) {
+        lastPrice = todayBar.c;
+        lastVolume = todayBar.v;
+        lastTimestamp = new Date(todayBar.t);
+      }
+    } catch {
+      // If today's intraday data unavailable, use daily bar
+    }
+
+    const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
+    const spread = lastPrice * 0.001;
+
     const quote = {
       symbol: upperSymbol,
-      bid: Math.round((bar.c - spread) * 100) / 100,
-      ask: Math.round((bar.c + spread) * 100) / 100,
-      last: bar.c,
-      volume: bar.v,
-      timestamp: new Date(bar.t).toISOString(),
+      bid: Math.round((lastPrice - spread) * 100) / 100,
+      ask: Math.round((lastPrice + spread) * 100) / 100,
+      last: lastPrice,
+      volume: lastVolume,
+      prevClose,
+      changePercent: Math.round(changePercent * 100) / 100,
+      timestamp: lastTimestamp.toISOString(),
     };
     setCache(cacheKey, quote);
     return c.json(quote, 200);
@@ -295,16 +438,22 @@ const candlesRoute = createRoute({
 });
 
 app.openapi(candlesRoute, async (c) => {
+  // biome-ignore lint/suspicious/noConsole: Debug
+  console.log("🚨 CANDLES ENDPOINT HIT - NEW CODE IS RUNNING 🚨");
   const { symbol } = c.req.valid("param");
   const { timeframe, limit } = c.req.valid("query");
   const upperSymbol = symbol.toUpperCase();
-  const cacheKey = `candles:${upperSymbol}:${timeframe}:${limit}`;
+  const cacheKey = `candles:${CACHE_VERSION}:${upperSymbol}:${timeframe}:${limit}`;
 
   // Check cache first
   const cached = getCached<z.infer<typeof CandleSchema>[]>(cacheKey);
   if (cached) {
+    // biome-ignore lint/suspicious/noConsole: Debug
+    console.log(`📦 CACHE HIT for ${cacheKey} - returning ${cached.length} candles`);
     return c.json(cached, 200);
   }
+  // biome-ignore lint/suspicious/noConsole: Debug
+  console.log(`❌ CACHE MISS for ${cacheKey} - fetching fresh data`);
 
   const client = getPolygonClient();
 
@@ -322,27 +471,34 @@ app.openapi(candlesRoute, async (c) => {
   let fromStr: string;
   let toStr: string;
 
+  // Get today's date in NY timezone
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayNY = formatter.format(new Date());
+  toStr = todayNY;
+
   if (tf.timespan === "day") {
-    // For daily charts, we want history
-    const to = new Date();
+    // For daily charts, we want 1 year of history
     const from = new Date();
-    from.setDate(from.getDate() - 365); // Last 1 year
-    toStr = to.toISOString().slice(0, 10);
+    from.setDate(from.getDate() - 365);
     fromStr = from.toISOString().slice(0, 10);
   } else {
-    // Intraday: Strict "Today" Window (NY Time)
-    const formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/New_York",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const todayNY = formatter.format(new Date());
-    fromStr = todayNY;
-    toStr = todayNY;
+    // Intraday: look back 7 days to handle weekends/holidays/after hours
+    const from = new Date();
+    from.setDate(from.getDate() - 7);
+    fromStr = from.toISOString().slice(0, 10);
   }
 
-  const fetchLimit = Math.min(limit + 100, 5000);
+  // Scale fetchLimit based on timeframe to ensure enough market-hours bars survive filtering.
+  // Polygon returns pre-market + regular + after-hours data. Market hours filter removes ~40% of bars.
+  // For larger timeframes, we need proportionally more bars to get the requested limit after filtering.
+  const baseMultiplier = tf.multiplier; // 1 for 1m, 5 for 5m, 15 for 15m
+  const safetyFactor = baseMultiplier <= 1 ? 1.5 : baseMultiplier <= 5 ? 3 : 5;
+  const fetchLimit = Math.min(Math.ceil(limit * safetyFactor) + 100, 50000);
 
   try {
     const response = await client.getAggregates(
@@ -367,9 +523,45 @@ app.openapi(candlesRoute, async (c) => {
       });
     }
 
-    // Reverse to get chronological order (oldest -> newest) since we fetched desc
-    // Take the last N candles based on the requested limit
-    const recentResults = response.results.slice(0, limit).reverse();
+    // Filter for market hours only (intraday timeframes) and sort chronologically
+    let filteredResults = response.results;
+    if (tf.timespan !== "day") {
+      const beforeCount = response.results.length;
+      filteredResults = response.results.filter((bar) => {
+        const barDate = new Date(bar.t);
+        const inMarket = isMarketHours(barDate);
+        return inMarket;
+      });
+      // biome-ignore lint/suspicious/noConsole: Debug logging
+      console.log(
+        `Market hours filter: ${beforeCount} -> ${filteredResults.length} bars for ${upperSymbol} ${timeframe}`
+      );
+    }
+
+    // Sort by timestamp ascending (oldest first) to ensure correct order
+    filteredResults.sort((a, b) => a.t - b.t);
+
+    // Take the most recent N candles (from the end since we're now sorted ascending)
+    const startIndex = Math.max(0, filteredResults.length - limit);
+    const recentResults = filteredResults.slice(startIndex);
+
+    // Debug: log the actual time range being returned
+    if (recentResults.length > 0) {
+      const etOptions: Intl.DateTimeFormatOptions = {
+        timeZone: "America/New_York",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      };
+      const first = recentResults[0];
+      const last = recentResults[recentResults.length - 1];
+      const firstDate = first ? new Date(first.t) : new Date();
+      const lastDate = last ? new Date(last.t) : new Date();
+      // biome-ignore lint/suspicious/noConsole: Debug logging
+      console.log(
+        `Returning ${recentResults.length} ${timeframe} candles: ${firstDate.toLocaleTimeString("en-US", etOptions)} to ${lastDate.toLocaleTimeString("en-US", etOptions)} ET`
+      );
+    }
 
     const candles = recentResults.map((bar) => ({
       timestamp: new Date(bar.t).toISOString(),
@@ -470,13 +662,15 @@ app.openapi(indicatorsRoute, async (c) => {
       });
     }
 
-    // Log warning if insufficient data for some indicators
-    if (response.results.length < 14) {
+    // Filter for market hours only (intraday timeframes)
+    let bars = response.results;
+    if (tf.timespan !== "day") {
+      bars = response.results.filter((bar) => isMarketHours(new Date(bar.t)));
     }
 
-    const closes = response.results.map((b) => b.c);
-    const highs = response.results.map((b) => b.h);
-    const lows = response.results.map((b) => b.l);
+    const closes = bars.map((b) => b.c);
+    const highs = bars.map((b) => b.h);
+    const lows = bars.map((b) => b.l);
 
     // Calculate indicators
     const sma = (data: number[], period: number): number | null => {
