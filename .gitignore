@@ -12,6 +12,7 @@ out/
 
 # Test coverage
 coverage/
+coverage.xml
 
 # Environment files
 .env
