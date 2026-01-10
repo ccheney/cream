@@ -440,13 +440,16 @@ describe("Timeout Handling", () => {
       }
     });
 
-    it("should treat errors as timeout for safety", async () => {
+    it("should distinguish errors from timeouts", async () => {
       const promise = Promise.reject(new Error("Agent error"));
       const result = await withAgentTimeout(promise, 1000, "error-agent");
 
-      expect(result.timedOut).toBe(true);
-      if (result.timedOut) {
+      // Errors are reported separately from timeouts
+      expect(result.errored).toBe(true);
+      expect(result.timedOut).toBe(false);
+      if (result.errored) {
         expect(result.agentName).toBe("error-agent");
+        expect(result.error).toBe("Agent error");
       }
     });
   });

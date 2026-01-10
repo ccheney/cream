@@ -154,7 +154,8 @@ describe("Config Flow Integration", () => {
 
       const config = await service.getActiveConfig("PAPER");
 
-      expect(config.agents.technical_analyst.model).toBe("gemini-3-pro-preview");
+      // Model is now global via trading.globalModel, agents return "global" placeholder
+      expect(config.agents.technical_analyst.model).toBe("global");
       expect(config.agents.technical_analyst.enabled).toBe(true);
       expect(config.agents.trader.enabled).toBe(true);
     });
@@ -197,14 +198,14 @@ describe("Config Flow Integration", () => {
       await service.saveDraft("PAPER", {
         agents: {
           technical_analyst: {
-            model: "gemini-3-flash-preview",
             enabled: false,
           },
         },
       });
 
       const draft = await service.getDraft("PAPER");
-      expect(draft.agents.technical_analyst.model).toBe("gemini-3-flash-preview");
+      // Model is now global via trading.globalModel, agents return "global" placeholder
+      expect(draft.agents.technical_analyst.model).toBe("global");
       expect(draft.agents.technical_analyst.enabled).toBe(false);
     });
 

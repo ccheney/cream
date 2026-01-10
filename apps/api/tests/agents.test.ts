@@ -449,32 +449,8 @@ describe("Agent Configuration", () => {
         expect(config.name).toBeDefined();
         expect(config.name.length).toBeGreaterThan(0);
         expect(config.role).toBeDefined();
-        expect(config.model).toBeDefined();
         expect(config.personality).toBeInstanceOf(Array);
         expect(config.tools).toBeInstanceOf(Array);
-      }
-    });
-
-    it("should assign pro model to complex agents", () => {
-      const complexAgents: AgentType[] = [
-        "technical_analyst",
-        "news_analyst",
-        "fundamentals_analyst",
-        "bullish_researcher",
-        "bearish_researcher",
-        "trader",
-      ];
-
-      for (const agentType of complexAgents) {
-        expect(AGENT_CONFIGS[agentType].model).toBe("gemini-3-pro-preview");
-      }
-    });
-
-    it("should assign flash model to validation agents", () => {
-      const validationAgents: AgentType[] = ["risk_manager", "critic"];
-
-      for (const agentType of validationAgents) {
-        expect(AGENT_CONFIGS[agentType].model).toBe("gemini-3-flash-preview");
       }
     });
   });
