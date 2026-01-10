@@ -33,8 +33,8 @@ export const TavilyResponseSchema = z.object({
   query: z.string(),
   results: z.array(TavilyResultSchema),
   response_time: z.number(),
-  answer: z.string().optional(),
-  follow_up_questions: z.array(z.string()).optional(),
+  answer: z.string().nullable().optional(),
+  follow_up_questions: z.array(z.string()).nullable().optional(),
 });
 export type TavilyResponse = z.infer<typeof TavilyResponseSchema>;
 

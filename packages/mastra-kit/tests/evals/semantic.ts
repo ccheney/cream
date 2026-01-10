@@ -126,7 +126,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/** Mock implementation - in production, this would call Gemini or OpenAI API. */
+/** Mock implementation - in production, this would call Gemini API. */
 async function getEmbedding(text: string, config: EmbeddingConfig): Promise<number[]> {
   const cacheKey = getCacheKey(text, config.model);
 
