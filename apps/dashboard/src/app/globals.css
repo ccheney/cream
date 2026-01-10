@@ -285,3 +285,36 @@ html.transitioning,
 html.transitioning * {
   transition: background-color 0.2s ease, border-color 0.2s ease !important;
 }
+
+/* ============================================
+ * Streaming Cursor Animation
+ * ============================================ */
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 530ms step-end infinite;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink {
+    animation: none;
+    opacity: 1;
+  }
+
+  .animate-ping {
+    animation: none;
+  }
+
+  .animate-pulse {
+    animation: none;
+  }
+}

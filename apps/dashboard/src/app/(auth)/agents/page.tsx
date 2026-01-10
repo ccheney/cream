@@ -2,76 +2,150 @@
 "use client";
 
 /**
- * Agents Page - Monitor 8-agent consensus network
+ * Agents Page - Monitor 8-agent consensus network with real-time streaming
+ *
+ * Displays agent status cards with live tool calls and reasoning streams.
+ *
+ * @see docs/plans/ui/20-design-philosophy.md
  */
 
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
+import { AgentStreamingCard } from "@/components/agents/AgentStreamingCard";
+import { AgentStreamingDetail } from "@/components/agents/AgentStreamingDetail";
 import { useAgentOutputs, useAgentStatuses } from "@/hooks/queries";
+import { type AgentType, useAgentStreaming } from "@/hooks/useAgentStreaming";
 
-const AGENT_COLORS: Record<string, string> = {
-  technical_analyst: "#3B82F6",
-  news_sentiment: "#10B981",
-  fundamentals_macro: "#F59E0B",
-  bullish_research: "#22C55E",
-  bearish_research: "#EF4444",
-  trader: "#8B5CF6",
-  risk_manager: "#EC4899",
-  critic: "#6366F1",
-};
+// ============================================
+// Constants
+// ============================================
+
+const AGENT_TYPES: AgentType[] = [
+  "technical",
+  "news",
+  "fundamentals",
+  "bullish",
+  "bearish",
+  "trader",
+  "risk",
+  "critic",
+];
 
 const AGENT_NAMES: Record<string, string> = {
-  technical_analyst: "Technical Analyst",
-  news_sentiment: "News & Sentiment",
-  fundamentals_macro: "Fundamentals & Macro",
-  bullish_research: "Bullish Research",
-  bearish_research: "Bearish Research",
+  technical: "Technical Analyst",
+  news: "News & Sentiment",
+  fundamentals: "Fundamentals & Macro",
+  bullish: "Bullish Research",
+  bearish: "Bearish Research",
   trader: "Trader",
-  risk_manager: "Risk Manager",
+  risk: "Risk Manager",
   critic: "Critic",
 };
 
+// ============================================
+// Main Component
+// ============================================
+
 export default function AgentsPage() {
-  const { data: statuses, isLoading: statusesLoading } = useAgentStatuses();
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const { data: _statuses, isLoading: statusesLoading } = useAgentStatuses();
+  const [selectedAgent, setSelectedAgent] = useState<AgentType | null>(null);
   const { data: outputs, isLoading: outputsLoading } = useAgentOutputs(selectedAgent ?? "", 20);
+
+  // Real-time streaming state
+  const { agents: streamingAgents, currentCycleId, isSubscribed } = useAgentStreaming();
+
+  const selectedState = selectedAgent ? streamingAgents.get(selectedAgent) : undefined;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Agent Network</h1>
-        <div className="text-sm text-cream-500 dark:text-cream-400">
-          Consensus: APPROVE / REJECT requires Risk + Critic agreement
+        <div className="flex items-center gap-4">
+          {currentCycleId && (
+            <span className="text-xs font-mono text-stone-400 dark:text-stone-500">
+              Cycle: {currentCycleId.slice(0, 16)}...
+            </span>
+          )}
+          {isSubscribed && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              Connected
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Agent Grid */}
-      <div className="grid grid-cols-4 gap-4">
-        {statusesLoading
-          ? [...Array(8)].map((_, i) => (
-              <div
-                key={`skeleton-${i}`}
-                className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4"
-              >
-                <div className="h-4 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
-                <div className="h-4 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-              </div>
-            ))
-          : statuses?.map((agent) => (
-              <AgentCard
-                key={agent.type}
-                agent={agent}
-                isSelected={selectedAgent === agent.type}
-                onClick={() => setSelectedAgent(agent.type)}
+      {/* Main Layout: Cards + Detail Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Agent Cards Grid */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {AGENT_TYPES.map((agentType) => (
+              <AgentStreamingCard
+                key={agentType}
+                agentType={agentType}
+                state={streamingAgents.get(agentType)}
+                isSelected={selectedAgent === agentType}
+                onClick={() => setSelectedAgent(agentType)}
               />
             ))}
+          </div>
+
+          {/* Fallback: Show loading skeleton if no streaming and statuses loading */}
+          {statusesLoading && streamingAgents.size === 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4"
+                >
+                  <div className="h-4 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
+                  <div className="h-4 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Detail Panel */}
+        <div className="lg:col-span-1">
+          {selectedAgent && selectedState ? (
+            <AgentStreamingDetail
+              agentType={selectedAgent}
+              state={selectedState}
+              cycleId={currentCycleId}
+            />
+          ) : selectedAgent ? (
+            <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
+              <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
+                {AGENT_NAMES[selectedAgent]}
+              </h3>
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                Waiting for streaming data...
+              </p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
+                Trigger a trading cycle to see real-time tool calls and reasoning.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                Select an agent to view streaming details
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Agent Output Stream */}
+      {/* Historical Outputs Section */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
           <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-            Agent Output Stream
+            Historical Outputs
           </h2>
           {selectedAgent && (
             <span className="text-sm text-cream-500 dark:text-cream-400">
@@ -79,10 +153,10 @@ export default function AgentsPage() {
             </span>
           )}
         </div>
-        <div className="p-4 h-96 overflow-auto">
+        <div className="p-4 max-h-96 overflow-auto">
           {!selectedAgent ? (
             <p className="text-cream-500 dark:text-cream-400">
-              Select an agent to view their outputs
+              Select an agent to view their historical outputs
             </p>
           ) : outputsLoading ? (
             <div className="space-y-4">
@@ -129,77 +203,5 @@ export default function AgentsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function AgentCard({
-  agent,
-  isSelected,
-  onClick,
-}: {
-  agent: {
-    type: string;
-    displayName: string;
-    status: string;
-    lastOutputAt: string | null;
-    outputsToday: number;
-    avgConfidence: number;
-    approvalRate: number;
-  };
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const statusColors = {
-    idle: "text-cream-500",
-    processing: "text-blue-500 animate-pulse",
-    error: "text-red-500",
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`bg-white dark:bg-night-800 rounded-lg border p-4 text-left transition-all ${
-        isSelected
-          ? "border-blue-500 ring-2 ring-blue-500/20"
-          : "border-cream-200 dark:border-night-700 hover:border-cream-300 dark:hover:border-night-600"
-      }`}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: AGENT_COLORS[agent.type] ?? "#6B7280" }}
-        />
-        <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
-          {agent.displayName}
-        </span>
-      </div>
-      <div
-        className={`mt-2 text-sm capitalize ${
-          statusColors[agent.status as keyof typeof statusColors] ?? statusColors.idle
-        }`}
-      >
-        {agent.status}
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-cream-500 dark:text-cream-400">
-        <div>
-          <span className="block">Today</span>
-          <span className="font-medium text-cream-700 dark:text-cream-300">
-            {agent.outputsToday} outputs
-          </span>
-        </div>
-        <div>
-          <span className="block">Approval</span>
-          <span className="font-medium text-cream-700 dark:text-cream-300">
-            {(agent.approvalRate * 100).toFixed(0)}%
-          </span>
-        </div>
-      </div>
-      {agent.lastOutputAt && (
-        <div className="mt-2 text-xs text-cream-400">
-          Last: {formatDistanceToNow(new Date(agent.lastOutputAt), { addSuffix: true })}
-        </div>
-      )}
-    </button>
   );
 }
