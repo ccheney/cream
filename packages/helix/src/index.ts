@@ -65,20 +65,34 @@ export {
 export {
   type Citation,
   type CitationSourceType,
+  // Scoring functions
+  calculateEdgePriority,
+  calculateHubPenalty,
+  calculateRecencyBoost,
+  // Constants
+  EDGE_TYPE_THRESHOLDS,
+  filterAndPrioritizeEdges,
   type GraphEdge,
   type GraphNode,
   type GraphPath,
   getCompanyNodes,
   getDecisionCitations,
+  getEdgeWeight,
   getInfluencedDecisions,
   getInfluencingEvents,
   getLifecycleEvents,
   getNeighbors,
   getNode,
   getNodesByType,
+  MENTION_TYPE_WEIGHTS,
+  shouldFollowEdge,
+  sortEdgesByPriority,
   type TraversalOptions,
   type TraversalResponse,
   traverse,
+  // Weighted traversal
+  type WeightedTraversalResponse,
+  weightedTraverse,
 } from "./queries/graph";
 // Mutations
 export {
