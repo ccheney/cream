@@ -51,13 +51,17 @@ class TestHammerDetection:
         """Test hammer detection in downtrend."""
         detector = CandlestickPatternDetector()
         # Create downtrend followed by hammer
+        # Hammer requires: long lower shadow (>= 2x body), small upper shadow (< 0.5x body)
+        # Also body/range must be >= 0.1 to avoid doji classification
         candles = [
-            make_candle(110, 112, 108, 108),
-            make_candle(108, 109, 106, 106),
-            make_candle(106, 107, 103, 103),
-            make_candle(103, 104, 100, 100),
-            make_candle(100, 101, 97, 97),
-            make_candle(97, 98, 88, 97),  # Hammer: long lower shadow, small body
+            make_candle(110, 112, 108, 107),  # Bearish
+            make_candle(107, 108, 104, 103),  # Bearish
+            make_candle(103, 104, 100, 99),  # Bearish
+            make_candle(99, 100, 96, 95),  # Bearish
+            make_candle(95, 96, 92, 91),  # Bearish
+            # Hammer: body=2, lower shadow=6 (>=2*body), upper shadow=0.5 (<0.5*body=1)
+            # body/range = 2/8.5 = 0.24 (>0.1, not a doji)
+            make_candle(90, 92.5, 84, 92),
         ]
         patterns = detector.detect(candles)
         hammers = [p for p in patterns if p.pattern_type == PatternType.HAMMER]
@@ -68,13 +72,17 @@ class TestHammerDetection:
         """Test hanging man detection in uptrend."""
         detector = CandlestickPatternDetector()
         # Create uptrend followed by hanging man
+        # Hanging man is same shape as hammer but in uptrend (long lower shadow, small body)
+        # body/range must be >= 0.1 to avoid doji classification
         candles = [
-            make_candle(90, 92, 89, 92),
-            make_candle(92, 95, 91, 94),
-            make_candle(94, 97, 93, 96),
-            make_candle(96, 99, 95, 98),
-            make_candle(98, 101, 97, 100),
-            make_candle(100, 101, 90, 100),  # Hanging man
+            make_candle(90, 92, 89, 91),  # Bullish
+            make_candle(91, 94, 90, 93),  # Bullish
+            make_candle(93, 96, 92, 95),  # Bullish
+            make_candle(95, 98, 94, 97),  # Bullish
+            make_candle(97, 100, 96, 99),  # Bullish
+            # Hanging man: body=2, lower shadow=6 (>=2*body), upper shadow=0.5 (<0.5*body=1)
+            # body/range = 2/8.5 = 0.24 (>0.1, not a doji)
+            make_candle(99, 101.5, 93, 101),
         ]
         patterns = detector.detect(candles)
         hanging_men = [p for p in patterns if p.pattern_type == PatternType.HANGING_MAN]
@@ -84,13 +92,17 @@ class TestHammerDetection:
     def test_detects_shooting_star(self) -> None:
         """Test shooting star detection in uptrend."""
         detector = CandlestickPatternDetector()
+        # Shooting star requires: long upper shadow (>= 2x body), small lower shadow (< 0.5x body)
+        # body/range must be >= 0.1 to avoid doji classification
         candles = [
-            make_candle(90, 92, 89, 92),
-            make_candle(92, 95, 91, 94),
-            make_candle(94, 97, 93, 96),
-            make_candle(96, 99, 95, 98),
-            make_candle(98, 101, 97, 100),
-            make_candle(100, 110, 99, 101),  # Shooting star: long upper shadow
+            make_candle(90, 92, 89, 91),  # Bullish
+            make_candle(91, 94, 90, 93),  # Bullish
+            make_candle(93, 96, 92, 95),  # Bullish
+            make_candle(95, 98, 94, 97),  # Bullish
+            make_candle(97, 100, 96, 99),  # Bullish
+            # Shooting star: body=2, upper shadow=6 (>=2*body), lower shadow=0.5 (<0.5*body=1)
+            # body/range = 2/8.5 = 0.24 (>0.1, not a doji)
+            make_candle(101, 109, 100.5, 103),
         ]
         patterns = detector.detect(candles)
         stars = [p for p in patterns if p.pattern_type == PatternType.SHOOTING_STAR]

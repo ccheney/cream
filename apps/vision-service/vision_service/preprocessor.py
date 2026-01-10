@@ -7,7 +7,7 @@ Uses OpenCV for image processing operations.
 from dataclasses import dataclass
 from typing import cast
 
-import cv2  # type: ignore[import-not-found]
+import cv2  # type: ignore[import-not-found,unused-ignore]
 import numpy as np
 from numpy.typing import NDArray
 
@@ -69,7 +69,7 @@ class ChartPreprocessor:
 
         # Convert to grayscale if requested
         if self.config.grayscale and channels > 1:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # type: ignore[assignment]
             channels = 1
 
         # Normalize brightness
@@ -170,7 +170,7 @@ class ChartPreprocessor:
         # Calculate current mean brightness
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) > 2 else image
 
-        current_brightness = np.mean(gray) / 255.0
+        current_brightness = float(np.mean(gray)) / 255.0  # type: ignore[arg-type]
         target = self.config.target_brightness
 
         if current_brightness == 0:

@@ -70,8 +70,12 @@ class TestChartAnalyzer:
         """Test analysis with bullish patterns."""
         analyzer = ChartAnalyzer()
         # Create trend with bullish reversal pattern
+        # Hammer requires: long lower shadow (>= 2x body), small upper shadow (< 0.5x body)
+        # body/range must be >= 0.1 to avoid doji classification
         candles = make_bearish_trend(6) + [
-            make_candle(97, 98, 88, 97),  # Hammer at bottom
+            # Hammer: body=2, lower shadow=6 (>=2*body), upper shadow=0.5 (<0.5*body=1)
+            # body/range = 2/8.5 = 0.24 (>0.1, not a doji)
+            make_candle(90, 92.5, 84, 92),
         ]
         result = analyzer.analyze(candles)
 
