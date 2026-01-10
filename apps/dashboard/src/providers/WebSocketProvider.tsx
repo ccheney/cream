@@ -125,6 +125,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   }, [isAuthenticated, connectionState, connected, connect, disconnect]);
 
+  // Subscribe to core channels when connected
+  useEffect(() => {
+    if (connected) {
+      subscribe(["system", "portfolio"]);
+    }
+  }, [connected, subscribe]);
+
   const value = useMemo<WebSocketContextValue>(
     () => ({
       connectionState,

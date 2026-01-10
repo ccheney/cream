@@ -595,7 +595,12 @@ app.openapi(triggerCycleRoute, async (c) => {
   };
 
   // Helper to emit final result via WebSocket
-  const emitResult = (status: "completed" | "failed", durationMs: number, error?: string) => {
+  const emitResult = (
+    status: "completed" | "failed",
+    durationMs: number,
+    workflowResult?: Awaited<ReturnType<typeof tradingCycleWorkflow.execute>>,
+    error?: string
+  ) => {
     const resultData: CycleResultData = {
       cycleId,
       environment,
@@ -603,14 +608,19 @@ app.openapi(triggerCycleRoute, async (c) => {
       durationMs,
       configVersion: configVersion ?? undefined,
       error,
-      // Result details would come from workflow output when available
       result:
-        status === "completed"
+        status === "completed" && workflowResult
           ? {
-              approved: true,
-              iterations: 1,
-              decisions: [],
-              orders: [],
+              approved: workflowResult.approved,
+              iterations: workflowResult.iterations,
+              decisions: [], // Decisions are persisted to DB, not returned in workflow result
+              orders: workflowResult.orderSubmission.orderIds.map((orderId) => ({
+                orderId,
+                symbol: "unknown", // Order details not returned by workflow
+                side: "buy" as const,
+                quantity: 0,
+                status: "submitted" as const,
+              })),
             }
           : undefined,
       timestamp: new Date().toISOString(),
@@ -635,7 +645,7 @@ app.openapi(triggerCycleRoute, async (c) => {
       const source = useDraftConfig ? "dashboard-test" : "manual";
       const ctx = createContext(environment, source, configVersion ?? undefined);
 
-      await tradingCycleWorkflow.execute({
+      const workflowResult = await tradingCycleWorkflow.execute({
         triggerData: {
           cycleId,
           context: ctx,
@@ -651,9 +661,12 @@ app.openapi(triggerCycleRoute, async (c) => {
       systemState.lastCycleId = cycleId;
       systemState.lastCycleTime = cycleState.completedAt;
 
-      // Emit completion
-      emitProgress("complete", 100, "done", "Trading cycle completed successfully");
-      emitResult("completed", Date.now() - startTime);
+      // Emit completion with workflow result
+      const statusMessage = workflowResult.approved
+        ? `Cycle completed: ${workflowResult.iterations} iteration(s), plan approved`
+        : `Cycle completed: ${workflowResult.iterations} iteration(s), plan rejected`;
+      emitProgress("complete", 100, "done", statusMessage);
+      emitResult("completed", Date.now() - startTime, workflowResult);
     } catch (error) {
       cycleState.status = "failed";
       cycleState.completedAt = new Date().toISOString();
@@ -661,7 +674,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 
       // Emit failure
       emitProgress("error", 0, "failed", `Cycle failed: ${cycleState.error}`);
-      emitResult("failed", Date.now() - startTime, cycleState.error);
+      emitResult("failed", Date.now() - startTime, undefined, cycleState.error);
     }
   };
 

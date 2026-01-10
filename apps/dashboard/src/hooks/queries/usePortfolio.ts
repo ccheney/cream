@@ -18,7 +18,6 @@ export function usePortfolioSummary() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
-    refetchInterval: 5000,
   });
 }
 
@@ -31,7 +30,6 @@ export function usePositions() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
-    refetchInterval: 5000,
   });
 }
 

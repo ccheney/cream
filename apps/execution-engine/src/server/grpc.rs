@@ -677,7 +677,8 @@ impl MarketDataService for MarketDataServiceImpl {
         }
 
         // Map timeframe from minutes to Alpaca format
-        let timeframe = req.bar_timeframes.first().map_or("1Hour", |&tf| match tf {
+        let timeframe_minutes = req.bar_timeframes.first().copied().unwrap_or(60);
+        let timeframe = match timeframe_minutes {
             1 => "1Min",
             5 => "5Min",
             15 => "15Min",
@@ -685,12 +686,38 @@ impl MarketDataService for MarketDataServiceImpl {
             240 => "4Hour",
             1440 => "1Day",
             _ => "1Hour",
-        });
+        };
+
+        // Calculate how far back to fetch based on timeframe.
+        // Technical indicators need varying amounts of historical data:
+        // - Bollinger Bands: 20 periods (default)
+        // - RSI: 14 periods
+        // - SMA/EMA: commonly 20-200 periods
+        // We fetch 100 bars minimum to support most indicators with some buffer.
+        // For hourly bars, a trading day has ~6.5 hours, so 100 bars = ~15 trading days.
+        // We go back extra calendar days to account for weekends/holidays.
+        let (bars_needed, calendar_days_back): (u32, i64) = match timeframe_minutes {
+            1 => (100, 2),      // 1-min bars: 2 days covers ~780 market minutes
+            5 => (100, 5),      // 5-min bars: 5 days covers ~390 bars
+            15 => (100, 14),    // 15-min bars: 2 weeks covers ~260 bars
+            60 => (100, 30),    // 1-hour bars: 30 days covers ~130 bars
+            240 => (100, 90),   // 4-hour bars: 90 days covers ~90 bars
+            1440 => (150, 180), // Daily bars: 180 days covers ~125 trading days
+            _ => (100, 30),     // Default to 30 days
+        };
+        let start_date = chrono::Utc::now() - chrono::Duration::days(calendar_days_back);
+        let start_str = start_date.format("%Y-%m-%dT00:00:00Z").to_string();
 
         // Fetch bars from Alpaca data API
         let bars_response = self
             .alpaca
-            .get_bars(&req.symbols, timeframe, None, None, Some(100))
+            .get_bars(
+                &req.symbols,
+                timeframe,
+                Some(&start_str),
+                None,
+                Some(bars_needed),
+            )
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "Failed to fetch bars from Alpaca");

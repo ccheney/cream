@@ -15,7 +15,8 @@ export type WSMessageType =
   | "alert"
   | "system_status"
   | "position_update"
-  | "portfolio_update";
+  | "portfolio_update"
+  | "portfolio";
 
 export interface WSMessage<T = unknown> {
   type: WSMessageType;
@@ -169,8 +170,8 @@ export function handleWSMessage(message: WSMessage): void {
       break;
     }
 
-    case "portfolio_update": {
-      // Portfolio metrics changed
+    case "portfolio_update":
+    case "portfolio": {
       queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.all });
       break;
     }

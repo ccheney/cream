@@ -22,7 +22,6 @@ export function useSystemStatus() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
-    refetchInterval: 5000,
   });
 }
 
