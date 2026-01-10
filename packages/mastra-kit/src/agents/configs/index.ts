@@ -8,6 +8,8 @@ export { BEARISH_RESEARCHER_CONFIG } from "./bearishResearcher.js";
 export { BULLISH_RESEARCHER_CONFIG } from "./bullishResearcher.js";
 export { CRITIC_CONFIG } from "./critic.js";
 export { FUNDAMENTALS_ANALYST_CONFIG } from "./fundamentalsAnalyst.js";
+export { IDEA_AGENT_CONFIG } from "./ideaAgent.js";
+export { INDICATOR_RESEARCHER_CONFIG } from "./indicatorResearcher.js";
 export { NEWS_ANALYST_CONFIG } from "./newsAnalyst.js";
 export { RISK_MANAGER_CONFIG } from "./riskManager.js";
 export { TECHNICAL_ANALYST_CONFIG } from "./technicalAnalyst.js";
