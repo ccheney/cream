@@ -24,8 +24,10 @@ import {
   economicCalendarTool,
   type FundamentalsAnalysisOutput,
   getGreeksTool,
+  getMarketSnapshotsTool,
   getOptionChainTool,
   getPortfolioStateTool,
+  getPredictionSignalsTool,
   getQuotesTool,
   helixQueryTool,
   newsSearchTool,
@@ -61,13 +63,13 @@ export type {
  * Maps our configuration model names to the actual provider format.
  */
 const MODEL_MAP: Record<string, string> = {
-  "gemini-3-pro-preview": "google/gemini-3-pro-preview",
+  "gemini-3-pro-preview": "google/gemini-3-flash-preview",
   "gemini-3-flash-preview": "google/gemini-3-flash-preview",
   "claude-opus-4": "anthropic/claude-opus-4-5",
 };
 
 /** Default model when no mapping found */
-const DEFAULT_MODEL = "google/gemini-3-pro-preview";
+const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 
 /**
  * Map internal model names to Mastra model identifiers.
@@ -101,6 +103,9 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
   news_search: newsSearchTool,
   helix_query: helixQueryTool,
   web_search: webSearchTool,
+  // Prediction market tools
+  get_prediction_signals: getPredictionSignalsTool,
+  get_market_snapshots: getMarketSnapshotsTool,
 };
 
 // ============================================
@@ -460,6 +465,19 @@ export interface AgentContext {
       averageIC: number;
     };
   };
+  /** Prediction market signals (Fed rate, recession probability, etc.) */
+  predictionMarketSignals?: {
+    fedCutProbability?: number;
+    fedHikeProbability?: number;
+    recessionProbability12m?: number;
+    macroUncertaintyIndex?: number;
+    policyEventRisk?: number;
+    marketConfidence?: number;
+    cpiSurpriseDirection?: number;
+    gdpSurpriseDirection?: number;
+    timestamp?: string;
+    platforms?: string[];
+  };
   /** Agent configurations from runtime config (from database) */
   agentConfigs?: Record<AgentType, AgentConfigEntry>;
 }
@@ -608,6 +626,89 @@ ${alertLines.join("\n")}`;
 }
 
 /**
+ * Build prediction market context section for prompts.
+ * Includes Fed rate probabilities, recession risk, and policy event risk.
+ */
+function buildPredictionMarketContext(
+  predictionMarketSignals?: AgentContext["predictionMarketSignals"]
+): string {
+  if (!predictionMarketSignals) {
+    return "";
+  }
+
+  const lines: string[] = [];
+
+  // Fed rate probabilities
+  if (
+    predictionMarketSignals.fedCutProbability !== undefined ||
+    predictionMarketSignals.fedHikeProbability !== undefined
+  ) {
+    const cutProb = predictionMarketSignals.fedCutProbability;
+    const hikeProb = predictionMarketSignals.fedHikeProbability;
+    if (cutProb !== undefined) {
+      lines.push(`- Fed Rate Cut Probability: ${(cutProb * 100).toFixed(1)}%`);
+    }
+    if (hikeProb !== undefined) {
+      lines.push(`- Fed Rate Hike Probability: ${(hikeProb * 100).toFixed(1)}%`);
+    }
+  }
+
+  // Recession probability
+  if (predictionMarketSignals.recessionProbability12m !== undefined) {
+    lines.push(
+      `- 12-Month Recession Probability: ${(predictionMarketSignals.recessionProbability12m * 100).toFixed(1)}%`
+    );
+  }
+
+  // Macro uncertainty and policy event risk
+  if (predictionMarketSignals.macroUncertaintyIndex !== undefined) {
+    const uncertainty = predictionMarketSignals.macroUncertaintyIndex;
+    const level = uncertainty > 0.7 ? "HIGH" : uncertainty > 0.4 ? "MODERATE" : "LOW";
+    lines.push(`- Macro Uncertainty Index: ${(uncertainty * 100).toFixed(1)}% (${level})`);
+  }
+
+  if (predictionMarketSignals.policyEventRisk !== undefined) {
+    lines.push(
+      `- Policy Event Risk: ${(predictionMarketSignals.policyEventRisk * 100).toFixed(1)}%`
+    );
+  }
+
+  // Economic surprise directions
+  if (predictionMarketSignals.cpiSurpriseDirection !== undefined) {
+    const cpiDir = predictionMarketSignals.cpiSurpriseDirection > 0 ? "HIGHER" : "LOWER";
+    lines.push(
+      `- CPI Surprise Direction: ${cpiDir} (${Math.abs(predictionMarketSignals.cpiSurpriseDirection * 100).toFixed(1)}%)`
+    );
+  }
+
+  if (predictionMarketSignals.gdpSurpriseDirection !== undefined) {
+    const gdpDir = predictionMarketSignals.gdpSurpriseDirection > 0 ? "HIGHER" : "LOWER";
+    lines.push(
+      `- GDP Surprise Direction: ${gdpDir} (${Math.abs(predictionMarketSignals.gdpSurpriseDirection * 100).toFixed(1)}%)`
+    );
+  }
+
+  // Market confidence
+  if (predictionMarketSignals.marketConfidence !== undefined) {
+    lines.push(
+      `- Market Confidence: ${(predictionMarketSignals.marketConfidence * 100).toFixed(1)}%`
+    );
+  }
+
+  if (lines.length === 0) {
+    return "";
+  }
+
+  const platforms = predictionMarketSignals.platforms?.join(", ") || "Unknown";
+  const timestamp = predictionMarketSignals.timestamp || "Unknown";
+
+  return `
+Prediction Market Signals (from ${platforms}, updated ${timestamp}):
+${lines.join("\n")}
+`;
+}
+
+/**
  * Run Technical Analyst agent.
  */
 export async function runTechnicalAnalyst(
@@ -680,12 +781,13 @@ export async function runFundamentalsAnalyst(
   );
 
   const regimeContext = buildRegimeContext(context.regimeLabels);
+  const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
 
   const prompt = `Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
-${regimeContext}
+${regimeContext}${predictionMarketContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
 
@@ -694,7 +796,17 @@ Cycle ID: ${context.cycleId}
 
 The market regime classification reflects the current market environment.
 Use this context to assess whether fundamental drivers align with or diverge from the regime.
-HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.`;
+HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.
+
+${
+  context.predictionMarketSignals
+    ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
+- High Fed cut probability suggests easing expectations - generally supportive for equities
+- High recession probability warrants defensive positioning
+- High macro uncertainty may justify smaller position sizes
+- Use these signals to inform your fundamental thesis and event risk assessment.`
+    : ""
+}`;
 
   const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
@@ -976,6 +1088,741 @@ export async function runApprovalParallel(
   const [riskManager, critic] = await Promise.all([
     runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs),
     runCritic(plan, analystOutputs, debateOutputs, agentConfigs),
+  ]);
+
+  return { riskManager, critic };
+}
+
+// ============================================
+// Agent Streaming Types
+// ============================================
+
+/**
+ * Streaming chunk type for WebSocket emission.
+ */
+export interface AgentStreamChunk {
+  type: "text-delta" | "tool-call" | "tool-result" | "reasoning-delta" | "finish" | "error";
+  agentType: AgentType;
+  payload: {
+    text?: string;
+    toolName?: string;
+    toolArgs?: Record<string, unknown>;
+    toolCallId?: string;
+    result?: unknown;
+    success?: boolean;
+    error?: string;
+  };
+  timestamp: string;
+}
+
+/**
+ * Callback type for streaming chunk emission.
+ */
+export type OnStreamChunk = (chunk: AgentStreamChunk) => void;
+
+// ============================================
+// Agent Streaming Functions
+// ============================================
+
+/**
+ * Run Technical Analyst agent with streaming.
+ * Emits tool calls and reasoning as they occur, returns structured output.
+ */
+export async function runTechnicalAnalystStreaming(
+  context: AgentContext,
+  onChunk: OnStreamChunk
+): Promise<TechnicalAnalysisOutput[]> {
+  const regimeContext = buildRegimeContext(context.regimeLabels);
+
+  const prompt = `Analyze the following instruments:
+${JSON.stringify(context.snapshots, null, 2)}
+${regimeContext}
+Symbols to analyze: ${context.symbols.join(", ")}
+Cycle ID: ${context.cycleId}
+
+Consider the market regime when assessing trend, momentum, and volatility.
+Regime context should inform your setup classification and technical thesis.`;
+
+  const settings = getAgentRuntimeSettings("technical_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(TechnicalAnalysisSchema) });
+
+  const stream = await technicalAnalystAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "technical_analyst",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as TechnicalAnalysisOutput[];
+}
+
+/**
+ * Run News & Sentiment Analyst agent with streaming.
+ */
+export async function runNewsAnalystStreaming(
+  context: AgentContext,
+  onChunk: OnStreamChunk
+): Promise<SentimentAnalysisOutput[]> {
+  const newsEvents = (context.recentEvents ?? []).filter(
+    (e) => e.sourceType === "news" || e.sourceType === "press_release"
+  );
+
+  const prompt = `Analyze news and sentiment for the following instruments:
+
+Current News from Pipeline:
+${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
+
+Recent Historical Events (from database):
+${JSON.stringify(newsEvents, null, 2)}
+
+Symbols to analyze: ${context.symbols.join(", ")}
+Cycle ID: ${context.cycleId}`;
+
+  const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
+
+  const stream = await newsAnalystAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "news_analyst",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as SentimentAnalysisOutput[];
+}
+
+/**
+ * Run Fundamentals & Macro Analyst agent with streaming.
+ */
+export async function runFundamentalsAnalystStreaming(
+  context: AgentContext,
+  onChunk: OnStreamChunk
+): Promise<FundamentalsAnalysisOutput[]> {
+  const fundamentalEvents = (context.recentEvents ?? []).filter(
+    (e) =>
+      e.sourceType === "macro" ||
+      e.sourceType === "transcript" ||
+      e.eventType === "earnings" ||
+      e.eventType === "guidance" ||
+      e.eventType === "macro_release"
+  );
+
+  const regimeContext = buildRegimeContext(context.regimeLabels);
+  const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
+
+  const prompt = `Analyze fundamentals and macro context for the following instruments:
+
+Current Macro Indicators:
+${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
+${regimeContext}${predictionMarketContext}
+Recent Fundamental/Macro Events (from database):
+${JSON.stringify(fundamentalEvents, null, 2)}
+
+Symbols to analyze: ${context.symbols.join(", ")}
+Cycle ID: ${context.cycleId}
+
+The market regime classification reflects the current market environment.
+Use this context to assess whether fundamental drivers align with or diverge from the regime.
+HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.
+
+${
+  context.predictionMarketSignals
+    ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
+- High Fed cut probability suggests easing expectations - generally supportive for equities
+- High recession probability warrants defensive positioning
+- High macro uncertainty may justify smaller position sizes
+- Use these signals to inform your fundamental thesis and event risk assessment.`
+    : ""
+}`;
+
+  const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
+
+  const stream = await fundamentalsAnalystAgent.stream(
+    [{ role: "user", content: prompt }],
+    options
+  );
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "fundamentals_analyst",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as FundamentalsAnalysisOutput[];
+}
+
+/**
+ * Run all analyst agents in parallel with streaming.
+ */
+export async function runAnalystsParallelStreaming(
+  context: AgentContext,
+  onChunk: OnStreamChunk
+): Promise<{
+  technical: TechnicalAnalysisOutput[];
+  news: SentimentAnalysisOutput[];
+  fundamentals: FundamentalsAnalysisOutput[];
+}> {
+  const [technical, news, fundamentals] = await Promise.all([
+    runTechnicalAnalystStreaming(context, onChunk),
+    runNewsAnalystStreaming(context, onChunk),
+    runFundamentalsAnalystStreaming(context, onChunk),
+  ]);
+
+  return { technical, news, fundamentals };
+}
+
+/**
+ * Run Bullish Researcher agent with streaming.
+ */
+export async function runBullishResearcherStreaming(
+  context: AgentContext,
+  analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  },
+  onChunk: OnStreamChunk
+): Promise<BullishResearchOutput[]> {
+  const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
+
+Technical Analysis:
+${JSON.stringify(analystOutputs.technical, null, 2)}
+
+News & Sentiment Analysis:
+${JSON.stringify(analystOutputs.news, null, 2)}
+
+Fundamentals Analysis:
+${JSON.stringify(analystOutputs.fundamentals, null, 2)}
+
+Memory context (similar historical cases):
+${JSON.stringify(context.memory ?? {}, null, 2)}
+
+Symbols: ${context.symbols.join(", ")}
+Cycle ID: ${context.cycleId}`;
+
+  const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
+
+  const stream = await bullishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "bullish_researcher",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as BullishResearchOutput[];
+}
+
+/**
+ * Run Bearish Researcher agent with streaming.
+ */
+export async function runBearishResearcherStreaming(
+  context: AgentContext,
+  analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  },
+  onChunk: OnStreamChunk
+): Promise<BearishResearchOutput[]> {
+  const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
+
+Technical Analysis:
+${JSON.stringify(analystOutputs.technical, null, 2)}
+
+News & Sentiment Analysis:
+${JSON.stringify(analystOutputs.news, null, 2)}
+
+Fundamentals Analysis:
+${JSON.stringify(analystOutputs.fundamentals, null, 2)}
+
+Memory context (similar historical cases):
+${JSON.stringify(context.memory ?? {}, null, 2)}
+
+Symbols: ${context.symbols.join(", ")}
+Cycle ID: ${context.cycleId}`;
+
+  const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
+
+  const stream = await bearishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "bearish_researcher",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as BearishResearchOutput[];
+}
+
+/**
+ * Run both research agents in parallel with streaming (debate phase).
+ */
+export async function runDebateParallelStreaming(
+  context: AgentContext,
+  analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  },
+  onChunk: OnStreamChunk
+): Promise<{
+  bullish: BullishResearchOutput[];
+  bearish: BearishResearchOutput[];
+}> {
+  const [bullish, bearish] = await Promise.all([
+    runBullishResearcherStreaming(context, analystOutputs, onChunk),
+    runBearishResearcherStreaming(context, analystOutputs, onChunk),
+  ]);
+
+  return { bullish, bearish };
+}
+
+/**
+ * Run Trader agent with streaming.
+ */
+export async function runTraderStreaming(
+  context: AgentContext,
+  debateOutputs: {
+    bullish: BullishResearchOutput[];
+    bearish: BearishResearchOutput[];
+  },
+  onChunk: OnStreamChunk,
+  portfolioState?: Record<string, unknown>
+): Promise<DecisionPlan> {
+  const factorZooContext = buildFactorZooContext(context.factorZoo);
+
+  const prompt = `Synthesize the debate into a concrete trading plan:
+
+Bullish Research:
+${JSON.stringify(debateOutputs.bullish, null, 2)}
+
+Bearish Research:
+${JSON.stringify(debateOutputs.bearish, null, 2)}
+${factorZooContext}
+Current Portfolio State:
+${JSON.stringify(portfolioState ?? {}, null, 2)}
+
+Cycle ID: ${context.cycleId}
+Timestamp: ${new Date().toISOString()}
+
+${
+  context.factorZoo
+    ? `IMPORTANT: Factor Zoo signals provide quantitative evidence. The Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents the weighted combination of ${context.factorZoo.stats.activeCount} active factors.
+- Use Mega-Alpha direction to inform overall market stance
+- Weight position sizing by signal strength
+- Be cautious of factors showing decay (IC degradation)
+- Critical alerts indicate factors losing predictive power`
+    : ""
+}`;
+
+  const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+
+  const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "trader",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as DecisionPlan;
+}
+
+/**
+ * Run Risk Manager agent with streaming.
+ */
+export async function runRiskManagerStreaming(
+  plan: DecisionPlan,
+  onChunk: OnStreamChunk,
+  portfolioState?: Record<string, unknown>,
+  constraints?: Record<string, unknown>,
+  factorZooContext?: AgentContext["factorZoo"],
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
+): Promise<RiskManagerOutput> {
+  const decayRiskSection = factorZooContext?.decayAlerts.length
+    ? `
+Factor Zoo Risk Alerts:
+${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
+
+NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
+    : "";
+
+  const prompt = `Validate this trading plan against risk constraints:
+
+Decision Plan:
+${JSON.stringify(plan, null, 2)}
+
+Current Portfolio State:
+${JSON.stringify(portfolioState ?? {}, null, 2)}
+
+Risk Constraints:
+${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
+
+  const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
+  options.modelSettings.temperature = 0.1;
+
+  const stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "risk_manager",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as RiskManagerOutput;
+}
+
+/**
+ * Run Critic agent with streaming.
+ */
+export async function runCriticStreaming(
+  plan: DecisionPlan,
+  analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  },
+  debateOutputs: {
+    bullish: BullishResearchOutput[];
+    bearish: BearishResearchOutput[];
+  },
+  onChunk: OnStreamChunk,
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
+): Promise<CriticOutput> {
+  const prompt = `Validate the logical consistency of this trading plan:
+
+Decision Plan:
+${JSON.stringify(plan, null, 2)}
+
+Supporting Analyst Outputs:
+Technical: ${JSON.stringify(analystOutputs.technical, null, 2)}
+News: ${JSON.stringify(analystOutputs.news, null, 2)}
+Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
+
+Debate Outputs:
+Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
+Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
+
+  const settings = getAgentRuntimeSettings("critic", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
+  options.modelSettings.temperature = 0.1;
+
+  const stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
+
+  for await (const chunk of stream.fullStream) {
+    const streamChunk: AgentStreamChunk = {
+      type: chunk.type as AgentStreamChunk["type"],
+      agentType: "critic",
+      payload: {},
+      timestamp: new Date().toISOString(),
+    };
+
+    switch (chunk.type) {
+      case "text-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "tool-call":
+        streamChunk.payload.toolName = chunk.payload.toolName;
+        streamChunk.payload.toolArgs = chunk.payload.args;
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        onChunk(streamChunk);
+        break;
+      case "tool-result":
+        streamChunk.payload.toolCallId = chunk.payload.toolCallId;
+        streamChunk.payload.result = chunk.payload.result;
+        streamChunk.payload.success = true;
+        onChunk(streamChunk);
+        break;
+      case "reasoning-delta":
+        streamChunk.payload.text = chunk.payload.text;
+        onChunk(streamChunk);
+        break;
+      case "error":
+        streamChunk.payload.error =
+          chunk.payload.error instanceof Error
+            ? chunk.payload.error.message
+            : String(chunk.payload.error);
+        onChunk(streamChunk);
+        break;
+    }
+  }
+
+  return (await stream.object) as CriticOutput;
+}
+
+/**
+ * Run both approval agents in parallel with streaming.
+ */
+export async function runApprovalParallelStreaming(
+  plan: DecisionPlan,
+  analystOutputs: {
+    technical: TechnicalAnalysisOutput[];
+    news: SentimentAnalysisOutput[];
+    fundamentals: FundamentalsAnalysisOutput[];
+  },
+  debateOutputs: {
+    bullish: BullishResearchOutput[];
+    bearish: BearishResearchOutput[];
+  },
+  onChunk: OnStreamChunk,
+  portfolioState?: Record<string, unknown>,
+  constraints?: Record<string, unknown>,
+  factorZooContext?: AgentContext["factorZoo"],
+  agentConfigs?: Record<AgentType, AgentConfigEntry>
+): Promise<{
+  riskManager: RiskManagerOutput;
+  critic: CriticOutput;
+}> {
+  const [riskManager, critic] = await Promise.all([
+    runRiskManagerStreaming(
+      plan,
+      onChunk,
+      portfolioState,
+      constraints,
+      factorZooContext,
+      agentConfigs
+    ),
+    runCriticStreaming(plan, analystOutputs, debateOutputs, onChunk, agentConfigs),
   ]);
 
   return { riskManager, critic };

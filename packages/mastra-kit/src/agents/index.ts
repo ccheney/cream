@@ -70,7 +70,13 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
     "Sector-aware analysis",
     "Forward-looking on event risks",
   ],
-  tools: ["economic_calendar", "helix_query", "web_search"],
+  tools: [
+    "economic_calendar",
+    "helix_query",
+    "web_search",
+    "get_prediction_signals",
+    "get_market_snapshots",
+  ],
 };
 
 export const BULLISH_RESEARCHER_CONFIG: AgentConfig = {
@@ -119,6 +125,7 @@ export const TRADER_CONFIG: AgentConfig = {
     "get_greeks",
     "helix_query",
     "web_search",
+    "get_prediction_signals",
   ],
 };
 
@@ -133,7 +140,7 @@ export const RISK_MANAGER_CONFIG: AgentConfig = {
     "Systematic constraint checker",
     "Clear about violations and required changes",
   ],
-  tools: ["get_portfolio_state", "web_search"],
+  tools: ["get_portfolio_state", "web_search", "get_prediction_signals"],
 };
 
 export const CRITIC_CONFIG: AgentConfig = {
