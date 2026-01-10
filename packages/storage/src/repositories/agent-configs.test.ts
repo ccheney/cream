@@ -21,7 +21,6 @@ async function setupTables(client: TursoClient): Promise<void> {
       id TEXT PRIMARY KEY,
       environment TEXT NOT NULL,
       agent_type TEXT NOT NULL,
-      model TEXT NOT NULL,
       system_prompt_override TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
