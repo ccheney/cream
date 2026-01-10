@@ -18,12 +18,14 @@ import {
   type GlobalModel,
   getModelId as getGlobalModelId,
 } from "@cream/domain";
+import { type IndicatorHypothesis, IndicatorHypothesisSchema } from "@cream/indicators";
 import {
   AGENT_CONFIGS,
   AGENT_PROMPTS,
   type AgentType,
   type BearishResearchOutput,
   type BullishResearchOutput,
+  buildResearcherPrompt,
   type CriticOutput,
   type DecisionPlan,
   economicCalendarTool,
@@ -36,6 +38,7 @@ import {
   getQuotesTool,
   helixQueryTool,
   newsSearchTool,
+  type ResearcherInput,
   type RiskManagerOutput,
   recalcIndicatorTool,
   type SentimentAnalysisOutput,
@@ -305,6 +308,51 @@ const CriticOutputSchema = z.object({
 });
 
 // ============================================
+// Idea Agent Output Schema
+// ============================================
+
+const IdeaAgentOutputSchema = z.object({
+  hypothesis_id: z.string(),
+  title: z.string(),
+  economic_rationale: z.string(),
+  market_mechanism: z.enum([
+    "BEHAVIORAL_BIAS",
+    "STRUCTURAL_CONSTRAINT",
+    "INFORMATION_ASYMMETRY",
+    "LIQUIDITY_PREMIUM",
+    "RISK_PREMIUM",
+  ]),
+  target_regime: z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
+  expected_metrics: z.object({
+    ic_target: z.number(),
+    sharpe_target: z.number(),
+    decay_half_life_days: z.number(),
+  }),
+  falsification_criteria: z.array(z.string()),
+  required_features: z.array(z.string()),
+  parameter_count: z.number(),
+  related_literature: z.array(
+    z.object({
+      title: z.string(),
+      authors: z.string(),
+      url: z.string().nullable(),
+      relevance: z.string(),
+    })
+  ),
+  originality_justification: z.string(),
+  similar_past_hypotheses: z.array(
+    z.object({
+      hypothesis_id: z.string(),
+      outcome: z.enum(["validated", "rejected"]),
+      lesson: z.string(),
+    })
+  ),
+  implementation_hints: z.string(),
+});
+
+export type IdeaAgentOutput = z.infer<typeof IdeaAgentOutputSchema>;
+
+// ============================================
 // Agent Factory
 // ============================================
 
@@ -379,6 +427,12 @@ export const riskManagerAgent = createAgent("risk_manager");
 /** Critic - Checks logical consistency */
 export const criticAgent = createAgent("critic");
 
+/** Idea Agent - Generates alpha factor hypotheses */
+export const ideaAgentAgent = createAgent("idea_agent");
+
+/** Indicator Researcher - Formulates indicator hypotheses */
+export const indicatorResearcherAgent = createAgent("indicator_researcher");
+
 // ============================================
 // Agent Registry
 // ============================================
@@ -392,6 +446,8 @@ export const mastraAgents = {
   trader: traderAgent,
   risk_manager: riskManagerAgent,
   critic: criticAgent,
+  idea_agent: ideaAgentAgent,
+  indicator_researcher: indicatorResearcherAgent,
 } as const;
 
 export type MastraAgentRegistry = typeof mastraAgents;
@@ -478,7 +534,7 @@ export interface AgentContext {
     platforms?: string[];
   };
   /** Agent configurations from runtime config (from database) */
-  agentConfigs?: Record<AgentType, AgentConfigEntry>;
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>;
 }
 
 /**
@@ -502,7 +558,7 @@ interface AgentRuntimeSettings {
  */
 function getAgentRuntimeSettings(
   agentType: AgentType,
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): AgentRuntimeSettings {
   const config = agentConfigs?.[agentType];
   if (config) {
@@ -1000,7 +1056,7 @@ export async function runRiskManager(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -1045,7 +1101,7 @@ export async function runCritic(
     bullish: BullishResearchOutput[];
     bearish: BearishResearchOutput[];
   },
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<CriticOutput> {
   const prompt = `Validate the logical consistency of this trading plan:
 
@@ -1089,7 +1145,7 @@ export async function runApprovalParallel(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
@@ -1661,7 +1717,7 @@ export async function runRiskManagerStreaming(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -1745,7 +1801,7 @@ export async function runCriticStreaming(
     bearish: BearishResearchOutput[];
   },
   onChunk: OnStreamChunk,
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<CriticOutput> {
   const prompt = `Validate the logical consistency of this trading plan:
 
@@ -1827,7 +1883,7 @@ export async function runApprovalParallelStreaming(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
@@ -1862,7 +1918,7 @@ export async function revisePlan(
     bullish: BullishResearchOutput[];
     bearish: BearishResearchOutput[];
   },
-  agentConfigs?: Record<AgentType, AgentConfigEntry>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<DecisionPlan> {
   const prompt = `Revise the following trading plan based on the rejection feedback:
 
@@ -1888,4 +1944,133 @@ Please address ALL rejection reasons and produce a revised plan that:
   const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 
   return response.object as DecisionPlan;
+}
+
+// ============================================
+// Research Agent Execution Functions
+// ============================================
+
+/**
+ * Context for Idea Agent
+ */
+export interface IdeaAgentContext {
+  /** Current market regime */
+  regime: string;
+  /** Uncovered market regimes */
+  gaps: string[];
+  /** Factors currently experiencing decay */
+  decayingFactors: Array<{ id: string; decayRate: number }>;
+  /** Factor Zoo summary stats */
+  factorZooSummary: string;
+  /** Research trigger details */
+  trigger: {
+    type: string;
+    severity: string;
+    suggestedFocus: string;
+    affectedFactors: string[];
+    detectedAt: string;
+  };
+  /** Similar past hypotheses from memory */
+  memoryResults?: Array<{
+    hypothesisId: string;
+    title: string;
+    status: "validated" | "rejected";
+    targetRegime: string;
+    ic?: number;
+    lessonsLearned?: string;
+  }>;
+  /** Agent configs for runtime settings */
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>;
+}
+
+/**
+ * Run Idea Agent to generate alpha factor hypotheses.
+ */
+export async function runIdeaAgent(context: IdeaAgentContext): Promise<IdeaAgentOutput> {
+  const decayingInfo =
+    context.decayingFactors.length > 0
+      ? context.decayingFactors
+          .map((f) => `${f.id} (decay rate: ${f.decayRate.toFixed(4)}/day)`)
+          .join(", ")
+      : "None currently decaying";
+
+  const memoryInfo =
+    context.memoryResults && context.memoryResults.length > 0
+      ? JSON.stringify(
+          context.memoryResults.map((h) => ({
+            id: h.hypothesisId,
+            title: h.title,
+            status: h.status,
+            regime: h.targetRegime,
+            ic: h.ic,
+            lessons: h.lessonsLearned,
+          })),
+          null,
+          2
+        )
+      : "No similar past hypotheses found";
+
+  const prompt = `<context>
+<trigger>
+Type: ${context.trigger.type}
+Severity: ${context.trigger.severity}
+Suggested Focus: ${context.trigger.suggestedFocus}
+Affected Factors: ${context.trigger.affectedFactors.join(", ") || "None specifically"}
+Detected At: ${context.trigger.detectedAt}
+</trigger>
+
+<market_state>
+Current Regime: ${context.regime}
+Uncovered Regimes: ${context.gaps.length > 0 ? context.gaps.join(", ") : "All regimes covered"}
+Decaying Factors: ${decayingInfo}
+</market_state>
+
+<factor_zoo>
+${context.factorZooSummary}
+</factor_zoo>
+
+<memory_context>
+Similar Past Hypotheses:
+${memoryInfo}
+</memory_context>
+</context>
+
+<task>
+Generate a novel alpha factor hypothesis that addresses the research trigger.
+
+Requirements:
+1. Target the ${context.trigger.type === "REGIME_GAP" ? `uncovered ${context.regime} regime` : "current market conditions"}
+2. ${context.trigger.type === "ALPHA_DECAY" ? `Consider replacing or improving on: ${context.trigger.affectedFactors.join(", ")}` : "Focus on novel alpha sources"}
+3. Use web search to find supporting academic research
+4. Ensure the hypothesis is sufficiently different from existing factors
+
+Output a complete hypothesis.
+</task>`;
+
+  const settings = getAgentRuntimeSettings("idea_agent", context.agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: IdeaAgentOutputSchema });
+
+  const response = await ideaAgentAgent.generate([{ role: "user", content: prompt }], options);
+
+  return response.object as IdeaAgentOutput;
+}
+
+/**
+ * Run Indicator Researcher agent to formulate indicator hypotheses.
+ */
+export async function runIndicatorResearcher(
+  input: ResearcherInput,
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+): Promise<IndicatorHypothesis> {
+  const prompt = buildResearcherPrompt(input);
+
+  const settings = getAgentRuntimeSettings("indicator_researcher", agentConfigs);
+  const options = buildGenerateOptions(settings, { schema: IndicatorHypothesisSchema });
+
+  const response = await indicatorResearcherAgent.generate(
+    [{ role: "user", content: prompt }],
+    options
+  );
+
+  return response.object as IndicatorHypothesis;
 }
