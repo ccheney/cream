@@ -12,6 +12,7 @@ import {
 } from "@cream/config";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
+import { setPredictionMarketsRepoProvider } from "@cream/mastra-kit";
 import {
   AgentConfigsRepository,
   createInMemoryClient,
@@ -110,6 +111,30 @@ export function closeDb(): void {
   }
   initPromise = null;
 }
+
+// ============================================
+// Tool Provider Registration
+// ============================================
+
+let toolProvidersRegistered = false;
+
+/**
+ * Register tool providers for Mastra tools that need database access.
+ * This should be called early in application startup.
+ */
+export function registerToolProviders(): void {
+  if (toolProvidersRegistered) {
+    return;
+  }
+
+  // Register prediction markets repo provider for agent tools
+  setPredictionMarketsRepoProvider(getPredictionMarketsRepo);
+
+  toolProvidersRegistered = true;
+}
+
+// Auto-register on module load
+registerToolProviders();
 
 // ============================================
 // Repository Factories

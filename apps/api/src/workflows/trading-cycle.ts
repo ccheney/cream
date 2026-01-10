@@ -77,6 +77,23 @@ const log: LifecycleLogger = createNodeLogger({
 // Types
 // ============================================
 
+/**
+ * Prediction market signals from the prediction markets workflow.
+ * Updated every 15 minutes.
+ */
+export interface PredictionMarketSignals {
+  fedCutProbability?: number;
+  fedHikeProbability?: number;
+  recessionProbability12m?: number;
+  macroUncertaintyIndex?: number;
+  policyEventRisk?: number;
+  marketConfidence?: number;
+  cpiSurpriseDirection?: number;
+  gdpSurpriseDirection?: number;
+  timestamp?: string;
+  platforms?: string[];
+}
+
 export interface ExternalContext {
   news: Array<{
     eventId: string;
@@ -89,6 +106,8 @@ export interface ExternalContext {
   }>;
   sentiment: Record<string, number>;
   macroIndicators: Record<string, number>;
+  /** Prediction market signals (Fed rate, recession probability, etc.) */
+  predictionMarketSignals?: PredictionMarketSignals;
 }
 
 /**
@@ -1029,7 +1048,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     computeAndStoreRegimes(marketSnapshot),
   ]);
 
-  // Build agent context with external news, macro data, regime classifications, and agent configs
+  // Build agent context with external news, macro data, regime classifications, prediction markets, and agent configs
   const agentContext: AgentContext = {
     cycleId,
     symbols: instruments,
@@ -1041,6 +1060,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       sentiment: externalContext?.sentiment ?? {},
     },
     regimeLabels,
+    predictionMarketSignals: externalContext?.predictionMarketSignals,
     agentConfigs,
   };
 
