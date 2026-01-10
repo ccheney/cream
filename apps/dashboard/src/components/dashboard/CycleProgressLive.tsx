@@ -76,29 +76,29 @@ export function CycleProgressLive({
   const phaseColor = phase ? PHASE_COLORS[phase] : "from-stone-400 to-stone-500";
 
   return (
-    <div className={compact ? "space-y-1.5" : "space-y-3"}>
+    <div className={`${compact ? "space-y-1.5" : "space-y-3"} overflow-hidden`}>
       {/* Phase indicator with living pulse */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {isRunning && (
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
             </span>
           )}
           <span
-            className={`font-medium text-stone-900 dark:text-stone-100 ${compact ? "text-sm" : ""}`}
+            className={`font-medium text-stone-900 dark:text-stone-100 shrink-0 ${compact ? "text-sm" : ""}`}
           >
             {phaseLabel}
           </span>
           <span
-            className={`font-mono text-stone-500 dark:text-stone-400 ${compact ? "text-xs" : "text-sm"}`}
+            className={`font-mono text-stone-500 dark:text-stone-400 truncate ${compact ? "text-xs" : "text-sm"}`}
           >
             #{cycle.id.slice(0, 8)}
           </span>
         </div>
         <span
-          className={`font-medium font-mono text-stone-600 dark:text-stone-300 ${compact ? "text-xs" : "text-sm"}`}
+          className={`font-medium font-mono text-stone-600 dark:text-stone-300 shrink-0 ml-2 ${compact ? "text-xs" : "text-sm"}`}
         >
           {Math.round(progress)}%
         </span>
@@ -115,13 +115,13 @@ export function CycleProgressLive({
       >
         <div
           className={`h-full bg-gradient-to-r ${phaseColor} transition-all duration-500 ease-out`}
-          style={{ width: `${progress}%` }}
+          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>
 
       {/* Description */}
       {showDescription && !compact && (
-        <p className="text-sm text-stone-600 dark:text-stone-400">{phaseDescription}</p>
+        <p className="text-sm text-stone-600 dark:text-stone-400 break-words">{phaseDescription}</p>
       )}
     </div>
   );

@@ -26,6 +26,8 @@ const FEED_TO_STORE_TYPE: Partial<Record<EventType, StoreEventType>> = {
   decision: "agent_decision",
   alert: "system_alert",
   agent: "agent_decision",
+  cycle: "market_event",
+  backtest: "market_event",
   system: "market_event",
 };
 
@@ -40,6 +42,8 @@ const EVENT_TYPES: EventType[] = [
   "reject",
   "alert",
   "agent",
+  "cycle",
+  "backtest",
   "system",
 ];
 
@@ -54,11 +58,14 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
   reject: "Rejects",
   alert: "Alerts",
   agent: "Agents",
+  cycle: "Cycles",
+  backtest: "Backtest",
   system: "System",
 };
 
 export default function FeedPage() {
-  const { connected, lastMessage } = useWebSocket();
+  const { connected, lastMessage, subscribe, unsubscribe, subscribeSymbols, unsubscribeSymbols } =
+    useWebSocket();
   const { stats, recordEvent } = useFeedStats();
   const addEventToStore = useEventFeedStore((s) => s.addEvent);
   const resetNewEventCount = useEventFeedStore((s) => s.resetNewEventCount);
@@ -73,7 +80,54 @@ export default function FeedPage() {
   });
   const [isPaused, setIsPaused] = useState(false);
   const [symbolFilter, setSymbolFilter] = useState("");
+  const [subscribedSymbol, setSubscribedSymbol] = useState<string | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Subscribe to feed-relevant channels when page mounts
+  const feedChannels = useMemo(
+    () => ["cycles", "agents", "alerts", "orders", "trades", "backtests"],
+    []
+  );
+  useEffect(() => {
+    if (connected) {
+      subscribe(feedChannels);
+    }
+    return () => {
+      if (connected) {
+        unsubscribe(feedChannels);
+      }
+    };
+  }, [connected, subscribe, unsubscribe, feedChannels]);
+
+  // Subscribe to symbol for real-time quotes/trades when filter is a valid symbol
+  useEffect(() => {
+    const trimmed = symbolFilter.trim().toUpperCase();
+    // Only subscribe if it looks like a valid ticker (1-5 uppercase letters)
+    const isValidTicker = /^[A-Z]{1,5}$/.test(trimmed);
+
+    if (connected && isValidTicker && trimmed !== subscribedSymbol) {
+      // Unsubscribe from previous symbol
+      if (subscribedSymbol) {
+        unsubscribeSymbols([subscribedSymbol]);
+      }
+      // Subscribe to new symbol
+      subscribeSymbols([trimmed]);
+      setSubscribedSymbol(trimmed);
+    } else if (!isValidTicker && subscribedSymbol) {
+      // Unsubscribe when filter is cleared or invalid
+      unsubscribeSymbols([subscribedSymbol]);
+      setSubscribedSymbol(null);
+    }
+  }, [connected, symbolFilter, subscribedSymbol, subscribeSymbols, unsubscribeSymbols]);
+
+  // Cleanup symbol subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (subscribedSymbol) {
+        unsubscribeSymbols([subscribedSymbol]);
+      }
+    };
+  }, [subscribedSymbol, unsubscribeSymbols]);
 
   // Reset unread count when viewing feed page
   useEffect(() => {

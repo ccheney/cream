@@ -17,6 +17,7 @@ import type {
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
   getAlertsRepo,
+  getCyclesRepo,
   getDecisionsRepo,
   getOrdersRepo,
   getPositionsRepo,
@@ -803,6 +804,20 @@ app.openapi(triggerCycleRoute, async (c) => {
     const startTime = Date.now();
     cycleState.status = "running";
 
+    // Persist cycle start to database
+    let cyclesRepo: Awaited<ReturnType<typeof getCyclesRepo>> | null = null;
+    try {
+      cyclesRepo = await getCyclesRepo();
+      await cyclesRepo.start(
+        cycleId,
+        environment,
+        symbols?.length ?? 0,
+        configVersion ?? undefined
+      );
+    } catch {
+      // Non-critical - continue cycle even if persistence fails
+    }
+
     // Emit initial progress
     emitProgress("observe", 0, "starting", "Starting trading cycle...");
 
@@ -833,12 +848,44 @@ app.openapi(triggerCycleRoute, async (c) => {
       systemState.lastCycleId = cycleId;
       systemState.lastCycleTime = cycleState.completedAt;
 
+      // Persist cycle completion to database
+      const durationMs = Date.now() - startTime;
+      if (cyclesRepo) {
+        try {
+          // Fetch decisions for the cycle to store summary
+          const decisionsRepo = await getDecisionsRepo();
+          const decisionsResult = await decisionsRepo.findMany({ cycleId, environment });
+          const decisionSummaries = decisionsResult.data.map((d) => ({
+            symbol: d.symbol,
+            action: d.action as "BUY" | "SELL" | "HOLD",
+            direction: d.direction as "LONG" | "SHORT" | "FLAT",
+            confidence: d.confidenceScore ?? 0,
+          }));
+
+          await cyclesRepo.complete(cycleId, {
+            approved: workflowResult.approved,
+            iterations: workflowResult.iterations,
+            decisions: decisionSummaries,
+            orders: workflowResult.orderSubmission.orderIds.map((orderId) => ({
+              orderId,
+              symbol: "unknown",
+              side: "buy" as const,
+              quantity: 0,
+              status: "submitted" as const,
+            })),
+            durationMs,
+          });
+        } catch {
+          // Non-critical - log but don't fail
+        }
+      }
+
       // Emit completion with workflow result
       const statusMessage = workflowResult.approved
         ? `Cycle completed: ${workflowResult.iterations} iteration(s), plan approved`
         : `Cycle completed: ${workflowResult.iterations} iteration(s), plan rejected`;
       emitProgress("complete", 100, "done", statusMessage);
-      emitResult("completed", Date.now() - startTime, workflowResult);
+      emitResult("completed", durationMs, workflowResult);
 
       // Broadcast notification that decisions are ready
       // (Dashboard fetches full decisions via REST API)
@@ -865,10 +912,25 @@ app.openapi(triggerCycleRoute, async (c) => {
       cycleState.status = "failed";
       cycleState.completedAt = new Date().toISOString();
       cycleState.error = error instanceof Error ? error.message : "Unknown error";
+      const durationMs = Date.now() - startTime;
+
+      // Persist cycle failure to database
+      if (cyclesRepo) {
+        try {
+          await cyclesRepo.fail(
+            cycleId,
+            cycleState.error,
+            error instanceof Error ? error.stack : undefined,
+            durationMs
+          );
+        } catch {
+          // Non-critical - log but don't fail
+        }
+      }
 
       // Emit failure
       emitProgress("error", 0, "failed", `Cycle failed: ${cycleState.error}`);
-      emitResult("failed", Date.now() - startTime, undefined, cycleState.error);
+      emitResult("failed", durationMs, undefined, cycleState.error);
     }
   };
 

@@ -263,22 +263,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-function ConnectionBadge({ connected, state }: { connected: boolean; state: string }) {
-  const colors = {
-    connected: "bg-green-500",
-    connecting: "bg-yellow-500 animate-pulse",
-    reconnecting: "bg-yellow-500 animate-pulse",
-    disconnected: "bg-red-500",
-  };
-
-  const color = colors[state as keyof typeof colors] ?? colors.disconnected;
+function ConnectionBadge({ connected }: { connected: boolean; state: string }) {
+  // Only show connected (green) or disconnected (red) - no intermediate states
+  if (!connected) {
+    return null;
+  }
 
   return (
     <div className="flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${color}`} title={state} />
-      <span className="text-xs text-cream-500 dark:text-cream-400 capitalize hidden sm:inline">
-        {connected ? "Connected" : state}
-      </span>
+      <div className="w-2 h-2 rounded-full bg-green-500" title="connected" />
+      <span className="text-xs text-cream-500 dark:text-cream-400 hidden sm:inline">Connected</span>
     </div>
   );
 }

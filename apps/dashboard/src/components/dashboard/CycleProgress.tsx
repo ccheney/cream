@@ -76,12 +76,12 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
     : "Initializing cycle...";
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3 overflow-hidden">
+      <div className="flex items-center justify-between min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <span
             className={cn(
-              "text-sm font-medium",
+              "text-sm font-medium shrink-0",
               colors.text,
               status === "running" && "animate-pulse"
             )}
@@ -89,12 +89,12 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
             {phaseLabel}
           </span>
           {progress?.activeSymbol && (
-            <span className="text-xs text-stone-500 dark:text-stone-400">
+            <span className="text-xs text-stone-500 dark:text-stone-400 truncate">
               ({progress.activeSymbol})
             </span>
           )}
         </div>
-        <span className={cn("text-sm font-medium tabular-nums", colors.text)}>
+        <span className={cn("text-sm font-medium tabular-nums shrink-0 ml-2", colors.text)}>
           {Math.round(percentage)}%
         </span>
       </div>
@@ -113,11 +113,11 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
             colors.bar,
             status === "running" && "animate-pulse"
           )}
-          style={{ width: `${percentage}%` }}
+          style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
         />
       </div>
 
-      <p className="text-sm text-stone-600 dark:text-stone-400">{phaseDescription}</p>
+      <p className="text-sm text-stone-600 dark:text-stone-400 break-words">{phaseDescription}</p>
 
       {progress?.totalSymbols && progress.totalSymbols > 0 && (
         <p className="text-xs text-stone-500 dark:text-stone-500">

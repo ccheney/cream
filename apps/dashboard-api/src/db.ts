@@ -16,6 +16,8 @@ import {
   BacktestsRepository,
   ConfigVersionsRepository,
   ConstraintsConfigRepository,
+  type CyclesRepository,
+  createCyclesRepository,
   createInMemoryClient,
   createTursoClient,
   DecisionsRepository,
@@ -257,6 +259,14 @@ export async function getAuditLogRepo(): Promise<AuditLogRepository> {
 export async function getConstraintsConfigRepo(): Promise<ConstraintsConfigRepository> {
   const client = await getDbClient();
   return new ConstraintsConfigRepository(client);
+}
+
+/**
+ * Get cycles repository
+ */
+export async function getCyclesRepo(): Promise<CyclesRepository> {
+  const client = await getDbClient();
+  return createCyclesRepository(client);
 }
 
 // ============================================

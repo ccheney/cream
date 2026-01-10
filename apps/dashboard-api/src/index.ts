@@ -21,6 +21,7 @@ import {
   sessionMiddleware,
 } from "./auth/session.js";
 import { closeDb } from "./db.js";
+import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
 import { AUTH_CONFIG, rateLimit } from "./middleware/index.js";
 import {
   agentsRoutes,
@@ -266,6 +267,10 @@ if (import.meta.main) {
   // Initialize options data streaming (non-blocking)
   initOptionsDataStreaming().catch((_error) => {});
 
+  // Start event publisher for broadcasting events to WebSocket clients
+  const publisher = getEventPublisher();
+  publisher.start().catch((_error) => {});
+
   const server = Bun.serve({
     port,
     async fetch(req, server) {
@@ -298,6 +303,7 @@ if (import.meta.main) {
 
   // Graceful shutdown
   process.on("SIGINT", () => {
+    resetEventPublisher();
     shutdownMarketDataStreaming();
     shutdownOptionsDataStreaming();
     closeAllConnections("Server shutting down");
@@ -307,6 +313,7 @@ if (import.meta.main) {
   });
 
   process.on("SIGTERM", () => {
+    resetEventPublisher();
     shutdownMarketDataStreaming();
     shutdownOptionsDataStreaming();
     closeAllConnections("Server shutting down");

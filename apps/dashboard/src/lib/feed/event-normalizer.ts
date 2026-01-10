@@ -30,6 +30,8 @@ export type EventType =
   | "reject"
   | "alert"
   | "agent"
+  | "cycle"
+  | "backtest"
   | "system";
 
 export interface NormalizedEvent {
@@ -60,6 +62,8 @@ const EVENT_ICONS: Record<EventType, string> = {
   reject: "✗",
   alert: "⚠",
   agent: "◈",
+  cycle: "↻",
+  backtest: "▶",
   system: "⚙",
 };
 
@@ -352,6 +356,334 @@ function normalizeAgentOutput(
 }
 
 /**
+ * Normalize a cycle progress message.
+ */
+function normalizeCycleProgress(
+  data: { phase?: string; progress?: number; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const phase = data.phase || "unknown";
+  const progress = data.progress ?? 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "cycle",
+    icon: EVENT_ICONS.cycle,
+    symbol: data.symbol || "",
+    title: `OODA ${phase}`,
+    details: `Progress: ${Math.round(progress * 100)}%`,
+    color: "accent",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an aggregate (candle) message.
+ */
+function normalizeAggregate(
+  data: { symbol: string; open: number; high: number; low: number; close: number; volume: number },
+  timestamp: Date
+): NormalizedEvent {
+  const change = data.close - data.open;
+  const changePercent = data.open > 0 ? (change / data.open) * 100 : 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "trade",
+    icon: EVENT_ICONS.trade,
+    symbol: data.symbol,
+    title: data.symbol,
+    details: `${formatCurrency(data.close)} ${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%  Vol: ${(data.volume / 1000).toFixed(1)}K`,
+    color: change >= 0 ? "profit" : "loss",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an agent tool call message.
+ */
+function normalizeAgentToolCall(
+  data: { agentType?: string; toolName?: string; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const agent = data.agentType || "agent";
+  const tool = data.toolName || "tool";
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "agent",
+    icon: "🔧",
+    symbol: data.symbol || "",
+    title: `${agent} → ${tool}`,
+    details: "Tool call",
+    color: "accent",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an agent tool result message.
+ */
+function normalizeAgentToolResult(
+  data: { agentType?: string; toolName?: string; symbol?: string; success?: boolean },
+  timestamp: Date
+): NormalizedEvent {
+  const agent = data.agentType || "agent";
+  const tool = data.toolName || "tool";
+  const success = data.success !== false;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "agent",
+    icon: success ? "✓" : "✗",
+    symbol: data.symbol || "",
+    title: `${agent} ← ${tool}`,
+    details: success ? "Result received" : "Tool failed",
+    color: success ? "profit" : "loss",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an agent reasoning message.
+ */
+function normalizeAgentReasoning(
+  data: { agentType?: string; text?: string; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const agent = data.agentType || "agent";
+  const text = data.text || "";
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "agent",
+    icon: "💭",
+    symbol: data.symbol || "",
+    title: `${agent} thinking`,
+    details: text.slice(0, 80) + (text.length > 80 ? "..." : ""),
+    color: "neutral",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an agent text delta message.
+ */
+function normalizeAgentTextDelta(
+  data: { agentType?: string; text?: string; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const agent = data.agentType || "agent";
+  const text = data.text || "";
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "agent",
+    icon: "📝",
+    symbol: data.symbol || "",
+    title: `${agent} output`,
+    details: text.slice(0, 80) + (text.length > 80 ? "..." : ""),
+    color: "neutral",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize an agent status message.
+ */
+function normalizeAgentStatus(
+  data: { type?: string; displayName?: string; status?: string; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const agent = data.displayName || data.type || "agent";
+  const status = data.status || "idle";
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "agent",
+    icon: EVENT_ICONS.agent,
+    symbol: data.symbol || "",
+    title: agent,
+    details: status,
+    color: status === "running" ? "accent" : "neutral",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a cycle result message.
+ */
+function normalizeCycleResult(
+  data: { cycleId?: string; status?: string; symbol?: string; decisionsCount?: number },
+  timestamp: Date
+): NormalizedEvent {
+  const status = data.status || "completed";
+  const decisions = data.decisionsCount ?? 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "cycle",
+    icon: EVENT_ICONS.cycle,
+    symbol: data.symbol || "",
+    title: `Cycle ${status}`,
+    details: decisions > 0 ? `${decisions} decision(s)` : "",
+    color: status === "completed" ? "profit" : status === "failed" ? "loss" : "neutral",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a decision plan message.
+ */
+function normalizeDecisionPlan(
+  data: { symbol?: string; action?: string; direction?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const symbol = data.symbol || "???";
+  const action = data.action || "PLAN";
+  const direction = data.direction || "";
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "decision",
+    icon: "📋",
+    symbol,
+    title: `${symbol} ${action}`,
+    details: direction ? `Direction: ${direction}` : "Plan generated",
+    color: "accent",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest started message.
+ */
+function normalizeBacktestStarted(
+  data: { backtestId?: string; symbol?: string },
+  timestamp: Date
+): NormalizedEvent {
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: EVENT_ICONS.backtest,
+    symbol: data.symbol || "",
+    title: "Backtest started",
+    details: data.backtestId ? `ID: ${data.backtestId.slice(0, 8)}` : "",
+    color: "accent",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest progress message.
+ */
+function normalizeBacktestProgress(
+  data: { backtestId?: string; progress?: number; currentDate?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const progress = data.progress ?? 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: EVENT_ICONS.backtest,
+    symbol: "",
+    title: "Backtest running",
+    details: `${Math.round(progress * 100)}%${data.currentDate ? ` @ ${data.currentDate}` : ""}`,
+    color: "accent",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest trade message.
+ */
+function normalizeBacktestTrade(
+  data: { symbol?: string; side?: string; quantity?: number; price?: number },
+  timestamp: Date
+): NormalizedEvent {
+  const symbol = data.symbol || "???";
+  const side = data.side?.toUpperCase() || "TRADE";
+  const qty = data.quantity || 0;
+  const price = data.price || 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: side === "BUY" ? "↗" : "↘",
+    symbol,
+    title: `${symbol} ${side} ${qty}`,
+    details: formatCurrency(price),
+    color: side === "BUY" ? "profit" : "loss",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest equity message.
+ */
+function normalizeBacktestEquity(
+  data: { equity?: number; date?: string },
+  timestamp: Date
+): NormalizedEvent {
+  const equity = data.equity || 0;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: "📈",
+    symbol: "",
+    title: "Equity update",
+    details: `${formatCurrency(equity)}${data.date ? ` @ ${data.date}` : ""}`,
+    color: "neutral",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest completed message.
+ */
+function normalizeBacktestCompleted(
+  data: { backtestId?: string; totalReturn?: number; sharpe?: number },
+  timestamp: Date
+): NormalizedEvent {
+  const returnPct = data.totalReturn ?? 0;
+  const sharpe = data.sharpe;
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: "✓",
+    symbol: "",
+    title: "Backtest completed",
+    details: `Return: ${returnPct >= 0 ? "+" : ""}${(returnPct * 100).toFixed(2)}%${sharpe !== undefined ? ` Sharpe: ${sharpe.toFixed(2)}` : ""}`,
+    color: returnPct >= 0 ? "profit" : "loss",
+    raw: data,
+  };
+}
+
+/**
+ * Normalize a backtest error message.
+ */
+function normalizeBacktestError(
+  data: { backtestId?: string; error?: string },
+  timestamp: Date
+): NormalizedEvent {
+  return {
+    id: crypto.randomUUID(),
+    timestamp,
+    type: "backtest",
+    icon: "✗",
+    symbol: "",
+    title: "Backtest failed",
+    details: data.error?.slice(0, 60) || "Unknown error",
+    color: "loss",
+    raw: data,
+  };
+}
+
+/**
  * Normalize a system message (fallback).
  */
 function normalizeSystem(data: unknown, type: string, timestamp: Date): NormalizedEvent {
@@ -429,14 +761,100 @@ export function normalizeEvent(message: WebSocketMessage): NormalizedEvent | nul
         timestamp
       );
 
-    // Messages we don't display in feed
+    case "cycle_progress":
+      return normalizeCycleProgress(
+        data as { phase?: string; progress?: number; symbol?: string },
+        timestamp
+      );
+
+    case "aggregate":
+      return normalizeAggregate(
+        data as {
+          symbol: string;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume: number;
+        },
+        timestamp
+      );
+
+    case "agent_tool_call":
+      return normalizeAgentToolCall(
+        data as { agentType?: string; toolName?: string; symbol?: string },
+        timestamp
+      );
+
+    case "agent_tool_result":
+      return normalizeAgentToolResult(
+        data as { agentType?: string; toolName?: string; symbol?: string; success?: boolean },
+        timestamp
+      );
+
+    case "agent_reasoning":
+      return normalizeAgentReasoning(
+        data as { agentType?: string; text?: string; symbol?: string },
+        timestamp
+      );
+
+    case "agent_text_delta":
+      return normalizeAgentTextDelta(
+        data as { agentType?: string; text?: string; symbol?: string },
+        timestamp
+      );
+
+    case "agent_status":
+      return normalizeAgentStatus(
+        data as { type?: string; displayName?: string; status?: string; symbol?: string },
+        timestamp
+      );
+
+    case "cycle_result":
+      return normalizeCycleResult(
+        data as { cycleId?: string; status?: string; symbol?: string; decisionsCount?: number },
+        timestamp
+      );
+
+    case "decision_plan":
+      return normalizeDecisionPlan(
+        data as { symbol?: string; action?: string; direction?: string },
+        timestamp
+      );
+
+    case "backtest:started":
+      return normalizeBacktestStarted(data as { backtestId?: string; symbol?: string }, timestamp);
+
+    case "backtest:progress":
+      return normalizeBacktestProgress(
+        data as { backtestId?: string; progress?: number; currentDate?: string },
+        timestamp
+      );
+
+    case "backtest:trade":
+      return normalizeBacktestTrade(
+        data as { symbol?: string; side?: string; quantity?: number; price?: number },
+        timestamp
+      );
+
+    case "backtest:equity":
+      return normalizeBacktestEquity(data as { equity?: number; date?: string }, timestamp);
+
+    case "backtest:completed":
+      return normalizeBacktestCompleted(
+        data as { backtestId?: string; totalReturn?: number; sharpe?: number },
+        timestamp
+      );
+
+    case "backtest:error":
+      return normalizeBacktestError(data as { backtestId?: string; error?: string }, timestamp);
+
+    // Messages we don't display in feed (protocol/internal)
     case "pong":
     case "subscribed":
     case "unsubscribed":
     case "portfolio":
     case "system_status":
-    case "cycle_progress":
-    case "decision_plan":
     case "options_aggregate":
       return null;
 
@@ -460,6 +878,8 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   reject: "text-red-500",
   alert: "text-amber-500",
   agent: "text-indigo-500",
+  cycle: "text-teal-500",
+  backtest: "text-sky-500",
   system: "text-gray-500",
 };
 

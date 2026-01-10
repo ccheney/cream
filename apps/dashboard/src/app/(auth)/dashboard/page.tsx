@@ -302,7 +302,7 @@ export default function DashboardPage() {
 
           {/* Cycle Progress */}
           {activeCycleId && (
-            <div className="mt-4 pt-4 border-t border-cream-100 dark:border-night-700">
+            <div className="mt-4 pt-4 border-t border-cream-100 dark:border-night-700 overflow-hidden">
               <CycleProgress
                 cycleId={activeCycleId}
                 onComplete={handleCycleComplete}
