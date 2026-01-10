@@ -157,18 +157,20 @@ async function seedEnvironment(
   const existingConstraints = await constraintsRepo.getActive(environment);
 
   if (!existingTrading || force) {
+    let version = 1;
     if (existingTrading && force) {
       await tradingRepo.setStatus(existingTrading.id, "archived");
+      version = existingTrading.version + 1;
       result.trading = "replaced";
     } else {
       result.trading = "created";
     }
 
-    const configId = `tc_${environment.toLowerCase()}_v1_seed`;
+    const configId = `tc_${environment.toLowerCase()}_${Date.now()}_seed`;
     await tradingRepo.create({
       id: configId,
       environment,
-      version: 1,
+      version,
       ...DEFAULT_TRADING_CONFIG,
       status: "active",
     });
@@ -209,7 +211,7 @@ async function seedEnvironment(
       result.constraints = "created";
     }
 
-    const configId = `cc_${environment.toLowerCase()}_v1_seed`;
+    const configId = `cc_${environment.toLowerCase()}_${Date.now()}_seed`;
     await constraintsRepo.create({
       id: configId,
       environment,
