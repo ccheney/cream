@@ -12,6 +12,7 @@ export type WSMessageType =
   | "decision"
   | "agent_output"
   | "cycle_progress"
+  | "cycle_result"
   | "alert"
   | "system_status"
   | "position_update"
@@ -65,9 +66,31 @@ export interface AgentOutputData {
 export interface CycleProgressData {
   cycleId: string;
   phase: CyclePhase;
+  step: string;
   progress: number;
-  startedAt: string;
-  estimatedEndAt?: string;
+  message: string;
+  activeSymbol?: string;
+  totalSymbols?: number;
+  completedSymbols?: number;
+  startedAt?: string;
+  estimatedCompletion?: string;
+  timestamp: string;
+}
+
+export interface CycleResultData {
+  cycleId: string;
+  environment: string;
+  status: "completed" | "failed";
+  result?: {
+    approved: boolean;
+    iterations: number;
+    decisions: unknown[];
+    orders: unknown[];
+  };
+  error?: string;
+  durationMs: number;
+  configVersion?: string;
+  timestamp: string;
 }
 
 export interface SystemStatusData {
@@ -142,17 +165,43 @@ export function handleWSMessage(message: WSMessage): void {
       const data = message.data as CycleProgressData;
       const store = useCycleStore.getState();
 
+      // Normalize phase to lowercase for cycle-store compatibility
+      const normalizedPhase = data.phase.toLowerCase() as CyclePhase;
+
       // Update cycle store with progress
       store.setCycle({
         id: data.cycleId,
-        phase: data.phase,
+        phase: normalizedPhase,
         progress: data.progress,
-        startedAt: data.startedAt,
-        estimatedEndAt: data.estimatedEndAt,
+        startedAt: data.startedAt ?? data.timestamp,
+        estimatedEndAt: data.estimatedCompletion,
       });
+
+      // Update phase explicitly in case setCycle doesn't update it
+      store.updatePhase(normalizedPhase);
+      store.updateProgress(data.progress);
 
       // Also invalidate system status
       queryClient.invalidateQueries({ queryKey: queryKeys.system.status() });
+      break;
+    }
+
+    case "cycle_result": {
+      const data = message.data as CycleResultData;
+      const store = useCycleStore.getState();
+
+      if (data.status === "completed") {
+        // Mark cycle as complete
+        store.completeCycle();
+      } else if (data.status === "failed") {
+        // Reset the store on failure
+        store.reset();
+      }
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.system.status() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.decisions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.all });
       break;
     }
 

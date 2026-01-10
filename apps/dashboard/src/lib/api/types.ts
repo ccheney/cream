@@ -96,6 +96,13 @@ export interface Alert {
   createdAt: string;
 }
 
+export interface RunningCycle {
+  cycleId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  startedAt: string;
+  phase: "observe" | "orient" | "decide" | "act" | "complete" | null;
+}
+
 export interface SystemStatus {
   environment: Environment;
   status: SystemStatusType;
@@ -105,6 +112,7 @@ export interface SystemStatus {
   positionCount: number;
   openOrderCount: number;
   alerts: Alert[];
+  runningCycle: RunningCycle | null;
 }
 
 export interface StartRequest {
@@ -203,12 +211,11 @@ export interface ThesisSummary {
 }
 
 export interface DecisionDetail extends Decision {
-  strategyFamily: string;
-  timeHorizon: TimeHorizon;
-  rationale: {
-    bullishFactors: string[];
-    bearishFactors: string[];
-  };
+  strategyFamily: string | null;
+  timeHorizon: TimeHorizon | null;
+  rationale: string | null;
+  bullishFactors: string[];
+  bearishFactors: string[];
   agentOutputs: AgentOutput[];
   citations: Citation[];
   execution: ExecutionDetail | null;
@@ -435,10 +442,13 @@ export type RuntimeAgentType =
 
 export type ConfigStatus = "draft" | "testing" | "active" | "archived";
 
+export type GlobalModel = "gemini-3-flash-preview" | "gemini-3-pro-preview";
+
 export interface RuntimeTradingConfig {
   id: string;
   environment: Environment;
   version: number;
+  globalModel: GlobalModel;
   maxConsensusIterations: number;
   agentTimeoutMs: number;
   totalConsensusTimeoutMs: number;

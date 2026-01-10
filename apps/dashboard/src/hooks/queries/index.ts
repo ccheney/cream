@@ -120,6 +120,7 @@ export {
 // System
 export {
   useChangeEnvironment,
+  useCycleStatus,
   usePauseSystem,
   useStartSystem,
   useStopSystem,

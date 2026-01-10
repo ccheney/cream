@@ -110,3 +110,39 @@ export function useTriggerCycle() {
     },
   });
 }
+
+interface CycleStatusResponse {
+  cycleId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  environment: string;
+  startedAt: string;
+  completedAt: string | null;
+  error: string | null;
+}
+
+/**
+ * Query cycle status by ID.
+ * Used to check if a previously started cycle is still running after navigation.
+ */
+export function useCycleStatus(cycleId: string | null) {
+  return useQuery({
+    queryKey: [...queryKeys.system.all, "cycle", cycleId] as const,
+    queryFn: async () => {
+      if (!cycleId) {
+        return null;
+      }
+      const { data } = await get<CycleStatusResponse>(`/api/system/cycle/${cycleId}`);
+      return data;
+    },
+    enabled: !!cycleId,
+    staleTime: 5000, // Refetch every 5 seconds while polling
+    refetchInterval: (query) => {
+      // Only poll if cycle is still running
+      const data = query.state.data;
+      if (data?.status === "queued" || data?.status === "running") {
+        return 2000; // Poll every 2 seconds
+      }
+      return false;
+    },
+  });
+}
