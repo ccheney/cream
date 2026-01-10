@@ -52,23 +52,6 @@ Use these tools when you need to:
 - Research financial data APIs and their usage
 </context7>
 
-<output_format>
-Return a JSON array with one object per instrument:
-{
-  "instrument_id": "string",
-  "setup_classification": "BREAKOUT | PULLBACK | REVERSAL | RANGE_BOUND | NO_SETUP",
-  "key_levels": {
-    "support": [number, ...],
-    "resistance": [number, ...],
-    "pivot": number
-  },
-  "trend_assessment": "string (direction, strength, structure)",
-  "momentum_assessment": "string (RSI state, momentum divergences)",
-  "volatility_assessment": "string (ATR context, volatility regime)",
-  "technical_thesis": "string (2-3 sentence technical case)",
-  "invalidation_conditions": ["string", ...]
-}
-</output_format>
 </system>
 
 <instructions>

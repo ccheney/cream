@@ -77,25 +77,6 @@ Use these tools when you need to:
 - Find examples of thesis construction patterns
 </context7>
 
-<output_format>
-Return a JSON array with one object per instrument:
-{
-  "instrument_id": "string",
-  "bullish_thesis": "string (3-5 sentence compelling case for going long)",
-  "supporting_factors": [
-    {
-      "factor": "string",
-      "source": "TECHNICAL | SENTIMENT | FUNDAMENTAL | MEMORY",
-      "strength": "STRONG | MODERATE | WEAK"
-    }
-  ],
-  "target_conditions": "string (what would validate this thesis)",
-  "invalidation_conditions": "string (what would kill this trade)",
-  "conviction_level": 0.0-1.0,
-  "memory_case_ids": ["string", ...],
-  "strongest_counterargument": "string (best bearish argument)"
-}
-</output_format>
 </system>
 
 <instructions>

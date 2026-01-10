@@ -51,25 +51,6 @@ Use these tools when you need to:
 - Find examples of NLP processing for financial text
 </context7>
 
-<output_format>
-Return a JSON array with one object per instrument:
-{
-  "instrument_id": "string",
-  "event_impacts": [
-    {
-      "event_id": "string",
-      "event_type": "EARNINGS | GUIDANCE | M&A | REGULATORY | PRODUCT | MACRO | ANALYST | SOCIAL",
-      "impact_direction": "BULLISH | BEARISH | NEUTRAL | UNCERTAIN",
-      "impact_magnitude": "HIGH | MEDIUM | LOW",
-      "reasoning": "string"
-    }
-  ],
-  "overall_sentiment": "BULLISH | BEARISH | NEUTRAL | MIXED",
-  "sentiment_strength": 0.0-1.0,
-  "duration_expectation": "INTRADAY | DAYS | WEEKS | PERSISTENT",
-  "linked_event_ids": ["string", ...]
-}
-</output_format>
 </system>
 
 <instructions>

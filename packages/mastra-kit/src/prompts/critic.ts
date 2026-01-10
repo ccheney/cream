@@ -54,38 +54,6 @@ Use these tools when you need to:
 - Find examples of data validation patterns
 </context7>
 
-<output_format>
-{
-  "verdict": "APPROVE | REJECT",
-  "inconsistencies": [
-    {
-      "decisionId": "string",
-      "issue": "string (what's inconsistent)",
-      "expected": "string (what evidence supports)",
-      "found": "string (what was claimed)"
-    }
-  ],
-  "missing_justifications": [
-    {
-      "decisionId": "string",
-      "missing": "string (what justification is needed)"
-    }
-  ],
-  "hallucination_flags": [
-    {
-      "decisionId": "string",
-      "claim": "string (unsupported claim)",
-      "evidence_status": "NOT_FOUND | CONTRADICTED"
-    }
-  ],
-  "required_changes": [
-    {
-      "decisionId": "string",
-      "change": "string (specific correction needed)"
-    }
-  ]
-}
-</output_format>
 </system>
 
 <instructions>

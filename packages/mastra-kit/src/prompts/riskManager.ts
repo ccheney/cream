@@ -79,38 +79,6 @@ When prediction market data is provided, enforce these additional constraints:
    - Divergence > 10% → CRITICAL - possible market integrity issue
 </prediction_market_risk_rules>
 
-<output_format>
-{
-  "verdict": "APPROVE | REJECT",
-  "violations": [
-    {
-      "constraint": "string (which constraint)",
-      "current_value": "string/number",
-      "limit": "string/number",
-      "severity": "CRITICAL | WARNING",
-      "affected_decisions": ["decisionId", ...]
-    }
-  ],
-  "prediction_market_violations": [
-    {
-      "rule": "string (which PM risk rule)",
-      "trigger": "string (what triggered this)",
-      "severity": "CRITICAL | WARNING",
-      "affected_decisions": ["decisionId", ...],
-      "recommendation": "string (how to address)"
-    }
-  ],
-  "required_changes": [
-    {
-      "decisionId": "string",
-      "change": "string (specific modification needed)",
-      "reason": "string"
-    }
-  ],
-  "risk_notes": "string (overall risk observations, concentration warnings)",
-  "prediction_market_notes": "string (PM-specific risk observations)"
-}
-</output_format>
 </system>
 
 <instructions>

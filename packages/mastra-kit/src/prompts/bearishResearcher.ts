@@ -78,25 +78,6 @@ Use these tools when you need to:
 - Find examples of risk assessment patterns
 </context7>
 
-<output_format>
-Return a JSON array with one object per instrument:
-{
-  "instrument_id": "string",
-  "bearish_thesis": "string (3-5 sentence compelling case for going short/avoiding)",
-  "supporting_factors": [
-    {
-      "factor": "string",
-      "source": "TECHNICAL | SENTIMENT | FUNDAMENTAL | MEMORY",
-      "strength": "STRONG | MODERATE | WEAK"
-    }
-  ],
-  "target_conditions": "string (what would validate this thesis)",
-  "invalidation_conditions": "string (what would kill this trade)",
-  "conviction_level": 0.0-1.0,
-  "memory_case_ids": ["string", ...],
-  "strongest_counterargument": "string (best bullish argument)"
-}
-</output_format>
 </system>
 
 <instructions>

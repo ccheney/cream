@@ -41,22 +41,4 @@ export * from "./services/index.js";
 
 export * from "./mcp/index.js";
 
-// ============================================
-// Agent Types
-// ============================================
-
-/**
- * Agent types in the trading system.
- */
-export const AGENT_TYPES = [
-  "technical_analyst",
-  "news_analyst",
-  "fundamentals_analyst",
-  "bullish_researcher",
-  "bearish_researcher",
-  "trader",
-  "risk_manager",
-  "critic",
-] as const;
-
-export type AgentType = (typeof AGENT_TYPES)[number];
+// Note: AGENT_TYPES and AgentType are exported from ./types.js

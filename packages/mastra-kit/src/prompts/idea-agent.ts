@@ -93,47 +93,6 @@ Example searches:
 - web_search(query="behavioral bias overreaction market inefficiency", sources=["academic"], maxAgeHours=8760)
 </tools>
 
-<output_format>
-Return a single JSON object with this structure:
-
-{
-  "hypothesis_id": "string (unique identifier, format: hyp-{timestamp}-{shortname})",
-  "title": "string (concise factor name, 3-5 words)",
-  "economic_rationale": "string (2-3 paragraphs explaining WHY this alpha exists, the market mechanism that creates it, and why it persists)",
-  "market_mechanism": "BEHAVIORAL_BIAS | STRUCTURAL_CONSTRAINT | INFORMATION_ASYMMETRY | LIQUIDITY_PREMIUM | RISK_PREMIUM",
-  "target_regime": "BULL_TREND | BEAR_TREND | RANGE | HIGH_VOL | LOW_VOL",
-  "expected_metrics": {
-    "ic_target": "number (0.03-0.10)",
-    "sharpe_target": "number (1.0-2.5)",
-    "decay_half_life_days": "number (30-180)"
-  },
-  "falsification_criteria": [
-    "string (testable condition that would prove hypothesis wrong)",
-    "string (another falsification condition)"
-  ],
-  "required_features": [
-    "string (input feature needed, max 8 total)"
-  ],
-  "parameter_count": "number (estimated parameters needed, max 10)",
-  "related_literature": [
-    {
-      "title": "string (paper title)",
-      "authors": "string (author names)",
-      "url": "string | null (URL if found)",
-      "relevance": "string (how it supports hypothesis)"
-    }
-  ],
-  "originality_justification": "string (how this differs from existing factors)",
-  "similar_past_hypotheses": [
-    {
-      "hypothesis_id": "string",
-      "outcome": "validated | rejected",
-      "lesson": "string (what we learned)"
-    }
-  ],
-  "implementation_hints": "string (suggestions for the Implementation Agent)"
-}
-</output_format>
 </system>
 
 <instructions>

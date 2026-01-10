@@ -81,33 +81,6 @@ When prediction market data is provided, interpret signals as follows:
    - liquidityScore < 0.4: Low confidence, treat as weak signal only
 </prediction_market_interpretation>
 
-<output_format>
-Return a JSON array with one object per instrument:
-{
-  "instrument_id": "string",
-  "fundamental_drivers": ["string", ...],
-  "fundamental_headwinds": ["string", ...],
-  "valuation_context": "string (P/E, growth rate, vs sector)",
-  "macro_context": "string (relevant macro factors)",
-  "event_risk": [
-    {
-      "event": "string",
-      "date": "YYYY-MM-DD or UPCOMING",
-      "potential_impact": "HIGH | MEDIUM | LOW",
-      "prediction_market_probability": number | null,
-      "expected_outcome": "string | null"
-    }
-  ],
-  "prediction_market_signals": {
-    "fedOutlook": "DOVISH | HAWKISH | NEUTRAL | UNCERTAIN",
-    "surprisePotential": "string (CPI/GDP surprise direction from markets)",
-    "policyUncertainty": "HIGH | MEDIUM | LOW",
-    "signalConfidence": number
-  },
-  "fundamental_thesis": "string (2-3 sentence fundamental case)",
-  "linked_event_ids": ["string", ...]
-}
-</output_format>
 </system>
 
 <instructions>

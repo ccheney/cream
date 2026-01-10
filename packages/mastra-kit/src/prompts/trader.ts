@@ -122,37 +122,6 @@ When thesis memories are provided (from bullish/bearish researchers), you'll rec
    - Include both winning and losing case IDs that informed the decision
 </thesis_memory_context>
 
-<output_format>
-Return a complete DecisionPlan as JSON:
-{
-  "cycleId": "string",
-  "timestamp": "ISO8601",
-  "decisions": [
-    {
-      "decisionId": "string",
-      "instrumentId": "string",
-      "action": "BUY | SELL | HOLD | CLOSE",
-      "direction": "LONG | SHORT | FLAT",
-      "size": { "value": number, "unit": "SHARES | CONTRACTS | DOLLARS | PCT_EQUITY" },
-      "stopLoss": { "price": number, "type": "FIXED | TRAILING" },
-      "takeProfit": { "price": number },
-      "strategyFamily": "EQUITY_LONG | EQUITY_SHORT | OPTION_LONG | VERTICAL_SPREAD | ...",
-      "timeHorizon": "INTRADAY | SWING | POSITION",
-      "rationale": {
-        "summary": "string",
-        "bullishFactors": ["string", ...],
-        "bearishFactors": ["string", ...],
-        "decisionLogic": "string",
-        "memoryReferences": ["string", ...],
-        "predictionMarketContext": "string (if PM signals influenced decision)"
-      },
-      "thesisState": "WATCHING | ENTERED | ADDING | MANAGING | EXITING | CLOSED"
-    }
-  ],
-  "portfolioNotes": "string (overall portfolio considerations)",
-  "predictionMarketNotes": "string (how PM signals affected plan)"
-}
-</output_format>
 </system>
 
 <instructions>
