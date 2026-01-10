@@ -24,7 +24,34 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["CREAM_ENV", "TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN", "HELIX_URL", "ALPACA_KEY", "ALPACA_SECRET", "POLYGON_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"]
+      "passThroughEnv": [
+        "CREAM_ENV",
+        "CREAM_BROKER",
+        "TURSO_DATABASE_URL",
+        "TURSO_AUTH_TOKEN",
+        "HELIX_URL",
+        "HELIX_HOST",
+        "HELIX_PORT",
+        "ALPACA_KEY",
+        "ALPACA_SECRET",
+        "ALPACA_BASE_URL",
+        "POLYGON_KEY",
+        "DATABENTO_KEY",
+        "FMP_KEY",
+        "ALPHAVANTAGE_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "BETTER_AUTH_URL",
+        "TAVILY_API_KEY",
+        "KALSHI_API_KEY_ID",
+        "KALSHI_PRIVATE_KEY_PATH",
+        "ALLOWED_ORIGINS",
+        "NODE_ENV",
+        "LOG_LEVEL"
+      ]
     },
     "clean": {
       "cache": false,

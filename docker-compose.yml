@@ -23,7 +23,7 @@ services:
   # Turso - SQLite-compatible database with HTTP protocol
   # https://github.com/tursodatabase/turso
   turso:
-    image: ghcr.io/tursodatabase/turso:latest
+    image: ghcr.io/tursodatabase/libsql-server:latest
     container_name: cream-turso
     ports:
       - "8080:8080"     # HTTP endpoint for libsql client

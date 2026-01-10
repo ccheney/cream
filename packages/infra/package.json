@@ -1,0 +1,10 @@
+{
+  "name": "@cream/infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "tofu validate",
+    "format": "tofu fmt -recursive",
+    "clean": "rm -rf .terraform"
+  }
+}

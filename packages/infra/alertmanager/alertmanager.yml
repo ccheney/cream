@@ -15,14 +15,13 @@
 
 global:
   # SMTP configuration for email notifications
-  smtp_smarthost: '${SMTP_SMARTHOST:-localhost:25}'
-  smtp_from: '${SMTP_FROM:-alertmanager@cream.dev}'
-  smtp_auth_username: '${SMTP_USERNAME:-}'
-  smtp_auth_password: '${SMTP_PASSWORD:-}'
-  smtp_require_tls: true
+  # In production, set SMTP_SMARTHOST env var; dev uses localhost
+  smtp_smarthost: 'localhost:25'
+  smtp_from: 'alertmanager@cream.broker'
+  smtp_require_tls: false
 
-  # Slack webhook URL
-  slack_api_url: '${SLACK_WEBHOOK_URL:-}'
+  # Slack webhook URL (placeholder for dev - set SLACK_WEBHOOK_URL in production)
+  slack_api_url: 'https://hooks.slack.com/services/placeholder'
 
   # Resolve timeout (when alerts are considered resolved)
   resolve_timeout: 5m
@@ -111,21 +110,13 @@ receivers:
   # Default receiver (development: webhook for testing)
   - name: "default"
     webhook_configs:
-      - url: '${WEBHOOK_URL:-http://localhost:9000/webhook}'
+      - url: 'http://localhost:9000/webhook'
         send_resolved: true
 
-  # Critical alerts: PagerDuty + Slack
+  # Critical alerts: Slack (PagerDuty disabled in dev)
   - name: "critical"
-    pagerduty_configs:
-      - service_key: '${PAGERDUTY_SERVICE_KEY:-}'
-        severity: critical
-        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
-        details:
-          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
-          num_firing: '{{ .Alerts.Firing | len }}'
-          num_resolved: '{{ .Alerts.Resolved | len }}'
     slack_configs:
-      - channel: '${SLACK_CHANNEL_CRITICAL:-#alerts-critical}'
+      - channel: '#alerts-critical'
         send_resolved: true
         color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
         title: '{{ if eq .Status "firing" }}:rotating_light:{{ else }}:white_check_mark:{{ end }} {{ .GroupLabels.alertname }}'
@@ -148,7 +139,7 @@ receivers:
   # SLO violation alerts: Slack SLO channel
   - name: "slo-violations"
     slack_configs:
-      - channel: '${SLACK_CHANNEL_SLO:-#alerts-slo}'
+      - channel: '#alerts-slo'
         send_resolved: true
         color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
         title: '{{ if eq .Status "firing" }}:warning:{{ else }}:white_check_mark:{{ end }} SLO: {{ .GroupLabels.slo }}'
@@ -168,7 +159,7 @@ receivers:
   # Warning alerts: Email
   - name: "warnings"
     email_configs:
-      - to: '${ALERT_EMAIL:-team@cream.dev}'
+      - to: 'team@cream.broker'
         send_resolved: true
         html: |
           <h2>{{ .GroupLabels.alertname }}</h2>
