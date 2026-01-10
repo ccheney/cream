@@ -7,6 +7,7 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
+import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
 import type { Row, TursoClient } from "../turso.js";
 import { RepositoryError } from "./base.js";
 
@@ -54,6 +55,9 @@ export interface TradingConfig {
   tradingCycleIntervalMs: number;
   predictionMarketsIntervalMs: number;
 
+  // Global LLM model
+  globalModel: GlobalModel;
+
   // Workflow
   status: TradingConfigStatus;
   createdAt: string;
@@ -91,6 +95,9 @@ export interface CreateTradingConfigInput {
   tradingCycleIntervalMs?: number;
   predictionMarketsIntervalMs?: number;
 
+  // Global LLM model
+  globalModel?: GlobalModel;
+
   // Workflow
   status?: TradingConfigStatus;
   promotedFrom?: string | null;
@@ -121,6 +128,9 @@ export interface UpdateTradingConfigInput {
   // Schedule
   tradingCycleIntervalMs?: number;
   predictionMarketsIntervalMs?: number;
+
+  // Global LLM model
+  globalModel?: GlobalModel;
 }
 
 // ============================================
@@ -154,6 +164,9 @@ function mapTradingConfigRow(row: Row): TradingConfig {
     // Schedule
     tradingCycleIntervalMs: row.trading_cycle_interval_ms as number,
     predictionMarketsIntervalMs: row.prediction_markets_interval_ms as number,
+
+    // Global LLM model
+    globalModel: (row.global_model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL,
 
     // Workflow
     status: row.status as TradingConfigStatus,
@@ -190,8 +203,9 @@ export class TradingConfigRepository {
           high_conviction_pct, medium_conviction_pct, low_conviction_pct,
           min_risk_reward_ratio, kelly_fraction,
           trading_cycle_interval_ms, prediction_markets_interval_ms,
+          global_model,
           status, created_at, updated_at, promoted_from
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           input.id,
           input.environment,
@@ -208,6 +222,7 @@ export class TradingConfigRepository {
           input.kellyFraction ?? 0.5,
           input.tradingCycleIntervalMs ?? 3600000,
           input.predictionMarketsIntervalMs ?? 900000,
+          input.globalModel ?? DEFAULT_GLOBAL_MODEL,
           input.status ?? "draft",
           now,
           now,
@@ -343,6 +358,10 @@ export class TradingConfigRepository {
         updateFields.push("prediction_markets_interval_ms = ?");
         updateValues.push(input.predictionMarketsIntervalMs);
       }
+      if (input.globalModel !== undefined) {
+        updateFields.push("global_model = ?");
+        updateValues.push(input.globalModel);
+      }
 
       if (updateFields.length > 0) {
         updateFields.push("updated_at = ?");
@@ -434,6 +453,7 @@ export class TradingConfigRepository {
       "kellyFraction",
       "tradingCycleIntervalMs",
       "predictionMarketsIntervalMs",
+      "globalModel",
     ];
 
     const differences: { field: string; value1: unknown; value2: unknown }[] = [];
@@ -488,6 +508,7 @@ export class TradingConfigRepository {
       kellyFraction: source.kellyFraction,
       tradingCycleIntervalMs: source.tradingCycleIntervalMs,
       predictionMarketsIntervalMs: source.predictionMarketsIntervalMs,
+      globalModel: source.globalModel,
       status: "draft",
       promotedFrom: sourceId,
     });

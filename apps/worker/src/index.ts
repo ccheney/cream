@@ -28,6 +28,8 @@ interface WorkerState {
   environment: RuntimeEnvironment;
   /** Whether to run on startup */
   runOnStartup: boolean;
+  /** Whether scheduler is disabled (dev mode) */
+  schedulerDisabled: boolean;
   /** Active timer handles */
   timers: {
     tradingCycle: ReturnType<typeof setTimeout> | null;
@@ -249,6 +251,12 @@ function schedulePredictionMarkets(): void {
 }
 
 function startScheduler(): void {
+  const msUntilHour = calculateNextHourMs();
+  const msUntil15Min = calculateNext15MinMs();
+  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+  console.log(
+    `⏰ Scheduler started: trading cycle in ${Math.round(msUntilHour / 60000)}m, predictions in ${Math.round(msUntil15Min / 60000)}m`
+  );
   scheduleTradingCycle();
   schedulePredictionMarkets();
 }
@@ -372,6 +380,7 @@ async function main() {
     config,
     environment,
     runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
+    schedulerDisabled: Bun.env.SCHEDULER_DISABLED === "true",
     timers: {
       tradingCycle: null,
       predictionMarkets: null,
@@ -402,15 +411,21 @@ async function main() {
   // biome-ignore lint/suspicious/noConsole: Startup info is intentional
   console.log(`🏥 Health endpoint listening on port ${HEALTH_PORT}`);
 
-  // Run immediately if configured
-  if (state.runOnStartup) {
-    // biome-ignore lint/suspicious/noConsole: Startup run notification is intentional
-    console.log("▶️  Running cycles on startup...");
-    await Promise.all([runTradingCycle(), runPredictionMarkets()]);
-  }
+  // Skip scheduling if disabled (dev mode)
+  if (state.schedulerDisabled) {
+    // biome-ignore lint/suspicious/noConsole: Startup info is intentional
+    console.log("⏸️  Scheduler disabled (SCHEDULER_DISABLED=true). Health endpoint only.");
+  } else {
+    // Run immediately if configured
+    if (state.runOnStartup) {
+      // biome-ignore lint/suspicious/noConsole: Startup run notification is intentional
+      console.log("▶️  Running cycles on startup...");
+      await Promise.all([runTradingCycle(), runPredictionMarkets()]);
+    }
 
-  // Start the schedulers
-  startScheduler();
+    // Start the schedulers
+    startScheduler();
+  }
 
   // Handle config reload on SIGHUP
   process.on("SIGHUP", () => {
