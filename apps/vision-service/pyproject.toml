@@ -14,12 +14,12 @@ description = "Chart analysis and computer vision service for Cream"
 readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 authors = [{ name = "Chris Cheney", email = "chris@cheney.dev" }]
-requires-python = ">=3.15"
+requires-python = ">=3.14"
 
 dependencies = [
     "pillow>=12.1",
     "opencv-python>=4.12",
-    "numpy>=2.4",
+    "numpy>=2,<2.3",
 ]
 
 [project.optional-dependencies]
@@ -117,7 +117,7 @@ known-first-party = ["vision_service"]
 # MyPy Configuration
 # ============================================
 [tool.mypy]
-python_version = "3.15"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
