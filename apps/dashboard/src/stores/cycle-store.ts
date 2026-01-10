@@ -6,6 +6,7 @@
  */
 
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 
 export type CyclePhase = "observe" | "orient" | "decide" | "act" | "complete";
 
@@ -194,22 +195,25 @@ export const selectSymbolAnalysis = (state: CycleStore) => state.symbolAnalysis;
 export const selectStreamingOutput = (state: CycleStore) => state.streamingOutput;
 
 export function useActiveCycle() {
-  return useCycleStore((state) => ({
-    cycle: state.activeCycle,
-    phase: state.activeCycle?.phase,
-    progress: state.activeCycle?.progress ?? 0,
-    isRunning: state.activeCycle !== null && state.activeCycle.phase !== "complete",
-  }));
+  return useCycleStore(
+    useShallow((state) => ({
+      cycle: state.activeCycle,
+      phase: state.activeCycle?.phase,
+      progress: state.activeCycle?.progress ?? 0,
+      isRunning: state.activeCycle !== null && state.activeCycle.phase !== "complete",
+    }))
+  );
 }
 
 export function useAgentOutputs() {
-  const outputs = useCycleStore((state) => state.agentOutputs);
-  return {
-    outputs,
-    getOutput: (agentType: string) => outputs.get(agentType),
-    hasOutput: (agentType: string) => outputs.has(agentType),
-    count: outputs.size,
-  };
+  return useCycleStore(
+    useShallow((state) => ({
+      outputs: state.agentOutputs,
+      getOutput: (agentType: string) => state.agentOutputs.get(agentType),
+      hasOutput: (agentType: string) => state.agentOutputs.has(agentType),
+      count: state.agentOutputs.size,
+    }))
+  );
 }
 
 export function useAgentOutput(agentType: string) {
@@ -229,18 +233,20 @@ export function useStreamingOutput() {
 }
 
 export function useCycleActions() {
-  return useCycleStore((state) => ({
-    setCycle: state.setCycle,
-    updatePhase: state.updatePhase,
-    updateProgress: state.updateProgress,
-    updateAgentOutput: state.updateAgentOutput,
-    updateSymbolAnalysis: state.updateSymbolAnalysis,
-    setStreamingOutput: state.setStreamingOutput,
-    appendStreamingOutput: state.appendStreamingOutput,
-    clearOutputs: state.clearOutputs,
-    completeCycle: state.completeCycle,
-    reset: state.reset,
-  }));
+  return useCycleStore(
+    useShallow((state) => ({
+      setCycle: state.setCycle,
+      updatePhase: state.updatePhase,
+      updateProgress: state.updateProgress,
+      updateAgentOutput: state.updateAgentOutput,
+      updateSymbolAnalysis: state.updateSymbolAnalysis,
+      setStreamingOutput: state.setStreamingOutput,
+      appendStreamingOutput: state.appendStreamingOutput,
+      clearOutputs: state.clearOutputs,
+      completeCycle: state.completeCycle,
+      reset: state.reset,
+    }))
+  );
 }
 
 export default useCycleStore;

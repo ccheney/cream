@@ -125,16 +125,29 @@ type SerializedState = {
 
 const storage = createJSONStorage<PersistedState>(() => sessionStorage, {
   reviver: (_key, value: unknown) => {
-    // Convert serialized agents array back to Map
+    // Convert serialized agents array back to Map and deduplicate toolCalls
     if (
       typeof value === "object" &&
       value !== null &&
       "agents" in value &&
       Array.isArray((value as SerializedState).agents)
     ) {
+      const deduplicatedAgents = (value as SerializedState).agents.map(
+        ([agentType, state]): [AgentType, AgentStreamingState] => {
+          const seen = new Set<string>();
+          const uniqueToolCalls = state.toolCalls.filter((tc) => {
+            if (seen.has(tc.toolCallId)) {
+              return false;
+            }
+            seen.add(tc.toolCallId);
+            return true;
+          });
+          return [agentType, { ...state, toolCalls: uniqueToolCalls }];
+        }
+      );
       return {
         ...value,
-        agents: new Map((value as SerializedState).agents),
+        agents: new Map(deduplicatedAgents),
       };
     }
     return value;
@@ -157,6 +170,11 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
         set((state) => {
           const newAgents = new Map(state.agents);
           const current = newAgents.get(agentType) ?? createInitialAgentState();
+          // Deduplicate by toolCallId
+          const exists = current.toolCalls.some((tc) => tc.toolCallId === toolCall.toolCallId);
+          if (exists) {
+            return state;
+          }
           newAgents.set(agentType, {
             ...current,
             status: "processing",

@@ -9,6 +9,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 // ============================================
 // Types
@@ -40,7 +41,7 @@ export type WatchlistStore = WatchlistState & WatchlistActions;
 // Defaults
 // ============================================
 
-const DEFAULT_SYMBOLS = ["SPY", "QQQ", "AAPL", "NVDA", "MSFT"];
+const DEFAULT_SYMBOLS = ["QQQ", "SPY", "UVXY", "TSLA", "NVDA", "PLTR"];
 
 const initialState: WatchlistState = {
   symbols: DEFAULT_SYMBOLS,
@@ -141,15 +142,17 @@ export const selectSymbolCount = (state: WatchlistStore) => state.symbols.length
  * Hook for watchlist management.
  */
 export function useWatchlist() {
-  return useWatchlistStore((state) => ({
-    symbols: state.symbols,
-    addSymbol: state.addSymbol,
-    removeSymbol: state.removeSymbol,
-    setSymbols: state.setSymbols,
-    hasSymbol: state.hasSymbol,
-    reorderSymbols: state.reorderSymbols,
-    clear: state.clear,
-  }));
+  return useWatchlistStore(
+    useShallow((state) => ({
+      symbols: state.symbols,
+      addSymbol: state.addSymbol,
+      removeSymbol: state.removeSymbol,
+      setSymbols: state.setSymbols,
+      hasSymbol: state.hasSymbol,
+      reorderSymbols: state.reorderSymbols,
+      clear: state.clear,
+    }))
+  );
 }
 
 export default useWatchlistStore;

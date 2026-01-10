@@ -16,7 +16,7 @@ import { useShallow } from "zustand/react/shallow";
 // ============================================
 
 export type Theme = "light" | "dark" | "system";
-export type ChartTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+export type ChartTimeframe = "1m" | "5m" | "15m";
 
 /**
  * Real-time feed filter options.
@@ -94,7 +94,7 @@ const initialState: UIState = {
 
   // User preferences
   theme: "system",
-  chartTimeframe: "1h",
+  chartTimeframe: "15m",
   realTimeFeedFilters: ["all"],
 
   // Table preferences

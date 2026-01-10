@@ -9,6 +9,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 // ============================================
 // Types
@@ -302,29 +303,33 @@ export function useSubscribedSymbols(): string[] {
  * Hook for subscription actions.
  */
 export function useSubscriptionActions() {
-  return useWSStore((state) => ({
-    subscribe: state.subscribe,
-    unsubscribe: state.unsubscribe,
-    subscribeSymbols: state.subscribeSymbols,
-    unsubscribeSymbols: state.unsubscribeSymbols,
-    clearSubscriptions: state.clearSubscriptions,
-  }));
+  return useWSStore(
+    useShallow((state) => ({
+      subscribe: state.subscribe,
+      unsubscribe: state.unsubscribe,
+      subscribeSymbols: state.subscribeSymbols,
+      unsubscribeSymbols: state.unsubscribeSymbols,
+      clearSubscriptions: state.clearSubscriptions,
+    }))
+  );
 }
 
 /**
  * Hook for connection actions.
  */
 export function useConnectionActions() {
-  return useWSStore((state) => ({
-    setConnected: state.setConnected,
-    setConnectionStatus: state.setConnectionStatus,
-    onConnected: state.onConnected,
-    onDisconnected: state.onDisconnected,
-    setReconnectAttempts: state.setReconnectAttempts,
-    incrementReconnectAttempts: state.incrementReconnectAttempts,
-    setLastError: state.setLastError,
-    reset: state.reset,
-  }));
+  return useWSStore(
+    useShallow((state) => ({
+      setConnected: state.setConnected,
+      setConnectionStatus: state.setConnectionStatus,
+      onConnected: state.onConnected,
+      onDisconnected: state.onDisconnected,
+      setReconnectAttempts: state.setReconnectAttempts,
+      incrementReconnectAttempts: state.incrementReconnectAttempts,
+      setLastError: state.setLastError,
+      reset: state.reset,
+    }))
+  );
 }
 
 export default useWSStore;

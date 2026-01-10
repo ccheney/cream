@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 
 export type HealthStatus = "healthy" | "degraded" | "disconnected";
 
@@ -179,18 +180,20 @@ export function useOptionsConnected(): boolean {
 }
 
 export function useStreamingMetrics() {
-  return useStreamingMetricsStore((state) => ({
-    stocksConnected: state.stocksConnected,
-    optionsConnected: state.optionsConnected,
-    symbolCount: state.symbolCount,
-    contractCount: state.contractCount,
-    quotesPerMinute: state.quotesPerMinute,
-    optionsQuotesPerMinute: state.optionsQuotesPerMinute,
-    lastMessageAgo: state.lastMessageAgo,
-    avgLatency: state.avgLatency,
-    reconnectAttempts: state.reconnectAttempts,
-    healthStatus: getHealthStatus(state),
-  }));
+  return useStreamingMetricsStore(
+    useShallow((state) => ({
+      stocksConnected: state.stocksConnected,
+      optionsConnected: state.optionsConnected,
+      symbolCount: state.symbolCount,
+      contractCount: state.contractCount,
+      quotesPerMinute: state.quotesPerMinute,
+      optionsQuotesPerMinute: state.optionsQuotesPerMinute,
+      lastMessageAgo: state.lastMessageAgo,
+      avgLatency: state.avgLatency,
+      reconnectAttempts: state.reconnectAttempts,
+      healthStatus: getHealthStatus(state),
+    }))
+  );
 }
 
 export default useStreamingMetricsStore;

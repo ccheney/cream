@@ -94,13 +94,13 @@ describe("useUIStore", () => {
   });
 
   describe("chart preferences", () => {
-    test("starts with 1h timeframe", () => {
-      expect(useUIStore.getState().chartTimeframe).toBe("1h");
+    test("starts with 15m timeframe", () => {
+      expect(useUIStore.getState().chartTimeframe).toBe("15m");
     });
 
     test("setChartTimeframe changes timeframe", () => {
-      useUIStore.getState().setChartTimeframe("1d");
-      expect(useUIStore.getState().chartTimeframe).toBe("1d");
+      useUIStore.getState().setChartTimeframe("5m");
+      expect(useUIStore.getState().chartTimeframe).toBe("5m");
     });
 
     test("starts with volume visible", () => {
@@ -152,7 +152,7 @@ describe("useUIStore", () => {
       // Change multiple values
       useUIStore.getState().setSidebarCollapsed(true);
       useUIStore.getState().setTheme("dark");
-      useUIStore.getState().setChartTimeframe("1d");
+      useUIStore.getState().setChartTimeframe("5m");
       useUIStore.getState().setTablePageSize(100);
 
       // Reset
@@ -161,7 +161,7 @@ describe("useUIStore", () => {
       // Verify all back to initial
       expect(useUIStore.getState().sidebarCollapsed).toBe(false);
       expect(useUIStore.getState().theme).toBe("system");
-      expect(useUIStore.getState().chartTimeframe).toBe("1h");
+      expect(useUIStore.getState().chartTimeframe).toBe("15m");
       expect(useUIStore.getState().tablePageSize).toBe(25);
     });
   });
