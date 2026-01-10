@@ -149,28 +149,6 @@ export {
 } from "./cache";
 
 // ============================================
-// Metrics Exports
-// ============================================
-
-export {
-  type CacheStatusLabel,
-  createPredictionMarketMetrics,
-  type ErrorTypeLabel,
-  getDefaultMetrics,
-  LATENCY_BUCKETS,
-  type MetricsConfig,
-  type PlatformLabel,
-  type PredictionMarketMetrics,
-  recordApiCall,
-  recordApiError,
-  recordCacheAccess,
-  resetDefaultMetrics,
-  setMarketCount,
-  setWebsocketState,
-  updateSignalFreshness,
-} from "./metrics";
-
-// ============================================
 // Sector Mapping Exports
 // ============================================
 
