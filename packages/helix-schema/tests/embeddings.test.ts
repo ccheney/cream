@@ -33,13 +33,9 @@ describe("Embedding Configuration", () => {
     expect(DEFAULT_EMBEDDING_CONFIG.apiKeyEnvVar).toBe("GOOGLE_GENERATIVE_AI_API_KEY");
   });
 
-  it("defines alternative embedding models", () => {
+  it("defines gemini-embedding-001 model", () => {
     expect(EMBEDDING_MODELS["gemini-embedding-001"]).toBeDefined();
-    expect(EMBEDDING_MODELS["text-embedding-004"]).toBeDefined();
-  });
-
-  it("text-embedding-004 has 768 dimensions", () => {
-    expect(EMBEDDING_MODELS["text-embedding-004"].dimensions).toBe(768);
+    expect(EMBEDDING_MODELS["gemini-embedding-001"].dimensions).toBe(3072);
   });
 });
 
@@ -309,18 +305,6 @@ describe("createEmbeddingClient", () => {
     const client = createEmbeddingClient();
     const config = client.getConfig();
     expect(config.model).toBe("gemini-embedding-001");
-  });
-
-  it("creates client with specified model", () => {
-    // Skip if no API key
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      return;
-    }
-
-    const client = createEmbeddingClient("text-embedding-004");
-    const config = client.getConfig();
-    expect(config.model).toBe("text-embedding-004");
-    expect(config.dimensions).toBe(768);
   });
 });
 

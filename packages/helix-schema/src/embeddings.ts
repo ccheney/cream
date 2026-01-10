@@ -44,21 +44,13 @@ export const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = {
 };
 
 /**
- * Alternative embedding models for future migration
+ * Available embedding models
  */
 export const EMBEDDING_MODELS: Record<string, EmbeddingConfig> = {
   "gemini-embedding-001": {
     provider: "gemini",
     model: "gemini-embedding-001",
     dimensions: 3072,
-    batchSize: 100,
-    maxTokens: 2048,
-    apiKeyEnvVar: "GOOGLE_GENERATIVE_AI_API_KEY",
-  },
-  "text-embedding-004": {
-    provider: "gemini",
-    model: "text-embedding-004",
-    dimensions: 768,
     batchSize: 100,
     maxTokens: 2048,
     apiKeyEnvVar: "GOOGLE_GENERATIVE_AI_API_KEY",
