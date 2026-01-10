@@ -276,7 +276,7 @@ export interface WorkflowResult {
 // Default Timeout Configuration (fallback if DB not available)
 // ============================================
 
-const DEFAULT_AGENT_TIMEOUT_MS = 180_000; // 3 minutes per agent (LLMs need time)
+const DEFAULT_AGENT_TIMEOUT_MS = 1_800_000; // 30 minutes per agent (LLMs can be slow)
 const DEFAULT_TOTAL_CONSENSUS_TIMEOUT_MS = 300_000; // 5 minutes total
 const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
 
