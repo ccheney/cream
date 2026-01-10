@@ -47,7 +47,6 @@ packages/
   external-context/     # News, sentiment, fundamentals extraction
   filings/              # SEC EDGAR filing ingestion (10-K, 10-Q, 8-K)
   prediction-markets/   # Kalshi integration
-  validation/           # Schema parity validation
   dashboard-types/      # Shared dashboard/API types
   tsconfig/             # Shared TypeScript configs
   infra/                # OpenTelemetry, OpenTofu infrastructure

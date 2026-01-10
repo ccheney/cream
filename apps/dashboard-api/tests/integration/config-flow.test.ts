@@ -154,8 +154,7 @@ describe("Config Flow Integration", () => {
 
       const config = await service.getActiveConfig("PAPER");
 
-      // Model is now global via trading.globalModel, agents return "global" placeholder
-      expect(config.agents.technical_analyst.model).toBe("global");
+      // Model is now global via trading.globalModel (no per-agent model field)
       expect(config.agents.technical_analyst.enabled).toBe(true);
       expect(config.agents.trader.enabled).toBe(true);
     });
@@ -204,8 +203,7 @@ describe("Config Flow Integration", () => {
       });
 
       const draft = await service.getDraft("PAPER");
-      // Model is now global via trading.globalModel, agents return "global" placeholder
-      expect(draft.agents.technical_analyst.model).toBe("global");
+      // Model is now global via trading.globalModel (no per-agent model field)
       expect(draft.agents.technical_analyst.enabled).toBe(false);
     });
 

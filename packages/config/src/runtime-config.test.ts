@@ -59,7 +59,6 @@ function createMockAgentConfig(
     id: `ac-${agentType}`,
     environment: "PAPER",
     agentType,
-    model: "gemini-3-pro-preview",
     systemPromptOverride: null,
     enabled: true,
     createdAt: new Date().toISOString(),

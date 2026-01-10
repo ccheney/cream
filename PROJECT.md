@@ -97,7 +97,6 @@ cream/
 │   ├── mastra-kit/                 # Agent prompts, tools, evaluations
 │   ├── external-context/           # News, sentiment, fundamentals extraction
 │   ├── prediction-markets/         # Kalshi integration
-│   ├── validation/                 # Schema parity validation
 │   ├── dashboard-types/            # Shared dashboard/API types
 │   ├── tsconfig/                   # Shared TypeScript configs
 │   ├── infra/                      # OpenTofu infrastructure
@@ -209,7 +208,6 @@ DeepEval agent evaluation framework with LLM-as-Judge.
 ### Testing
 | Package | Purpose |
 |---------|---------|
-| `@cream/validation` | Research→production parity checks |
 | `@cream/research` | Python backtesting (VectorBT runner, subprocess execution) |
 
 ---
