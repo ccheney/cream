@@ -170,13 +170,6 @@ Dashboard uses **better-auth** with Google OAuth for authentication:
 | PAPER | Yes | No |
 | LIVE | Yes | Yes |
 
-### OAuth Callback Flow
-
-1. User clicks "Sign in with Google" on dashboard
-2. Redirected to Google OAuth consent screen
-3. Google redirects to `{BETTER_AUTH_URL}/api/auth/callback/google`
-4. Session created and user redirected to dashboard
-
 ### Protected Routes
 
 ```typescript
@@ -188,16 +181,6 @@ app.use("/api/*", sessionMiddleware(), requireAuth());
 // LIVE environment: require MFA + confirmation header
 app.post("/api/orders", liveProtection({ requireMFA: true, requireConfirmation: true }));
 ```
-
-## Runtime Configuration
-
-All runtime config is stored in the database (no YAML files):
-
-| Table | Purpose |
-|-------|---------|
-| `trading_config` | Consensus thresholds, position sizing, risk/reward |
-| `agent_configs` | Model selection, temperature, prompt overrides per agent |
-| `universe_configs` | Symbol sources, filters, include/exclude lists |
 
 **Loading config:**
 ```typescript
@@ -238,24 +221,6 @@ validateEnvironmentOrExit("dashboard-api", ["TURSO_DATABASE_URL"]);
 
 Use [testcontainers](https://github.com/testcontainers/testcontainers-node) for integration tests requiring real infrastructure:
 
-```typescript
-import { GenericContainer, StartedTestContainer } from "testcontainers";
-
-let container: StartedTestContainer;
-
-beforeAll(async () => {
-  container = await new GenericContainer("ghcr.io/tursodatabase/turso:latest")
-    .withExposedPorts(8080)
-    .start();
-
-  process.env.TURSO_DATABASE_URL = `http://localhost:${container.getMappedPort(8080)}`;
-});
-
-afterAll(async () => {
-  await container.stop();
-});
-```
-
 **When to use testcontainers:**
 - HelixDB integration tests (graph queries, vector search)
 - Turso/SQLite integration tests (migrations, complex queries)
@@ -269,7 +234,7 @@ afterAll(async () => {
 
 ## Code Conventions
 
-- **NEVER run `bun run dev` or `bun dev`** - the user manages their own dev servers
+- **NEVER run `bun run dev` or `bun dev`** - unless explicitly told to, the user manages their own dev servers
 - Prefer Bun APIs over Node.js equivalents (`Bun.file()`, `Bun.serve()`, etc.)
 - Use `workspace:*` for internal package dependencies
 - Financial calculations use `rust_decimal` (Rust) or handle precision carefully (TS)
