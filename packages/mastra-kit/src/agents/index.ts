@@ -32,8 +32,6 @@ export {
   parseResearcherResponse,
   type ResearcherInput,
   type ResearcherOutput,
-  SPECIALIZED_AGENT_MODELS,
-  type SpecializedAgentModel,
 } from "./indicatorResearcher.js";
 // Re-export registry
 export {

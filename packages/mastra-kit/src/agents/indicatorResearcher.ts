@@ -15,26 +15,6 @@ import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
 import { type IndicatorHypothesis, IndicatorHypothesisSchema } from "@cream/indicators";
 
 // ============================================
-// Model Configuration (DEPRECATED)
-// ============================================
-
-/**
- * @deprecated Use global model from trading_config.global_model instead.
- * Kept for backward compatibility - these values are no longer used at runtime.
- */
-export const SPECIALIZED_AGENT_MODELS = {
-  /** Now uses global model */
-  sonnet: DEFAULT_GLOBAL_MODEL,
-  /** Now uses global model */
-  opus: DEFAULT_GLOBAL_MODEL,
-} as const;
-
-/**
- * @deprecated Use GlobalModel from @cream/domain instead.
- */
-export type SpecializedAgentModel = GlobalModel;
-
-// ============================================
 // System Prompt
 // ============================================
 
@@ -113,8 +93,8 @@ export interface IndicatorResearcherConfig {
   /** Role description */
   role: string;
 
-  /** Model to use */
-  model: SpecializedAgentModel;
+  /** Model to use (global model from trading_config) */
+  model: GlobalModel;
 
   /** System prompt for hypothesis generation */
   systemPrompt: string;
@@ -136,7 +116,7 @@ export const INDICATOR_RESEARCHER_CONFIG: IndicatorResearcherConfig = {
   type: "indicator_researcher",
   name: "Indicator Researcher",
   role: "Formulate indicator hypotheses based on regime gaps and performance analysis",
-  model: SPECIALIZED_AGENT_MODELS.sonnet,
+  model: DEFAULT_GLOBAL_MODEL,
   systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
   tools: ["web_search", "helix_query"],
   temperature: 0.7,

@@ -34,22 +34,12 @@ export const context7Client = new MCPClient({
 /**
  * Get Context7 tools for use with agents
  *
- * Must call connectContext7() first.
- *
  * Returns tools:
  * - resolve-library-id
  * - query-docs
  */
 export async function getContext7Tools() {
   return context7Client.listTools();
-}
-
-/**
- * Connect to the Context7 MCP server
- * @deprecated MCPClient manages connections automatically - this is a no-op
- */
-export async function connectContext7() {
-  // MCPClient handles connections internally
 }
 
 /**
