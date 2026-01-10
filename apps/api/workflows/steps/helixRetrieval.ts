@@ -22,7 +22,12 @@ import {
   vectorSearch,
 } from "@cream/helix";
 import type { TradeDecision } from "@cream/helix-schema";
-import { DEFAULT_RRF_K, fuseWithRRF, type RRFResult } from "@cream/helix-schema";
+import {
+  DEFAULT_RRF_K,
+  fuseWithRRF,
+  type RRFResult,
+  type RetrievalResult as RRFRetrievalResult,
+} from "@cream/helix-schema";
 
 // ============================================
 // Types
@@ -231,7 +236,7 @@ async function performVectorSearch(
   embedding: number[],
   topK: number,
   minSimilarity: number
-): Promise<RetrievalResult<TradeDecision>[]> {
+): Promise<RRFRetrievalResult<TradeDecision>[]> {
   const response = await vectorSearch<TradeDecision>(client, embedding, {
     topK,
     minSimilarity,
@@ -263,7 +268,7 @@ async function performGraphTraversal(
   underlyingSymbol?: string,
   regime?: string,
   limit = 50
-): Promise<RetrievalResult<TradeDecision>[]> {
+): Promise<RRFRetrievalResult<TradeDecision>[]> {
   const results: Map<string, { node: TradeDecision; score: number }> = new Map();
 
   // Strategy 1: Same instrument
@@ -382,8 +387,8 @@ async function findDecisionsByRegime(
  * Fuse vector and graph results using RRF.
  */
 function fuseResults(
-  vectorResults: RetrievalResult<TradeDecision>[],
-  graphResults: RetrievalResult<TradeDecision>[],
+  vectorResults: RRFRetrievalResult<TradeDecision>[],
+  graphResults: RRFRetrievalResult<TradeDecision>[],
   topK: number
 ): RRFResult<TradeDecision>[] {
   return fuseWithRRF(vectorResults, graphResults, {

@@ -17,6 +17,12 @@
 import { create } from "@bufbuild/protobuf";
 import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
 import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { generateSituationBrief, type MarketSnapshot as HelixMarketSnapshot } from "@cream/helix";
+import {
+  createEmbeddingClient,
+  type EmbeddingClient,
+  type TradeDecision,
+} from "@cream/helix-schema";
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 import { createMarketDataAdapter } from "@cream/marketdata";
 import {
@@ -35,6 +41,11 @@ import {
   getCandleFixtures,
   getSnapshotFixture,
 } from "../../fixtures/market/index.js";
+import type { TradeDecisionInput } from "../../workflows/steps/helixMemoryUpdate.js";
+import {
+  createHelixOrchestrator,
+  type HelixOrchestrator,
+} from "../../workflows/steps/helixOrchestrator.js";
 import {
   type AgentConfigEntry,
   type AgentContext,
@@ -74,6 +85,63 @@ const log: LifecycleLogger = createNodeLogger({
   environment: process.env.CREAM_ENV ?? "BACKTEST",
   pretty: process.env.NODE_ENV === "development",
 });
+
+// ============================================
+// HelixDB Orchestrator Singleton
+// ============================================
+
+let embeddingClient: EmbeddingClient | null = null;
+let helixOrchestrator: HelixOrchestrator | null = null;
+
+/**
+ * Get or create the embedding client singleton.
+ * Returns null if initialization fails (missing API key, etc.).
+ */
+function getEmbeddingClient(): EmbeddingClient | null {
+  if (embeddingClient) {
+    return embeddingClient;
+  }
+
+  try {
+    embeddingClient = createEmbeddingClient();
+    return embeddingClient;
+  } catch (error) {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to create embedding client"
+    );
+    return null;
+  }
+}
+
+/**
+ * Get or create the HelixDB orchestrator singleton.
+ * Returns null if HelixDB client is unavailable.
+ */
+function getHelixOrchestrator(): HelixOrchestrator | null {
+  if (helixOrchestrator) {
+    return helixOrchestrator;
+  }
+
+  const client = getHelixClient();
+  if (!client) {
+    return null;
+  }
+
+  helixOrchestrator = createHelixOrchestrator(client, {
+    enabled: true,
+    retrievalEnabled: true,
+    memoryUpdateEnabled: true,
+    fallbackOnError: true,
+    performanceTargets: {
+      retrievalMaxMs: 50,
+      updateMaxMs: 100,
+      lifecycleMaxMs: 50,
+    },
+  });
+
+  return helixOrchestrator;
+}
 
 // ============================================
 // Types
@@ -496,7 +564,7 @@ function fetchFixtureSnapshot(instruments: string[]): MarketSnapshot {
 /**
  * Load memory context including relevant historical cases from HelixDB.
  *
- * Retrieves similar trade decisions from HelixDB using Case-Based Reasoning (CBR).
+ * Uses the HelixDB orchestrator for GraphRAG retrieval (vector + graph search).
  * Falls back to empty context if HelixDB is unavailable.
  *
  * @param snapshot - Market snapshot with instrument data
@@ -517,9 +585,6 @@ async function loadMemoryContext(
     };
   }
 
-  // Try to retrieve relevant cases from HelixDB
-  const relevantCases: unknown[] = [];
-
   // In BACKTEST mode, skip HelixDB queries for faster execution
   if (ctx && isBacktest(ctx)) {
     return {
@@ -528,56 +593,86 @@ async function loadMemoryContext(
     };
   }
 
-  // Try to connect to HelixDB and retrieve similar cases
-  try {
-    const helixClient = getHelixClient();
-    if (helixClient) {
-      // Query for similar trade decisions for each instrument
-      // Using the SearchSimilarDecisions query if available
-      for (const symbol of snapshot.instruments) {
-        try {
-          // Build a simple query text from the market context
-          const candles = snapshot.candles[symbol];
-          const lastCandle = candles?.[candles.length - 1];
-          const queryText = lastCandle
-            ? `Trading ${symbol} at price ${lastCandle.close.toFixed(2)}`
-            : `Trading ${symbol}`;
+  // Get orchestrator and embedding client
+  const orchestrator = getHelixOrchestrator();
+  const embedder = getEmbeddingClient();
 
-          const result = await helixClient.query<
-            Array<{
-              decision_id: string;
-              instrument_id: string;
-              action: string;
-              regime_label: string;
-              rationale_text: string;
-              similarity_score?: number;
-            }>
-          >("SearchSimilarDecisions", {
-            query_text: queryText,
-            instrument_id: symbol,
-            limit: 5,
+  // If either is unavailable, return empty context (graceful degradation)
+  if (!orchestrator || !embedder) {
+    log.debug("HelixDB orchestrator or embedding client unavailable, using empty memory context");
+    return {
+      relevantCases: [],
+      regimeLabels,
+    };
+  }
+
+  // Retrieve similar cases for each instrument using GraphRAG
+  const relevantCases: unknown[] = [];
+
+  for (const symbol of snapshot.instruments) {
+    try {
+      // Build market snapshot for situation brief
+      const candles = snapshot.candles[symbol];
+      const lastCandle = candles?.[candles.length - 1];
+      const helixSnapshot: HelixMarketSnapshot = {
+        instrumentId: symbol,
+        regimeLabel: regimeLabels[symbol]?.regime ?? "RANGE",
+        indicators: lastCandle
+          ? {
+              close: lastCandle.close,
+              open: lastCandle.open,
+              high: lastCandle.high,
+              low: lastCandle.low,
+              volume: lastCandle.volume,
+            }
+          : undefined,
+      };
+
+      // Generate situation brief and embedding
+      const situationBrief = generateSituationBrief(helixSnapshot);
+      const embeddingResult = await embedder.generateEmbedding(situationBrief);
+
+      // Call orchestrator for retrieval
+      const result = await orchestrator.orient({
+        queryEmbedding: embeddingResult.values,
+        instrumentId: symbol,
+        underlyingSymbol: symbol,
+        regime: regimeLabels[symbol]?.regime,
+        topK: 5,
+      });
+
+      // Log retrieval metrics
+      if (result.success && result.data) {
+        log.debug(
+          {
+            symbol,
+            decisionsFound: result.data.decisions.length,
+            executionMs: result.executionMs,
+            usedFallback: result.usedFallback,
+            exceededTarget: result.exceededTarget,
+          },
+          "HelixDB retrieval completed"
+        );
+
+        // Convert decisions to relevant cases format
+        for (const decision of result.data.decisions) {
+          relevantCases.push({
+            caseId: decision.decisionId,
+            symbol: decision.instrumentId,
+            action: decision.action,
+            regime: decision.regime,
+            rationale: decision.rationaleSummary,
+            similarity: decision.relevanceScore,
           });
-
-          if (result.data && result.data.length > 0) {
-            relevantCases.push(
-              ...result.data.map((d) => ({
-                caseId: d.decision_id,
-                symbol: d.instrument_id,
-                action: d.action,
-                regime: d.regime_label,
-                rationale: d.rationale_text,
-                similarity: d.similarity_score ?? 0,
-              }))
-            );
-          }
-        } catch {
-          // Continue with other instruments if one query fails
         }
       }
+    } catch (error) {
+      // Log but continue with other instruments
+      log.warn(
+        { symbol, error: error instanceof Error ? error.message : String(error) },
+        "Failed to retrieve memories for symbol"
+      );
     }
-  } catch {
-    // HelixDB unavailable - continue with empty cases
-    // This is expected in BACKTEST mode or when HelixDB is not running
   }
 
   return {
@@ -1529,6 +1624,99 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       "Failed to persist decisions"
     );
     // Don't fail the cycle - decisions are for observability, not critical path
+  }
+
+  // ============================================
+  // Update HelixDB Memory (Act Phase - Memory)
+  // ============================================
+  const orchestrator = getHelixOrchestrator();
+  const embedder = getEmbeddingClient();
+
+  if (orchestrator && embedder && consensusResult.approved) {
+    log.info(
+      { cycleId, decisionCount: consensusResult.plan.decisions.length },
+      "Updating HelixDB memory"
+    );
+
+    try {
+      // Map decision action to HelixDB action type
+      const mapAction = (action: string): "BUY" | "SELL" | "HOLD" | "NO_TRADE" => {
+        switch (action) {
+          case "BUY":
+            return "BUY";
+          case "SELL":
+          case "CLOSE":
+            return "SELL";
+          case "HOLD":
+            return "HOLD";
+          default:
+            return "NO_TRADE";
+        }
+      };
+
+      // Convert decisions to TradeDecisionInput format
+      const tradeDecisionInputs: TradeDecisionInput[] = await Promise.all(
+        consensusResult.plan.decisions.map(async (decision) => {
+          // Generate embedding for the rationale
+          const rationaleText = decision.rationale?.summary ?? "";
+          const embeddingResult = await embedder.generateEmbedding(rationaleText);
+
+          // Build TradeDecision for HelixDB
+          const tradeDecision: TradeDecision = {
+            decision_id: decision.decisionId,
+            cycle_id: cycleId,
+            instrument_id: decision.instrumentId,
+            underlying_symbol: decision.instrumentId, // Use instrument as underlying for equities
+            regime_label: regimeLabels[decision.instrumentId]?.regime ?? "RANGE",
+            action: mapAction(decision.action),
+            decision_json: JSON.stringify({
+              action: decision.action,
+              direction: decision.direction,
+              size: decision.size,
+              stopLoss: decision.stopLoss,
+              takeProfit: decision.takeProfit,
+              strategyFamily: decision.strategyFamily,
+              timeHorizon: decision.timeHorizon,
+            }),
+            rationale_text: rationaleText,
+            snapshot_reference: `snapshot-${cycleId}`,
+            created_at: new Date().toISOString(),
+            environment: context.environment as "BACKTEST" | "PAPER" | "LIVE",
+          };
+
+          return {
+            decision: tradeDecision,
+            embedding: embeddingResult.values,
+          };
+        })
+      );
+
+      // Call orchestrator's act() method
+      const actResult = await orchestrator.act({
+        decisions: tradeDecisionInputs,
+        lifecycleEvents: [],
+        externalEvents: [],
+        influenceEdges: [],
+      });
+
+      log.info(
+        {
+          cycleId,
+          success: actResult.success,
+          usedFallback: actResult.usedFallback,
+          executionMs: actResult.executionMs,
+          exceededTarget: actResult.exceededTarget,
+          decisionsProcessed: actResult.data?.decisions.totalProcessed ?? 0,
+        },
+        "HelixDB memory update completed"
+      );
+    } catch (error) {
+      log.warn(
+        { cycleId, error: error instanceof Error ? error.message : String(error) },
+        "Failed to update HelixDB memory - continuing with trading cycle"
+      );
+      // Don't fail the cycle - memory update is non-critical
+    }
   }
 
   // ============================================
