@@ -43,11 +43,6 @@ describe("Embedding Configuration", () => {
   it("text-embedding-004 has 768 dimensions", () => {
     expect(EMBEDDING_MODELS["text-embedding-004"].dimensions).toBe(768);
   });
-
-  it("OpenAI models have correct dimensions", () => {
-    expect(EMBEDDING_MODELS["text-embedding-3-large"].dimensions).toBe(3072);
-    expect(EMBEDDING_MODELS["text-embedding-3-small"].dimensions).toBe(1536);
-  });
 });
 
 // ============================================

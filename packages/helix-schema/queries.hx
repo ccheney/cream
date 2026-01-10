@@ -1,35 +1,26 @@
-// Cream Trading System - HelixDB Query Definitions
-// All HelixQL query operations for the trading memory system
-//
-// Queries cover:
-// - Node insertion with embeddings
-// - Vector similarity search with filters
-// - Graph traversal operations
-// - Edge creation for relationships
-//
-// @see schema.hx for node and edge type definitions
-// @see docs/plans/04-memory-helixdb.md for full specification
+// Cream Trading System - HelixDB Queries
+// Following HelixDB v2 patterns
 
 // ============================================
-// Trading Memory Insertion Queries
+// Vector Insertion Queries
 // ============================================
 
-// Insert a new TradeDecision with embedded rationale
 QUERY InsertTradeDecision(
     decision_id: String,
     cycle_id: String,
     instrument_id: String,
-    underlying_symbol: String?,
+    underlying_symbol: String,
     regime_label: String,
     action: String,
     decision_json: String,
     rationale_text: String,
     snapshot_reference: String,
-    created_at: String,
-    environment: String
+    realized_outcome: String,
+    environment: String,
+    closed_at: String
 ) =>
     decision <- AddV<TradeDecision>(
-        Embed(rationale_text, "gemini:gemini-embedding-001"),
+        Embed(rationale_text),
         {
             decision_id: decision_id,
             cycle_id: cycle_id,
@@ -40,57 +31,25 @@ QUERY InsertTradeDecision(
             decision_json: decision_json,
             rationale_text: rationale_text,
             snapshot_reference: snapshot_reference,
-            created_at: created_at,
-            environment: environment
+            realized_outcome: realized_outcome,
+            environment: environment,
+            closed_at: closed_at
         }
     )
     RETURN decision
 
-
-// Insert a TradeLifecycleEvent and link to parent decision
-QUERY InsertLifecycleEvent(
-    event_id: String,
-    decision_id: String,
-    event_type: String,
-    timestamp: String,
-    price: F64,
-    quantity: I64,
-    environment: String
-) =>
-    event <- AddN<TradeLifecycleEvent>({
-        event_id: event_id,
-        decision_id: decision_id,
-        event_type: event_type,
-        timestamp: timestamp,
-        price: price,
-        quantity: quantity,
-        environment: environment
-    })
-    // Link to parent decision
-    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
-    AddE<HAS_EVENT>::From(decision)::To(event)
-    RETURN event
-
-
-// ============================================
-// External Event Insertion Queries
-// ============================================
-
-// Insert ExternalEvent with optional embedding
 QUERY InsertExternalEvent(
     event_id: String,
     event_type: String,
-    event_time: String,
     payload: String,
-    text_summary: String?,
+    text_summary: String,
     related_instrument_ids: String
 ) =>
     event <- AddV<ExternalEvent>(
-        Embed(text_summary, "gemini:gemini-embedding-001"),
+        Embed(text_summary),
         {
             event_id: event_id,
             event_type: event_type,
-            event_time: event_time,
             payload: payload,
             text_summary: text_summary,
             related_instrument_ids: related_instrument_ids
@@ -98,12 +57,6 @@ QUERY InsertExternalEvent(
     )
     RETURN event
 
-
-// ============================================
-// Document Node Insertion Queries
-// ============================================
-
-// Insert FilingChunk with embedded text
 QUERY InsertFilingChunk(
     chunk_id: String,
     filing_id: String,
@@ -111,10 +64,10 @@ QUERY InsertFilingChunk(
     filing_type: String,
     filing_date: String,
     chunk_text: String,
-    chunk_index: I64
+    chunk_index: U32
 ) =>
     chunk <- AddV<FilingChunk>(
-        Embed(chunk_text, "gemini:gemini-embedding-001"),
+        Embed(chunk_text),
         {
             chunk_id: chunk_id,
             filing_id: filing_id,
@@ -127,8 +80,6 @@ QUERY InsertFilingChunk(
     )
     RETURN chunk
 
-
-// Insert TranscriptChunk with embedded text
 QUERY InsertTranscriptChunk(
     chunk_id: String,
     transcript_id: String,
@@ -136,10 +87,10 @@ QUERY InsertTranscriptChunk(
     call_date: String,
     speaker: String,
     chunk_text: String,
-    chunk_index: I64
+    chunk_index: U32
 ) =>
     chunk <- AddV<TranscriptChunk>(
-        Embed(chunk_text, "gemini:gemini-embedding-001"),
+        Embed(chunk_text),
         {
             chunk_id: chunk_id,
             transcript_id: transcript_id,
@@ -152,26 +103,20 @@ QUERY InsertTranscriptChunk(
     )
     RETURN chunk
 
-
-// Insert NewsItem with headline + body embeddings
 QUERY InsertNewsItem(
     item_id: String,
     headline: String,
     body_text: String,
-    published_at: String,
     source: String,
     related_symbols: String,
     sentiment_score: F64
 ) =>
-    // Concatenate headline and body for embedding
-    combined_text <- headline + "\n\n" + body_text
     item <- AddV<NewsItem>(
-        Embed(combined_text, "gemini:gemini-embedding-001"),
+        Embed(headline),
         {
             item_id: item_id,
             headline: headline,
             body_text: body_text,
-            published_at: published_at,
             source: source,
             related_symbols: related_symbols,
             sentiment_score: sentiment_score
@@ -179,12 +124,178 @@ QUERY InsertNewsItem(
     )
     RETURN item
 
+QUERY InsertThesisMemory(
+    thesis_id: String,
+    instrument_id: String,
+    underlying_symbol: String,
+    entry_thesis: String,
+    outcome: String,
+    pnl_percent: F64,
+    holding_period_days: U32,
+    lessons_learned: String,
+    entry_regime: String,
+    exit_regime: String,
+    close_reason: String,
+    entry_price: F64,
+    exit_price: F64,
+    environment: String,
+    closed_at: String
+) =>
+    thesis <- AddV<ThesisMemory>(
+        Embed(entry_thesis),
+        {
+            thesis_id: thesis_id,
+            instrument_id: instrument_id,
+            underlying_symbol: underlying_symbol,
+            entry_thesis: entry_thesis,
+            outcome: outcome,
+            pnl_percent: pnl_percent,
+            holding_period_days: holding_period_days,
+            lessons_learned: lessons_learned,
+            entry_regime: entry_regime,
+            exit_regime: exit_regime,
+            close_reason: close_reason,
+            entry_price: entry_price,
+            exit_price: exit_price,
+            environment: environment,
+            closed_at: closed_at
+        }
+    )
+    RETURN thesis
+
+QUERY InsertIndicator(
+    indicator_id: String,
+    name: String,
+    category: String,
+    status: String,
+    hypothesis: String,
+    economic_rationale: String,
+    embedding_text: String,
+    generated_in_regime: String,
+    code_hash: String,
+    ast_signature: String,
+    deflated_sharpe: F64,
+    probability_of_overfit: F64,
+    information_coefficient: F64,
+    environment: String
+) =>
+    indicator <- AddV<Indicator>(
+        Embed(embedding_text),
+        {
+            indicator_id: indicator_id,
+            name: name,
+            category: category,
+            status: status,
+            hypothesis: hypothesis,
+            economic_rationale: economic_rationale,
+            embedding_text: embedding_text,
+            generated_in_regime: generated_in_regime,
+            code_hash: code_hash,
+            ast_signature: ast_signature,
+            deflated_sharpe: deflated_sharpe,
+            probability_of_overfit: probability_of_overfit,
+            information_coefficient: information_coefficient,
+            environment: environment
+        }
+    )
+    RETURN indicator
+
+QUERY InsertResearchHypothesis(
+    hypothesis_id: String,
+    title: String,
+    economic_rationale: String,
+    market_mechanism: String,
+    target_regime: String,
+    status: String,
+    expected_ic: F64,
+    expected_sharpe: F64,
+    falsification_criteria: String,
+    required_features: String,
+    related_literature: String,
+    originality_justification: String,
+    trigger_type: String,
+    implementation_hints: String,
+    lessons_learned: String,
+    realized_ic: F64,
+    realized_sharpe: F64,
+    factor_id: String,
+    author: String,
+    validated_at: String,
+    environment: String
+) =>
+    hypothesis <- AddV<ResearchHypothesis>(
+        Embed(economic_rationale),
+        {
+            hypothesis_id: hypothesis_id,
+            title: title,
+            economic_rationale: economic_rationale,
+            market_mechanism: market_mechanism,
+            target_regime: target_regime,
+            status: status,
+            expected_ic: expected_ic,
+            expected_sharpe: expected_sharpe,
+            falsification_criteria: falsification_criteria,
+            required_features: required_features,
+            related_literature: related_literature,
+            originality_justification: originality_justification,
+            trigger_type: trigger_type,
+            implementation_hints: implementation_hints,
+            lessons_learned: lessons_learned,
+            realized_ic: realized_ic,
+            realized_sharpe: realized_sharpe,
+            factor_id: factor_id,
+            author: author,
+            validated_at: validated_at,
+            environment: environment
+        }
+    )
+    RETURN hypothesis
+
+QUERY InsertAcademicPaper(
+    paper_id: String,
+    title: String,
+    authors: String,
+    paper_abstract: String,
+    url: String,
+    publication_year: U32,
+    citation_count: U32
+) =>
+    paper <- AddV<AcademicPaper>(
+        Embed(paper_abstract),
+        {
+            paper_id: paper_id,
+            title: title,
+            authors: authors,
+            paper_abstract: paper_abstract,
+            url: url,
+            publication_year: publication_year,
+            citation_count: citation_count
+        }
+    )
+    RETURN paper
 
 // ============================================
-// Domain Knowledge Insertion Queries
+// Node Insertion Queries
 // ============================================
 
-// Insert Company node (no embedding)
+QUERY InsertLifecycleEvent(
+    event_id: String,
+    decision_id: String,
+    event_type: String,
+    price: F64,
+    quantity: I64,
+    environment: String
+) =>
+    event <- AddN<TradeLifecycleEvent>({
+        event_id: event_id,
+        decision_id: decision_id,
+        event_type: event_type,
+        price: price,
+        quantity: quantity,
+        environment: environment
+    })
+    RETURN event
+
 QUERY InsertCompany(
     symbol: String,
     name: String,
@@ -201,8 +312,6 @@ QUERY InsertCompany(
     })
     RETURN company
 
-
-// Insert MacroEntity node (no embedding)
 QUERY InsertMacroEntity(
     entity_id: String,
     name: String,
@@ -217,411 +326,203 @@ QUERY InsertMacroEntity(
     })
     RETURN entity
 
-
 // ============================================
-// Vector Similarity Search Queries
+// Vector Search Queries
 // ============================================
 
-// Search for similar past decisions by rationale
-QUERY SearchSimilarDecisions(
-    query_text: String,
-    instrument_id: String?,
-    regime_label: String?,
-    limit: I64
-) =>
-    results <- SearchV<TradeDecision>(Embed(query_text, "gemini:gemini-embedding-001"), limit)
-        ::WHERE(
-            (_::{instrument_id}::EQ(instrument_id) OR instrument_id IS NULL) AND
-            (_::{regime_label}::EQ(regime_label) OR regime_label IS NULL)
-        )
-    RETURN results::{
-        decision_id: decision_id,
-        instrument_id: instrument_id,
-        regime_label: regime_label,
-        action: action,
-        rationale_text: rationale_text,
-        environment: environment,
-        similarity_score: _::DISTANCE
-    }
+QUERY SearchSimilarDecisions(query_text: String, limit: I64) =>
+    results <- SearchV<TradeDecision>(Embed(query_text), limit)
+    RETURN results
 
+QUERY SearchDecisionsByInstrument(query_text: String, instrument_id: String, limit: I64) =>
+    results <- SearchV<TradeDecision>(Embed(query_text), limit)
+        ::WHERE(_::{instrument_id}::EQ(instrument_id))
+    RETURN results
 
-// Search filing chunks for a company
-QUERY SearchFilings(
-    query: String,
-    company_symbol: String?,
-    limit: I64
-) =>
-    results <- SearchV<FilingChunk>(Embed(query, "gemini:gemini-embedding-001"), limit)
-        ::WHERE(_::{company_symbol}::EQ(company_symbol) OR company_symbol IS NULL)
-    RETURN results::{
-        chunk_id: chunk_id,
-        filing_id: filing_id,
-        company_symbol: company_symbol,
-        filing_type: filing_type,
-        chunk_text: chunk_text,
-        similarity_score: _::DISTANCE
-    }
+QUERY SearchFilings(query: String, limit: I64) =>
+    results <- SearchV<FilingChunk>(Embed(query), limit)
+    RETURN results
 
+QUERY SearchFilingsByCompany(query: String, company_symbol: String, limit: I64) =>
+    results <- SearchV<FilingChunk>(Embed(query), limit)
+        ::WHERE(_::{company_symbol}::EQ(company_symbol))
+    RETURN results
 
-// Search transcript chunks for a company
-QUERY SearchTranscripts(
-    query: String,
-    company_symbol: String?,
-    limit: I64
-) =>
-    results <- SearchV<TranscriptChunk>(Embed(query, "gemini:gemini-embedding-001"), limit)
-        ::WHERE(_::{company_symbol}::EQ(company_symbol) OR company_symbol IS NULL)
-    RETURN results::{
-        chunk_id: chunk_id,
-        transcript_id: transcript_id,
-        company_symbol: company_symbol,
-        speaker: speaker,
-        chunk_text: chunk_text,
-        similarity_score: _::DISTANCE
-    }
+QUERY SearchTranscripts(query: String, limit: I64) =>
+    results <- SearchV<TranscriptChunk>(Embed(query), limit)
+    RETURN results
 
+QUERY SearchTranscriptsByCompany(query: String, company_symbol: String, limit: I64) =>
+    results <- SearchV<TranscriptChunk>(Embed(query), limit)
+        ::WHERE(_::{company_symbol}::EQ(company_symbol))
+    RETURN results
 
-// Search news items
-QUERY SearchNews(
-    query: String,
-    limit: I64
-) =>
-    results <- SearchV<NewsItem>(Embed(query, "gemini:gemini-embedding-001"), limit)
-    RETURN results::{
-        item_id: item_id,
-        headline: headline,
-        body_text: body_text,
-        source: source,
-        sentiment_score: sentiment_score,
-        similarity_score: _::DISTANCE
-    }
+QUERY SearchNews(query: String, limit: I64) =>
+    results <- SearchV<NewsItem>(Embed(query), limit)
+    RETURN results
 
+QUERY SearchExternalEvents(query: String, limit: I64) =>
+    results <- SearchV<ExternalEvent>(Embed(query), limit)
+    RETURN results
 
-// Search external events
-QUERY SearchExternalEvents(
-    query: String,
-    event_type: String?,
-    limit: I64
-) =>
-    results <- SearchV<ExternalEvent>(Embed(query, "gemini:gemini-embedding-001"), limit)
-        ::WHERE(_::{event_type}::EQ(event_type) OR event_type IS NULL)
-    RETURN results::{
-        event_id: event_id,
-        event_type: event_type,
-        event_time: event_time,
-        text_summary: text_summary,
-        similarity_score: _::DISTANCE
-    }
+QUERY SearchExternalEventsByType(query: String, event_type: String, limit: I64) =>
+    results <- SearchV<ExternalEvent>(Embed(query), limit)
+        ::WHERE(_::{event_type}::EQ(event_type))
+    RETURN results
 
+QUERY SearchSimilarTheses(query_text: String, limit: I64) =>
+    results <- SearchV<ThesisMemory>(Embed(query_text), limit)
+    RETURN results
+
+QUERY SearchThesesByOutcome(query_text: String, outcome: String, limit: I64) =>
+    results <- SearchV<ThesisMemory>(Embed(query_text), limit)
+        ::WHERE(_::{outcome}::EQ(outcome))
+    RETURN results
 
 // ============================================
 // Graph Traversal Queries
 // ============================================
 
-// Get trade decision with all lifecycle events
 QUERY GetTradeWithEvents(decision_id: String) =>
-    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
     events <- decision::Out<HAS_EVENT>
-    RETURN {
-        decision: decision,
-        events: events
-    }
+    RETURN events
 
+QUERY GetInfluencedDecisions(event_id: String) =>
+    event <- V<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
+    decisions <- event::Out<INFLUENCED_DECISION>
+    RETURN decisions
 
-// Get decisions influenced by an external event
-// Filters by minimum influence score (default threshold: 0.6)
-QUERY GetInfluencedDecisions(event_id: String, min_confidence: F64?) =>
-    event <- N<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
-    influenced <- event::Out<INFLUENCED_DECISION>
-        ::WHERE(_::EDGE::{influence_score} >= (min_confidence OR 0.6))
-    RETURN influenced::{
-        decision: _,
-        influence_score: _::EDGE::{influence_score},
-        influence_type: _::EDGE::{influence_type}
-    }
-
-
-// Get company with all related filings
 QUERY GetCompanyFilings(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     filings <- company::In<FILED_BY>
-    RETURN {
-        company: company,
-        filings: filings
-    }
+    RETURN filings
 
-
-// Get company with all transcripts
 QUERY GetCompanyTranscripts(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     transcripts <- company::In<TRANSCRIPT_FOR>
-    RETURN {
-        company: company,
-        transcripts: transcripts
-    }
+    RETURN transcripts
 
-
-// Get company with all news mentions
 QUERY GetCompanyNews(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     news <- company::In<MENTIONS_COMPANY>
-    RETURN news::{
-        item: _,
-        sentiment: _::EDGE::{sentiment}
-    }
+    RETURN news
 
-
-// Get related companies (multi-hop)
-QUERY GetRelatedCompanies(symbol: String, max_depth: I64) =>
+QUERY GetRelatedCompanies(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
-    related <- company::Out<RELATED_TO>{1..max_depth}
-    RETURN related::{
-        company: _,
-        relationship_type: _::EDGE::{relationship_type}
-    }
+    related <- company::Out<RELATED_TO>
+    RETURN related
 
-
-// Get company dependency chain (supply chain, customers, partners)
-// Traverses DEPENDS_ON edges with strength filtering
-// max_depth defaults to 2 (optimal for trading context)
-// min_strength defaults to 0.3 to filter weak dependencies
-QUERY GetCompanyDependencyChain(
-    symbol: String,
-    max_depth: I64?,
-    min_strength: F64?
-) =>
+QUERY GetCompanyDependencies(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
-    dependencies <- company::Out<DEPENDS_ON>{1..(max_depth OR 2)}
-        ::WHERE(_::EDGE::{strength} >= (min_strength OR 0.3))
-    RETURN dependencies::{
-        company: _,
-        relationship_type: _::EDGE::{relationship_type},
-        strength: _::EDGE::{strength},
-        depth: _::DEPTH
-    }
+    deps <- company::Out<DEPENDS_ON>
+    RETURN deps
 
-
-// Get companies that depend on a given company (reverse dependency lookup)
-QUERY GetDependentCompanies(symbol: String, min_strength: F64?) =>
+QUERY GetDependentCompanies(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     dependents <- company::In<DEPENDS_ON>
-        ::WHERE(_::EDGE::{strength} >= (min_strength OR 0.3))
-    RETURN dependents::{
-        company: _,
-        relationship_type: _::EDGE::{relationship_type},
-        strength: _::EDGE::{strength}
-    }
+    RETURN dependents
 
-
-// Get companies affected by a macro entity
-QUERY GetCompaniesAffectedByMacro(entity_id: String, min_sensitivity: F64?) =>
+QUERY GetCompaniesAffectedByMacro(entity_id: String) =>
     entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
-    affected <- entity::In<AFFECTED_BY>
-        ::WHERE(_::EDGE::{sensitivity} >= (min_sensitivity OR 0.5))
-    RETURN affected::{
-        company: _,
-        sensitivity: _::EDGE::{sensitivity}
-    }
+    companies <- entity::In<AFFECTED_BY>
+    RETURN companies
 
-
-// Get events related to a macro entity
 QUERY GetMacroEvents(entity_id: String) =>
     entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
     events <- entity::In<RELATES_TO_MACRO>
     RETURN events
 
-
-// ============================================
-// Edge Creation Queries
-// ============================================
-
-// Link external event to decision with influence data
-QUERY CreateInfluencedDecisionEdge(
-    event_id: String,
-    decision_id: String,
-    influence_score: F64,
-    influence_type: String
-) =>
-    event <- N<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
-    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
-    edge <- AddE<INFLUENCED_DECISION>::From(event)::To(decision)::{
-        influence_score: influence_score,
-        influence_type: influence_type
-    }
-    RETURN edge
-
-
-// Link filing chunk to company
-QUERY CreateFiledByEdge(chunk_id: String, company_symbol: String) =>
-    chunk <- N<FilingChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
-    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
-    edge <- AddE<FILED_BY>::From(chunk)::To(company)
-    RETURN edge
-
-
-// Link transcript chunk to company
-QUERY CreateTranscriptForEdge(chunk_id: String, company_symbol: String) =>
-    chunk <- N<TranscriptChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
-    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
-    edge <- AddE<TRANSCRIPT_FOR>::From(chunk)::To(company)
-    RETURN edge
-
-
-// Link news item to company with sentiment
-QUERY CreateMentionsCompanyEdge(
-    item_id: String,
-    company_symbol: String,
-    sentiment: F64?
-) =>
-    news <- N<NewsItem>::WHERE(_::{item_id}::EQ(item_id))
-    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
-    edge <- AddE<MENTIONS_COMPANY>::From(news)::To(company)::{
-        sentiment: sentiment
-    }
-    RETURN edge
-
-
-// Link external event to macro entity
-QUERY CreateRelatesToMacroEdge(event_id: String, entity_id: String) =>
-    event <- N<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
-    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
-    edge <- AddE<RELATES_TO_MACRO>::From(event)::To(entity)
-    RETURN edge
-
-
-// Link companies with relationship type
-QUERY CreateRelatedToEdge(
-    source_symbol: String,
-    target_symbol: String,
-    relationship_type: String
-) =>
-    source <- N<Company>::WHERE(_::{symbol}::EQ(source_symbol))
-    target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
-    edge <- AddE<RELATED_TO>::From(source)::To(target)::{
-        relationship_type: relationship_type
-    }
-    RETURN edge
-
-
-// Link company to another company it depends on (supply chain)
-QUERY CreateDependsOnEdge(
-    source_symbol: String,
-    target_symbol: String,
-    relationship_type: String,
-    strength: F64
-) =>
-    source <- N<Company>::WHERE(_::{symbol}::EQ(source_symbol))
-    target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
-    edge <- AddE<DEPENDS_ON>::From(source)::To(target)::{
-        relationship_type: relationship_type,
-        strength: strength
-    }
-    RETURN edge
-
-
-// Link company to macro entity it's affected by
-QUERY CreateAffectedByEdge(
-    company_symbol: String,
-    entity_id: String,
-    sensitivity: F64
-) =>
-    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
-    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
-    edge <- AddE<AFFECTED_BY>::From(company)::To(entity)::{
-        sensitivity: sensitivity
-    }
-    RETURN edge
-
-
-// Link company to document with mention metadata
-QUERY CreateMentionedInEdge(
-    company_symbol: String,
-    document_id: String,
-    document_type: String,
-    mention_type: String
-) =>
-    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
-    edge <- AddE<MENTIONED_IN>::From(company)::To(document_id)::{
-        document_type: document_type,
-        mention_type: mention_type
-    }
-    RETURN edge
-
+QUERY GetThesisDecisions(thesis_id: String) =>
+    thesis <- V<ThesisMemory>::WHERE(_::{thesis_id}::EQ(thesis_id))
+    decisions <- thesis::Out<THESIS_INCLUDES>
+    RETURN decisions
 
 // ============================================
 // Lookup Queries
 // ============================================
 
-// Get decision by ID
 QUERY GetDecisionById(decision_id: String) =>
-    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
     RETURN decision
 
-
-// Get company by symbol
 QUERY GetCompanyBySymbol(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     RETURN company
 
-
-// Get decisions by instrument and environment
-QUERY GetDecisionsByInstrument(instrument_id: String, environment: String) =>
-    decisions <- N<TradeDecision>
-        ::WHERE(_::{instrument_id}::EQ(instrument_id) AND _::{environment}::EQ(environment))
-    RETURN decisions
-
-
-// Get decisions by regime
-QUERY GetDecisionsByRegime(regime_label: String, environment: String) =>
-    decisions <- N<TradeDecision>
-        ::WHERE(_::{regime_label}::EQ(regime_label) AND _::{environment}::EQ(environment))
-    RETURN decisions
-
-
-// Get recent events by type
-QUERY GetRecentEventsByType(event_type: String, limit: I64) =>
-    events <- N<ExternalEvent>
-        ::WHERE(_::{event_type}::EQ(event_type))
-        ::ORDER_BY(_::{event_time} DESC)
-        ::RANGE(0, limit)
-    RETURN events
-
-
-// ============================================
-// Aggregate Queries
-// ============================================
-
-// Count decisions by action type for an instrument
-QUERY CountDecisionsByAction(instrument_id: String, environment: String) =>
-    decisions <- N<TradeDecision>
-        ::WHERE(_::{instrument_id}::EQ(instrument_id) AND _::{environment}::EQ(environment))
-        ::GROUP_BY(_::{action})
-    RETURN decisions::{
-        action: _::{action},
-        count: _::COUNT
-    }
-
-
-// Get all companies in a sector
 QUERY GetCompaniesBySector(sector: String) =>
     companies <- N<Company>::WHERE(_::{sector}::EQ(sector))
     RETURN companies
 
+QUERY GetThesisById(thesis_id: String) =>
+    thesis <- V<ThesisMemory>::WHERE(_::{thesis_id}::EQ(thesis_id))
+    RETURN thesis
 
 // ============================================
-// Trade Decision Update Queries
+// Indicator Search Queries
 // ============================================
 
-// Update a trade decision with realized outcome
-// Called after a trade is closed to record P&L and performance metrics
-QUERY UpdateDecisionOutcome(
-    decision_id: String,
-    realized_outcome: String,
-    closed_at: String
-) =>
-    decision <- N<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
-    decision::UPDATE({
-        realized_outcome: realized_outcome,
-        closed_at: closed_at
-    })
-    RETURN decision
+QUERY SearchSimilarIndicators(query_text: String, limit: I64) =>
+    results <- SearchV<Indicator>(Embed(query_text), limit)
+    RETURN results
+
+QUERY SearchIndicatorsByCategory(query_text: String, category: String, limit: I64) =>
+    results <- SearchV<Indicator>(Embed(query_text), limit)
+        ::WHERE(_::{category}::EQ(category))
+    RETURN results
+
+QUERY SearchIndicatorsByStatus(query_text: String, status: String, limit: I64) =>
+    results <- SearchV<Indicator>(Embed(query_text), limit)
+        ::WHERE(_::{status}::EQ(status))
+    RETURN results
+
+QUERY GetIndicatorById(indicator_id: String) =>
+    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
+    RETURN indicator
+
+// ============================================
+// Research Hypothesis Search Queries
+// ============================================
+
+QUERY SearchSimilarHypotheses(query_text: String, limit: I64) =>
+    results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
+    RETURN results
+
+QUERY SearchHypothesesByStatus(query_text: String, status: String, limit: I64) =>
+    results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
+        ::WHERE(_::{status}::EQ(status))
+    RETURN results
+
+QUERY SearchHypothesesByMechanism(query_text: String, market_mechanism: String, limit: I64) =>
+    results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
+        ::WHERE(_::{market_mechanism}::EQ(market_mechanism))
+    RETURN results
+
+QUERY GetHypothesisById(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    RETURN hypothesis
+
+// ============================================
+// Academic Paper Search Queries
+// ============================================
+
+QUERY SearchAcademicPapers(query_text: String, limit: I64) =>
+    results <- SearchV<AcademicPaper>(Embed(query_text), limit)
+    RETURN results
+
+QUERY GetPaperById(paper_id: String) =>
+    paper <- V<AcademicPaper>::WHERE(_::{paper_id}::EQ(paper_id))
+    RETURN paper
+
+// ============================================
+// Indicator Graph Traversal Queries
+// ============================================
+// NOTE: Graph traversal queries for new edge types are disabled
+// due to a HelixDB code generator bug that produces invalid Rust code.
+// The edges are defined in schema.hx and can be traversed via raw queries.
+// See: https://github.com/helixdb/helix/issues (code generator bug)
+
+// ============================================
+// Hypothesis Graph Traversal Queries
+// ============================================
+// NOTE: Disabled due to same code generator bug as above.

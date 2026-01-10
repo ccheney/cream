@@ -48,7 +48,7 @@ export type DistanceMetric = z.infer<typeof DistanceMetric>;
  * - dot_product: Fast, requires pre-normalized vectors (equivalent to cosine if normalized)
  */
 export const DISTANCE_METRIC_NOTES: Record<DistanceMetric, string> = {
-  cosine: "Standard for text embeddings (Gemini, OpenAI). Range: [0, 2] where 0 = identical",
+  cosine: "Standard for text embeddings (Gemini). Range: [0, 2] where 0 = identical",
   euclidean: "L2 distance. Good for image embeddings. Range: [0, ∞) where 0 = identical",
   dot_product: "Inner product. Requires normalized vectors. Range: [-1, 1] where 1 = identical",
 };

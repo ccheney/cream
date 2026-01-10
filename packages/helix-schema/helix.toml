@@ -1,0 +1,10 @@
+[project]
+name = "cream-helix"
+queries = "./"
+container_runtime = "docker"
+
+[local.dev]
+port = 6969
+build_mode = "debug"
+
+[cloud]

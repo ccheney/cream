@@ -18,7 +18,7 @@ import { GoogleGenAI } from "@google/genai";
  */
 export interface EmbeddingConfig {
   /** Embedding provider */
-  provider: "gemini" | "openai";
+  provider: "gemini";
   /** Model identifier */
   model: string;
   /** Output dimensions */
@@ -40,7 +40,7 @@ export const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = {
   dimensions: 3072,
   batchSize: 100,
   maxTokens: 2048,
-  apiKeyEnvVar: "GEMINI_API_KEY",
+  apiKeyEnvVar: "GOOGLE_GENERATIVE_AI_API_KEY",
 };
 
 /**
@@ -53,7 +53,7 @@ export const EMBEDDING_MODELS: Record<string, EmbeddingConfig> = {
     dimensions: 3072,
     batchSize: 100,
     maxTokens: 2048,
-    apiKeyEnvVar: "GEMINI_API_KEY",
+    apiKeyEnvVar: "GOOGLE_GENERATIVE_AI_API_KEY",
   },
   "text-embedding-004": {
     provider: "gemini",
@@ -61,24 +61,7 @@ export const EMBEDDING_MODELS: Record<string, EmbeddingConfig> = {
     dimensions: 768,
     batchSize: 100,
     maxTokens: 2048,
-    apiKeyEnvVar: "GEMINI_API_KEY",
-  },
-  // OpenAI alternatives (not implemented, documented for future)
-  "text-embedding-3-large": {
-    provider: "openai",
-    model: "text-embedding-3-large",
-    dimensions: 3072,
-    batchSize: 2048,
-    maxTokens: 8191,
-    apiKeyEnvVar: "OPENAI_API_KEY",
-  },
-  "text-embedding-3-small": {
-    provider: "openai",
-    model: "text-embedding-3-small",
-    dimensions: 1536,
-    batchSize: 2048,
-    maxTokens: 8191,
-    apiKeyEnvVar: "OPENAI_API_KEY",
+    apiKeyEnvVar: "GOOGLE_GENERATIVE_AI_API_KEY",
   },
 };
 

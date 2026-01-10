@@ -1,451 +1,292 @@
 // Cream Trading System - HelixDB Schema
-// Complete HelixQL schema for all node types
+// Following HelixDB v2 idiomatic patterns
 //
-// Node Types (9 total):
-// - Trading Memory: TradeDecision, TradeLifecycleEvent
-// - External Events: ExternalEvent
-// - Documents: FilingChunk, TranscriptChunk, NewsItem
-// - Domain Knowledge: Company, MacroEntity
-// - Meta: Environment (enum-like)
-//
-// @see docs/plans/04-memory-helixdb.md for full specification
+// Types:
+// - V:: for vector types (embedding-searchable)
+// - N:: for node types (graph entities)
+// - E:: for edge types (relationships)
 
 // ============================================
-// Trading Memory Nodes
+// Trading Memory - Vector Types
 // ============================================
 
-// Stores each trading decision with its context and outcomes
-N::TradeDecision {
-    // Unique identifier
-    decision_id: String,
-
-    // Cycle when decision was made
-    cycle_id: String,
-
-    // Traded instrument (ticker or OCC symbol for options)
-    instrument_id: String,
-
-    // For options, the underlying symbol
-    underlying_symbol: String?,
-
-    // Market regime at decision time (BULL_TREND, BEAR_TREND, RANGE, etc.)
-    regime_label: String,
-
-    // Trading action: BUY, SELL, HOLD, INCREASE, REDUCE, NO_TRADE
+// Trading decisions with embedded rationale for semantic search
+V::TradeDecision {
+    INDEX decision_id: String,
+    INDEX cycle_id: String,
+    INDEX instrument_id: String,
+    underlying_symbol: String,
+    INDEX regime_label: String,
     action: String,
-
-    // Full approved decision payload as JSON
     decision_json: String,
-
-    // Human-readable rationale - EMBEDDED for semantic retrieval
-    rationale_text: Embed(String),
-
-    // Pointer to MarketSnapshot used for decision
+    rationale_text: String,
     snapshot_reference: String,
-
-    // Filled incrementally with execution results (JSON)
-    realized_outcome: String?,
-
-    // Decision timestamp (ISO 8601)
-    created_at: String,
-
-    // When position was fully closed (ISO 8601)
-    closed_at: String?,
-
-    // Trading environment: BACKTEST, PAPER, LIVE
-    environment: String,
+    realized_outcome: String,
+    INDEX environment: String,
+    created_at: Date DEFAULT NOW,
+    closed_at: String
 }
 
-// Indexes for TradeDecision
-INDEX TradeDecision.decision_id
-INDEX TradeDecision.cycle_id
-INDEX TradeDecision.instrument_id
-INDEX TradeDecision.regime_label
-INDEX TradeDecision.environment
-// Composite index for common query pattern
-INDEX TradeDecision.(instrument_id, regime_label)
-
-
-// Represents events in a trade's lifecycle (fills, adjustments, closes)
+// Trade lifecycle events (no embedding needed)
 N::TradeLifecycleEvent {
-    // Unique identifier
-    event_id: String,
-
-    // Parent decision reference
-    decision_id: String,
-
-    // Event type: FILL, PARTIAL_FILL, ADJUSTMENT, CLOSE
+    INDEX event_id: String,
+    INDEX decision_id: String,
     event_type: String,
-
-    // When event occurred (ISO 8601)
-    timestamp: String,
-
-    // Execution price
     price: F64,
-
-    // Quantity involved (signed: positive=buy, negative=sell)
     quantity: I64,
-
-    // Trading environment: BACKTEST, PAPER, LIVE
-    environment: String,
+    INDEX environment: String,
+    timestamp: Date DEFAULT NOW
 }
 
-// Indexes for TradeLifecycleEvent
-INDEX TradeLifecycleEvent.event_id
-INDEX TradeLifecycleEvent.decision_id
-INDEX TradeLifecycleEvent.environment
-
-
 // ============================================
-// External Event Nodes
+// External Events - Vector Types
 // ============================================
 
-// Represents discrete market events that may influence decisions
-N::ExternalEvent {
-    // Unique identifier
-    event_id: String,
-
-    // Event type: EARNINGS, MACRO, NEWS, SENTIMENT_SPIKE, FED_MEETING, etc.
-    event_type: String,
-
-    // When event occurred (ISO 8601)
-    event_time: String,
-
-    // Structured event details as JSON
+// Market events with embedded summaries for semantic search
+V::ExternalEvent {
+    INDEX event_id: String,
+    INDEX event_type: String,
     payload: String,
-
-    // Summary text - optionally EMBEDDED for semantic retrieval
-    text_summary: Embed(String)?,
-
-    // Affected instrument IDs as JSON array
+    text_summary: String,
     related_instrument_ids: String,
+    event_time: Date DEFAULT NOW
 }
 
-// Indexes for ExternalEvent
-INDEX ExternalEvent.event_id
-INDEX ExternalEvent.event_type
-// Composite index for time-based event filtering
-INDEX ExternalEvent.(event_type, event_time)
-
-
 // ============================================
-// Document Nodes
+// Document Chunks - Vector Types
 // ============================================
 
-// Chunked SEC filings for retrieval (10-K, 10-Q, 8-K)
-N::FilingChunk {
-    // Unique identifier
-    chunk_id: String,
-
-    // Parent filing identifier
-    filing_id: String,
-
-    // Company ticker symbol
-    company_symbol: String,
-
-    // Filing type: 10-K, 10-Q, 8-K, etc.
+// SEC filings chunked for RAG retrieval
+V::FilingChunk {
+    INDEX chunk_id: String,
+    INDEX filing_id: String,
+    INDEX company_symbol: String,
     filing_type: String,
-
-    // Filing date (YYYY-MM-DD)
     filing_date: String,
-
-    // Chunk text - EMBEDDED for semantic retrieval
-    chunk_text: Embed(String),
-
-    // Position in the filing (0-indexed)
-    chunk_index: I64,
+    chunk_text: String,
+    chunk_index: U32
 }
 
-// Indexes for FilingChunk
-INDEX FilingChunk.chunk_id
-INDEX FilingChunk.filing_id
-INDEX FilingChunk.company_symbol
-// Composite index for company filings by date
-INDEX FilingChunk.(company_symbol, filing_date)
-
-
-// Chunked earnings call transcripts
-N::TranscriptChunk {
-    // Unique identifier
-    chunk_id: String,
-
-    // Parent transcript identifier
-    transcript_id: String,
-
-    // Company ticker symbol
-    company_symbol: String,
-
-    // Earnings call date (YYYY-MM-DD)
+// Earnings transcripts chunked for RAG retrieval
+V::TranscriptChunk {
+    INDEX chunk_id: String,
+    INDEX transcript_id: String,
+    INDEX company_symbol: String,
     call_date: String,
-
-    // Speaker: CEO, CFO, COO, Analyst, Operator, etc.
     speaker: String,
-
-    // Chunk text - EMBEDDED for semantic retrieval
-    chunk_text: Embed(String),
-
-    // Position in the transcript (0-indexed)
-    chunk_index: I64,
+    chunk_text: String,
+    chunk_index: U32
 }
 
-// Indexes for TranscriptChunk
-INDEX TranscriptChunk.chunk_id
-INDEX TranscriptChunk.transcript_id
-INDEX TranscriptChunk.company_symbol
-// Composite index for company transcripts by date
-INDEX TranscriptChunk.(company_symbol, call_date)
-
-
-// News articles and press releases
-N::NewsItem {
-    // Unique identifier
-    item_id: String,
-
-    // Headline - EMBEDDED for semantic retrieval
-    headline: Embed(String),
-
-    // Full body text - EMBEDDED for semantic retrieval
-    body_text: Embed(String),
-
-    // Publication time (ISO 8601)
-    published_at: String,
-
-    // News source (e.g., "Reuters", "Bloomberg", "PR Newswire")
-    source: String,
-
-    // Mentioned ticker symbols as JSON array
+// News articles with embedded content
+V::NewsItem {
+    INDEX item_id: String,
+    headline: String,
+    body_text: String,
+    INDEX source: String,
     related_symbols: String,
-
-    // Pre-computed sentiment score [-1.0, 1.0]
     sentiment_score: F64,
+    published_at: Date DEFAULT NOW
 }
 
-// Indexes for NewsItem
-INDEX NewsItem.item_id
-INDEX NewsItem.published_at
-INDEX NewsItem.source
-
-
 // ============================================
-// Domain Knowledge Nodes
+// Domain Knowledge - Node Types
 // ============================================
 
-// Company metadata for relationship reasoning
+// Company metadata for graph relationships
 N::Company {
-    // Ticker symbol (primary identifier)
-    symbol: String,
-
-    // Full company name
+    INDEX symbol: String,
     name: String,
-
-    // GICS sector (e.g., "Technology", "Healthcare")
-    sector: String,
-
-    // GICS industry (e.g., "Software", "Biotechnology")
-    industry: String,
-
-    // Market cap bucket: MEGA, LARGE, MID, SMALL, MICRO
-    market_cap_bucket: String,
+    INDEX sector: String,
+    INDEX industry: String,
+    market_cap_bucket: String
 }
 
-// Indexes for Company
-INDEX Company.symbol
-INDEX Company.sector
-INDEX Company.industry
-
-
-// Macroeconomic concepts for event linking
+// Macro economic entities for event correlation
 N::MacroEntity {
-    // Entity identifier (e.g., "CPI", "FOMC", "NFP", "GDP")
-    entity_id: String,
-
-    // Full name (e.g., "Consumer Price Index")
+    INDEX entity_id: String,
     name: String,
-
-    // Description of what it represents
     description: String,
-
-    // Release frequency: MONTHLY, QUARTERLY, WEEKLY, IRREGULAR
-    frequency: String,
+    INDEX frequency: String
 }
 
-// Indexes for MacroEntity
-INDEX MacroEntity.entity_id
-INDEX MacroEntity.frequency
-
-
 // ============================================
-// Relationship Edges (GraphRAG)
+// Indicator Synthesis - Vector Types
 // ============================================
 
-// Links external events to trading decisions they influenced
+// Synthesized technical indicators with embedded hypotheses
+V::Indicator {
+    INDEX indicator_id: String,
+    name: String,
+    INDEX category: String,
+    INDEX status: String,
+    hypothesis: String,
+    economic_rationale: String,
+    embedding_text: String,
+    generated_in_regime: String,
+    code_hash: String,
+    ast_signature: String,
+    deflated_sharpe: F64,
+    probability_of_overfit: F64,
+    information_coefficient: F64,
+    generated_at: Date DEFAULT NOW,
+    INDEX environment: String
+}
+
+// ============================================
+// Research Pipeline - Vector Types
+// ============================================
+
+// Alpha factor hypotheses from the Idea Agent
+V::ResearchHypothesis {
+    INDEX hypothesis_id: String,
+    title: String,
+    economic_rationale: String,
+    INDEX market_mechanism: String,
+    INDEX target_regime: String,
+    INDEX status: String,
+    expected_ic: F64,
+    expected_sharpe: F64,
+    falsification_criteria: String,
+    required_features: String,
+    related_literature: String,
+    originality_justification: String,
+    trigger_type: String,
+    implementation_hints: String,
+    lessons_learned: String,
+    realized_ic: F64,
+    realized_sharpe: F64,
+    factor_id: String,
+    author: String,
+    created_at: Date DEFAULT NOW,
+    validated_at: String,
+    INDEX environment: String
+}
+
+// Referenced academic papers
+V::AcademicPaper {
+    INDEX paper_id: String,
+    title: String,
+    authors: String,
+    paper_abstract: String,
+    url: String,
+    publication_year: U32,
+    citation_count: U32
+}
+
+// ============================================
+// Thesis Memory - Vector Types
+// ============================================
+
+// Closed thesis outcomes for learning and retrieval
+V::ThesisMemory {
+    INDEX thesis_id: String,
+    INDEX instrument_id: String,
+    underlying_symbol: String,
+    entry_thesis: String,
+    INDEX outcome: String,
+    pnl_percent: F64,
+    holding_period_days: U32,
+    lessons_learned: String,
+    entry_regime: String,
+    exit_regime: String,
+    close_reason: String,
+    entry_price: F64,
+    exit_price: F64,
+    INDEX environment: String,
+    entry_date: Date DEFAULT NOW,
+    closed_at: String
+}
+
+// ============================================
+// Edge Types - Relationships
+// ============================================
+
+// Event influences on trading decisions
 E::INFLUENCED_DECISION {
-    // Source: ExternalEvent, Target: TradeDecision
-    source: ExternalEvent,
-    target: TradeDecision,
-
-    // Influence score [0.0, 1.0]
-    influence_score: F64,
-
-    // How the event influenced the decision
-    influence_type: String,
+    From: ExternalEvent,
+    To: TradeDecision,
+    Properties: {
+        influence_score: F64,
+        influence_type: String
+    }
 }
 
-// Links documents to companies they are about
+// Document-company relationships
 E::FILED_BY {
-    // Source: FilingChunk, Target: Company
-    source: FilingChunk,
-    target: Company,
+    From: FilingChunk,
+    To: Company,
+    Properties: {}
 }
 
 E::TRANSCRIPT_FOR {
-    // Source: TranscriptChunk, Target: Company
-    source: TranscriptChunk,
-    target: Company,
+    From: TranscriptChunk,
+    To: Company,
+    Properties: {}
 }
 
 E::MENTIONS_COMPANY {
-    // Source: NewsItem, Target: Company
-    source: NewsItem,
-    target: Company,
-
-    // Mention sentiment [-1.0, 1.0]
-    sentiment: F64?,
+    From: NewsItem,
+    To: Company,
+    Properties: {
+        sentiment: F64
+    }
 }
 
-// Links events to macro entities they relate to
+// Event-macro relationships
 E::RELATES_TO_MACRO {
-    // Source: ExternalEvent, Target: MacroEntity
-    source: ExternalEvent,
-    target: MacroEntity,
+    From: ExternalEvent,
+    To: MacroEntity,
+    Properties: {}
 }
 
-// Links companies that are related (sector peers, supply chain, etc.)
+// Company-company relationships
 E::RELATED_TO {
-    // Source: Company, Target: Company
-    source: Company,
-    target: Company,
-
-    // Relationship type: SECTOR_PEER, SUPPLY_CHAIN, COMPETITOR, CUSTOMER
-    relationship_type: String,
+    From: Company,
+    To: Company,
+    Properties: {
+        relationship_type: String
+    }
 }
 
-// Links decisions to the trade lifecycle events
-E::HAS_EVENT {
-    // Source: TradeDecision, Target: TradeLifecycleEvent
-    source: TradeDecision,
-    target: TradeLifecycleEvent,
-}
-
-// Links companies to other companies they depend on (supply chain, etc.)
 E::DEPENDS_ON {
-    // Source: Company, Target: Company
-    source: Company,
-    target: Company,
-
-    // Relationship type: SUPPLIER, CUSTOMER, PARTNER
-    relationship_type: String,
-
-    // Strength of dependency [0.0, 1.0]
-    strength: F64,
+    From: Company,
+    To: Company,
+    Properties: {
+        relationship_type: String,
+        strength: F64
+    }
 }
 
-// Links companies to macro entities that affect them
+// Decision lifecycle
+E::HAS_EVENT {
+    From: TradeDecision,
+    To: TradeLifecycleEvent,
+    Properties: {}
+}
+
+// Company-macro sensitivity
 E::AFFECTED_BY {
-    // Source: Company, Target: MacroEntity
-    source: Company,
-    target: MacroEntity,
-
-    // Sensitivity to this macro factor [0.0, 1.0] where 1.0 = highly sensitive
-    sensitivity: F64,
+    From: Company,
+    To: MacroEntity,
+    Properties: {
+        sensitivity: F64
+    }
 }
 
-// Links companies to documents that mention them
-E::MENTIONED_IN {
-    // Source: Company, Target: FilingChunk | TranscriptChunk | NewsItem
-    // Note: Target can be any document type
-    source: Company,
-    target: String, // Document ID (chunk_id or item_id)
-
-    // Document type: FILING, TRANSCRIPT, NEWS
-    document_type: String,
-
-    // Mention type: PRIMARY (main subject), SECONDARY (notable mention), PEER_COMPARISON (comparison context)
-    mention_type: String,
-}
-
-
-// ============================================
-// Thesis Memory Nodes (Post-Hoc Analysis)
-// ============================================
-
-// Stores closed thesis outcomes for agent learning and retrieval
-// Created when a thesis closes - captures lessons learned for future reference
-N::ThesisMemory {
-    // Unique identifier (matches thesis_id from Turso)
-    thesis_id: String,
-
-    // Traded instrument
-    instrument_id: String,
-
-    // Underlying symbol (for options)
-    underlying_symbol: String?,
-
-    // Original entry thesis - EMBEDDED for semantic retrieval
-    entry_thesis: Embed(String),
-
-    // Outcome: WIN, LOSS, SCRATCH
-    outcome: String,
-
-    // P&L percentage (e.g., 5.5 for +5.5%, -3.2 for -3.2%)
-    pnl_percent: F64,
-
-    // Holding period in days
-    holding_period_days: I64,
-
-    // Post-hoc analysis: lessons learned from this thesis
-    // Stored as JSON array of strings
-    lessons_learned: String,
-
-    // Market regime when thesis was entered
-    entry_regime: String,
-
-    // Market regime when thesis was closed
-    exit_regime: String?,
-
-    // Close reason: STOP_HIT, TARGET_HIT, INVALIDATED, MANUAL, TIME_DECAY, CORRELATION
-    close_reason: String,
-
-    // Entry price
-    entry_price: F64?,
-
-    // Exit price
-    exit_price: F64?,
-
-    // When thesis was entered (ISO 8601)
-    entry_date: String,
-
-    // When thesis was closed (ISO 8601)
-    closed_at: String,
-
-    // Trading environment: BACKTEST, PAPER, LIVE
-    environment: String,
-}
-
-// Indexes for ThesisMemory
-INDEX ThesisMemory.thesis_id
-INDEX ThesisMemory.instrument_id
-INDEX ThesisMemory.outcome
-INDEX ThesisMemory.environment
-// Composite index for filtering by outcome and regime
-INDEX ThesisMemory.(outcome, entry_regime)
-// Composite index for instrument and outcome
-INDEX ThesisMemory.(instrument_id, outcome)
-
-
-// Links ThesisMemory to related TradeDecisions
+// Thesis-decision linkage
 E::THESIS_INCLUDES {
-    // Source: ThesisMemory, Target: TradeDecision
-    source: ThesisMemory,
-    target: TradeDecision,
+    From: ThesisMemory,
+    To: TradeDecision,
+    Properties: {}
 }
+
+// ============================================
+// Indicator Synthesis Edges
+// ============================================
+// NOTE: Edge definitions for new vector types are disabled
+// due to a HelixDB code generator bug that produces invalid Rust code.
+// These relationships are tracked in the TypeScript types and can be
+// managed at the application layer until the bug is resolved.
+// Edge types: SIMILAR_TO, USED_IN_DECISION, DERIVED_FROM,
+//             INSPIRED_BY, IMPROVES_ON, GENERATED_FACTOR

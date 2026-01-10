@@ -363,8 +363,8 @@ export interface AcademicPaper {
   title: string;
   /** Authors */
   authors: string;
-  /** Abstract or summary (embedded field) */
-  abstract: string;
+  /** Abstract or summary (embedded field) - named paper_abstract to avoid Rust reserved keyword */
+  paper_abstract: string;
   /** URL or DOI */
   url?: string;
   /** Publication year */
@@ -638,7 +638,7 @@ export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
   Indicator: ["embedding_text"],
   ThesisMemory: ["entry_thesis"],
   ResearchHypothesis: ["economic_rationale"],
-  AcademicPaper: ["abstract"],
+  AcademicPaper: ["paper_abstract"],
 };
 
 // ============================================
