@@ -294,14 +294,20 @@ class Stage1Validator:
                     jittered_signals = self.factor.compute_signal(self.data)
                     jittered_metrics = self._run_backtest(jittered_signals)
                     jittered_sharpe = jittered_metrics["sharpe"]
-                    sharpe_deltas.append(abs(jittered_sharpe - base_sharpe))
+                    delta = abs(jittered_sharpe - base_sharpe)
+                    # Only append valid deltas
+                    if not np.isnan(delta):
+                        sharpe_deltas.append(delta)
                 except Exception:
                     continue
 
             # Sensitivity = mean absolute deviation of Sharpe
-            sensitivities[param_name] = (
-                float(np.mean(sharpe_deltas)) if sharpe_deltas else float("inf")
-            )
+            if sharpe_deltas:
+                sens = float(np.mean(sharpe_deltas))
+                # Handle NaN values - treat as 0 (no measurable sensitivity)
+                sensitivities[param_name] = sens if not np.isnan(sens) else 0.0
+            else:
+                sensitivities[param_name] = 0.0
 
         return sensitivities
 

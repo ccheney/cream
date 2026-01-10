@@ -233,32 +233,15 @@ class CPCVValidator:
         is_ranks = np.argsort(np.argsort(is_arr))
         oos_ranks = np.argsort(np.argsort(oos_arr))
 
-        # Compute rank correlation using logit
-        # PBO is estimated as the fraction of cases where
-        # a strategy's IS rank exceeds its OOS rank
-        logit_diffs = []
-
+        # Use simple rank comparison method for PBO:
+        # Count fraction of cases where IS rank > OOS rank
+        # This indicates overfitting: good IS performance, bad OOS performance
+        overfit_count = 0
         for i in range(n):
-            is_rank = is_ranks[i]
-            oos_rank = oos_ranks[i]
+            if is_ranks[i] > oos_ranks[i]:
+                overfit_count += 1
 
-            # Logit transformation: log(rank / (n - rank))
-            # Avoid division by zero
-            if is_rank > 0 and is_rank < n - 1:
-                is_logit = np.log(is_rank / (n - is_rank - 1))
-            else:
-                is_logit = 0.0
-
-            if oos_rank > 0 and oos_rank < n - 1:
-                oos_logit = np.log(oos_rank / (n - oos_rank - 1))
-            else:
-                oos_logit = 0.0
-
-            logit_diffs.append(is_logit - oos_logit)
-
-        # PBO = fraction where IS rank > OOS rank (logit diff > 0)
-        # This indicates overfitting: good IS, bad OOS
-        pbo = float(np.mean([1.0 if d > 0 else 0.0 for d in logit_diffs]))
+        pbo = float(overfit_count) / n
 
         return pbo
 

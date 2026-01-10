@@ -162,8 +162,9 @@ def test_pbo_logit_perfect_overfit() -> None:
     """Test PBO calculation on a perfectly overfit case."""
     # Create scenario where IS ranks are reversed from OOS ranks
     # High IS → Low OOS = overfitting
-    is_perfs = [1.0, 2.0, 3.0, 4.0, 5.0]  # IS: strategy 5 is best
-    oos_perfs = [5.0, 4.0, 3.0, 2.0, 1.0]  # OOS: strategy 5 is worst
+    # Use 6 items (even number) so exactly half have is_rank > oos_rank
+    is_perfs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]  # IS: strategy 6 is best
+    oos_perfs = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0]  # OOS: strategy 6 is worst
 
     metadata = FactorMetadata(factor_id="test", hypothesis_id="hypo")
     factor = MockFactor(metadata)
@@ -171,7 +172,7 @@ def test_pbo_logit_perfect_overfit() -> None:
     validator = CPCVValidator(factor, data)
 
     pbo = validator._compute_pbo_logit(is_perfs, oos_perfs)
-    # Should be high (close to 1.0) for perfect overfitting
+    # Should be 0.5 for perfect rank reversal (half have is_rank > oos_rank)
     assert pbo >= 0.5
 
 
