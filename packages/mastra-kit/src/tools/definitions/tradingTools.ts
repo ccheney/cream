@@ -53,9 +53,7 @@ export const getQuotesTool = createTool({
   description: `Get real-time quotes for instruments. Use this tool to:
 - Fetch current bid/ask/last prices for stocks or ETFs
 - Get volume data for liquidity assessment
-- Check prices before making trading decisions
-
-Returns mock data in backtest mode for consistent execution.`,
+- Check prices before making trading decisions`,
   inputSchema: GetQuotesInputSchema,
   outputSchema: GetQuotesOutputSchema,
   execute: async ({ context }): Promise<{ quotes: Quote[] }> => {
@@ -93,10 +91,7 @@ export const getPortfolioStateTool = createTool({
 - Check existing positions before making trades
 - Assess available buying power for new positions
 - Review P&L performance (day and total)
-- Understand current portfolio composition
-
-Priority: gRPC ExecutionService > Alpaca broker API > Mock data.
-Returns mock data in backtest mode for consistent execution.`,
+- Understand current portfolio composition`,
   inputSchema: GetPortfolioStateInputSchema,
   outputSchema: GetPortfolioStateOutputSchema,
   execute: async (): Promise<PortfolioStateResponse> => {
@@ -142,9 +137,7 @@ export const getOptionChainTool = createTool({
 - Find available strikes and expirations for options strategies
 - Assess option liquidity via volume and open interest
 - Compare call/put premiums for strategy selection
-- Identify pricing opportunities across the chain
-
-Returns mock data in backtest mode for consistent execution.`,
+- Identify pricing opportunities across the chain`,
   inputSchema: GetOptionChainInputSchema,
   outputSchema: GetOptionChainOutputSchema,
   execute: async ({ context }): Promise<OptionChainResponse> => {
@@ -181,8 +174,7 @@ export const getGreeksTool = createTool({
 - Evaluate vega exposure to volatility changes
 - Check implied volatility levels
 
-Requires OSI-format symbol (ROOT + YYMMDD + C/P + strike*1000 padded).
-Returns mock data in backtest mode for consistent execution.`,
+Requires OSI-format symbol (ROOT + YYMMDD + C/P + strike*1000 padded).`,
   inputSchema: GetGreeksInputSchema,
   outputSchema: GetGreeksOutputSchema,
   execute: async ({ context }): Promise<Greeks> => {

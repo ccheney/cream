@@ -68,9 +68,7 @@ Supported indicators:
 - ATR: Average True Range (params: period, default 14)
 - BOLLINGER: Bollinger Bands (params: period, stdDev, defaults 20, 2)
 - STOCHASTIC: Stochastic Oscillator (params: kPeriod, dPeriod, defaults 14, 3)
-- VOLUME_SMA: Volume Simple Moving Average (params: period, default 20)
-
-Returns mock data in backtest mode for consistent execution.`,
+- VOLUME_SMA: Volume Simple Moving Average (params: period, default 20)`,
   inputSchema: RecalcIndicatorInputSchema,
   outputSchema: RecalcIndicatorOutputSchema,
   execute: async ({ context }): Promise<IndicatorResult> => {
@@ -112,7 +110,6 @@ export const economicCalendarTool = createTool({
 - Assess event risk for trading decisions
 
 Events include impact rating (high/medium/low) and actual vs forecast data.
-Returns empty array in backtest mode for consistent execution.
 Requires FMP_KEY environment variable.`,
   inputSchema: EconomicCalendarInputSchema,
   outputSchema: EconomicCalendarOutputSchema,
@@ -157,7 +154,6 @@ export const newsSearchTool = createTool({
 
 Sentiment is determined via keyword-based analysis (positive/negative/neutral).
 For more sophisticated sentiment, use the external-context extraction pipeline.
-Returns empty array in backtest mode for consistent execution.
 Requires FMP_KEY environment variable.`,
   inputSchema: NewsSearchInputSchema,
   outputSchema: NewsSearchOutputSchema,
@@ -194,9 +190,7 @@ export const helixQueryTool = createTool({
 HelixDB stores the system's learned memory including:
 - Historical trade outcomes and their contexts
 - Market pattern embeddings for similarity search
-- Cross-session learning and pattern recognition
-
-Returns empty results in backtest mode for consistent execution.`,
+- Cross-session learning and pattern recognition`,
   inputSchema: HelixQueryInputSchema,
   outputSchema: HelixQueryOutputSchema,
   execute: async ({ context }): Promise<HelixQueryResult> => {

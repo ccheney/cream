@@ -15,8 +15,18 @@
 import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
 import { createContext, isBacktest, requireEnv, validateEnvironmentOrExit } from "@cream/domain";
-import { getRuntimeConfigService, resetRuntimeConfigService, validateHelixDBOrExit } from "./db";
-import { getSubscriptionStatus, startMarketDataSubscription, stopMarketDataSubscription } from "./marketdata";
+import { createFilingsIngestionService } from "@cream/filings";
+import {
+  getDbClient,
+  getRuntimeConfigService,
+  resetRuntimeConfigService,
+  validateHelixDBOrExit,
+} from "./db";
+import {
+  getSubscriptionStatus,
+  startMarketDataSubscription,
+  stopMarketDataSubscription,
+} from "./marketdata";
 
 // ============================================
 // Worker State
@@ -35,11 +45,13 @@ interface WorkerState {
   timers: {
     tradingCycle: ReturnType<typeof setTimeout> | null;
     predictionMarkets: ReturnType<typeof setTimeout> | null;
+    filingsSync: ReturnType<typeof setTimeout> | null;
   };
   /** Last run timestamps */
   lastRun: {
     tradingCycle: Date | null;
     predictionMarkets: Date | null;
+    filingsSync: Date | null;
   };
   /** Startup time */
   startedAt: Date;
@@ -47,6 +59,7 @@ interface WorkerState {
   running: {
     tradingCycle: boolean;
     predictionMarkets: boolean;
+    filingsSync: boolean;
   };
 }
 
@@ -198,6 +211,53 @@ async function runPredictionMarkets(): Promise<void> {
   }
 }
 
+/**
+ * Run the SEC filings sync.
+ * Fetches filings from SEC EDGAR, chunks them, and ingests into HelixDB.
+ */
+async function runFilingsSync(): Promise<void> {
+  if (state.running.filingsSync) {
+    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
+    console.log("⏭️  Skipping filings sync - previous run still in progress");
+    return;
+  }
+
+  state.running.filingsSync = true;
+  state.lastRun.filingsSync = new Date();
+
+  // biome-ignore lint/suspicious/noConsole: Filings sync start is intentional
+  console.log("📄 Starting SEC filings sync...");
+
+  try {
+    const dbClient = await getDbClient();
+    const service = createFilingsIngestionService(dbClient);
+
+    // Get symbols from universe config
+    const instruments = getInstruments();
+
+    const result = await service.syncFilings({
+      symbols: instruments,
+      filingTypes: ["10-K", "10-Q", "8-K"],
+      limitPerSymbol: 5,
+      triggerSource: "scheduled",
+      environment: state.environment,
+    });
+
+    // biome-ignore lint/suspicious/noConsole: Filings sync result is intentional
+    console.log(
+      `📄 Filings sync complete: ${result.filingsIngested} filings, ${result.chunksCreated} chunks ` +
+        `(${result.durationMs}ms)`
+    );
+  } catch (error) {
+    // biome-ignore lint/suspicious/noConsole: Error is intentional
+    console.error(
+      `❌ Filings sync failed: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  } finally {
+    state.running.filingsSync = false;
+  }
+}
+
 // ============================================
 // Scheduler
 // ============================================
@@ -226,6 +286,36 @@ function calculateNext15MinMs(): number {
   return next15Min.getTime() - now.getTime();
 }
 
+/**
+ * Calculate milliseconds until next 6 AM EST.
+ * SEC filings sync runs once per day at 6 AM Eastern.
+ */
+function calculateNext6AMESTMs(): number {
+  const now = new Date();
+
+  // Get current time in EST/EDT
+  const estOptions: Intl.DateTimeFormatOptions = {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    hour12: false,
+  };
+  const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+
+  // Calculate next 6 AM EST
+  const next6AM = new Date(now);
+  if (estHour >= 6) {
+    // Already past 6 AM today, schedule for tomorrow
+    next6AM.setDate(next6AM.getDate() + 1);
+  }
+
+  // Set to 6 AM EST (approximate by setting UTC time)
+  // EST is UTC-5, EDT is UTC-4
+  // This is a simplification - in production use a proper timezone library
+  next6AM.setUTCHours(11, 0, 0, 0); // 6 AM EST = 11 AM UTC
+
+  return next6AM.getTime() - now.getTime();
+}
+
 function scheduleTradingCycle(): void {
   const intervals = getIntervals();
 
@@ -251,15 +341,29 @@ function schedulePredictionMarkets(): void {
   }, msUntilNext15Min);
 }
 
+/** 24 hours in milliseconds */
+const FILINGS_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+function scheduleFilingsSync(): void {
+  // Schedule at next 6 AM EST, then repeat every 24 hours
+  const msUntil6AM = calculateNext6AMESTMs();
+  state.timers.filingsSync = setTimeout(() => {
+    runFilingsSync();
+    state.timers.filingsSync = setInterval(runFilingsSync, FILINGS_SYNC_INTERVAL_MS);
+  }, msUntil6AM);
+}
+
 function startScheduler(): void {
   const msUntilHour = calculateNextHourMs();
   const msUntil15Min = calculateNext15MinMs();
+  const msUntil6AM = calculateNext6AMESTMs();
   // biome-ignore lint/suspicious/noConsole: Startup info is intentional
   console.log(
-    `⏰ Scheduler started: trading cycle in ${Math.round(msUntilHour / 60000)}m, predictions in ${Math.round(msUntil15Min / 60000)}m`
+    `⏰ Scheduler started: trading cycle in ${Math.round(msUntilHour / 60000)}m, predictions in ${Math.round(msUntil15Min / 60000)}m, filings in ${Math.round(msUntil6AM / 3600000)}h`
   );
   scheduleTradingCycle();
   schedulePredictionMarkets();
+  scheduleFilingsSync();
 }
 
 function stopScheduler(): void {
@@ -272,6 +376,11 @@ function stopScheduler(): void {
     clearTimeout(state.timers.predictionMarkets);
     clearInterval(state.timers.predictionMarkets);
     state.timers.predictionMarkets = null;
+  }
+  if (state.timers.filingsSync) {
+    clearTimeout(state.timers.filingsSync);
+    clearInterval(state.timers.filingsSync);
+    state.timers.filingsSync = null;
   }
 }
 
@@ -305,10 +414,12 @@ function startHealthServer(): void {
           last_run: {
             trading_cycle: state.lastRun.tradingCycle?.toISOString() ?? null,
             prediction_markets: state.lastRun.predictionMarkets?.toISOString() ?? null,
+            filings_sync: state.lastRun.filingsSync?.toISOString() ?? null,
           },
           running: {
             trading_cycle: state.running.tradingCycle,
             prediction_markets: state.running.predictionMarkets,
+            filings_sync: state.running.filingsSync,
           },
           market_data: {
             active: marketDataStatus.active,
@@ -392,15 +503,18 @@ async function main() {
     timers: {
       tradingCycle: null,
       predictionMarkets: null,
+      filingsSync: null,
     },
     lastRun: {
       tradingCycle: null,
       predictionMarkets: null,
+      filingsSync: null,
     },
     startedAt: new Date(),
     running: {
       tradingCycle: false,
       predictionMarkets: false,
+      filingsSync: false,
     },
   };
 

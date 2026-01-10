@@ -5,7 +5,11 @@
  * This triggers the Rust side to start the Databento feed with the configured symbols.
  */
 
-import { createMarketDataClient, type MarketDataServiceClient, type Quote } from "@cream/domain/grpc";
+import {
+  createMarketDataClient,
+  type MarketDataServiceClient,
+  type Quote,
+} from "@cream/domain/grpc";
 
 // ============================================
 // Configuration
@@ -86,7 +90,9 @@ export async function startMarketDataSubscription(
   subscriptionState.updateCount = 0;
 
   // biome-ignore lint/suspicious/noConsole: Intentional logging
-  console.log(`[MarketData] Starting subscription for ${symbols.length} symbols: ${symbols.join(", ")}`);
+  console.log(
+    `[MarketData] Starting subscription for ${symbols.length} symbols: ${symbols.join(", ")}`
+  );
 
   const client = getMarketDataClient();
 

@@ -29,6 +29,7 @@ import {
   backtestRoutes,
   configRoutes,
   decisionsRoutes,
+  filingsRoutes,
   indicatorsRoutes,
   marketRoutes,
   optionsRoutes,
@@ -183,6 +184,7 @@ app.use("/api/preferences/*", requireAuth());
 app.use("/api/indicators/*", requireAuth());
 app.use("/api/research/*", requireAuth());
 app.use("/api/options/*", requireAuth());
+app.use("/api/filings/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -205,6 +207,7 @@ app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
 app.route("/api/indicators", indicatorsRoutes);
 app.route("/api/research", researchRoutes);
+app.route("/api/filings", filingsRoutes);
 
 // ============================================
 // OpenAPI Documentation

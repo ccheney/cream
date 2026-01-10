@@ -98,9 +98,7 @@ The tool supports:
 - Time-bounded searches (e.g., last 4 hours, last 24 hours, up to 1 week)
 - Source filtering (news sites, social media, financial blogs)
 - Topic specialization (general, news, finance)
-- Symbol enrichment for financial queries
-
-Returns empty results in backtest mode for consistent execution.`,
+- Symbol enrichment for financial queries`,
   inputSchema: WebSearchInputSchema,
   outputSchema: WebSearchOutputSchema,
   execute: async ({ context }) => {

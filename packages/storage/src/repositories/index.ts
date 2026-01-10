@@ -148,6 +148,21 @@ export {
   type FeatureInsert,
   FeaturesRepository,
 } from "./features.js";
+// Filings (migration 006) - SEC filings tracking
+export {
+  type CreateFilingInput,
+  type CreateSyncRunInput,
+  type Filing,
+  type FilingFilters,
+  type FilingStatus,
+  type FilingSyncRun,
+  FilingSyncRunsRepository,
+  FilingsRepository,
+  type FilingType,
+  type SyncRunStatus,
+  type TriggerSource,
+  type UpdateSyncRunProgress,
+} from "./filings.js";
 // Historical universe (migration 005) - point-in-time survivorship bias prevention
 export {
   type ChangeType,

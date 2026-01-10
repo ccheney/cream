@@ -39,6 +39,7 @@ export const Channel = z.enum([
   "alerts",
   "system",
   "portfolio",
+  "filings",
 ]);
 
 export type Channel = z.infer<typeof Channel>;
@@ -67,6 +68,7 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
   alerts: "System alerts and notifications",
   system: "System status updates",
   portfolio: "Portfolio value and position updates",
+  filings: "SEC filings sync progress and results",
 };
 
 // ============================================

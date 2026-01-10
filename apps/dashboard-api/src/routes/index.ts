@@ -48,6 +48,7 @@ export { default as alertsRoutes } from "./alerts.js";
 export { default as backtestRoutes } from "./backtest.js";
 export { default as configRoutes } from "./config.js";
 export { default as decisionsRoutes } from "./decisions.js";
+export { default as filingsRoutes } from "./filings.js";
 export { default as indicatorsRoutes } from "./indicators.js";
 export { default as marketRoutes } from "./market.js";
 export { default as optionsRoutes } from "./options.js";

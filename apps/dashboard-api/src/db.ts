@@ -22,6 +22,8 @@ import {
   createTursoClient,
   DecisionsRepository,
   FactorZooRepository,
+  FilingSyncRunsRepository,
+  FilingsRepository,
   OrdersRepository,
   PortfolioSnapshotsRepository,
   PositionsRepository,
@@ -267,6 +269,22 @@ export async function getConstraintsConfigRepo(): Promise<ConstraintsConfigRepos
 export async function getCyclesRepo(): Promise<CyclesRepository> {
   const client = await getDbClient();
   return createCyclesRepository(client);
+}
+
+/**
+ * Get filings repository
+ */
+export async function getFilingsRepo(): Promise<FilingsRepository> {
+  const client = await getDbClient();
+  return new FilingsRepository(client);
+}
+
+/**
+ * Get filing sync runs repository
+ */
+export async function getFilingSyncRunsRepo(): Promise<FilingSyncRunsRepository> {
+  const client = await getDbClient();
+  return new FilingSyncRunsRepository(client);
 }
 
 // ============================================

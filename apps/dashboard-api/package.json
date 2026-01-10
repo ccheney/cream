@@ -25,6 +25,7 @@
     "@cream/config": "workspace:*",
     "@cream/dashboard-types": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/filings": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/marketdata": "workspace:*",

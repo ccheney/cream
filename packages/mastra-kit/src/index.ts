@@ -45,6 +45,12 @@ export * from "./services/index.js";
 export * from "./observability/index.js";
 
 // ============================================
+// MCP Clients
+// ============================================
+
+export * from "./mcp/index.js";
+
+// ============================================
 // Evaluation Framework Exports
 // ============================================
 

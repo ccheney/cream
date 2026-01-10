@@ -164,9 +164,7 @@ export const getPredictionSignalsTool = createTool({
 - Inform position sizing and risk management based on market-implied probabilities
 
 These signals are derived from real-money bets on Kalshi and Polymarket.
-Updated every 15 minutes.
-
-Returns empty results in backtest mode for consistent execution.`,
+Updated every 15 minutes.`,
   inputSchema: GetPredictionSignalsInputSchema,
   outputSchema: GetPredictionSignalsOutputSchema,
   execute: async (): Promise<z.infer<typeof GetPredictionSignalsOutputSchema>> => {
@@ -266,9 +264,7 @@ export const getMarketSnapshotsTool = createTool({
 - Identify high-conviction macro views from market pricing
 
 Markets include Fed rate decisions, economic data surprises, recession bets, and geopolitical events.
-Updated every 15 minutes.
-
-Returns empty results in backtest mode for consistent execution.`,
+Updated every 15 minutes.`,
   inputSchema: GetMarketSnapshotsInputSchema,
   outputSchema: GetMarketSnapshotsOutputSchema,
   execute: async ({ context }): Promise<z.infer<typeof GetMarketSnapshotsOutputSchema>> => {

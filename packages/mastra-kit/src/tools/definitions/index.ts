@@ -78,6 +78,13 @@ export {
   type UpdateDailyWeightsOutput,
   UpdateDailyWeightsOutputSchema,
 } from "./factorZoo.js";
+// Filing search tools
+export {
+  FilingChunkSummarySchema,
+  SearchFilingsInputSchema,
+  SearchFilingsOutputSchema,
+  searchFilingsTool,
+} from "./filingTools.js";
 // Prediction market tools
 export {
   GetMarketSnapshotsInputSchema,

@@ -970,6 +970,20 @@ export function broadcastAgentStatus(message: ServerMessage): number {
   return broadcast("agents", message);
 }
 
+/**
+ * Broadcast filings sync progress message to connections subscribed to filings channel.
+ */
+export function broadcastFilingsSyncProgress(message: ServerMessage): number {
+  return broadcast("filings", message);
+}
+
+/**
+ * Broadcast filings sync completion message to connections subscribed to filings channel.
+ */
+export function broadcastFilingsSyncComplete(message: ServerMessage): number {
+  return broadcast("filings", message);
+}
+
 // ============================================
 // Connection Lifecycle
 // ============================================
