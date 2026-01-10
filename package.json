@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "CREAM_ENV=${CREAM_ENV:-BACKTEST} turbo run dev",
+    "dev": "CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
     "build": "turbo run build",
     "test": "NODE_ENV=test CREAM_ENV=BACKTEST turbo run test --filter='!./apps/dashboard'",
     "test:dashboard": "cd apps/dashboard && bun test src/",

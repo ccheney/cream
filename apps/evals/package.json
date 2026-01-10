@@ -1,0 +1,12 @@
+{
+  "name": "@cream/evals",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Run: uv run deepeval test run'",
+    "test": "uv run pytest",
+    "format": "ruff format .",
+    "lint": "ruff check .",
+    "clean": "rm -rf .pytest_cache __pycache__ .ruff_cache"
+  }
+}
