@@ -181,6 +181,7 @@ app.use("/api/theses/*", requireAuth());
 app.use("/api/preferences/*", requireAuth());
 app.use("/api/indicators/*", requireAuth());
 app.use("/api/research/*", requireAuth());
+app.use("/api/options/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());

@@ -49,6 +49,15 @@ const AlertSchema = z.object({
   createdAt: z.string(),
 });
 
+const CycleStatusValue = z.enum(["queued", "running", "completed", "failed"]);
+
+const RunningCycleSchema = z.object({
+  cycleId: z.string(),
+  status: CycleStatusValue,
+  startedAt: z.string(),
+  phase: z.string().nullable(),
+});
+
 const SystemStatusSchema = z.object({
   environment: EnvironmentSchema,
   status: SystemStatusValue,
@@ -58,6 +67,7 @@ const SystemStatusSchema = z.object({
   positionCount: z.number(),
   openOrderCount: z.number(),
   alerts: z.array(AlertSchema),
+  runningCycle: RunningCycleSchema.nullable(),
 });
 
 const HealthResponseSchema = z.object({
@@ -94,8 +104,6 @@ const TriggerCycleRequestSchema = z.object({
   confirmLive: z.boolean().optional(),
 });
 
-const CycleStatusValue = z.enum(["queued", "running", "completed", "failed"]);
-
 const TriggerCycleResponseSchema = z.object({
   cycleId: z.string(),
   status: CycleStatusValue,
@@ -124,6 +132,8 @@ interface CycleState {
   startedAt: string;
   completedAt: string | null;
   error: string | null;
+  /** Current phase of the OODA cycle */
+  phase: "observe" | "orient" | "decide" | "act" | "complete" | null;
 }
 
 interface SystemState {
@@ -223,6 +233,11 @@ app.openapi(statusRoute, async (c) => {
   nextHour.setMinutes(0, 0, 0);
   nextHour.setHours(nextHour.getHours() + 1);
 
+  // Check for running cycle in current environment
+  const runningCycle = systemState.runningCycles.get(systemState.environment);
+  const isRunning =
+    runningCycle && (runningCycle.status === "queued" || runningCycle.status === "running");
+
   return c.json({
     environment: systemState.environment,
     status: systemState.status,
@@ -240,6 +255,14 @@ app.openapi(statusRoute, async (c) => {
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
+    runningCycle: isRunning
+      ? {
+          cycleId: runningCycle.cycleId,
+          status: runningCycle.status,
+          startedAt: runningCycle.startedAt,
+          phase: runningCycle.phase,
+        }
+      : null,
   });
 });
 
@@ -300,6 +323,11 @@ app.openapi(startRoute, async (c) => {
   nextHour.setMinutes(0, 0, 0);
   nextHour.setHours(nextHour.getHours() + 1);
 
+  // Check for running cycle
+  const runningCycle = systemState.runningCycles.get(systemState.environment);
+  const isRunning =
+    runningCycle && (runningCycle.status === "queued" || runningCycle.status === "running");
+
   return c.json({
     environment: systemState.environment,
     status: systemState.status,
@@ -317,6 +345,14 @@ app.openapi(startRoute, async (c) => {
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
+    runningCycle: isRunning
+      ? {
+          cycleId: runningCycle.cycleId,
+          status: runningCycle.status,
+          startedAt: runningCycle.startedAt,
+          phase: runningCycle.phase,
+        }
+      : null,
   });
 });
 
@@ -403,6 +439,7 @@ app.openapi(stopRoute, async (c) => {
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
+    runningCycle: null, // System stopped - no running cycle
   });
 });
 
@@ -451,6 +488,7 @@ app.openapi(pauseRoute, async (c) => {
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
+    runningCycle: null, // System paused - no new cycles
   });
 });
 
@@ -525,6 +563,7 @@ app.openapi(environmentRoute, async (c) => {
       acknowledged: a.acknowledged,
       createdAt: a.createdAt,
     })),
+    runningCycle: null, // Environment changed - must be stopped (no running cycle)
   });
 });
 
@@ -630,12 +669,16 @@ app.openapi(triggerCycleRoute, async (c) => {
     startedAt,
     completedAt: null,
     error: null,
+    phase: null,
   };
   systemState.runningCycles.set(environment, cycleState);
   systemState.lastTriggerTime.set(environment, Date.now());
 
-  // Helper to emit progress via WebSocket
+  // Helper to emit progress via WebSocket (also updates stored phase)
   const emitProgress = (phase: CyclePhase, progress: number, step: string, message: string) => {
+    // Update stored phase for API queries
+    cycleState.phase = phase.toLowerCase() as CycleState["phase"];
+
     const progressData: CycleProgressData = {
       cycleId,
       phase,
