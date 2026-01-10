@@ -30,14 +30,12 @@ describe("Embedding Configuration", () => {
     expect(DEFAULT_EMBEDDING_CONFIG.dimensions).toBe(3072);
     expect(DEFAULT_EMBEDDING_CONFIG.batchSize).toBe(100);
     expect(DEFAULT_EMBEDDING_CONFIG.maxTokens).toBe(2048);
-    expect(DEFAULT_EMBEDDING_CONFIG.apiKeyEnvVar).toBe("GEMINI_API_KEY");
+    expect(DEFAULT_EMBEDDING_CONFIG.apiKeyEnvVar).toBe("GOOGLE_GENERATIVE_AI_API_KEY");
   });
 
   it("defines alternative embedding models", () => {
     expect(EMBEDDING_MODELS["gemini-embedding-001"]).toBeDefined();
     expect(EMBEDDING_MODELS["text-embedding-004"]).toBeDefined();
-    expect(EMBEDDING_MODELS["text-embedding-3-large"]).toBeDefined();
-    expect(EMBEDDING_MODELS["text-embedding-3-small"]).toBeDefined();
   });
 
   it("text-embedding-004 has 768 dimensions", () => {
@@ -270,22 +268,22 @@ describe("needsReembedding", () => {
 describe("EmbeddingClient construction", () => {
   it("throws when API key is missing", () => {
     // Save current env
-    const savedKey = process.env.GEMINI_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    const savedKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     try {
       expect(() => new EmbeddingClient()).toThrow("Missing API key");
     } finally {
       // Restore env
       if (savedKey) {
-        process.env.GEMINI_API_KEY = savedKey;
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY = savedKey;
       }
     }
   });
 
   it("getConfig returns config copy", () => {
     // Skip if no API key
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return;
     }
 
@@ -304,7 +302,7 @@ describe("EmbeddingClient construction", () => {
 describe("createEmbeddingClient", () => {
   it("creates client with default config", () => {
     // Skip if no API key
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return;
     }
 
@@ -315,7 +313,7 @@ describe("createEmbeddingClient", () => {
 
   it("creates client with specified model", () => {
     // Skip if no API key
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return;
     }
 
@@ -330,4 +328,4 @@ describe("createEmbeddingClient", () => {
 // Integration Tests
 // ============================================
 // API integration tests are in embeddings.integration.test.ts
-// Run with: GEMINI_API_KEY=xxx bun test embeddings.integration.test.ts
+// Run with: GOOGLE_GENERATIVE_AI_API_KEY=xxx bun test embeddings.integration.test.ts
