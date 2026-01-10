@@ -20,7 +20,7 @@
     "@cream/filings": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/storage": "workspace:*",
-    "@mastra/core": "^0.24.9",
+    "@mastra/core": "1.0.0-beta.14",
     "zod": "^4.3.5"
   },
   "devDependencies": {

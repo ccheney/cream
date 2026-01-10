@@ -8,7 +8,7 @@
  * - gemini-3-flash-preview (default, faster)
  * - gemini-3-pro-preview (more capable reasoning)
  *
- * The global model is passed via RuntimeContext.set("model", globalModel).
+ * The global model is passed via RequestContext.set("model", globalModel).
  *
  * @see docs/plans/05-agents.md
  */
@@ -46,7 +46,7 @@ import {
   webSearchTool,
 } from "@cream/mastra-kit";
 import { Agent } from "@mastra/core/agent";
-import { RuntimeContext } from "@mastra/core/runtime-context";
+import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
 import { z } from "zod";
 
@@ -358,11 +358,11 @@ export type IdeaAgentOutput = z.infer<typeof IdeaAgentOutputSchema>;
 
 /**
  * Create a Mastra Agent from our config.
- * Uses dynamic model selection to allow runtime model override via RuntimeContext.
+ * Uses dynamic model selection to allow runtime model override via RequestContext.
  * Resolves tool instances from TOOL_INSTANCES registry based on config.tools.
  *
  * NOTE: All agents now use the global model from trading_config.global_model.
- * The global model is passed via RuntimeContext.set("model", globalModel).
+ * The global model is passed via RequestContext.set("model", globalModel).
  */
 function createAgent(agentType: AgentType): Agent {
   const config = AGENT_CONFIGS[agentType];
@@ -383,10 +383,10 @@ function createAgent(agentType: AgentType): Agent {
     }
   }
 
-  // Use dynamic model function to get the global model from RuntimeContext
-  // The global model is set via runtimeContext.set("model", globalModel) by the caller
-  const dynamicModel = ({ runtimeContext }: { runtimeContext: RuntimeContext }) => {
-    const runtimeModel = runtimeContext?.get("model") as string | undefined;
+  // Use dynamic model function to get the global model from RequestContext
+  // The global model is set via requestContext.set("model", globalModel) by the caller
+  const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
+    const runtimeModel = requestContext?.get("model") as string | undefined;
     return getModelIdForRuntime(runtimeModel);
   };
 
@@ -571,10 +571,10 @@ function getAgentRuntimeSettings(
 }
 
 /**
- * Create a RuntimeContext with model configuration for runtime model selection.
+ * Create a RequestContext with model configuration for runtime model selection.
  */
-function createRuntimeContext(model?: string): RuntimeContext {
-  const ctx = new RuntimeContext();
+function createRequestContext(model?: string): RequestContext {
+  const ctx = new RequestContext();
   if (model) {
     ctx.set("model", model);
   }
@@ -591,20 +591,20 @@ function buildGenerateOptions(
 ): {
   structuredOutput: { schema: z.ZodType };
   modelSettings: { temperature: number };
-  runtimeContext: RuntimeContext;
+  requestContext: RequestContext;
   instructions?: string;
 } {
   const options: {
     structuredOutput: { schema: z.ZodType };
     modelSettings: { temperature: number };
-    runtimeContext: RuntimeContext;
+    requestContext: RequestContext;
     instructions?: string;
   } = {
     structuredOutput,
     modelSettings: {
       temperature: DEFAULT_TEMPERATURE,
     },
-    runtimeContext: createRuntimeContext(settings.model),
+    requestContext: createRequestContext(settings.model),
   };
 
   // Apply system prompt override if configured

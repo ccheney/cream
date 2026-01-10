@@ -267,7 +267,7 @@ Markets include Fed rate decisions, economic data surprises, recession bets, and
 Updated every 15 minutes.`,
   inputSchema: GetMarketSnapshotsInputSchema,
   outputSchema: GetMarketSnapshotsOutputSchema,
-  execute: async ({ context }): Promise<z.infer<typeof GetMarketSnapshotsOutputSchema>> => {
+  execute: async (inputData): Promise<z.infer<typeof GetMarketSnapshotsOutputSchema>> => {
     const ctx = createToolContext();
 
     // In backtest mode, return empty results
@@ -282,18 +282,18 @@ Updated every 15 minutes.`,
 
     // Use findSnapshots with filters if provided, otherwise getLatestSnapshots
     let snapshots: Awaited<ReturnType<typeof repo.getLatestSnapshots>>;
-    if (context.marketType) {
+    if (inputData.marketType) {
       snapshots = await repo.findSnapshots(
         {
-          platform: context.platform,
-          marketType: context.marketType,
+          platform: inputData.platform,
+          marketType: inputData.marketType,
         },
-        context.limit ?? 20
+        inputData.limit ?? 20
       );
     } else {
-      snapshots = await repo.getLatestSnapshots(context.platform);
-      if (context.limit && snapshots.length > context.limit) {
-        snapshots = snapshots.slice(0, context.limit);
+      snapshots = await repo.getLatestSnapshots(inputData.platform);
+      if (inputData.limit && snapshots.length > inputData.limit) {
+        snapshots = snapshots.slice(0, inputData.limit);
       }
     }
 

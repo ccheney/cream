@@ -56,9 +56,9 @@ export const getQuotesTool = createTool({
 - Check prices before making trading decisions`,
   inputSchema: GetQuotesInputSchema,
   outputSchema: GetQuotesOutputSchema,
-  execute: async ({ context }): Promise<{ quotes: Quote[] }> => {
+  execute: async (inputData): Promise<{ quotes: Quote[] }> => {
     const ctx = createToolContext();
-    const quotes = await getQuotes(ctx, context.instruments);
+    const quotes = await getQuotes(ctx, inputData.instruments);
     return { quotes };
   },
 });
@@ -140,9 +140,9 @@ export const getOptionChainTool = createTool({
 - Identify pricing opportunities across the chain`,
   inputSchema: GetOptionChainInputSchema,
   outputSchema: GetOptionChainOutputSchema,
-  execute: async ({ context }): Promise<OptionChainResponse> => {
+  execute: async (inputData): Promise<OptionChainResponse> => {
     const ctx = createToolContext();
-    return getOptionChain(ctx, context.underlying);
+    return getOptionChain(ctx, inputData.underlying);
   },
 });
 
@@ -177,9 +177,9 @@ export const getGreeksTool = createTool({
 Requires OSI-format symbol (ROOT + YYMMDD + C/P + strike*1000 padded).`,
   inputSchema: GetGreeksInputSchema,
   outputSchema: GetGreeksOutputSchema,
-  execute: async ({ context }): Promise<Greeks> => {
+  execute: async (inputData): Promise<Greeks> => {
     const ctx = createToolContext();
-    return getGreeks(ctx, context.contractSymbol);
+    return getGreeks(ctx, inputData.contractSymbol);
   },
 });
 

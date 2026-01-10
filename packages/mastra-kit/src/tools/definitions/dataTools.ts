@@ -71,9 +71,9 @@ Supported indicators:
 - VOLUME_SMA: Volume Simple Moving Average (params: period, default 20)`,
   inputSchema: RecalcIndicatorInputSchema,
   outputSchema: RecalcIndicatorOutputSchema,
-  execute: async ({ context }): Promise<IndicatorResult> => {
+  execute: async (inputData): Promise<IndicatorResult> => {
     const ctx = createToolContext();
-    return recalcIndicator(ctx, context.indicator, context.symbol, context.params);
+    return recalcIndicator(ctx, inputData.indicator, inputData.symbol, inputData.params);
   },
 });
 
@@ -113,9 +113,9 @@ Events include impact rating (high/medium/low) and actual vs forecast data.
 Requires FMP_KEY environment variable.`,
   inputSchema: EconomicCalendarInputSchema,
   outputSchema: EconomicCalendarOutputSchema,
-  execute: async ({ context }): Promise<{ events: EconomicEvent[] }> => {
+  execute: async (inputData): Promise<{ events: EconomicEvent[] }> => {
     const ctx = createToolContext();
-    const events = await getEconomicCalendar(ctx, context.startDate, context.endDate);
+    const events = await getEconomicCalendar(ctx, inputData.startDate, inputData.endDate);
     return { events };
   },
 });
@@ -157,9 +157,9 @@ For more sophisticated sentiment, use the external-context extraction pipeline.
 Requires FMP_KEY environment variable.`,
   inputSchema: NewsSearchInputSchema,
   outputSchema: NewsSearchOutputSchema,
-  execute: async ({ context }): Promise<{ news: NewsItem[] }> => {
+  execute: async (inputData): Promise<{ news: NewsItem[] }> => {
     const ctx = createToolContext();
-    const news = await searchNews(ctx, context.query, context.symbols, context.limit);
+    const news = await searchNews(ctx, inputData.query, inputData.symbols, inputData.limit);
     return { news };
   },
 });
@@ -193,9 +193,9 @@ HelixDB stores the system's learned memory including:
 - Cross-session learning and pattern recognition`,
   inputSchema: HelixQueryInputSchema,
   outputSchema: HelixQueryOutputSchema,
-  execute: async ({ context }): Promise<HelixQueryResult> => {
+  execute: async (inputData): Promise<HelixQueryResult> => {
     const ctx = createToolContext();
-    return helixQuery(ctx, context.queryName, context.params as Record<string, unknown>);
+    return helixQuery(ctx, inputData.queryName, inputData.params as Record<string, unknown>);
   },
 });
 

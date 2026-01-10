@@ -9,15 +9,14 @@ process.env.CREAM_BROKER = "ALPACA";
 import { describe, expect, mock, test } from "bun:test";
 import type { Factor, FactorZooStats, ResearchBudgetStatus, ResearchRun } from "@cream/domain";
 import type { FactorZooRepository } from "@cream/storage";
-import type { RuntimeContext } from "@mastra/core/runtime-context";
 import {
+  type CheckResearchStatusOutput,
+  type CheckTriggerConditionsOutput,
   createCheckResearchStatusTool,
   createCheckTriggerConditionsTool,
   createTriggerResearchTool,
+  type TriggerResearchOutput,
 } from "./researchTrigger";
-
-// Mock runtime context for tool execution
-const mockRuntimeContext = {} as RuntimeContext;
 
 // ============================================
 // Mock Factory Helpers
@@ -173,13 +172,10 @@ describe("createTriggerResearchTool", () => {
     });
 
     const tool = createTriggerResearchTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        focus: "Test hypothesis for momentum factor",
-        triggerType: "manual",
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      focus: "Test hypothesis for momentum factor",
+      triggerType: "manual",
+    })) as TriggerResearchOutput;
 
     expect(result.success).toBe(false);
     expect(result.blocked).toBe(true);
@@ -198,14 +194,11 @@ describe("createTriggerResearchTool", () => {
     });
 
     const tool = createTriggerResearchTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        focus: "Test hypothesis for momentum factor development",
-        targetRegime: "bull",
-        triggerType: "manual",
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      focus: "Test hypothesis for momentum factor development",
+      targetRegime: "bull",
+      triggerType: "manual",
+    })) as TriggerResearchOutput;
 
     expect(result.success).toBe(true);
     expect(result.blocked).toBe(false);
@@ -234,12 +227,9 @@ describe("createTriggerResearchTool", () => {
 
     const tool = createTriggerResearchTool(mockRepo);
     await tool.execute({
-      context: {
-        focus: "Refinement of existing momentum strategy",
-        replaceFactorId: "parent-factor",
-        triggerType: "refinement",
-      },
-      runtimeContext: mockRuntimeContext,
+      focus: "Refinement of existing momentum strategy",
+      replaceFactorId: "parent-factor",
+      triggerType: "refinement",
     });
 
     expect(findFactorByIdMock).toHaveBeenCalledWith("parent-factor");
@@ -253,13 +243,10 @@ describe("createTriggerResearchTool", () => {
     });
 
     const tool = createTriggerResearchTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        focus: "Test hypothesis for momentum factor",
-        triggerType: "manual",
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      focus: "Test hypothesis for momentum factor",
+      triggerType: "manual",
+    })) as TriggerResearchOutput;
 
     expect(result.success).toBe(false);
     expect(result.blocked).toBe(false);
@@ -286,7 +273,7 @@ describe("createCheckResearchStatusTool", () => {
     });
 
     const tool = createCheckResearchStatusTool(mockRepo);
-    const result = await tool.execute({ context: {}, runtimeContext: mockRuntimeContext });
+    const result = (await tool.execute({})) as CheckResearchStatusOutput;
 
     expect(result.activeRuns).toHaveLength(0);
     expect(result.totalActive).toBe(0);
@@ -304,7 +291,7 @@ describe("createCheckResearchStatusTool", () => {
     });
 
     const tool = createCheckResearchStatusTool(mockRepo);
-    const result = await tool.execute({ context: {}, runtimeContext: mockRuntimeContext });
+    const result = (await tool.execute({})) as CheckResearchStatusOutput;
 
     expect(result.activeRuns).toHaveLength(2);
     expect(result.totalActive).toBe(2);
@@ -323,10 +310,7 @@ describe("createCheckResearchStatusTool", () => {
     });
 
     const tool = createCheckResearchStatusTool(mockRepo);
-    const result = await tool.execute({
-      context: { runId: "run-1" },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({ runId: "run-1" })) as CheckResearchStatusOutput;
 
     expect(result.activeRuns).toHaveLength(1);
     expect(result.activeRuns[0]?.runId).toBe("run-1");
@@ -341,10 +325,7 @@ describe("createCheckResearchStatusTool", () => {
     });
 
     const tool = createCheckResearchStatusTool(mockRepo);
-    const result = await tool.execute({
-      context: { runId: "unknown-run" },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({ runId: "unknown-run" })) as CheckResearchStatusOutput;
 
     expect(result.activeRuns).toHaveLength(0);
     expect(result.message).toContain("not found in active runs");
@@ -356,7 +337,7 @@ describe("createCheckResearchStatusTool", () => {
     });
 
     const tool = createCheckResearchStatusTool(mockRepo);
-    const result = await tool.execute({ context: {}, runtimeContext: mockRuntimeContext });
+    const result = (await tool.execute({})) as CheckResearchStatusOutput;
 
     expect(result.activeRuns).toHaveLength(0);
     expect(result.message).toContain("Failed to check research status");
@@ -383,13 +364,10 @@ describe("createCheckTriggerConditionsTool", () => {
     });
 
     const tool = createCheckTriggerConditionsTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        currentRegime: "HIGH_VOL",
-        activeRegimes: ["BULL_TREND"],
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      currentRegime: "HIGH_VOL",
+      activeRegimes: ["BULL_TREND"],
+    })) as CheckTriggerConditionsOutput;
 
     expect(result.shouldTrigger).toBe(true);
     expect(result.trigger?.type).toBe("REGIME_GAP");
@@ -403,13 +381,10 @@ describe("createCheckTriggerConditionsTool", () => {
     });
 
     const tool = createCheckTriggerConditionsTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        currentRegime: "BULL_TREND",
-        activeRegimes: ["BULL_TREND", "BEAR_TREND"],
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      currentRegime: "BULL_TREND",
+      activeRegimes: ["BULL_TREND", "BEAR_TREND"],
+    })) as CheckTriggerConditionsOutput;
 
     expect(result.shouldTrigger).toBe(false);
     expect(result.trigger).toBeNull();
@@ -425,13 +400,10 @@ describe("createCheckTriggerConditionsTool", () => {
     });
 
     const tool = createCheckTriggerConditionsTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        currentRegime: "HIGH_VOL",
-        activeRegimes: [],
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      currentRegime: "HIGH_VOL",
+      activeRegimes: [],
+    })) as CheckTriggerConditionsOutput;
 
     expect(result.shouldTrigger).toBe(false);
     expect(result.blockingCheck.isBlocked).toBe(true);
@@ -444,13 +416,10 @@ describe("createCheckTriggerConditionsTool", () => {
     });
 
     const tool = createCheckTriggerConditionsTool(mockRepo);
-    const result = await tool.execute({
-      context: {
-        currentRegime: "BULL_TREND",
-        activeRegimes: [],
-      },
-      runtimeContext: mockRuntimeContext,
-    });
+    const result = (await tool.execute({
+      currentRegime: "BULL_TREND",
+      activeRegimes: [],
+    })) as CheckTriggerConditionsOutput;
 
     expect(result.shouldTrigger).toBe(false);
     expect(result.blockingCheck.isBlocked).toBe(true);

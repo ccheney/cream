@@ -8,7 +8,7 @@
  * - context7_query-docs: Query documentation for a specific library
  */
 
-import { MastraMCPClient } from "@mastra/mcp";
+import { MCPClient } from "@mastra/mcp";
 
 /**
  * Context7 MCP client for documentation access
@@ -22,11 +22,12 @@ import { MastraMCPClient } from "@mastra/mcp";
  * });
  * ```
  */
-export const context7Client = new MastraMCPClient({
-  name: "context7",
-  server: {
-    command: "npx",
-    args: ["-y", "@upstash/context7-mcp@latest"],
+export const context7Client = new MCPClient({
+  servers: {
+    context7: {
+      command: "npx",
+      args: ["-y", "@upstash/context7-mcp@latest"],
+    },
   },
 });
 
@@ -40,14 +41,15 @@ export const context7Client = new MastraMCPClient({
  * - query-docs
  */
 export async function getContext7Tools() {
-  return context7Client.tools();
+  return context7Client.listTools();
 }
 
 /**
  * Connect to the Context7 MCP server
+ * @deprecated MCPClient manages connections automatically - this is a no-op
  */
 export async function connectContext7() {
-  await context7Client.connect();
+  // MCPClient handles connections internally
 }
 
 /**

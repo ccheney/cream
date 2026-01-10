@@ -77,13 +77,13 @@ Search Tips:
 - Use company symbol filter when researching specific stocks`,
   inputSchema: SearchFilingsInputSchema,
   outputSchema: SearchFilingsOutputSchema,
-  execute: async ({ context }): Promise<SearchFilingsResult> => {
+  execute: async (inputData): Promise<SearchFilingsResult> => {
     const ctx = createToolContext();
     return searchFilings(ctx, {
-      query: context.query,
-      symbol: context.symbol,
-      filingTypes: context.filingTypes,
-      limit: context.limit,
+      query: inputData.query,
+      symbol: inputData.symbol,
+      filingTypes: inputData.filingTypes,
+      limit: inputData.limit,
     });
   },
 });

@@ -86,8 +86,8 @@ The tool checks blocking conditions before starting:
 Returns a research run ID to track progress with check_research_status.`,
     inputSchema: TriggerResearchInputSchema,
     outputSchema: TriggerResearchOutputSchema,
-    execute: async ({ context }) => {
-      const { focus, targetRegime, replaceFactorId, triggerType } = context;
+    execute: async (inputData) => {
+      const { focus, targetRegime, replaceFactorId, triggerType } = inputData;
 
       // Check blocking conditions first
       const blockingCheck = await triggerService.checkBlockingConditions();
@@ -226,8 +226,8 @@ Returns details about active and recent research runs including:
 - PR URL if promotion complete`,
     inputSchema: CheckResearchStatusInputSchema,
     outputSchema: CheckResearchStatusOutputSchema,
-    execute: async ({ context }) => {
-      const { runId } = context;
+    execute: async (inputData) => {
+      const { runId } = inputData;
 
       try {
         // Get all active research runs
@@ -373,8 +373,8 @@ Also checks blocking conditions:
 Use this to decide if trigger_research should be called.`,
     inputSchema: CheckTriggerConditionsInputSchema,
     outputSchema: CheckTriggerConditionsOutputSchema,
-    execute: async ({ context }) => {
-      const { currentRegime, activeRegimes } = context;
+    execute: async (inputData) => {
+      const { currentRegime, activeRegimes } = inputData;
 
       try {
         const activeFactors = await factorZoo.findActiveFactors();

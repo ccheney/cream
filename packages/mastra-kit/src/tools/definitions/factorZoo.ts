@@ -176,8 +176,8 @@ Use this tool during the Decide phase to get a single aggregated alpha signal
 for position sizing and trade decisions.`,
     inputSchema: ComputeMegaAlphaInputSchema,
     outputSchema: ComputeMegaAlphaOutputSchema,
-    execute: async ({ context }) => {
-      const { signals } = context;
+    execute: async (inputData) => {
+      const { signals } = inputData;
 
       try {
         // Convert Record to Map
@@ -275,8 +275,8 @@ Efficient batch computation for portfolio-level alpha aggregation.
 Use this during the Decide phase when evaluating multiple instruments.`,
     inputSchema: ComputeMegaAlphaForSymbolsInputSchema,
     outputSchema: ComputeMegaAlphaForSymbolsOutputSchema,
-    execute: async ({ context }) => {
-      const { symbolSignals } = context;
+    execute: async (inputData) => {
+      const { symbolSignals } = inputData;
 
       try {
         // Convert nested Records to nested Maps
@@ -378,8 +378,8 @@ Run this tool periodically (e.g., weekly) to identify factors
 that may need refinement or replacement.`,
     inputSchema: CheckFactorDecayInputSchema,
     outputSchema: CheckFactorDecayOutputSchema,
-    execute: async ({ context }) => {
-      const { factorId } = context;
+    execute: async (inputData) => {
+      const { factorId } = inputData;
 
       try {
         if (factorId) {
@@ -643,8 +643,8 @@ Use this tool when you need to understand why a factor signal should be trusted
 or when evaluating factor-based recommendations.`,
     inputSchema: GetFactorContextInputSchema,
     outputSchema: GetFactorContextOutputSchema,
-    execute: async ({ context }) => {
-      const { factorId } = context;
+    execute: async (inputData) => {
+      const { factorId } = inputData;
 
       try {
         const factor = await factorZoo.findFactorById(factorId);

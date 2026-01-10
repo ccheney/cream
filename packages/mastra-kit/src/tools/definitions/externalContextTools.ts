@@ -96,12 +96,12 @@ Returns full extraction results with:
 Requires FMP_KEY for news fetching.`,
   inputSchema: ExtractNewsContextInputSchema,
   outputSchema: ExtractNewsContextOutputSchema,
-  execute: async ({ context }): Promise<ExtractNewsContextOutput> => {
+  execute: async (inputData): Promise<ExtractNewsContextOutput> => {
     const ctx = createToolContext();
     const result = await extractNewsContext(ctx, {
-      symbols: context.symbols,
-      limit: context.limit,
-      dryRun: context.dryRun,
+      symbols: inputData.symbols,
+      limit: inputData.limit,
+      dryRun: inputData.dryRun,
     });
     // Convert Date objects to ISO strings for JSON serialization
     return {
@@ -161,13 +161,13 @@ Extracts and scores the full transcript:
 Requires FMP_KEY for transcript fetching.`,
   inputSchema: ExtractTranscriptInputSchema,
   outputSchema: ExtractTranscriptOutputSchema,
-  execute: async ({ context }): Promise<ExtractTranscriptOutput> => {
+  execute: async (inputData): Promise<ExtractTranscriptOutput> => {
     const ctx = createToolContext();
     const result = await extractTranscript(ctx, {
-      symbol: context.symbol,
-      year: context.year,
-      quarter: context.quarter,
-      dryRun: context.dryRun,
+      symbol: inputData.symbol,
+      year: inputData.year,
+      quarter: inputData.quarter,
+      dryRun: inputData.dryRun,
     });
     // Convert Date objects to ISO strings for JSON serialization
     return {
@@ -233,13 +233,13 @@ Returns:
 - relatedSymbols: Ticker symbols identified from entities`,
   inputSchema: AnalyzeContentInputSchema,
   outputSchema: AnalyzeContentOutputSchema,
-  execute: async ({ context }): Promise<AnalyzeContentOutput> => {
+  execute: async (inputData): Promise<AnalyzeContentOutput> => {
     const ctx = createToolContext();
     const result = await analyzeContent(ctx, {
-      content: context.content,
-      sourceType: context.sourceType,
-      symbols: context.symbols,
-      dryRun: context.dryRun,
+      content: inputData.content,
+      sourceType: inputData.sourceType,
+      symbols: inputData.symbols,
+      dryRun: inputData.dryRun,
     });
     return {
       extraction: result.extraction,

@@ -101,9 +101,9 @@ The tool supports:
 - Symbol enrichment for financial queries`,
   inputSchema: WebSearchInputSchema,
   outputSchema: WebSearchOutputSchema,
-  execute: async ({ context }) => {
+  execute: async (inputData) => {
     const ctx = createToolContext();
-    return webSearch(ctx, context);
+    return webSearch(ctx, inputData);
   },
 });
 
