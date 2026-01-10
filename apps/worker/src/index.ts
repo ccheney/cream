@@ -338,13 +338,12 @@ async function main() {
   if (!isBacktest(startupCtx)) {
     validateEnvironmentOrExit(startupCtx, "worker", ["FMP_KEY"]);
 
-    // Warn if no LLM key is set (needed for real agent execution)
-    const hasLlmKey = process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!hasLlmKey) {
+    // Warn if no LLM key is set (needed for OODA agent execution)
+    // OODA agents use Gemini exclusively via GOOGLE_GENERATIVE_AI_API_KEY
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       // biome-ignore lint/suspicious/noConsole: Startup warning is intentional
       console.warn(
-        "⚠️  No LLM API key configured (ANTHROPIC_API_KEY or GOOGLE_API_KEY). " +
-          "Agent execution will use stub agents."
+        "⚠️  GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
       );
     }
   }

@@ -4,7 +4,6 @@
 # This file configures DeepEval metrics for agent evaluation.
 # API Keys required:
 #   - GOOGLE_API_KEY: For Gemini judge model
-#   - OPENAI_API_KEY: Alternative judge model (GPT-4o)
 
 # ============================================
 # Metric Configurations

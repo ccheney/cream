@@ -5,8 +5,10 @@
  * These agents use the prompts and configs from @cream/mastra-kit.
  *
  * Model routing:
- * - Pro model (gemini-2.0-flash): Complex reasoning (analysts, researchers, trader)
- * - Flash model (gemini-2.0-flash): Fast validation (risk manager, critic)
+ * - Pro model (gemini-3-pro-preview): Complex reasoning (analysts, researchers, trader)
+ * - Flash model (gemini-3-flash-preview): Fast validation (risk manager, critic)
+ *
+ * Gemini 3 models support tools + structured output together (unlike 2.x models).
  *
  * @see docs/plans/05-agents.md
  */
@@ -59,29 +61,18 @@ export type {
  * Maps our configuration model names to the actual provider format.
  */
 const MODEL_MAP: Record<string, string> = {
-  // Google models
-  "gemini-3-pro-preview": "google/gemini-2.5-pro",
-  "gemini-3-flash-preview": "google/gemini-2.0-flash",
-  "gemini-2.0-flash": "google/gemini-2.0-flash",
-  "gemini-2.5-pro": "google/gemini-2.5-pro",
-  // Anthropic models
-  "claude-sonnet-4": "anthropic/claude-sonnet-4-20250514",
-  "claude-opus-4": "anthropic/claude-opus-4-20250514",
-  "claude-3.5-sonnet": "anthropic/claude-3-5-sonnet-20241022",
-  "claude-3.5-haiku": "anthropic/claude-3-5-haiku-20241022",
-  // OpenAI models (for future use)
-  "gpt-4o": "openai/gpt-4o",
-  "gpt-4o-mini": "openai/gpt-4o-mini",
+  "gemini-3-pro-preview": "google/gemini-3-pro-preview",
+  "gemini-3-flash-preview": "google/gemini-3-flash-preview",
+  "claude-opus-4": "anthropic/claude-opus-4-5",
 };
 
 /** Default model when no mapping found */
-const DEFAULT_MODEL = "google/gemini-2.0-flash";
+const DEFAULT_MODEL = "google/gemini-3-pro-preview";
 
 /**
  * Map internal model names to Mastra model identifiers.
  */
 function getModelId(internalModel: string): string {
-  // If it already has a provider prefix (e.g., "google/gemini-2.0-flash"), return as-is
   if (internalModel.includes("/")) {
     return internalModel;
   }

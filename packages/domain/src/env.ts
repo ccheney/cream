@@ -130,8 +130,13 @@ const envSchema = z.object({
     .describe("Alpaca API base URL (override for testing)"),
 
   // LLM Configuration
-  ANTHROPIC_API_KEY: z.string().optional().describe("Anthropic API key for Claude"),
-  GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key"),
+  // OODA agents use Gemini exclusively; ANTHROPIC_API_KEY is only for claude-agent-sdk
+  ANTHROPIC_API_KEY: z.string().optional().describe("Anthropic API key (claude-agent-sdk only)"),
+  GOOGLE_GENERATIVE_AI_API_KEY: z
+    .string()
+    .optional()
+    .describe("Google Gemini API key (required for OODA agents)"),
+  GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key (legacy, unused)"),
 
   // Prediction Markets
   KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
@@ -174,6 +179,8 @@ function parseEnv(): EnvConfig {
     ALPACA_SECRET: Bun.env.ALPACA_SECRET ?? process.env.ALPACA_SECRET,
     ALPACA_BASE_URL: Bun.env.ALPACA_BASE_URL ?? process.env.ALPACA_BASE_URL,
     ANTHROPIC_API_KEY: Bun.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY,
+    GOOGLE_GENERATIVE_AI_API_KEY:
+      Bun.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
     GOOGLE_API_KEY: Bun.env.GOOGLE_API_KEY ?? process.env.GOOGLE_API_KEY,
     KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,
     KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH ?? process.env.KALSHI_PRIVATE_KEY_PATH,
@@ -367,9 +374,10 @@ export function validateEnvironment(
     }
   }
 
-  // Check LLM key for LIVE (at least one required)
-  if (ctx.environment === "LIVE" && !env.ANTHROPIC_API_KEY && !env.GOOGLE_API_KEY) {
-    errors.push("ANTHROPIC_API_KEY or GOOGLE_API_KEY is required for LIVE environment");
+  // Check Gemini key for LIVE (required for OODA agents)
+  // Note: ANTHROPIC_API_KEY is only for claude-agent-sdk, not OODA agents
+  if (ctx.environment === "LIVE" && !env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    errors.push("GOOGLE_GENERATIVE_AI_API_KEY is required for LIVE environment (OODA agents)");
   }
 
   return {
@@ -456,8 +464,16 @@ export function getEnvVarDocumentation(): Array<{
     { name: "ALPACA_KEY", required: "PAPER/LIVE", description: "Alpaca API key" },
     { name: "ALPACA_SECRET", required: "PAPER/LIVE", description: "Alpaca API secret" },
     { name: "ALPACA_BASE_URL", required: "no", description: "Alpaca API base URL (override)" },
-    { name: "ANTHROPIC_API_KEY", required: "LIVE*", description: "Anthropic API key for Claude" },
-    { name: "GOOGLE_API_KEY", required: "LIVE*", description: "Google Gemini API key" },
+    {
+      name: "ANTHROPIC_API_KEY",
+      required: "no",
+      description: "Anthropic API key (claude-agent-sdk only, not OODA)",
+    },
+    {
+      name: "GOOGLE_GENERATIVE_AI_API_KEY",
+      required: "LIVE",
+      description: "Google Gemini API key (required for OODA agents)",
+    },
     { name: "KALSHI_API_KEY_ID", required: "no", description: "Kalshi API key ID" },
     { name: "KALSHI_PRIVATE_KEY_PATH", required: "no", description: "Path to Kalshi private key" },
     { name: "TAVILY_API_KEY", required: "no", description: "Tavily API key for web search" },
