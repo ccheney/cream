@@ -7,6 +7,9 @@
 import { checkIndicatorTrigger } from "./checkIndicatorTrigger.js";
 import { implementIndicator } from "./claudeCodeIndicator.js";
 import {
+  analyzeContent,
+  extractNewsContext,
+  extractTranscript,
   getEconomicCalendar,
   getGreeks,
   getOptionChain,
@@ -36,6 +39,10 @@ export const TOOL_REGISTRY = {
   web_search: webSearch,
   check_indicator_trigger: checkIndicatorTrigger,
   implement_indicator: implementIndicator,
+  // External context extraction tools
+  extract_news_context: extractNewsContext,
+  extract_transcript: extractTranscript,
+  analyze_content: analyzeContent,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;

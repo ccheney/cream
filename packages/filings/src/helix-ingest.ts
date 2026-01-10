@@ -5,7 +5,7 @@
  */
 
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
-import type { ChunkedFilingEvent, FilingChunkData } from "./types.js";
+import type { FilingChunk, FilingChunkData } from "./types.js";
 
 // ============================================
 // Types
@@ -28,6 +28,16 @@ export interface BatchIngestionResult {
   failed: ChunkIngestionResult[];
   totalProcessed: number;
   executionTimeMs: number;
+}
+
+/**
+ * Aggregated ingestion result for multiple filings
+ */
+export interface FilingsIngestionResult {
+  filingsProcessed: number;
+  chunksIngested: number;
+  chunksFailed: number;
+  totalExecutionTimeMs: number;
 }
 
 // ============================================
@@ -68,6 +78,30 @@ export async function ingestFilingChunk(
 }
 
 /**
+ * Ingest a FilingChunk (camelCase) into HelixDB.
+ *
+ * Converts to snake_case format for HelixDB.
+ */
+export async function ingestChunk(
+  client: HelixClient,
+  chunk: FilingChunk
+): Promise<ChunkIngestionResult> {
+  const chunkData: FilingChunkData = {
+    chunk_id: chunk.chunkId,
+    filing_id: chunk.filingId,
+    company_symbol: chunk.companySymbol,
+    filing_type: chunk.filingType,
+    filing_date: chunk.filingDate,
+    section_name: chunk.sectionName,
+    chunk_index: chunk.chunkIndex,
+    chunk_text: chunk.chunkText,
+    total_chunks: chunk.totalChunks,
+  };
+
+  return ingestFilingChunk(client, chunkData);
+}
+
+/**
  * Ingest multiple filing chunks into HelixDB.
  *
  * Processes chunks sequentially to avoid overwhelming HelixDB.
@@ -98,46 +132,66 @@ export async function batchIngestFilingChunks(
 }
 
 /**
- * Ingest all chunks from a chunked filing event.
+ * Ingest multiple FilingChunk objects (camelCase) into HelixDB.
  */
-export async function ingestChunkedFiling(
+export async function batchIngestChunks(
   client: HelixClient,
-  filing: ChunkedFilingEvent
+  chunks: FilingChunk[]
 ): Promise<BatchIngestionResult> {
-  return batchIngestFilingChunks(client, filing.chunks);
-}
-
-/**
- * Ingest multiple chunked filing events.
- *
- * Returns aggregate statistics across all filings.
- */
-export async function ingestChunkedFilings(
-  client: HelixClient,
-  filings: ChunkedFilingEvent[],
-  onProgress?: (filing: ChunkedFilingEvent, result: BatchIngestionResult) => void
-): Promise<{
-  filingsProcessed: number;
-  chunksIngested: number;
-  chunksFailed: number;
-  totalExecutionTimeMs: number;
-}> {
   const startTime = Date.now();
-  let chunksIngested = 0;
-  let chunksFailed = 0;
+  const successful: ChunkIngestionResult[] = [];
+  const failed: ChunkIngestionResult[] = [];
 
-  for (const filing of filings) {
-    const result = await ingestChunkedFiling(client, filing);
-    chunksIngested += result.successful.length;
-    chunksFailed += result.failed.length;
-
-    if (onProgress) {
-      onProgress(filing, result);
+  for (const chunk of chunks) {
+    const result = await ingestChunk(client, chunk);
+    if (result.success) {
+      successful.push(result);
+    } else {
+      failed.push(result);
     }
   }
 
   return {
-    filingsProcessed: filings.length,
+    successful,
+    failed,
+    totalProcessed: chunks.length,
+    executionTimeMs: Date.now() - startTime,
+  };
+}
+
+/**
+ * Ingest chunks from multiple filings.
+ *
+ * @param client - HelixDB client
+ * @param filingChunks - Array of arrays, each containing chunks for one filing
+ * @param onProgress - Optional callback after each filing is processed
+ * @returns Aggregated statistics
+ */
+export async function ingestFilingChunks(
+  client: HelixClient,
+  filingChunks: FilingChunk[][],
+  onProgress?: (filingIndex: number, result: BatchIngestionResult) => void
+): Promise<FilingsIngestionResult> {
+  const startTime = Date.now();
+  let chunksIngested = 0;
+  let chunksFailed = 0;
+
+  for (let i = 0; i < filingChunks.length; i++) {
+    const chunks = filingChunks[i];
+    if (!chunks) {
+      continue;
+    }
+    const result = await batchIngestChunks(client, chunks);
+    chunksIngested += result.successful.length;
+    chunksFailed += result.failed.length;
+
+    if (onProgress) {
+      onProgress(i, result);
+    }
+  }
+
+  return {
+    filingsProcessed: filingChunks.length,
     chunksIngested,
     chunksFailed,
     totalExecutionTimeMs: Date.now() - startTime,
@@ -149,23 +203,20 @@ export async function ingestChunkedFilings(
 // ============================================
 
 /**
- * Create a HelixDB client from environment variables and ingest filings.
+ * Create a HelixDB client from environment variables and ingest chunks.
  *
- * This is a convenience wrapper that handles client creation.
+ * @param filingChunks - Array of arrays, each containing chunks for one filing
+ * @param onProgress - Optional callback after each filing is processed
+ * @returns Aggregated statistics
  */
-export async function ingestFilingsToHelix(
-  filings: ChunkedFilingEvent[],
-  onProgress?: (filing: ChunkedFilingEvent, result: BatchIngestionResult) => void
-): Promise<{
-  filingsProcessed: number;
-  chunksIngested: number;
-  chunksFailed: number;
-  totalExecutionTimeMs: number;
-}> {
+export async function ingestChunksToHelix(
+  filingChunks: FilingChunk[][],
+  onProgress?: (filingIndex: number, result: BatchIngestionResult) => void
+): Promise<FilingsIngestionResult> {
   const client = createHelixClientFromEnv();
 
   try {
-    return await ingestChunkedFilings(client, filings, onProgress);
+    return await ingestFilingChunks(client, filingChunks, onProgress);
   } finally {
     // HelixDB client cleanup if needed
   }

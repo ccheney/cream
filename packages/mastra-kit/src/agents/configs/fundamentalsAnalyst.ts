@@ -16,6 +16,8 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
   ],
   tools: [
     "economic_calendar",
+    "extract_transcript",
+    "analyze_content",
     "helix_query",
     "web_search",
     "get_prediction_signals",

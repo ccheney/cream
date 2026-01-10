@@ -26,6 +26,11 @@ export {
 } from "./claudeCodeIndicator.js";
 // Mastra tool definitions
 export {
+  // External context tools
+  AnalyzeContentInputSchema,
+  AnalyzeContentOutputSchema,
+  analyzeContentTool,
+  // Factor Zoo tools
   type CheckFactorDecayInput,
   CheckFactorDecayInputSchema,
   type CheckFactorDecayOutput,
@@ -46,6 +51,7 @@ export {
   ComputeMegaAlphaInputSchema,
   type ComputeMegaAlphaOutput,
   ComputeMegaAlphaOutputSchema,
+  ContentScoresSchema,
   createCheckFactorDecayTool,
   createCheckResearchStatusTool,
   createCheckTriggerConditionsTool,
@@ -60,7 +66,14 @@ export {
   // Data tools
   EconomicCalendarInputSchema,
   EconomicCalendarOutputSchema,
+  ExtractedEventSchema,
+  ExtractNewsContextInputSchema,
+  ExtractNewsContextOutputSchema,
+  ExtractTranscriptInputSchema,
+  ExtractTranscriptOutputSchema,
   economicCalendarTool,
+  extractNewsContextTool,
+  extractTranscriptTool,
   // Filing search tool
   FilingChunkSummarySchema,
   type GetCurrentWeightsInput,
@@ -119,6 +132,15 @@ export {
 } from "./definitions/index.js";
 // Re-export implementations
 export {
+  type AnalyzeContentParams,
+  type AnalyzeContentResult,
+  analyzeContent,
+  type ExtractNewsContextParams,
+  type ExtractNewsContextResult,
+  type ExtractTranscriptParams,
+  type ExtractTranscriptResult,
+  extractNewsContext,
+  extractTranscript,
   getEconomicCalendar,
   getGreeks,
   getOptionChain,

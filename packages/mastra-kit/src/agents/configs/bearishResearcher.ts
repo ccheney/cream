@@ -14,5 +14,11 @@ export const BEARISH_RESEARCHER_CONFIG: AgentConfig = {
     "Grounds arguments in evidence",
     "Acknowledges counterarguments honestly",
   ],
-  tools: ["helix_query", "web_search", "context7_resolve-library-id", "context7_query-docs"],
+  tools: [
+    "helix_query",
+    "web_search",
+    "analyze_content",
+    "context7_resolve-library-id",
+    "context7_query-docs",
+  ],
 };

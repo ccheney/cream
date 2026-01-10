@@ -4,6 +4,17 @@
  * Re-exports all tool implementation functions.
  */
 
+export {
+  type AnalyzeContentParams,
+  type AnalyzeContentResult,
+  analyzeContent,
+  type ExtractNewsContextParams,
+  type ExtractNewsContextResult,
+  type ExtractTranscriptParams,
+  type ExtractTranscriptResult,
+  extractNewsContext,
+  extractTranscript,
+} from "./externalContext.js";
 export { getEconomicCalendar, searchNews } from "./fmp.js";
 export { helixQuery } from "./helix.js";
 export { recalcIndicator } from "./indicators.js";

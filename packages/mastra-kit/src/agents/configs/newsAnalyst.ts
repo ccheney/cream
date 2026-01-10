@@ -16,6 +16,8 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
   ],
   tools: [
     "news_search",
+    "extract_news_context",
+    "analyze_content",
     "helix_query",
     "web_search",
     "context7_resolve-library-id",

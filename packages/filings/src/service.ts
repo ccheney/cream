@@ -2,23 +2,39 @@
  * Filings Ingestion Service
  *
  * Orchestrates the complete filing ingestion pipeline:
- * 1. Fetch filings from SEC EDGAR (via Python bridge)
- * 2. Chunk filings by section
- * 3. Ingest chunks into HelixDB with embeddings
- * 4. Track progress in Turso
+ * 1. Fetch filings from SEC EDGAR (native TypeScript client)
+ * 2. Parse filings with cheerio
+ * 3. Chunk filings by section
+ * 4. Ingest chunks into HelixDB with embeddings
+ * 5. Track progress in Turso
  */
 
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { FilingSyncRunsRepository, FilingsRepository, type TursoClient } from "@cream/storage";
-import { ingestChunkedFilings } from "./helix-ingest.js";
-import { fetchAndChunkFilings } from "./python-bridge.js";
+import { chunkParsedFiling } from "./chunker.js";
+import { EdgarClient, type EdgarClientConfig } from "./edgar-client.js";
+import { batchIngestChunks } from "./helix-ingest.js";
+import { parseFiling } from "./parsers/index.js";
 import type {
-  ChunkedFilingEvent,
+  Filing,
+  FilingChunk,
   FilingSyncConfig,
   FilingSyncResult,
   FilingType,
   ProgressCallback,
 } from "./types.js";
+
+// ============================================
+// Types
+// ============================================
+
+/**
+ * Internal representation of a processed filing with its chunks
+ */
+interface ProcessedFiling {
+  filing: Filing;
+  chunks: FilingChunk[];
+}
 
 // ============================================
 // Service Class
@@ -40,21 +56,26 @@ import type {
  * ```
  */
 export class FilingsIngestionService {
+  private edgarClient: EdgarClient;
+
   constructor(
     private readonly filingsRepo: FilingsRepository,
     private readonly syncRunsRepo: FilingSyncRunsRepository,
     private readonly helixClient?: HelixClient,
-    private readonly cwd?: string
-  ) {}
+    config?: EdgarClientConfig
+  ) {
+    this.edgarClient = new EdgarClient(config);
+  }
 
   /**
    * Run a complete filing sync operation.
    *
    * 1. Creates a sync run record
-   * 2. Fetches and chunks filings from SEC
-   * 3. Filters out already-ingested filings
-   * 4. Ingests new chunks into HelixDB
-   * 5. Updates tracking records
+   * 2. Fetches filings from SEC EDGAR
+   * 3. Parses and chunks each filing
+   * 4. Filters out already-ingested filings
+   * 5. Ingests new chunks into HelixDB
+   * 6. Updates tracking records
    */
   async syncFilings(
     config: FilingSyncConfig,
@@ -76,84 +97,139 @@ export class FilingsIngestionService {
       environment: config.environment,
     });
 
+    let symbolsProcessed = 0;
+    let filingsFetched = 0;
     let filingsIngested = 0;
     let chunksCreated = 0;
 
     try {
-      // Phase 1: Fetch and chunk filings from SEC
-      const {
-        filings,
-        complete,
-        errors: fetchErrors,
-      } = await fetchAndChunkFilings(config.symbols, {
-        filingTypes: config.filingTypes,
-        startDate: config.startDate,
-        endDate: config.endDate,
-        limitPerSymbol: config.limitPerSymbol,
-        cwd: this.cwd,
-        onProgress: (progress) => {
-          if (onProgress) {
-            onProgress({
-              ...progress,
-              filingsIngested,
-              chunksCreated,
-            });
-          }
-        },
-      });
-
-      errors.push(...fetchErrors);
-
-      // Phase 2: Filter out already-ingested filings
-      const newFilings = await this.filterNewFilings(filings);
-
-      // Phase 3: Ingest into HelixDB
       const client = this.helixClient ?? createHelixClientFromEnv();
 
-      await ingestChunkedFilings(client, newFilings, async (filing, result) => {
-        // Track individual filing
-        const filingId = `filing_${filing.accession_number.replace(/-/g, "")}`;
-
-        await this.filingsRepo.create({
-          id: filingId,
-          accessionNumber: filing.accession_number,
-          symbol: filing.symbol,
-          filingType: filing.filing_type as FilingType,
-          filedDate: filing.filed_date,
-          ingestedAt: new Date().toISOString(),
-        });
-
-        if (result.successful.length > 0) {
-          await this.filingsRepo.markComplete(
-            filingId,
-            filing.chunks.length,
-            result.successful.length
-          );
-          filingsIngested++;
-          chunksCreated += result.successful.length;
-        } else if (result.failed.length > 0) {
-          await this.filingsRepo.markFailed(filingId, result.failed.map((f) => f.error).join("; "));
-        }
-
+      // Process each symbol
+      for (const symbol of config.symbols) {
+        // Report progress - fetching
         if (onProgress) {
           onProgress({
-            phase: "storing",
-            symbol: filing.symbol,
-            symbolsProcessed: config.symbols.indexOf(filing.symbol) + 1,
+            phase: "fetching",
+            symbol,
+            symbolsProcessed,
             symbolsTotal: config.symbols.length,
             filingsIngested,
             chunksCreated,
           });
         }
-      });
 
-      // Update progress
-      await this.syncRunsRepo.updateProgress(runId, {
-        symbolsProcessed: config.symbols.length,
-        filingsFetched: complete?.filings_fetched ?? 0,
-        filingsIngested,
-        chunksCreated,
-      });
+        try {
+          // Fetch filings for symbol
+          const filings = await this.edgarClient.getFilings({
+            tickerOrCik: symbol,
+            filingTypes: config.filingTypes,
+            startDate: config.startDate ? new Date(config.startDate) : undefined,
+            endDate: config.endDate ? new Date(config.endDate) : undefined,
+            limit: config.limitPerSymbol ?? 10,
+          });
+
+          filingsFetched += filings.length;
+
+          // Report progress - parsing
+          if (onProgress) {
+            onProgress({
+              phase: "parsing",
+              symbol,
+              symbolsProcessed,
+              symbolsTotal: config.symbols.length,
+              filingsIngested,
+              chunksCreated,
+            });
+          }
+
+          // Process each filing
+          for (const filing of filings) {
+            // Check if already ingested
+            const exists = await this.filingsRepo.existsByAccessionNumber(filing.accessionNumber);
+            if (exists) {
+              continue;
+            }
+
+            try {
+              // Fetch HTML and parse
+              const html = await this.edgarClient.getFilingHtml(filing);
+              const parsed = parseFiling(filing, html);
+
+              // Report progress - chunking
+              if (onProgress) {
+                onProgress({
+                  phase: "chunking",
+                  symbol,
+                  symbolsProcessed,
+                  symbolsTotal: config.symbols.length,
+                  filingsIngested,
+                  chunksCreated,
+                });
+              }
+
+              // Chunk the filing
+              const chunks = chunkParsedFiling(parsed);
+
+              // Create filing record
+              const filingId = `filing_${filing.accessionNumber.replace(/-/g, "")}`;
+              await this.filingsRepo.create({
+                id: filingId,
+                accessionNumber: filing.accessionNumber,
+                symbol,
+                filingType: filing.filingType,
+                filedDate: formatDate(filing.filedDate),
+                ingestedAt: new Date().toISOString(),
+              });
+
+              // Report progress - storing
+              if (onProgress) {
+                onProgress({
+                  phase: "storing",
+                  symbol,
+                  symbolsProcessed,
+                  symbolsTotal: config.symbols.length,
+                  filingsIngested,
+                  chunksCreated,
+                });
+              }
+
+              // Ingest chunks into HelixDB
+              const result = await batchIngestChunks(client, chunks);
+
+              if (result.successful.length > 0) {
+                await this.filingsRepo.markComplete(
+                  filingId,
+                  Object.keys(parsed.sections).length,
+                  result.successful.length
+                );
+                filingsIngested++;
+                chunksCreated += result.successful.length;
+              } else if (result.failed.length > 0) {
+                const errorMsg = result.failed.map((f) => f.error).join("; ");
+                await this.filingsRepo.markFailed(filingId, errorMsg);
+                errors.push(`Failed to ingest ${filing.accessionNumber}: ${errorMsg}`);
+              }
+            } catch (parseError) {
+              const errorMsg = parseError instanceof Error ? parseError.message : "Unknown error";
+              errors.push(`Failed to parse ${symbol}/${filing.accessionNumber}: ${errorMsg}`);
+            }
+          }
+        } catch (symbolError) {
+          const errorMsg = symbolError instanceof Error ? symbolError.message : "Unknown error";
+          errors.push(`Failed to process ${symbol}: ${errorMsg}`);
+        }
+
+        symbolsProcessed++;
+
+        // Update progress in database
+        await this.syncRunsRepo.updateProgress(runId, {
+          symbolsProcessed,
+          filingsFetched,
+          filingsIngested,
+          chunksCreated,
+        });
+      }
 
       // Mark complete
       await this.syncRunsRepo.complete(runId, {
@@ -163,9 +239,9 @@ export class FilingsIngestionService {
 
       return {
         runId,
-        success: true,
-        symbolsProcessed: config.symbols.length,
-        filingsFetched: complete?.filings_fetched ?? 0,
+        success: errors.length === 0,
+        symbolsProcessed,
+        filingsFetched,
         filingsIngested,
         chunksCreated,
         durationMs: Date.now() - startTime,
@@ -180,8 +256,8 @@ export class FilingsIngestionService {
       return {
         runId,
         success: false,
-        symbolsProcessed: 0,
-        filingsFetched: 0,
+        symbolsProcessed,
+        filingsFetched,
         filingsIngested,
         chunksCreated,
         durationMs: Date.now() - startTime,
@@ -191,19 +267,29 @@ export class FilingsIngestionService {
   }
 
   /**
-   * Filter out filings that have already been ingested.
+   * Fetch and process a single filing.
+   *
+   * Useful for testing or one-off ingestion.
    */
-  private async filterNewFilings(filings: ChunkedFilingEvent[]): Promise<ChunkedFilingEvent[]> {
-    const newFilings: ChunkedFilingEvent[] = [];
+  async processFiling(symbol: string, accessionNumber: string): Promise<ProcessedFiling | null> {
+    // Get filings for symbol
+    const filings = await this.edgarClient.getFilings({
+      tickerOrCik: symbol,
+      limit: 100,
+    });
 
-    for (const filing of filings) {
-      const exists = await this.filingsRepo.existsByAccessionNumber(filing.accession_number);
-      if (!exists) {
-        newFilings.push(filing);
-      }
+    // Find the specific filing
+    const filing = filings.find((f) => f.accessionNumber === accessionNumber);
+    if (!filing) {
+      return null;
     }
 
-    return newFilings;
+    // Fetch and parse
+    const html = await this.edgarClient.getFilingHtml(filing);
+    const parsed = parseFiling(filing, html);
+    const chunks = chunkParsedFiling(parsed);
+
+    return { filing, chunks };
   }
 
   /**
@@ -258,10 +344,22 @@ export class FilingsIngestionService {
 export function createFilingsIngestionService(
   tursoClient: TursoClient,
   helixClient?: HelixClient,
-  cwd?: string
+  config?: EdgarClientConfig
 ): FilingsIngestionService {
   const filingsRepo = new FilingsRepository(tursoClient);
   const syncRunsRepo = new FilingSyncRunsRepository(tursoClient);
 
-  return new FilingsIngestionService(filingsRepo, syncRunsRepo, helixClient, cwd);
+  return new FilingsIngestionService(filingsRepo, syncRunsRepo, helixClient, config);
+}
+
+// ============================================
+// Utilities
+// ============================================
+
+/**
+ * Format a Date as ISO date string (YYYY-MM-DD).
+ */
+function formatDate(date: Date): string {
+  const isoString = date.toISOString();
+  return isoString.split("T")[0] ?? isoString.slice(0, 10);
 }

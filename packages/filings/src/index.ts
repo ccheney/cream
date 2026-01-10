@@ -18,42 +18,66 @@
  * ```
  */
 
+// Chunker
+export {
+  chunkParsedFiling,
+  chunksToObjects,
+  createChunkId,
+  estimateTokens,
+  SECTION_NAMES,
+  splitTextWithOverlap,
+} from "./chunker.js";
+// Edgar Client
+export { EdgarClient, type EdgarClientConfig, type GetFilingsParams } from "./edgar-client.js";
 // HelixDB Ingestion
 export {
   type BatchIngestionResult,
+  batchIngestChunks,
   batchIngestFilingChunks,
   type ChunkIngestionResult,
-  ingestChunkedFiling,
-  ingestChunkedFilings,
+  type FilingsIngestionResult,
+  ingestChunk,
+  ingestChunksToHelix,
   ingestFilingChunk,
-  ingestFilingsToHelix,
+  ingestFilingChunks,
 } from "./helix-ingest.js";
-// Python Bridge
+// Parsers
 export {
-  FilingsPythonBridge,
-  fetchAndChunkFilings,
-} from "./python-bridge.js";
+  COMMON_SECTIONS,
+  FilingParser,
+  Form8KParser,
+  Form10KParser,
+  Form10QParser,
+  getParser,
+  ITEMS_8K,
+  parseFiling,
+  parseFilingWithParser,
+  SECTIONS_10K,
+  SECTIONS_10Q,
+} from "./parsers/index.js";
+
 // Service
 export {
   createFilingsIngestionService,
   FilingsIngestionService,
 } from "./service.js";
+
 // Types
 export type {
-  ChunkedFilingEvent,
-  CompleteEvent,
-  ErrorEvent,
-  FetchFilingsParams,
+  Company,
+  Filing,
+  FilingChunk,
   FilingChunkData,
-  FilingMetadataEvent,
   FilingSyncConfig,
   FilingSyncResult,
   FilingType,
-  ParseErrorEvent,
+  Form8KItem,
+  ParsedFiling,
   ProgressCallback,
-  ProgressEvent,
-  PythonEvent,
-  PythonRequest,
-  SymbolErrorEvent,
 } from "./types.js";
-export { FilingTypeSchema } from "./types.js";
+
+export {
+  FilingTypeSchema,
+  fromFilingChunkData,
+  toFilingChunkData,
+} from "./types.js";

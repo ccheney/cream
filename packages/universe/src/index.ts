@@ -13,6 +13,7 @@ export {
   FMPClient,
   type FMPClientConfig,
   type FMPConstituent,
+  type FMPEarningsTranscript,
   type FMPEconomicEvent,
   type FMPETFHolding,
   type FMPHistoricalConstituent,

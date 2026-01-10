@@ -375,6 +375,21 @@ export class FMPClient {
   async getGeneralNews(limit = 50): Promise<FMPStockNews[]> {
     return this.request<FMPStockNews[]>("/stock_news", { limit });
   }
+
+  async getEarningsTranscript(
+    symbol: string,
+    year?: number,
+    quarter?: number
+  ): Promise<FMPEarningsTranscript[]> {
+    const params: Record<string, string | number> = {};
+    if (year !== undefined) {
+      params.year = year;
+    }
+    if (quarter !== undefined) {
+      params.quarter = quarter;
+    }
+    return this.request<FMPEarningsTranscript[]>(`/earning_call_transcript/${symbol}`, params);
+  }
 }
 
 export interface FMPEconomicEvent {
@@ -398,6 +413,14 @@ export interface FMPStockNews {
   site: string;
   text: string;
   url: string;
+}
+
+export interface FMPEarningsTranscript {
+  symbol: string;
+  quarter: number;
+  year: number;
+  date: string;
+  content: string;
 }
 
 export function createFMPClient(config?: Partial<FMPClientConfig>): FMPClient {

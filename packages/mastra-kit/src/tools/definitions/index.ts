@@ -6,7 +6,6 @@
  * for input validation and output typing.
  */
 
-// Data tools (indicators, news, calendar, helix)
 export {
   EconomicCalendarInputSchema,
   EconomicCalendarOutputSchema,
@@ -21,6 +20,20 @@ export {
   RecalcIndicatorOutputSchema,
   recalcIndicatorTool,
 } from "./dataTools.js";
+// Data tools (indicators, news, calendar, helix)
+export {
+  AnalyzeContentInputSchema,
+  AnalyzeContentOutputSchema,
+  analyzeContentTool,
+  ContentScoresSchema,
+  ExtractedEventSchema,
+  ExtractNewsContextInputSchema,
+  ExtractNewsContextOutputSchema,
+  ExtractTranscriptInputSchema,
+  ExtractTranscriptOutputSchema,
+  extractNewsContextTool,
+  extractTranscriptTool,
+} from "./externalContextTools.js";
 // Factor Zoo tools (require FactorZooRepository dependency injection)
 export {
   type CheckFactorDecayInput,

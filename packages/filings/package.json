@@ -19,6 +19,8 @@
     "@cream/helix": "workspace:*",
     "@cream/helix-schema": "workspace:*",
     "@cream/storage": "workspace:*",
+    "cheerio": "1.1.2",
+    "sec-edgar-toolkit": "0.1.1",
     "zod": "^4.3.5"
   },
   "devDependencies": {
