@@ -17,6 +17,7 @@
 import { create } from "@bufbuild/protobuf";
 import { type FullRuntimeConfig, RuntimeConfigError } from "@cream/config";
 import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 import { createMarketDataAdapter } from "@cream/marketdata";
 import {
   ConsensusGate,
@@ -26,6 +27,7 @@ import {
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 import { InstrumentSchema, InstrumentType } from "@cream/schema-gen/cream/v1/common";
+import type { CreateDecisionInput } from "@cream/storage";
 import {
   FIXTURE_TIMESTAMP,
   getCandleFixtures,
@@ -46,12 +48,24 @@ import {
   type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
 import {
+  getDecisionsRepo,
   getHelixClient,
   getRegimeLabelsRepo,
   getRuntimeConfigService,
   type RuntimeEnvironment,
 } from "../db.js";
 import { ExecutionEngineError, getExecutionEngineClient, OrderSide } from "../grpc/index.js";
+
+// ============================================
+// Logger
+// ============================================
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "trading-cycle",
+  level: process.env.LOG_LEVEL === "debug" ? "debug" : "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: process.env.NODE_ENV === "development",
+});
 
 // ============================================
 // Types
@@ -326,8 +340,8 @@ async function fetchMarketSnapshot(
   // Calculate date range for candle fetching (last 7 days for 120 hourly candles)
   const toDate = new Date();
   const fromDate = new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const from = fromDate.toISOString().split("T")[0]!;
-  const to = toDate.toISOString().split("T")[0]!;
+  const from = fromDate.toISOString().slice(0, 10);
+  const to = toDate.toISOString().slice(0, 10);
 
   const timestamp = Date.now();
   const candles: Record<string, CandleData[]> = {};
@@ -918,6 +932,16 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     useDraftConfig = false,
   } = input;
 
+  log.info(
+    {
+      cycleId,
+      environment: context.environment,
+      instruments,
+      useDraftConfig,
+    },
+    "Starting LLM trading cycle"
+  );
+
   // ============================================
   // Load runtime config from DB
   // ============================================
@@ -961,6 +985,8 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   // ============================================
   // Phase 1: Analysts (Parallel with timeout)
   // ============================================
+  log.info({ cycleId, instruments, phase: "analysts" }, "Starting analyst phase");
+
   const analystsResult = await withAgentTimeout(
     runAnalystsParallel(agentContext),
     agentTimeoutMs * 3, // 3 agents running
@@ -974,7 +1000,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   };
 
   if (analystsResult.timedOut) {
-    // Return no-trade on analyst timeout
+    log.warn({ cycleId, phase: "analysts" }, "Analyst agents timed out");
     return {
       cycleId,
       approved: false,
@@ -984,11 +1010,39 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       configVersion,
     };
   }
+  if (analystsResult.errored) {
+    log.error({ cycleId, phase: "analysts", error: analystsResult.error }, "Analyst agents failed");
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: {
+        submitted: false,
+        orderIds: [],
+        errors: [`Analyst agents failed: ${analystsResult.error}`],
+      },
+      mode: "LLM",
+      configVersion,
+    };
+  }
   analystOutputs = analystsResult.result;
+
+  log.info(
+    {
+      cycleId,
+      phase: "analysts",
+      technicalCount: analystOutputs.technical.length,
+      newsCount: analystOutputs.news.length,
+      fundamentalsCount: analystOutputs.fundamentals.length,
+    },
+    "Analyst phase complete"
+  );
 
   // ============================================
   // Phase 2: Debate (Parallel with timeout)
   // ============================================
+  log.info({ cycleId, phase: "debate" }, "Starting debate phase");
+
   const debateResult = await withAgentTimeout(
     runDebateParallel(agentContext, analystOutputs),
     agentTimeoutMs * 2, // 2 agents running
@@ -1001,6 +1055,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   };
 
   if (debateResult.timedOut) {
+    log.warn({ cycleId, phase: "debate" }, "Research agents timed out");
     return {
       cycleId,
       approved: false,
@@ -1010,11 +1065,38 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       configVersion,
     };
   }
+  if (debateResult.errored) {
+    log.error({ cycleId, phase: "debate", error: debateResult.error }, "Research agents failed");
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: {
+        submitted: false,
+        orderIds: [],
+        errors: [`Research agents failed: ${debateResult.error}`],
+      },
+      mode: "LLM",
+      configVersion,
+    };
+  }
   debateOutputs = debateResult.result;
+
+  log.info(
+    {
+      cycleId,
+      phase: "debate",
+      bullishCount: debateOutputs.bullish.length,
+      bearishCount: debateOutputs.bearish.length,
+    },
+    "Debate phase complete"
+  );
 
   // ============================================
   // Phase 3: Trader synthesizes plan
   // ============================================
+  log.info({ cycleId, phase: "trader" }, "Starting trader phase");
+
   const traderResult = await withAgentTimeout(
     runTrader(agentContext, debateOutputs),
     agentTimeoutMs,
@@ -1022,6 +1104,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   );
 
   if (traderResult.timedOut) {
+    log.warn({ cycleId, phase: "trader" }, "Trader agent timed out");
     return {
       cycleId,
       approved: false,
@@ -1031,12 +1114,47 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       configVersion,
     };
   }
+  if (traderResult.errored) {
+    log.error({ cycleId, phase: "trader", error: traderResult.error }, "Trader agent failed");
+    return {
+      cycleId,
+      approved: false,
+      iterations: 0,
+      orderSubmission: {
+        submitted: false,
+        orderIds: [],
+        errors: [`Trader agent failed: ${traderResult.error}`],
+      },
+      mode: "LLM",
+      configVersion,
+    };
+  }
   const initialPlan = traderResult.result;
+
+  log.info(
+    {
+      cycleId,
+      phase: "trader",
+      decisionCount: initialPlan.decisions.length,
+      decisions: initialPlan.decisions.map((d) => ({
+        symbol: d.instrumentId,
+        action: d.action,
+        direction: d.direction,
+        size: d.size,
+      })),
+    },
+    "Trader phase complete"
+  );
 
   // ============================================
   // Phase 4: Consensus Loop (Risk Manager + Critic)
   // Config values used: maxConsensusIterations, agentTimeoutMs, totalConsensusTimeoutMs
   // ============================================
+  log.info(
+    { cycleId, phase: "consensus", maxIterations: maxConsensusIterations },
+    "Starting consensus phase"
+  );
+
   const gate = new ConsensusGate({
     maxIterations: maxConsensusIterations,
     logRejections: true,
@@ -1071,9 +1189,79 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     }
   );
 
+  log.info(
+    {
+      cycleId,
+      phase: "consensus",
+      approved: consensusResult.approved,
+      iterations: consensusResult.iterations,
+      finalDecisionCount: consensusResult.plan.decisions.length,
+    },
+    "Consensus phase complete"
+  );
+
+  // ============================================
+  // Persist Decisions to Database
+  // ============================================
+  log.info(
+    { cycleId, decisionCount: consensusResult.plan.decisions.length },
+    "Persisting decisions to database"
+  );
+
+  try {
+    const decisionsRepo = await getDecisionsRepo();
+    const persistedDecisions: string[] = [];
+
+    for (const decision of consensusResult.plan.decisions) {
+      const decisionInput: CreateDecisionInput = {
+        id: decision.decisionId,
+        cycleId,
+        symbol: decision.instrumentId,
+        action: decision.action as "BUY" | "SELL" | "HOLD" | "CLOSE",
+        direction: decision.direction as "LONG" | "SHORT" | "FLAT",
+        size: decision.size.value,
+        sizeUnit: decision.size.unit,
+        entryPrice: null, // Will be set when order fills
+        stopPrice: decision.stopLoss?.price ?? null,
+        targetPrice: decision.takeProfit?.price ?? null,
+        status: consensusResult.approved ? "approved" : "rejected",
+        strategyFamily: decision.strategyFamily ?? null,
+        timeHorizon: decision.timeHorizon ?? null,
+        rationale: decision.rationale?.summary ?? null,
+        bullishFactors: decision.rationale?.bullishFactors ?? [],
+        bearishFactors: decision.rationale?.bearishFactors ?? [],
+        confidenceScore: null, // Not available on Decision type
+        riskScore: null, // Not available on Decision type
+        metadata: {
+          consensusIterations: consensusResult.iterations,
+          configVersion,
+          decisionLogic: decision.rationale?.decisionLogic ?? null,
+          memoryReferences: decision.rationale?.memoryReferences ?? [],
+        },
+        environment: context.environment,
+      };
+
+      await decisionsRepo.create(decisionInput);
+      persistedDecisions.push(decision.decisionId);
+    }
+
+    log.info(
+      { cycleId, persistedCount: persistedDecisions.length, decisionIds: persistedDecisions },
+      "Decisions persisted successfully"
+    );
+  } catch (error) {
+    log.error(
+      { cycleId, error: error instanceof Error ? error.message : String(error) },
+      "Failed to persist decisions"
+    );
+    // Don't fail the cycle - decisions are for observability, not critical path
+  }
+
   // ============================================
   // Act Phase - Constraints and Orders
   // ============================================
+  log.info({ cycleId, phase: "act", approved: consensusResult.approved }, "Starting act phase");
+
   const constraintCheck = await checkConstraints(
     consensusResult.approved,
     consensusResult.plan,
@@ -1084,6 +1272,18 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     consensusResult.plan,
     cycleId,
     context
+  );
+
+  log.info(
+    {
+      cycleId,
+      approved: consensusResult.approved,
+      iterations: consensusResult.iterations,
+      ordersSubmitted: orderSubmission.submitted,
+      orderIds: orderSubmission.orderIds,
+      errors: orderSubmission.errors,
+    },
+    "Trading cycle complete"
   );
 
   return {

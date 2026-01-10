@@ -27,6 +27,7 @@
     "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/logger": "workspace:*",
     "@cream/storage": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",

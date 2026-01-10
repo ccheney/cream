@@ -16,6 +16,7 @@ import {
   AgentConfigsRepository,
   createInMemoryClient,
   createTursoClient,
+  DecisionsRepository,
   ExternalEventsRepository,
   OrdersRepository,
   PositionsRepository,
@@ -160,6 +161,14 @@ export async function getPredictionMarketsRepo(): Promise<PredictionMarketsRepos
 export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
   const client = await getDbClient();
   return new RegimeLabelsRepository(client);
+}
+
+/**
+ * Get decisions repository
+ */
+export async function getDecisionsRepo(): Promise<DecisionsRepository> {
+  const client = await getDbClient();
+  return new DecisionsRepository(client);
 }
 
 // ============================================

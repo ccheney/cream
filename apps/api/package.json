@@ -15,7 +15,7 @@
     }
   },
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
+    "dev": "tsc --noEmit --watch",
     "build": "bun build src/index.ts --outdir dist --target bun --external @libsql/client --external libsql --external better-sqlite3 --external @tursodatabase/* --external @cream/schema-gen/*",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
@@ -30,6 +30,7 @@
     "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/logger": "workspace:*",
     "@cream/external-context": "workspace:*",
     "@cream/helix": "workspace:*",
     "@cream/helix-schema": "workspace:*",
