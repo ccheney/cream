@@ -778,6 +778,38 @@ impl AlpacaAdapter {
 
         self.data_request(&query).await
     }
+
+    /// Get latest quotes for symbols from the Alpaca Market Data API.
+    ///
+    /// Fetches real-time quotes from the `/v2/stocks/quotes/latest` endpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbols` - List of stock symbols to fetch quotes for
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails.
+    pub async fn get_quotes(
+        &self,
+        symbols: &[String],
+    ) -> Result<AlpacaQuotesResponse, AlpacaError> {
+        if symbols.is_empty() {
+            return Ok(AlpacaQuotesResponse {
+                quotes: HashMap::new(),
+            });
+        }
+
+        let symbols_param = symbols.join(",");
+        let query = format!("/v2/stocks/quotes/latest?symbols={}", symbols_param);
+
+        tracing::debug!(
+            symbols = ?symbols,
+            "Fetching latest quotes from Alpaca data API"
+        );
+
+        self.data_request(&query).await
+    }
 }
 
 // Implement BrokerAdapter trait for AlpacaAdapter
@@ -847,6 +879,29 @@ pub struct AlpacaBar {
     /// Number of trades.
     #[serde(default)]
     pub n: Option<i32>,
+}
+
+/// Response from GET /v2/stocks/quotes/latest endpoint.
+#[derive(Debug, Deserialize)]
+pub struct AlpacaQuotesResponse {
+    /// Map of symbol to latest quote.
+    pub quotes: HashMap<String, AlpacaQuote>,
+}
+
+/// Latest quote from Alpaca market data API.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AlpacaQuote {
+    /// Timestamp in RFC3339 format.
+    pub t: String,
+    /// Ask price.
+    pub ap: f64,
+    /// Ask size.
+    #[serde(rename = "as")]
+    pub ask_size: i32,
+    /// Bid price.
+    pub bp: f64,
+    /// Bid size.
+    pub bs: i32,
 }
 
 // ----- Trading API Types -----

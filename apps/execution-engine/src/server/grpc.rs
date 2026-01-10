@@ -724,6 +724,17 @@ impl MarketDataService for MarketDataServiceImpl {
                 Status::internal(format!("Failed to fetch market data: {e}"))
             })?;
 
+        // Fetch quotes from Alpaca data API
+        let quotes_response = self
+            .alpaca
+            .get_quotes(&req.symbols)
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Failed to fetch quotes from Alpaca, continuing without quotes");
+                e
+            })
+            .ok();
+
         // Convert to proto SymbolSnapshots
         let symbol_snapshots: Vec<SymbolSnapshot> = req
             .symbols
@@ -755,9 +766,25 @@ impl MarketDataService for MarketDataServiceImpl {
                     })
                     .unwrap_or_default();
 
+                // Build quote from Alpaca response if available
+                let quote = quotes_response
+                    .as_ref()
+                    .and_then(|qr| qr.quotes.get(symbol))
+                    .map(|aq| proto::cream::v1::Quote {
+                        symbol: symbol.clone(),
+                        bid: aq.bp,
+                        ask: aq.ap,
+                        bid_size: aq.bs,
+                        ask_size: aq.ask_size,
+                        last: 0.0,    // Not provided in latest quotes endpoint
+                        last_size: 0, // Not provided in latest quotes endpoint
+                        volume: 0,    // Not provided in latest quotes endpoint
+                        timestamp: parse_timestamp(&aq.t),
+                    });
+
                 SymbolSnapshot {
                     symbol: symbol.clone(),
-                    quote: None, // Quote not fetched in this implementation
+                    quote,
                     bars,
                     market_status: 0, // UNSPECIFIED
                     day_high: 0.0,
