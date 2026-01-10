@@ -25,7 +25,7 @@ export interface EdgarClientConfig {
   timeout?: number;
 }
 
-const DEFAULT_USER_AGENT = "CreamTradingSystem/1.0 (contact@cream.dev)";
+const DEFAULT_USER_AGENT = "Cream/1.0 (chris@cheney.dev)";
 
 // ============================================
 // Parameters
