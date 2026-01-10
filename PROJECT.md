@@ -1,6 +1,6 @@
 # Cream
 
-Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through an 8-agent consensus network.
+Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through a 10-agent consensus network.
 
 ## Status
 
@@ -14,7 +14,7 @@ Agentic trading system for US equities and options combining LLM-based reasoning
 ├─────────────────┬─────────────────┬─────────────────┬───────────────────────┤
 │     OBSERVE     │      ORIENT     │      DECIDE     │          ACT          │
 ├─────────────────┼─────────────────┼─────────────────┼───────────────────────┤
-│ Market data     │ HelixDB         │ 8-agent         │ Rust execution        │
+│ Market data     │ HelixDB         │ 10-agent        │ Rust execution        │
 │ OHLCV candles   │ retrieval       │ consensus       │ engine validates      │
 │ Positions       │ Indicators      │ network         │ & routes orders       │
 │ News/events     │ Regime classify │ produces plan   │ via Alpaca            │
@@ -29,20 +29,18 @@ Agentic trading system for US equities and options combining LLM-based reasoning
                          └──────────────────────┘
 ```
 
-### Agent Consensus Network (8 Agents)
+### Agent Consensus Network (10 Agents)
 
-The system uses an 8-agent network with parallel and sequential execution phases:
-
-| Phase | Agent | Role | Model |
-|-------|-------|------|-------|
-| **Analysis** (parallel) | Technical Analyst | Price patterns, support/resistance, indicators | Gemini 3 Pro |
-| | News Analyst | Breaking news, social sentiment | Gemini 3 Pro |
-| | Fundamentals Analyst | Earnings, economic indicators, prediction markets | Gemini 3 Pro |
-| **Research** (parallel) | Bullish Researcher | Constructs strongest bull case | Gemini 3 Pro |
-| | Bearish Researcher | Constructs strongest bear case | Gemini 3 Pro |
-| **Decision** (sequential) | Trader | Synthesizes inputs into DecisionPlan | Gemini 3 Pro |
-| **Approval** (parallel) | Risk Manager | Validates against risk constraints | Gemini 3 Flash |
-| | Critic | Validates logical consistency, anti-hallucination | Gemini 3 Flash |
+| Phase | Agent | Role |
+|-------|-------|------|
+| **Analysis** (parallel) | Technical Analyst | Price patterns, support/resistance, indicators |
+| | News Analyst | Breaking news, social sentiment |
+| | Fundamentals Analyst | Earnings, economic indicators, prediction markets |
+| **Research** (parallel) | Bullish Researcher | Constructs strongest bull case |
+| | Bearish Researcher | Constructs strongest bear case with counterarguments |
+| **Decision** (sequential) | Trader | Synthesizes inputs into DecisionPlan |
+| **Approval** (parallel) | Risk Manager | Validates against risk constraints |
+| | Critic | Validates logical consistency, anti-hallucination |
 
 **Consensus Rule**: Plans execute only when **both** Risk Manager and Critic approve. Up to 3 revision iterations if rejected.
 
@@ -56,7 +54,7 @@ The system uses an 8-agent network with parallel and sequential execution phases
 | **TypeScript Compiler** | tsgo (`@typescript/native-preview`) | 7.0+ |
 | **Rust** | Edition 2024 | 1.92+ |
 | **Python** | uv package manager | 3.14+ |
-| **Agent Orchestration** | Mastra | 0.24+ |
+| **Agent Orchestration** | Mastra | 1.0.0-beta.14 |
 | **LLM Provider** | Google Gemini | gemini-3-pro-preview, gemini-3-flash-preview |
 | **Graph + Vector DB** | HelixDB | HNSW indexing, 3072D embeddings |
 | **Relational DB** | Turso (SQLite) | turso |
@@ -75,34 +73,33 @@ cream/
 │   ├── worker/                     # Hourly scheduler
 │   ├── dashboard/                  # Next.js 16 trading dashboard
 │   ├── dashboard-api/              # Hono REST + WebSocket API
-│   ├── execution-engine/           # Rust gRPC server (~36K lines)
-│   ├── evals/                      # Python DeepEval agent evaluations
-│   ├── filings-service/            # Python SEC filings ingestion
+│   ├── execution-engine/           # Rust gRPC server
 │   └── vision-service/             # Python chart analysis
 │
-├── packages/                       # Shared libraries (20 packages)
-│   ├── domain/                     # Zod schemas, environment, time utilities
-│   ├── config/                     # Runtime config service, Zod schemas, secrets
+├── packages/                       # Shared libraries (23 packages)
+│   ├── domain/                     # Zod schemas, environment, gRPC clients
+│   ├── config/                     # Runtime config service, secrets
 │   ├── schema/                     # Protobuf definitions (.proto files)
 │   ├── schema-gen/                 # Generated Protobuf stubs (TS/Rust/Python)
-│   ├── storage/                    # Turso client, repositories, migrations
-│   ├── helix/                      # HelixDB client
-│   ├── helix-schema/               # HelixDB schema, CBR logic
+│   ├── storage/                    # Turso client, 25+ repositories
+│   ├── helix/                      # HelixDB client (vector search, GraphRAG)
+│   ├── helix-schema/               # HelixDB schema, CBR, memory management
 │   ├── broker/                     # Alpaca Markets integration
-│   ├── marketdata/                 # Polygon/Databento adapters
+│   ├── marketdata/                 # Polygon/Databento/FMP adapters
 │   ├── universe/                   # Trading universe resolution
 │   ├── indicators/                 # Technical indicators (RSI, ATR, SMA)
 │   ├── regime/                     # Market regime classification
 │   ├── metrics/                    # Risk-adjusted performance metrics
-│   ├── mastra-kit/                 # Agent prompts, tools, evaluations
-│   ├── external-context/           # News, sentiment, fundamentals extraction
-│   ├── prediction-markets/         # Kalshi integration
+│   ├── mastra-kit/                 # 10 agents, 30+ tools, consensus gate
+│   ├── external-context/           # News/sentiment extraction pipeline
+│   ├── filings/                    # SEC EDGAR filing ingestion
+│   ├── prediction-markets/         # Kalshi/Polymarket integration
 │   ├── dashboard-types/            # Shared dashboard/API types
+│   ├── logger/                     # Pino-based structured logging
+│   ├── validation/                 # Research-to-production parity
 │   ├── tsconfig/                   # Shared TypeScript configs
 │   ├── infra/                      # OpenTofu infrastructure
-│   └── research/                   # Python backtesting (VectorBT, NautilusTrader)
-│
-└── docs/plans/                     # Architecture documentation
+│   └── research/                   # Python backtesting (VectorBT)
 ```
 
 ---
@@ -110,99 +107,126 @@ cream/
 ## Applications
 
 ### API (`apps/api`)
-Mastra server orchestrating agents and workflows. Implements the OODA loop with 8 stub agents (Phase 4).
 
-**Entry**: `bun run --watch src/index.ts`
+Mastra orchestration server running the hourly OODA loop with 10-agent consensus.
+
 **Port**: 4111
 
-### Worker (`apps/worker`)
-Hourly scheduler triggering trading cycles aligned to candle closes.
+**Workflows**:
+- Trading Cycle - 5-phase OODA loop (analysts → researchers → trader → consensus)
+- Prediction Markets - 15-minute macro signal fetching
 
-**Entry**: `bun run --watch src/index.ts`
-**Schedule**: Every hour at minute 0
+**Mode Selection**:
+| Mode | Agents | Market Data | Execution |
+|------|--------|-------------|-----------|
+| BACKTEST | Stub (no LLM) | Fixtures | Mock |
+| PAPER | Mastra + Gemini | Live | Paper orders |
+| LIVE | Mastra + Gemini | Live | Real orders |
+
+### Worker (`apps/worker`)
+
+Scheduler triggering three workflows:
+
+- **Trading Cycle** (~hourly) - Full OODA loop
+- **Prediction Markets** (~15 min) - Kalshi/Polymarket signals
+- **SEC Filings** (daily 6 AM ET) - Filing ingestion
+
+**Port**: 3002 (health endpoint)
 
 ### Dashboard (`apps/dashboard`)
-Next.js 16 React 19 frontend with Turbopack HMR.
 
-**Tech**: React 19, Zustand, TanStack Query, Lightweight Charts, Framer Motion
-**Entry**: `bun run dev`
+Trading control center built with Next.js 16.1, React 19, and Turbopack.
+
+**Tech**: TanStack Query 5, Zustand, Lightweight Charts, Tailwind CSS 4, better-auth
+
 **Port**: 3000
 
-**Key Pages**:
-- `/config/edit` - Edit draft configuration
-- `/config/promote` - Test-and-promote workflow (PAPER → LIVE)
-- `/backtest` - Self-service backtesting with real-time progress
+**Pages**: `/dashboard`, `/portfolio`, `/decisions`, `/charts/[symbol]`, `/agents`, `/config`, `/risk`, `/options`, `/backtest/[id]`
 
 ### Dashboard API (`apps/dashboard-api`)
-Hono REST + WebSocket API with JWT auth and OpenAPI docs.
 
-**Entry**: `PORT=3001 bun run --watch src/index.ts`
-**Endpoints**: `/health`, `/api/*`, `/ws`, `/docs`
+Hono REST + WebSocket API for the dashboard.
 
-**Key Services**:
-- Runtime config management (draft → paper → live promotion)
-- Backtest execution via Python subprocess (VectorBT)
-- WebSocket streaming for real-time progress updates
+**Port**: 3001
+
+**Routes** (14): system, decisions, portfolio, alerts, agents, config, market, options, risk, backtests, theses, indicators, filings
+
+**WebSocket Channels**: quote, backtest, system
+
+**Auth**: Google OAuth via better-auth, TOTP 2FA required for LIVE
 
 ### Execution Engine (`apps/execution-engine`)
-Rust gRPC server for deterministic order validation and routing (~36,115 lines).
 
-**Entry**: `cargo run --bin execution-engine`
-**Ports**: 50051 (HTTP), 50053 (gRPC), 50052 (Arrow Flight)
+Rust gRPC server for deterministic order validation and routing.
+
+**Ports**: 50051 (HTTP), 50052 (Arrow Flight), 50053 (gRPC)
 
 **Capabilities**:
 - DecisionPlan validation against risk constraints
 - Order routing to Alpaca Markets
 - Position sizing (shares, contracts, dollars, % equity)
-- Options Greeks calculation
 - Execution tactics (PASSIVE_LIMIT, TWAP, VWAP, ICEBERG)
-- Backtest simulation with fill models
+- Backtest simulation with configurable fill/slippage models
 - Crash recovery and reconciliation
+- Options Greeks and multi-leg validation
 
-### Python Services
-- **filings-service**: SEC EDGAR filing retrieval (10-K, 10-Q, 8-K)
-- **vision-service**: Chart pattern recognition (Pillow, OpenCV)
+### Vision Service (`apps/vision-service`)
+
+Python chart analysis service.
+
+**Features**:
+- 11+ candlestick pattern detection
+- Support/resistance level identification
+- Signal generation with confidence scoring
 
 ---
 
 ## Key Packages
 
 ### Core Domain
+
 | Package | Purpose |
 |---------|---------|
-| `@cream/domain` | Zod schemas, calendar, clock validation, decision types |
-| `@cream/config` | Runtime config service, feature flags, secrets management |
+| `@cream/domain` | Zod schemas, ExecutionContext, gRPC/Arrow clients |
+| `@cream/config` | RuntimeConfigService, secrets, startup validation |
 | `@cream/schema` | Protobuf definitions (common, decision, execution, events) |
 | `@cream/schema-gen` | Generated stubs for TS, Rust, Python |
+| `@cream/logger` | Pino structured logging with redaction |
+| `@cream/validation` | Research-to-production parity checks |
 
 ### Data Layer
+
 | Package | Purpose |
 |---------|---------|
-| `@cream/storage` | Turso client, repositories, migrations (26 tables) |
-| `@cream/helix` | HelixDB client (vector search, graph traversal) |
-| `@cream/helix-schema` | 9 node types, 11 edge types, CBR logic |
-| `@cream/marketdata` | Polygon, Databento, FMP adapters |
+| `@cream/storage` | Turso client, 25+ repositories, migrations |
+| `@cream/helix` | HelixDB client (vector search ~2ms, graph <1ms) |
+| `@cream/helix-schema` | 10 node types, 11 edge types, CBR, forgetting |
+| `@cream/marketdata` | Polygon, Databento, FMP, Alpha Vantage adapters |
 
 ### Trading Logic
+
 | Package | Purpose |
 |---------|---------|
 | `@cream/broker` | Alpaca adapter with multi-leg options |
-| `@cream/indicators` | RSI, MACD, ATR, SMA, Bollinger Bands |
-| `@cream/regime` | Market regime classification (rule-based, GMM) |
-| `@cream/universe` | Universe resolution with survivorship bias prevention |
-| `@cream/metrics` | Sharpe, Sortino, Calmar ratios, drawdown |
+| `@cream/indicators` | RSI, SMA, EMA, ATR, Bollinger Bands, transforms |
+| `@cream/regime` | Rule-based and GMM classification |
+| `@cream/universe` | Index constituents, screeners, point-in-time |
+| `@cream/metrics` | Sharpe, Sortino, Calmar, drawdown |
 
 ### Agent System
-| Package | Purpose |
-|---------|---------|
-| `@cream/mastra-kit` | 8-agent configs, prompts, consensus gate, tools |
-| `@cream/external-context` | Claude extraction pipeline for news/sentiment |
-| `@cream/prediction-markets` | Kalshi/Polymarket integration |
 
-### Testing
 | Package | Purpose |
 |---------|---------|
-| `@cream/research` | Python backtesting (VectorBT runner, subprocess execution) |
+| `@cream/mastra-kit` | 10 agents, 30+ tools, dual-approval consensus |
+| `@cream/external-context` | Claude extraction pipeline for news/sentiment |
+| `@cream/filings` | SEC EDGAR ingestion (10-K, 10-Q, 8-K) |
+| `@cream/prediction-markets` | Kalshi/Polymarket clients, arbitrage detection |
+
+### Research
+
+| Package | Purpose |
+|---------|---------|
+| `@cream/research` | VectorBT, NautilusTrader, model calibration |
 
 ---
 
@@ -217,15 +241,15 @@ Rust gRPC server for deterministic order validation and routing (~36,115 lines).
 
 ### HelixDB Schema
 
-**9 Node Types**: TradeDecision, TradeLifecycleEvent, ExternalEvent, FilingChunk, TranscriptChunk, NewsItem, Company, MacroEntity, ThesisMemory
+**Node Types**: TradeDecision, TradeLifecycleEvent, ExternalEvent, FilingChunk, TranscriptChunk, NewsItem, Company, MacroEntity, ThesisMemory, Indicator
 
-**11 Edge Types**: INFLUENCED_DECISION, FILED_BY, TRANSCRIPT_FOR, MENTIONS_COMPANY, RELATES_TO_MACRO, RELATED_TO, DEPENDS_ON, AFFECTED_BY, MENTIONED_IN, HAS_EVENT, THESIS_INCLUDES
+**Edge Types**: INFLUENCED_DECISION, FILED_BY, TRANSCRIPT_FOR, MENTIONS_COMPANY, RELATES_TO_MACRO, RELATED_TO, DEPENDS_ON, AFFECTED_BY, MENTIONED_IN, HAS_EVENT, THESIS_INCLUDES
 
-**Vector Search**: HNSW indexing with Gemini 3072D embeddings, <2ms latency, 90% recall@k10
+**Performance**: Vector search ~2ms, graph traversal <1ms
 
 **Retrieval**: Hybrid GraphRAG with Reciprocal Rank Fusion (k=60)
 
-### Turso Schema (26 Tables)
+### Turso Schema
 
 **Migration 001**: decisions, agent_outputs, orders, positions, position_history, portfolio_snapshots, config_versions
 
@@ -239,13 +263,14 @@ Rust gRPC server for deterministic order validation and routing (~36,115 lines).
 
 **Migration 006**: prediction_market_snapshots, prediction_market_signals, prediction_market_arbitrage
 
-**Migration 011**: trading_config, agent_configs, universe_configs (runtime config)
+**Migration 011**: trading_config, agent_configs, universe_configs
 
 ---
 
 ## Commands
 
 ### Development
+
 ```bash
 bun install                         # Install TS dependencies
 cargo build --workspace             # Build Rust
@@ -254,6 +279,7 @@ bun run dev                         # Start all services (Turborepo)
 ```
 
 ### Testing
+
 ```bash
 bun test                            # All TS tests (CREAM_ENV=BACKTEST)
 bun test packages/domain            # Single package
@@ -262,8 +288,9 @@ pytest                              # Python tests
 ```
 
 ### Linting & Formatting
+
 ```bash
-bun run lint                        # All linters (TS + Rust + Python)
+bun run lint                        # All linters
 bun run format                      # All formatters
 biome check .                       # TS/JS only
 cargo clippy --all-targets          # Rust only
@@ -271,22 +298,25 @@ ruff check                          # Python only
 ```
 
 ### Coverage
+
 ```bash
 cargo cov                           # Rust → lcov.info
 cargo cov-html                      # Rust → coverage/
-cargo cov-check                     # Verify 80% threshold
+cargo cov-check                     # Verify threshold
 ```
 
 ### Code Generation
+
 ```bash
 buf generate                        # Protobuf → TS + Rust + Python stubs
 ```
 
-### Docker
+### Database
+
 ```bash
-docker compose up -d                # Start infrastructure (Turso, Redis)
-docker compose logs -f              # View logs
-docker compose down -v              # Stop and remove
+bun run db:migrate                  # Run migrations
+bun run db:status                   # Check status
+bun run db:seed                     # Seed config
 ```
 
 ---
@@ -294,91 +324,165 @@ docker compose down -v              # Stop and remove
 ## Environment Variables
 
 ### Core
+
 ```bash
 CREAM_ENV=BACKTEST                  # BACKTEST | PAPER | LIVE
 CREAM_BROKER=ALPACA                 # Broker selection
 ```
 
 ### Databases
+
 ```bash
 TURSO_DATABASE_URL=file:local.db    # Local SQLite or Turso URL
+TURSO_AUTH_TOKEN=                   # Turso Cloud auth
 HELIX_URL=http://localhost:6969    # HelixDB endpoint
 ```
 
 ### Market Data
+
 ```bash
-DATABENTO_KEY=                      # Execution-grade market data
-POLYGON_KEY=                        # Candles and options (Massive.com)
+POLYGON_KEY=                        # Candles and options
+DATABENTO_KEY=                      # Execution-grade data
 FMP_KEY=                            # Fundamentals
+ALPHAVANTAGE_KEY=                   # Macro indicators
 ```
 
 ### Broker
+
 ```bash
 ALPACA_KEY=                         # Alpaca API key
 ALPACA_SECRET=                      # Alpaca API secret
 ```
 
 ### LLM
+
 ```bash
 GOOGLE_API_KEY=                     # Gemini models
+ANTHROPIC_API_KEY=                  # Claude extraction
+```
+
+### Prediction Markets
+
+```bash
+KALSHI_API_KEY_ID=                  # Kalshi API key ID
+KALSHI_PRIVATE_KEY_PATH=            # Path to RSA private key
+```
+
+### Authentication
+
+```bash
+GOOGLE_CLIENT_ID=                   # Google OAuth
+GOOGLE_CLIENT_SECRET=               # Google OAuth
+BETTER_AUTH_URL=                    # OAuth callbacks
 ```
 
 ### Dashboard API
+
 ```bash
 PORT=3001                           # Server port
-JWT_SECRET=                         # Auth secret
-RUST_GRPC_URL=http://localhost:50053
-MASTRA_API_URL=http://localhost:4111
+ALLOWED_ORIGINS=                    # CORS origins
 ```
+
+---
+
+## Risk Constraints
+
+### Per-Instrument
+
+- Max units: 1,000 shares/contracts
+- Max notional: $50,000
+- Max % equity: 10%
+
+### Portfolio
+
+- Max gross notional: $500,000
+- Max net notional: $250,000
+- Max leverage: 2.0x
+
+### Options Greeks
+
+- Max delta notional: $100,000
+- Max gamma: 1,000
+- Max vega: $5,000
+- Max theta: -$500/day
+
+---
+
+## Configuration System
+
+Runtime configuration stored in database (no YAML fallback):
+
+### Promotion Workflow
+
+```
+DRAFT (editing) → TEST (sandbox) → ACTIVE (production)
+```
+
+### Config Tables
+
+- `trading_config` - Consensus thresholds, position sizing
+- `agent_configs` - Model selection, temperature, prompts
+- `universe_configs` - Symbol sources, filters
 
 ---
 
 ## Testing Infrastructure
 
 ### Test Frameworks
-| Language | Framework | Config |
-|----------|-----------|--------|
-| TypeScript | bun:test | bunfig.toml |
-| Rust | cargo test + mockall | Cargo.toml |
-| Python | pytest + pytest-asyncio | pyproject.toml |
+
+| Language | Framework |
+|----------|-----------|
+| TypeScript | bun:test |
+| Rust | cargo test + mockall |
+| Python | pytest + pytest-asyncio |
 
 ### Coverage Tiers
-| Tier | Packages | Line/Branch/Function |
-|------|----------|---------------------|
-| Critical | execution-engine, broker, domain | 90/85/90% |
-| Core | indicators, helix, schema | 80/75/80% |
-| Standard | api, research | 70/65/70% |
-| Agent | mastra-kit | 60/50/60% |
 
-### Test Data
-- **Golden datasets**: Snapshot-based regression testing
-- **Testcontainers**: Docker-based integration tests
-
-### Agent Evaluations
-- **DeepEval**: Task completion, G-Eval, answer relevancy
-- **Braintrust**: Experiment tracking, custom scorers
-- **LLM-as-Judge**: Gemini/GPT-4o for semantic evaluation
+| Tier | Packages | Target |
+|------|----------|--------|
+| Critical | execution-engine, broker, domain | 90% |
+| Core | indicators, helix, schema | 80% |
+| Standard | api, research | 70% |
+| Agent | mastra-kit | 60% |
 
 ---
 
 ## CI/CD
 
-### GitHub Actions Workflows
+### GitHub Actions
 
-**test.yml** (main CI):
-- Path-based filtering (only run affected tests)
-- Parallel jobs: unit-ts, unit-rust, unit-python, integration, lint
-- Test gate for merge requirements
+- **test.yml** - Path-based filtering, parallel jobs
+- **buf-check.yml** - Proto linting, breaking changes
+- **deploy.yml** - Hetzner deployment via Docker Compose
 
-**buf-check.yml**:
-- Proto linting and breaking change detection
-- Code generation verification
+---
+
+## Infrastructure
+
+### Deployment (Hetzner + Vercel DNS)
+
+```
+┌─────────────────────────────────────────────────┐
+│              Hetzner VPS (cpx31)                 │
+│                                                  │
+│   Caddy (Auto-HTTPS)                            │
+│     cream.broker → dashboard:3000               │
+│     api.cream.broker → dashboard-api:3001       │
+│                                                  │
+│   Services: Dashboard, Dashboard API, Worker    │
+│   External: Turso Cloud                         │
+└─────────────────────────────────────────────────┘
+```
+
+### Cost (~$64/month)
+
+- Hetzner cpx31: ~$15
+- Turso Pro: ~$29
+- Vercel Pro: ~$20
 
 ---
 
 ## Decision Plan Schema
-
-All trading decisions follow this structure:
 
 ```typescript
 interface DecisionPlan {
@@ -404,122 +508,3 @@ interface Decision {
 ```
 
 **Validation**: Minimum 1.5:1 risk-reward ratio enforced.
-
----
-
-## Risk Constraints
-
-The execution engine enforces these limits before order submission:
-
-### Per-Instrument
-- Max units: 1,000 shares/contracts
-- Max notional: $50,000
-- Max % equity: 10%
-
-### Portfolio
-- Max gross notional: $500,000
-- Max net notional: $250,000
-- Max leverage: 2.0x
-
-### Options Greeks
-- Max delta notional: $100,000
-- Max gamma: 1,000
-- Max vega: $5,000
-- Max theta: -$500/day
-
-### Prediction Markets
-- No new entries within 24h of high-uncertainty events
-- Reduce sizing 30% when macro uncertainty > 0.6
-
----
-
-## Development Workflow
-
-### Starting All Services
-
-```bash
-# Terminal 1: Execution Engine
-cd apps/execution-engine && cargo run
-
-# Terminal 2: API
-cd apps/api && bun run --watch src/index.ts
-
-# Terminal 3: Worker
-cd apps/worker && bun run --watch src/index.ts
-
-# Terminal 4: Dashboard API
-cd apps/dashboard-api && PORT=3001 bun run --watch src/index.ts
-
-# Terminal 5: Dashboard
-cd apps/dashboard && bun run dev
-```
-
-### Building for Production
-
-```bash
-# TypeScript
-bun build src/index.ts --outdir dist --target bun
-
-# Next.js Dashboard
-cd apps/dashboard && bun run build
-
-# Rust
-cargo build --release
-
-# Python
-uv pip install -e "."
-```
-
----
-
-## Configuration System
-
-Runtime configuration is stored in the database (no YAML files):
-
-### Config Promotion Workflow
-```
-DRAFT (editing) → PAPER (testing) → LIVE (production)
-```
-
-- Edit configs in DRAFT state via dashboard
-- "Test in Paper" triggers on-demand OODA cycle
-- "Promote to Live" publishes tested config
-- Rollback to previous versions supported
-
-### Config Tables
-- `trading_config` - Consensus thresholds, position sizing, risk/reward
-- `agent_configs` - Model selection, temperature, prompt overrides
-- `universe_configs` - Symbol sources, filters, include/exclude lists
-
----
-
-## Backtesting
-
-Self-service backtesting from dashboard:
-
-- **Engine**: VectorBT via Python subprocess
-- **Progress**: Real-time WebSocket updates
-- **Data**: Historical OHLCV via @cream/marketdata → Parquet
-- **Results**: Stored in Turso (trades, equity curve, metrics)
-
----
-
-## Documentation
-
-Detailed architecture docs in `docs/plans/`:
-
-| Document | Content |
-|----------|---------|
-| `00-overview.md` | System overview, constraints |
-| `01-architecture.md` | Component design, data flow |
-| `05-agents.md` | Agent specifications, prompts |
-| `09-rust-core.md` | Execution engine design |
-| `14-testing.md` | Testing strategy |
-| `15-implementation.md` | Build phases |
-| `16-tech-stack.md` | Technology decisions |
-
----
-
-## License
-
-AGPL-3.0-only
