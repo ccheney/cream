@@ -14,11 +14,5 @@ export const RISK_MANAGER_CONFIG: AgentConfig = {
     "Systematic constraint checker",
     "Clear about violations and required changes",
   ],
-  tools: [
-    "get_portfolio_state",
-    "web_search",
-    "get_prediction_signals",
-    "context7_resolve-library-id",
-    "context7_query-docs",
-  ],
+  tools: ["get_portfolio_state", "web_search", "get_prediction_signals"],
 };

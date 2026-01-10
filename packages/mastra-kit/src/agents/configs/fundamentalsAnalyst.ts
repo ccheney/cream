@@ -22,7 +22,5 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
     "web_search",
     "get_prediction_signals",
     "get_market_snapshots",
-    "context7_resolve-library-id",
-    "context7_query-docs",
   ],
 };

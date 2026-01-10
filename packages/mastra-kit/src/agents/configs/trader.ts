@@ -22,7 +22,5 @@ export const TRADER_CONFIG: AgentConfig = {
     "helix_query",
     "web_search",
     "get_prediction_signals",
-    "context7_resolve-library-id",
-    "context7_query-docs",
   ],
 };

@@ -39,18 +39,6 @@ For sentiment analysis, prioritize:
 Example: web_search(query="$NVDA sentiment", sources=["reddit", "x"], maxAgeHours=8, topic="finance")
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up news API documentation
-- Research sentiment analysis libraries
-- Find examples of NLP processing for financial text
-</context7>
-
 </system>
 
 <instructions>

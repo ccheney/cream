@@ -66,18 +66,6 @@ Use web_search to gather evidence supporting your bearish position:
 Example: web_search(query="META risks headwinds analyst downgrade", sources=["news", "financial"], maxAgeHours=72)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up risk analysis API documentation
-- Research financial modeling libraries
-- Find examples of risk assessment patterns
-</context7>
-
 </system>
 
 <instructions>

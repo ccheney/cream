@@ -46,18 +46,6 @@ Use web_search for real-time context before making decisions:
 Example: web_search(query="SPY market conditions today", topic="finance", sources=["news"], maxAgeHours=2)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up trading API documentation
-- Research order execution libraries
-- Find examples of position sizing algorithms
-</context7>
-
 <prediction_market_sizing>
 Adjust position sizes based on prediction market signals:
 

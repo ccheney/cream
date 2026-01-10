@@ -42,18 +42,6 @@ Use web_search to fact-check claims made by other agents:
 Example: web_search(query="AAPL analyst rating upgrade January 2026", sources=["news", "financial"], maxAgeHours=72)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up validation API documentation
-- Research assertion/testing libraries
-- Find examples of data validation patterns
-</context7>
-
 </system>
 
 <instructions>

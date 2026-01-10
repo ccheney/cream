@@ -40,18 +40,6 @@ For technical analysis, use web_search to find:
 Example: web_search(query="AAPL technical analysis breakout", sources=["reddit", "x"], maxAgeHours=24)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up API documentation for technical indicator libraries
-- Find code examples for chart pattern detection
-- Research financial data APIs and their usage
-</context7>
-
 </system>
 
 <instructions>

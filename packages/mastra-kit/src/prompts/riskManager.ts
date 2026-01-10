@@ -45,18 +45,6 @@ Monitor for risk events using web_search:
 Example: web_search(query="market volatility geopolitical risk", topic="news", sources=["news"], maxAgeHours=4)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up risk management API documentation
-- Research portfolio optimization libraries
-- Find examples of risk calculation algorithms
-</context7>
-
 <prediction_market_risk_rules>
 When prediction market data is provided, enforce these additional constraints:
 

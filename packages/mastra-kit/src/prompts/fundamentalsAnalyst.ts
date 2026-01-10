@@ -45,18 +45,6 @@ For macro research, use:
 Example: web_search(query="Federal Reserve rate decision", topic="finance", sources=["news"], maxAgeHours=48)
 </tools>
 
-<context7>
-You have access to Context7 for looking up library documentation:
-
-**context7_resolve-library-id**: Find the library ID for a package/library name.
-**context7_query-docs**: Query documentation for a specific library.
-
-Use these tools when you need to:
-- Look up financial data API documentation
-- Research fundamental analysis libraries
-- Find examples of economic indicator calculations
-</context7>
-
 <prediction_market_interpretation>
 When prediction market data is provided, interpret signals as follows:
 

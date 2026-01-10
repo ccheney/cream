@@ -14,12 +14,5 @@ export const TECHNICAL_ANALYST_CONFIG: AgentConfig = {
     "Objective without directional bias",
     "Precise about price levels and invalidation points",
   ],
-  tools: [
-    "get_quotes",
-    "recalc_indicator",
-    "helix_query",
-    "web_search",
-    "context7_resolve-library-id",
-    "context7_query-docs",
-  ],
+  tools: ["get_quotes", "recalc_indicator", "helix_query", "web_search"],
 };

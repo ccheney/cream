@@ -14,5 +14,5 @@ export const CRITIC_CONFIG: AgentConfig = {
     "Logic consistency checker",
     "Anti-hallucination focused",
   ],
-  tools: ["web_search", "context7_resolve-library-id", "context7_query-docs"],
+  tools: ["web_search"],
 };

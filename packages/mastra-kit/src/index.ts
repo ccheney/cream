@@ -35,10 +35,4 @@ export * from "./types.js";
 
 export * from "./services/index.js";
 
-// ============================================
-// MCP Clients
-// ============================================
-
-export * from "./mcp/index.js";
-
 // Note: AGENT_TYPES and AgentType are exported from ./types.js
