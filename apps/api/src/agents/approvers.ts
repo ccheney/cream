@@ -4,6 +4,7 @@
  * Contains Risk Manager and Critic agents for plan validation.
  */
 
+import type { IndicatorSnapshot } from "@cream/indicators";
 import type { AgentType } from "@cream/mastra-kit";
 
 import type { AnalystOutputs } from "./analysts.js";
@@ -38,15 +39,77 @@ export const criticAgent = createAgent("critic");
 // ============================================
 
 /**
+ * Build risk indicators summary from snapshots.
+ */
+function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapshot>): string {
+  if (!indicators || Object.keys(indicators).length === 0) {
+    return "";
+  }
+
+  const lines: string[] = ["Risk-Relevant Indicators:"];
+
+  for (const [symbol, snapshot] of Object.entries(indicators)) {
+    const riskParts: string[] = [];
+
+    // Volatility metrics
+    if (snapshot.price.realized_vol_20d !== null) {
+      riskParts.push(`RV=${(snapshot.price.realized_vol_20d * 100).toFixed(1)}%`);
+    }
+    if (snapshot.options.atm_iv !== null) {
+      riskParts.push(`IV=${(snapshot.options.atm_iv * 100).toFixed(1)}%`);
+    }
+    if (snapshot.price.atr_14 !== null) {
+      riskParts.push(`ATR=${snapshot.price.atr_14.toFixed(2)}`);
+    }
+
+    // Liquidity risk
+    if (snapshot.liquidity.bid_ask_spread_pct !== null) {
+      const spreadWarning = snapshot.liquidity.bid_ask_spread_pct > 0.005 ? " [WIDE]" : "";
+      riskParts.push(
+        `Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${spreadWarning}`
+      );
+    }
+
+    // Short squeeze risk
+    if (
+      snapshot.short_interest.short_pct_float !== null &&
+      snapshot.short_interest.short_pct_float > 0.1
+    ) {
+      riskParts.push(
+        `SI=${(snapshot.short_interest.short_pct_float * 100).toFixed(1)}% [ELEVATED]`
+      );
+    }
+
+    // Options sentiment
+    if (snapshot.options.put_call_ratio_volume !== null) {
+      const pcSignal =
+        snapshot.options.put_call_ratio_volume > 1.2
+          ? " [BEARISH]"
+          : snapshot.options.put_call_ratio_volume < 0.7
+            ? " [BULLISH]"
+            : "";
+      riskParts.push(`P/C=${snapshot.options.put_call_ratio_volume.toFixed(2)}${pcSignal}`);
+    }
+
+    if (riskParts.length > 0) {
+      lines.push(`- ${symbol}: ${riskParts.join(", ")}`);
+    }
+  }
+
+  return lines.length > 1 ? `\n${lines.join("\n")}\n` : "";
+}
+
+/**
  * Run Risk Manager agent to validate plan.
- * Considers Factor Zoo decay alerts as risk factors.
+ * Considers Factor Zoo decay alerts and risk indicators.
  */
 export async function runRiskManager(
   plan: DecisionPlan,
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -55,6 +118,8 @@ ${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.
 
 NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
     : "";
+
+  const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
   const prompt = `Validate this trading plan against risk constraints:
 
@@ -65,7 +130,13 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Risk Constraints:
-${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
+${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
+RISK VALIDATION GUIDANCE:
+- High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
+- Wide bid-ask spreads (> 0.5%) indicate liquidity risk - reject large orders
+- Short interest > 20% of float signals squeeze risk for short positions
+- ATR should inform stop-loss distances (use 2-3x ATR minimum)
+- Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
 
   const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
@@ -109,7 +180,7 @@ Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
 /**
  * Run both approval agents in parallel.
- * Passes Factor Zoo context to Risk Manager for decay-aware validation.
+ * Passes Factor Zoo context and indicators to Risk Manager for comprehensive validation.
  */
 export async function runApprovalParallel(
   plan: DecisionPlan,
@@ -118,13 +189,14 @@ export async function runApprovalParallel(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
 }> {
   const [riskManager, critic] = await Promise.all([
-    runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs),
+    runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs, indicators),
     runCritic(plan, analystOutputs, debateOutputs, agentConfigs),
   ]);
 
@@ -190,7 +262,8 @@ export async function runRiskManagerStreaming(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -199,6 +272,8 @@ ${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.
 
 NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
     : "";
+
+  const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
   const prompt = `Validate this trading plan against risk constraints:
 
@@ -209,7 +284,13 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Risk Constraints:
-${JSON.stringify(constraints ?? {}, null, 2)}${decayRiskSection}`;
+${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
+RISK VALIDATION GUIDANCE:
+- High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
+- Wide bid-ask spreads (> 0.5%) indicate liquidity risk - reject large orders
+- Short interest > 20% of float signals squeeze risk for short positions
+- ATR should inform stop-loss distances (use 2-3x ATR minimum)
+- Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
 
   const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
@@ -279,7 +360,8 @@ export async function runApprovalParallelStreaming(
   portfolioState?: Record<string, unknown>,
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
@@ -291,7 +373,8 @@ export async function runApprovalParallelStreaming(
       portfolioState,
       constraints,
       factorZooContext,
-      agentConfigs
+      agentConfigs,
+      indicators
     ),
     runCriticStreaming(plan, analystOutputs, debateOutputs, onChunk, agentConfigs),
   ]);

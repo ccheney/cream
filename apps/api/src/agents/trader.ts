@@ -7,7 +7,7 @@
 import type { AgentType } from "@cream/mastra-kit";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildFactorZooContext } from "./prompts.js";
+import { buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
 import type {
   AgentConfigEntry,
@@ -43,7 +43,7 @@ export interface DebateOutputs {
 
 /**
  * Run Trader agent to synthesize DecisionPlan.
- * Incorporates Factor Zoo signals (Mega-Alpha) when available.
+ * Incorporates Factor Zoo signals (Mega-Alpha) and comprehensive indicators when available.
  */
 export async function runTrader(
   context: AgentContext,
@@ -51,6 +51,7 @@ export async function runTrader(
   portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
   const factorZooContext = buildFactorZooContext(context.factorZoo);
+  const indicatorContext = buildIndicatorContext(context.indicators);
 
   const prompt = `Synthesize the debate into a concrete trading plan:
 
@@ -59,20 +60,26 @@ ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
 Bearish Research:
 ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${factorZooContext}
+${factorZooContext}${indicatorContext}
 Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
 Timestamp: ${new Date().toISOString()}
 
+POSITION SIZING GUIDANCE from indicators:
+- Use ATR for stop-loss distance calculations (ATR multiples)
+- Consider volatility (realized_vol, ATM IV) for position sizing
+- Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
+- Short interest > 20% signals potential squeeze risk
 ${
   context.factorZoo
-    ? `IMPORTANT: Factor Zoo signals provide quantitative evidence. The Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents the weighted combination of ${context.factorZoo.stats.activeCount} active factors.
+    ? `
+FACTOR ZOO SIGNALS:
+- Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
 - Use Mega-Alpha direction to inform overall market stance
 - Weight position sizing by signal strength
-- Be cautious of factors showing decay (IC degradation)
-- Critical alerts indicate factors losing predictive power`
+- Be cautious of factors showing decay (IC degradation)`
     : ""
 }`;
 
@@ -144,6 +151,7 @@ export async function runTraderStreaming(
   portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
   const factorZooContext = buildFactorZooContext(context.factorZoo);
+  const indicatorContext = buildIndicatorContext(context.indicators);
 
   const prompt = `Synthesize the debate into a concrete trading plan:
 
@@ -152,20 +160,26 @@ ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
 Bearish Research:
 ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${factorZooContext}
+${factorZooContext}${indicatorContext}
 Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
 Timestamp: ${new Date().toISOString()}
 
+POSITION SIZING GUIDANCE from indicators:
+- Use ATR for stop-loss distance calculations (ATR multiples)
+- Consider volatility (realized_vol, ATM IV) for position sizing
+- Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
+- Short interest > 20% signals potential squeeze risk
 ${
   context.factorZoo
-    ? `IMPORTANT: Factor Zoo signals provide quantitative evidence. The Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents the weighted combination of ${context.factorZoo.stats.activeCount} active factors.
+    ? `
+FACTOR ZOO SIGNALS:
+- Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
 - Use Mega-Alpha direction to inform overall market stance
 - Weight position sizing by signal strength
-- Be cautious of factors showing decay (IC degradation)
-- Critical alerts indicate factors losing predictive power`
+- Be cautious of factors showing decay (IC degradation)`
     : ""
 }`;
 

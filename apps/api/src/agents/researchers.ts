@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
+import { buildIndicatorSummary } from "./prompts.js";
 import { BearishResearchSchema, BullishResearchSchema } from "./schemas.js";
 import type {
   AgentConfigEntry,
@@ -43,6 +44,9 @@ export async function runBullishResearcher(
   context: AgentContext,
   analystOutputs: AnalystOutputs
 ): Promise<BullishResearchOutput[]> {
+  // Build compact indicator summary for momentum/trend signals
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
@@ -50,12 +54,21 @@ ${JSON.stringify(analystOutputs.news, null, 2)}
 
 Fundamentals Analysis:
 ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
-
+${indicatorSummary ? `\nKey Technical Signals:\n${indicatorSummary}` : ""}
 Memory context (similar historical cases):
 ${JSON.stringify(context.memory ?? {}, null, 2)}
 
 Symbols: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Build the bullish thesis considering:
+- RSI signals: OVERSOLD suggests potential reversal opportunity
+- MACD: Bullish crossovers or strong positive momentum support the case
+- Trend: UPTREND or STRONG UPTREND from moving averages
+- P/C ratio: BULLISH SENTIMENT from low put/call ratios
+- Quality factors: High gross profitability, strong cash flow quality
+
+Weight technical factors alongside fundamental drivers.`;
 
   const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
@@ -76,6 +89,9 @@ export async function runBearishResearcher(
   context: AgentContext,
   analystOutputs: AnalystOutputs
 ): Promise<BearishResearchOutput[]> {
+  // Build compact indicator summary for momentum/trend signals
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
@@ -83,12 +99,22 @@ ${JSON.stringify(analystOutputs.news, null, 2)}
 
 Fundamentals Analysis:
 ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
-
+${indicatorSummary ? `\nKey Technical Signals:\n${indicatorSummary}` : ""}
 Memory context (similar historical cases):
 ${JSON.stringify(context.memory ?? {}, null, 2)}
 
 Symbols: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Build the bearish thesis considering:
+- RSI signals: OVERBOUGHT suggests potential reversal risk
+- MACD: Bearish crossovers or negative momentum support the case
+- Trend: DOWNTREND or STRONG DOWNTREND from moving averages
+- P/C ratio: BEARISH SENTIMENT from high put/call ratios
+- Quality concerns: High accruals, Beneish M-Score > -2.22 (manipulation risk)
+- Asset growth: High asset growth often predicts lower future returns
+
+Weight technical factors alongside fundamental headwinds.`;
 
   const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
@@ -178,6 +204,9 @@ export async function runBullishResearcherStreaming(
   analystOutputs: AnalystOutputs,
   onChunk: OnStreamChunk
 ): Promise<BullishResearchOutput[]> {
+  // Build compact indicator summary for momentum/trend signals
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
@@ -185,12 +214,21 @@ ${JSON.stringify(analystOutputs.news, null, 2)}
 
 Fundamentals Analysis:
 ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
-
+${indicatorSummary ? `\nKey Technical Signals:\n${indicatorSummary}` : ""}
 Memory context (similar historical cases):
 ${JSON.stringify(context.memory ?? {}, null, 2)}
 
 Symbols: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Build the bullish thesis considering:
+- RSI signals: OVERSOLD suggests potential reversal opportunity
+- MACD: Bullish crossovers or strong positive momentum support the case
+- Trend: UPTREND or STRONG UPTREND from moving averages
+- P/C ratio: BULLISH SENTIMENT from low put/call ratios
+- Quality factors: High gross profitability, strong cash flow quality
+
+Weight technical factors alongside fundamental drivers.`;
 
   const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
@@ -217,6 +255,9 @@ export async function runBearishResearcherStreaming(
   analystOutputs: AnalystOutputs,
   onChunk: OnStreamChunk
 ): Promise<BearishResearchOutput[]> {
+  // Build compact indicator summary for momentum/trend signals
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
@@ -224,12 +265,22 @@ ${JSON.stringify(analystOutputs.news, null, 2)}
 
 Fundamentals Analysis:
 ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
-
+${indicatorSummary ? `\nKey Technical Signals:\n${indicatorSummary}` : ""}
 Memory context (similar historical cases):
 ${JSON.stringify(context.memory ?? {}, null, 2)}
 
 Symbols: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Build the bearish thesis considering:
+- RSI signals: OVERBOUGHT suggests potential reversal risk
+- MACD: Bearish crossovers or negative momentum support the case
+- Trend: DOWNTREND or STRONG DOWNTREND from moving averages
+- P/C ratio: BEARISH SENTIMENT from high put/call ratios
+- Quality concerns: High accruals, Beneish M-Score > -2.22 (manipulation risk)
+- Asset growth: High asset growth often predicts lower future returns
+
+Weight technical factors alongside fundamental headwinds.`;
 
   const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
