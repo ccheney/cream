@@ -146,8 +146,7 @@ jobs:
 
       - name: Run tests
         if: steps.rust-check.outputs.exists == 'true'
-        run: cargo test --workspace
-        working-directory: apps/execution-engine
+        run: bun run test:rs
 
   # ============================================
   # Python Tests
@@ -182,14 +181,12 @@ jobs:
         if: steps.python-check.outputs.exists == 'true'
         run: pip install uv
 
-      - name: Run research tests
+      - name: Run tests
         if: steps.python-check.outputs.exists == 'true'
         run: |
-          if [ -f "packages/research/pyproject.toml" ]; then
-            cd packages/research
-            uv pip install -e ".[dev]" --system || true
-            pytest tests/ || echo "No tests found"
-          fi
+          cd packages/research
+          uv pip install -e ".[dev]" --system || true
+          bun run test:py
 
   # ============================================
   # Integration Tests (using testcontainers)

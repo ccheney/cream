@@ -13,6 +13,8 @@
     "build": "turbo run build",
     "test": "NODE_ENV=test CREAM_ENV=BACKTEST turbo run test --filter='!./apps/dashboard'",
     "test:ts": "NODE_ENV=test CREAM_ENV=BACKTEST turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine' --filter='!@cream/research' --filter='!@cream/vision-service'",
+    "test:rs": "cargo test --workspace --manifest-path apps/execution-engine/Cargo.toml",
+    "test:py": "cd packages/research && uv run --extra dev pytest",
     "test:dashboard": "cd apps/dashboard && bun test src/",
     "test:integration": "CREAM_ENV=BACKTEST bun test ./**/tests/integration/*.test.ts --timeout 120000",
     "typecheck": "turbo run typecheck",
