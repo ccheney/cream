@@ -26,12 +26,16 @@ from research.greeks.black_scholes import (
     call_rho,
     call_theta,
     call_vega,
+    charm,
+    compute_all_greeks,
     put_delta,
     put_gamma,
     put_price,
     put_rho,
     put_theta,
     put_vega,
+    vanna,
+    vomma,
 )
 from research.greeks.implied_volatility import (
     ImpliedVolatilitySolver,
@@ -41,9 +45,10 @@ from research.greeks.multi_leg import MultiLegGreeks, OptionLeg
 from research.greeks.portfolio import PortfolioGreeks
 
 __all__ = [
-    # Black-Scholes Greeks functions
+    # Black-Scholes pricing
     "call_price",
     "put_price",
+    # First-order Greeks
     "call_delta",
     "put_delta",
     "call_gamma",
@@ -54,6 +59,12 @@ __all__ = [
     "put_vega",
     "call_rho",
     "put_rho",
+    # Second-order Greeks
+    "vanna",
+    "charm",
+    "vomma",
+    # Calculator
+    "compute_all_greeks",
     # Classes
     "BlackScholesGreeks",
     "ImpliedVolatilitySolver",
