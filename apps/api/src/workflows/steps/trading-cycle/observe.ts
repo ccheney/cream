@@ -2,18 +2,85 @@
  * Observe Phase
  *
  * Market data fetching for the trading cycle workflow.
+ * Now includes indicator calculation via IndicatorService.
  */
 
 import type { ExecutionContext } from "@cream/domain";
 import { isBacktest } from "@cream/domain";
-import { createMarketDataAdapter } from "@cream/marketdata";
-
+import {
+  createLiquidityCalculator,
+  createPriceCalculator,
+  IndicatorService,
+  type IndicatorSnapshot,
+  type MarketDataProvider,
+  type OHLCVBar,
+  type Quote,
+} from "@cream/indicators";
+import {
+  type AdapterCandle,
+  createMarketDataAdapter,
+  type MarketDataAdapter,
+} from "@cream/marketdata";
 import {
   FIXTURE_TIMESTAMP,
   getCandleFixtures,
   getSnapshotFixture,
 } from "../../../../fixtures/market/index.js";
+import { log } from "./logger.js";
 import type { CandleData, MarketSnapshot, QuoteData } from "./types.js";
+
+// ============================================
+// Adapter: MarketDataAdapter -> MarketDataProvider
+// ============================================
+
+/**
+ * Wraps the marketdata adapter to provide the MarketDataProvider interface
+ * required by IndicatorService.
+ */
+class MarketDataProviderAdapter implements MarketDataProvider {
+  constructor(private readonly adapter: MarketDataAdapter) {}
+
+  async getBars(symbol: string, limit: number): Promise<OHLCVBar[]> {
+    const toDate = new Date();
+    const daysNeeded = Math.ceil(limit / 24) + 14; // +14 days buffer for 1h bars
+    const fromDate = new Date(toDate.getTime() - daysNeeded * 24 * 60 * 60 * 1000);
+
+    const candles = await this.adapter.getCandles(
+      symbol,
+      "1h",
+      fromDate.toISOString().slice(0, 10),
+      toDate.toISOString().slice(0, 10)
+    );
+
+    return candles.slice(-limit).map(this.candleToBar);
+  }
+
+  async getQuote(symbol: string): Promise<Quote | null> {
+    const adapterQuote = await this.adapter.getQuote(symbol);
+    if (!adapterQuote) {
+      return null;
+    }
+
+    return {
+      timestamp: adapterQuote.timestamp,
+      bidPrice: adapterQuote.bid,
+      bidSize: adapterQuote.bidSize,
+      askPrice: adapterQuote.ask,
+      askSize: adapterQuote.askSize,
+    };
+  }
+
+  private candleToBar(candle: AdapterCandle): OHLCVBar {
+    return {
+      timestamp: candle.timestamp,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      volume: candle.volume,
+    };
+  }
+}
 
 // ============================================
 // Market Data Fetching
@@ -23,11 +90,12 @@ import type { CandleData, MarketSnapshot, QuoteData } from "./types.js";
  * Fetch market snapshot for the given instruments.
  *
  * In BACKTEST mode, uses deterministic fixture data for reproducible behavior.
- * In PAPER/LIVE mode, fetches real market data via the market data adapter.
+ * In PAPER/LIVE mode, fetches real market data via the market data adapter
+ * and calculates indicators via IndicatorService.
  *
  * @param instruments - Array of ticker symbols
  * @param ctx - Execution context for environment detection
- * @returns Market snapshot with candles and quotes for each instrument
+ * @returns Market snapshot with candles, quotes, and indicators for each instrument
  */
 export async function fetchMarketSnapshot(
   instruments: string[],
@@ -86,12 +154,75 @@ export async function fetchMarketSnapshot(
     }
   }
 
+  // Fetch indicators via IndicatorService
+  const indicators = await fetchIndicators(instruments, adapter);
+
   return {
     instruments,
     candles,
     quotes,
+    indicators,
     timestamp,
   };
+}
+
+/**
+ * Fetch indicator snapshots for the given instruments using IndicatorService.
+ *
+ * Creates an IndicatorService with the marketdata adapter wrapped as a
+ * MarketDataProvider, then fetches snapshots for all symbols in parallel.
+ *
+ * @param instruments - Array of ticker symbols
+ * @param adapter - Market data adapter to use
+ * @returns Record of symbol to IndicatorSnapshot
+ */
+async function fetchIndicators(
+  instruments: string[],
+  adapter: MarketDataAdapter
+): Promise<Record<string, IndicatorSnapshot>> {
+  const startTime = Date.now();
+
+  // Wrap the marketdata adapter as a MarketDataProvider
+  const marketDataProvider = new MarketDataProviderAdapter(adapter);
+
+  // Create IndicatorService with price and liquidity calculators
+  const indicatorService = new IndicatorService(
+    {
+      marketData: marketDataProvider,
+      priceCalculator: createPriceCalculator(),
+      liquidityCalculator: createLiquidityCalculator(),
+    },
+    {
+      barsLookback: 200,
+      includeBatchIndicators: false, // Batch indicators require DB repos
+      includeOptionsIndicators: false, // Options require options data provider
+      enableCache: true,
+      bypassCache: false,
+    }
+  );
+
+  try {
+    const snapshots = await indicatorService.getSnapshots(instruments);
+
+    // Convert Map to Record
+    const result: Record<string, IndicatorSnapshot> = {};
+    for (const [symbol, snapshot] of snapshots) {
+      result[symbol] = snapshot;
+    }
+
+    log.debug(
+      {
+        count: instruments.length,
+        duration: Date.now() - startTime,
+      },
+      "Fetched indicator snapshots"
+    );
+
+    return result;
+  } catch (error) {
+    log.error({ error }, "Failed to fetch indicator snapshots");
+    return {};
+  }
 }
 
 /**

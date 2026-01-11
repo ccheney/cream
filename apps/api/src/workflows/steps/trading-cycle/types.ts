@@ -5,6 +5,7 @@
  */
 
 import type { ExecutionContext } from "@cream/domain";
+import type { IndicatorSnapshot } from "@cream/indicators";
 import type { ThesisState } from "@cream/storage";
 
 import type { OnStreamChunk } from "../../../agents/mastra-agents.js";
@@ -128,6 +129,8 @@ export interface MarketSnapshot {
   candles: Record<string, CandleData[]>;
   /** Quote data keyed by symbol */
   quotes: Record<string, QuoteData>;
+  /** Indicator snapshots keyed by symbol (from IndicatorService) */
+  indicators?: Record<string, IndicatorSnapshot>;
   /** Timestamp when the snapshot was created */
   timestamp: number;
 }

@@ -243,6 +243,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     cycleId,
     symbols: instruments,
     snapshots: marketSnapshot.candles,
+    indicators: marketSnapshot.indicators,
     memory: { relevantCases: memoryContext.relevantCases },
     externalContext: {
       news: externalContext?.news ?? [],

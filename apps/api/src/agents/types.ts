@@ -4,6 +4,7 @@
  * Contains all interfaces and type definitions used across agent modules.
  */
 
+import type { IndicatorSnapshot } from "@cream/indicators";
 import type { AgentType } from "@cream/mastra-kit";
 
 // Re-export types from @cream/mastra-kit for convenience
@@ -29,6 +30,8 @@ export interface AgentContext {
   cycleId: string;
   symbols: string[];
   snapshots: Record<string, unknown>;
+  /** Indicator snapshots per symbol from IndicatorService */
+  indicators?: Record<string, IndicatorSnapshot>;
   memory?: Record<string, unknown>;
   externalContext?: Record<string, unknown>;
   /** Recent external events from database (news, macro, transcripts) */
