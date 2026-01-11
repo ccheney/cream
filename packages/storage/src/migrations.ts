@@ -1,4 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
+import { log } from "./logger.js";
 import type { TursoClient } from "./turso.js";
 
 export interface Migration {
@@ -44,7 +45,7 @@ export async function runMigrations(
     migrationsDir = DEFAULT_MIGRATIONS_DIR,
     targetVersion,
     dryRun = false,
-    logger = console.log,
+    logger = (msg: string) => log.info({}, msg),
   } = options;
 
   const startTime = Date.now();
@@ -116,7 +117,7 @@ export async function rollbackMigrations(
     migrationsDir = DEFAULT_MIGRATIONS_DIR,
     targetVersion = 0,
     dryRun = false,
-    logger = console.log,
+    logger = (msg: string) => log.info({}, msg),
   } = options;
 
   const startTime = Date.now();

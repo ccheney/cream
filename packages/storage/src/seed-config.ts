@@ -18,6 +18,7 @@
  */
 
 import { createContext } from "@cream/domain";
+import { log } from "./logger.js";
 import {
   AGENT_TYPES,
   AgentConfigsRepository,
@@ -99,8 +100,7 @@ function parseArgs(): SeedOptions {
     if (["BACKTEST", "PAPER", "LIVE"].includes(envValue)) {
       environments = [envValue];
     } else {
-      // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-      console.error(`Invalid environment: ${envValue}. Must be BACKTEST, PAPER, or LIVE.`);
+      log.error({ envValue }, "Invalid environment. Must be BACKTEST, PAPER, or LIVE.");
       process.exit(1);
     }
   }
@@ -205,11 +205,9 @@ async function seedEnvironment(
 async function main(): Promise<void> {
   const options = parseArgs();
 
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.log("🌱 Seeding runtime configuration...\n");
+  log.info({}, "Seeding runtime configuration");
   if (options.force) {
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log("⚠️  Force mode enabled - existing configs will be replaced\n");
+    log.warn({}, "Force mode enabled - existing configs will be replaced");
   }
 
   // createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
@@ -224,8 +222,7 @@ async function main(): Promise<void> {
   const results: SeedResult[] = [];
 
   for (const env of options.environments) {
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`📦 Seeding ${env} environment...`);
+    log.info({ environment: env }, "Seeding environment");
     try {
       const result = await seedEnvironment(
         env,
@@ -237,49 +234,31 @@ async function main(): Promise<void> {
       );
       results.push(result);
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-      console.error(`   ❌ Failed to seed ${env}:`, error);
+      log.error(
+        { environment: env, error: error instanceof Error ? error.message : String(error) },
+        "Failed to seed environment"
+      );
       process.exit(1);
     }
   }
 
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.log("\n✅ Seed complete!\n");
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.log("Summary:");
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.log("─".repeat(50));
+  log.info({}, "Seed complete");
 
   for (const result of results) {
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`\n${result.environment}:`);
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Trading config:     ${formatStatus(result.trading)}`);
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Agent configs:      ${formatStatus(result.agents)}`);
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Universe config:    ${formatStatus(result.universe)}`);
-    // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-    console.log(`  Constraints config: ${formatStatus(result.constraints)}`);
-  }
-
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.log("\n");
-}
-
-function formatStatus(status: "created" | "skipped" | "replaced"): string {
-  switch (status) {
-    case "created":
-      return "✨ Created";
-    case "skipped":
-      return "⏭️  Skipped (already exists)";
-    case "replaced":
-      return "🔄 Replaced";
+    log.info(
+      {
+        environment: result.environment,
+        trading: result.trading,
+        agents: result.agents,
+        universe: result.universe,
+        constraints: result.constraints,
+      },
+      "Environment seed summary"
+    );
   }
 }
 
 main().catch((error) => {
-  // biome-ignore lint/suspicious/noConsole: CLI script requires console output
-  console.error("Fatal error:", error);
+  log.error({ error: error instanceof Error ? error.message : String(error) }, "Fatal error");
   process.exit(1);
 });
