@@ -46,6 +46,7 @@
 export { default as agentsRoutes } from "./agents.js";
 export { default as alertsRoutes } from "./alerts.js";
 export { default as backtestRoutes } from "./backtest.js";
+export { default as batchStatusRoutes } from "./batch-status.js";
 export { default as configRoutes } from "./config.js";
 export { default as decisionsRoutes } from "./decisions.js";
 export { default as filingsRoutes } from "./filings.js";
