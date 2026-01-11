@@ -8,6 +8,25 @@
  */
 
 export {
+  // Types
+  type AlpacaActionType,
+  type AlpacaCorporateAction,
+  type AlpacaCorporateActionsClient,
+  // Batch job
+  CorporateActionsBatchJob,
+  type CorporateActionsBatchJobConfig,
+  // Calculation functions (exported for testing)
+  calculateDaysToExDividend,
+  calculateDividendGrowth,
+  calculateDividendIndicators,
+  calculateSplitAdjustmentFactor,
+  calculateTrailingDividendYield,
+  type DividendIndicators,
+  hasPendingSplit,
+  mapAlpacaActionType,
+  type PriceProvider,
+} from "./corporate-actions-batch.js";
+export {
   type BatchJobResult,
   // Calculation functions (exported for testing)
   calculateAccrualsRatio,
@@ -28,6 +47,26 @@ export {
 } from "./fundamentals-batch.js";
 
 export {
+  // Types
+  type AggregatedSentiment,
+  // Calculation functions (exported for testing)
+  aggregateSentimentScores,
+  calculateRecencyWeight,
+  calculateSentimentMomentum,
+  calculateSentimentStrength,
+  computeSentimentScore,
+  detectEventRisk,
+  type EventType,
+  type ExtractedSentiment,
+  // Batch job
+  SentimentAggregationJob,
+  type SentimentBatchJobConfig,
+  type SentimentClassification,
+  // Sentiment data provider interface
+  type SentimentDataProvider,
+  type SentimentScoringConfig,
+} from "./sentiment-batch.js";
+export {
   // Calculation functions (exported for testing)
   calculateShortInterestMomentum,
   calculateShortInterestRatio,
@@ -43,24 +82,3 @@ export {
   ShortInterestBatchJob,
   type ShortInterestBatchJobConfig,
 } from "./short-interest-batch.js";
-
-export {
-  // Calculation functions (exported for testing)
-  aggregateSentimentScores,
-  calculateRecencyWeight,
-  calculateSentimentMomentum,
-  calculateSentimentStrength,
-  computeSentimentScore,
-  detectEventRisk,
-  // Types
-  type AggregatedSentiment,
-  type EventType,
-  type ExtractedSentiment,
-  type SentimentClassification,
-  // Sentiment data provider interface
-  type SentimentDataProvider,
-  // Batch job
-  SentimentAggregationJob,
-  type SentimentBatchJobConfig,
-  type SentimentScoringConfig,
-} from "./sentiment-batch.js";
