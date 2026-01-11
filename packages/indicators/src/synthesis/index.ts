@@ -93,19 +93,24 @@ export {
 } from "./ic.js";
 // Production Monitoring
 export {
+  computeHealthStatus,
+  computeRollingMetricsFromHistory,
   type DailyICMetrics,
   DailyICMetricsSchema,
   type DecisionAttribution,
   DecisionAttributionSchema,
+  detectCrowding,
+  evaluateRetirementConditions,
   IndicatorMonitor,
   MONITORING_DEFAULTS,
   type RetirementCheck,
+  type RetirementCheckOptions,
   RetirementCheckSchema,
   type RetirementReason,
   RetirementReasonSchema,
   type RollingMetrics,
   RollingMetricsSchema,
-} from "./monitoring.js";
+} from "./monitoring/index.js";
 // Orthogonality Checker (Correlation + VIF)
 export {
   type CorrelationResult,
