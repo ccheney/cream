@@ -37,7 +37,7 @@ export {
   type HealthCheckResult,
   type HealthStatus,
   type SystemHealth,
-} from "./health";
+} from "./health/index.js";
 // API Key Rotation
 export {
   type ApiKey,
