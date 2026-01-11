@@ -15,7 +15,7 @@
     "format": "biome format --write src/ tests/"
   },
   "dependencies": {
-    "@alpacahq/typescript-sdk": "0.0.32-preview",
+    "@msgpack/msgpack": "^3.0.0",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/indicators": "workspace:*",

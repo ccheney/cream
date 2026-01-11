@@ -4,21 +4,26 @@
  * Real-time streaming market data via WebSocket.
  *
  * Supports:
- * - Stock quotes, trades, and bars
- * - Options quotes and trades
- * - Crypto quotes, trades, and bars
+ * - Stock quotes, trades, and bars (JSON)
+ * - Options quotes and trades (msgpack)
+ * - News articles (JSON)
+ * - Crypto quotes, trades, and bars (JSON)
  *
  * Endpoints:
  * - Stocks (SIP): wss://stream.data.alpaca.markets/v2/sip
  * - Stocks (IEX): wss://stream.data.alpaca.markets/v2/iex
  * - Options: wss://stream.data.alpaca.markets/v1beta1/options
+ * - News: wss://stream.data.alpaca.markets/v1beta1/news
  * - Crypto: wss://stream.data.alpaca.markets/v1beta3/crypto/us
  * - Test: wss://stream.data.alpaca.markets/v2/test
  *
  * @see https://docs.alpaca.markets/docs/streaming-market-data
+ * @see https://docs.alpaca.markets/docs/real-time-option-data
+ * @see https://docs.alpaca.markets/docs/streaming-real-time-news
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import { decode as msgpackDecode } from "@msgpack/msgpack";
 import WebSocket from "ws";
 import { z } from "zod";
 
@@ -33,7 +38,10 @@ const ALPACA_WS_ENDPOINTS = {
     test: "wss://stream.data.alpaca.markets/v2/test", // Test stream (24/5)
   },
   options: {
-    opra: "wss://stream.data.alpaca.markets/v1beta1/options",
+    opra: "wss://stream.data.alpaca.markets/v1beta1/options", // OPRA feed (msgpack only)
+  },
+  news: {
+    default: "wss://stream.data.alpaca.markets/v1beta1/news", // News stream
   },
   crypto: {
     us: "wss://stream.data.alpaca.markets/v1beta3/crypto/us",
@@ -41,7 +49,7 @@ const ALPACA_WS_ENDPOINTS = {
 } as const;
 
 // ============================================
-// Message Schemas
+// Message Schemas - Stocks
 // ============================================
 
 export const AlpacaWsQuoteMessageSchema = z.object({
@@ -98,6 +106,29 @@ export const AlpacaWsStatusMessageSchema = z.object({
 });
 export type AlpacaWsStatusMessage = z.infer<typeof AlpacaWsStatusMessageSchema>;
 
+// ============================================
+// Message Schemas - News
+// ============================================
+
+export const AlpacaWsNewsMessageSchema = z.object({
+  T: z.literal("n"), // Message type
+  id: z.number(), // Article ID
+  headline: z.string(), // Article headline
+  summary: z.string().optional(), // Article summary
+  author: z.string().optional(), // Author name
+  created_at: z.string(), // Created timestamp (RFC-3339)
+  updated_at: z.string().optional(), // Updated timestamp
+  url: z.string().optional(), // Article URL
+  content: z.string().optional(), // Full content (may include HTML)
+  symbols: z.array(z.string()), // Related stock symbols
+  source: z.string(), // News source (e.g., "Benzinga")
+});
+export type AlpacaWsNewsMessage = z.infer<typeof AlpacaWsNewsMessageSchema>;
+
+// ============================================
+// Message Schemas - Control Messages
+// ============================================
+
 export const AlpacaWsSuccessMessageSchema = z.object({
   T: z.literal("success"),
   msg: z.enum(["connected", "authenticated"]),
@@ -120,6 +151,7 @@ export const AlpacaWsSubscriptionMessageSchema = z.object({
   updatedBars: z.array(z.string()).optional(),
   statuses: z.array(z.string()).optional(),
   lulds: z.array(z.string()).optional(),
+  news: z.array(z.string()).optional(),
 });
 export type AlpacaWsSubscriptionMessage = z.infer<typeof AlpacaWsSubscriptionMessageSchema>;
 
@@ -128,6 +160,7 @@ export type AlpacaWsMessage =
   | AlpacaWsTradeMessage
   | AlpacaWsBarMessage
   | AlpacaWsStatusMessage
+  | AlpacaWsNewsMessage
   | AlpacaWsSuccessMessage
   | AlpacaWsErrorMessage
   | AlpacaWsSubscriptionMessage;
@@ -137,7 +170,7 @@ export type AlpacaWsMessage =
 // ============================================
 
 export type AlpacaWsFeed = "sip" | "iex" | "test";
-export type AlpacaWsMarket = "stocks" | "options" | "crypto";
+export type AlpacaWsMarket = "stocks" | "options" | "news" | "crypto";
 
 export interface AlpacaWebSocketConfig {
   /** Alpaca API key */
@@ -175,6 +208,7 @@ export type AlpacaWsEvent =
   | { type: "trade"; message: AlpacaWsTradeMessage }
   | { type: "bar"; message: AlpacaWsBarMessage }
   | { type: "status"; message: AlpacaWsStatusMessage }
+  | { type: "news"; message: AlpacaWsNewsMessage }
   | { type: "error"; code: number; message: string }
   | { type: "disconnected"; reason: string }
   | { type: "reconnecting"; attempt: number };
@@ -191,24 +225,44 @@ export type AlpacaWsEventHandler = (event: AlpacaWsEvent) => void | Promise<void
  * Manages WebSocket connections, authentication, subscriptions,
  * and automatic reconnection with exponential backoff.
  *
+ * Note: Options stream uses msgpack encoding (binary), while
+ * stocks, news, and crypto use JSON encoding.
+ *
  * @example
  * ```typescript
- * const client = new AlpacaWebSocketClient({
+ * // Stocks streaming (JSON)
+ * const stocksClient = new AlpacaWebSocketClient({
  *   apiKey: process.env.ALPACA_KEY!,
  *   apiSecret: process.env.ALPACA_SECRET!,
  *   market: 'stocks',
- *   feed: 'sip', // Full market (Algo Trader Plus)
+ *   feed: 'sip',
  * });
  *
- * client.on((event) => {
+ * stocksClient.on((event) => {
  *   if (event.type === 'quote') {
  *     console.log(`${event.message.S}: $${event.message.bp}/$${event.message.ap}`);
  *   }
  * });
  *
- * await client.connect();
- * client.subscribe('quotes', ['AAPL', 'MSFT']);
- * client.subscribe('bars', ['AAPL', 'MSFT']);
+ * await stocksClient.connect();
+ * stocksClient.subscribe('quotes', ['AAPL', 'MSFT']);
+ *
+ * // Options streaming (msgpack)
+ * const optionsClient = new AlpacaWebSocketClient({
+ *   apiKey: process.env.ALPACA_KEY!,
+ *   apiSecret: process.env.ALPACA_SECRET!,
+ *   market: 'options',
+ * });
+ *
+ * // News streaming (JSON)
+ * const newsClient = new AlpacaWebSocketClient({
+ *   apiKey: process.env.ALPACA_KEY!,
+ *   apiSecret: process.env.ALPACA_SECRET!,
+ *   market: 'news',
+ * });
+ *
+ * await newsClient.connect();
+ * newsClient.subscribe('news', ['*']); // Subscribe to all news
  * ```
  */
 export class AlpacaWebSocketClient {
@@ -223,6 +277,7 @@ export class AlpacaWebSocketClient {
     dailyBars: Set<string>;
     updatedBars: Set<string>;
     statuses: Set<string>;
+    news: Set<string>;
   } = {
     trades: new Set(),
     quotes: new Set(),
@@ -230,6 +285,7 @@ export class AlpacaWebSocketClient {
     dailyBars: new Set(),
     updatedBars: new Set(),
     statuses: new Set(),
+    news: new Set(),
   };
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -247,6 +303,14 @@ export class AlpacaWebSocketClient {
       reconnectDelayMs: config.reconnectDelayMs ?? 1000,
       pingIntervalS: config.pingIntervalS ?? 30,
     };
+  }
+
+  /**
+   * Check if this stream uses msgpack encoding.
+   * Options stream is msgpack-only per Alpaca docs.
+   */
+  private usesMsgpack(): boolean {
+    return this.config.market === "options";
   }
 
   /**
@@ -273,6 +337,7 @@ export class AlpacaWebSocketClient {
     dailyBars: string[];
     updatedBars: string[];
     statuses: string[];
+    news: string[];
   } {
     return {
       trades: Array.from(this.activeSubscriptions.trades),
@@ -281,6 +346,7 @@ export class AlpacaWebSocketClient {
       dailyBars: Array.from(this.activeSubscriptions.dailyBars),
       updatedBars: Array.from(this.activeSubscriptions.updatedBars),
       statuses: Array.from(this.activeSubscriptions.statuses),
+      news: Array.from(this.activeSubscriptions.news),
     };
   }
 
@@ -293,6 +359,9 @@ export class AlpacaWebSocketClient {
     }
     if (this.config.market === "options") {
       return ALPACA_WS_ENDPOINTS.options.opra;
+    }
+    if (this.config.market === "news") {
+      return ALPACA_WS_ENDPOINTS.news.default;
     }
     return ALPACA_WS_ENDPOINTS.crypto.us;
   }
@@ -384,15 +453,23 @@ export class AlpacaWebSocketClient {
   /**
    * Subscribe to a channel for symbols.
    *
-   * @param channel - Channel type (trades, quotes, bars, dailyBars, updatedBars, statuses)
-   * @param symbols - Array of symbols to subscribe to (use "*" for all)
+   * Note: For options, wildcard (*) subscriptions are NOT allowed for quotes
+   * due to the large volume of symbols.
+   *
+   * @param channel - Channel type (trades, quotes, bars, dailyBars, updatedBars, statuses, news)
+   * @param symbols - Array of symbols to subscribe to (use "*" for all, except options quotes)
    */
   subscribe(
-    channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses",
+    channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses" | "news",
     symbols: string[]
   ): void {
     if (!this.isConnected()) {
       throw new Error("Not authenticated. Call connect() first.");
+    }
+
+    // Validate: options quotes don't support wildcards
+    if (this.config.market === "options" && channel === "quotes" && symbols.includes("*")) {
+      throw new Error("Options quotes do not support wildcard (*) subscriptions");
     }
 
     this.send({
@@ -412,7 +489,7 @@ export class AlpacaWebSocketClient {
    * @param symbols - Array of symbols to unsubscribe from
    */
   unsubscribe(
-    channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses",
+    channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses" | "news",
     symbols: string[]
   ): void {
     if (!this.isConnected()) {
@@ -446,13 +523,41 @@ export class AlpacaWebSocketClient {
 
   /**
    * Send a message over the WebSocket.
+   * Uses msgpack for options stream, JSON for others.
    */
   private send(message: Record<string, unknown>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error("WebSocket not ready");
     }
 
+    // Always send JSON for auth/subscribe messages
+    // msgpack is only used for receiving data on options stream
     this.ws.send(JSON.stringify(message));
+  }
+
+  /**
+   * Parse incoming message data.
+   * Options stream uses msgpack, others use JSON.
+   */
+  private parseMessage(data: Buffer): unknown[] {
+    if (this.usesMsgpack()) {
+      // Decode msgpack binary data
+      try {
+        const decoded = msgpackDecode(data);
+        return Array.isArray(decoded) ? decoded : [decoded];
+      } catch {
+        return [];
+      }
+    }
+
+    // Parse JSON
+    try {
+      const text = data.toString("utf-8");
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -460,16 +565,7 @@ export class AlpacaWebSocketClient {
    */
   private handleMessage(data: Buffer, connectResolve?: (value: undefined) => void): void {
     try {
-      const text = data.toString("utf-8");
-
-      // Alpaca sends arrays of messages
-      let messages: unknown[];
-      try {
-        const parsed = JSON.parse(text);
-        messages = Array.isArray(parsed) ? parsed : [parsed];
-      } catch {
-        return;
-      }
+      const messages = this.parseMessage(data);
 
       for (const msg of messages) {
         if (typeof msg !== "object" || msg === null) {
@@ -553,6 +649,11 @@ export class AlpacaWebSocketClient {
           if (statusParsed.success) {
             this.emit({ type: "status", message: statusParsed.data });
           }
+        } else if (type === "n") {
+          const newsParsed = AlpacaWsNewsMessageSchema.safeParse(msgObj);
+          if (newsParsed.success) {
+            this.emit({ type: "news", message: newsParsed.data });
+          }
         }
       }
     } catch (error) {
@@ -574,6 +675,7 @@ export class AlpacaWebSocketClient {
     const dailyBars = Array.from(this.activeSubscriptions.dailyBars);
     const updatedBars = Array.from(this.activeSubscriptions.updatedBars);
     const statuses = Array.from(this.activeSubscriptions.statuses);
+    const news = Array.from(this.activeSubscriptions.news);
 
     const subscriptionMsg: Record<string, unknown> = { action: "subscribe" };
 
@@ -594,6 +696,9 @@ export class AlpacaWebSocketClient {
     }
     if (statuses.length > 0) {
       subscriptionMsg.statuses = statuses;
+    }
+    if (news.length > 0) {
+      subscriptionMsg.news = news;
     }
 
     // Only send if there are subscriptions
@@ -718,6 +823,7 @@ export function createAlpacaStocksClientFromEnv(feed: AlpacaWsFeed = "sip"): Alp
 
 /**
  * Create an Alpaca WebSocket client for options from environment variables.
+ * Note: Options stream uses msgpack encoding.
  */
 export function createAlpacaOptionsClientFromEnv(): AlpacaWebSocketClient {
   const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
@@ -732,6 +838,25 @@ export function createAlpacaOptionsClientFromEnv(): AlpacaWebSocketClient {
     apiSecret,
     market: "options",
     feed: "sip", // Options always use OPRA feed
+  });
+}
+
+/**
+ * Create an Alpaca WebSocket client for news from environment variables.
+ */
+export function createAlpacaNewsClientFromEnv(): AlpacaWebSocketClient {
+  const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
+  const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
+  }
+
+  return new AlpacaWebSocketClient({
+    apiKey,
+    apiSecret,
+    market: "news",
+    feed: "sip", // Not used for news, but required by config
   });
 }
 

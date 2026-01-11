@@ -30,6 +30,7 @@ export {
   createAlpacaClientFromEnv,
   isAlpacaConfigured,
   type OptionContractParams,
+  type TradingEnvironment,
 } from "./alpaca";
 // Alpaca WebSocket (real-time streaming)
 export {
@@ -45,6 +46,8 @@ export {
   type AlpacaWsFeed,
   type AlpacaWsMarket,
   type AlpacaWsMessage,
+  type AlpacaWsNewsMessage,
+  AlpacaWsNewsMessageSchema,
   type AlpacaWsQuoteMessage,
   AlpacaWsQuoteMessageSchema,
   type AlpacaWsStatusMessage,
@@ -55,6 +58,7 @@ export {
   AlpacaWsSuccessMessageSchema,
   type AlpacaWsTradeMessage,
   AlpacaWsTradeMessageSchema,
+  createAlpacaNewsClientFromEnv,
   createAlpacaOptionsClientFromEnv,
   createAlpacaStocksClientFromEnv,
   createAlpacaWebSocketClientFromEnv,

@@ -2,20 +2,27 @@
  * Alpaca Markets API Client
  *
  * Unified market data provider for stocks, options, and crypto.
- * Uses the official @alpacahq/typescript-sdk for REST API access.
+ * Uses direct fetch calls to Alpaca's REST API.
  *
  * Features:
  * - Stock quotes, bars, and trades
  * - Options contracts, snapshots with Greeks
  * - Corporate actions (splits, dividends)
- * - Built-in rate limiting via SDK
+ * - Built-in rate limiting
  *
  * @see https://docs.alpaca.markets/docs/about-market-data-api
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { createClient } from "@alpacahq/typescript-sdk";
 import { z } from "zod";
+
+// ============================================
+// Constants
+// ============================================
+
+const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
+const ALPACA_PAPER_TRADING_URL = "https://paper-api.alpaca.markets";
+const ALPACA_LIVE_TRADING_URL = "https://api.alpaca.markets";
 
 // ============================================
 // Response Schemas
@@ -154,10 +161,15 @@ export type AlpacaCorporateActionDividend = z.infer<typeof AlpacaCorporateAction
 // Client Types
 // ============================================
 
+export type TradingEnvironment = "PAPER" | "LIVE";
+
 export interface AlpacaClientConfig {
   apiKey: string;
   apiSecret: string;
-  paper?: boolean;
+  /** Market data API base URL (defaults to data.alpaca.markets) */
+  baseUrl?: string;
+  /** Trading environment for options contracts API (defaults to PAPER) */
+  environment?: TradingEnvironment;
 }
 
 export type AlpacaTimeframe =
@@ -186,10 +198,8 @@ export interface OptionContractParams {
 // Client Implementation
 // ============================================
 
-type AlpacaSDKClient = ReturnType<typeof createClient>;
-
 /**
- * Alpaca Markets API client for REST endpoints.
+ * Alpaca Markets API client using direct fetch.
  *
  * Provides access to:
  * - Stock quotes, bars, trades, and snapshots
@@ -201,7 +211,6 @@ type AlpacaSDKClient = ReturnType<typeof createClient>;
  * const client = new AlpacaMarketDataClient({
  *   apiKey: process.env.ALPACA_KEY!,
  *   apiSecret: process.env.ALPACA_SECRET!,
- *   paper: process.env.CREAM_ENV !== "LIVE",
  * });
  *
  * const quotes = await client.getQuotes(["AAPL", "MSFT"]);
@@ -209,14 +218,71 @@ type AlpacaSDKClient = ReturnType<typeof createClient>;
  * ```
  */
 export class AlpacaMarketDataClient {
-  private client: AlpacaSDKClient;
+  private apiKey: string;
+  private apiSecret: string;
+  private baseUrl: string;
+  private tradingUrl: string;
 
   constructor(config: AlpacaClientConfig) {
-    this.client = createClient({
-      key: config.apiKey,
-      secret: config.apiSecret,
-      paper: config.paper ?? true,
+    this.apiKey = config.apiKey;
+    this.apiSecret = config.apiSecret;
+    this.baseUrl = config.baseUrl ?? ALPACA_DATA_BASE_URL;
+    this.tradingUrl =
+      config.environment === "LIVE" ? ALPACA_LIVE_TRADING_URL : ALPACA_PAPER_TRADING_URL;
+  }
+
+  /**
+   * Make an authenticated request to the Alpaca market data API.
+   */
+  private async request<T>(
+    path: string,
+    params?: Record<string, string | number | boolean | undefined>
+  ): Promise<T> {
+    return this.makeRequest<T>(this.baseUrl, path, params);
+  }
+
+  /**
+   * Make an authenticated request to the Alpaca trading API.
+   */
+  private async tradingRequest<T>(
+    path: string,
+    params?: Record<string, string | number | boolean | undefined>
+  ): Promise<T> {
+    return this.makeRequest<T>(this.tradingUrl, path, params);
+  }
+
+  /**
+   * Make an authenticated request to a specific Alpaca API endpoint.
+   */
+  private async makeRequest<T>(
+    baseUrl: string,
+    path: string,
+    params?: Record<string, string | number | boolean | undefined>
+  ): Promise<T> {
+    const url = new URL(path, baseUrl);
+
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) {
+          url.searchParams.set(key, String(value));
+        }
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "APCA-API-KEY-ID": this.apiKey,
+        "APCA-API-SECRET-KEY": this.apiSecret,
+        Accept: "application/json",
+      },
     });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText);
+      throw new Error(`Alpaca API error ${response.status}: ${errorText}`);
+    }
+
+    return response.json() as Promise<T>;
   }
 
   // ============================================
@@ -230,9 +296,10 @@ export class AlpacaMarketDataClient {
     const result = new Map<string, AlpacaQuote>();
 
     try {
-      const response = await this.client.getStocksQuotesLatest({
-        symbols: symbols.join(","),
-      });
+      const response = await this.request<{ quotes: Record<string, unknown> }>(
+        "/v2/stocks/quotes/latest",
+        { symbols: symbols.join(",") }
+      );
 
       if (response?.quotes) {
         for (const [symbol, quote] of Object.entries(response.quotes)) {
@@ -290,7 +357,7 @@ export class AlpacaMarketDataClient {
     const bars: AlpacaBar[] = [];
 
     try {
-      const response = await this.client.getStocksBars({
+      const response = await this.request<{ bars: Record<string, unknown[]> }>("/v2/stocks/bars", {
         symbols: symbol,
         timeframe,
         start,
@@ -341,89 +408,87 @@ export class AlpacaMarketDataClient {
     const result = new Map<string, AlpacaSnapshot>();
 
     try {
-      const response = await this.client.getStocksSnapshots({
+      const response = await this.request<Record<string, unknown>>("/v2/stocks/snapshots", {
         symbols: symbols.join(","),
       });
 
-      if (response?.snapshots) {
-        for (const [symbol, snapshot] of Object.entries(response.snapshots)) {
-          const s = snapshot as Record<string, unknown>;
+      for (const [symbol, snapshot] of Object.entries(response)) {
+        const s = snapshot as Record<string, unknown>;
 
-          const quote = s.latestQuote as Record<string, unknown> | undefined;
-          const trade = s.latestTrade as Record<string, unknown> | undefined;
-          const minBar = s.minuteBar as Record<string, unknown> | undefined;
-          const dayBar = s.dailyBar as Record<string, unknown> | undefined;
-          const prevBar = s.prevDailyBar as Record<string, unknown> | undefined;
+        const quote = s.latestQuote as Record<string, unknown> | undefined;
+        const trade = s.latestTrade as Record<string, unknown> | undefined;
+        const minBar = s.minuteBar as Record<string, unknown> | undefined;
+        const dayBar = s.dailyBar as Record<string, unknown> | undefined;
+        const prevBar = s.prevDailyBar as Record<string, unknown> | undefined;
 
-          result.set(symbol, {
-            symbol,
-            latestQuote: quote
-              ? {
-                  symbol,
-                  bidPrice: (quote.bp as number) ?? 0,
-                  bidSize: (quote.bs as number) ?? 0,
-                  askPrice: (quote.ap as number) ?? 0,
-                  askSize: (quote.as as number) ?? 0,
-                  bidExchange: quote.bx as string | undefined,
-                  askExchange: quote.ax as string | undefined,
-                  timestamp: (quote.t as string) ?? "",
-                  conditions: quote.c as string[] | undefined,
-                  tape: quote.z as string | undefined,
-                }
-              : undefined,
-            latestTrade: trade
-              ? {
-                  symbol,
-                  price: (trade.p as number) ?? 0,
-                  size: (trade.s as number) ?? 0,
-                  timestamp: (trade.t as string) ?? "",
-                  exchange: trade.x as string | undefined,
-                  id: trade.i as number | undefined,
-                  conditions: trade.c as string[] | undefined,
-                  tape: trade.z as string | undefined,
-                }
-              : undefined,
-            minuteBar: minBar
-              ? {
-                  symbol,
-                  open: (minBar.o as number) ?? 0,
-                  high: (minBar.h as number) ?? 0,
-                  low: (minBar.l as number) ?? 0,
-                  close: (minBar.c as number) ?? 0,
-                  volume: (minBar.v as number) ?? 0,
-                  timestamp: (minBar.t as string) ?? "",
-                  vwap: minBar.vw as number | undefined,
-                  tradeCount: minBar.n as number | undefined,
-                }
-              : undefined,
-            dailyBar: dayBar
-              ? {
-                  symbol,
-                  open: (dayBar.o as number) ?? 0,
-                  high: (dayBar.h as number) ?? 0,
-                  low: (dayBar.l as number) ?? 0,
-                  close: (dayBar.c as number) ?? 0,
-                  volume: (dayBar.v as number) ?? 0,
-                  timestamp: (dayBar.t as string) ?? "",
-                  vwap: dayBar.vw as number | undefined,
-                  tradeCount: dayBar.n as number | undefined,
-                }
-              : undefined,
-            prevDailyBar: prevBar
-              ? {
-                  symbol,
-                  open: (prevBar.o as number) ?? 0,
-                  high: (prevBar.h as number) ?? 0,
-                  low: (prevBar.l as number) ?? 0,
-                  close: (prevBar.c as number) ?? 0,
-                  volume: (prevBar.v as number) ?? 0,
-                  timestamp: (prevBar.t as string) ?? "",
-                  vwap: prevBar.vw as number | undefined,
-                  tradeCount: prevBar.n as number | undefined,
-                }
-              : undefined,
-          });
-        }
+        result.set(symbol, {
+          symbol,
+          latestQuote: quote
+            ? {
+                symbol,
+                bidPrice: (quote.bp as number) ?? 0,
+                bidSize: (quote.bs as number) ?? 0,
+                askPrice: (quote.ap as number) ?? 0,
+                askSize: (quote.as as number) ?? 0,
+                bidExchange: quote.bx as string | undefined,
+                askExchange: quote.ax as string | undefined,
+                timestamp: (quote.t as string) ?? "",
+                conditions: quote.c as string[] | undefined,
+                tape: quote.z as string | undefined,
+              }
+            : undefined,
+          latestTrade: trade
+            ? {
+                symbol,
+                price: (trade.p as number) ?? 0,
+                size: (trade.s as number) ?? 0,
+                timestamp: (trade.t as string) ?? "",
+                exchange: trade.x as string | undefined,
+                id: trade.i as number | undefined,
+                conditions: trade.c as string[] | undefined,
+                tape: trade.z as string | undefined,
+              }
+            : undefined,
+          minuteBar: minBar
+            ? {
+                symbol,
+                open: (minBar.o as number) ?? 0,
+                high: (minBar.h as number) ?? 0,
+                low: (minBar.l as number) ?? 0,
+                close: (minBar.c as number) ?? 0,
+                volume: (minBar.v as number) ?? 0,
+                timestamp: (minBar.t as string) ?? "",
+                vwap: minBar.vw as number | undefined,
+                tradeCount: minBar.n as number | undefined,
+              }
+            : undefined,
+          dailyBar: dayBar
+            ? {
+                symbol,
+                open: (dayBar.o as number) ?? 0,
+                high: (dayBar.h as number) ?? 0,
+                low: (dayBar.l as number) ?? 0,
+                close: (dayBar.c as number) ?? 0,
+                volume: (dayBar.v as number) ?? 0,
+                timestamp: (dayBar.t as string) ?? "",
+                vwap: dayBar.vw as number | undefined,
+                tradeCount: dayBar.n as number | undefined,
+              }
+            : undefined,
+          prevDailyBar: prevBar
+            ? {
+                symbol,
+                open: (prevBar.o as number) ?? 0,
+                high: (prevBar.h as number) ?? 0,
+                low: (prevBar.l as number) ?? 0,
+                close: (prevBar.c as number) ?? 0,
+                volume: (prevBar.v as number) ?? 0,
+                timestamp: (prevBar.t as string) ?? "",
+                vwap: prevBar.vw as number | undefined,
+                tradeCount: prevBar.n as number | undefined,
+              }
+            : undefined,
+        });
       }
     } catch {
       // Return empty map on error
@@ -439,9 +504,10 @@ export class AlpacaMarketDataClient {
     const result = new Map<string, AlpacaTrade>();
 
     try {
-      const response = await this.client.getStocksTradesLatest({
-        symbols: symbols.join(","),
-      });
+      const response = await this.request<{ trades: Record<string, unknown> }>(
+        "/v2/stocks/trades/latest",
+        { symbols: symbols.join(",") }
+      );
 
       if (response?.trades) {
         for (const [symbol, trade] of Object.entries(response.trades)) {
@@ -480,6 +546,9 @@ export class AlpacaMarketDataClient {
 
   /**
    * Get option contracts for an underlying symbol.
+   *
+   * Note: Uses the trading API (/v2/options/contracts) as the market data API
+   * doesn't have this endpoint. This returns contract metadata, not real-time quotes.
    */
   async getOptionContracts(
     underlying: string,
@@ -488,29 +557,31 @@ export class AlpacaMarketDataClient {
     const contracts: AlpacaOptionContract[] = [];
 
     try {
-      // Check if the SDK has the method
-      const clientAny = this.client as Record<string, unknown>;
-      const getOptionsContractsMethod = clientAny.getOptionsContracts;
-
-      if (typeof getOptionsContractsMethod !== "function") {
-        // SDK doesn't have this method yet, return empty array
-        return contracts;
-      }
-
-      const response = (await getOptionsContractsMethod.call(this.client, {
-        underlying_symbols: underlying,
-        expiration_date_gte: params?.expirationDateGte,
-        expiration_date_lte: params?.expirationDateLte,
-        root_symbol: params?.rootSymbol,
-        type: params?.type,
-        strike_price_gte: params?.strikePriceGte,
-        strike_price_lte: params?.strikePriceLte,
-        limit: params?.limit ?? 1000,
-      })) as { option_contracts?: unknown[] } | undefined;
+      const response = await this.tradingRequest<{ option_contracts?: unknown[] }>(
+        "/v2/options/contracts",
+        {
+          underlying_symbols: underlying,
+          expiration_date_gte: params?.expirationDateGte,
+          expiration_date_lte: params?.expirationDateLte,
+          root_symbol: params?.rootSymbol,
+          type: params?.type,
+          strike_price_gte: params?.strikePriceGte,
+          strike_price_lte: params?.strikePriceLte,
+          limit: params?.limit ?? 1000,
+        }
+      );
 
       if (response?.option_contracts && Array.isArray(response.option_contracts)) {
         for (const contract of response.option_contracts) {
           const c = contract as Record<string, unknown>;
+
+          // Parse strike_price - it comes as a string from the trading API
+          let strikePrice = 0;
+          if (typeof c.strike_price === "string") {
+            strikePrice = Number.parseFloat(c.strike_price);
+          } else if (typeof c.strike_price === "number") {
+            strikePrice = c.strike_price;
+          }
 
           contracts.push({
             symbol: (c.symbol as string) ?? "",
@@ -523,7 +594,7 @@ export class AlpacaMarketDataClient {
             underlyingAssetId: c.underlying_asset_id as string | undefined,
             type: (c.type as "call" | "put") ?? "call",
             style: c.style as string | undefined,
-            strikePrice: (c.strike_price as number) ?? 0,
+            strikePrice,
             multiplier: c.multiplier as number | undefined,
             size: c.size as number | undefined,
             openInterest: c.open_interest as number | undefined,
@@ -547,9 +618,10 @@ export class AlpacaMarketDataClient {
     const result = new Map<string, AlpacaOptionSnapshot>();
 
     try {
-      const response = await this.client.getOptionsSnapshots({
-        symbols: symbols.join(","),
-      });
+      const response = await this.request<{ snapshots: Record<string, unknown> }>(
+        "/v1beta1/options/snapshots",
+        { symbols: symbols.join(",") }
+      );
 
       if (response?.snapshots) {
         for (const [symbol, snapshot] of Object.entries(response.snapshots)) {
@@ -629,13 +701,16 @@ export class AlpacaMarketDataClient {
     const splits: AlpacaCorporateActionSplit[] = [];
 
     try {
-      const response = await this.client.getStocksCorporateActions({
-        symbols: symbol,
-        types: "forward_split,reverse_split",
-      });
+      const response = await this.request<{ corporate_actions: Record<string, unknown> }>(
+        "/v1beta1/corporate-actions",
+        {
+          symbols: symbol,
+          types: "forward_split,reverse_split",
+        }
+      );
 
       if (response?.corporate_actions) {
-        const actions = response.corporate_actions as Record<string, unknown>;
+        const actions = response.corporate_actions;
 
         const forwardSplits = actions.forward_splits as unknown[] | undefined;
         const reverseSplits = actions.reverse_splits as unknown[] | undefined;
@@ -668,13 +743,16 @@ export class AlpacaMarketDataClient {
     const dividends: AlpacaCorporateActionDividend[] = [];
 
     try {
-      const response = await this.client.getStocksCorporateActions({
-        symbols: symbol,
-        types: "cash_dividend",
-      });
+      const response = await this.request<{ corporate_actions: Record<string, unknown> }>(
+        "/v1beta1/corporate-actions",
+        {
+          symbols: symbol,
+          types: "cash_dividend",
+        }
+      );
 
       if (response?.corporate_actions) {
-        const actions = response.corporate_actions as Record<string, unknown>;
+        const actions = response.corporate_actions;
         const cashDividends = actions.cash_dividends as unknown[] | undefined;
 
         for (const dividend of cashDividends ?? []) {
@@ -706,19 +784,22 @@ export class AlpacaMarketDataClient {
 
 /**
  * Create an Alpaca client from environment variables.
+ *
+ * Uses CREAM_ENV to determine trading environment (PAPER/LIVE).
  */
 export function createAlpacaClientFromEnv(): AlpacaMarketDataClient {
   const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
   const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+  const creamEnv = process.env.CREAM_ENV ?? Bun.env.CREAM_ENV;
 
   if (!apiKey || !apiSecret) {
     throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
   }
 
-  const env = process.env.CREAM_ENV ?? Bun.env.CREAM_ENV ?? "BACKTEST";
-  const paper = env !== "LIVE";
+  // Default to PAPER for safety, only use LIVE if explicitly set
+  const environment: TradingEnvironment = creamEnv === "LIVE" ? "LIVE" : "PAPER";
 
-  return new AlpacaMarketDataClient({ apiKey, apiSecret, paper });
+  return new AlpacaMarketDataClient({ apiKey, apiSecret, environment });
 }
 
 /**
