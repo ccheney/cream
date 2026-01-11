@@ -27,7 +27,12 @@ import type {
 import { requireEnv } from "@cream/domain";
 import { createExecutionClient, type ExecutionServiceClient } from "@cream/domain/grpc";
 import type { Candle } from "@cream/indicators";
-import { createPolygonClientFromEnv, type PolygonClient, type Snapshot } from "@cream/marketdata";
+import {
+  type AlpacaMarketDataClient,
+  type AlpacaSnapshot,
+  createAlpacaClientFromEnv,
+  isAlpacaConfigured,
+} from "@cream/marketdata";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
 import { resolveUniverseSymbols as resolveUniverseSymbolsFromConfig } from "@cream/universe";
 
@@ -244,16 +249,15 @@ async function gatherSnapshotData(
   errors: string[],
   warnings: string[]
 ): Promise<SnapshotData> {
-  // Create Polygon client for market data
-  let polygonClient: PolygonClient | null = null;
+  // Create Alpaca client for market data
+  let alpacaClient: AlpacaMarketDataClient | null = null;
   const creamEnv = requireEnv();
-  const polygonKey = process.env.POLYGON_KEY;
 
-  if (creamEnv !== "BACKTEST" || polygonKey) {
+  if (creamEnv !== "BACKTEST" || isAlpacaConfigured()) {
     try {
-      polygonClient = createPolygonClientFromEnv();
+      alpacaClient = createAlpacaClientFromEnv();
     } catch (error) {
-      warnings.push(`Could not create Polygon client: ${formatError(error)}`);
+      warnings.push(`Could not create Alpaca client: ${formatError(error)}`);
     }
   }
 
@@ -261,7 +265,7 @@ async function gatherSnapshotData(
   const marketSnapshots = await fetchMarketData(symbols, input, errors, warnings);
 
   // Fetch historical candles for regime classification and indicators
-  const historicalCandles = await fetchHistoricalCandles(symbols, polygonClient, errors, warnings);
+  const historicalCandles = await fetchHistoricalCandles(symbols, alpacaClient, errors, warnings);
 
   // Fetch current positions from broker
   const positions = await fetchPositions(errors, warnings);
@@ -278,7 +282,7 @@ async function gatherSnapshotData(
 }
 
 /**
- * Fetch market data snapshots from Polygon.
+ * Fetch market data snapshots from Alpaca.
  */
 async function fetchMarketData(
   symbols: string[],
@@ -288,11 +292,10 @@ async function fetchMarketData(
 ): Promise<Map<string, InternalSnapshot>> {
   const snapshots = new Map<string, InternalSnapshot>();
   const creamEnv = requireEnv();
-  const polygonKey = process.env.POLYGON_KEY;
 
   // In BACKTEST mode without API keys, use deterministic fixtures
-  if (creamEnv === "BACKTEST" && !polygonKey) {
-    warnings.push("BACKTEST mode without POLYGON_KEY: using fixture market data");
+  if (creamEnv === "BACKTEST" && !isAlpacaConfigured()) {
+    warnings.push("BACKTEST mode without ALPACA_KEY: using fixture market data");
 
     for (const symbol of symbols) {
       snapshots.set(symbol, getSnapshotFixture(symbol));
@@ -301,37 +304,34 @@ async function fetchMarketData(
     return snapshots;
   }
 
-  // In PAPER/LIVE mode, POLYGON_KEY is required
-  if (!polygonKey) {
+  // In PAPER/LIVE mode, Alpaca credentials are required
+  if (!isAlpacaConfigured()) {
     throw new Error(
-      `POLYGON_KEY is required in ${creamEnv} mode. ` +
-        "Set the POLYGON_KEY environment variable to fetch live market data."
+      `ALPACA_KEY and ALPACA_SECRET are required in ${creamEnv} mode. ` +
+        "Set these environment variables to fetch live market data."
     );
   }
 
   try {
-    const client = createPolygonClientFromEnv();
+    const client = createAlpacaClientFromEnv();
 
     // Fetch snapshots in batches for efficiency
     const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
 
     for (const batch of batches) {
-      const results = await Promise.allSettled(
-        batch.map(async (symbol) => {
-          const polygonSnapshot = await client.getTickerSnapshot(symbol);
-          if (!polygonSnapshot) {
-            throw new Error(`No snapshot data returned for ${symbol}`);
-          }
-          return { symbol, snapshot: transformPolygonSnapshot(symbol, polygonSnapshot) };
-        })
-      );
+      try {
+        const alpacaSnapshots = await client.getSnapshots(batch);
 
-      for (const result of results) {
-        if (result.status === "fulfilled") {
-          snapshots.set(result.value.symbol, result.value.snapshot);
-        } else {
-          errors.push(`Failed to fetch snapshot: ${result.reason}`);
+        for (const symbol of batch) {
+          const alpacaSnapshot = alpacaSnapshots.get(symbol);
+          if (alpacaSnapshot) {
+            snapshots.set(symbol, transformAlpacaSnapshot(symbol, alpacaSnapshot));
+          } else {
+            errors.push(`No snapshot data returned for ${symbol}`);
+          }
         }
+      } catch (error) {
+        errors.push(`Failed to fetch batch snapshots: ${formatError(error)}`);
       }
     }
   } catch (error) {
@@ -342,32 +342,32 @@ async function fetchMarketData(
 }
 
 /**
- * Transform a Polygon API Snapshot to our internal format.
+ * Transform an Alpaca API Snapshot to our internal format.
  */
-function transformPolygonSnapshot(symbol: string, polygon: Snapshot): InternalSnapshot {
+function transformAlpacaSnapshot(symbol: string, alpaca: AlpacaSnapshot): InternalSnapshot {
   return {
     symbol,
-    lastTrade: polygon.lastTrade
+    lastTrade: alpaca.latestTrade
       ? {
-          price: polygon.lastTrade.p,
-          size: polygon.lastTrade.s,
-          timestamp: polygon.lastTrade.t,
+          price: alpaca.latestTrade.price,
+          size: alpaca.latestTrade.size,
+          timestamp: new Date(alpaca.latestTrade.timestamp).getTime(),
         }
       : undefined,
-    lastQuote: polygon.lastQuote
+    lastQuote: alpaca.latestQuote
       ? {
-          bid: polygon.lastQuote.p,
-          ask: polygon.lastQuote.P,
-          bidSize: polygon.lastQuote.s,
-          askSize: polygon.lastQuote.S,
-          timestamp: polygon.lastQuote.t,
+          bid: alpaca.latestQuote.bidPrice,
+          ask: alpaca.latestQuote.askPrice,
+          bidSize: alpaca.latestQuote.bidSize,
+          askSize: alpaca.latestQuote.askSize,
+          timestamp: new Date(alpaca.latestQuote.timestamp).getTime(),
         }
       : undefined,
-    volume: polygon.day?.v ?? 0,
-    dayHigh: polygon.day?.h ?? 0,
-    dayLow: polygon.day?.l ?? 0,
-    prevClose: polygon.day?.c ?? 0, // Note: Polygon doesn't have prevClose in day, use previous day endpoint if needed
-    open: polygon.day?.o ?? 0,
+    volume: alpaca.dailyBar?.volume ?? 0,
+    dayHigh: alpaca.dailyBar?.high ?? 0,
+    dayLow: alpaca.dailyBar?.low ?? 0,
+    prevClose: alpaca.prevDailyBar?.close ?? 0,
+    open: alpaca.dailyBar?.open ?? 0,
   };
 }
 
@@ -376,7 +376,7 @@ function transformPolygonSnapshot(symbol: string, polygon: Snapshot): InternalSn
  */
 async function fetchHistoricalCandles(
   symbols: string[],
-  polygonClient: PolygonClient | null,
+  alpacaClient: AlpacaMarketDataClient | null,
   errors: string[],
   warnings: string[]
 ): Promise<Map<string, Candle[]>> {
@@ -384,8 +384,8 @@ async function fetchHistoricalCandles(
   const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
 
   // If no client available, use deterministic fixtures in BACKTEST mode
-  if (!polygonClient) {
-    warnings.push("Using fixture historical candles (no Polygon client available)");
+  if (!alpacaClient) {
+    warnings.push("Using fixture historical candles (no Alpaca client available)");
     for (const symbol of symbols) {
       candles.set(symbol, getCandleFixtures(symbol, requiredBars));
     }
@@ -406,23 +406,17 @@ async function fetchHistoricalCandles(
   for (const batch of batches) {
     const results = await Promise.allSettled(
       batch.map(async (symbol) => {
-        const response = await polygonClient.getAggregates(symbol, 1, "hour", fromStr, toStr, {
-          limit: requiredBars,
-          sort: "desc",
-        });
+        const bars = await alpacaClient.getBars(symbol, "1Hour", fromStr, toStr, requiredBars);
 
-        const bars = response.results ?? [];
-        // Convert to Candle format and reverse to oldest-first
-        const symbolCandles: Candle[] = bars
-          .map((bar) => ({
-            timestamp: bar.t,
-            open: bar.o,
-            high: bar.h,
-            low: bar.l,
-            close: bar.c,
-            volume: bar.v,
-          }))
-          .reverse();
+        // Convert to Candle format (Alpaca returns oldest-first by default)
+        const symbolCandles: Candle[] = bars.map((bar) => ({
+          timestamp: new Date(bar.timestamp).getTime(),
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+          volume: bar.volume,
+        }));
 
         return { symbol, candles: symbolCandles };
       })

@@ -11,29 +11,26 @@ import type { Backtest } from "@cream/storage";
 // Generate enough data for SMA calculations (need at least 30 bars for SMA crossover)
 const generateMockBars = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
-    t: 1704067200000 + i * 3600000,
-    o: 100 + i * 0.1,
-    h: 101 + i * 0.1,
-    l: 99 + i * 0.1,
-    c: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0), // Create some crossover opportunities
-    v: 1000 + i * 10,
+    symbol: "AAPL",
+    timestamp: new Date(1704067200000 + i * 3600000).toISOString(),
+    open: 100 + i * 0.1,
+    high: 101 + i * 0.1,
+    low: 99 + i * 0.1,
+    close: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0), // Create some crossover opportunities
+    volume: 1000 + i * 10,
   }));
 
 // Mock dependencies before importing the module
-const mockGetAggregates = mock(() =>
-  Promise.resolve({
-    results: generateMockBars(50), // Provide enough data for SMA calculations
-    resultsCount: 50,
-  })
-);
+const mockGetBars = mock(() => Promise.resolve(generateMockBars(50)));
 
-const mockPolygonClient = {
-  getAggregates: mockGetAggregates,
+const mockAlpacaClient = {
+  getBars: mockGetBars,
 };
 
 // Mock the marketdata module
 mock.module("@cream/marketdata", () => ({
-  createPolygonClientFromEnv: () => mockPolygonClient,
+  createAlpacaClientFromEnv: () => mockAlpacaClient,
+  isAlpacaConfigured: () => true,
 }));
 
 // Import after mocking
@@ -75,7 +72,7 @@ describe("Backtest Data Service", () => {
   let unlinkSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    mockGetAggregates.mockClear();
+    mockGetBars.mockClear();
 
     // Mock Bun.spawn for Parquet writing
     spawnSpy = spyOn(Bun, "spawn").mockImplementation(
@@ -100,23 +97,12 @@ describe("Backtest Data Service", () => {
   });
 
   describe("prepareBacktestData", () => {
-    it("should fetch OHLCV data via Polygon client", async () => {
+    it("should fetch OHLCV data via Alpaca client", async () => {
       const backtest = createTestBacktest();
 
       await prepareBacktestData(backtest);
 
-      expect(mockGetAggregates).toHaveBeenCalledWith(
-        "AAPL",
-        1,
-        "hour",
-        "2024-01-01",
-        "2024-01-31",
-        expect.objectContaining({
-          adjusted: true,
-          sort: "asc",
-          limit: 50000,
-        })
-      );
+      expect(mockGetBars).toHaveBeenCalledWith("AAPL", "1Hour", "2024-01-01", "2024-01-31", 50000);
     });
 
     it("should write Parquet file to temp directory", async () => {
@@ -147,7 +133,7 @@ describe("Backtest Data Service", () => {
     });
 
     it("should throw if no market data found", async () => {
-      mockGetAggregates.mockResolvedValueOnce({ results: [], resultsCount: 0 });
+      mockGetBars.mockResolvedValueOnce([]);
       const backtest = createTestBacktest();
 
       await expect(prepareBacktestData(backtest)).rejects.toThrow("No market data found for AAPL");
@@ -158,13 +144,12 @@ describe("Backtest Data Service", () => {
 
       await prepareBacktestData(backtest);
 
-      expect(mockGetAggregates).toHaveBeenCalledWith(
+      expect(mockGetBars).toHaveBeenCalledWith(
         "AAPL",
-        1,
-        "day",
+        "1Day",
         expect.any(String),
         expect.any(String),
-        expect.any(Object)
+        50000
       );
     });
 
@@ -173,13 +158,12 @@ describe("Backtest Data Service", () => {
 
       await prepareBacktestData(backtest);
 
-      expect(mockGetAggregates).toHaveBeenCalledWith(
+      expect(mockGetBars).toHaveBeenCalledWith(
         "AAPL",
-        1,
-        "hour",
+        "1Hour",
         expect.any(String),
         expect.any(String),
-        expect.any(Object)
+        50000
       );
     });
 
@@ -234,7 +218,7 @@ describe("Backtest Data Service", () => {
 
       await prepareSignals(backtest);
 
-      expect(mockGetAggregates).toHaveBeenCalled();
+      expect(mockGetBars).toHaveBeenCalled();
     });
   });
 
@@ -265,7 +249,7 @@ describe("Backtest Data Service", () => {
       await prepareAllBacktestData(backtest);
 
       // Should be called twice - once for data, once for signals
-      expect(mockGetAggregates).toHaveBeenCalledTimes(2);
+      expect(mockGetBars).toHaveBeenCalledTimes(2);
     });
   });
 

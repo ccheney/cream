@@ -47,23 +47,20 @@ const PYTHON_DEPS_AVAILABLE = checkPythonDepsAvailable();
 // Generate enough data for SMA calculations (need at least 30 bars for SMA crossover)
 const generateMockBars = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
-    t: 1704067200000 + i * 3600000,
-    o: 100 + i * 0.1,
-    h: 101 + i * 0.1,
-    l: 99 + i * 0.1,
-    c: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0),
-    v: 1000 + i * 10,
+    symbol: "AAPL",
+    timestamp: new Date(1704067200000 + i * 3600000).toISOString(),
+    open: 100 + i * 0.1,
+    high: 101 + i * 0.1,
+    low: 99 + i * 0.1,
+    close: 100.5 + i * 0.1 + (i % 10 === 0 ? 2 : 0),
+    volume: 1000 + i * 10,
   }));
 
-const mockGetAggregates = mock(() =>
-  Promise.resolve({
-    results: generateMockBars(50),
-    resultsCount: 50,
-  })
-);
+const mockGetBars = mock(() => Promise.resolve(generateMockBars(50)));
 
 mock.module("@cream/marketdata", () => ({
-  createPolygonClientFromEnv: () => ({ getAggregates: mockGetAggregates }),
+  createAlpacaClientFromEnv: () => ({ getBars: mockGetBars }),
+  isAlpacaConfigured: () => true,
 }));
 
 // ============================================
@@ -93,7 +90,7 @@ function createTestBacktest(overrides?: Partial<Backtest>): Backtest {
 
 describe.skipIf(!PYTHON_DEPS_AVAILABLE)("Signal Generation Integration", () => {
   beforeEach(() => {
-    mockGetAggregates.mockClear();
+    mockGetBars.mockClear();
   });
 
   it("generates signals without crashing for sufficient data", async () => {

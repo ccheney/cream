@@ -12,20 +12,24 @@ const MassiveConnectionState = {
 
 // Mock parseOptionTicker from marketdata
 mock.module("@cream/marketdata", () => ({
-  createPolygonClientFromEnv: () => ({
-    getOptionChainSnapshot: mock(() =>
-      Promise.resolve({
-        results: [
-          {
-            details: { ticker: "AAPL240119C00150000" },
-            last_quote: { midpoint: 5.5 },
-            underlying_asset: { price: 155 },
-            greeks: { delta: 0.5, gamma: 0.05, theta: -0.01, vega: 0.1 },
-          },
-        ],
-      })
+  createAlpacaClientFromEnv: () => ({
+    getOptionSnapshots: mock(() =>
+      Promise.resolve(
+        new Map([
+          [
+            "AAPL240119C00150000",
+            {
+              symbol: "AAPL240119C00150000",
+              latestQuote: { bidPrice: 5.4, askPrice: 5.6, midpoint: 5.5 },
+              underlyingPrice: 155,
+              greeks: { delta: 0.5, gamma: 0.05, theta: -0.01, vega: 0.1 },
+            },
+          ],
+        ])
+      )
     ),
   }),
+  isAlpacaConfigured: () => true,
   parseOptionTicker: (ticker: string) => {
     if (ticker === "AAPL240119C00150000") {
       return {
@@ -109,9 +113,10 @@ describe("PortfolioService", () => {
   it("should handle missing market data gracefully", async () => {
     // Mock empty market data response
     mock.module("@cream/marketdata", () => ({
-      createPolygonClientFromEnv: () => ({
-        getOptionChainSnapshot: mock(() => Promise.resolve({ results: [] })),
+      createAlpacaClientFromEnv: () => ({
+        getOptionSnapshots: mock(() => Promise.resolve(new Map())),
       }),
+      isAlpacaConfigured: () => true,
       parseOptionTicker: (ticker: string) => {
         if (ticker === "AAPL240119C00150000") {
           return {

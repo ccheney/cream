@@ -7,8 +7,11 @@
 
 // Set environment BEFORE imports so cached env is correct
 process.env.CREAM_ENV = "BACKTEST";
-const savedPolygonKey = process.env.POLYGON_KEY;
-process.env.POLYGON_KEY = ""; // Empty string to use mock data
+// Clear Alpaca credentials to trigger fixture/mock data path
+const savedAlpacaKey = process.env.ALPACA_KEY;
+const savedAlpacaSecret = process.env.ALPACA_SECRET;
+delete process.env.ALPACA_KEY;
+delete process.env.ALPACA_SECRET;
 
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -20,10 +23,13 @@ import {
   PERFORMANCE_TARGETS,
 } from "../workflows/steps/marketSnapshotBuilder";
 
-// Restore POLYGON_KEY after imports (for other tests in the same process)
+// Restore Alpaca credentials after tests (for other tests in the same process)
 afterAll(() => {
-  if (savedPolygonKey !== undefined) {
-    process.env.POLYGON_KEY = savedPolygonKey;
+  if (savedAlpacaKey !== undefined) {
+    process.env.ALPACA_KEY = savedAlpacaKey;
+  }
+  if (savedAlpacaSecret !== undefined) {
+    process.env.ALPACA_SECRET = savedAlpacaSecret;
   }
 });
 
