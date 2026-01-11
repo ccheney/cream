@@ -198,7 +198,7 @@ function transformToContract(
     bid: snapshot?.latestQuote?.bidPrice ?? lastPrice,
     ask: snapshot?.latestQuote?.askPrice ?? lastPrice,
     last: lastPrice,
-    volume: null, // Alpaca doesn't provide volume in option snapshots
+    volume: snapshot?.dailyBar?.volume ?? null,
     openInterest: contract.openInterest ?? null,
     impliedVolatility: snapshot?.impliedVolatility ?? null,
   };
@@ -525,7 +525,7 @@ app.openapi(quoteRoute, async (c) => {
       bid: snapshot.latestQuote?.bidPrice ?? null,
       ask: snapshot.latestQuote?.askPrice ?? null,
       last: snapshot.latestTrade?.price ?? null,
-      volume: null, // Alpaca doesn't provide volume in option snapshots
+      volume: snapshot.dailyBar?.volume ?? null,
       openInterest: null, // Alpaca doesn't provide OI in snapshots, only in contracts
       impliedVolatility: snapshot.impliedVolatility ?? null,
       greeks: {

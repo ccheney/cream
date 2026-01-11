@@ -107,6 +107,17 @@ export const AlpacaOptionGreeksSchema = z.object({
 });
 export type AlpacaOptionGreeks = z.infer<typeof AlpacaOptionGreeksSchema>;
 
+const OptionBarSchema = z.object({
+  open: z.number(),
+  high: z.number(),
+  low: z.number(),
+  close: z.number(),
+  volume: z.number(),
+  vwap: z.number().optional(),
+  tradeCount: z.number().optional(),
+  timestamp: z.string(),
+});
+
 export const AlpacaOptionSnapshotSchema = z.object({
   symbol: z.string(),
   latestQuote: z
@@ -129,6 +140,8 @@ export const AlpacaOptionSnapshotSchema = z.object({
       conditions: z.array(z.string()).optional(),
     })
     .optional(),
+  dailyBar: OptionBarSchema.optional(),
+  prevDailyBar: OptionBarSchema.optional(),
   greeks: AlpacaOptionGreeksSchema.optional(),
   impliedVolatility: z.number().optional(),
 });
@@ -612,59 +625,161 @@ export class AlpacaMarketDataClient {
   }
 
   /**
+   * Get the trading day to use for volume data.
+   * Returns today during market hours, or the last trading day when closed.
+   */
+  private getTradingDayForVolume(): string {
+    const now = new Date();
+    const day = now.getDay();
+
+    // Convert to ET (approximate: UTC-5 for EST, UTC-4 for EDT)
+    // Using UTC-5 as conservative estimate
+    const etHour = (now.getUTCHours() - 5 + 24) % 24;
+    const etMinute = now.getUTCMinutes();
+
+    // Market hours: 9:30 AM - 4:00 PM ET
+    const marketOpen = etHour > 9 || (etHour === 9 && etMinute >= 30);
+    const marketClose = etHour < 16;
+    const isWeekday = day >= 1 && day <= 5;
+    const isMarketOpen = isWeekday && marketOpen && marketClose;
+
+    if (isMarketOpen) {
+      // During market hours, use today
+      return now.toISOString().slice(0, 10);
+    }
+
+    // Market is closed - find last trading day
+    let daysBack = 0;
+
+    if (day === 0) {
+      // Sunday -> Friday
+      daysBack = 2;
+    } else if (day === 6) {
+      // Saturday -> Friday
+      daysBack = 1;
+    } else if (day === 1 && !marketOpen) {
+      // Monday before open -> Friday
+      daysBack = 3;
+    } else if (!marketOpen) {
+      // Weekday before open -> previous day
+      daysBack = 1;
+    } else {
+      // Weekday after close -> today (use today's final volume)
+      daysBack = 0;
+    }
+
+    const tradingDay = new Date(now);
+    tradingDay.setDate(tradingDay.getDate() - daysBack);
+    return tradingDay.toISOString().slice(0, 10);
+  }
+
+  /**
    * Get option snapshots with Greeks.
+   * Also fetches the last trading day's bars to get accurate volume data.
+   * Batches requests to respect Alpaca's 100 symbol limit.
    */
   async getOptionSnapshots(symbols: string[]): Promise<Map<string, AlpacaOptionSnapshot>> {
     const result = new Map<string, AlpacaOptionSnapshot>();
+    if (symbols.length === 0) {
+      return result;
+    }
+
+    const BATCH_SIZE = 100;
+    const tradingDay = this.getTradingDayForVolume();
 
     try {
-      const response = await this.request<{ snapshots: Record<string, unknown> }>(
-        "/v1beta1/options/snapshots",
-        { symbols: symbols.join(",") }
-      );
+      // Split symbols into batches of 100
+      const batches: string[][] = [];
+      for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+        batches.push(symbols.slice(i, i + BATCH_SIZE));
+      }
 
-      if (response?.snapshots) {
-        for (const [symbol, snapshot] of Object.entries(response.snapshots)) {
-          const s = snapshot as Record<string, unknown>;
+      // Fetch all batches in parallel
+      const batchPromises = batches.map(async (batch) => {
+        const [snapshotRes, barsRes] = await Promise.all([
+          this.request<{ snapshots: Record<string, unknown> }>("/v1beta1/options/snapshots", {
+            symbols: batch.join(","),
+          }),
+          this.request<{ bars: Record<string, unknown[]> }>("/v1beta1/options/bars", {
+            symbols: batch.join(","),
+            timeframe: "1Day",
+            start: tradingDay,
+            limit: batch.length,
+          }).catch(() => ({ bars: {} })),
+        ]);
+        return { snapshots: snapshotRes?.snapshots ?? {}, bars: barsRes?.bars ?? {} };
+      });
 
-          const quote = s.latestQuote as Record<string, unknown> | undefined;
-          const trade = s.latestTrade as Record<string, unknown> | undefined;
-          const greeks = s.greeks as Record<string, unknown> | undefined;
+      const batchResults = await Promise.all(batchPromises);
 
-          result.set(symbol, {
-            symbol,
-            latestQuote: quote
-              ? {
-                  bidPrice: (quote.bp as number) ?? 0,
-                  bidSize: (quote.bs as number) ?? 0,
-                  askPrice: (quote.ap as number) ?? 0,
-                  askSize: (quote.as as number) ?? 0,
-                  bidExchange: quote.bx as string | undefined,
-                  askExchange: quote.ax as string | undefined,
-                  timestamp: (quote.t as string) ?? "",
-                }
-              : undefined,
-            latestTrade: trade
-              ? {
-                  price: (trade.p as number) ?? 0,
-                  size: (trade.s as number) ?? 0,
-                  timestamp: (trade.t as string) ?? "",
-                  exchange: trade.x as string | undefined,
-                  conditions: trade.c as string[] | undefined,
-                }
-              : undefined,
-            greeks: greeks
-              ? {
-                  delta: greeks.delta as number | undefined,
-                  gamma: greeks.gamma as number | undefined,
-                  theta: greeks.theta as number | undefined,
-                  vega: greeks.vega as number | undefined,
-                  rho: greeks.rho as number | undefined,
-                }
-              : undefined,
-            impliedVolatility: s.impliedVolatility as number | undefined,
-          });
+      // Merge all batch results
+      const allSnapshots: Record<string, unknown> = {};
+      const allBars: Record<string, unknown[]> = {};
+      for (const { snapshots, bars } of batchResults) {
+        Object.assign(allSnapshots, snapshots);
+        Object.assign(allBars, bars);
+      }
+
+      // Build a map of symbol -> last trading day's volume from bars
+      const volumeMap = new Map<string, number>();
+      for (const [symbol, bars] of Object.entries(allBars)) {
+        if (Array.isArray(bars) && bars.length > 0) {
+          const bar = bars[0] as Record<string, unknown>;
+          volumeMap.set(symbol, (bar.v as number) ?? 0);
         }
+      }
+
+      for (const [symbol, snapshot] of Object.entries(allSnapshots)) {
+        const s = snapshot as Record<string, unknown>;
+
+        const quote = s.latestQuote as Record<string, unknown> | undefined;
+        const trade = s.latestTrade as Record<string, unknown> | undefined;
+        const greeks = s.greeks as Record<string, unknown> | undefined;
+
+        // Get volume from bars response
+        const dailyVolume = volumeMap.get(symbol) ?? 0;
+
+        result.set(symbol, {
+          symbol,
+          latestQuote: quote
+            ? {
+                bidPrice: (quote.bp as number) ?? 0,
+                bidSize: (quote.bs as number) ?? 0,
+                askPrice: (quote.ap as number) ?? 0,
+                askSize: (quote.as as number) ?? 0,
+                bidExchange: quote.bx as string | undefined,
+                askExchange: quote.ax as string | undefined,
+                timestamp: (quote.t as string) ?? "",
+              }
+            : undefined,
+          latestTrade: trade
+            ? {
+                price: (trade.p as number) ?? 0,
+                size: (trade.s as number) ?? 0,
+                timestamp: (trade.t as string) ?? "",
+                exchange: trade.x as string | undefined,
+                conditions: trade.c as string[] | undefined,
+              }
+            : undefined,
+          dailyBar: {
+            open: 0,
+            high: 0,
+            low: 0,
+            close: 0,
+            volume: dailyVolume,
+            timestamp: tradingDay,
+          },
+          greeks: greeks
+            ? {
+                delta: greeks.delta as number | undefined,
+                gamma: greeks.gamma as number | undefined,
+                theta: greeks.theta as number | undefined,
+                vega: greeks.vega as number | undefined,
+                rho: greeks.rho as number | undefined,
+              }
+            : undefined,
+          impliedVolatility: s.impliedVolatility as number | undefined,
+        });
       }
     } catch {
       // Return empty map on error
@@ -695,8 +810,8 @@ export class AlpacaMarketDataClient {
       end.setDate(end.getDate() + 6);
 
       dateRanges.push({
-        gte: start.toISOString().split("T")[0]!,
-        lte: end.toISOString().split("T")[0]!,
+        gte: start.toISOString().slice(0, 10),
+        lte: end.toISOString().slice(0, 10),
       });
     }
 
@@ -710,8 +825,8 @@ export class AlpacaMarketDataClient {
       end.setDate(0); // Last day of month
 
       dateRanges.push({
-        gte: start.toISOString().split("T")[0]!,
-        lte: end.toISOString().split("T")[0]!,
+        gte: start.toISOString().slice(0, 10),
+        lte: end.toISOString().slice(0, 10),
       });
     }
 
