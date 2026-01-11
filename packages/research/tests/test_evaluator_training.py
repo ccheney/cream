@@ -33,6 +33,13 @@ from research.evaluator.training import (
     TrainingPhase,
     TrainingResult,
 )
+from research.evaluator.training_checkpoint import save_checkpoint
+from research.evaluator.training_converters import (
+    expert_annotations_to_pairs,
+    historical_outcomes_to_pairs,
+    outcome_to_score,
+    pairs_to_tensors,
+)
 
 # ============================================
 # Fixtures
@@ -302,11 +309,10 @@ class TestEvaluatorTrainingPipeline:
 
 
 class TestExpertToPairs:
-    """Tests for _expert_to_pairs conversion."""
+    """Tests for expert_annotations_to_pairs conversion."""
 
-    def test_convert_annotations(self, pipeline, sample_plan, sample_context):
+    def test_convert_annotations(self, config, sample_plan, sample_context):
         """Test converting expert annotations to pairs."""
-        # Create annotations with different ratings
         annotations = [
             ExpertAnnotation(
                 annotation_id=f"ann_{i}",
@@ -317,29 +323,27 @@ class TestExpertToPairs:
             for i in range(5)
         ]
 
-        pairs = pipeline._expert_to_pairs(annotations)
+        pairs = expert_annotations_to_pairs(annotations, config, verbose=False)
 
         assert len(pairs) > 0
-        # Check pair structure
         pair = pairs[0]
         assert pair.source == "expert"
         assert pair.chosen_score > pair.rejected_score
 
-    def test_empty_annotations(self, pipeline):
+    def test_empty_annotations(self, config):
         """Test handling empty annotations."""
-        pairs = pipeline._expert_to_pairs([])
+        pairs = expert_annotations_to_pairs([], config, verbose=False)
 
         assert pairs == []
 
-    def test_single_annotation(self, pipeline, sample_annotation):
+    def test_single_annotation(self, config, sample_annotation):
         """Test handling single annotation."""
-        pairs = pipeline._expert_to_pairs([sample_annotation])
+        pairs = expert_annotations_to_pairs([sample_annotation], config, verbose=False)
 
         assert pairs == []  # Need at least 2 for pairing
 
-    def test_filters_low_margin(self, pipeline, sample_plan, sample_context):
+    def test_filters_low_margin(self, sample_plan, sample_context):
         """Test that low-margin pairs are filtered."""
-        # Create annotations with close ratings
         annotations = [
             ExpertAnnotation(
                 annotation_id="ann_1",
@@ -355,17 +359,16 @@ class TestExpertToPairs:
             ),
         ]
 
-        pipeline.config.min_margin = 0.1
-        pairs = pipeline._expert_to_pairs(annotations)
+        config = TrainingConfig(min_margin=0.1, verbose=False)
+        pairs = expert_annotations_to_pairs(annotations, config, verbose=False)
 
-        # Should be filtered due to low margin
         assert len(pairs) == 0
 
 
 class TestOutcomesToPairs:
-    """Tests for _outcomes_to_pairs conversion."""
+    """Tests for historical_outcomes_to_pairs conversion."""
 
-    def test_convert_outcomes(self, pipeline, sample_plan, sample_context):
+    def test_convert_outcomes(self, config, sample_plan, sample_context):
         """Test converting outcomes to pairs."""
         outcomes = [
             HistoricalOutcome(
@@ -377,15 +380,14 @@ class TestOutcomesToPairs:
             for i in range(10)
         ]
 
-        pairs = pipeline._outcomes_to_pairs(outcomes)
+        pairs = historical_outcomes_to_pairs(outcomes, config, verbose=False)
 
         assert len(pairs) > 0
-        # Check stratification worked
         pair = pairs[0]
         assert pair.source == "historical_outcome"
         assert "return_diff" in pair.metadata
 
-    def test_stratified_sampling(self, pipeline, sample_plan, sample_context):
+    def test_stratified_sampling(self, sample_plan, sample_context):
         """Test stratified sampling selects top/bottom percentiles."""
         outcomes = [
             HistoricalOutcome(
@@ -397,35 +399,33 @@ class TestOutcomesToPairs:
             for i in range(10)
         ]
 
-        pipeline.config.top_percentile = 0.3
-        pipeline.config.bottom_percentile = 0.3
-        pairs = pipeline._outcomes_to_pairs(outcomes)
+        config = TrainingConfig(top_percentile=0.3, bottom_percentile=0.3, verbose=False)
+        pairs = historical_outcomes_to_pairs(outcomes, config, verbose=False)
 
-        # Top 3 × Bottom 3 = 9 pairs max
+        # Top 3 x Bottom 3 = 9 pairs max
         assert len(pairs) > 0
 
-        # Check all pairs have positive return_diff
         for pair in pairs:
             assert pair.metadata["return_diff"] > 0
 
-    def test_empty_outcomes(self, pipeline):
+    def test_empty_outcomes(self, config):
         """Test handling empty outcomes."""
-        pairs = pipeline._outcomes_to_pairs([])
+        pairs = historical_outcomes_to_pairs([], config, verbose=False)
 
         assert pairs == []
 
 
 class TestOutcomeToScore:
-    """Tests for _outcome_to_score conversion."""
+    """Tests for outcome_to_score conversion."""
 
-    def test_positive_return(self, pipeline, sample_outcome):
+    def test_positive_return(self, sample_outcome):
         """Test score for positive return."""
-        score = pipeline._outcome_to_score(sample_outcome)
+        score = outcome_to_score(sample_outcome)
 
         assert 0.0 <= score <= 1.0
         assert score > 0.5  # Positive return should be > 0.5
 
-    def test_negative_return(self, pipeline, sample_plan, sample_context):
+    def test_negative_return(self, sample_plan, sample_context):
         """Test score for negative return."""
         outcome = HistoricalOutcome(
             outcome_id="out_neg",
@@ -435,12 +435,12 @@ class TestOutcomeToScore:
             hit_stop=True,
         )
 
-        score = pipeline._outcome_to_score(outcome)
+        score = outcome_to_score(outcome)
 
         assert 0.0 <= score <= 1.0
         assert score < 0.5  # Negative return should be < 0.5
 
-    def test_target_hit_bonus(self, pipeline, sample_plan, sample_context):
+    def test_target_hit_bonus(self, sample_plan, sample_context):
         """Test bonus for hitting target."""
         outcome_no_target = HistoricalOutcome(
             outcome_id="out_1",
@@ -457,8 +457,8 @@ class TestOutcomeToScore:
             hit_target=True,
         )
 
-        score_no_target = pipeline._outcome_to_score(outcome_no_target)
-        score_with_target = pipeline._outcome_to_score(outcome_with_target)
+        score_no_target = outcome_to_score(outcome_no_target)
+        score_with_target = outcome_to_score(outcome_with_target)
 
         assert score_with_target > score_no_target
 
@@ -604,9 +604,9 @@ class TestTrainPhase:
 
 
 class TestPairsToTensors:
-    """Tests for _pairs_to_tensors."""
+    """Tests for pairs_to_tensors."""
 
-    def test_convert_pairs(self, pipeline, sample_plan, sample_context):
+    def test_convert_pairs(self, sample_plan, sample_context):
         """Test converting pairs to tensors."""
         pairs = [
             PreferencePair(
@@ -620,7 +620,7 @@ class TestPairsToTensors:
             )
         ]
 
-        chosen, rejected, margins = pipeline._pairs_to_tensors(pairs)
+        chosen, rejected, margins = pairs_to_tensors(pairs)
 
         assert chosen.shape == (1, 128)
         assert rejected.shape == (1, 128)
@@ -675,13 +675,14 @@ class TestCheckpointing:
             pipeline.config.checkpoint_dir = tmpdir
             pipeline.config.save_checkpoints = True
 
-            # Initialize optimizer
-            pipeline._optimizer = torch.optim.Adam(
+            optimizer = torch.optim.Adam(
                 pipeline.model.parameters(),
                 lr=pipeline.config.learning_rate,
             )
 
-            path = pipeline._save_checkpoint("test_phase")
+            path = save_checkpoint(
+                pipeline.model, pipeline.config, "test_phase", optimizer, pipeline.calibrator
+            )
 
             assert path.exists()
             assert "test_phase" in path.name
@@ -690,22 +691,21 @@ class TestCheckpointing:
         """Test loading checkpoint."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline.config.checkpoint_dir = tmpdir
-            pipeline._optimizer = torch.optim.Adam(
+
+            optimizer = torch.optim.Adam(
                 pipeline.model.parameters(),
                 lr=pipeline.config.learning_rate,
             )
 
-            # Save checkpoint
-            path = pipeline._save_checkpoint("test_phase")
+            path = save_checkpoint(
+                pipeline.model, pipeline.config, "test_phase", optimizer, pipeline.calibrator
+            )
 
-            # Modify model
             original_weight = pipeline.model.network[0].weight.clone()
             pipeline.model.network[0].weight.data.fill_(0)
 
-            # Load checkpoint
             pipeline.load_checkpoint(path)
 
-            # Weights should be restored
             restored_weight = pipeline.model.network[0].weight
             assert torch.allclose(original_weight, restored_weight)
 

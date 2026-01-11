@@ -21,6 +21,7 @@ from research.evaluator.calibration import (
     CalibrationDriftDetector,
     ProbabilityCalibrator,
 )
+from research.evaluator.counterfactual import CounterfactualEstimator
 from research.evaluator.expected_value import (
     REGIME_WIN_RATE_MODIFIERS,
     EVConfig,
@@ -32,6 +33,12 @@ from research.evaluator.expected_value import (
     estimate_scratch_probability,
 )
 from research.evaluator.llm_judge import LLMJudge
+from research.evaluator.perturbation import (
+    PlanPerturbationGenerator,
+    identify_perturbation_type,
+)
+from research.evaluator.plan_generator import PlanGenerator
+from research.evaluator.plan_scorer import PlanScorer
 from research.evaluator.post_execution import (
     Attribution,
     MarketData,
@@ -43,6 +50,11 @@ from research.evaluator.pre_execution import (
     DimensionScores,
     PlanScore,
     PreExecutionEvaluator,
+)
+from research.evaluator.preference_types import (
+    Action,
+    Direction,
+    SizeUnit,
 )
 from research.evaluator.rule_scorer import RuleBasedScorer, ScoringResult
 from research.evaluator.synthetic_preferences import (
@@ -64,10 +76,13 @@ from research.evaluator.training import (
 )
 
 __all__ = [
+    "Action",
     "Attribution",
     "BradleyTerryRewardModel",
     "CalibrationDriftDetector",
+    "CounterfactualEstimator",
     "DimensionScores",
+    "Direction",
     "EVConfig",
     "EvaluatorTrainingPipeline",
     "ExecutedTradeOutcome",
@@ -81,7 +96,10 @@ __all__ = [
     "MarketRegime",
     "OutcomeScore",
     "PhaseProgress",
+    "PlanGenerator",
+    "PlanPerturbationGenerator",
     "PlanScore",
+    "PlanScorer",
     "PostExecutionEvaluator",
     "PreExecutionEvaluator",
     "PreferencePair",
@@ -89,6 +107,7 @@ __all__ = [
     "REGIME_WIN_RATE_MODIFIERS",
     "RuleBasedScorer",
     "ScoringResult",
+    "SizeUnit",
     "SyntheticPreferenceGenerator",
     "TradeOutcome",
     "TradingPlan",
@@ -99,5 +118,6 @@ __all__ = [
     "estimate_probabilities",
     "estimate_scratch_probability",
     "generate_random_contexts",
+    "identify_perturbation_type",
     "train_bradley_terry_model",
 ]
