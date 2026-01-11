@@ -47,6 +47,15 @@ export {
   type NewsItemInput,
 } from "./news-ingestion.js";
 export {
+  calculatePaperRelevanceScore,
+  createPaperIngestionService,
+  type PaperIngestionOptions,
+  type PaperIngestionResult,
+  PaperIngestionService,
+  type PaperInput,
+  SEED_PAPERS,
+} from "./paper-ingestion.js";
+export {
   createUniverseSyncer,
   instrumentsToCompanyData,
   type ResolvedInstrument,

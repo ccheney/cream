@@ -6,6 +6,21 @@
  * for input validation and output typing.
  */
 
+// Academic paper tools
+export {
+  GetPaperInputSchema,
+  GetPaperOutputSchema,
+  getAcademicPaperTool,
+  IngestPapersInputSchema,
+  IngestPapersOutputSchema,
+  ingestAcademicPapersTool,
+  SearchExternalPapersInputSchema,
+  SearchExternalPapersOutputSchema,
+  SearchPapersInputSchema,
+  SearchPapersOutputSchema,
+  searchAcademicPapersTool,
+  searchExternalPapersTool,
+} from "./academicPaperTools.js";
 // Company relationship tools
 export {
   type CompanyRelationshipsInput,

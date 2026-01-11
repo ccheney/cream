@@ -23,6 +23,14 @@
  * ```
  */
 
+// Academic APIs
+export {
+  createSemanticScholarClient,
+  SemanticScholarClient,
+  type SemanticScholarConfig,
+  type SemanticScholarPaper,
+  type SemanticScholarSearchResponse,
+} from "./academic/index.js";
 // Extraction
 export {
   createExtractionClient,
