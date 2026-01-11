@@ -3,14 +3,14 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { Candle } from "@cream/indicators";
+import type { OHLCVBar } from "@cream/indicators";
 import {
   calculateMean,
   calculateStd,
   calculateZScore,
   extractFeatures,
   extractSingleFeature,
-  getMinimumCandleCount,
+  getMinimumOHLCVBarCount,
   normalizeFeatures,
 } from "../src/features";
 import {
@@ -31,12 +31,12 @@ import {
 // Test Data Generation
 // ============================================
 
-function createCandle(
+function createOHLCVBar(
   timestamp: string,
   close: number,
   volume = 1000000,
-  overrides: Partial<Candle> = {}
-): Candle {
+  overrides: Partial<OHLCVBar> = {}
+): OHLCVBar {
   return {
     timestamp: new Date(timestamp).getTime(),
     open: close * 0.995,
@@ -48,13 +48,13 @@ function createCandle(
   };
 }
 
-function generateTrendingCandles(
+function generateTrendingOHLCVBars(
   startPrice: number,
   direction: "up" | "down",
   count: number,
   volatility = 0.01
-): Candle[] {
-  const candles: Candle[] = [];
+): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   let price = startPrice;
   const baseDate = new Date("2024-01-01");
 
@@ -65,14 +65,14 @@ function generateTrendingCandles(
     price = price * (1 + drift + noise);
 
     const date = new Date(baseDate.getTime() + i * 24 * 60 * 60 * 1000);
-    candles.push(createCandle(date.toISOString(), price));
+    candles.push(createOHLCVBar(date.toISOString(), price));
   }
 
   return candles;
 }
 
-function generateRangeBoundCandles(basePrice: number, count: number, volatility = 0.01): Candle[] {
-  const candles: Candle[] = [];
+function generateRangeBoundOHLCVBars(basePrice: number, count: number, volatility = 0.01): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   const baseDate = new Date("2024-01-01");
 
   for (let i = 0; i < count; i++) {
@@ -81,14 +81,14 @@ function generateRangeBoundCandles(basePrice: number, count: number, volatility 
     const price = basePrice * (1 + deviation);
 
     const date = new Date(baseDate.getTime() + i * 24 * 60 * 60 * 1000);
-    candles.push(createCandle(date.toISOString(), price));
+    candles.push(createOHLCVBar(date.toISOString(), price));
   }
 
   return candles;
 }
 
-function generateHighVolatilityCandles(basePrice: number, count: number): Candle[] {
-  const candles: Candle[] = [];
+function generateHighVolatilityOHLCVBars(basePrice: number, count: number): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   let price = basePrice;
   const baseDate = new Date("2024-01-01");
 
@@ -98,14 +98,14 @@ function generateHighVolatilityCandles(basePrice: number, count: number): Candle
     price = price * (1 + swing);
 
     const date = new Date(baseDate.getTime() + i * 24 * 60 * 60 * 1000);
-    candles.push(createCandle(date.toISOString(), price, 2000000)); // Higher volume
+    candles.push(createOHLCVBar(date.toISOString(), price, 2000000)); // Higher volume
   }
 
   return candles;
 }
 
-function _generateLowVolatilityCandles(basePrice: number, count: number): Candle[] {
-  const candles: Candle[] = [];
+function _generateLowVolatilityOHLCVBars(basePrice: number, count: number): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   let price = basePrice;
   const baseDate = new Date("2024-01-01");
 
@@ -115,7 +115,7 @@ function _generateLowVolatilityCandles(basePrice: number, count: number): Candle
     price = price * (1 + move);
 
     const date = new Date(baseDate.getTime() + i * 24 * 60 * 60 * 1000);
-    candles.push(createCandle(date.toISOString(), price, 500000)); // Lower volume
+    candles.push(createOHLCVBar(date.toISOString(), price, 500000)); // Lower volume
   }
 
   return candles;
@@ -166,7 +166,7 @@ describe("Feature Extraction", () => {
 
   describe("extractFeatures", () => {
     it("extracts features from candles", () => {
-      const candles = generateTrendingCandles(100, "up", 50);
+      const candles = generateTrendingOHLCVBars(100, "up", 50);
       const features = extractFeatures(candles);
 
       expect(features.length).toBeGreaterThan(0);
@@ -177,7 +177,7 @@ describe("Feature Extraction", () => {
     });
 
     it("returns empty for insufficient data", () => {
-      const candles = generateTrendingCandles(100, "up", 5);
+      const candles = generateTrendingOHLCVBars(100, "up", 5);
       const features = extractFeatures(candles);
       expect(features.length).toBe(0);
     });
@@ -185,26 +185,26 @@ describe("Feature Extraction", () => {
 
   describe("extractSingleFeature", () => {
     it("extracts single feature for latest candle", () => {
-      const candles = generateTrendingCandles(100, "up", 50);
+      const candles = generateTrendingOHLCVBars(100, "up", 50);
       const feature = extractSingleFeature(candles);
 
       expect(feature).not.toBeNull();
-      const lastCandle = candles[candles.length - 1];
-      expect(lastCandle).toBeDefined();
-      expect(feature!.timestamp).toBe(new Date(lastCandle!.timestamp).toISOString());
+      const lastOHLCVBar = candles[candles.length - 1];
+      expect(lastOHLCVBar).toBeDefined();
+      expect(feature!.timestamp).toBe(new Date(lastOHLCVBar!.timestamp).toISOString());
     });
   });
 
-  describe("getMinimumCandleCount", () => {
+  describe("getMinimumOHLCVBarCount", () => {
     it("returns correct minimum", () => {
-      const min = getMinimumCandleCount();
+      const min = getMinimumOHLCVBarCount();
       expect(min).toBe(21); // 20 + 1
     });
   });
 
   describe("normalizeFeatures", () => {
     it("normalizes features to zero mean and unit variance", () => {
-      const candles = generateTrendingCandles(100, "up", 100);
+      const candles = generateTrendingOHLCVBars(100, "up", 100);
       const features = extractFeatures(candles);
       const { normalized, means, stds } = normalizeFeatures(features);
 
@@ -228,9 +228,9 @@ describe("GMM Classifier", () => {
     it("trains a GMM model", () => {
       // Generate mixed regime data
       const candles = [
-        ...generateTrendingCandles(100, "up", 100),
-        ...generateTrendingCandles(150, "down", 100),
-        ...generateRangeBoundCandles(120, 100),
+        ...generateTrendingOHLCVBars(100, "up", 100),
+        ...generateTrendingOHLCVBars(150, "down", 100),
+        ...generateRangeBoundOHLCVBars(120, 100),
       ];
 
       const model = trainGMM(candles);
@@ -243,16 +243,16 @@ describe("GMM Classifier", () => {
     });
 
     it("throws for insufficient data", () => {
-      const candles = generateTrendingCandles(100, "up", 30);
+      const candles = generateTrendingOHLCVBars(100, "up", 30);
 
       expect(() => trainGMM(candles)).toThrow("Insufficient data");
     });
 
     it("assigns regime labels to clusters", () => {
       const candles = [
-        ...generateTrendingCandles(100, "up", 150),
-        ...generateTrendingCandles(200, "down", 150),
-        ...generateHighVolatilityCandles(150, 150),
+        ...generateTrendingOHLCVBars(100, "up", 150),
+        ...generateTrendingOHLCVBars(200, "down", 150),
+        ...generateHighVolatilityOHLCVBars(150, 150),
       ];
 
       const model = trainGMM(candles);
@@ -266,16 +266,16 @@ describe("GMM Classifier", () => {
 
   describe("classifyWithGMM", () => {
     it("classifies candles with trained model", () => {
-      const trainingCandles = [
-        ...generateTrendingCandles(100, "up", 150),
-        ...generateTrendingCandles(200, "down", 150),
-        ...generateRangeBoundCandles(150, 150),
+      const trainingOHLCVBars = [
+        ...generateTrendingOHLCVBars(100, "up", 150),
+        ...generateTrendingOHLCVBars(200, "down", 150),
+        ...generateRangeBoundOHLCVBars(150, 150),
       ];
 
-      const model = trainGMM(trainingCandles);
+      const model = trainGMM(trainingOHLCVBars);
 
-      const testCandles = generateTrendingCandles(100, "up", 50);
-      const result = classifyWithGMM(model, testCandles);
+      const testOHLCVBars = generateTrendingOHLCVBars(100, "up", 50);
+      const result = classifyWithGMM(model, testOHLCVBars);
 
       expect(result).not.toBeNull();
       expect(result!.regime).toBeDefined();
@@ -284,11 +284,11 @@ describe("GMM Classifier", () => {
     });
 
     it("returns null for insufficient test data", () => {
-      const trainingCandles = generateTrendingCandles(100, "up", 300);
-      const model = trainGMM(trainingCandles);
+      const trainingOHLCVBars = generateTrendingOHLCVBars(100, "up", 300);
+      const model = trainGMM(trainingOHLCVBars);
 
-      const testCandles = generateTrendingCandles(100, "up", 5);
-      const result = classifyWithGMM(model, testCandles);
+      const testOHLCVBars = generateTrendingOHLCVBars(100, "up", 5);
+      const result = classifyWithGMM(model, testOHLCVBars);
 
       expect(result).toBeNull();
     });
@@ -296,16 +296,16 @@ describe("GMM Classifier", () => {
 
   describe("classifySeriesWithGMM", () => {
     it("classifies a series of candles", () => {
-      const trainingCandles = [
-        ...generateTrendingCandles(100, "up", 150),
-        ...generateTrendingCandles(200, "down", 150),
-        ...generateRangeBoundCandles(150, 150),
+      const trainingOHLCVBars = [
+        ...generateTrendingOHLCVBars(100, "up", 150),
+        ...generateTrendingOHLCVBars(200, "down", 150),
+        ...generateRangeBoundOHLCVBars(150, 150),
       ];
 
-      const model = trainGMM(trainingCandles);
+      const model = trainGMM(trainingOHLCVBars);
 
-      const testCandles = generateTrendingCandles(100, "up", 100);
-      const results = classifySeriesWithGMM(model, testCandles);
+      const testOHLCVBars = generateTrendingOHLCVBars(100, "up", 100);
+      const results = classifySeriesWithGMM(model, testOHLCVBars);
 
       expect(results.length).toBeGreaterThan(0);
       expect(results[0]).toHaveProperty("regime");
@@ -315,7 +315,7 @@ describe("GMM Classifier", () => {
 
   describe("Model Serialization", () => {
     it("serializes and deserializes model", () => {
-      const candles = generateTrendingCandles(100, "up", 300);
+      const candles = generateTrendingOHLCVBars(100, "up", 300);
       const model = trainGMM(candles);
 
       const json = serializeGMMModel(model);

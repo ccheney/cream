@@ -14,7 +14,7 @@
  */
 
 import type { RegimeLabel } from "@cream/config";
-import type { Candle } from "@cream/indicators";
+import type { OHLCVBar } from "@cream/indicators";
 import {
   DEFAULT_FEATURE_CONFIG,
   extractFeatures,
@@ -112,7 +112,7 @@ export const DEFAULT_GMM_CONFIG: GMMConfig = {
  * @param config - GMM configuration
  * @returns Trained GMM model
  */
-export function trainGMM(candles: Candle[], config: GMMConfig = DEFAULT_GMM_CONFIG): GMMModel {
+export function trainGMM(candles: OHLCVBar[], config: GMMConfig = DEFAULT_GMM_CONFIG): GMMModel {
   const features = extractFeatures(candles, config.featureConfig);
   if (features.length < config.k * 10) {
     throw new Error(
@@ -328,7 +328,7 @@ function assignRegimeLabels(clusters: GMMCluster[]): void {
  * @param candles - Candles to classify
  * @returns Classification result
  */
-export function classifyWithGMM(model: GMMModel, candles: Candle[]): GMMClassification | null {
+export function classifyWithGMM(model: GMMModel, candles: OHLCVBar[]): GMMClassification | null {
   const features = extractFeatures(candles, model.config.featureConfig);
   if (features.length === 0) {
     return null;
@@ -371,7 +371,7 @@ export function classifyWithGMM(model: GMMModel, candles: Candle[]): GMMClassifi
  */
 export function classifySeriesWithGMM(
   model: GMMModel,
-  candles: Candle[]
+  candles: OHLCVBar[]
 ): Array<GMMClassification & { timestamp: string }> {
   const features = extractFeatures(candles, model.config.featureConfig);
   const results: Array<GMMClassification & { timestamp: string }> = [];

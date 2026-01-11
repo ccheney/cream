@@ -3,11 +3,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { Candle } from "@cream/indicators";
+import type { OHLCVBar } from "@cream/indicators";
 import {
   classifyRegime,
   createRuleBasedClassifier,
-  getRequiredCandleCount,
+  getRequiredOHLCVBarCount,
   hasEnoughData,
   type RegimeInput,
 } from "../src/ruleBasedClassifier";
@@ -16,13 +16,13 @@ import {
 // Test Fixtures
 // ============================================
 
-function createCandle(
+function createOHLCVBar(
   close: number,
   high?: number,
   low?: number,
   volume = 1000000,
   timestamp = Date.now()
-): Candle {
+): OHLCVBar {
   const h = high ?? close * 1.01;
   const l = low ?? close * 0.99;
   const open = close * (0.99 + Math.random() * 0.02);
@@ -36,19 +36,19 @@ function createCandle(
   };
 }
 
-function createTrendingCandles(
+function createTrendingOHLCVBars(
   startPrice: number,
   direction: "up" | "down",
   count: number
-): Candle[] {
-  const candles: Candle[] = [];
+): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   let price = startPrice;
   const change = direction === "up" ? 0.01 : -0.01; // 1% per candle
 
   for (let i = 0; i < count; i++) {
     price = price * (1 + change);
     candles.push(
-      createCandle(
+      createOHLCVBar(
         price,
         price * 1.005, // Tighter range in trend
         price * 0.995,
@@ -61,18 +61,18 @@ function createTrendingCandles(
   return candles;
 }
 
-function createRangeBoundCandles(
+function createRangeBoundOHLCVBars(
   centerPrice: number,
   count: number,
   volatility = 0.005 // 0.5% range
-): Candle[] {
-  const candles: Candle[] = [];
+): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
 
   for (let i = 0; i < count; i++) {
     const noise = (Math.random() - 0.5) * volatility * 2;
     const price = centerPrice * (1 + noise);
     candles.push(
-      createCandle(
+      createOHLCVBar(
         price,
         price * (1 + volatility),
         price * (1 - volatility),
@@ -85,8 +85,8 @@ function createRangeBoundCandles(
   return candles;
 }
 
-function createHighVolatilityCandles(startPrice: number, count: number): Candle[] {
-  const candles: Candle[] = [];
+function createHighVolatilityOHLCVBars(startPrice: number, count: number): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
   let price = startPrice;
 
   for (let i = 0; i < count; i++) {
@@ -94,7 +94,7 @@ function createHighVolatilityCandles(startPrice: number, count: number): Candle[
     const change = (Math.random() - 0.5) * 0.1;
     price = price * (1 + change);
     candles.push(
-      createCandle(
+      createOHLCVBar(
         price,
         price * 1.03, // Wide range
         price * 0.97,
@@ -107,15 +107,15 @@ function createHighVolatilityCandles(startPrice: number, count: number): Candle[
   return candles;
 }
 
-function createLowVolatilityCandles(price: number, count: number): Candle[] {
-  const candles: Candle[] = [];
+function createLowVolatilityOHLCVBars(price: number, count: number): OHLCVBar[] {
+  const candles: OHLCVBar[] = [];
 
   for (let i = 0; i < count; i++) {
     // Very small movements (0.1%)
     const noise = (Math.random() - 0.5) * 0.002;
     const closePrice = price * (1 + noise);
     candles.push(
-      createCandle(
+      createOHLCVBar(
         closePrice,
         closePrice * 1.001, // Very tight range
         closePrice * 0.999,
@@ -135,7 +135,7 @@ function createLowVolatilityCandles(price: number, count: number): Candle[] {
 describe("Rule-Based Regime Classifier", () => {
   describe("classifyRegime", () => {
     test("classifies bullish trend correctly", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       const input: RegimeInput = { candles };
 
       const result = classifyRegime(input);
@@ -147,7 +147,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("classifies bearish trend correctly", () => {
-      const candles = createTrendingCandles(100, "down", 60);
+      const candles = createTrendingOHLCVBars(100, "down", 60);
       const input: RegimeInput = { candles };
 
       const result = classifyRegime(input);
@@ -159,7 +159,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("classifies range-bound correctly with converged MAs and low vol", () => {
-      const candles = createLowVolatilityCandles(100, 60);
+      const candles = createLowVolatilityOHLCVBars(100, 60);
       // Add historical ATR showing current is low
       const historicalAtr = Array(100)
         .fill(0)
@@ -174,13 +174,13 @@ describe("Rule-Based Regime Classifier", () => {
 
     test("classifies high volatility correctly", () => {
       // Create baseline normal volatility data
-      const normalCandles = createRangeBoundCandles(100, 50);
+      const normalOHLCVBars = createRangeBoundOHLCVBars(100, 50);
       // Then add high volatility candles
-      const highVolCandles = createHighVolatilityCandles(100, 20);
-      const candles = [...normalCandles, ...highVolCandles];
+      const highVolOHLCVBars = createHighVolatilityOHLCVBars(100, 20);
+      const candles = [...normalOHLCVBars, ...highVolOHLCVBars];
 
       // Historical ATR from normal period
-      const historicalAtr = normalCandles.map((c) => c.high - c.low);
+      const historicalAtr = normalOHLCVBars.map((c) => c.high - c.low);
       const input: RegimeInput = { candles, historicalAtr };
 
       const result = classifyRegime(input);
@@ -194,13 +194,13 @@ describe("Rule-Based Regime Classifier", () => {
 
     test("classifies low volatility correctly", () => {
       // Create baseline normal volatility data
-      const normalCandles = createRangeBoundCandles(100, 50, 0.02);
+      const normalOHLCVBars = createRangeBoundOHLCVBars(100, 50, 0.02);
       // Then add very low volatility candles
-      const lowVolCandles = createLowVolatilityCandles(100, 20);
-      const candles = [...normalCandles, ...lowVolCandles];
+      const lowVolOHLCVBars = createLowVolatilityOHLCVBars(100, 20);
+      const candles = [...normalOHLCVBars, ...lowVolOHLCVBars];
 
       // Historical ATR from normal period
-      const historicalAtr = normalCandles.map((c) => c.high - c.low);
+      const historicalAtr = normalOHLCVBars.map((c) => c.high - c.low);
       const input: RegimeInput = { candles, historicalAtr };
 
       const result = classifyRegime(input);
@@ -212,7 +212,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("uses custom configuration", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       const config = {
         trend_ma_fast: 10,
         trend_ma_slow: 30,
@@ -229,7 +229,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("provides metrics in result", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       const result = classifyRegime({ candles });
 
       expect(result.metrics).toBeDefined();
@@ -243,7 +243,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("handles empty historical ATR", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       const result = classifyRegime({ candles, historicalAtr: [] });
 
       expect(result.regime).toBeDefined();
@@ -255,7 +255,7 @@ describe("Rule-Based Regime Classifier", () => {
   describe("createRuleBasedClassifier", () => {
     test("creates reusable classifier function", () => {
       const classifier = createRuleBasedClassifier();
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
 
       const result = classifier({ candles });
 
@@ -270,7 +270,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_low: 15,
       };
       const classifier = createRuleBasedClassifier(config);
-      const candles = createTrendingCandles(100, "up", 30);
+      const candles = createTrendingOHLCVBars(100, "up", 30);
 
       const result = classifier({ candles });
 
@@ -278,9 +278,9 @@ describe("Rule-Based Regime Classifier", () => {
     });
   });
 
-  describe("getRequiredCandleCount", () => {
+  describe("getRequiredOHLCVBarCount", () => {
     test("returns correct count for default config", () => {
-      const count = getRequiredCandleCount();
+      const count = getRequiredOHLCVBarCount();
       // Default slow MA is 50, ATR is 14, need max + 1
       expect(count).toBe(51);
     });
@@ -292,7 +292,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_high: 80,
         volatility_percentile_low: 20,
       };
-      const count = getRequiredCandleCount(config);
+      const count = getRequiredOHLCVBarCount(config);
       expect(count).toBe(101);
     });
 
@@ -303,7 +303,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_high: 80,
         volatility_percentile_low: 20,
       };
-      const count = getRequiredCandleCount(config);
+      const count = getRequiredOHLCVBarCount(config);
       // ATR period (14) is greater than slow MA (10)
       expect(count).toBe(15);
     });
@@ -311,12 +311,12 @@ describe("Rule-Based Regime Classifier", () => {
 
   describe("hasEnoughData", () => {
     test("returns true when enough candles", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       expect(hasEnoughData(candles)).toBe(true);
     });
 
     test("returns false when not enough candles", () => {
-      const candles = createTrendingCandles(100, "up", 10);
+      const candles = createTrendingOHLCVBars(100, "up", 10);
       expect(hasEnoughData(candles)).toBe(false);
     });
 
@@ -327,7 +327,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_high: 80,
         volatility_percentile_low: 20,
       };
-      const candles = createTrendingCandles(100, "up", 15);
+      const candles = createTrendingOHLCVBars(100, "up", 15);
       expect(hasEnoughData(candles, config)).toBe(true);
     });
   });
@@ -335,14 +335,14 @@ describe("Rule-Based Regime Classifier", () => {
   describe("Confidence Scores", () => {
     test("confidence increases with stronger trends", () => {
       // Weak trend
-      const weakCandles = createTrendingCandles(100, "up", 60);
+      const weakOHLCVBars = createTrendingOHLCVBars(100, "up", 60);
       // Make it weaker by reducing the price change
       for (let i = 30; i < 60; i++) {
-        const candle = weakCandles[i];
+        const candle = weakOHLCVBars[i];
         if (!candle) {
           continue;
         }
-        weakCandles[i] = createCandle(
+        weakOHLCVBars[i] = createOHLCVBar(
           candle.close * 0.99,
           undefined,
           undefined,
@@ -350,11 +350,11 @@ describe("Rule-Based Regime Classifier", () => {
           candle.timestamp
         );
       }
-      const weakResult = classifyRegime({ candles: weakCandles });
+      const weakResult = classifyRegime({ candles: weakOHLCVBars });
 
       // Strong trend
-      const strongCandles = createTrendingCandles(100, "up", 60);
-      const strongResult = classifyRegime({ candles: strongCandles });
+      const strongOHLCVBars = createTrendingOHLCVBars(100, "up", 60);
+      const strongResult = classifyRegime({ candles: strongOHLCVBars });
 
       // Both should be bullish but strong should have higher confidence
       if (weakResult.regime === "BULL_TREND" && strongResult.regime === "BULL_TREND") {
@@ -363,7 +363,7 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("confidence is bounded 0-1", () => {
-      const candles = createTrendingCandles(100, "up", 60);
+      const candles = createTrendingOHLCVBars(100, "up", 60);
       const result = classifyRegime({ candles });
 
       expect(result.confidence).toBeGreaterThanOrEqual(0);
@@ -373,8 +373,8 @@ describe("Rule-Based Regime Classifier", () => {
 
   describe("Edge Cases", () => {
     test("handles minimum required candles", () => {
-      const count = getRequiredCandleCount();
-      const candles = createTrendingCandles(100, "up", count);
+      const count = getRequiredOHLCVBarCount();
+      const candles = createTrendingOHLCVBars(100, "up", count);
 
       const result = classifyRegime({ candles });
 
@@ -383,12 +383,12 @@ describe("Rule-Based Regime Classifier", () => {
     });
 
     test("handles flat price series", () => {
-      const flatCandles: Candle[] = [];
+      const flatOHLCVBars: OHLCVBar[] = [];
       for (let i = 0; i < 60; i++) {
-        flatCandles.push(createCandle(100, 100.5, 99.5, 1000000, Date.now() + i * 3600000));
+        flatOHLCVBars.push(createOHLCVBar(100, 100.5, 99.5, 1000000, Date.now() + i * 3600000));
       }
 
-      const result = classifyRegime({ candles: flatCandles });
+      const result = classifyRegime({ candles: flatOHLCVBars });
 
       // Flat prices should result in RANGE or LOW_VOL
       expect(["RANGE", "LOW_VOL"]).toContain(result.regime);
@@ -396,15 +396,15 @@ describe("Rule-Based Regime Classifier", () => {
 
     test("handles extreme price movements", () => {
       // Create a sudden crash scenario
-      const normalCandles = createRangeBoundCandles(100, 40);
-      const crashCandles = createTrendingCandles(100, "down", 20);
+      const normalOHLCVBars = createRangeBoundOHLCVBars(100, 40);
+      const crashOHLCVBars = createTrendingOHLCVBars(100, "down", 20);
       // Make the crash more extreme
-      for (let i = 0; i < crashCandles.length; i++) {
-        const candle = crashCandles[i];
+      for (let i = 0; i < crashOHLCVBars.length; i++) {
+        const candle = crashOHLCVBars[i];
         if (!candle) {
           continue;
         }
-        crashCandles[i] = createCandle(
+        crashOHLCVBars[i] = createOHLCVBar(
           candle.close * 0.8,
           candle.high * 0.85,
           candle.low * 0.75,
@@ -413,8 +413,8 @@ describe("Rule-Based Regime Classifier", () => {
         );
       }
 
-      const candles = [...normalCandles, ...crashCandles];
-      const historicalAtr = normalCandles.map((c) => c.high - c.low);
+      const candles = [...normalOHLCVBars, ...crashOHLCVBars];
+      const historicalAtr = normalOHLCVBars.map((c) => c.high - c.low);
 
       const result = classifyRegime({ candles, historicalAtr });
 

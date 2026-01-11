@@ -10,7 +10,7 @@
  * @see docs/plans/02-data-layer.md
  */
 
-import type { Candle } from "@cream/indicators";
+import type { OHLCVBar } from "@cream/indicators";
 
 export interface RegimeFeatures {
   /** Log returns */
@@ -48,7 +48,7 @@ export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
  * @returns Array of extracted features
  */
 export function extractFeatures(
-  candles: Candle[],
+  candles: OHLCVBar[],
   config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): RegimeFeatures[] {
   if (candles.length < config.volatilityPeriod + 1) {
@@ -95,7 +95,7 @@ export function extractFeatures(
 }
 
 export function extractSingleFeature(
-  candles: Candle[],
+  candles: OHLCVBar[],
   config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): RegimeFeatures | null {
   const features = extractFeatures(candles, config);

@@ -1,56 +1,21 @@
 /**
- * Technical Indicators Package
+ * @cream/indicators v2
  *
- * Provides calculation implementations for technical analysis indicators.
- * Supports momentum, trend, volatility, and volume indicators.
+ * Technical indicator calculation engine for the Cream trading system.
  *
- * @example
- * ```ts
- * import {
- *   calculateRSI,
- *   calculateSMA,
- *   calculateIndicators,
- * } from '@cream/indicators';
- *
- * // Calculate single indicator
- * const rsi = calculateRSI(candles, { period: 14 });
- *
- * // Calculate all indicators for a timeframe
- * const snapshot = calculateIndicators(candles, '1h');
- * console.log(snapshot.values['rsi_14_1h']);
- * ```
- *
- * @see docs/plans/11-configuration.md for indicator specifications
+ * Architecture:
+ * - service/: Main service layer for indicator orchestration
+ * - calculators/: Pure calculation functions organized by category
+ *   - price/: Price-based indicators (trend, momentum, volatility)
+ *   - liquidity/: Market microstructure indicators
+ *   - options/: Options-derived indicators
+ * - repositories/: Turso persistence layer
+ * - types/: Zod schemas and TypeScript types
+ * - batch/: Bulk processing utilities
  */
 
-// Momentum Indicators
-export * from "./momentum/index";
-// Indicator Pipeline
-export {
-  calculateHistoricalIndicators,
-  calculateIndicators,
-  calculateMultiTimeframeIndicators,
-  DEFAULT_PIPELINE_CONFIG,
-  getRequiredWarmupPeriod,
-  type IndicatorPipelineConfig,
-} from "./pipeline";
-// Storage Integration
-export {
-  type PersistIndicatorsOptions,
-  type PersistResult,
-  persistHistoricalIndicators,
-  persistIndicators,
-  persistMultipleIndicators,
-} from "./storage";
-// Synthesis (Dynamic Indicator Generation)
-export * from "./synthesis/index";
-// Normalization Transforms
-export * from "./transforms/index";
-// Trend Indicators
-export * from "./trend/index";
-// Types
+export * from "./batch";
+export * from "./calculators";
+export * from "./repositories";
+export * from "./service";
 export * from "./types";
-// Volatility Indicators
-export * from "./volatility/index";
-// Volume Indicators
-export * from "./volume/index";

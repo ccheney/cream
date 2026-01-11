@@ -16,11 +16,11 @@
  */
 
 import type { RegimeLabel, RuleBasedConfig } from "@cream/config";
-import { type Candle, calculateATR, calculateSMA } from "@cream/indicators";
+import { type OHLCVBar, calculateATR, calculateSMA } from "@cream/indicators";
 
 export interface RegimeInput {
   /** Recent price candles (oldest first) */
-  candles: Candle[];
+  candles: OHLCVBar[];
   /** Historical ATR values for percentile calculation */
   historicalAtr?: number[];
 }
@@ -67,13 +67,9 @@ export function classifyRegime(
 ): RegimeClassification {
   const { candles, historicalAtr = [] } = input;
 
-  const fastMaResults = calculateSMA(candles, { period: config.trend_ma_fast });
-  const slowMaResults = calculateSMA(candles, { period: config.trend_ma_slow });
-  const atrResults = calculateATR(candles, { period: 14 });
-
-  const fastMa = fastMaResults[fastMaResults.length - 1]?.ma ?? 0;
-  const slowMa = slowMaResults[slowMaResults.length - 1]?.ma ?? 0;
-  const currentAtr = atrResults[atrResults.length - 1]?.atr ?? 0;
+  const fastMa = calculateSMA(candles, config.trend_ma_fast) ?? 0;
+  const slowMa = calculateSMA(candles, config.trend_ma_slow) ?? 0;
+  const currentAtr = calculateATR(candles, 14) ?? 0;
   const currentPrice = candles[candles.length - 1]?.close ?? 0;
 
   const maDiff = fastMa - slowMa;
@@ -195,7 +191,7 @@ export function getRequiredCandleCount(
 }
 
 export function hasEnoughData(
-  candles: Candle[],
+  candles: OHLCVBar[],
   config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
 ): boolean {
   return candles.length >= getRequiredCandleCount(config);
