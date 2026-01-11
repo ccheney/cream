@@ -9,6 +9,7 @@ import type { AgentType } from "@cream/mastra-kit";
 
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
+import { buildIndicatorSummary } from "./prompts.js";
 import { CriticOutputSchema, RiskManagerOutputSchema } from "./schemas.js";
 import type { DebateOutputs } from "./trader.js";
 import type {
@@ -149,13 +150,17 @@ RISK VALIDATION GUIDANCE:
 
 /**
  * Run Critic agent to check logical consistency.
+ * Validates that plan claims are supported by indicator signals.
  */
 export async function runCritic(
   plan: DecisionPlan,
   analystOutputs: AnalystOutputs,
   debateOutputs: DebateOutputs,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<CriticOutput> {
+  const indicatorSummary = buildIndicatorSummary(indicators);
+
   const prompt = `Validate the logical consistency of this trading plan:
 
 Decision Plan:
@@ -167,7 +172,14 @@ Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 
 Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
-Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
+Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}
+${indicatorSummary ? `\n${indicatorSummary}` : ""}
+CONSISTENCY VALIDATION GUIDANCE:
+- Verify bullish claims align with technical signals (RSI, MACD, trend)
+- Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
+- Ensure position direction matches the weight of evidence from indicators
+- Flag contradictions between plan rationale and quantitative signals
+- Verify that size/conviction aligns with signal strength and agreement`;
 
   const settings = getAgentRuntimeSettings("critic", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
@@ -180,7 +192,7 @@ Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
 /**
  * Run both approval agents in parallel.
- * Passes Factor Zoo context and indicators to Risk Manager for comprehensive validation.
+ * Passes Factor Zoo context and indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallel(
   plan: DecisionPlan,
@@ -197,7 +209,7 @@ export async function runApprovalParallel(
 }> {
   const [riskManager, critic] = await Promise.all([
     runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs, indicators),
-    runCritic(plan, analystOutputs, debateOutputs, agentConfigs),
+    runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators),
   ]);
 
   return { riskManager, critic };
@@ -311,14 +323,18 @@ RISK VALIDATION GUIDANCE:
 
 /**
  * Run Critic agent with streaming.
+ * Validates that plan claims are supported by indicator signals.
  */
 export async function runCriticStreaming(
   plan: DecisionPlan,
   analystOutputs: AnalystOutputs,
   debateOutputs: DebateOutputs,
   onChunk: OnStreamChunk,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  indicators?: Record<string, IndicatorSnapshot>
 ): Promise<CriticOutput> {
+  const indicatorSummary = buildIndicatorSummary(indicators);
+
   const prompt = `Validate the logical consistency of this trading plan:
 
 Decision Plan:
@@ -330,7 +346,14 @@ Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 
 Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
-Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
+Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}
+${indicatorSummary ? `\n${indicatorSummary}` : ""}
+CONSISTENCY VALIDATION GUIDANCE:
+- Verify bullish claims align with technical signals (RSI, MACD, trend)
+- Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
+- Ensure position direction matches the weight of evidence from indicators
+- Flag contradictions between plan rationale and quantitative signals
+- Verify that size/conviction aligns with signal strength and agreement`;
 
   const settings = getAgentRuntimeSettings("critic", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
@@ -351,6 +374,7 @@ Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}`;
 
 /**
  * Run both approval agents in parallel with streaming.
+ * Passes indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallelStreaming(
   plan: DecisionPlan,
@@ -376,7 +400,7 @@ export async function runApprovalParallelStreaming(
       agentConfigs,
       indicators
     ),
-    runCriticStreaming(plan, analystOutputs, debateOutputs, onChunk, agentConfigs),
+    runCriticStreaming(plan, analystOutputs, debateOutputs, onChunk, agentConfigs, indicators),
   ]);
 
   return { riskManager, critic };
