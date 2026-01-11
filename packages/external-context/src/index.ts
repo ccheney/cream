@@ -29,13 +29,19 @@ export {
   ExtractionClient,
   type ExtractionClientConfig,
 } from "./extraction/index.js";
+// HelixDB Integration
+export {
+  type EventIngestionResult,
+  ingestExtractedEvent,
+  ingestExtractedEvents,
+  searchSimilarEvents,
+} from "./helix-integration.js";
 // Linking
 export {
   createEntityLinker,
   EntityLinker,
   type EntityLinkerConfig,
 } from "./linking/index.js";
-
 // Parsers
 export {
   type AlphaVantageEconomicIndicator,
@@ -65,7 +71,6 @@ export {
   type PipelineConfig,
   type PipelineResult,
 } from "./pipeline.js";
-
 // Scoring
 export {
   aggregateSentimentScores,

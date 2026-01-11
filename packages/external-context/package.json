@@ -18,6 +18,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/helix": "workspace:*",
     "@cream/logger": "workspace:*",
     "zod": "^4.3.5"
   },

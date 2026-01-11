@@ -12,6 +12,7 @@
 
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import {
+  createEventIngestionService,
   createHelixClientFromEnv,
   formatTradeMemorySummary,
   generateSituationBrief,
@@ -71,6 +72,12 @@ const RecentEventSchema = z.object({
   relatedInstruments: z.array(z.string()),
 });
 
+const SemanticEventSchema = z.object({
+  eventId: z.string(),
+  similarity: z.number(),
+  textSummary: z.string(),
+});
+
 /**
  * Schema for thesis memory results
  */
@@ -97,8 +104,10 @@ export const MemoryOutputSchema = z.object({
   similarTheses: z.record(z.string(), z.array(ThesisMemorySchema)),
   /** Formatted thesis summaries for agent context */
   thesisSummaries: z.record(z.string(), z.string()),
-  /** Recent external events (news, macro, etc.) */
+  /** Recent external events (news, macro, etc.) from Turso */
   recentEvents: z.array(RecentEventSchema),
+  /** Semantically similar events from HelixDB (vector search) */
+  semanticEvents: z.array(SemanticEventSchema),
   /** Aggregate statistics */
   stats: z.object({
     totalMemoriesRetrieved: z.number(),
@@ -107,6 +116,7 @@ export const MemoryOutputSchema = z.object({
     symbolsWithTheses: z.number(),
     avgRetrievalTimeMs: z.number(),
     recentEventsCount: z.number(),
+    semanticEventsCount: z.number(),
   }),
 });
 
@@ -218,7 +228,7 @@ function summarizeThesisMemories(results: ThesisMemoryResult[]): string {
 }
 
 /**
- * Retrieve recent external events for given symbols
+ * Retrieve recent external events for given symbols from Turso
  */
 async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]> {
   try {
@@ -230,6 +240,40 @@ async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]>
     log.warn(
       { error: error instanceof Error ? error.message : String(error) },
       "Failed to retrieve recent events"
+    );
+    return [];
+  }
+}
+
+/**
+ * Result from semantic event search
+ */
+interface SemanticEventResult {
+  eventId: string;
+  similarity: number;
+  textSummary: string;
+}
+
+/**
+ * Retrieve semantically similar events from HelixDB
+ *
+ * Uses vector similarity search to find events similar to the current
+ * market context, providing historical pattern matching beyond just
+ * time-based filtering.
+ */
+async function retrieveSimilarEventsFromHelix(
+  helix: HelixClient,
+  situationBrief: string,
+  limit = 10
+): Promise<SemanticEventResult[]> {
+  try {
+    const service = createEventIngestionService(helix);
+    const results = await service.searchSimilarEvents(situationBrief, limit);
+    return results;
+  } catch (error) {
+    log.debug(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Semantic event search not available"
     );
     return [];
   }
@@ -321,6 +365,7 @@ export const retrieveMemoryStep = createStep({
       similarTheses: {},
       thesisSummaries: {},
       recentEvents: [],
+      semanticEvents: [],
       stats: {
         totalMemoriesRetrieved: 0,
         symbolsWithMemories: 0,
@@ -328,6 +373,7 @@ export const retrieveMemoryStep = createStep({
         symbolsWithTheses: 0,
         avgRetrievalTimeMs: 0,
         recentEventsCount: 0,
+        semanticEventsCount: 0,
       },
     };
 
@@ -371,7 +417,17 @@ export const retrieveMemoryStep = createStep({
     // Retrieve memories and events in parallel
     const retrievalTimes: number[] = [];
 
-    const [memoryResults, thesisResults, recentEvents] = await Promise.all([
+    // Generate a combined situation brief for semantic event search
+    const combinedSituationBrief = symbols
+      .map((symbol) => {
+        const snapshot = snapshots[symbol];
+        const marketSnapshot = snapshotToMarketSnapshot(symbol, snapshot);
+        return generateSituationBrief(marketSnapshot);
+      })
+      .slice(0, 3) // Use first 3 symbols to keep brief concise
+      .join("\n");
+
+    const [memoryResults, thesisResults, recentEvents, semanticEvents] = await Promise.all([
       // Trade memories
       Promise.all(
         symbols.map(async (symbol) => {
@@ -393,8 +449,10 @@ export const retrieveMemoryStep = createStep({
           return { symbol, result };
         })
       ),
-      // External events
+      // Recent external events from Turso
       retrieveRecentEvents(symbols),
+      // Semantically similar events from HelixDB
+      retrieveSimilarEventsFromHelix(helix, combinedSituationBrief, 10),
     ]);
 
     // Aggregate trade memory results
@@ -438,6 +496,7 @@ export const retrieveMemoryStep = createStep({
       similarTheses,
       thesisSummaries,
       recentEvents: recentEvents.map(formatExternalEvent),
+      semanticEvents,
       stats: {
         totalMemoriesRetrieved: totalMemories,
         symbolsWithMemories,
@@ -445,6 +504,7 @@ export const retrieveMemoryStep = createStep({
         symbolsWithTheses,
         avgRetrievalTimeMs,
         recentEventsCount: recentEvents.length,
+        semanticEventsCount: semanticEvents.length,
       },
     };
   },

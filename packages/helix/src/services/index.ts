@@ -18,6 +18,13 @@ export {
   type SupplyChainRelationship,
 } from "./company-graph-builder.js";
 export {
+  createEventIngestionService,
+  type EventIngestionOptions,
+  type EventIngestionResult,
+  EventIngestionService,
+  type ExtractedEvent,
+} from "./event-ingestion.js";
+export {
   type CompanySensitivity,
   calculateRollingCorrelation,
   correlationToSensitivity,
@@ -32,6 +39,13 @@ export {
   type PredefinedMacroEntity,
   SECTOR_DEFAULT_SENSITIVITIES,
 } from "./macro-graph-builder.js";
+export {
+  createNewsIngestionService,
+  type NewsIngestionOptions,
+  type NewsIngestionResult,
+  NewsIngestionService,
+  type NewsItemInput,
+} from "./news-ingestion.js";
 export {
   createUniverseSyncer,
   instrumentsToCompanyData,
