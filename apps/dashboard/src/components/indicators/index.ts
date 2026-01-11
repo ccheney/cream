@@ -22,6 +22,10 @@ export {
   type SnapshotMetadata,
   type ValueIndicators,
 } from "./IndicatorSnapshot";
+export {
+  OptionsIndicators as OptionsIndicatorsWidget,
+  type OptionsIndicatorsProps,
+} from "./OptionsIndicators";
 export { PaperTradingSection } from "./PaperTradingSection";
 export {
   PriceIndicators as PriceIndicatorsWidget,
