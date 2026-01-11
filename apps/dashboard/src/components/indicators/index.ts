@@ -6,6 +6,10 @@
 
 export { ActiveIndicatorsTable } from "./ActiveIndicatorsTable";
 export { ActivityFeed } from "./ActivityFeed";
+export {
+  FundamentalsIndicators as FundamentalsIndicatorsWidget,
+  type FundamentalsIndicatorsProps,
+} from "./FundamentalsIndicators";
 export { ICChart } from "./ICChart";
 export {
   type CorporateIndicators,
