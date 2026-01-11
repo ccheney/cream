@@ -50,6 +50,9 @@ from research.evaluator.pre_execution import (
     DimensionScores,
     PlanScore,
     PreExecutionEvaluator,
+    compute_context_score,
+    compute_memory_score,
+    compute_technical_score,
 )
 from research.evaluator.preference_types import (
     Action,
@@ -83,6 +86,9 @@ __all__ = [
     "CounterfactualEstimator",
     "DimensionScores",
     "Direction",
+    "compute_context_score",
+    "compute_memory_score",
+    "compute_technical_score",
     "EVConfig",
     "EvaluatorTrainingPipeline",
     "ExecutedTradeOutcome",
