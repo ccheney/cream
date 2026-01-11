@@ -12,6 +12,7 @@ import {
   useBacktests,
   useBacktestTrades,
   useCreateBacktest,
+  useTheses,
 } from "@/hooks/queries";
 import { useBacktestProgress } from "@/hooks/useBacktestProgress";
 
@@ -19,17 +20,63 @@ export default function BacktestPage() {
   const [selectedBacktest, setSelectedBacktest] = useState<string | null>(null);
   const [newBacktest, setNewBacktest] = useState({
     name: "",
+    symbol: "SPY",
+    strategy: "sma_crossover" as const,
     startDate: "",
     endDate: "",
     initialCapital: 100000,
   });
+
+  const STRATEGIES = [
+    {
+      value: "sma_crossover",
+      label: "SMA Crossover",
+      description: "Buy on golden cross, sell on death cross (10/30)",
+    },
+    {
+      value: "rsi_oversold_overbought",
+      label: "RSI Oversold/Overbought",
+      description: "Buy oversold bounce, sell overbought (14, 30/70)",
+    },
+    {
+      value: "bollinger_breakout",
+      label: "Bollinger Breakout",
+      description: "Buy upper breakout, sell lower touch (20, 2σ)",
+    },
+    {
+      value: "macd_crossover",
+      label: "MACD Crossover",
+      description: "Buy MACD cross up, sell cross down (12/26/9)",
+    },
+  ] as const;
   const [createdBacktestId, setCreatedBacktestId] = useState<string | null>(null);
 
   const { data: backtests, isLoading: backtestsLoading } = useBacktests();
+  const { data: theses } = useTheses();
   const { data: backtest } = useBacktest(selectedBacktest ?? "");
   const { data: trades } = useBacktestTrades(selectedBacktest ?? "");
   const { data: equity } = useBacktestEquity(selectedBacktest ?? "");
   const createBacktest = useCreateBacktest();
+
+  const handleThesisSelect = (thesisId: string) => {
+    const thesis = theses?.find((t) => t.id === thesisId);
+    if (thesis) {
+      // Use createdAt as start date, and expiresAt or today as end
+      const createdDate = new Date(thesis.createdAt);
+      const endDate = thesis.expiresAt ? new Date(thesis.expiresAt) : new Date();
+
+      const start = createdDate.toISOString().split("T")[0];
+      const end = endDate.toISOString().split("T")[0];
+
+      setNewBacktest({
+        ...newBacktest,
+        name: `Thesis: ${thesis.symbol}`,
+        symbol: thesis.symbol,
+        startDate: start ?? "",
+        endDate: end ?? "",
+      });
+    }
+  };
 
   // Track progress of newly created backtest
   const { status: newBacktestStatus, progress: newBacktestProgress } =
@@ -46,10 +93,26 @@ export default function BacktestPage() {
   const formatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 
   const handleCreateBacktest = async () => {
-    if (newBacktest.name && newBacktest.startDate && newBacktest.endDate) {
-      const result = await createBacktest.mutateAsync(newBacktest);
+    if (newBacktest.name && newBacktest.symbol && newBacktest.startDate && newBacktest.endDate) {
+      const result = await createBacktest.mutateAsync({
+        name: newBacktest.name,
+        startDate: newBacktest.startDate,
+        endDate: newBacktest.endDate,
+        initialCapital: newBacktest.initialCapital,
+        universe: [newBacktest.symbol.toUpperCase()],
+        config: {
+          strategy: { type: newBacktest.strategy },
+        },
+      });
       setCreatedBacktestId(result.id);
-      setNewBacktest({ name: "", startDate: "", endDate: "", initialCapital: 100000 });
+      setNewBacktest({
+        name: "",
+        symbol: "SPY",
+        strategy: "sma_crossover",
+        startDate: "",
+        endDate: "",
+        initialCapital: 100000,
+      });
     }
   };
 
@@ -67,10 +130,27 @@ export default function BacktestPage() {
 
       {/* Backtest Configuration */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
-          New Backtest
-        </h2>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">New Backtest</h2>
+          {theses && theses.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-cream-500 dark:text-cream-400">From thesis:</span>
+              <select
+                onChange={(e) => e.target.value && handleThesisSelect(e.target.value)}
+                className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-2 py-1 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+                defaultValue=""
+              >
+                <option value="">Select a thesis...</option>
+                {theses.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.symbol} - {t.status} ({new Date(t.createdAt).toLocaleDateString()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-6 gap-4">
           <div>
             <label
               htmlFor="backtest-name"
@@ -86,6 +166,50 @@ export default function BacktestPage() {
               placeholder="Strategy name"
               className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
             />
+          </div>
+          <div>
+            <label
+              htmlFor="backtest-symbol"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
+              Symbol
+            </label>
+            <input
+              id="backtest-symbol"
+              type="text"
+              value={newBacktest.symbol}
+              onChange={(e) => setNewBacktest({ ...newBacktest, symbol: e.target.value })}
+              placeholder="SPY"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100 uppercase"
+            />
+          </div>
+          <div className="col-span-2">
+            <label
+              htmlFor="backtest-strategy"
+              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+            >
+              Strategy
+            </label>
+            <select
+              id="backtest-strategy"
+              value={newBacktest.strategy}
+              onChange={(e) =>
+                setNewBacktest({
+                  ...newBacktest,
+                  strategy: e.target.value as typeof newBacktest.strategy,
+                })
+              }
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+            >
+              {STRATEGIES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-cream-400 dark:text-cream-500">
+              {STRATEGIES.find((s) => s.value === newBacktest.strategy)?.description}
+            </p>
           </div>
           <div>
             <label

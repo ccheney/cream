@@ -773,12 +773,28 @@ export interface BacktestTrade {
   cumulativePnl: number;
 }
 
+export interface BacktestStrategyConfig {
+  type: "sma_crossover" | "rsi_oversold_overbought" | "bollinger_breakout" | "macd_crossover";
+  fastPeriod?: number;
+  slowPeriod?: number;
+  signalPeriod?: number;
+  period?: number;
+  oversold?: number;
+  overbought?: number;
+  stdDev?: number;
+}
+
 export interface CreateBacktestRequest {
   name: string;
   startDate: string;
   endDate: string;
   initialCapital: number;
-  config?: Partial<FullRuntimeConfig>;
+  universe?: string[];
+  config?: {
+    strategy?: BacktestStrategyConfig;
+    timeframe?: "1Min" | "5Min" | "15Min" | "1Hour" | "1Day";
+    slippageBps?: number;
+  };
 }
 
 // ============================================

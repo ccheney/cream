@@ -72,7 +72,10 @@ export function BacktestListItem({
               <StatusBadge status={displayStatus} />
             </div>
             <span className="text-sm text-cream-500 dark:text-cream-400">
-              {formatDistanceToNow(new Date(bt.createdAt), { addSuffix: true })}
+              {formatDistanceToNow(
+                new Date(bt.createdAt.endsWith("Z") ? bt.createdAt : `${bt.createdAt}Z`),
+                { addSuffix: true }
+              )}
             </span>
           </div>
           <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
