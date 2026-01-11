@@ -35,6 +35,7 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getExternalEventsRepo } from "../db.js";
+import { log } from "../logger.js";
 import { getLatestPredictionMarketSignals } from "./fetchPredictionMarkets.js";
 import { MemoryOutputSchema } from "./retrieveMemory.js";
 
@@ -223,10 +224,7 @@ export const gatherExternalContextStep = createStep({
     });
 
     if (!hasAnthropicKey) {
-      // biome-ignore lint/suspicious/noConsole: Intentional warning for missing API key
-      console.warn(
-        "[gatherExternalContext] ANTHROPIC_API_KEY not set - using dry run mode (no LLM extraction)"
-      );
+      log.warn({}, "ANTHROPIC_API_KEY not set - using dry run mode (no LLM extraction)");
     }
 
     try {
@@ -247,15 +245,19 @@ export const gatherExternalContextStep = createStep({
       // Process macro releases through pipeline
       const macroResults = await pipeline.processMacroReleases(economicEvents);
 
-      // Log extraction metrics for monitoring
-      // biome-ignore lint/suspicious/noConsole: Intentional metrics logging
-      console.log(
-        `[gatherExternalContext] Extraction complete: ` +
-          `news=${newsResults.stats.successCount}/${newsResults.stats.inputCount} ` +
-          `(${newsResults.stats.errorCount} errors, ${newsResults.stats.processingTimeMs}ms), ` +
-          `macro=${macroResults.stats.successCount}/${macroResults.stats.inputCount} ` +
-          `(${macroResults.stats.errorCount} errors, ${macroResults.stats.processingTimeMs}ms), ` +
-          `mode=${hasAnthropicKey ? "llm" : "dry-run"}`
+      log.info(
+        {
+          newsSuccess: newsResults.stats.successCount,
+          newsTotal: newsResults.stats.inputCount,
+          newsErrors: newsResults.stats.errorCount,
+          newsTimeMs: newsResults.stats.processingTimeMs,
+          macroSuccess: macroResults.stats.successCount,
+          macroTotal: macroResults.stats.inputCount,
+          macroErrors: macroResults.stats.errorCount,
+          macroTimeMs: macroResults.stats.processingTimeMs,
+          mode: hasAnthropicKey ? "llm" : "dry-run",
+        },
+        "External context extraction complete"
       );
 
       // Combine all events
@@ -266,8 +268,10 @@ export const gatherExternalContextStep = createStep({
         getExternalEventsRepo()
           .then((repo) => repo.createMany(allEvents.map(toStorageEvent)))
           .catch((err) => {
-            // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-            console.warn("[gatherExternalContext] Failed to store events:", err);
+            log.warn(
+              { error: err instanceof Error ? err.message : String(err) },
+              "Failed to store external events"
+            );
           });
       }
 
@@ -308,11 +312,9 @@ export const gatherExternalContextStep = createStep({
           : undefined,
       };
     } catch (error) {
-      // Error gathering external context - return empty context to avoid blocking workflow
-      // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-      console.error(
-        "[gatherExternalContext] Failed to gather external context:",
-        error instanceof Error ? error.message : String(error)
+      log.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to gather external context"
       );
       return {
         news: [],

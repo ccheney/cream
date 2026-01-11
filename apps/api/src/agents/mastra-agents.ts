@@ -53,6 +53,8 @@ import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
 import { z } from "zod";
 
+import { log } from "../logger.js";
+
 // Re-export types for convenience
 export type {
   BearishResearchOutput,
@@ -383,10 +385,7 @@ function createAgent(agentType: AgentType): Agent {
     if (tool) {
       tools[toolName] = tool;
     } else {
-      // biome-ignore lint/suspicious/noConsole: Intentional warning for unmapped tools during development
-      console.warn(
-        `[createAgent] Tool '${toolName}' not found in TOOL_INSTANCES for agent '${agentType}'`
-      );
+      log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
     }
   }
 

@@ -27,6 +27,7 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getPredictionMarketsRepo } from "../db.js";
+import { log } from "../logger.js";
 
 /**
  * Create ExecutionContext for step invocation.
@@ -261,12 +262,16 @@ export const fetchPredictionMarketsStep = createStep({
       // Store data to database (non-blocking)
       Promise.all([
         storeMarketSnapshots(marketData.events).catch((err) => {
-          // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-          console.warn("[fetchPredictionMarkets] Failed to store snapshots:", err);
+          log.warn(
+            { error: err instanceof Error ? err.message : String(err) },
+            "Failed to store prediction market snapshots"
+          );
         }),
         storeComputedSignals(marketData.signals, marketData.scores).catch((err) => {
-          // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-          console.warn("[fetchPredictionMarkets] Failed to store signals:", err);
+          log.warn(
+            { error: err instanceof Error ? err.message : String(err) },
+            "Failed to store prediction market signals"
+          );
         }),
       ]);
 
@@ -282,8 +287,10 @@ export const fetchPredictionMarketsStep = createStep({
         fetchedAt,
       };
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-      console.warn("[fetchPredictionMarkets] Failed to fetch:", error);
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to fetch prediction market data"
+      );
       return {
         signals: {
           platforms: [],
@@ -387,8 +394,10 @@ export async function getLatestPredictionMarketSignals(): Promise<PredictionMark
       fetchedAt: latestSignals.timestamp,
     };
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-    console.warn("[getLatestPredictionMarketSignals] Failed:", error);
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to get latest prediction market signals"
+    );
     return null;
   }
 }

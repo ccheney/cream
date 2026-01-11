@@ -30,6 +30,8 @@ import {
   UniverseConfigsRepository,
 } from "@cream/storage";
 
+import { log } from "./logger.js";
+
 /**
  * Create ExecutionContext for database initialization.
  * DB client is created at API startup.
@@ -90,12 +92,10 @@ async function initializeDb(): Promise<TursoClient> {
 
   // Run migrations on first connection
   const result = await runMigrations(client, {
-    // biome-ignore lint/suspicious/noConsole: Migration logging is intentional
-    logger: (msg) => console.log(`[API DB Migration] ${msg}`),
+    logger: (msg) => log.debug({ migration: msg }, "DB migration"),
   });
   if (result.applied.length > 0) {
-    // biome-ignore lint/suspicious/noConsole: Startup logging is intentional
-    console.log(`[API DB] Applied ${result.applied.length} migration(s)`);
+    log.info({ count: result.applied.length }, "Applied DB migrations");
   }
 
   return client;
@@ -262,10 +262,9 @@ export function getHelixClient(): HelixClient | null {
     helixClient = createHelixClientFromEnv();
     return helixClient;
   } catch (error) {
-    // Log but don't throw - caller should handle null
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-    console.error(
-      `[HelixDB] Failed to create client: ${error instanceof Error ? error.message : "Unknown error"}`
+    log.error(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      "HelixDB failed to create client"
     );
     return null;
   }
@@ -330,8 +329,7 @@ export async function validateHelixDBAtStartup(
   const isBacktestEnv = isBacktest(ctx);
   const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
 
-  // biome-ignore lint/suspicious/noConsole: Startup logging is intentional
-  console.log(`[HelixDB] Validating connection (environment: ${ctx.environment})...`);
+  log.info({ environment: ctx.environment }, "HelixDB validating connection");
 
   const health = await checkHelixHealth();
 
@@ -340,24 +338,24 @@ export async function validateHelixDBAtStartup(
       `HelixDB health check failed: ${health.error}. ` +
       `Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"}`;
 
-    // biome-ignore lint/suspicious/noConsole: Error logging is intentional
-    console.error(`[HelixDB] ${errorMsg}`);
+    log.error(
+      {
+        error: health.error,
+        host: process.env.HELIX_HOST ?? "localhost",
+        port: process.env.HELIX_PORT ?? "6969",
+      },
+      "HelixDB health check failed"
+    );
 
     if (failFast) {
       throw new HelixDBValidationError(errorMsg);
     }
 
-    // In BACKTEST mode with failFast=false, just warn
-    // biome-ignore lint/suspicious/noConsole: Warning is intentional
-    console.warn(`[HelixDB] Continuing despite health check failure (failFast=false)`);
+    log.warn({}, "HelixDB continuing despite health check failure (failFast=false)");
   } else if (health.latencyMs > maxLatencyMs) {
-    const warnMsg = `HelixDB latency (${health.latencyMs.toFixed(0)}ms) exceeds threshold (${maxLatencyMs}ms)`;
-
-    // biome-ignore lint/suspicious/noConsole: Warning is intentional
-    console.warn(`[HelixDB] ${warnMsg}`);
+    log.warn({ latencyMs: health.latencyMs, maxLatencyMs }, "HelixDB latency exceeds threshold");
   } else {
-    // biome-ignore lint/suspicious/noConsole: Success logging is intentional
-    console.log(`[HelixDB] Health check passed (latency: ${health.latencyMs.toFixed(0)}ms)`);
+    log.info({ latencyMs: health.latencyMs }, "HelixDB health check passed");
   }
 
   return health;
@@ -375,14 +373,10 @@ export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void
     await validateHelixDBAtStartup(ctx, { failFast: !isBacktest(ctx) });
   } catch (error) {
     if (error instanceof HelixDBValidationError) {
-      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
-      console.error(`\n❌ HelixDB validation failed for API service:\n`);
-      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
-      console.error(`   ${error.message}\n`);
-      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
-      console.error(`Environment: ${ctx.environment}`);
-      // biome-ignore lint/suspicious/noConsole: Fatal error output is intentional
-      console.error(`\nPlease ensure HelixDB is running and restart.\n`);
+      log.error(
+        { error: error.message, environment: ctx.environment },
+        "HelixDB validation failed for API service"
+      );
       process.exit(1);
     }
     throw error;

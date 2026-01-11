@@ -43,6 +43,7 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getExternalEventsRepo } from "../db.js";
+import { log } from "../logger.js";
 import { SnapshotOutputSchema } from "./buildSnapshot.js";
 
 // ============================================
@@ -226,9 +227,10 @@ async function retrieveRecentEvents(symbols: string[]): Promise<ExternalEvent[]>
     const events = await repo.findBySymbols(symbols, 50);
     return events;
   } catch (error) {
-    // Log but don't fail - external events are optional context
-    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-    console.warn("Failed to retrieve recent events:", error);
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to retrieve recent events"
+    );
     return [];
   }
 }
@@ -255,9 +257,10 @@ async function retrieveThesesForSymbol(
 
     return results;
   } catch (error) {
-    // Log but don't fail - thesis memory is optional context
-    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-    console.warn(`Failed to retrieve thesis memories for ${symbol}:`, error);
+    log.warn(
+      { symbol, error: error instanceof Error ? error.message : String(error) },
+      "Failed to retrieve thesis memories"
+    );
     return null;
   }
 }
@@ -287,9 +290,10 @@ async function retrieveMemoriesForSymbol(
 
     return result;
   } catch (error) {
-    // Log but don't fail - memory is optional context
-    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-    console.warn(`Failed to retrieve memories for ${symbol}:`, error);
+    log.warn(
+      { symbol, error: error instanceof Error ? error.message : String(error) },
+      "Failed to retrieve trade memories"
+    );
     return null;
   }
 }
@@ -348,9 +352,10 @@ export const retrieveMemoryStep = createStep({
       helix = getHelixClient();
       embedder = getEmbeddingClient();
     } catch (error) {
-      // If clients fail to initialize (missing API keys, etc.), return empty
-      // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-      console.warn("Memory retrieval clients not available:", error);
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Memory retrieval clients not available"
+      );
       // Still try to get recent events even if Helix is unavailable
       const recentEvents = await retrieveRecentEvents(symbols);
       return {

@@ -22,6 +22,7 @@ import {
   type NodeWithEmbedding,
 } from "@cream/helix";
 import { getHelixClient } from "../db.js";
+import { log } from "../logger.js";
 
 /**
  * Create ExecutionContext for step invocation.
@@ -259,10 +260,7 @@ export const persistMemoryStep = createStep({
 
     // Check for explicit skip flag (for isolated tests only)
     if (shouldSkipPersistence()) {
-      // biome-ignore lint/suspicious/noConsole: Explicit skip notification
-      console.warn(
-        `[persist-memory] Skipping HelixDB persistence (SKIP_HELIX_PERSISTENCE=true) for cycle ${cycleId}`
-      );
+      log.warn({ cycleId }, "Skipping HelixDB persistence (SKIP_HELIX_PERSISTENCE=true)");
       return {
         persisted: false,
         memoryId: undefined,
@@ -297,8 +295,14 @@ export const persistMemoryStep = createStep({
         `Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"} ` +
         `or set SKIP_HELIX_PERSISTENCE=true to explicitly skip.`;
 
-      // biome-ignore lint/suspicious/noConsole: Critical error logging
-      console.error(`[persist-memory] ${errorMsg}`);
+      log.error(
+        {
+          cycleId,
+          host: process.env.HELIX_HOST ?? "localhost",
+          port: process.env.HELIX_PORT ?? "6969",
+        },
+        "HelixDB client unavailable for memory persistence"
+      );
 
       // Throw error - don't silently succeed
       throw new MemoryPersistenceError(errorMsg, "HELIX_UNAVAILABLE");
@@ -307,9 +311,9 @@ export const persistMemoryStep = createStep({
     // Get embedding client (optional - persistence still works without embeddings)
     const embedder = getEmbeddingClient();
     if (!embedder) {
-      // biome-ignore lint/suspicious/noConsole: Warning for missing embeddings
-      console.warn(
-        `[persist-memory] Embedding client unavailable. Decisions will be stored without embeddings for cycle ${cycleId}`
+      log.warn(
+        { cycleId },
+        "Embedding client unavailable - decisions will be stored without embeddings"
       );
     }
 
@@ -335,8 +339,10 @@ export const persistMemoryStep = createStep({
     } catch (error) {
       const errorMsg = `Failed to write to HelixDB for cycle ${cycleId}: ${error instanceof Error ? error.message : "Unknown error"}`;
 
-      // biome-ignore lint/suspicious/noConsole: Critical error logging
-      console.error(`[persist-memory] ${errorMsg}`);
+      log.error(
+        { cycleId, error: error instanceof Error ? error.message : "Unknown error" },
+        "Failed to write to HelixDB"
+      );
 
       throw new MemoryPersistenceError(
         errorMsg,
@@ -349,9 +355,9 @@ export const persistMemoryStep = createStep({
     if (result.failed.length > 0) {
       errors.push(...result.failed.map((f) => `Failed to persist ${f.id}: ${f.error}`));
 
-      // biome-ignore lint/suspicious/noConsole: Partial failure logging
-      console.warn(
-        `[persist-memory] Partial failure for cycle ${cycleId}: ${result.failed.length}/${decisions.length} decisions failed`
+      log.warn(
+        { cycleId, failedCount: result.failed.length, totalCount: decisions.length },
+        "Partial failure persisting decisions to HelixDB"
       );
     }
 
@@ -359,16 +365,14 @@ export const persistMemoryStep = createStep({
     if (result.successful.length === 0 && decisions.length > 0) {
       const errorMsg = `All ${decisions.length} decision writes failed for cycle ${cycleId}`;
 
-      // biome-ignore lint/suspicious/noConsole: Critical error logging
-      console.error(`[persist-memory] ${errorMsg}`);
+      log.error({ cycleId, totalCount: decisions.length }, "All decision writes failed");
 
       throw new MemoryPersistenceError(errorMsg, "WRITE_FAILED");
     }
 
-    // Log success
-    // biome-ignore lint/suspicious/noConsole: Success logging
-    console.log(
-      `[persist-memory] Persisted ${result.successful.length}/${decisions.length} decisions for cycle ${cycleId}`
+    log.info(
+      { cycleId, successCount: result.successful.length, totalCount: decisions.length },
+      "Persisted decisions to HelixDB"
     );
 
     return {
