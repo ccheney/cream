@@ -104,7 +104,7 @@ jobs:
         run: bun install --force
 
       - name: Run tests
-        run: bun run test
+        run: bun run test:ts
 
   # ============================================
   # Rust Unit Tests
