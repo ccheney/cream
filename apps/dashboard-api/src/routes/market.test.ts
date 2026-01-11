@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, mock, test } from "bun:test";
 import marketRoutes from "./market";
 
 beforeAll(() => {
-  process.env.POLYGON_KEY = "test";
+  process.env.ALPACA_KEY = "test";
+  process.env.ALPACA_SECRET = "test";
 });
 
 // Mock database
@@ -23,13 +24,12 @@ mock.module("../db", () => ({
   }),
 }));
 
-// Mock market data
+// Mock Alpaca market data client
 mock.module("@cream/marketdata", () => ({
-  PolygonClient: class {
-    getPreviousClose() {
-      return Promise.resolve({ results: [{ c: 20 }] });
-    }
-  },
+  createAlpacaClientFromEnv: () => ({
+    getSnapshots: () => Promise.resolve(new Map()),
+  }),
+  isAlpacaConfigured: () => true,
 }));
 
 describe("Market Routes", () => {
@@ -40,7 +40,7 @@ describe("Market Routes", () => {
     expect(data).toMatchObject({
       label: "BULL_TREND",
       confidence: 0.8,
-      vix: 20,
+      vix: 0, // VIX is 0 since Alpaca doesn't provide real VIX data
       sectorRotation: {},
       updatedAt: "2024-01-01T00:00:00Z",
     });

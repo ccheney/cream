@@ -10,7 +10,7 @@ const MassiveConnectionState = {
   ERROR: "ERROR",
 } as const;
 
-// Mock parseOptionTicker from marketdata
+// Mock marketdata module
 mock.module("@cream/marketdata", () => ({
   createAlpacaClientFromEnv: () => ({
     getOptionSnapshots: mock(() =>
@@ -20,9 +20,23 @@ mock.module("@cream/marketdata", () => ({
             "AAPL240119C00150000",
             {
               symbol: "AAPL240119C00150000",
-              latestQuote: { bidPrice: 5.4, askPrice: 5.6, midpoint: 5.5 },
-              underlyingPrice: 155,
+              latestTrade: { price: 5.5, size: 10, timestamp: new Date().toISOString() },
+              latestQuote: { bidPrice: 5.4, askPrice: 5.6 },
               greeks: { delta: 0.5, gamma: 0.05, theta: -0.01, vega: 0.1 },
+            },
+          ],
+        ])
+      )
+    ),
+    getSnapshots: mock(() =>
+      Promise.resolve(
+        new Map([
+          [
+            "AAPL",
+            {
+              symbol: "AAPL",
+              dailyBar: { close: 155, open: 154, high: 156, low: 153, volume: 1000000 },
+              latestTrade: { price: 155, size: 100, timestamp: new Date().toISOString() },
             },
           ],
         ])
@@ -115,6 +129,7 @@ describe("PortfolioService", () => {
     mock.module("@cream/marketdata", () => ({
       createAlpacaClientFromEnv: () => ({
         getOptionSnapshots: mock(() => Promise.resolve(new Map())),
+        getSnapshots: mock(() => Promise.resolve(new Map())),
       }),
       isAlpacaConfigured: () => true,
       parseOptionTicker: (ticker: string) => {
