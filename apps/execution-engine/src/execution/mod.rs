@@ -19,8 +19,9 @@ pub mod stops;
 pub mod tactics;
 
 pub use alpaca::{
-    AccountInfo, AlpacaAdapter, AlpacaError, FeeBreakdown, OptionsOrderValidator,
-    Position as AlpacaPosition, RegulatoryFeeCalculator,
+    AccountInfo, AlpacaAdapter, AlpacaBar, AlpacaBarsResponse, AlpacaError, AlpacaQuote,
+    AlpacaQuotesResponse, FeeBreakdown, OptionsOrderValidator, Position as AlpacaPosition,
+    RegulatoryFeeCalculator,
 };
 pub use backtest::{BacktestAdapter, RecordedOrder};
 pub use gateway::{
