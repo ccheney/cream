@@ -43,7 +43,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from dataclasses import dataclass
 from typing import Any
 
 from google import genai
@@ -52,14 +51,12 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from research.evaluator.rule_scorer import ScoringResult
 
-
-@dataclass
-class CacheEntry:
-    """Cache entry for LLM responses."""
-
-    score: float
-    components: dict[str, float]
-    feedback: str
+from .prompts import (
+    build_context_relevance_prompt,
+    build_memory_consistency_prompt,
+    build_technical_alignment_prompt,
+)
+from .types import CacheEntry
 
 
 class LLMJudge:
@@ -102,18 +99,15 @@ class LLMJudge:
         Raises:
             ValueError: If API key is not provided and not in environment
         """
-        # Get API key from argument or environment
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError(
                 "API key required: pass api_key argument or set GOOGLE_API_KEY environment variable"
             )
 
-        # Create Gemini client
         self.client = genai.Client(api_key=self.api_key)
         self.model_name = model or self.DEFAULT_MODEL
 
-        # Cache for responses
         self.enable_cache = enable_cache
         self._cache: dict[str, CacheEntry] = {}
 
@@ -150,7 +144,6 @@ class LLMJudge:
             )
             return response.text
         except Exception as e:
-            # Log error and re-raise for retry
             print(f"LLM call failed: {e}")
             raise
 
@@ -228,7 +221,6 @@ class LLMJudge:
                 "patterns": ["bullish_divergence"],
             }
         """
-        # Check cache
         cache_key = self._get_cache_key("technical_alignment", {"plan": plan, "context": context})
         if self.enable_cache and cache_key in self._cache:
             cached = self._cache[cache_key]
@@ -238,37 +230,10 @@ class LLMJudge:
                 feedback=cached.feedback,
             )
 
-        # Build prompt
-        prompt = f"""You are an expert trading system evaluator. Score the technical alignment of this trading plan on a 0-100 scale.
-
-TRADING PLAN:
-{json.dumps(plan, indent=2)}
-
-TECHNICAL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Evaluate whether the plan aligns with technical indicators, chart patterns, support/resistance levels, and momentum signals.
-
-Provide your response in this exact format:
-SCORE: <0-100>
-COMPONENTS: {{"indicator_alignment": <0-100>, "pattern_alignment": <0-100>, "level_alignment": <0-100>}}
-FEEDBACK: <2-3 sentence explanation>
-
-Scoring guidelines:
-- 90-100: Excellent alignment, plan strongly supported by technicals
-- 70-89: Good alignment, most indicators support the plan
-- 50-69: Acceptable alignment, mixed signals
-- 30-49: Poor alignment, technicals suggest caution
-- 0-29: Unacceptable alignment, technicals contradict plan
-"""
-
-        # Call LLM
+        prompt = build_technical_alignment_prompt(plan, context)
         response = await self._call_llm(prompt)
-
-        # Parse response
         score, components, feedback = self._parse_score_response(response)
 
-        # Cache result
         if self.enable_cache:
             self._cache[cache_key] = CacheEntry(
                 score=score,
@@ -328,7 +293,6 @@ Scoring guidelines:
                 },
             ]
         """
-        # Check cache
         cache_key = self._get_cache_key(
             "memory_consistency", {"plan": plan, "memory_nodes": memory_nodes}
         )
@@ -340,40 +304,10 @@ Scoring guidelines:
                 feedback=cached.feedback,
             )
 
-        # Build prompt
-        prompt = f"""You are an expert trading system evaluator. Score the memory consistency of this trading plan on a 0-100 scale.
-
-TRADING PLAN:
-{json.dumps(plan, indent=2)}
-
-HISTORICAL MEMORY (recent similar decisions):
-{json.dumps(memory_nodes, indent=2)}
-
-Evaluate whether the plan is consistent with historical decisions and learned patterns. Consider:
-- Similar strategies in similar conditions
-- Past outcomes (wins vs losses)
-- Lessons learned from previous trades
-
-Provide your response in this exact format:
-SCORE: <0-100>
-COMPONENTS: {{"strategy_consistency": <0-100>, "outcome_learning": <0-100>, "pattern_recognition": <0-100>}}
-FEEDBACK: <2-3 sentence explanation>
-
-Scoring guidelines:
-- 90-100: Excellent consistency, plan aligns with successful historical patterns
-- 70-89: Good consistency, plan builds on past experience
-- 50-69: Acceptable consistency, some alignment with history
-- 30-49: Poor consistency, plan contradicts historical lessons
-- 0-29: Unacceptable consistency, plan ignores past failures
-"""
-
-        # Call LLM
+        prompt = build_memory_consistency_prompt(plan, memory_nodes)
         response = await self._call_llm(prompt)
-
-        # Parse response
         score, components, feedback = self._parse_score_response(response)
 
-        # Cache result
         if self.enable_cache:
             self._cache[cache_key] = CacheEntry(
                 score=score,
@@ -435,7 +369,6 @@ Scoring guidelines:
                 },
             ]
         """
-        # Check cache
         cache_key = self._get_cache_key(
             "context_relevance",
             {"plan": plan, "regime": regime, "external_events": external_events},
@@ -448,43 +381,10 @@ Scoring guidelines:
                 feedback=cached.feedback,
             )
 
-        # Build prompt
-        prompt = f"""You are an expert trading system evaluator. Score the context relevance of this trading plan on a 0-100 scale.
-
-TRADING PLAN:
-{json.dumps(plan, indent=2)}
-
-MARKET REGIME:
-{json.dumps(regime, indent=2)}
-
-EXTERNAL EVENTS:
-{json.dumps(external_events, indent=2)}
-
-Evaluate whether the plan accounts for current market regime, volatility, and external events. Consider:
-- Regime appropriateness (does the strategy fit the current market state?)
-- Event awareness (does the plan acknowledge key catalysts/risks?)
-- Timing appropriateness (is now the right time given context?)
-
-Provide your response in this exact format:
-SCORE: <0-100>
-COMPONENTS: {{"regime_fit": <0-100>, "event_awareness": <0-100>, "timing": <0-100>}}
-FEEDBACK: <2-3 sentence explanation>
-
-Scoring guidelines:
-- 90-100: Excellent context awareness, plan perfectly suited to current environment
-- 70-89: Good context awareness, plan accounts for key factors
-- 50-69: Acceptable context awareness, some consideration of environment
-- 30-49: Poor context awareness, plan misses important context
-- 0-29: Unacceptable context awareness, plan ignores critical factors
-"""
-
-        # Call LLM
+        prompt = build_context_relevance_prompt(plan, regime, external_events)
         response = await self._call_llm(prompt)
-
-        # Parse response
         score, components, feedback = self._parse_score_response(response)
 
-        # Cache result
         if self.enable_cache:
             self._cache[cache_key] = CacheEntry(
                 score=score,
