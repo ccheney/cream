@@ -114,9 +114,11 @@ export function detectVolumeAnomalies(
   }
 
   for (let i = config.lookbackPeriod; i < candles.length; i++) {
-    const candle = candles[i]!;
+    const candle = candles[i];
+    if (!candle) {
+      continue;
+    }
 
-    // Calculate rolling statistics for volume
     const windowStart = Math.max(0, i - config.lookbackPeriod);
     const volumeWindow = candles.slice(windowStart, i).map((c) => c.volume);
 
@@ -158,8 +160,11 @@ export function detectPriceSpikes(
   const anomalies: Anomaly[] = [];
 
   for (let i = 1; i < candles.length; i++) {
-    const prev = candles[i - 1]!;
-    const curr = candles[i]!;
+    const prev = candles[i - 1];
+    const curr = candles[i];
+    if (!prev || !curr) {
+      continue;
+    }
 
     // Calculate percentage change
     const pctChange = (curr.close - prev.close) / prev.close;
@@ -215,17 +220,22 @@ export function detectFlashCrashes(
   const anomalies: Anomaly[] = [];
 
   for (let i = 1; i < candles.length - recoveryCandles; i++) {
-    const prev = candles[i - 1]!;
-    const curr = candles[i]!;
+    const prev = candles[i - 1];
+    const curr = candles[i];
+    if (!prev || !curr) {
+      continue;
+    }
 
     // Check for significant drop
     const dropPct = (curr.low - prev.close) / prev.close;
 
     if (dropPct <= -config.flashCrashPct) {
-      // Check for recovery within window
       let recovered = false;
       for (let j = 1; j <= recoveryCandles && i + j < candles.length; j++) {
-        const recoveryCandle = candles[i + j]!;
+        const recoveryCandle = candles[i + j];
+        if (!recoveryCandle) {
+          continue;
+        }
         const recoveryPct = (recoveryCandle.close - prev.close) / prev.close;
 
         // Consider recovered if price returns within 2% of original
@@ -252,10 +262,12 @@ export function detectFlashCrashes(
     const rallyPct = (curr.high - prev.close) / prev.close;
 
     if (rallyPct >= config.flashCrashPct) {
-      // Check for reversal within window
       let reversed = false;
       for (let j = 1; j <= recoveryCandles && i + j < candles.length; j++) {
-        const reversalCandle = candles[i + j]!;
+        const reversalCandle = candles[i + j];
+        if (!reversalCandle) {
+          continue;
+        }
         const reversalPct = (reversalCandle.close - prev.close) / prev.close;
 
         // Consider reversed if price returns within 2% of original

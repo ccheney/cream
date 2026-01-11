@@ -70,7 +70,10 @@ export function extractFeatures(
   for (let i = config.volatilityPeriod; i < candles.length; i++) {
     // Returns array is offset by 1 from candles array due to diff calculation
     const returnIdx = i - 1;
-    const candle = candles[i]!;
+    const candle = candles[i];
+    if (!candle) {
+      continue;
+    }
 
     const returns = logReturns[returnIdx] ?? 0;
 
@@ -166,11 +169,20 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
     Math.max(calculateStd(trendStrength), 0.0001),
   ];
 
+  const meanReturns = means[0] ?? 0;
+  const meanVol = means[1] ?? 0;
+  const meanVolZ = means[2] ?? 0;
+  const meanTrend = means[3] ?? 0;
+  const stdReturns = stds[0] ?? 1;
+  const stdVol = stds[1] ?? 1;
+  const stdVolZ = stds[2] ?? 1;
+  const stdTrend = stds[3] ?? 1;
+
   const normalized = features.map((f) => [
-    (f.returns - means[0]!) / stds[0]!,
-    (f.volatility - means[1]!) / stds[1]!,
-    (f.volumeZScore - means[2]!) / stds[2]!,
-    (f.trendStrength - means[3]!) / stds[3]!,
+    (f.returns - meanReturns) / stdReturns,
+    (f.volatility - meanVol) / stdVol,
+    (f.volumeZScore - meanVolZ) / stdVolZ,
+    (f.trendStrength - meanTrend) / stdTrend,
   ]);
 
   return { normalized, means, stds };
@@ -181,10 +193,19 @@ export function normalizeFeatureVector(
   means: number[],
   stds: number[]
 ): number[] {
+  const meanReturns = means[0] ?? 0;
+  const meanVol = means[1] ?? 0;
+  const meanVolZ = means[2] ?? 0;
+  const meanTrend = means[3] ?? 0;
+  const stdReturns = stds[0] ?? 1;
+  const stdVol = stds[1] ?? 1;
+  const stdVolZ = stds[2] ?? 1;
+  const stdTrend = stds[3] ?? 1;
+
   return [
-    (feature.returns - means[0]!) / stds[0]!,
-    (feature.volatility - means[1]!) / stds[1]!,
-    (feature.volumeZScore - means[2]!) / stds[2]!,
-    (feature.trendStrength - means[3]!) / stds[3]!,
+    (feature.returns - meanReturns) / stdReturns,
+    (feature.volatility - meanVol) / stdVol,
+    (feature.volumeZScore - meanVolZ) / stdVolZ,
+    (feature.trendStrength - meanTrend) / stdTrend,
   ];
 }

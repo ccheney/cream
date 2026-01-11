@@ -66,11 +66,11 @@ function buildUrl(
   const url = new URL(path, API_BASE_URL);
 
   if (params) {
-    Object.entries(params).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
         url.searchParams.set(key, String(value));
       }
-    });
+    }
   }
 
   return url.toString();

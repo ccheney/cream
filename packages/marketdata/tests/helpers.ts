@@ -4,12 +4,15 @@
 
 import { mock } from "bun:test";
 
+type FetchParameters = Parameters<typeof fetch>;
+type FetchReturnType = ReturnType<typeof fetch>;
+
 /**
  * Mock fetch type that includes both fetch signature and mock methods.
  * The calls array is typed to match the fetch signature.
  */
-export interface MockFetch extends Function {
-  (...args: Parameters<typeof fetch>): ReturnType<typeof fetch>;
+export interface MockFetch {
+  (...args: FetchParameters): FetchReturnType;
   preconnect: typeof fetch.preconnect;
   mock: {
     calls: [url: string | URL | Request, options?: RequestInit | undefined][];

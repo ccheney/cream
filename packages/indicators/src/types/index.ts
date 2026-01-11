@@ -17,6 +17,10 @@
 
 import { z } from "zod";
 
+import { calculateATR } from "../calculators/price/atr";
+import { calculateRSI } from "../calculators/price/rsi";
+import { calculateSMA } from "../calculators/price/sma";
+
 // ============================================================
 // ENUMS
 // ============================================================
@@ -1053,8 +1057,10 @@ export interface MultiTimeframeIndicators {
 /**
  * Calculate indicators across multiple timeframes
  *
- * NOTE: This is a stub implementation. Returns empty results.
- * Full implementation requires candle aggregation infrastructure.
+ * Calculates RSI, SMA, and ATR indicators for the given candles.
+ *
+ * NOTE: Currently only calculates for the input timeframe (labeled as "1h").
+ * Full multi-timeframe support requires candle aggregation infrastructure.
  *
  * @param candles - Input candles (assumed to be base timeframe)
  * @param config - Pipeline configuration
@@ -1062,17 +1068,28 @@ export interface MultiTimeframeIndicators {
  */
 export function calculateMultiTimeframeIndicators(
   candles: OHLCVBar[],
-  _config: Partial<IndicatorPipelineConfig> = {}
+  config: Partial<IndicatorPipelineConfig> = {}
 ): MultiTimeframeIndicators {
-  // Stub implementation - returns empty structure
-  // TODO: Implement candle aggregation and multi-timeframe calculation
   if (candles.length === 0) {
     return {};
   }
+
+  const fullConfig = { ...DEFAULT_PIPELINE_CONFIG, ...config };
+  const period = fullConfig.basePeriod;
+  const indicators: { [indicator: string]: number | null } = {};
+
+  // Calculate RSI
+  const rsiResult = calculateRSI(candles, period);
+  indicators[`rsi_${period}`] = rsiResult?.rsi ?? null;
+
+  // Calculate SMA
+  indicators[`sma_${period}`] = calculateSMA(candles, period);
+
+  // Calculate ATR
+  indicators[`atr_${period}`] = calculateATR(candles, period);
+
   return {
-    "1d": {},
-    "1h": {},
-    "15m": {},
+    "1h": indicators,
   };
 }
 

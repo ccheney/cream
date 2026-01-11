@@ -297,7 +297,10 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
   async function getConnection(): Promise<T> {
     // Try to get an available connection
     while (available.length > 0) {
-      const connection = available.pop()!;
+      const connection = available.pop();
+      if (connection === undefined) {
+        continue;
+      }
       const pooled = connections.get(connection);
 
       if (!pooled) {
@@ -330,9 +333,11 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
     // Create new connection if under max
     if (connections.size < max) {
       const connection = await createConnection();
-      const pooled = connections.get(connection)!;
-      pooled.inUse = true;
-      pooled.useCount++;
+      const pooled = connections.get(connection);
+      if (pooled) {
+        pooled.inUse = true;
+        pooled.useCount++;
+      }
       return connection;
     }
 
@@ -404,10 +409,17 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
    */
   function processPending(): void {
     while (pending.length > 0 && available.length > 0) {
-      const request = pending.shift()!;
+      const request = pending.shift();
+      if (!request) {
+        continue;
+      }
       clearTimeout(request.timer);
 
-      const connection = available.pop()!;
+      const connection = available.pop();
+      if (connection === undefined) {
+        pending.unshift(request);
+        continue;
+      }
       const pooled = connections.get(connection);
 
       if (pooled) {
@@ -648,7 +660,10 @@ export function createHttpPool(config: HttpPoolConfig = {}): HttpPool {
 
   function processPending(): void {
     while (pending.length > 0 && active < maxConcurrent) {
-      const request = pending.shift()!;
+      const request = pending.shift();
+      if (!request) {
+        continue;
+      }
       clearTimeout(request.timer);
       active++;
 

@@ -96,7 +96,18 @@ export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDet
     };
   }
 
-  const firstCandle = candles[0]!;
+  const firstCandle = candles[0];
+  if (!firstCandle) {
+    return {
+      symbol: "",
+      timeframe: "1h",
+      totalCandles: 0,
+      gaps: [],
+      gapCount: 0,
+      totalMissingCandles: 0,
+      hasGaps: false,
+    };
+  }
   const timeframe = firstCandle.timeframe;
   const expectedIntervalMs = getExpectedIntervalMs(timeframe);
   const toleranceMs = expectedIntervalMs * toleranceMultiplier;
@@ -105,8 +116,11 @@ export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDet
   let totalMissingCandles = 0;
 
   for (let i = 1; i < candles.length; i++) {
-    const prev = candles[i - 1]!;
-    const curr = candles[i]!;
+    const prev = candles[i - 1];
+    const curr = candles[i];
+    if (!prev || !curr) {
+      continue;
+    }
 
     const prevTime = new Date(prev.timestamp).getTime();
     const currTime = new Date(curr.timestamp).getTime();
@@ -208,14 +222,16 @@ export function fillGaps(
   const result: (Candle | InterpolatedCandle)[] = [firstCandle];
 
   for (let i = 1; i < candles.length; i++) {
-    const prev = candles[i - 1]!;
-    const curr = candles[i]!;
+    const prev = candles[i - 1];
+    const curr = candles[i];
+    if (!prev || !curr) {
+      continue;
+    }
 
     const prevTime = new Date(prev.timestamp).getTime();
     const currTime = new Date(curr.timestamp).getTime();
     const gapCandles = Math.floor((currTime - prevTime) / expectedIntervalMs) - 1;
 
-    // Only interpolate if within threshold
     if (gapCandles > 0 && gapCandles <= maxInterpolateCandles) {
       for (let j = 1; j <= gapCandles; j++) {
         const interpolatedTime = prevTime + j * expectedIntervalMs;

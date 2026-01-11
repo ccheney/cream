@@ -254,11 +254,12 @@ export class BacktestsRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM backtests`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
+    const baseSql = sql.split(" LIMIT ")[0] ?? sql;
+    const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0]!,
+      baseSql,
       countSql,
       args.slice(0, -2),
       pagination
@@ -433,7 +434,10 @@ export class BacktestsRepository {
       Number(result.lastInsertRowid),
     ]);
 
-    return mapTradeRow(row!);
+    if (!row) {
+      throw new RepositoryError(`Failed to retrieve created trade`, "NOT_FOUND", "backtest_trades");
+    }
+    return mapTradeRow(row);
   }
 
   /**

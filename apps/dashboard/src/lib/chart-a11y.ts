@@ -99,12 +99,17 @@ export function calculateStats(data: number[]): ChartStats {
     return {};
   }
 
-  const current = data[data.length - 1]!;
+  const first = data[0];
+  const last = data[data.length - 1];
+  if (first === undefined || last === undefined) {
+    return {};
+  }
+
+  const current = last;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const mean = data.reduce((sum, v) => sum + v, 0) / data.length;
 
-  const first = data[0]!;
   const change = current - first;
   const changePercent = first !== 0 ? (change / first) * 100 : 0;
 
@@ -408,12 +413,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number {
   const { r, g, b } = rgb;
-  const components = [r, g, b].map((c) => {
+  const toLinear = (c: number): number => {
     const sRGB = c / 255;
     return sRGB <= 0.03928 ? sRGB / 12.92 : ((sRGB + 0.055) / 1.055) ** 2.4;
-  });
-  const R = components[0]!;
-  const G = components[1]!;
-  const B = components[2]!;
+  };
+  const R = toLinear(r);
+  const G = toLinear(g);
+  const B = toLinear(b);
   return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }

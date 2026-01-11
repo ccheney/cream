@@ -28,7 +28,7 @@ export type SystemHealthStatus =
   | "live"
   | "streaming";
 
-export interface SystemHealthBadgeProps extends HTMLAttributes<HTMLDivElement> {
+export interface SystemHealthBadgeProps extends HTMLAttributes<HTMLOutputElement> {
   /** Health status */
   status: SystemHealthStatus;
   /** Show the text label */
@@ -89,7 +89,7 @@ const sizeToStatusDotSize: Record<"sm" | "md" | "lg", StatusDotSize> = {
  * <SystemHealthBadge status="disconnected" label="API Offline" />
  * ```
  */
-export const SystemHealthBadge = forwardRef<HTMLDivElement, SystemHealthBadgeProps>(
+export const SystemHealthBadge = forwardRef<HTMLOutputElement, SystemHealthBadgeProps>(
   (
     {
       status,
@@ -135,9 +135,8 @@ export const SystemHealthBadge = forwardRef<HTMLDivElement, SystemHealthBadgePro
     };
 
     return (
-      <div
+      <output
         ref={ref}
-        role="status"
         aria-label={displayLabel}
         className={cn(
           "inline-flex items-center",
@@ -153,7 +152,7 @@ export const SystemHealthBadge = forwardRef<HTMLDivElement, SystemHealthBadgePro
             {displayLabel}
           </span>
         )}
-      </div>
+      </output>
     );
   }
 );

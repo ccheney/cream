@@ -11,10 +11,17 @@ import type { ApiKey } from "./types.js";
 export function selectRoundRobin(
   keys: ApiKey[],
   currentIndex: number
-): { key: ApiKey; nextIndex: number } {
+): { key: ApiKey; nextIndex: number } | null {
+  if (keys.length === 0) {
+    return null;
+  }
   const index = currentIndex % keys.length;
+  const key = keys[index];
+  if (key === undefined) {
+    return null;
+  }
   return {
-    key: keys[index]!,
+    key,
     nextIndex: index + 1,
   };
 }

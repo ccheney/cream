@@ -184,11 +184,12 @@ export function useMultiLoadingState(
   useEffect(() => {
     return () => {
       if (autoCleanup) {
-        keysRef.current.forEach((key) => store.stopLoading(key));
+        for (const key of keysRef.current) {
+          store.stopLoading(key);
+        }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCleanup, store.stopLoading]);
+  }, [autoCleanup, store]);
 
   const isLoading = useCallback((key: LoadingKey) => store.isLoading(key), [store]);
 

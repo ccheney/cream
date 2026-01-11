@@ -148,11 +148,12 @@ export class AuditLogRepository {
     }
 
     const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-    const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
+    const baseSql = sql.split(" LIMIT ")[0] ?? sql;
+    const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
 
     const result = await paginate<Row>(
       this.client,
-      sql.split(" LIMIT ")[0]!,
+      baseSql,
       countSql,
       args.slice(0, -2),
       pagination

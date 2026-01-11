@@ -211,25 +211,43 @@ export function calculateTransitionMatrix(
   transitions: RegimeTransition[]
 ): Record<RegimeLabel, Record<RegimeLabel, number>> {
   const regimes: RegimeLabel[] = ["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"];
-  const counts: Record<RegimeLabel, Record<RegimeLabel, number>> = {} as any;
-  const totals: Record<RegimeLabel, number> = {} as any;
 
-  for (const from of regimes) {
-    counts[from] = {} as Record<RegimeLabel, number>;
-    totals[from] = 0;
-    for (const to of regimes) {
-      counts[from][to] = 0;
-    }
-  }
+  const createEmptyRow = (): Record<RegimeLabel, number> => ({
+    BULL_TREND: 0,
+    BEAR_TREND: 0,
+    RANGE: 0,
+    HIGH_VOL: 0,
+    LOW_VOL: 0,
+  });
+
+  const counts: Record<RegimeLabel, Record<RegimeLabel, number>> = {
+    BULL_TREND: createEmptyRow(),
+    BEAR_TREND: createEmptyRow(),
+    RANGE: createEmptyRow(),
+    HIGH_VOL: createEmptyRow(),
+    LOW_VOL: createEmptyRow(),
+  };
+  const totals: Record<RegimeLabel, number> = {
+    BULL_TREND: 0,
+    BEAR_TREND: 0,
+    RANGE: 0,
+    HIGH_VOL: 0,
+    LOW_VOL: 0,
+  };
 
   for (const t of transitions) {
     counts[t.fromRegime][t.toRegime]++;
     totals[t.fromRegime]++;
   }
 
-  const matrix: Record<RegimeLabel, Record<RegimeLabel, number>> = {} as any;
+  const matrix: Record<RegimeLabel, Record<RegimeLabel, number>> = {
+    BULL_TREND: createEmptyRow(),
+    BEAR_TREND: createEmptyRow(),
+    RANGE: createEmptyRow(),
+    HIGH_VOL: createEmptyRow(),
+    LOW_VOL: createEmptyRow(),
+  };
   for (const from of regimes) {
-    matrix[from] = {} as Record<RegimeLabel, number>;
     for (const to of regimes) {
       matrix[from][to] = totals[from] > 0 ? counts[from][to] / totals[from] : 0;
     }

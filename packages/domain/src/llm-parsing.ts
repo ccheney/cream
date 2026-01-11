@@ -330,13 +330,13 @@ export async function parseWithRetry<T>(
   // If no retry callback, fail immediately
   if (!retryCallback) {
     logger.error("No retry callback provided, failing", { agentType });
-    return createFailureResult(attempts, firstAttempt.error!, agentType);
+    return createFailureResult(attempts, firstAttempt.error ?? "Unknown error", agentType);
   }
 
   // Generate retry prompt
   const retryPrompt = generateRetryPrompt(
     taskContext,
-    firstAttempt.error!,
+    firstAttempt.error ?? "Unknown error",
     schemaToDescription(schema)
   );
 
@@ -382,7 +382,7 @@ export async function parseWithRetry<T>(
     rawOutput: redactSecrets ? redactSensitiveData(retryOutput) : retryOutput,
   });
 
-  return createFailureResult(attempts, secondAttempt.error!, agentType);
+  return createFailureResult(attempts, secondAttempt.error ?? "Unknown error", agentType);
 }
 
 /**
@@ -414,7 +414,7 @@ export function parseOnce<T>(
     rawOutput: logOutput,
   });
 
-  return createFailureResult([attempt], attempt.error!, agentType);
+  return createFailureResult([attempt], attempt.error ?? "Unknown error", agentType);
 }
 
 // ============================================

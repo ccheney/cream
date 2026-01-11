@@ -265,8 +265,21 @@ export function useConnectionRecovery(
 
   // Get backoff delay
   const getBackoffDelay = useCallback(() => {
-    return calculateBackoffDelay(retryAttempt, backoff);
-  }, [retryAttempt, backoff]);
+    return calculateBackoffDelay(retryAttempt, {
+      initialDelayMs: backoff.initialDelayMs,
+      maxDelayMs: backoff.maxDelayMs,
+      multiplier: backoff.multiplier,
+      jitterFactor: backoff.jitterFactor,
+      maxRetries: backoff.maxRetries,
+    });
+  }, [
+    retryAttempt,
+    backoff.initialDelayMs,
+    backoff.maxDelayMs,
+    backoff.multiplier,
+    backoff.jitterFactor,
+    backoff.maxRetries,
+  ]);
 
   // Check if should retry
   const shouldRetry = useCallback(() => {

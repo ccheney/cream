@@ -336,14 +336,14 @@ describe("parseServerMessage", () => {
       "error",
     ];
 
-    validTypes.forEach((type) => {
+    for (const type of validTypes) {
       it(`accepts "${type}" as valid type`, () => {
         const raw = { type, data: {}, timestamp: "2025-01-04T12:00:00Z" };
         const result = parseServerMessage(raw);
         expect(result).not.toBeNull();
         expect(result?.type).toBe(type);
       });
-    });
+    }
   });
 });
 
@@ -401,7 +401,7 @@ describe("OrderPayload Type", () => {
 
   it("supports all order statuses", () => {
     const statuses: OrderPayload["status"][] = ["pending", "filled", "cancelled", "rejected"];
-    statuses.forEach((status) => {
+    for (const status of statuses) {
       const payload: OrderPayload = {
         orderId: "ord-123",
         symbol: "TEST",
@@ -412,7 +412,7 @@ describe("OrderPayload Type", () => {
         timestamp: "2025-01-04T12:00:00Z",
       };
       expect(payload.status).toBe(status);
-    });
+    }
   });
 });
 
@@ -432,7 +432,7 @@ describe("DecisionPayload Type", () => {
 
   it("supports all decision actions", () => {
     const actions: DecisionPayload["action"][] = ["BUY", "SELL", "HOLD", "CLOSE"];
-    actions.forEach((action) => {
+    for (const action of actions) {
       const payload: DecisionPayload = {
         decisionId: "dec-1",
         symbol: "TEST",
@@ -441,7 +441,7 @@ describe("DecisionPayload Type", () => {
         timestamp: "2025-01-04T12:00:00Z",
       };
       expect(payload.action).toBe(action);
-    });
+    }
   });
 });
 
@@ -462,14 +462,14 @@ describe("SystemStatusPayload Type", () => {
 
   it("supports all status values", () => {
     const statuses: SystemStatusPayload["status"][] = ["online", "offline", "degraded"];
-    statuses.forEach((status) => {
+    for (const status of statuses) {
       const payload: SystemStatusPayload = {
         status,
         services: {},
         lastUpdated: "2025-01-04T12:00:00Z",
       };
       expect(payload.status).toBe(status);
-    });
+    }
   });
 
   it("supports all service health values", () => {
@@ -504,7 +504,7 @@ describe("AlertPayload Type", () => {
 
   it("supports all alert types", () => {
     const types: AlertPayload["type"][] = ["info", "warning", "error", "success"];
-    types.forEach((type) => {
+    for (const type of types) {
       const payload: AlertPayload = {
         alertId: "a1",
         type,
@@ -513,7 +513,7 @@ describe("AlertPayload Type", () => {
         timestamp: "2025-01-04T12:00:00Z",
       };
       expect(payload.type).toBe(type);
-    });
+    }
   });
 });
 
@@ -552,7 +552,7 @@ describe("CycleProgressPayload Type", () => {
       "act",
       "complete",
     ];
-    phases.forEach((phase) => {
+    for (const phase of phases) {
       const payload: CycleProgressPayload = {
         cycleId: "c1",
         phase,
@@ -560,7 +560,7 @@ describe("CycleProgressPayload Type", () => {
         timestamp: "2025-01-04T12:00:00Z",
       };
       expect(payload.phase).toBe(phase);
-    });
+    }
   });
 });
 

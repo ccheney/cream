@@ -158,8 +158,11 @@ export function calculateDrawdownStats(equityCurve: EquityPoint[]): DrawdownStat
     return createEmptyDrawdownStats();
   }
 
-  // Initialize with first point
-  const firstPoint = equityCurve[0]!;
+  // Initialize with first point (safe after length check)
+  const firstPoint = equityCurve[0];
+  if (!firstPoint) {
+    return createEmptyDrawdownStats();
+  }
   let peakEquity = firstPoint.equity;
   let peakTimestamp = firstPoint.timestamp;
   let troughEquity = firstPoint.equity;
@@ -204,8 +207,11 @@ export function calculateDrawdownStats(equityCurve: EquityPoint[]): DrawdownStat
     }
   }
 
-  // Get current (last) values
-  const lastPoint = equityCurve[equityCurve.length - 1]!;
+  // Get current (last) values (safe - we checked length > 0 at start)
+  const lastPoint = equityCurve[equityCurve.length - 1];
+  if (!lastPoint) {
+    return createEmptyDrawdownStats();
+  }
   const currentDrawdownPct = calculateDrawdown(lastPoint.equity, peakEquity);
   const currentDrawdownAbsolute = Math.max(0, peakEquity - lastPoint.equity);
 
@@ -298,10 +304,10 @@ export class DrawdownTracker {
 
     if (equity >= this.peakEquity) {
       // New high - check if recovering from drawdown
-      if (previousInDrawdown) {
+      if (previousInDrawdown && this.currentDrawdownStart !== null) {
         // Record completed drawdown event
         this.history.push({
-          startTimestamp: this.currentDrawdownStart!,
+          startTimestamp: this.currentDrawdownStart,
           endTimestamp: timestamp,
           peakEquity: this.peakEquity,
           troughEquity: this.troughEquity,

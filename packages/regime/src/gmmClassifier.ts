@@ -176,7 +176,7 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
     let cumDist = 0;
     let nextIdx = 0;
     for (let i = 0; i < n; i++) {
-      cumDist += distances[i]!;
+      cumDist += distances[i] ?? 0;
       if (cumDist >= threshold) {
         nextIdx = i;
         break;
@@ -186,9 +186,13 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
   }
 
   for (let c = 0; c < k; c++) {
+    const center = centers[c];
+    if (!center) {
+      continue;
+    }
     clusters.push({
       index: c,
-      mean: centers[c]!,
+      mean: center,
       variance: new Array(d).fill(1), // Start with unit variance
       weight: 1 / k,
       regime: "RANGE", // Default, will be assigned later
@@ -207,12 +211,18 @@ function computeResponsibilities(data: number[][], clusters: GMMCluster[]): numb
   const responsibilities: number[][] = [];
 
   for (let i = 0; i < n; i++) {
-    const point = data[i]!;
+    const point = data[i];
+    if (!point) {
+      continue;
+    }
     const probs: number[] = [];
     let sum = 0;
 
     for (let c = 0; c < k; c++) {
-      const cluster = clusters[c]!;
+      const cluster = clusters[c];
+      if (!cluster) {
+        continue;
+      }
       const prob = cluster.weight * gaussianPdf(point, cluster.mean, cluster.variance);
       probs.push(prob);
       sum += prob;
@@ -237,7 +247,10 @@ function updateClusters(
   const d = data[0]?.length ?? 4;
 
   for (let c = 0; c < k; c++) {
-    const cluster = clusters[c]!;
+    const cluster = clusters[c];
+    if (!cluster) {
+      continue;
+    }
 
     // Compute N_k (soft count)
     let nk = 0;
@@ -297,26 +310,39 @@ function computeLogLikelihood(data: number[][], clusters: GMMCluster[]): number 
  */
 function assignRegimeLabels(clusters: GMMCluster[]): void {
   // Feature indices: 0=returns, 1=volatility, 2=volumeZScore, 3=trendStrength
-  const sorted = [...clusters].sort((a, b) => a.mean[1]! - b.mean[1]!);
+  const sorted = [...clusters].sort((a, b) => (a.mean[1] ?? 0) - (b.mean[1] ?? 0));
 
-  const lowestVol = sorted[0]!;
-  const highestVol = sorted[sorted.length - 1]!;
+  const lowestVol = sorted[0];
+  const highestVol = sorted[sorted.length - 1];
 
-  lowestVol.regime = "LOW_VOL";
-  highestVol.regime = "HIGH_VOL";
+  if (lowestVol) {
+    lowestVol.regime = "LOW_VOL";
+  }
+  if (highestVol) {
+    highestVol.regime = "HIGH_VOL";
+  }
 
   const remaining = sorted.filter((c) => c !== lowestVol && c !== highestVol);
-  remaining.sort((a, b) => a.mean[3]! - b.mean[3]!);
+  remaining.sort((a, b) => (a.mean[3] ?? 0) - (b.mean[3] ?? 0));
 
   if (remaining.length >= 1) {
-    remaining[0]!.regime = "BEAR_TREND";
+    const first = remaining[0];
+    if (first) {
+      first.regime = "BEAR_TREND";
+    }
   }
   if (remaining.length >= 2) {
-    remaining[remaining.length - 1]!.regime = "BULL_TREND";
+    const last = remaining[remaining.length - 1];
+    if (last) {
+      last.regime = "BULL_TREND";
+    }
   }
   if (remaining.length >= 3) {
     for (let i = 1; i < remaining.length - 1; i++) {
-      remaining[i]!.regime = "RANGE";
+      const cluster = remaining[i];
+      if (cluster) {
+        cluster.regime = "RANGE";
+      }
     }
   }
 }
@@ -334,7 +360,10 @@ export function classifyWithGMM(model: GMMModel, candles: OHLCVBar[]): GMMClassi
     return null;
   }
 
-  const latestFeature = features[features.length - 1]!;
+  const latestFeature = features[features.length - 1];
+  if (!latestFeature) {
+    return null;
+  }
   const normalized = normalizeFeatureVector(latestFeature, model.featureMeans, model.featureStds);
 
   const probs: number[] = [];
@@ -350,13 +379,17 @@ export function classifyWithGMM(model: GMMModel, candles: OHLCVBar[]): GMMClassi
   let maxProb = 0;
   let maxIdx = 0;
   for (let i = 0; i < normalizedProbs.length; i++) {
-    if (normalizedProbs[i]! > maxProb) {
-      maxProb = normalizedProbs[i]!;
+    const prob = normalizedProbs[i] ?? 0;
+    if (prob > maxProb) {
+      maxProb = prob;
       maxIdx = i;
     }
   }
 
-  const predictedCluster = model.clusters[maxIdx]!;
+  const predictedCluster = model.clusters[maxIdx];
+  if (!predictedCluster) {
+    return null;
+  }
 
   return {
     regime: predictedCluster.regime,
@@ -392,8 +425,9 @@ export function classifySeriesWithGMM(
     let maxProb = 0;
     let maxIdx = 0;
     for (let i = 0; i < normalizedProbs.length; i++) {
-      if (normalizedProbs[i]! > maxProb) {
-        maxProb = normalizedProbs[i]!;
+      const prob = normalizedProbs[i] ?? 0;
+      if (prob > maxProb) {
+        maxProb = prob;
         maxIdx = i;
       }
     }
@@ -435,8 +469,11 @@ function gaussianPdf(x: number[], mean: number[], variance: number[]): number {
   let logProb = -0.5 * d * Math.log(2 * Math.PI);
 
   for (let i = 0; i < d; i++) {
-    logProb -= 0.5 * Math.log(variance[i]!);
-    logProb -= (0.5 * (x[i]! - mean[i]!) ** 2) / variance[i]!;
+    const v = variance[i] ?? 1;
+    const xi = x[i] ?? 0;
+    const mi = mean[i] ?? 0;
+    logProb -= 0.5 * Math.log(v);
+    logProb -= (0.5 * (xi - mi) ** 2) / v;
   }
 
   return Math.exp(logProb);
@@ -448,7 +485,9 @@ function gaussianPdf(x: number[], mean: number[], variance: number[]): number {
 function squaredDistance(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
-    sum += (a[i]! - b[i]!) ** 2;
+    const ai = a[i] ?? 0;
+    const bi = b[i] ?? 0;
+    sum += (ai - bi) ** 2;
   }
   return sum;
 }

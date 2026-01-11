@@ -138,7 +138,7 @@ export function isWeekend(date: Date): boolean {
  * Check if a date is a US market holiday.
  */
 export function isHoliday(date: Date, holidays = US_MARKET_HOLIDAYS_2024_2026): boolean {
-  const dateStr = date.toISOString().split("T")[0]!;
+  const dateStr = date.toISOString().split("T")[0] ?? "";
   return holidays.has(dateStr);
 }
 
@@ -146,7 +146,7 @@ export function isHoliday(date: Date, holidays = US_MARKET_HOLIDAYS_2024_2026): 
  * Check if a date is an early close day.
  */
 export function isEarlyClose(date: Date, earlyCloses = US_EARLY_CLOSES_2024_2026): boolean {
-  const dateStr = date.toISOString().split("T")[0]!;
+  const dateStr = date.toISOString().split("T")[0] ?? "";
   return earlyCloses.has(dateStr);
 }
 
@@ -276,14 +276,12 @@ export function isExpectedGap(
   const date1 = new Date(timestamp1);
   const date2 = new Date(timestamp2);
 
-  // Check if they're on different trading days
-  const day1 = date1.toISOString().split("T")[0]!;
-  const day2 = date2.toISOString().split("T")[0]!;
+  const day1 = date1.toISOString().split("T")[0] ?? "";
+  const day2 = date2.toISOString().split("T")[0] ?? "";
 
   if (day1 !== day2) {
-    // Check if there's at least one non-trading day between them
     const nextTrading = getNextTradingDay(date1, config);
-    const nextTradingStr = nextTrading.toISOString().split("T")[0]!;
+    const nextTradingStr = nextTrading.toISOString().split("T")[0] ?? "";
 
     // If next trading day is the same as day2, gap is expected (overnight)
     if (nextTradingStr === day2) {

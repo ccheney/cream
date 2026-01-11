@@ -266,7 +266,11 @@ async function loadMigrations(dir: string, direction: "up" | "down"): Promise<Mi
         continue;
       }
 
-      const version = parseInt(match[1]!, 10);
+      const versionStr = match[1];
+      if (versionStr === undefined) {
+        continue;
+      }
+      const version = parseInt(versionStr, 10);
 
       // Skip 001_init.sql if we have init/ directory
       if (version === 1 && migrations.some((m) => m.version === 1)) {

@@ -398,21 +398,16 @@ export function partialExcept<T extends z.ZodRawShape, K extends keyof T>(
   schema: z.ZodObject<T>,
   required: K[]
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const shape = schema.shape as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const newShape: Record<string, any> = {};
-
-  for (const key of Object.keys(shape)) {
-    const value = shape[key];
-    if (value && required.includes(key as K)) {
-      newShape[key] = value;
-    } else if (value) {
-      newShape[key] = value.optional();
+  const shape = schema.shape;
+  const entries = Object.entries(shape) as [string, z.ZodType<unknown>][];
+  const newEntries = entries.map(([key, value]) => {
+    if (required.includes(key as K)) {
+      return [key, value] as const;
     }
-  }
+    return [key, value.optional()] as const;
+  });
 
-  return z.object(newShape);
+  return z.object(Object.fromEntries(newEntries) as z.ZodRawShape);
 }
 
 /**

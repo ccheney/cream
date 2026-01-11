@@ -22,6 +22,7 @@ mod server;
 /// The generated code is in packages/schema-gen/rust/cream/v1/
 /// cream.v1.rs includes cream.v1.tonic.rs at the end
 #[allow(
+    dead_code,
     missing_docs,
     clippy::all,
     clippy::pedantic,

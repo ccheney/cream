@@ -251,7 +251,7 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
   return {
     type: message.type as ServerMessageType,
     data: message.data,
-    timestamp: (message.timestamp! as string) || new Date().toISOString(),
+    timestamp: (message.timestamp as string | undefined) ?? new Date().toISOString(),
   };
 }
 

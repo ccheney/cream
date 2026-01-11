@@ -190,12 +190,16 @@ export function useOptimisticUpdate<TData, TVariables>(
       }
 
       // Call user's onError handler
-      onError?.(error, variables, context!);
+      if (context) {
+        onError?.(error, variables, context);
+      }
     },
 
     // On success: call user's onSuccess handler
     onSuccess: (data, variables, context) => {
-      onSuccess?.(data, variables, context!);
+      if (context) {
+        onSuccess?.(data, variables, context);
+      }
     },
 
     // After mutation (success or error): refetch to ensure consistency

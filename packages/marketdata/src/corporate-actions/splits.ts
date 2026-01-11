@@ -135,7 +135,7 @@ export function getApplicableSplits(
   splits: SplitAdjustment[],
   candleDate: string
 ): SplitAdjustment[] {
-  const candleDateStr = candleDate.split("T")[0]!;
+  const candleDateStr = candleDate.split("T")[0] ?? candleDate;
   return splits.filter((split) => split.executionDate > candleDateStr);
 }
 

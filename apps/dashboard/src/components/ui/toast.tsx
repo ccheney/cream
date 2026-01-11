@@ -289,12 +289,12 @@ export function ToastContainer({ position: propPosition }: ToastContainerProps) 
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: toastKeyframes }} />
-      <div data-testid="toast-container" style={containerStyles} aria-label="Notifications">
+      <style>{toastKeyframes}</style>
+      <aside data-testid="toast-container" style={containerStyles} aria-label="Notifications">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={handleDismiss} />
         ))}
-      </div>
+      </aside>
     </>
   );
 }

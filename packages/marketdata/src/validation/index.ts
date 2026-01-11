@@ -164,8 +164,24 @@ export function validateCandleData(
     };
   }
 
-  const firstCandle = candles[0]!;
-  const lastCandle = candles[candles.length - 1]!;
+  const firstCandle = candles[0];
+  const lastCandle = candles[candles.length - 1];
+  if (!firstCandle || !lastCandle) {
+    return {
+      isValid: false,
+      symbol: "",
+      timeframe: "1h",
+      totalCandles: 0,
+      issues: [
+        {
+          type: "insufficient_data",
+          severity: "critical",
+          message: "No candle data provided",
+        },
+      ],
+      qualityScore: 0,
+    };
+  }
   const symbol = firstCandle.symbol;
   const timeframe = firstCandle.timeframe;
 

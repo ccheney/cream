@@ -106,11 +106,12 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
   // Calculate current P/L at underlying price
   const currentPnl = useMemo(() => {
     // Find data point closest to current price
-    if (data.length === 0) {
+    const firstPoint = data[0];
+    if (data.length === 0 || !firstPoint) {
       return { atExpiration: 0, today: 0 };
     }
 
-    let closest = data[0]!;
+    let closest = firstPoint;
     let minDiff = Math.abs(closest.price - livePrice);
 
     for (const point of data) {

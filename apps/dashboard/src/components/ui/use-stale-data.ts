@@ -6,7 +6,7 @@
  * @see docs/plans/ui/31-realtime-patterns.md line 26
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type StaleLevel = "fresh" | "stale" | "very-stale" | "extremely-stale";
 
@@ -95,47 +95,50 @@ export function useStaleData(
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const calculateStaleState = (elapsedMs: number): StaleState => {
-    const secondsSinceUpdate = Math.floor(elapsedMs / 1000);
+  const calculateStaleState = useCallback(
+    (elapsedMs: number): StaleState => {
+      const secondsSinceUpdate = Math.floor(elapsedMs / 1000);
 
-    if (elapsedMs >= extremelyStaleThresholdMs) {
-      return {
-        level: "extremely-stale",
-        isStale: true,
-        opacity: OPACITY_VALUES["extremely-stale"],
-        showIndicator: true,
-        secondsSinceUpdate,
-      };
-    }
+      if (elapsedMs >= extremelyStaleThresholdMs) {
+        return {
+          level: "extremely-stale",
+          isStale: true,
+          opacity: OPACITY_VALUES["extremely-stale"],
+          showIndicator: true,
+          secondsSinceUpdate,
+        };
+      }
 
-    if (elapsedMs >= veryStaleThresholdMs) {
-      return {
-        level: "very-stale",
-        isStale: true,
-        opacity: OPACITY_VALUES["very-stale"],
-        showIndicator: true,
-        secondsSinceUpdate,
-      };
-    }
+      if (elapsedMs >= veryStaleThresholdMs) {
+        return {
+          level: "very-stale",
+          isStale: true,
+          opacity: OPACITY_VALUES["very-stale"],
+          showIndicator: true,
+          secondsSinceUpdate,
+        };
+      }
 
-    if (elapsedMs >= staleThresholdMs) {
+      if (elapsedMs >= staleThresholdMs) {
+        return {
+          level: "stale",
+          isStale: true,
+          opacity: OPACITY_VALUES.stale,
+          showIndicator: false,
+          secondsSinceUpdate,
+        };
+      }
+
       return {
-        level: "stale",
-        isStale: true,
-        opacity: OPACITY_VALUES.stale,
+        level: "fresh",
+        isStale: false,
+        opacity: OPACITY_VALUES.fresh,
         showIndicator: false,
         secondsSinceUpdate,
       };
-    }
-
-    return {
-      level: "fresh",
-      isStale: false,
-      opacity: OPACITY_VALUES.fresh,
-      showIndicator: false,
-      secondsSinceUpdate,
-    };
-  };
+    },
+    [staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs]
+  );
 
   const markUpdated = () => {
     setLastUpdate(new Date());

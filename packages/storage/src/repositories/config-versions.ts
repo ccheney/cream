@@ -194,10 +194,10 @@ export class ConfigVersionsRepository {
     const versions = await this.findByEnvironment(environment, limit);
 
     const activationHistory = versions
-      .filter((v) => v.activatedAt !== null)
+      .filter((v): v is ConfigVersion & { activatedAt: string } => v.activatedAt !== null)
       .map((v) => ({
         id: v.id,
-        activatedAt: v.activatedAt!,
+        activatedAt: v.activatedAt,
         deactivatedAt: v.deactivatedAt,
       }))
       .sort((a, b) => b.activatedAt.localeCompare(a.activatedAt));

@@ -15,8 +15,8 @@ export function calculateCBRQuality(result: CBRRetrievalResult, minCases = 5): C
   const { cases, statistics } = result;
 
   const similarities = cases
-    .filter((c) => c.similarityScore !== undefined)
-    .map((c) => c.similarityScore!);
+    .filter((c): c is typeof c & { similarityScore: number } => c.similarityScore !== undefined)
+    .map((c) => c.similarityScore);
   const avgSimilarity =
     similarities.length > 0 ? similarities.reduce((a, b) => a + b, 0) / similarities.length : 0;
 

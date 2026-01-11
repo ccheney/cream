@@ -206,7 +206,7 @@ export class CandleIngestionService {
     startDate: string,
     endDate?: string
   ): Promise<IngestionResult> {
-    const end = endDate ?? new Date().toISOString().split("T")[0]!;
+    const end = endDate ?? new Date().toISOString().split("T")[0] ?? "";
     return this.ingestSymbol(symbol, {
       from: startDate,
       to: end,
@@ -223,18 +223,16 @@ export class CandleIngestionService {
 
     let from: string;
     if (lastCandle) {
-      // Start from the day of the last candle to catch any updates
       const lastDate = new Date(lastCandle.timestamp);
       lastDate.setDate(lastDate.getDate() - 1);
-      from = lastDate.toISOString().split("T")[0]!;
+      from = lastDate.toISOString().split("T")[0] ?? "";
     } else {
-      // No data, backfill last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      from = thirtyDaysAgo.toISOString().split("T")[0]!;
+      from = thirtyDaysAgo.toISOString().split("T")[0] ?? "";
     }
 
-    const to = new Date().toISOString().split("T")[0]!;
+    const to = new Date().toISOString().split("T")[0] ?? "";
 
     return this.ingestSymbol(symbol, {
       from,
@@ -379,12 +377,11 @@ export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe):
 
   for (let i = 0; i < candles.length; i += ratio) {
     const group = candles.slice(i, i + ratio);
-    if (group.length === 0) {
+    const first = group[0];
+    const last = group[group.length - 1];
+    if (!first || !last) {
       continue;
     }
-
-    const first = group[0]!;
-    const last = group[group.length - 1]!;
 
     aggregated.push({
       symbol: first.symbol,

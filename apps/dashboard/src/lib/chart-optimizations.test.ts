@@ -139,10 +139,10 @@ describe("downsampleTimeSeries", () => {
   it("preserves TimePoint structure", () => {
     const data = generateTimeSeries(100);
     const result = downsampleTimeSeries(data, 10);
-    result.forEach((point) => {
+    for (const point of result) {
       expect(typeof point.time).toBe("number");
       expect(typeof point.value).toBe("number");
-    });
+    }
   });
 
   it("returns data unchanged if within threshold", () => {
@@ -162,12 +162,12 @@ describe("downsampleOHLC", () => {
   it("preserves OHLC structure", () => {
     const data = generateOHLC(100);
     const result = downsampleOHLC(data, 10);
-    result.forEach((point) => {
+    for (const point of result) {
       expect(typeof point.open).toBe("number");
       expect(typeof point.high).toBe("number");
       expect(typeof point.low).toBe("number");
       expect(typeof point.close).toBe("number");
-    });
+    }
   });
 
   it("returns data unchanged if within threshold", () => {

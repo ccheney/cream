@@ -399,7 +399,7 @@ describe("correctiveRetrieval", () => {
 
   it("applies correction when quality is low", async () => {
     let callCount = 0;
-    const retrieveFn: RetrievalFunction<{ id: string }> = ({ k }) => {
+    const retrieveFn: RetrievalFunction<{ id: string }> = () => {
       callCount++;
       // First call returns poor results, subsequent calls return good results
       if (callCount === 1) {

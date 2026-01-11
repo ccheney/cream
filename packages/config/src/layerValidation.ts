@@ -428,26 +428,43 @@ export function parseImports(source: string): Array<{ path: string; line: number
   const dynamicImportRegex = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+    const line = lines[i];
+    if (line === undefined) {
+      continue;
+    }
     const lineNumber = i + 1;
 
     // Check import/export from
-    let match: RegExpExecArray | null;
     importRegex.lastIndex = 0;
-    while ((match = importRegex.exec(line)) !== null) {
-      imports.push({ path: match[1]!, line: lineNumber });
+    let match = importRegex.exec(line);
+    while (match !== null) {
+      const path = match[1];
+      if (path !== undefined) {
+        imports.push({ path, line: lineNumber });
+      }
+      match = importRegex.exec(line);
     }
 
     // Check require()
     requireRegex.lastIndex = 0;
-    while ((match = requireRegex.exec(line)) !== null) {
-      imports.push({ path: match[1]!, line: lineNumber });
+    match = requireRegex.exec(line);
+    while (match !== null) {
+      const path = match[1];
+      if (path !== undefined) {
+        imports.push({ path, line: lineNumber });
+      }
+      match = requireRegex.exec(line);
     }
 
     // Check dynamic import()
     dynamicImportRegex.lastIndex = 0;
-    while ((match = dynamicImportRegex.exec(line)) !== null) {
-      imports.push({ path: match[1]!, line: lineNumber });
+    match = dynamicImportRegex.exec(line);
+    while (match !== null) {
+      const path = match[1];
+      if (path !== undefined) {
+        imports.push({ path, line: lineNumber });
+      }
+      match = dynamicImportRegex.exec(line);
     }
   }
 

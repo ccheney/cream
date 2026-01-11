@@ -178,11 +178,11 @@ export function validateAtStartup(config: unknown): ValidationResult & { warning
   const baseResult = validateConfig(config);
   const warnings: string[] = [];
 
-  if (!baseResult.success) {
+  if (!baseResult.success || baseResult.data === undefined) {
     return { ...baseResult, warnings };
   }
 
-  const cfg = baseResult.data!;
+  const cfg = baseResult.data;
 
   // Cross-field consistency checks
 

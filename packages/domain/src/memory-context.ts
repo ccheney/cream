@@ -187,8 +187,10 @@ export function calculateCaseStatistics(cases: RetrievedCase[]): CaseStatistics 
   const durations = cases.map((c) => c.keyOutcomes.durationHours);
   const wins = cases.filter((c) => c.keyOutcomes.result === "win").length;
   const similarities = cases
-    .filter((c) => c.similarityScore !== undefined)
-    .map((c) => c.similarityScore!);
+    .filter(
+      (c): c is RetrievedCase & { similarityScore: number } => c.similarityScore !== undefined
+    )
+    .map((c) => c.similarityScore);
 
   // Calculate mean
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);

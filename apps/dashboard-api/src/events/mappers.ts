@@ -6,6 +6,8 @@
  * @see docs/plans/ui/08-realtime.md
  */
 
+import type { Action } from "../../../../packages/domain/src/decision.js";
+import type { AgentType, OrderStatus } from "../../../../packages/domain/src/websocket/channel.js";
 import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
 import type {
   BroadcastEvent,
@@ -50,14 +52,14 @@ export function mapCycleEvent(event: MastraCycleEvent): BroadcastEvent {
  * Map Mastra agent event to AgentOutputMessage.
  */
 export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
-  // Map event agent types to domain agent types
-  const agentTypeMap: Record<MastraAgentEvent["agentType"], string> = {
-    sentiment: "news_analyst",
-    fundamentals: "fundamentals_analyst",
-    bullish: "bullish_researcher",
-    bearish: "bearish_researcher",
+  // Map event agent types to domain AgentType values
+  const agentTypeMap: Record<MastraAgentEvent["agentType"], AgentType> = {
+    sentiment: "news",
+    fundamentals: "fundamentals",
+    bullish: "bullish",
+    bearish: "bearish",
     trader: "trader",
-    risk: "risk_manager",
+    risk: "risk",
     critic: "critic",
   };
 
@@ -73,7 +75,7 @@ export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
     type: "agent_output",
     data: {
       cycleId: event.cycleId,
-      agentType: agentTypeMap[event.agentType] as any,
+      agentType: agentTypeMap[event.agentType],
       status: statusMap[event.status],
       output: typeof event.output === "string" ? event.output : JSON.stringify(event.output ?? ""),
       timestamp: event.timestamp,
@@ -125,8 +127,8 @@ export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
     SELL: "sell",
   };
 
-  // Map event status to domain status
-  const statusMap: Record<OrderUpdateEvent["status"], any> = {
+  // Map event status to domain OrderStatus
+  const statusMap: Record<OrderUpdateEvent["status"], OrderStatus> = {
     pending: "pending",
     open: "submitted",
     partially_filled: "partial_fill",
@@ -167,7 +169,7 @@ export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
  */
 export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
   // Map CLOSE action to NO_TRADE since CLOSE is not in the domain Action type
-  const actionMap: Record<DecisionInsertEvent["action"], any> = {
+  const actionMap: Record<DecisionInsertEvent["action"], Action> = {
     BUY: "BUY",
     SELL: "SELL",
     HOLD: "HOLD",

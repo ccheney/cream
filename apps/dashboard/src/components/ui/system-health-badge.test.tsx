@@ -33,11 +33,11 @@ describe("SystemHealthBadge", () => {
     ];
 
     it("supports all status variants", () => {
-      statuses.forEach((status) => {
+      for (const status of statuses) {
         const element = createElement(SystemHealthBadge, { status }) as unknown as TestElement;
         expect(element).toBeDefined();
         expect(element.type).toBe(SystemHealthBadge);
-      });
+      }
     });
 
     it("creates element for connected status", () => {

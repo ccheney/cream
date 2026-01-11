@@ -70,6 +70,11 @@ export function validateCircularDependencies(
   const severity = circularAsError ? "ERROR" : "WARNING";
 
   for (const cycle of cycles) {
+    const firstPackage = cycle[0];
+    if (firstPackage === undefined) {
+      continue;
+    }
+
     const circular: CircularDependency = {
       cycle,
       message: `Circular dependency: ${cycle.join(" -> ")}`,
@@ -78,7 +83,7 @@ export function validateCircularDependencies(
     circularDependencies.push(circular);
 
     violations.push({
-      package: cycle[0]!,
+      package: firstPackage,
       type: "CIRCULAR",
       message: circular.message,
       relatedPackages: cycle.slice(1),

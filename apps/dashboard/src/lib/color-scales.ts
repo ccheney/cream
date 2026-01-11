@@ -46,13 +46,13 @@ export const CORRELATION_COLORS = {
  */
 export function hexToRgb(hex: string): RGB {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
+  if (!result || !result[1] || !result[2] || !result[3]) {
     throw new Error(`Invalid hex color: ${hex}`);
   }
   return {
-    r: parseInt(result[1]!, 16),
-    g: parseInt(result[2]!, 16),
-    b: parseInt(result[3]!, 16),
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16),
   };
 }
 
@@ -145,8 +145,9 @@ export function getCorrelationColor(value: number): string {
   // Round to 2 decimal places for caching
   const rounded = Math.round(value * 100) / 100;
 
-  if (colorCache.has(rounded)) {
-    return colorCache.get(rounded)!;
+  const cached = colorCache.get(rounded);
+  if (cached !== undefined) {
+    return cached;
   }
 
   const color = correlationScale(rounded);

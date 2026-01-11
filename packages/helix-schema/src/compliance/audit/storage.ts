@@ -59,10 +59,12 @@ export class InMemoryAuditStorage implements AuditStorage {
       results = results.filter((e) => e.environment === params.environment);
     }
     if (params.startTime) {
-      results = results.filter((e) => e.timestamp >= params.startTime!);
+      const startTime = params.startTime;
+      results = results.filter((e) => e.timestamp >= startTime);
     }
     if (params.endTime) {
-      results = results.filter((e) => e.timestamp <= params.endTime!);
+      const endTime = params.endTime;
+      results = results.filter((e) => e.timestamp <= endTime);
     }
 
     // Sort by timestamp descending (most recent first)

@@ -229,6 +229,9 @@ export class KeyRotationManager {
     switch (this.config.strategy) {
       case "round-robin": {
         const result = selectRoundRobin(activeKeys, this.currentIndex);
+        if (result === null) {
+          return null;
+        }
         this.currentIndex = result.nextIndex;
         return result.key;
       }

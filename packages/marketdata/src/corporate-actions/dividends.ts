@@ -119,7 +119,7 @@ export function calculateAnnualizedYield(
  * @returns Dividends with ex-date >= date
  */
 export function getDividendsFromDate(dividends: DividendInfo[], date: string): DividendInfo[] {
-  const dateStr = date.split("T")[0]!;
+  const dateStr = date.split("T")[0] ?? date;
   return dividends.filter((d) => d.exDividendDate >= dateStr);
 }
 
@@ -265,7 +265,7 @@ export function getSpecialDividends(dividends: DividendInfo[]): DividendInfo[] {
  */
 export function getUpcomingDividends(dividends: DividendInfo[], asOfDate?: Date): DividendInfo[] {
   const today = asOfDate ?? new Date();
-  const todayStr = today.toISOString().split("T")[0]!;
+  const todayStr = today.toISOString().split("T")[0] ?? "";
 
   return dividends.filter((d) => d.exDividendDate > todayStr);
 }
@@ -287,8 +287,8 @@ export function getDividendsGoingExWithin(
   const futureDate = new Date(today);
   futureDate.setDate(futureDate.getDate() + days);
 
-  const todayStr = today.toISOString().split("T")[0]!;
-  const futureStr = futureDate.toISOString().split("T")[0]!;
+  const todayStr = today.toISOString().split("T")[0] ?? "";
+  const futureStr = futureDate.toISOString().split("T")[0] ?? "";
 
   return dividends.filter((d) => d.exDividendDate > todayStr && d.exDividendDate <= futureStr);
 }

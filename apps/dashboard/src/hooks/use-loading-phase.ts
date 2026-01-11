@@ -458,13 +458,12 @@ export interface UseOnDemandLoaderReturn<T> {
  * ```tsx
  * function DecisionDetail({ id }: { id: string }) {
  *   const { data, isLoading, load } = useOnDemandLoader(
- *     () => fetchDecisionDetail(id),
- *     [id]
+ *     () => fetchDecisionDetail(id)
  *   );
  *
  *   useEffect(() => {
  *     load();
- *   }, [load]);
+ *   }, [load, id]);
  *
  *   if (isLoading) return <DetailSkeleton />;
  *   if (!data) return null;
@@ -473,10 +472,7 @@ export interface UseOnDemandLoaderReturn<T> {
  * }
  * ```
  */
-export function useOnDemandLoader<T>(
-  loader: () => Promise<T>,
-  deps: React.DependencyList = []
-): UseOnDemandLoaderReturn<T> {
+export function useOnDemandLoader<T>(loader: () => Promise<T>): UseOnDemandLoaderReturn<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -502,8 +498,7 @@ export function useOnDemandLoader<T>(
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, []);
 
   const reset = useCallback(() => {
     setData(null);

@@ -77,7 +77,12 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
 
   if (threshold <= 2) {
     // Return first and last point
-    return [data[0]!, data[data.length - 1]!];
+    const first = data[0];
+    const last = data[data.length - 1];
+    if (!first || !last) {
+      return data;
+    }
+    return [first, last];
   }
 
   const sampled: Point[] = [];
@@ -86,7 +91,11 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
   const bucketSize = (data.length - 2) / (threshold - 2);
 
   // Always add first point
-  sampled.push(data[0]!);
+  const firstPoint = data[0];
+  if (!firstPoint) {
+    return data;
+  }
+  sampled.push(firstPoint);
 
   let a = 0; // Previous selected point index
 
@@ -137,12 +146,18 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
       }
     }
 
-    sampled.push(data[maxAreaPoint]!);
-    a = maxAreaPoint;
+    const selectedPoint = data[maxAreaPoint];
+    if (selectedPoint) {
+      sampled.push(selectedPoint);
+      a = maxAreaPoint;
+    }
   }
 
   // Always add last point
-  sampled.push(data[data.length - 1]!);
+  const lastPoint = data[data.length - 1];
+  if (lastPoint) {
+    sampled.push(lastPoint);
+  }
 
   return sampled;
 }
@@ -165,7 +180,7 @@ export function downsampleTimeSeries(data: TimePoint[], threshold: number): Time
   const sampled = downsampleLTTB(points, { threshold });
 
   // Map back to TimePoint format
-  return sampled.map((p) => data[p.x]!) as TimePoint[];
+  return sampled.map((p) => data[p.x]).filter((p): p is TimePoint => p !== undefined);
 }
 
 /**
@@ -188,7 +203,7 @@ export function downsampleOHLC(data: OHLCPoint[], threshold: number): OHLCPoint[
   const sampled = downsampleLTTB(points, { threshold });
 
   // Map back to OHLC format
-  return sampled.map((p) => data[p.x]!) as OHLCPoint[];
+  return sampled.map((p) => data[p.x]).filter((p): p is OHLCPoint => p !== undefined);
 }
 
 // ============================================
@@ -245,11 +260,19 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
   let maxDistance = 0;
   let maxIndex = 0;
 
-  const start = points[0]!;
-  const end = points[points.length - 1]!;
+  const start = points[0];
+  const end = points[points.length - 1];
+
+  if (!start || !end) {
+    return points;
+  }
 
   for (let i = 1; i < points.length - 1; i++) {
-    const distance = perpendicularDistance(points[i]!, start, end);
+    const point = points[i];
+    if (!point) {
+      continue;
+    }
+    const distance = perpendicularDistance(point, start, end);
     if (distance > maxDistance) {
       maxDistance = distance;
       maxIndex = i;
@@ -266,7 +289,7 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
   }
 
   // If max distance is within epsilon, return just the endpoints
-  return [start!, end!];
+  return [start, end];
 }
 
 /**
@@ -296,7 +319,7 @@ export function simplifyTimeSeries(data: TimePoint[], epsilon: number): TimePoin
 
   // Map back to TimePoint format
   return simplified
-    .map((p) => data[Math.round(p.x * maxTime)]!)
+    .map((p) => data[Math.round(p.x * maxTime)])
     .filter((p): p is TimePoint => p !== undefined);
 }
 
@@ -314,12 +337,17 @@ export function sampleEveryN<T>(data: T[], n: number): T[] {
 
   const sampled: T[] = [];
   for (let i = 0; i < data.length; i += n) {
-    sampled.push(data[i]!);
+    const item = data[i];
+    if (item !== undefined) {
+      sampled.push(item);
+    }
   }
 
   // Always include last point
-  if (sampled[sampled.length - 1] !== data[data.length - 1]) {
-    sampled.push(data[data.length - 1]!);
+  const lastSampled = sampled[sampled.length - 1];
+  const lastData = data[data.length - 1];
+  if (lastData !== undefined && lastSampled !== lastData) {
+    sampled.push(lastData);
   }
 
   return sampled;
@@ -387,12 +415,12 @@ export class LRUCache<K, V> {
   }
 
   get(key: K): V | undefined {
-    if (!this.cache.has(key)) {
+    const value = this.cache.get(key);
+    if (value === undefined) {
       return undefined;
     }
 
     // Move to end (most recently used)
-    const value = this.cache.get(key)!;
     this.cache.delete(key);
     this.cache.set(key, value);
     return value;
@@ -437,8 +465,9 @@ export function memoize<Args extends unknown[], Result>(
   return (...args: Args): Result => {
     const key = keyFn ? keyFn(...args) : JSON.stringify(args);
 
-    if (cache.has(key)) {
-      return cache.get(key)!;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      return cached;
     }
 
     const result = fn(...args);

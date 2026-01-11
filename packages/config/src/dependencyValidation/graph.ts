@@ -79,7 +79,10 @@ export class DependencyGraph {
     const queue = [from];
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (current === undefined) {
+        continue;
+      }
       if (current === to) {
         return true;
       }
@@ -348,15 +351,18 @@ export class DependencyGraph {
 
     let minIndex = 0;
     for (let i = 1; i < withoutLast.length; i++) {
-      if (withoutLast[i]! < withoutLast[minIndex]!) {
+      const current = withoutLast[i];
+      const minElement = withoutLast[minIndex];
+      if (current !== undefined && minElement !== undefined && current < minElement) {
         minIndex = i;
       }
     }
 
+    const minElement = withoutLast[minIndex];
     const rotated = [
       ...withoutLast.slice(minIndex),
       ...withoutLast.slice(0, minIndex),
-      withoutLast[minIndex]!,
+      ...(minElement !== undefined ? [minElement] : []),
     ];
 
     return rotated;

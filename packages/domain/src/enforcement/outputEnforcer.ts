@@ -181,11 +181,11 @@ export class OutputEnforcer {
 
   constructor(options: EnforcementOptions = {}) {
     this.options = {
-      logger: options.logger ?? DEFAULT_OPTIONS.logger!,
-      traderAgent: options.traderAgent ?? undefined!,
+      logger: options.logger ?? DEFAULT_OPTIONS.logger ?? defaultLogger,
+      traderAgent: options.traderAgent as TraderAgentInterface,
       schema: options.schema ?? DecisionPlanSchema,
-      maxRevisionAttempts: options.maxRevisionAttempts ?? DEFAULT_OPTIONS.maxRevisionAttempts!,
-      skipPreflight: options.skipPreflight ?? DEFAULT_OPTIONS.skipPreflight!,
+      maxRevisionAttempts: options.maxRevisionAttempts ?? DEFAULT_OPTIONS.maxRevisionAttempts ?? 1,
+      skipPreflight: options.skipPreflight ?? DEFAULT_OPTIONS.skipPreflight ?? false,
     };
   }
 
