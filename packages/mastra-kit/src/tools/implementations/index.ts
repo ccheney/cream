@@ -5,6 +5,14 @@
  */
 
 export {
+  type CompanyRelationshipsResult,
+  type DependencyResult,
+  getCompanyRelationships,
+  getSectorPeers,
+  getSupplyChain,
+  type RelatedCompanyResult,
+} from "./companyRelationship.js";
+export {
   type AnalyzeContentParams,
   type AnalyzeContentResult,
   analyzeContent,

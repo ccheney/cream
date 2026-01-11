@@ -6,6 +6,25 @@
  * for input validation and output typing.
  */
 
+// Company relationship tools
+export {
+  type CompanyRelationshipsInput,
+  CompanyRelationshipsInputSchema,
+  type CompanyRelationshipsOutput,
+  CompanyRelationshipsOutputSchema,
+  companyRelationshipsTool,
+  companyRelationshipTools,
+  type SectorPeersInput,
+  SectorPeersInputSchema,
+  type SectorPeersOutput,
+  SectorPeersOutputSchema,
+  type SupplyChainInput,
+  SupplyChainInputSchema,
+  type SupplyChainOutput,
+  SupplyChainOutputSchema,
+  sectorPeersTool,
+  supplyChainTool,
+} from "./companyRelationshipTools.js";
 export {
   EconomicCalendarInputSchema,
   EconomicCalendarOutputSchema,

@@ -155,6 +155,28 @@ export {
   vectorSearch,
 } from "./queries/vector";
 
+// Services
+export {
+  type CompanyData,
+  CompanyGraphBuilder,
+  type CompanyGraphBuildOptions,
+  type CompanyGraphBuildResult,
+  type CorrelationAnalysisOptions,
+  type CorrelationPair,
+  calculateCorrelation,
+  calculateReturns,
+  createCompanyGraphBuilder,
+  createUniverseSyncer,
+  getMarketCapBucket,
+  instrumentsToCompanyData,
+  type ResolvedInstrument,
+  type SupplyChainRelationship,
+  syncCompaniesToGraph,
+  syncUniverseToGraph,
+  type UniverseSyncOptions,
+  type UniverseSyncResult,
+} from "./services";
+
 /**
  * Package version.
  */
