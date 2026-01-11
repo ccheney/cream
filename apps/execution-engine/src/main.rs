@@ -227,7 +227,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            None => match execution_engine::server::grpc::build_grpc_services() {
+            None => match execution_engine::server::build_grpc_services() {
                 Ok(services) => services,
                 Err(e) => {
                     tracing::error!("Failed to build gRPC services: {e}");

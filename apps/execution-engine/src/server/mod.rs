@@ -17,7 +17,7 @@
 //! See the `tls` module for more details.
 
 mod arrow_flight;
-pub mod grpc;
+mod grpc;
 mod http;
 pub mod tls;
 

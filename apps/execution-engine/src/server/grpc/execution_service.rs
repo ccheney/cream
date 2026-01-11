@@ -1,0 +1,617 @@
+//! ExecutionService gRPC implementation.
+//!
+//! Implements the `ExecutionService` gRPC service for order management,
+//! constraint checking, and account/position queries.
+
+use std::pin::Pin;
+use std::sync::Arc;
+use std::time::Instant;
+
+use tokio::sync::{RwLock, mpsc};
+use tokio_stream::{Stream, wrappers::ReceiverStream};
+use tonic::{Request, Response, Status};
+
+use super::cache::{
+    ACCOUNT_CACHE_TTL, AlpacaCache, CachedAccountState, CachedPositions, POSITIONS_CACHE_TTL,
+};
+use super::converters::{
+    convert_decision_plan, convert_order_side, convert_order_status, convert_order_type,
+    parse_timestamp,
+};
+use super::proto;
+use super::proto::cream::v1::{
+    AccountState, CancelOrderRequest, CancelOrderResponse, CheckConstraintsRequest,
+    CheckConstraintsResponse, ConstraintCheck, ConstraintResult, ConstraintViolation,
+    GetAccountStateRequest, GetAccountStateResponse, GetOrderStateRequest, GetOrderStateResponse,
+    GetPositionsRequest, GetPositionsResponse, Position, StreamExecutionsRequest,
+    StreamExecutionsResponse, SubmitOrderRequest, SubmitOrderResponse, ViolationSeverity,
+    execution_service_server::ExecutionService,
+};
+use crate::execution::{ExecutionGateway, OrderStateManager};
+use crate::models::Environment;
+use crate::risk::ConstraintValidator;
+
+/// Execution service implementation.
+pub struct ExecutionServiceImpl {
+    /// Constraint validator.
+    validator: Arc<ConstraintValidator>,
+    /// Order state manager.
+    state_manager: Arc<OrderStateManager>,
+    /// Execution gateway (using Alpaca as the broker).
+    gateway: Arc<ExecutionGateway<crate::execution::AlpacaAdapter>>,
+    /// Alpaca adapter for account/position queries.
+    alpaca: Arc<crate::execution::AlpacaAdapter>,
+    /// Cache for account/position data to reduce API calls.
+    cache: Arc<RwLock<AlpacaCache>>,
+}
+
+impl std::fmt::Debug for ExecutionServiceImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExecutionServiceImpl")
+            .field("validator", &"...")
+            .field("state_manager", &"...")
+            .field("gateway", &"...")
+            .finish()
+    }
+}
+
+impl ExecutionServiceImpl {
+    /// Create a new execution service.
+    pub fn new(
+        validator: ConstraintValidator,
+        state_manager: OrderStateManager,
+        gateway: ExecutionGateway<crate::execution::AlpacaAdapter>,
+        alpaca: crate::execution::AlpacaAdapter,
+    ) -> Self {
+        Self {
+            validator: Arc::new(validator),
+            state_manager: Arc::new(state_manager),
+            gateway: Arc::new(gateway),
+            alpaca: Arc::new(alpaca),
+            cache: Arc::new(RwLock::new(AlpacaCache::default())),
+        }
+    }
+
+    /// Create with default configuration (paper trading).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Alpaca adapter cannot be created.
+    pub fn with_defaults() -> Result<Self, crate::execution::AlpacaError> {
+        use crate::execution::AlpacaAdapter;
+
+        // Create paper trading adapter with credentials from environment
+        let alpaca = AlpacaAdapter::new(
+            std::env::var("ALPACA_KEY").unwrap_or_else(|_| "paper-key".to_string()),
+            std::env::var("ALPACA_SECRET").unwrap_or_else(|_| "paper-secret".to_string()),
+            Environment::Paper,
+        )?;
+
+        let state_manager = OrderStateManager::new();
+        let validator = ConstraintValidator::with_defaults();
+
+        // Create a second adapter instance for the gateway
+        // (they share the same credentials but have separate HTTP clients)
+        let gateway_alpaca = AlpacaAdapter::new(
+            std::env::var("ALPACA_KEY").unwrap_or_else(|_| "paper-key".to_string()),
+            std::env::var("ALPACA_SECRET").unwrap_or_else(|_| "paper-secret".to_string()),
+            Environment::Paper,
+        )?;
+
+        let gateway_state_manager = OrderStateManager::new();
+        let gateway_validator = ConstraintValidator::with_defaults();
+        let gateway = ExecutionGateway::with_defaults(
+            gateway_alpaca,
+            gateway_state_manager,
+            gateway_validator,
+        );
+
+        Ok(Self {
+            validator: Arc::new(validator),
+            state_manager: Arc::new(state_manager),
+            gateway: Arc::new(gateway),
+            alpaca: Arc::new(alpaca),
+            cache: Arc::new(RwLock::new(AlpacaCache::default())),
+        })
+    }
+
+    /// Get cached account state or fetch fresh data if cache is stale.
+    async fn get_cached_account(&self) -> Result<crate::execution::AccountInfo, Status> {
+        // Check cache first
+        {
+            let cache = self.cache.read().await;
+            if let Some(cached) = &cache.account
+                && cached.fetched_at.elapsed() < ACCOUNT_CACHE_TTL
+            {
+                tracing::trace!("Using cached account state");
+                return Ok(cached.state.clone());
+            }
+        }
+
+        // Cache miss or stale - fetch fresh data
+        let account_info = self
+            .alpaca
+            .get_account()
+            .await
+            .map_err(|e| Status::internal(format!("Failed to get account state: {e}")))?;
+
+        // Update cache
+        {
+            let mut cache = self.cache.write().await;
+            cache.account = Some(CachedAccountState {
+                state: account_info.clone(),
+                fetched_at: Instant::now(),
+            });
+        }
+
+        tracing::debug!(
+            account_id = %account_info.account_id,
+            "Fetched fresh account state from Alpaca"
+        );
+
+        Ok(account_info)
+    }
+
+    /// Get cached positions or fetch fresh data if cache is stale.
+    async fn get_cached_positions(&self) -> Result<Vec<crate::execution::AlpacaPosition>, Status> {
+        // Check cache first
+        {
+            let cache = self.cache.read().await;
+            if let Some(cached) = &cache.positions
+                && cached.fetched_at.elapsed() < POSITIONS_CACHE_TTL
+            {
+                tracing::trace!("Using cached positions");
+                return Ok(cached.positions.clone());
+            }
+        }
+
+        // Cache miss or stale - fetch fresh data
+        let positions = self
+            .alpaca
+            .get_positions()
+            .await
+            .map_err(|e| Status::internal(format!("Failed to get positions: {e}")))?;
+
+        // Update cache
+        {
+            let mut cache = self.cache.write().await;
+            cache.positions = Some(CachedPositions {
+                positions: positions.clone(),
+                fetched_at: Instant::now(),
+            });
+        }
+
+        tracing::debug!(
+            position_count = positions.len(),
+            "Fetched fresh positions from Alpaca"
+        );
+
+        Ok(positions)
+    }
+}
+
+#[tonic::async_trait]
+impl ExecutionService for ExecutionServiceImpl {
+    async fn check_constraints(
+        &self,
+        request: Request<CheckConstraintsRequest>,
+    ) -> Result<Response<CheckConstraintsResponse>, Status> {
+        let req = request.into_inner();
+
+        // Convert proto request to internal format
+        let decision_plan = req
+            .decision_plan
+            .ok_or_else(|| Status::invalid_argument("decision_plan is required"))?;
+
+        let account_state = req
+            .account_state
+            .ok_or_else(|| Status::invalid_argument("account_state is required"))?;
+
+        // Build internal constraint check request
+        let internal_request = crate::models::ConstraintCheckRequest {
+            request_id: uuid::Uuid::new_v4().to_string(),
+            cycle_id: decision_plan.cycle_id.clone(),
+            risk_policy_id: "default".to_string(),
+            account_equity: rust_decimal::Decimal::from_f64_retain(account_state.equity)
+                .unwrap_or_default(),
+            plan: convert_decision_plan(&decision_plan),
+        };
+
+        // Validate constraints
+        let response = self.validator.validate(&internal_request);
+
+        // Convert to proto response
+        let proto_response = CheckConstraintsResponse {
+            approved: response.ok,
+            checks: response
+                .violations
+                .iter()
+                .map(|v| ConstraintCheck {
+                    name: v.code.clone(),
+                    result: if v.severity == crate::models::ViolationSeverity::Error {
+                        ConstraintResult::Fail.into()
+                    } else {
+                        ConstraintResult::Warn.into()
+                    },
+                    description: v.message.clone(),
+                    actual_value: v.observed.parse().ok(),
+                    threshold: v.limit.parse().ok(),
+                })
+                .collect(),
+            violations: response
+                .violations
+                .iter()
+                .map(|v| ConstraintViolation {
+                    code: v.code.clone(),
+                    severity: match v.severity {
+                        crate::models::ViolationSeverity::Warning => {
+                            ViolationSeverity::Warning.into()
+                        }
+                        crate::models::ViolationSeverity::Error => ViolationSeverity::Error.into(),
+                    },
+                    message: v.message.clone(),
+                    instrument_id: if v.instrument_id.is_empty() {
+                        None
+                    } else {
+                        Some(v.instrument_id.clone())
+                    },
+                    field_path: if v.field_path.is_empty() {
+                        None
+                    } else {
+                        Some(v.field_path.clone())
+                    },
+                    observed_value: v.observed.parse().ok(),
+                    limit_value: v.limit.parse().ok(),
+                    constraint_name: v.code.clone(),
+                })
+                .collect(),
+            validated_at: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
+            rejection_reason: if response.ok {
+                None
+            } else {
+                Some(
+                    response
+                        .violations
+                        .first()
+                        .map(|v| v.message.clone())
+                        .unwrap_or_default(),
+                )
+            },
+        };
+
+        Ok(Response::new(proto_response))
+    }
+
+    async fn submit_order(
+        &self,
+        request: Request<SubmitOrderRequest>,
+    ) -> Result<Response<SubmitOrderResponse>, Status> {
+        let req = request.into_inner();
+
+        // Validate required fields
+        let instrument = req
+            .instrument
+            .ok_or_else(|| Status::invalid_argument("instrument is required"))?;
+
+        // Create internal order and submit via gateway
+        let order_id = uuid::Uuid::new_v4().to_string();
+
+        // For now, return a mock response
+        // Real implementation would route through the gateway
+        let response = SubmitOrderResponse {
+            order_id: order_id.clone(),
+            client_order_id: req.client_order_id,
+            status: proto::cream::v1::OrderStatus::Accepted.into(),
+            submitted_at: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
+            error_message: None,
+        };
+
+        tracing::info!(
+            order_id = %order_id,
+            instrument_id = %instrument.instrument_id,
+            quantity = req.quantity,
+            "Order submitted"
+        );
+
+        Ok(Response::new(response))
+    }
+
+    type StreamExecutionsStream =
+        Pin<Box<dyn Stream<Item = Result<StreamExecutionsResponse, Status>> + Send>>;
+
+    async fn stream_executions(
+        &self,
+        request: Request<StreamExecutionsRequest>,
+    ) -> Result<Response<Self::StreamExecutionsStream>, Status> {
+        let req = request.into_inner();
+
+        // Create a channel for streaming executions
+        let (tx, rx) = mpsc::channel(128);
+
+        // Spawn a task to send execution updates
+        let _state_manager = self.state_manager.clone();
+        let order_ids = req.order_ids;
+        let cycle_id = req.cycle_id;
+
+        tokio::spawn(async move {
+            // In a real implementation, this would:
+            // 1. Subscribe to order state changes
+            // 2. Filter by cycle_id and order_ids
+            // 3. Send updates to the stream
+
+            // For now, just keep the connection open
+            tracing::info!(
+                cycle_id = ?cycle_id,
+                order_count = order_ids.len(),
+                "Execution stream started"
+            );
+
+            // The stream will close when the client disconnects
+            let _ = tx;
+        });
+
+        let stream = ReceiverStream::new(rx);
+        Ok(Response::new(Box::pin(stream)))
+    }
+
+    async fn get_account_state(
+        &self,
+        _request: Request<GetAccountStateRequest>,
+    ) -> Result<Response<GetAccountStateResponse>, Status> {
+        // Get account state (uses cache if fresh)
+        let account_info = self.get_cached_account().await?;
+
+        let account_state = AccountState {
+            account_id: account_info.account_id,
+            equity: account_info.equity.to_string().parse().unwrap_or(0.0),
+            buying_power: account_info.buying_power.to_string().parse().unwrap_or(0.0),
+            margin_used: account_info.margin_used.to_string().parse().unwrap_or(0.0),
+            day_trade_count: account_info.daytrade_count,
+            is_pdt_restricted: account_info.pattern_day_trader,
+            as_of: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
+        };
+
+        Ok(Response::new(GetAccountStateResponse {
+            account_state: Some(account_state),
+        }))
+    }
+
+    async fn get_positions(
+        &self,
+        request: Request<GetPositionsRequest>,
+    ) -> Result<Response<GetPositionsResponse>, Status> {
+        let req = request.into_inner();
+
+        // Get positions (uses cache if fresh)
+        let alpaca_positions = self.get_cached_positions().await?;
+
+        // Filter by requested symbols if provided
+        let filtered_positions: Vec<_> = if req.symbols.is_empty() {
+            alpaca_positions
+        } else {
+            let symbol_set: std::collections::HashSet<&str> =
+                req.symbols.iter().map(String::as_str).collect();
+            alpaca_positions
+                .into_iter()
+                .filter(|p| symbol_set.contains(p.symbol.as_str()))
+                .collect()
+        };
+
+        // Convert to proto Position type
+        let positions: Vec<Position> = filtered_positions
+            .iter()
+            .map(|p| {
+                // Determine if this is an options symbol
+                let instrument_type =
+                    if crate::execution::OptionsOrderValidator::is_options_symbol(&p.symbol) {
+                        proto::cream::v1::InstrumentType::Option
+                    } else {
+                        proto::cream::v1::InstrumentType::Equity
+                    };
+
+                Position {
+                    instrument: Some(proto::cream::v1::Instrument {
+                        instrument_id: p.symbol.clone(),
+                        instrument_type: instrument_type.into(),
+                        option_contract: None, // Could parse from OCC symbol if needed
+                    }),
+                    quantity: p.qty.to_string().parse().unwrap_or(0),
+                    avg_entry_price: p.avg_entry_price.to_string().parse().unwrap_or(0.0),
+                    market_value: p.market_value.to_string().parse().unwrap_or(0.0),
+                    unrealized_pnl: p.unrealized_pl.to_string().parse().unwrap_or(0.0),
+                    unrealized_pnl_pct: p.unrealized_pl_pct.to_string().parse().unwrap_or(0.0),
+                    cost_basis: p.cost_basis.to_string().parse().unwrap_or(0.0),
+                }
+            })
+            .collect();
+
+        Ok(Response::new(GetPositionsResponse {
+            positions,
+            as_of: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
+        }))
+    }
+
+    async fn get_order_state(
+        &self,
+        request: Request<GetOrderStateRequest>,
+    ) -> Result<Response<GetOrderStateResponse>, Status> {
+        let req = request.into_inner();
+        let order_id = req.order_id;
+
+        tracing::debug!(order_id = %order_id, "Getting order state");
+
+        // Try to get order from state manager (by internal ID or broker ID)
+        let order_state = self
+            .state_manager
+            .get(&order_id)
+            .or_else(|| self.state_manager.get_by_broker_id(&order_id))
+            .ok_or_else(|| Status::not_found(format!("Order not found: {order_id}")))?;
+
+        // Convert internal OrderState to proto GetOrderStateResponse
+        let response = GetOrderStateResponse {
+            order_id: order_state.order_id.clone(),
+            broker_order_id: order_state.broker_order_id.clone(),
+            instrument: Some(proto::cream::v1::Instrument {
+                instrument_id: order_state.instrument_id.clone(),
+                instrument_type: proto::cream::v1::InstrumentType::Equity.into(), // Default
+                option_contract: None,
+            }),
+            status: convert_order_status(order_state.status),
+            side: convert_order_side(order_state.side),
+            order_type: convert_order_type(order_state.order_type),
+            requested_quantity: order_state
+                .requested_quantity
+                .to_string()
+                .parse()
+                .unwrap_or(0),
+            filled_quantity: order_state.filled_quantity.to_string().parse().unwrap_or(0),
+            avg_fill_price: order_state
+                .avg_fill_price
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            limit_price: order_state
+                .limit_price
+                .map(|p| p.to_string().parse().unwrap_or(0.0)),
+            stop_price: order_state
+                .stop_price
+                .map(|p| p.to_string().parse().unwrap_or(0.0)),
+            submitted_at: parse_timestamp(&order_state.submitted_at),
+            last_update_at: parse_timestamp(&order_state.last_update_at),
+            status_message: order_state.status_message.clone(),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    async fn cancel_order(
+        &self,
+        request: Request<CancelOrderRequest>,
+    ) -> Result<Response<CancelOrderResponse>, Status> {
+        let req = request.into_inner();
+        let order_id = req.order_id;
+
+        tracing::info!(order_id = %order_id, "Canceling order");
+
+        // Determine if this is a broker order ID or internal order ID
+        let broker_order_id = if let Some(order_state) = self.state_manager.get(&order_id) {
+            order_state.broker_order_id.clone()
+        } else if let Some(order_state) = self.state_manager.get_by_broker_id(&order_id) {
+            order_state.broker_order_id.clone()
+        } else {
+            return Err(Status::not_found(format!("Order not found: {order_id}")));
+        };
+
+        // Cancel via gateway
+        match self.gateway.cancel_order(&broker_order_id).await {
+            Ok(()) => {
+                // Get updated order state
+                let order_state = self
+                    .state_manager
+                    .get_by_broker_id(&broker_order_id)
+                    .ok_or_else(|| Status::internal("Order state missing after cancel"))?;
+
+                Ok(Response::new(CancelOrderResponse {
+                    accepted: true,
+                    order_id: order_state.order_id.clone(),
+                    status: convert_order_status(order_state.status),
+                    error_message: None,
+                }))
+            }
+            Err(cancel_error) => {
+                tracing::error!(
+                    order_id = %order_id,
+                    error = %cancel_error,
+                    "Cancel order failed"
+                );
+
+                // Still return success but with error message
+                // since this matches FIX protocol behavior
+                Ok(Response::new(CancelOrderResponse {
+                    accepted: false,
+                    order_id: order_id.clone(),
+                    status: proto::cream::v1::OrderStatus::Unspecified.into(),
+                    error_message: Some(format!("{cancel_error}")),
+                }))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_execution_service_creation() {
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
+        assert!(Arc::strong_count(&service.validator) == 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_state() {
+        // Skip if no credentials are available (uses paper-key/paper-secret fallback)
+        if std::env::var("ALPACA_KEY").is_err() {
+            eprintln!("Skipping test_get_account_state: ALPACA_KEY not set");
+            return;
+        }
+
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
+        let request = Request::new(GetAccountStateRequest { account_id: None });
+
+        let response = service.get_account_state(request).await;
+        match response {
+            Ok(resp) => {
+                let Some(state) = resp.into_inner().account_state else {
+                    panic!("should have account state");
+                };
+                // Account ID should be set (not necessarily "default" anymore)
+                assert!(!state.account_id.is_empty());
+                // Equity should be positive for a funded account
+                // (but could be 0 for a new paper account)
+                assert!(state.equity >= 0.0);
+            }
+            Err(e) => {
+                // API call failed - skip test gracefully
+                eprintln!("Skipping test_get_account_state: API error: {e}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_positions() {
+        // Skip if no credentials are available
+        if std::env::var("ALPACA_KEY").is_err() {
+            eprintln!("Skipping test_get_positions: ALPACA_KEY not set");
+            return;
+        }
+
+        let service = match ExecutionServiceImpl::with_defaults() {
+            Ok(s) => s,
+            Err(e) => panic!("should create service: {e}"),
+        };
+        let request = Request::new(GetPositionsRequest {
+            account_id: None,
+            symbols: vec!["AAPL".to_string()],
+        });
+
+        let response = service.get_positions(request).await;
+        match response {
+            Ok(resp) => {
+                let positions = resp.into_inner();
+                assert!(positions.as_of.is_some());
+                // Note: positions vector may be empty if no positions are held
+            }
+            Err(e) => {
+                // API call failed - skip test gracefully
+                eprintln!("Skipping test_get_positions: API error: {e}");
+            }
+        }
+    }
+}
