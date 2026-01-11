@@ -8,6 +8,7 @@
  */
 
 import type { Context, MiddlewareHandler } from "hono";
+import log from "../logger.js";
 
 // ============================================
 // Types
@@ -255,9 +256,15 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
       const userId = c.get("userId") as string | undefined;
       const path = new URL(c.req.url).pathname;
 
-      // biome-ignore lint/suspicious/noConsole: Security logging is intentional
-      console.warn(
-        `[RATE_LIMIT] Blocked request: ip=${ip} userId=${userId ?? "anonymous"} path=${path} limit=${mergedConfig.maxRequests}/${mergedConfig.windowMs}ms`
+      log.warn(
+        {
+          ip,
+          userId: userId ?? "anonymous",
+          path,
+          limit: mergedConfig.maxRequests,
+          windowMs: mergedConfig.windowMs,
+        },
+        "Rate limit exceeded"
       );
 
       // Return 429 Too Many Requests

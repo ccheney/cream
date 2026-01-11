@@ -7,6 +7,7 @@
 
 import { createPolygonClientFromEnv, parseOptionTicker } from "@cream/marketdata";
 import { getPositionsRepo } from "../db.js";
+import log from "../logger.js";
 import { systemState } from "../routes/system.js";
 
 // ============================================
@@ -91,8 +92,7 @@ export class PortfolioService {
         const details = parseOptionTicker(pos.symbol);
 
         if (!details) {
-          // biome-ignore lint/suspicious/noConsole: Log warning for bad data
-          console.warn(`Failed to parse option ticker: ${pos.symbol}`);
+          log.warn({ symbol: pos.symbol }, "Failed to parse option ticker");
           return null;
         }
 
@@ -116,8 +116,10 @@ export class PortfolioService {
 
           return { pos, details };
         } catch (error) {
-          // biome-ignore lint/suspicious/noConsole: Log warning
-          console.warn(`Failed to parse/prep option ${pos.symbol}`, error);
+          log.warn(
+            { symbol: pos.symbol, error: error instanceof Error ? error.message : String(error) },
+            "Failed to prep option"
+          );
           return null;
         }
       })
@@ -205,8 +207,10 @@ export class PortfolioService {
           });
         }
       } catch (error) {
-        // biome-ignore lint/suspicious/noConsole: Log error
-        console.error(`Error fetching options for ${underlying}:`, error);
+        log.error(
+          { underlying, error: error instanceof Error ? error.message : String(error) },
+          "Error fetching options"
+        );
         // Add with stale/db data
         if (items) {
           for (const item of items) {

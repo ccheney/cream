@@ -10,7 +10,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { logger as honoLogger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
 import { auth } from "./auth/better-auth.js";
@@ -22,6 +22,7 @@ import {
 } from "./auth/session.js";
 import { closeDb } from "./db.js";
 import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
+import log from "./logger.js";
 import { AUTH_CONFIG, rateLimit } from "./middleware/index.js";
 import {
   agentsRoutes,
@@ -76,8 +77,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
           new URL(origin);
           return true;
         } catch {
-          // biome-ignore lint/suspicious/noConsole: startup validation logging
-          console.warn(`[CORS] Invalid origin in ALLOWED_ORIGINS: ${origin}`);
+          log.warn({ origin }, "Invalid origin in ALLOWED_ORIGINS");
           return false;
         }
       })
@@ -99,7 +99,7 @@ app.use(
 );
 
 // Request logging
-app.use("/*", logger());
+app.use("/*", honoLogger());
 
 // Server timing headers
 app.use("/*", timing());

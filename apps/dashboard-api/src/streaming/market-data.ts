@@ -17,6 +17,7 @@ import {
   type MassiveWebSocketClient,
   PolygonClient,
 } from "@cream/marketdata";
+import log from "../logger.js";
 import { broadcastAggregate, broadcastQuote, broadcastTrade } from "../websocket/handler.js";
 
 // Polygon client for fetching previous close
@@ -137,8 +138,12 @@ function handleMassiveEvent(event: MassiveEvent): void {
           `T.${s}`,
           `Q.${s}`,
         ]);
-        // biome-ignore lint/suspicious/noConsole: Error logging for subscribe failure
-        massiveClient?.subscribe(subscriptions).catch(console.error);
+        massiveClient?.subscribe(subscriptions).catch((error) => {
+          log.error(
+            { error: error instanceof Error ? error.message : String(error) },
+            "Failed to resubscribe to market data"
+          );
+        });
       }
       break;
 

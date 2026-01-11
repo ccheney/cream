@@ -8,6 +8,7 @@
  */
 
 import type { BacktestsRepository } from "@cream/storage";
+import log from "../logger.js";
 
 // ============================================
 // Types
@@ -259,6 +260,8 @@ export async function executeBacktest(
   await repo.start(backtestId);
   broadcast?.(backtestId, { type: "backtest:started" });
 
+  log.info({ backtestId, cwd, config }, "Executing Python backtest runner");
+
   try {
     // Spawn Python subprocess
     const proc = Bun.spawn(
@@ -270,6 +273,8 @@ export async function executeBacktest(
       }
     );
 
+    log.debug({ backtestId, pid: proc.pid }, "Python process spawned");
+
     // Set up timeout
     const timeoutId = setTimeout(() => {
       proc.kill();
@@ -280,10 +285,14 @@ export async function executeBacktest(
       const decoder = new TextDecoder();
       const reader = proc.stdout.getReader();
       let buffer = "";
+      let eventCount = 0;
+
+      log.debug({ backtestId }, "Starting to read stdout");
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          log.debug({ backtestId, eventCount }, "Stdout stream ended");
           break;
         }
 
@@ -296,11 +305,18 @@ export async function executeBacktest(
             continue;
           }
 
+          log.trace({ backtestId, line: line.substring(0, 200) }, "Raw stdout line");
+
           try {
             const event = JSON.parse(line) as BacktestEvent;
+            log.debug({ backtestId, eventType: event.type }, "Backtest event received");
+            eventCount++;
             await handleEvent(backtestId, event, repo, broadcast);
           } catch {
-            // Parse errors are expected for non-JSON stderr output - silently skip
+            log.warn(
+              { backtestId, line: line.substring(0, 100) },
+              "Failed to parse backtest event"
+            );
           }
         }
       }
@@ -317,9 +333,11 @@ export async function executeBacktest(
 
       // Check exit code
       const exitCode = await proc.exited;
+      log.info({ backtestId, exitCode }, "Python process exited");
 
       if (exitCode !== 0) {
         const stderr = await new Response(proc.stderr).text();
+        log.error({ backtestId, exitCode, stderr }, "Backtest process failed");
         throw new Error(`Backtest process exited with code ${exitCode}: ${stderr}`);
       }
     } finally {

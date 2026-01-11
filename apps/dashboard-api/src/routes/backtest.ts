@@ -18,6 +18,7 @@ import type { Backtest, BacktestEquityPoint, BacktestTrade } from "@cream/storag
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { getBacktestsRepo } from "../db.js";
+import log from "../logger.js";
 import { cleanupBacktestData, prepareAllBacktestData } from "../services/backtest-data.js";
 import { executeBacktest } from "../services/backtest-executor.js";
 import { broadcastToBacktest } from "../websocket/handler.js";
@@ -41,9 +42,21 @@ async function runBacktestInBackground(
 
   let dataPaths: Awaited<ReturnType<typeof prepareAllBacktestData>> | null = null;
 
+  log.info(
+    {
+      backtestId: backtest.id,
+      universe: backtest.universe,
+      startDate: backtest.startDate,
+      endDate: backtest.endDate,
+    },
+    "Starting backtest execution"
+  );
+
   try {
     // Prepare data files (OHLCV and signals)
+    log.debug({ backtestId: backtest.id }, "Preparing backtest data");
     dataPaths = await prepareAllBacktestData(backtest);
+    log.debug({ backtestId: backtest.id, dataPaths }, "Backtest data prepared");
 
     // Execute backtest with WebSocket broadcasting
     await executeBacktest(
@@ -61,8 +74,16 @@ async function runBacktestInBackground(
       }
     );
   } catch (error) {
-    // Log the error but don't rethrow - this is fire-and-forget
+    // Log the error for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
+    log.error(
+      {
+        backtestId: backtest.id,
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      "Backtest failed"
+    );
 
     // Ensure database is updated with failure
     try {

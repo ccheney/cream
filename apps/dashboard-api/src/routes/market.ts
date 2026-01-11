@@ -11,6 +11,7 @@ import { PolygonClient } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { getRegimeLabelsRepo } from "../db.js";
+import log from "../logger.js";
 
 // ============================================
 // Polygon Client (singleton)
@@ -438,8 +439,7 @@ const candlesRoute = createRoute({
 });
 
 app.openapi(candlesRoute, async (c) => {
-  // biome-ignore lint/suspicious/noConsole: Debug
-  console.log("🚨 CANDLES ENDPOINT HIT - NEW CODE IS RUNNING 🚨");
+  log.debug("Candles endpoint hit");
   const { symbol } = c.req.valid("param");
   const { timeframe, limit } = c.req.valid("query");
   const upperSymbol = symbol.toUpperCase();
@@ -448,12 +448,10 @@ app.openapi(candlesRoute, async (c) => {
   // Check cache first
   const cached = getCached<z.infer<typeof CandleSchema>[]>(cacheKey);
   if (cached) {
-    // biome-ignore lint/suspicious/noConsole: Debug
-    console.log(`📦 CACHE HIT for ${cacheKey} - returning ${cached.length} candles`);
+    log.debug({ cacheKey, count: cached.length }, "Cache hit for candles");
     return c.json(cached, 200);
   }
-  // biome-ignore lint/suspicious/noConsole: Debug
-  console.log(`❌ CACHE MISS for ${cacheKey} - fetching fresh data`);
+  log.debug({ cacheKey }, "Cache miss for candles - fetching fresh data");
 
   const client = getPolygonClient();
 
@@ -510,14 +508,19 @@ app.openapi(candlesRoute, async (c) => {
       { limit: fetchLimit, sort: "desc" }
     );
 
-    // biome-ignore lint/suspicious/noConsole: Debugging
-    console.log(
-      `Fetched candles for ${upperSymbol} (${timeframe}): ${response.results?.length ?? 0} bars from ${fromStr} to ${toStr}`
+    log.debug(
+      {
+        symbol: upperSymbol,
+        timeframe,
+        count: response.results?.length ?? 0,
+        from: fromStr,
+        to: toStr,
+      },
+      "Fetched candles from API"
     );
 
     if (!response.results || response.results.length === 0) {
-      // biome-ignore lint/suspicious/noConsole: Error logging
-      console.error(`No data returned for ${upperSymbol} ${timeframe}`);
+      log.warn({ symbol: upperSymbol, timeframe }, "No candle data returned from API");
       throw new HTTPException(503, {
         message: `No candle data available for ${upperSymbol}`,
       });
@@ -532,9 +535,9 @@ app.openapi(candlesRoute, async (c) => {
         const inMarket = isMarketHours(barDate);
         return inMarket;
       });
-      // biome-ignore lint/suspicious/noConsole: Debug logging
-      console.log(
-        `Market hours filter: ${beforeCount} -> ${filteredResults.length} bars for ${upperSymbol} ${timeframe}`
+      log.debug(
+        { symbol: upperSymbol, timeframe, beforeCount, afterCount: filteredResults.length },
+        "Applied market hours filter"
       );
     }
 
@@ -545,21 +548,21 @@ app.openapi(candlesRoute, async (c) => {
     const startIndex = Math.max(0, filteredResults.length - limit);
     const recentResults = filteredResults.slice(startIndex);
 
-    // Debug: log the actual time range being returned
+    // Log the actual time range being returned
     if (recentResults.length > 0) {
-      const etOptions: Intl.DateTimeFormatOptions = {
-        timeZone: "America/New_York",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
       const first = recentResults[0];
       const last = recentResults[recentResults.length - 1];
-      const firstDate = first ? new Date(first.t) : new Date();
-      const lastDate = last ? new Date(last.t) : new Date();
-      // biome-ignore lint/suspicious/noConsole: Debug logging
-      console.log(
-        `Returning ${recentResults.length} ${timeframe} candles: ${firstDate.toLocaleTimeString("en-US", etOptions)} to ${lastDate.toLocaleTimeString("en-US", etOptions)} ET`
+      const firstTimestamp = first ? new Date(first.t).toISOString() : null;
+      const lastTimestamp = last ? new Date(last.t).toISOString() : null;
+      log.debug(
+        {
+          symbol: upperSymbol,
+          timeframe,
+          count: recentResults.length,
+          firstTimestamp,
+          lastTimestamp,
+        },
+        "Returning candles"
       );
     }
 

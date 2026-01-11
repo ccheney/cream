@@ -10,6 +10,7 @@
 import { type OptionSnapshotResult, PolygonClient } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
+import log from "../logger.js";
 
 // ============================================
 // Polygon Client (singleton)
@@ -443,8 +444,7 @@ app.openapi(expirationsRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
-    // biome-ignore lint/suspicious/noConsole: debug logging for API errors
-    console.error(`[Options] Failed to fetch expirations for ${upperUnderlying}:`, error);
+    log.error({ underlying: upperUnderlying, error: message }, "Failed to fetch expirations");
     throw new HTTPException(503, {
       message: `Failed to fetch expirations for ${upperUnderlying}: ${message}`,
     });
