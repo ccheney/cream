@@ -8,18 +8,18 @@
  * - Volume: VWAP
  */
 
-export { calculateATR, calculateATRSeries, calculateTrueRange, type ATRResult } from "./atr";
-export { calculateSMA, calculateSMASeries, type SMAResult } from "./sma";
-
+export { type ATRResult, calculateATR, calculateATRSeries, calculateTrueRange } from "./atr";
 export {
-  calculateRSI,
-  calculateRSISeries,
-  classifyRSI,
-  detectRSIDivergence,
-  type RSILevel,
-  type RSIResult,
-} from "./rsi";
-
+  type BandwidthLevel,
+  type BollingerBandsResult,
+  type BollingerPosition,
+  calculateBollingerBands,
+  calculateBollingerBandsSeries,
+  classifyBandwidth,
+  classifyBollingerPosition,
+  detectBandWalking,
+  detectBollingerSqueeze,
+} from "./bollinger";
 export {
   calculateEMA,
   calculateEMAMultiplier,
@@ -30,19 +30,6 @@ export {
   type EMAResult,
   type MultiEMAResult,
 } from "./ema";
-
-export {
-  calculateBollingerBands,
-  calculateBollingerBandsSeries,
-  classifyBandwidth,
-  classifyBollingerPosition,
-  detectBandWalking,
-  detectBollingerSqueeze,
-  type BandwidthLevel,
-  type BollingerBandsResult,
-  type BollingerPosition,
-} from "./bollinger";
-
 export {
   calculateMACD,
   calculateMACDSeries,
@@ -53,20 +40,6 @@ export {
   type MACDResult,
   type MACDSettings,
 } from "./macd";
-
-export {
-  calculateSlowStochastic,
-  calculateStochastic,
-  calculateStochasticSeries,
-  classifyStochastic,
-  detectStochasticCrossover,
-  detectStochasticHook,
-  type SlowStochasticResult,
-  type StochasticLevel,
-  type StochasticResult,
-  type StochasticSettings,
-} from "./stochastic";
-
 export {
   calculateCustomMomentumPeriods,
   calculateMomentum,
@@ -80,6 +53,27 @@ export {
   type MomentumStrength,
   type MultiPeriodMomentum,
 } from "./momentum";
+export {
+  calculateRSI,
+  calculateRSISeries,
+  classifyRSI,
+  detectRSIDivergence,
+  type RSILevel,
+  type RSIResult,
+} from "./rsi";
+export { calculateSMA, calculateSMASeries, type SMAResult } from "./sma";
+export {
+  calculateSlowStochastic,
+  calculateStochastic,
+  calculateStochasticSeries,
+  classifyStochastic,
+  detectStochasticCrossover,
+  detectStochasticHook,
+  type SlowStochasticResult,
+  type StochasticLevel,
+  type StochasticResult,
+  type StochasticSettings,
+} from "./stochastic";
 
 export {
   calculateCloseToCloseVolatility,
@@ -95,3 +89,9 @@ export {
   type VolatilityMethod,
   type VolatilityResult,
 } from "./volatility";
+
+export {
+  calculateVolumeSMA,
+  calculateVolumeSMASeries,
+  type VolumeSMAResult,
+} from "./volume-sma";

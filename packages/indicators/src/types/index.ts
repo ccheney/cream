@@ -436,6 +436,12 @@ export const OHLCVBarSchema = z.object({
 export type OHLCVBar = z.infer<typeof OHLCVBarSchema>;
 
 /**
+ * Candle type alias for backward compatibility
+ * (Identical to OHLCVBar)
+ */
+export type Candle = OHLCVBar;
+
+/**
  * Quote input for liquidity calculators
  */
 export const QuoteSchema = z.object({
@@ -635,4 +641,468 @@ export function createEmptySnapshot(symbol: string): IndicatorSnapshot {
     market: createEmptyMarketContext(),
     metadata: createDefaultMetadata(),
   };
+}
+
+// ============================================================
+// DYNAMIC INDICATOR SYNTHESIS TYPES
+// ============================================================
+
+/**
+ * Market regime type for hypothesis applicability
+ */
+export const MarketRegimeType = z.enum(["TRENDING", "RANGING", "VOLATILE", "ROTATING", "CRISIS"]);
+export type MarketRegimeType = z.infer<typeof MarketRegimeType>;
+
+/**
+ * Indicator category for classification
+ */
+export const IndicatorCategory = z.enum([
+  "momentum",
+  "trend",
+  "volatility",
+  "liquidity",
+  "correlation",
+  "microstructure",
+  "sentiment",
+  "regime",
+]);
+export type IndicatorCategory = z.infer<typeof IndicatorCategory>;
+
+/**
+ * Expected properties for an indicator hypothesis
+ */
+export const ExpectedPropertiesSchema = z.object({
+  /** Expected information coefficient range [min, max] */
+  expectedICRange: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+  /** Maximum acceptable correlation with existing indicators */
+  maxCorrelationWithExisting: z.number().min(0).max(1),
+  /** Target timeframe for the indicator */
+  targetTimeframe: z.string(),
+  /** Market regimes where indicator should perform well */
+  applicableRegimes: z.array(MarketRegimeType),
+});
+export type ExpectedProperties = z.infer<typeof ExpectedPropertiesSchema>;
+
+/**
+ * IndicatorHypothesis — The schema for indicator hypothesis generation
+ *
+ * Used by the Indicator Researcher agent during dynamic indicator synthesis.
+ *
+ * @see docs/plans/19-dynamic-indicator-synthesis.md
+ */
+export const IndicatorHypothesisSchema = z.object({
+  /** Unique name for the indicator (snake_case) */
+  name: z.string().regex(/^[a-z][a-z0-9_]*$/, "Must be snake_case"),
+
+  /** Category classification */
+  category: IndicatorCategory,
+
+  /** Core hypothesis statement (min 50 chars) */
+  hypothesis: z.string().min(50),
+
+  /** Economic rationale explaining predictive power (min 100 chars) */
+  economicRationale: z.string().min(100),
+
+  /** Mathematical approach description (min 50 chars) */
+  mathematicalApproach: z.string().min(50),
+
+  /** Specific criteria that would invalidate the hypothesis */
+  falsificationCriteria: z.array(z.string().min(10)).min(1),
+
+  /** Expected statistical properties */
+  expectedProperties: ExpectedPropertiesSchema,
+
+  /** Related academic/practitioner research */
+  relatedAcademicWork: z.array(z.string()).optional(),
+});
+export type IndicatorHypothesis = z.infer<typeof IndicatorHypothesisSchema>;
+
+// ============================================================
+// INDICATOR COMPARISON
+// ============================================================
+
+/**
+ * Result of comparing two indicators
+ */
+export interface IndicatorComparisonResult {
+  /** Correlation coefficient between indicators */
+  correlation: number;
+  /** AST similarity score (0-1) for code comparison */
+  astSimilarity?: number;
+  /** Whether indicators are sufficiently orthogonal */
+  isOrthogonal: boolean;
+}
+
+/**
+ * Compare two indicators for orthogonality
+ *
+ * Used during dynamic indicator synthesis to ensure new indicators
+ * provide unique signal not captured by existing indicators.
+ *
+ * @param indicator1Values - Time series values for first indicator
+ * @param indicator2Values - Time series values for second indicator
+ * @param threshold - Correlation threshold for orthogonality (default: 0.5)
+ * @returns Comparison result with correlation and orthogonality determination
+ */
+export function compareIndicator(
+  indicator1Values: number[],
+  indicator2Values: number[],
+  threshold = 0.5
+): IndicatorComparisonResult {
+  if (indicator1Values.length !== indicator2Values.length) {
+    throw new Error("Indicator arrays must have the same length");
+  }
+
+  if (indicator1Values.length === 0) {
+    return { correlation: 0, isOrthogonal: true };
+  }
+
+  // Calculate Pearson correlation
+  const n = indicator1Values.length;
+  const mean1 = indicator1Values.reduce((a, b) => a + b, 0) / n;
+  const mean2 = indicator2Values.reduce((a, b) => a + b, 0) / n;
+
+  let numerator = 0;
+  let sum1Sq = 0;
+  let sum2Sq = 0;
+
+  for (let i = 0; i < n; i++) {
+    const diff1 = (indicator1Values[i] ?? 0) - mean1;
+    const diff2 = (indicator2Values[i] ?? 0) - mean2;
+    numerator += diff1 * diff2;
+    sum1Sq += diff1 * diff1;
+    sum2Sq += diff2 * diff2;
+  }
+
+  const denominator = Math.sqrt(sum1Sq * sum2Sq);
+  const correlation = denominator === 0 ? 0 : numerator / denominator;
+
+  return {
+    correlation,
+    isOrthogonal: Math.abs(correlation) < threshold,
+  };
+}
+
+// ============================================================
+// INDICATOR TRIGGER CONDITIONS
+// ============================================================
+
+/**
+ * IC (Information Coefficient) history entry
+ */
+export interface ICHistoryEntry {
+  /** Date string in YYYY-MM-DD format */
+  date: string;
+  /** IC value for that date */
+  icValue: number;
+}
+
+/**
+ * Input parameters for creating trigger conditions
+ */
+export interface TriggerConditionsInput {
+  /** Whether a regime gap was detected */
+  regimeGapDetected: boolean;
+  /** Current market regime label */
+  currentRegime: string;
+  /** Details about the regime gap (if any) */
+  regimeGapDetails?: string;
+  /** Similarity score of closest matching indicator (0-1) */
+  closestIndicatorSimilarity?: number;
+  /** IC history entries (newest first) */
+  icHistory: ICHistoryEntry[];
+  /** ISO timestamp of last generation attempt (null if never attempted) */
+  lastAttemptAt?: string | null;
+  /** Current count of active indicators */
+  activeIndicatorCount: number;
+  /** Maximum indicator capacity (defaults to 20) */
+  maxIndicatorCapacity?: number;
+}
+
+/**
+ * Computed trigger conditions for evaluation
+ */
+export interface TriggerConditions {
+  /** Whether a regime gap was detected */
+  regimeGapDetected: boolean;
+  /** Current market regime */
+  currentRegime: string;
+  /** Regime gap details */
+  regimeGapDetails?: string;
+  /** Closest indicator similarity score */
+  closestIndicatorSimilarity: number;
+  /** Rolling 30-day IC */
+  rollingIC30Day: number;
+  /** Number of consecutive days of IC decay */
+  icDecayDays: number;
+  /** Whether existing indicators are underperforming */
+  existingIndicatorsUnderperforming: boolean;
+  /** Days since last generation attempt */
+  daysSinceLastAttempt: number;
+  /** Number of active indicators */
+  activeIndicatorCount: number;
+  /** Maximum indicator capacity */
+  maxIndicatorCapacity: number;
+}
+
+/**
+ * Result of trigger condition evaluation
+ */
+export interface TriggerEvaluationResult {
+  /** Whether indicator generation should be triggered */
+  shouldTrigger: boolean;
+  /** The computed conditions */
+  conditions: TriggerConditions;
+  /** Summary explanation */
+  summary: string;
+}
+
+/**
+ * Create trigger conditions from input parameters
+ *
+ * @param input - The trigger check parameters
+ * @returns Computed trigger conditions
+ */
+export function createTriggerConditions(input: TriggerConditionsInput): TriggerConditions {
+  const {
+    regimeGapDetected,
+    currentRegime,
+    regimeGapDetails,
+    closestIndicatorSimilarity = 1.0,
+    icHistory,
+    lastAttemptAt,
+    activeIndicatorCount,
+    maxIndicatorCapacity = 20,
+  } = input;
+
+  // Calculate rolling 30-day IC
+  const recent30 = icHistory.slice(0, 30);
+  const rollingIC30Day =
+    recent30.length > 0 ? recent30.reduce((sum, e) => sum + e.icValue, 0) / recent30.length : 0;
+
+  // Calculate consecutive IC decay days
+  let icDecayDays = 0;
+  for (let i = 1; i < icHistory.length; i++) {
+    const current = icHistory[i];
+    const previous = icHistory[i - 1];
+    if (current && previous && current.icValue < previous.icValue) {
+      icDecayDays++;
+    } else {
+      break;
+    }
+  }
+
+  // Determine if existing indicators are underperforming
+  const existingIndicatorsUnderperforming = rollingIC30Day < 0.02 && icDecayDays >= 5;
+
+  // Calculate days since last attempt
+  let daysSinceLastAttempt = Infinity;
+  if (lastAttemptAt) {
+    const lastAttemptDate = new Date(lastAttemptAt);
+    const now = new Date();
+    daysSinceLastAttempt = Math.floor(
+      (now.getTime() - lastAttemptDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  }
+
+  return {
+    regimeGapDetected,
+    currentRegime,
+    regimeGapDetails,
+    closestIndicatorSimilarity,
+    rollingIC30Day,
+    icDecayDays,
+    existingIndicatorsUnderperforming,
+    daysSinceLastAttempt,
+    activeIndicatorCount,
+    maxIndicatorCapacity,
+  };
+}
+
+/**
+ * Evaluate trigger conditions to determine if indicator generation should be triggered
+ *
+ * Trigger criteria (from docs/plans/19-dynamic-indicator-synthesis.md):
+ * - Regime gap detected OR sustained underperformance (IC < 0.02 for 5+ days)
+ * - Minimum 30 days since last indicator generation attempt
+ * - Closest existing indicator similarity < 0.7
+ * - Indicator portfolio under capacity (max 20 indicators)
+ *
+ * @param conditions - The computed trigger conditions
+ * @returns Evaluation result with trigger decision and summary
+ */
+export function evaluateTriggerConditions(conditions: TriggerConditions): TriggerEvaluationResult {
+  const {
+    regimeGapDetected,
+    existingIndicatorsUnderperforming,
+    daysSinceLastAttempt,
+    closestIndicatorSimilarity,
+    activeIndicatorCount,
+    maxIndicatorCapacity,
+  } = conditions;
+
+  // Check cooldown (30 days)
+  if (daysSinceLastAttempt < 30) {
+    return {
+      shouldTrigger: false,
+      conditions,
+      summary: `Cooldown active: ${30 - daysSinceLastAttempt} days remaining`,
+    };
+  }
+
+  // Check capacity
+  if (activeIndicatorCount >= maxIndicatorCapacity) {
+    return {
+      shouldTrigger: false,
+      conditions,
+      summary: `Indicator capacity reached (${activeIndicatorCount}/${maxIndicatorCapacity})`,
+    };
+  }
+
+  // Check similarity threshold
+  if (closestIndicatorSimilarity >= 0.7) {
+    return {
+      shouldTrigger: false,
+      conditions,
+      summary: `Existing indicator too similar (${closestIndicatorSimilarity.toFixed(2)})`,
+    };
+  }
+
+  // Check trigger conditions (regime gap OR underperformance)
+  const hasRegimeGap = regimeGapDetected;
+  const hasUnderperformance = existingIndicatorsUnderperforming;
+
+  if (!hasRegimeGap && !hasUnderperformance) {
+    return {
+      shouldTrigger: false,
+      conditions,
+      summary: "No trigger condition met: no regime gap and performance adequate",
+    };
+  }
+
+  // All conditions met - should trigger
+  const reason = hasRegimeGap ? "Regime gap detected" : "Sustained underperformance";
+  return {
+    shouldTrigger: true,
+    conditions,
+    summary: `${reason}, generation warranted`,
+  };
+}
+
+// ============================================================
+// INDICATOR PIPELINE (STUBS)
+// ============================================================
+
+/**
+ * Pipeline configuration for multi-timeframe indicator calculation
+ *
+ * NOTE: This is a stub for forward compatibility. Full implementation pending.
+ * @see docs/plans/02-data-layer.md - Feature Computation
+ */
+export interface IndicatorPipelineConfig {
+  /** Timeframes to calculate indicators for */
+  timeframes: string[];
+  /** Base period for calculations */
+  basePeriod: number;
+  /** Whether to include volume indicators */
+  includeVolume: boolean;
+}
+
+/**
+ * Default pipeline configuration
+ */
+export const DEFAULT_PIPELINE_CONFIG: IndicatorPipelineConfig = {
+  timeframes: ["1d", "1h", "15m"],
+  basePeriod: 14,
+  includeVolume: true,
+};
+
+/**
+ * Transform configuration for feature normalization
+ */
+export interface TransformConfig {
+  /** Normalization method */
+  method: "zscore" | "minmax" | "robust";
+  /** Lookback period for normalization */
+  lookbackPeriod: number;
+  /** Whether to clip outliers */
+  clipOutliers: boolean;
+  /** Standard deviation threshold for outlier clipping */
+  clipThreshold: number;
+}
+
+/**
+ * Default transform configuration
+ */
+export const DEFAULT_TRANSFORM_CONFIG: TransformConfig = {
+  method: "zscore",
+  lookbackPeriod: 20,
+  clipOutliers: true,
+  clipThreshold: 3,
+};
+
+/**
+ * Multi-timeframe indicator calculation result
+ */
+export interface MultiTimeframeIndicators {
+  [timeframe: string]: {
+    [indicator: string]: number | null;
+  };
+}
+
+/**
+ * Calculate indicators across multiple timeframes
+ *
+ * NOTE: This is a stub implementation. Returns empty results.
+ * Full implementation requires candle aggregation infrastructure.
+ *
+ * @param candles - Input candles (assumed to be base timeframe)
+ * @param config - Pipeline configuration
+ * @returns Multi-timeframe indicator values
+ */
+export function calculateMultiTimeframeIndicators(
+  candles: OHLCVBar[],
+  _config: Partial<IndicatorPipelineConfig> = {}
+): MultiTimeframeIndicators {
+  // Stub implementation - returns empty structure
+  // TODO: Implement candle aggregation and multi-timeframe calculation
+  if (candles.length === 0) {
+    return {};
+  }
+  return {
+    "1d": {},
+    "1h": {},
+    "15m": {},
+  };
+}
+
+/**
+ * Transformed feature result
+ */
+export interface TransformedFeatures {
+  [feature: string]: number;
+}
+
+/**
+ * Apply transforms (normalization) to indicator values
+ *
+ * NOTE: This is a stub implementation. Returns input values unchanged.
+ * Full implementation requires historical data for normalization.
+ *
+ * @param candles - Input candles
+ * @param timeframe - Timeframe identifier
+ * @param config - Transform configuration
+ * @returns Transformed feature values
+ */
+export function applyTransforms(
+  candles: OHLCVBar[],
+  _timeframe: string,
+  _config: Partial<TransformConfig> = {}
+): TransformedFeatures {
+  // Stub implementation - returns empty structure
+  // TODO: Implement zscore/minmax/robust normalization
+  if (candles.length === 0) {
+    return {};
+  }
+  return {};
 }

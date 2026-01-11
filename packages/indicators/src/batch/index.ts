@@ -26,3 +26,20 @@ export {
   // FMP client interface
   type FundamentalsFMPClient,
 } from "./fundamentals-batch.js";
+
+export {
+  // Calculation functions (exported for testing)
+  calculateShortInterestMomentum,
+  calculateShortInterestRatio,
+  calculateShortPctFloat,
+  // FINRA client interface
+  type FINRAClient,
+  type FINRAQueryFilter,
+  type FINRAQueryRequest,
+  type FINRAShortInterestRecord,
+  // Shares provider interface
+  type SharesOutstandingProvider,
+  // Batch job
+  ShortInterestBatchJob,
+  type ShortInterestBatchJobConfig,
+} from "./short-interest-batch.js";
