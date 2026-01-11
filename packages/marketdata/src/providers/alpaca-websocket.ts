@@ -54,56 +54,56 @@ const ALPACA_WS_ENDPOINTS = {
 // ============================================
 
 export const AlpacaWsQuoteMessageSchema = z.object({
-  T: z.literal("q"), // Message type
-  S: z.string(), // Symbol
-  bx: z.string().optional(), // Bid exchange
-  bp: z.number(), // Bid price
-  bs: z.number(), // Bid size
-  ax: z.string().optional(), // Ask exchange
-  ap: z.number(), // Ask price
-  as: z.number(), // Ask size
-  t: z.string(), // Timestamp (RFC-3339)
-  c: z.array(z.string()).optional(), // Conditions
-  z: z.string().optional(), // Tape
+  T: z.literal("q").describe("Message type: 'q' for quote"),
+  S: z.string().describe("Ticker symbol (e.g., AAPL, MSFT)"),
+  bx: z.string().optional().describe("Bid exchange code (e.g., 'V' for IEX)"),
+  bp: z.number().describe("Best bid price"),
+  bs: z.number().describe("Bid size in round lots"),
+  ax: z.string().optional().describe("Ask exchange code (e.g., 'Q' for NASDAQ)"),
+  ap: z.number().describe("Best ask price"),
+  as: z.number().describe("Ask size in round lots"),
+  t: z.string().describe("Quote timestamp in RFC-3339 format"),
+  c: z.array(z.string()).optional().describe("Quote condition codes"),
+  z: z.string().optional().describe("Tape: A (NYSE), B (ARCA/regional), C (NASDAQ)"),
 });
 export type AlpacaWsQuoteMessage = z.infer<typeof AlpacaWsQuoteMessageSchema>;
 
 export const AlpacaWsTradeMessageSchema = z.object({
-  T: z.literal("t"), // Message type
-  S: z.string(), // Symbol
-  i: z.number().optional(), // Trade ID
-  x: z.string().optional(), // Exchange
-  p: z.number(), // Price
-  s: z.number(), // Size
-  t: z.string(), // Timestamp (RFC-3339)
-  c: z.array(z.string()).optional(), // Conditions
-  z: z.string().optional(), // Tape
+  T: z.literal("t").describe("Message type: 't' for trade"),
+  S: z.string().describe("Ticker symbol (e.g., AAPL, MSFT)"),
+  i: z.number().optional().describe("Unique trade ID"),
+  x: z.string().optional().describe("Exchange code where trade executed"),
+  p: z.number().describe("Trade price"),
+  s: z.number().describe("Trade size in shares"),
+  t: z.string().describe("Trade timestamp in RFC-3339 format"),
+  c: z.array(z.string()).optional().describe("Trade condition codes (e.g., '@' for regular sale)"),
+  z: z.string().optional().describe("Tape: A (NYSE), B (ARCA/regional), C (NASDAQ)"),
 });
 export type AlpacaWsTradeMessage = z.infer<typeof AlpacaWsTradeMessageSchema>;
 
 export const AlpacaWsBarMessageSchema = z.object({
-  T: z.enum(["b", "d", "u"]), // b=minute, d=daily, u=updated
-  S: z.string(), // Symbol
-  o: z.number(), // Open
-  h: z.number(), // High
-  l: z.number(), // Low
-  c: z.number(), // Close
-  v: z.number(), // Volume
-  t: z.string(), // Timestamp (RFC-3339)
-  vw: z.number().optional(), // VWAP
-  n: z.number().optional(), // Trade count
+  T: z.enum(["b", "d", "u"]).describe("Bar type: 'b' (minute), 'd' (daily), 'u' (updated)"),
+  S: z.string().describe("Ticker symbol (e.g., AAPL, MSFT)"),
+  o: z.number().describe("Opening price of the bar"),
+  h: z.number().describe("Highest price during the bar"),
+  l: z.number().describe("Lowest price during the bar"),
+  c: z.number().describe("Closing price of the bar"),
+  v: z.number().describe("Total volume traded during the bar"),
+  t: z.string().describe("Bar timestamp in RFC-3339 format"),
+  vw: z.number().optional().describe("Volume-weighted average price (VWAP)"),
+  n: z.number().optional().describe("Number of trades during the bar"),
 });
 export type AlpacaWsBarMessage = z.infer<typeof AlpacaWsBarMessageSchema>;
 
 export const AlpacaWsStatusMessageSchema = z.object({
-  T: z.literal("s"), // Status message type
-  S: z.string(), // Symbol
-  sc: z.string().optional(), // Status code
-  sm: z.string().optional(), // Status message
-  rc: z.string().optional(), // Reason code
-  rm: z.string().optional(), // Reason message
-  t: z.string().optional(), // Timestamp
-  z: z.string().optional(), // Tape
+  T: z.literal("s").describe("Message type: 's' for trading status"),
+  S: z.string().describe("Ticker symbol (e.g., AAPL, MSFT)"),
+  sc: z.string().optional().describe("Status code (e.g., 'T' for trading, 'H' for halted)"),
+  sm: z.string().optional().describe("Status message text"),
+  rc: z.string().optional().describe("Reason code for status change"),
+  rm: z.string().optional().describe("Reason message explaining status change"),
+  t: z.string().optional().describe("Status timestamp in RFC-3339 format"),
+  z: z.string().optional().describe("Tape: A (NYSE), B (ARCA/regional), C (NASDAQ)"),
 });
 export type AlpacaWsStatusMessage = z.infer<typeof AlpacaWsStatusMessageSchema>;
 
@@ -112,17 +112,19 @@ export type AlpacaWsStatusMessage = z.infer<typeof AlpacaWsStatusMessageSchema>;
 // ============================================
 
 export const AlpacaWsNewsMessageSchema = z.object({
-  T: z.literal("n"), // Message type
-  id: z.number(), // Article ID
-  headline: z.string(), // Article headline
-  summary: z.string().optional(), // Article summary
-  author: z.string().optional(), // Author name
-  created_at: z.string(), // Created timestamp (RFC-3339)
-  updated_at: z.string().optional(), // Updated timestamp
-  url: z.string().optional(), // Article URL
-  content: z.string().optional(), // Full content (may include HTML)
-  symbols: z.array(z.string()), // Related stock symbols
-  source: z.string(), // News source (e.g., "Benzinga")
+  T: z.literal("n").describe("Message type: 'n' for news"),
+  id: z.number().describe("Unique article identifier"),
+  headline: z.string().describe("Article headline/title"),
+  summary: z.string().optional().describe("Brief article summary"),
+  author: z.string().optional().describe("Article author name"),
+  created_at: z.string().describe("Publication timestamp in RFC-3339 format"),
+  updated_at: z.string().optional().describe("Last update timestamp in RFC-3339 format"),
+  url: z.string().optional().describe("Full URL to the article"),
+  content: z.string().optional().describe("Full article content (may include HTML markup)"),
+  symbols: z
+    .array(z.string())
+    .describe("Ticker symbols mentioned in article (e.g., ['AAPL', 'MSFT'])"),
+  source: z.string().describe("News source name (e.g., 'Benzinga', 'GlobeNewswire')"),
 });
 export type AlpacaWsNewsMessage = z.infer<typeof AlpacaWsNewsMessageSchema>;
 
