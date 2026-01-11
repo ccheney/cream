@@ -17,7 +17,7 @@ import type {
   ChartSkeletonProps,
   ChartWrapperProps,
   SkeletonVariant,
-} from "./ChartStates.js";
+} from "./ChartStates";
 
 // ============================================
 // Type Tests

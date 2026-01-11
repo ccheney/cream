@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { EventType, FeedEvent } from "./event-feed.js";
+import type { EventType, FeedEvent } from "./event-feed";
 
 // ============================================
 // Test Utilities

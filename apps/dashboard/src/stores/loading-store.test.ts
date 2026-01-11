@@ -20,7 +20,7 @@ import {
   selectIsLoadingByPrefix,
   selectLoadingKeys,
   useLoadingStore,
-} from "./loading-store.js";
+} from "./loading-store";
 
 // Reset store before each test
 beforeEach(() => {

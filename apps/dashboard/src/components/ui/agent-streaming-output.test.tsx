@@ -5,8 +5,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { AgentStreamingOutputProps } from "./agent-streaming-output.js";
-import type { StreamingStatus } from "./use-streaming-text.js";
+import type { AgentStreamingOutputProps } from "./agent-streaming-output";
+import type { StreamingStatus } from "./use-streaming-text";
 
 // ============================================
 // Type Tests

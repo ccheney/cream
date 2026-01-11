@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { InfoIcon } from "./helpers.js";
+import { InfoIcon } from "./helpers";
 
 export interface FormFieldProps {
   label: string;

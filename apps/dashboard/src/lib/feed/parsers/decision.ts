@@ -4,8 +4,8 @@
  * Handles decision and decision plan event normalization.
  */
 
-import type { DecisionData, DecisionPlanData, NormalizedEvent } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { DecisionData, DecisionPlanData, NormalizedEvent } from "../types";
+import { EVENT_ICONS } from "../types";
 
 function getDecisionColor(action: string): NormalizedEvent["color"] {
   switch (action) {

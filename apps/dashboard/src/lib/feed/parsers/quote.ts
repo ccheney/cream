@@ -4,8 +4,8 @@
  * Handles equity quote event normalization.
  */
 
-import type { NormalizedEvent, QuoteData } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { NormalizedEvent, QuoteData } from "../types";
+import { EVENT_ICONS } from "../types";
 
 function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;

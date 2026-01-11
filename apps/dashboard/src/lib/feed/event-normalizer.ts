@@ -8,7 +8,7 @@
  * @deprecated Import from './index.js' instead
  */
 
-export { normalizeEvent } from "./normalizer.js";
-export { formatContractDescription, parseContractSymbol } from "./parsers/options.js";
-export type { EventType, NormalizedEvent, WebSocketMessage } from "./types.js";
-export { EVENT_TYPE_COLORS, VALUE_COLORS } from "./types.js";
+export { normalizeEvent } from "./normalizer";
+export { formatContractDescription, parseContractSymbol } from "./parsers/options";
+export type { EventType, NormalizedEvent, WebSocketMessage } from "./types";
+export { EVENT_TYPE_COLORS, VALUE_COLORS } from "./types";

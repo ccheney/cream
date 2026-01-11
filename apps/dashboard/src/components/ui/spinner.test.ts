@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { SpinnerProps, SpinnerSize } from "./spinner.js";
+import type { SpinnerProps, SpinnerSize } from "./spinner";
 
 // ============================================
 // SpinnerProps Type Tests

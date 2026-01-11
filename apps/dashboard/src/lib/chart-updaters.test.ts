@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
-import type { OHLCVData } from "./chart-config.js";
+import type { OHLCVData } from "./chart-config";
 import {
   appendCandle,
   appendEquityPoint,
@@ -24,7 +24,7 @@ import {
   trimData,
   updateLastCandle,
   updateLastEquityPoint,
-} from "./chart-updaters.js";
+} from "./chart-updaters";
 
 // ============================================
 // Test Helpers

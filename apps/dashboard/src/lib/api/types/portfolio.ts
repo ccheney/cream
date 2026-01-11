@@ -2,14 +2,14 @@
  * Portfolio and account types (positions, trades, performance, risk).
  */
 
-import type { FullRuntimeConfig } from "./config.js";
+import type { FullRuntimeConfig } from "./config";
 import type {
   BacktestMetrics,
   BacktestStatus,
   DecisionSummary,
   Position,
   ThesisDetail,
-} from "./trading.js";
+} from "./trading";
 
 export interface PortfolioSummary {
   nav: number;

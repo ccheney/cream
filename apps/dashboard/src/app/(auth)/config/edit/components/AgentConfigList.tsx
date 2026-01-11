@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RuntimeAgentConfig, RuntimeAgentType } from "@/lib/api/types";
-import { InfoIcon, LabelWithTooltip } from "./helpers.js";
+import { InfoIcon, LabelWithTooltip } from "./helpers";
 
 export interface AgentConfigListProps {
   agents: Record<RuntimeAgentType, RuntimeAgentConfig>;

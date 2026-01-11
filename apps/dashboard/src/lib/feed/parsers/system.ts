@@ -4,8 +4,8 @@
  * Handles fallback system event normalization for unrecognized message types.
  */
 
-import type { NormalizedEvent } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { NormalizedEvent } from "../types";
+import { EVENT_ICONS } from "../types";
 
 export function normalizeSystem(data: unknown, type: string, timestamp: Date): NormalizedEvent {
   const jsonString = JSON.stringify(data) ?? "";

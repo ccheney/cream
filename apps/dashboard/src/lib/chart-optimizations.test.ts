@@ -24,7 +24,7 @@ import {
   simplifyTimeSeries,
   type TimePoint,
   throttle,
-} from "./chart-optimizations.js";
+} from "./chart-optimizations";
 
 // ============================================
 // Test Helpers

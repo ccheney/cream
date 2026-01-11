@@ -12,7 +12,7 @@ export {
   normalizeAgentToolCall,
   normalizeAgentToolResult,
   normalizeAlert,
-} from "./agent.js";
+} from "./agent";
 export {
   normalizeBacktestCompleted,
   normalizeBacktestEquity,
@@ -20,16 +20,16 @@ export {
   normalizeBacktestProgress,
   normalizeBacktestStarted,
   normalizeBacktestTrade,
-} from "./backtest.js";
-export { normalizeCycleProgress, normalizeCycleResult } from "./cycle.js";
-export { normalizeDecision, normalizeDecisionPlan } from "./decision.js";
+} from "./backtest";
+export { normalizeCycleProgress, normalizeCycleResult } from "./cycle";
+export { normalizeDecision, normalizeDecisionPlan } from "./decision";
 export {
   formatContractDescription,
   normalizeOptionsQuote,
   normalizeOptionsTrade,
   parseContractSymbol,
-} from "./options.js";
-export { normalizeOrder } from "./order.js";
-export { normalizeQuote } from "./quote.js";
-export { normalizeSystem } from "./system.js";
-export { normalizeAggregate, normalizeTrade } from "./trade.js";
+} from "./options";
+export { normalizeOrder } from "./order";
+export { normalizeQuote } from "./quote";
+export { normalizeSystem } from "./system";
+export { normalizeAggregate, normalizeTrade } from "./trade";

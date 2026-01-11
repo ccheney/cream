@@ -23,7 +23,7 @@ import {
   type SystemStatusPayload,
   type UseWebSocketQuerySyncOptions,
   type UseWebSocketQuerySyncReturn,
-} from "./useWebSocketQuerySync.js";
+} from "./useWebSocketQuerySync";
 
 // ============================================
 // Query Keys Tests

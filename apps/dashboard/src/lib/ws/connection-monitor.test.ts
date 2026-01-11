@@ -16,7 +16,7 @@ import {
   createConnectionMonitor,
   DEFAULT_OPTIONS,
   getBackoffSequence,
-} from "./connection-monitor.js";
+} from "./connection-monitor";
 
 // ============================================
 // calculateBackoff Tests

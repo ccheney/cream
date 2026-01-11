@@ -12,8 +12,8 @@ import type {
   BacktestStartedData,
   BacktestTradeData,
   NormalizedEvent,
-} from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+} from "../types";
+import { EVENT_ICONS } from "../types";
 
 function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;

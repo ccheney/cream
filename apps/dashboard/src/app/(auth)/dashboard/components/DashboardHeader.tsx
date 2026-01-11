@@ -1,7 +1,7 @@
 import type React from "react";
 import { StreamingBadge } from "@/components/ui/RefreshIndicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { DashboardHeaderProps } from "../types.js";
+import type { DashboardHeaderProps } from "../types";
 
 function SystemControls({
   status,

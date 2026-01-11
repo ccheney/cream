@@ -1,9 +1,9 @@
-export type { AgentConfigListProps } from "./AgentConfigList.js";
-export { AgentConfigList } from "./AgentConfigList.js";
-export type { DurationFieldProps, FormFieldProps } from "./FormFields.js";
-export { DurationField, FormField } from "./FormFields.js";
-export { InfoIcon, LabelWithTooltip } from "./helpers.js";
-export type { TradingConfigFormProps } from "./TradingConfigForm.js";
-export { TradingConfigForm } from "./TradingConfigForm.js";
-export type { UniverseConfigFormProps } from "./UniverseConfigForm.js";
-export { UniverseConfigForm } from "./UniverseConfigForm.js";
+export type { AgentConfigListProps } from "./AgentConfigList";
+export { AgentConfigList } from "./AgentConfigList";
+export type { DurationFieldProps, FormFieldProps } from "./FormFields";
+export { DurationField, FormField } from "./FormFields";
+export { InfoIcon, LabelWithTooltip } from "./helpers";
+export type { TradingConfigFormProps } from "./TradingConfigForm";
+export { TradingConfigForm } from "./TradingConfigForm";
+export type { UniverseConfigFormProps } from "./UniverseConfigForm";
+export { UniverseConfigForm } from "./UniverseConfigForm";

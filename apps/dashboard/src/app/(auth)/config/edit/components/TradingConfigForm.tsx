@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RuntimeTradingConfig } from "@/lib/api/types";
-import { DurationField, FormField } from "./FormFields.js";
-import { InfoIcon } from "./helpers.js";
+import { DurationField, FormField } from "./FormFields";
+import { InfoIcon } from "./helpers";
 
 export interface TradingConfigFormProps {
   config: RuntimeTradingConfig;

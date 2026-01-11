@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import type React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { SystemStatusBannerProps } from "../types.js";
+import type { SystemStatusBannerProps } from "../types";
 
 const ENV_DESCRIPTIONS: Record<string, string> = {
   BACKTEST: "Historical simulation mode - no real orders",

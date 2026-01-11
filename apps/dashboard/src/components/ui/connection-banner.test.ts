@@ -7,12 +7,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { ConnectionStatus } from "../../lib/ws/connection-monitor.js";
-import {
-  type ConnectionBannerProps,
-  formatRetryTime,
-  getStatusMessage,
-} from "./connection-banner.js";
+import type { ConnectionStatus } from "../../lib/ws/connection-monitor";
+import { type ConnectionBannerProps, formatRetryTime, getStatusMessage } from "./connection-banner";
 
 // ============================================
 // formatRetryTime Tests

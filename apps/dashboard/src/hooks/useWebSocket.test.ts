@@ -7,11 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-  calculateBackoffDelay,
-  createWebSocketUrl,
-  type ReconnectionConfig,
-} from "./useWebSocket.js";
+import { calculateBackoffDelay, createWebSocketUrl, type ReconnectionConfig } from "./useWebSocket";
 
 // ============================================
 // Backoff Delay Tests

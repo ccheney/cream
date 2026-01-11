@@ -1,6 +1,6 @@
 import type React from "react";
-import type { StoreCyclePhase } from "../types.js";
-import { OODAPhaseCard } from "./OODAPhaseCard.js";
+import type { StoreCyclePhase } from "../types";
+import { OODAPhaseCard } from "./OODAPhaseCard";
 
 interface OODAPhaseGridProps {
   currentPhase: StoreCyclePhase | undefined;

@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { ApiError, ApiErrorType, ErrorHandlerOptions } from "./error-handler.js";
+import type { ApiError, ApiErrorType, ErrorHandlerOptions } from "./error-handler";
 
 // ============================================
 // ApiErrorType Type Tests

@@ -14,7 +14,7 @@ import {
   selectIsSubscribedToSymbol,
   selectSubscriptionCount,
   useWSStore,
-} from "./websocket.js";
+} from "./websocket";
 
 // ============================================
 // Test Setup

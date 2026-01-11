@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import { useUIStore } from "./ui-store.js";
+import { useUIStore } from "./ui-store";
 
 describe("useUIStore", () => {
   beforeEach(() => {

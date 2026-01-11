@@ -12,7 +12,7 @@ import {
   type AllocationDataPoint,
   getAllocationColor,
   SAMPLE_ALLOCATION_DATA,
-} from "./AllocationChart.js";
+} from "./AllocationChart";
 
 // ============================================
 // Color Palette Tests

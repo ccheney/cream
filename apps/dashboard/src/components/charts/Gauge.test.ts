@@ -15,7 +15,7 @@ import {
   getGaugeColor,
   polarToCartesian,
   valueToAngle,
-} from "./Gauge.js";
+} from "./Gauge";
 
 // ============================================
 // Constants Tests

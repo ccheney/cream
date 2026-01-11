@@ -1,7 +1,7 @@
 import type React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getOODAPhaseStatus } from "../hooks.js";
-import type { OODAPhaseCardProps } from "../types.js";
+import { getOODAPhaseStatus } from "../hooks";
+import type { OODAPhaseCardProps } from "../types";
 
 const OODA_DESCRIPTIONS: Record<string, string> = {
   Observe: "Gather market data, candles, and news for analysis",

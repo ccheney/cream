@@ -8,8 +8,8 @@
 
 import { useConstraintsConfig, useUpdateConstraintsConfig } from "@/hooks/queries";
 import type { ConstraintsConfig } from "@/lib/api/types";
-import { useConstraintsEditor } from "../hooks.js";
-import { ConstraintField, EditorHeader, LoadingSkeleton, NotFoundMessage } from "./shared.js";
+import { useConstraintsEditor } from "../hooks";
+import { ConstraintField, EditorHeader, LoadingSkeleton, NotFoundMessage } from "./shared";
 
 export function ConstraintsSection() {
   const { data: constraints, isLoading } = useConstraintsConfig();

@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { LogoProps, LogoSize, LogoVariant } from "./logo.js";
+import type { LogoProps, LogoSize, LogoVariant } from "./logo";
 
 // ============================================
 // LogoProps Type Tests

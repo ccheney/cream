@@ -17,8 +17,8 @@ import {
   ConstraintsSection,
   NotificationsSection,
   UniverseSection,
-} from "./components/index.js";
-import { type Section, VALID_SECTIONS } from "./types.js";
+} from "./components/index";
+import { type Section, VALID_SECTIONS } from "./types";
 
 export default function ConfigSectionPage() {
   const params = useParams();

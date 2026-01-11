@@ -7,7 +7,7 @@
  * @see docs/plans/ui/05-api-endpoints.md
  *
  * NOTE: This file re-exports from ./types/ for backward compatibility.
- * New code should import directly from "./types/index.js" or specific modules.
+ * New code should import directly from "./types/index" or specific modules.
  */
 
-export * from "./types/index.js";
+export * from "./types/index";

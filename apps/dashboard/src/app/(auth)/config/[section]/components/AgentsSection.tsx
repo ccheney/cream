@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { useAgentConfig, useAgentStatuses, useUpdateAgentConfig } from "@/hooks/queries";
 import type { AgentConfig, AgentStatus } from "@/lib/api/types";
-import { useAgentEditor } from "../hooks.js";
+import { useAgentEditor } from "../hooks";
 
 export function AgentsSection() {
   const { data: statuses, isLoading } = useAgentStatuses();

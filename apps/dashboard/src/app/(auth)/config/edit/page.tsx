@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { ConfigDiff } from "@/components/config/ConfigDiff";
 import { useActiveConfig, useDraftConfig, useSaveDraft, useValidateDraft } from "@/hooks/queries";
 import type { FullRuntimeConfig, SaveDraftInput } from "@/lib/api/types";
-import { AgentConfigList, TradingConfigForm, UniverseConfigForm } from "./components/index.js";
+import { AgentConfigList, TradingConfigForm, UniverseConfigForm } from "./components/index";
 
 type TabType = "trading" | "agents" | "universe";
 

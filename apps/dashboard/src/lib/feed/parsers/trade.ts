@@ -4,8 +4,8 @@
  * Handles equity trade and aggregate (candle) event normalization.
  */
 
-import type { AggregateData, NormalizedEvent, TradeData } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { AggregateData, NormalizedEvent, TradeData } from "../types";
+import { EVENT_ICONS } from "../types";
 
 function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;

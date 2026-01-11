@@ -13,7 +13,7 @@ import {
   type UseLoadingStateReturn,
   type UseMultiLoadingStateReturn,
   withLoading,
-} from "./use-loading-state.js";
+} from "./use-loading-state";
 
 // ============================================
 // Type Tests

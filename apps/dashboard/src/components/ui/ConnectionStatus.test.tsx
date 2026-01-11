@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { ConnectionStatusProps } from "./ConnectionStatus.js";
+import type { ConnectionStatusProps } from "./ConnectionStatus";
 
 // Mock element creator for props testing
 const createMockElement = (props: ConnectionStatusProps) => ({ props });

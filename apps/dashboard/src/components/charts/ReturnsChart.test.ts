@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { CHART_COLORS } from "@/lib/chart-config";
-import { getReturnColor, type ReturnsDataPoint, SAMPLE_RETURNS_DATA } from "./ReturnsChart.js";
+import { getReturnColor, type ReturnsDataPoint, SAMPLE_RETURNS_DATA } from "./ReturnsChart";
 
 // ============================================
 // Color Logic Tests

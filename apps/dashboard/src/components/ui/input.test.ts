@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { InputProps } from "./input.js";
+import type { InputProps } from "./input";
 
 // ============================================
 // Type Tests

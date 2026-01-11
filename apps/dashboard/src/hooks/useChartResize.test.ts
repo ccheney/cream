@@ -14,7 +14,7 @@ import {
   clamp,
   debounce,
   getBreakpoint,
-} from "./useChartResize.js";
+} from "./useChartResize";
 
 // ============================================
 // Debounce Tests

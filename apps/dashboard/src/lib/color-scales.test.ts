@@ -21,7 +21,7 @@ import {
   type RGB,
   rgbToCss,
   rgbToHex,
-} from "./color-scales.js";
+} from "./color-scales";
 
 // ============================================
 // Hex/RGB Conversion Tests

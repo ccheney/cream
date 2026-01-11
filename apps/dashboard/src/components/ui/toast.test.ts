@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { Toast, ToastPosition } from "./toast.js";
+import type { Toast, ToastPosition } from "./toast";
 
 // ============================================
 // Module Exports Tests

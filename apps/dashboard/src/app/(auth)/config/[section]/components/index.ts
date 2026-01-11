@@ -4,9 +4,9 @@
  * Barrel exports for config section editor components.
  */
 
-export { AgentsSection } from "./AgentsSection.js";
-export { ConstraintsSection } from "./ConstraintsSection.js";
-export { NotificationsSection } from "./NotificationsSection.js";
+export { AgentsSection } from "./AgentsSection";
+export { ConstraintsSection } from "./ConstraintsSection";
+export { NotificationsSection } from "./NotificationsSection";
 export {
   ConstraintField,
   EditorHeader,
@@ -14,5 +14,5 @@ export {
   NotFoundMessage,
   NotificationRow,
   StatusBadge,
-} from "./shared.js";
-export { UniverseSection } from "./UniverseSection.js";
+} from "./shared";
+export { UniverseSection } from "./UniverseSection";

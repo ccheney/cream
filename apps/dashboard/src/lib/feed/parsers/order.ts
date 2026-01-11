@@ -4,8 +4,8 @@
  * Handles order, fill, and reject event normalization.
  */
 
-import type { EventType, NormalizedEvent, OrderData } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { EventType, NormalizedEvent, OrderData } from "../types";
+import { EVENT_ICONS } from "../types";
 
 function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;

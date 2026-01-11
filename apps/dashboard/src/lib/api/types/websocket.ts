@@ -5,11 +5,11 @@
  * The actual type definitions live in their domain modules.
  */
 
-export type { Quote } from "./market.js";
+export type { Quote } from "./market";
 
 export type {
   CycleProgress,
   CycleResult,
   DecisionSummaryBrief,
   OrderSummaryBrief,
-} from "./system.js";
+} from "./system";

@@ -17,7 +17,7 @@ export type {
   TwoFactorVerifyRequest,
   TwoFactorVerifyResponse,
   User,
-} from "./common.js";
+} from "./common";
 // Configuration types
 export type {
   AgentConfig,
@@ -37,7 +37,7 @@ export type {
   UniverseSourceType,
   ValidationError,
   ValidationResult,
-} from "./config.js";
+} from "./config";
 // Market data types
 export type {
   Candle,
@@ -56,7 +56,7 @@ export type {
   Quote,
   RegimeLabel,
   RegimeStatus,
-} from "./market.js";
+} from "./market";
 // Portfolio types
 export type {
   BacktestDetail,
@@ -73,7 +73,7 @@ export type {
   PositionGreeks,
   Trade,
   VaRMetrics,
-} from "./portfolio.js";
+} from "./portfolio";
 // System types
 export type {
   Alert,
@@ -91,7 +91,7 @@ export type {
   SystemStatusType,
   TriggerCycleRequest,
   TriggerCycleResponse,
-} from "./system.js";
+} from "./system";
 // Trading types
 export type {
   AgentOutput,
@@ -125,4 +125,4 @@ export type {
   ThesisTransitionRequest,
   TimeHorizon,
   UpdateThesisRequest,
-} from "./trading.js";
+} from "./trading";

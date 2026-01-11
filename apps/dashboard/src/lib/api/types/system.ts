@@ -2,7 +2,7 @@
  * System status and health types.
  */
 
-import type { Environment } from "./common.js";
+import type { Environment } from "./common";
 
 export type SystemStatusType = "ACTIVE" | "PAUSED" | "STOPPED";
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RuntimeUniverseConfig } from "@/lib/api/types";
-import { FormField } from "./FormFields.js";
-import { InfoIcon, LabelWithTooltip } from "./helpers.js";
+import { FormField } from "./FormFields";
+import { InfoIcon, LabelWithTooltip } from "./helpers";
 
 export interface UniverseConfigFormProps {
   config: RuntimeUniverseConfig;

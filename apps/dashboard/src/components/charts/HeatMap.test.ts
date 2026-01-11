@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { type CorrelationMatrix, SAMPLE_CORRELATION_DATA } from "./HeatMap.js";
+import { type CorrelationMatrix, SAMPLE_CORRELATION_DATA } from "./HeatMap";
 
 // ============================================
 // Sample Data Tests

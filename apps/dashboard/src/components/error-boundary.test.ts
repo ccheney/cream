@@ -7,11 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type {
-  ErrorBoundaryProps,
-  ErrorBoundaryState,
-  ErrorFallbackProps,
-} from "./error-boundary.js";
+import type { ErrorBoundaryProps, ErrorBoundaryState, ErrorFallbackProps } from "./error-boundary";
 
 // ============================================
 // ErrorBoundaryProps Type Tests

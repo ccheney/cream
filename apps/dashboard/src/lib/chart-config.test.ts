@@ -17,7 +17,7 @@ import {
   DEFAULT_CHART_OPTIONS,
   DEFAULT_LINE_OPTIONS,
   SAMPLE_OHLCV_DATA,
-} from "./chart-config.js";
+} from "./chart-config";
 
 // ============================================
 // Color Constants Tests

@@ -1,6 +1,6 @@
 import type React from "react";
 import { EventFeed } from "@/components/ui/event-feed";
-import type { EventFeedSectionProps } from "../types.js";
+import type { EventFeedSectionProps } from "../types";
 
 export function EventFeedSection({ events }: EventFeedSectionProps): React.JSX.Element {
   return (

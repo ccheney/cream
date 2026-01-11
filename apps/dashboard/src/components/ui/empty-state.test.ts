@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import React from "react";
-import type { EmptyStateAction, EmptyStateProps } from "./empty-state.js";
+import type { EmptyStateAction, EmptyStateProps } from "./empty-state";
 
 // ============================================
 // Type Tests

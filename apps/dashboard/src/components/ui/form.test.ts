@@ -7,12 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type {
-  FormDescriptionProps,
-  FormErrorProps,
-  FormItemProps,
-  FormLabelProps,
-} from "./form.js";
+import type { FormDescriptionProps, FormErrorProps, FormItemProps, FormLabelProps } from "./form";
 
 // ============================================
 // FormErrorProps Type Tests

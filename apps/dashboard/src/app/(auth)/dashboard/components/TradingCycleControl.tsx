@@ -1,7 +1,7 @@
 import type React from "react";
 import { CycleProgress } from "@/components/dashboard/CycleProgress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { TradingCycleControlProps } from "../types.js";
+import type { TradingCycleControlProps } from "../types";
 
 export function TradingCycleControl({
   status,

@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { CHART_COLORS } from "@/lib/chart-config";
-import { generatePath, getColor, getLastPoint, getTrendColor } from "./Sparkline.js";
+import { generatePath, getColor, getLastPoint, getTrendColor } from "./Sparkline";
 
 // ============================================
 // Color Tests

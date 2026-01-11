@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { ButtonProps, ButtonSize, ButtonState, ButtonVariant } from "./button.js";
+import type { ButtonProps, ButtonSize, ButtonState, ButtonVariant } from "./button";
 
 // ============================================
 // ButtonVariant Type Tests

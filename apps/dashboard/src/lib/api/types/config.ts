@@ -2,7 +2,7 @@
  * Configuration types (runtime config, constraints, agents).
  */
 
-import type { Environment } from "./common.js";
+import type { Environment } from "./common";
 
 export interface ConstraintsConfig {
   perInstrument: {

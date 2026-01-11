@@ -7,7 +7,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { Toast, ToastOptions, ToastPosition, ToastVariant } from "./toast-store.js";
+import type { Toast, ToastOptions, ToastPosition, ToastVariant } from "./toast-store";
 
 // Reset store between tests
 beforeEach(async () => {

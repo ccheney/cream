@@ -12,7 +12,7 @@ import type {
   SkeletonCircleProps,
   SkeletonProps,
   SkeletonTextProps,
-} from "./skeleton.js";
+} from "./skeleton";
 
 // ============================================
 // SkeletonProps Type Tests

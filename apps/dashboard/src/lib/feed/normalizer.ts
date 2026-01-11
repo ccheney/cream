@@ -31,7 +31,7 @@ import {
   normalizeQuote,
   normalizeSystem,
   normalizeTrade,
-} from "./parsers/index.js";
+} from "./parsers/index";
 import type {
   AgentOutputData,
   AgentReasoningData,
@@ -58,7 +58,7 @@ import type {
   QuoteData,
   TradeData,
   WebSocketMessage,
-} from "./types.js";
+} from "./types";
 
 const IGNORED_MESSAGE_TYPES = new Set([
   "pong",

@@ -1,7 +1,7 @@
 import type React from "react";
-import { formatCurrency, formatPercent } from "../hooks.js";
-import type { PortfolioData } from "../types.js";
-import { MetricCard } from "./MetricCard.js";
+import { formatCurrency, formatPercent } from "../hooks";
+import type { PortfolioData } from "../types";
+import { MetricCard } from "./MetricCard";
 
 interface PortfolioSummaryProps {
   portfolio: PortfolioData | undefined;

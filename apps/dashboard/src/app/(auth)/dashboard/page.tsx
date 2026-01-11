@@ -11,13 +11,13 @@ import {
   RecentDecisions,
   SystemStatusBanner,
   TradingCycleControl,
-} from "./components/index.js";
+} from "./components/index";
 import {
   useCycleManagement,
   useDashboardData,
   useNextCycleDisplay,
   useSystemControls,
-} from "./hooks.js";
+} from "./hooks";
 
 export default function DashboardPage(): React.JSX.Element {
   const { connected, feedEvents, status, portfolio, decisions } = useDashboardData();

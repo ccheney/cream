@@ -24,7 +24,7 @@ import {
   KEYBOARD_KEYS,
   toAccessibleTableData,
   toCSV,
-} from "./chart-a11y.js";
+} from "./chart-a11y";
 
 // ============================================
 // Mock KeyboardEvent

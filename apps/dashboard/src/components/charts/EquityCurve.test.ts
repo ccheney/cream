@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { type EquityDataPoint, SAMPLE_EQUITY_DATA } from "./EquityCurve.js";
+import { type EquityDataPoint, SAMPLE_EQUITY_DATA } from "./EquityCurve";
 
 // ============================================
 // Sample Data Tests

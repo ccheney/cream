@@ -1,6 +1,6 @@
 import type React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { MetricCardProps } from "../types.js";
+import type { MetricCardProps } from "../types";
 
 const METRIC_DESCRIPTIONS: Record<string, string> = {
   NAV: "Net Asset Value - Total portfolio value including cash and positions",

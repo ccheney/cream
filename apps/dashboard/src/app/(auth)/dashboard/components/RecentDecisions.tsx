@@ -3,7 +3,7 @@ import Link from "next/link";
 import type React from "react";
 import { LiveDataIndicator } from "@/components/ui/RefreshIndicator";
 import type { DecisionAction, DecisionStatus } from "@/lib/api/types/trading";
-import type { RecentDecisionsProps } from "../types.js";
+import type { RecentDecisionsProps } from "../types";
 
 function getActionColor(action: DecisionAction): string {
   switch (action) {

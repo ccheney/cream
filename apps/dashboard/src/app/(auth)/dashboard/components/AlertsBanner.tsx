@@ -1,5 +1,5 @@
 import type React from "react";
-import type { AlertsBannerProps } from "../types.js";
+import type { AlertsBannerProps } from "../types";
 
 function getSeverityColor(severity: "critical" | "warning" | "info"): string {
   switch (severity) {

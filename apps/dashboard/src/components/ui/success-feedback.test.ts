@@ -12,7 +12,7 @@ import type {
   CheckmarkProps,
   SuccessButtonProps,
   UseAsyncButtonOptions,
-} from "./success-feedback.js";
+} from "./success-feedback";
 
 // ============================================
 // ButtonState Type Tests

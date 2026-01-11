@@ -8,8 +8,8 @@
 
 import { useUniverseConfig, useUpdateUniverseConfig } from "@/hooks/queries";
 import type { RuntimeUniverseConfig } from "@/lib/api/types";
-import { useUniverseEditor } from "../hooks.js";
-import { EditorHeader, LoadingSkeleton, NotFoundMessage } from "./shared.js";
+import { useUniverseEditor } from "../hooks";
+import { EditorHeader, LoadingSkeleton, NotFoundMessage } from "./shared";
 
 export function UniverseSection() {
   const { data: universe, isLoading } = useUniverseConfig();

@@ -8,14 +8,14 @@
 
 import { useAlertSettings, useUpdateAlertSettings } from "@/hooks/queries";
 import type { AlertSettings } from "@/lib/api/types";
-import { useNotificationsEditor } from "../hooks.js";
+import { useNotificationsEditor } from "../hooks";
 import {
   EditorHeader,
   LoadingSkeleton,
   NotFoundMessage,
   NotificationRow,
   StatusBadge,
-} from "./shared.js";
+} from "./shared";
 
 export function NotificationsSection() {
   const { data: settings, isLoading } = useAlertSettings();

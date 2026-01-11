@@ -12,8 +12,8 @@ import type {
   AgentToolCallData,
   AgentToolResultData,
   NormalizedEvent,
-} from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+} from "../types";
+import { EVENT_ICONS } from "../types";
 
 function getSeverityColor(severity?: string): NormalizedEvent["color"] {
   switch (severity) {

@@ -4,8 +4,8 @@
  * Handles cycle progress and result event normalization.
  */
 
-import type { CycleProgressData, CycleResultData, NormalizedEvent } from "../types.js";
-import { EVENT_ICONS } from "../types.js";
+import type { CycleProgressData, CycleResultData, NormalizedEvent } from "../types";
+import { EVENT_ICONS } from "../types";
 
 function getStatusColor(status: string): NormalizedEvent["color"] {
   switch (status) {

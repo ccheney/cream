@@ -4,8 +4,8 @@
  * Barrel export for event normalization functionality.
  */
 
-export { normalizeEvent } from "./normalizer.js";
-export { formatContractDescription, parseContractSymbol } from "./parsers/options.js";
+export { normalizeEvent } from "./normalizer";
+export { formatContractDescription, parseContractSymbol } from "./parsers/options";
 export type {
   AgentOutputData,
   AgentReasoningData,
@@ -34,5 +34,5 @@ export type {
   QuoteData,
   TradeData,
   WebSocketMessage,
-} from "./types.js";
-export { EVENT_ICONS, EVENT_TYPE_COLORS, VALUE_COLORS } from "./types.js";
+} from "./types";
+export { EVENT_ICONS, EVENT_TYPE_COLORS, VALUE_COLORS } from "./types";
