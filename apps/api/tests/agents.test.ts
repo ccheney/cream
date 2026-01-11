@@ -1131,6 +1131,7 @@ describe("Agent Tool Wiring", () => {
         "extract_news_context",
         "analyze_content",
         "extract_transcript",
+        "graphrag_query",
       ];
 
       for (const agentType of AGENT_TYPES) {
