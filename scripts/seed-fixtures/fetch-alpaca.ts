@@ -13,6 +13,14 @@
 import { mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "fetch-alpaca-fixtures",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // Configuration
@@ -33,11 +41,10 @@ const ALPACA_KEY = Bun.env.ALPACA_KEY;
 const ALPACA_SECRET = Bun.env.ALPACA_SECRET;
 
 if (!ALPACA_KEY || !ALPACA_SECRET) {
-  console.error("❌ Missing required environment variables:");
-  console.error("   - ALPACA_KEY");
-  console.error("   - ALPACA_SECRET");
-  console.error("\nCreate .env.local with your Alpaca paper trading credentials.");
-  console.error("Sign up at: https://app.alpaca.markets/signup");
+  log.error(
+    { required: ["ALPACA_KEY", "ALPACA_SECRET"] },
+    "Missing required environment variables. Create .env.local with your Alpaca paper trading credentials. Sign up at: https://app.alpaca.markets/signup"
+  );
   process.exit(1);
 }
 
@@ -61,30 +68,30 @@ async function ensureDirectory(dir: string): Promise<void> {
 
 async function fetchAndSave(endpoint: string, filename: string): Promise<boolean> {
   const url = `${BASE_URL}${endpoint}`;
-  console.log(`→ Fetching ${endpoint}...`);
+  log.info({ endpoint }, "Fetching endpoint");
 
   try {
     const res = await fetch(url, { headers: HEADERS });
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`  ✗ HTTP ${res.status}: ${body.slice(0, 200)}`);
+      log.error({ endpoint, status: res.status, body: body.slice(0, 200) }, "HTTP error");
       return false;
     }
 
     const data = await res.json();
     const filepath = join(FIXTURES_DIR, filename);
     await Bun.write(filepath, JSON.stringify(data, null, 2));
-    console.log(`  ✓ Saved to ${filename}`);
+    log.info({ filename }, "Saved fixture");
     return true;
   } catch (err) {
-    console.error(`  ✗ Error: ${err instanceof Error ? err.message : String(err)}`);
+    log.error({ endpoint, error: err instanceof Error ? err.message : String(err) }, "Fetch error");
     return false;
   }
 }
 
 async function submitTestOrder(): Promise<{ orderId: string | null; success: boolean }> {
-  console.log("→ Submitting test order (will cancel immediately)...");
+  log.info({}, "Submitting test order (will cancel immediately)");
 
   const orderRequest = {
     symbol: "AAPL",
@@ -104,24 +111,24 @@ async function submitTestOrder(): Promise<{ orderId: string | null; success: boo
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`  ✗ HTTP ${res.status}: ${body.slice(0, 200)}`);
+      log.error({ status: res.status, body: body.slice(0, 200) }, "Order submission HTTP error");
       return { orderId: null, success: false };
     }
 
     const data = await res.json();
     const filepath = join(FIXTURES_DIR, "order-response.json");
     await Bun.write(filepath, JSON.stringify(data, null, 2));
-    console.log(`  ✓ Saved order response to order-response.json`);
+    log.info({ filename: "order-response.json" }, "Saved order response");
 
     return { orderId: data.id, success: true };
   } catch (err) {
-    console.error(`  ✗ Error: ${err instanceof Error ? err.message : String(err)}`);
+    log.error({ error: err instanceof Error ? err.message : String(err) }, "Order submission error");
     return { orderId: null, success: false };
   }
 }
 
 async function cancelOrder(orderId: string): Promise<boolean> {
-  console.log(`→ Canceling test order ${orderId}...`);
+  log.info({ orderId }, "Canceling test order");
 
   try {
     const res = await fetch(`${BASE_URL}/v2/orders/${orderId}`, {
@@ -130,15 +137,15 @@ async function cancelOrder(orderId: string): Promise<boolean> {
     });
 
     if (res.status === 204 || res.ok) {
-      console.log("  ✓ Order canceled successfully");
+      log.info({ orderId }, "Order canceled successfully");
       return true;
     }
 
     const body = await res.text();
-    console.error(`  ✗ HTTP ${res.status}: ${body.slice(0, 200)}`);
+    log.error({ orderId, status: res.status, body: body.slice(0, 200) }, "Order cancellation HTTP error");
     return false;
   } catch (err) {
-    console.error(`  ✗ Error: ${err instanceof Error ? err.message : String(err)}`);
+    log.error({ orderId, error: err instanceof Error ? err.message : String(err) }, "Order cancellation error");
     return false;
   }
 }
@@ -148,9 +155,7 @@ async function cancelOrder(orderId: string): Promise<boolean> {
 // ============================================
 
 async function main(): Promise<void> {
-  console.log("\n🔵 Alpaca Paper Trading Fixture Generator\n");
-  console.log(`Using API: ${BASE_URL}`);
-  console.log(`Output: ${FIXTURES_DIR}\n`);
+  log.info({ baseUrl: BASE_URL, outputDir: FIXTURES_DIR }, "Alpaca Paper Trading Fixture Generator starting");
 
   // Ensure fixtures directory exists
   await ensureDirectory(FIXTURES_DIR);
@@ -195,16 +200,15 @@ async function main(): Promise<void> {
   }
 
   // Summary
-  console.log("\n" + "─".repeat(40));
-  console.log(`✓ Alpaca fixtures complete: ${success} succeeded, ${failed} failed`);
+  log.info({ success, failed }, "Alpaca fixtures complete");
 
   if (failed > 0) {
-    console.log("\n⚠️  Some fetches failed. Check your API credentials and try again.");
+    log.warn({}, "Some fetches failed. Check your API credentials and try again.");
     process.exit(1);
   }
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  log.error({ error: err instanceof Error ? err.message : String(err) }, "Fatal error");
   process.exit(1);
 });

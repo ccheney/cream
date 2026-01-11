@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-/* biome-ignore-all lint/suspicious/noConsole: CLI script that outputs to console */
 /**
  * Backfill Historical Theses into HelixDB
  *
@@ -20,11 +19,19 @@
 import { type CreamEnvironment, createContext } from "@cream/domain";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 import { createTursoClient, ThesisStateRepository, type TursoClient } from "@cream/storage";
 import {
   batchIngestClosedTheses,
   type ThesisIngestionInput,
 } from "../workflows/steps/thesisMemoryIngestion.js";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "backfill-thesis-memory",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // CLI Arguments
@@ -98,10 +105,10 @@ async function getRegimeForDate(client: TursoClient, date: string): Promise<stri
 // ============================================
 
 async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
-  console.log("🔄 Starting thesis memory backfill...\n");
+  log.info({}, "Starting thesis memory backfill");
 
   if (options.dryRun) {
-    console.log("📋 DRY RUN MODE - No data will be ingested\n");
+    log.info({}, "DRY RUN MODE - No data will be ingested");
   }
 
   // Create Turso client
@@ -109,7 +116,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   if (!databaseUrl) {
-    console.error("❌ TURSO_DATABASE_URL environment variable not set");
+    log.error({}, "TURSO_DATABASE_URL environment variable not set");
     process.exit(1);
   }
 
@@ -126,13 +133,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
   // Build filters
   const environment = options.environment ?? "BACKTEST";
 
-  console.log(`📊 Fetching closed theses for environment: ${environment}`);
-  if (options.since) {
-    console.log(`   Since: ${options.since}`);
-  }
-  if (options.limit) {
-    console.log(`   Limit: ${options.limit}`);
-  }
+  log.info({ environment, since: options.since, limit: options.limit }, "Fetching closed theses");
 
   // Get closed theses
   const result = await thesisRepo.findMany(
@@ -147,12 +148,12 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
   const closedTheses = result.data;
 
   if (closedTheses.length === 0) {
-    console.log("\n✅ No closed theses found to backfill.");
+    log.info({}, "No closed theses found to backfill");
     storageClient.close();
     return;
   }
 
-  console.log(`\n📝 Found ${closedTheses.length} closed theses to process\n`);
+  log.info({ count: closedTheses.length }, "Found closed theses to process");
 
   // Prepare ingestion inputs
   const inputs: ThesisIngestionInput[] = [];
@@ -172,18 +173,24 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
     });
 
     if (options.dryRun) {
-      console.log(`  📄 ${thesis.thesisId}`);
-      console.log(`     Instrument: ${thesis.instrumentId}`);
-      console.log(`     Entry: ${entryDate} (${entryRegime})`);
-      console.log(`     Exit: ${exitDate} (${exitRegime})`);
-      console.log(`     P&L: ${thesis.realizedPnlPct?.toFixed(2) ?? "N/A"}%`);
-      console.log(`     Reason: ${thesis.closeReason ?? "N/A"}`);
-      console.log("");
+      log.info(
+        {
+          thesisId: thesis.thesisId,
+          instrumentId: thesis.instrumentId,
+          entryDate,
+          entryRegime,
+          exitDate,
+          exitRegime,
+          realizedPnlPct: thesis.realizedPnlPct,
+          closeReason: thesis.closeReason,
+        },
+        "Would ingest thesis"
+      );
     }
   }
 
   if (options.dryRun) {
-    console.log(`\n✅ Dry run complete. Would ingest ${inputs.length} theses.`);
+    log.info({ count: inputs.length }, "Dry run complete");
     storageClient.close();
     storageClient.close();
     return;
@@ -197,36 +204,40 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
     helixClient = createHelixClientFromEnv();
     embeddingClient = createEmbeddingClient();
   } catch (error) {
-    console.error("❌ Failed to create HelixDB or embedding client:", error);
-    console.log("\nSkipping ingestion - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set.");
+    log.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set"
+    );
     storageClient.close();
     storageClient.close();
     return;
   }
 
   // Batch ingest
-  console.log("🚀 Starting batch ingestion...\n");
+  log.info({}, "Starting batch ingestion");
 
   const batchResult = await batchIngestClosedTheses(inputs, helixClient, embeddingClient);
 
   // Report results
-  console.log("\n📊 Backfill Results:");
-  console.log(`   ✅ Successful: ${batchResult.successful.length}`);
-  console.log(`   ⏭️  Skipped: ${batchResult.skipped.length}`);
-  console.log(`   ❌ Failed: ${batchResult.failed.length}`);
-  console.log(`   ⏱️  Total time: ${(batchResult.totalExecutionTimeMs / 1000).toFixed(2)}s`);
+  log.info(
+    {
+      successful: batchResult.successful.length,
+      skipped: batchResult.skipped.length,
+      failed: batchResult.failed.length,
+      totalTimeSeconds: (batchResult.totalExecutionTimeMs / 1000).toFixed(2),
+    },
+    "Backfill results"
+  );
 
   if (batchResult.failed.length > 0) {
-    console.log("\n❌ Failed theses:");
     for (const failure of batchResult.failed) {
-      console.log(`   - ${failure.thesisId}: ${failure.error}`);
+      log.warn({ thesisId: failure.thesisId, error: failure.error }, "Failed to ingest thesis");
     }
   }
 
   if (batchResult.skipped.length > 0) {
-    console.log("\n⏭️  Skipped theses:");
     for (const skip of batchResult.skipped) {
-      console.log(`   - ${skip.thesisId}: ${skip.reason}`);
+      log.info({ thesisId: skip.thesisId, reason: skip.reason }, "Skipped thesis");
     }
   }
 
@@ -235,7 +246,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
   storageClient.close();
   storageClient.close();
 
-  console.log("\n✅ Backfill complete!");
+  log.info({}, "Backfill complete");
 }
 
 // ============================================
@@ -245,6 +256,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 const options = parseArgs();
 
 backfillThesisMemory(options).catch((error) => {
-  console.error("❌ Backfill failed:", error);
+  log.error({ error: error instanceof Error ? error.message : String(error) }, "Backfill failed");
   process.exit(1);
 });

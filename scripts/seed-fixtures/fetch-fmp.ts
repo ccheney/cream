@@ -14,6 +14,14 @@
 import { mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "fetch-fmp-fixtures",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // Configuration
@@ -33,9 +41,10 @@ const BASE_URL = "https://financialmodelingprep.com/api";
 const FMP_KEY = Bun.env.FMP_KEY;
 
 if (!FMP_KEY) {
-  console.error("❌ Missing required environment variable: FMP_KEY");
-  console.error("\nCreate .env.local with your FMP API key.");
-  console.error("Sign up at: https://site.financialmodelingprep.com/register");
+  log.error(
+    { required: "FMP_KEY" },
+    "Missing required environment variable. Create .env.local with your FMP API key. Sign up at: https://site.financialmodelingprep.com/register"
+  );
   process.exit(1);
 }
 
@@ -57,24 +66,24 @@ async function fetchAndSave(
   description: string
 ): Promise<boolean> {
   const url = `${BASE_URL}${endpoint}${endpoint.includes("?") ? "&" : "?"}apikey=${FMP_KEY}`;
-  console.log(`→ Fetching ${description}...`);
+  log.info({ description, endpoint }, "Fetching endpoint");
 
   try {
     const res = await fetch(url);
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`  ✗ HTTP ${res.status}: ${body.slice(0, 200)}`);
+      log.error({ description, status: res.status, body: body.slice(0, 200) }, "HTTP error");
       return false;
     }
 
     const data = await res.json();
     const filepath = join(FIXTURES_DIR, filename);
     await Bun.write(filepath, JSON.stringify(data, null, 2));
-    console.log(`  ✓ Saved to ${filename}`);
+    log.info({ filename }, "Saved fixture");
     return true;
   } catch (err) {
-    console.error(`  ✗ Error: ${err instanceof Error ? err.message : String(err)}`);
+    log.error({ description, error: err instanceof Error ? err.message : String(err) }, "Fetch error");
     return false;
   }
 }
@@ -84,9 +93,7 @@ async function fetchAndSave(
 // ============================================
 
 async function main(): Promise<void> {
-  console.log("\n🟢 Financial Modeling Prep Fixture Generator\n");
-  console.log(`Using API: ${BASE_URL}`);
-  console.log(`Output: ${FIXTURES_DIR}\n`);
+  log.info({ baseUrl: BASE_URL, outputDir: FIXTURES_DIR }, "Financial Modeling Prep Fixture Generator starting");
 
   // Ensure fixtures directory exists
   await ensureDirectory(FIXTURES_DIR);
@@ -197,15 +204,14 @@ async function main(): Promise<void> {
   }
 
   // Summary
-  console.log("\n" + "─".repeat(40));
-  console.log(`✓ FMP fixtures complete: ${success} succeeded, ${failed} failed`);
+  log.info({ success, failed }, "FMP fixtures complete");
 
   if (failed > 0) {
-    console.log("\n⚠️  Some fetches failed. Check your API key and daily limit.");
+    log.warn({}, "Some fetches failed. Check your API key and daily limit.");
   }
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  log.error({ error: err instanceof Error ? err.message : String(err) }, "Fatal error");
   process.exit(1);
 });

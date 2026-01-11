@@ -20,6 +20,14 @@
  */
 
 import { appendFileSync } from "node:fs";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "fetch-indicator-metadata",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // Types
@@ -91,6 +99,7 @@ const THRESHOLDS = {
 // GitHub Output Helpers
 // ============================================
 
+/* biome-ignore lint/suspicious/noConsole: Local testing output for GitHub Actions simulation */
 function setOutput(name: string, value: string): void {
   const outputFile = process.env.GITHUB_OUTPUT;
   if (outputFile) {
@@ -102,7 +111,7 @@ function setOutput(name: string, value: string): void {
       appendFileSync(outputFile, `${name}=${value}\n`);
     }
   } else {
-    // Local testing - print to stdout
+    // Local testing - print to stdout (intentionally console.log for GitHub Actions output simulation)
     console.log(`${name}=${value}`);
   }
 }
@@ -116,7 +125,7 @@ async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   if (!dbUrl) {
-    console.error("Error: TURSO_DATABASE_URL not set");
+    log.error({}, "TURSO_DATABASE_URL not set");
     process.exit(1);
   }
 
@@ -148,7 +157,7 @@ async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
 
   if (!response.ok) {
     const error = await response.text();
-    console.error(`Database error: ${error}`);
+    log.error({ error }, "Database error");
     return null;
   }
 
@@ -243,22 +252,21 @@ function isIndicatorValid(indicator: Indicator): boolean {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.error("Usage: bun run scripts/fetch-indicator-metadata.ts <indicator_id>");
+    log.error({ usage: "bun run scripts/fetch-indicator-metadata.ts <indicator_id>" }, "No indicator_id provided");
     process.exit(1);
   }
 
   const indicatorId = args[0];
-  console.log(`Fetching metadata for indicator: ${indicatorId}`);
+  log.info({ indicatorId }, "Fetching metadata for indicator");
 
   const indicator = await fetchIndicator(indicatorId);
 
   if (!indicator) {
-    console.error(`Indicator not found: ${indicatorId}`);
+    log.error({ indicatorId }, "Indicator not found");
     process.exit(1);
   }
 
-  console.log(`Found indicator: ${indicator.name} (${indicator.category})`);
-  console.log(`Status: ${indicator.status}`);
+  log.info({ name: indicator.name, category: indicator.category, status: indicator.status }, "Found indicator");
 
   // Set outputs
   setOutput("name", indicator.name);
@@ -271,33 +279,34 @@ async function main(): Promise<void> {
   const isValid = isIndicatorValid(indicator);
   setOutput("is_valid", isValid ? "true" : "false");
 
-  console.log(`Validation status: ${isValid ? "PASSED" : "FAILED"}`);
+  log.info({ isValid }, "Validation status");
 
   if (!isValid) {
-    console.log("\nValidation failures:");
+    const failures: string[] = [];
     if (!indicator.paper_trading_end) {
-      console.log("  - Paper trading not completed");
+      failures.push("Paper trading not completed");
     }
     if (!indicator.validation_report) {
-      console.log("  - No validation report");
+      failures.push("No validation report");
     }
     if (!indicator.paper_trading_report) {
-      console.log("  - No paper trading report");
+      failures.push("No paper trading report");
     } else {
       const report: PaperTradingReport = JSON.parse(indicator.paper_trading_report);
       if (report.recommendation !== "PROMOTE") {
-        console.log(`  - Paper trading recommendation: ${report.recommendation}`);
+        failures.push(`Paper trading recommendation: ${report.recommendation}`);
       }
       if (report.tradingDays < THRESHOLDS.PAPER_TRADING_DAYS_MIN) {
-        console.log(
-          `  - Insufficient trading days: ${report.tradingDays} < ${THRESHOLDS.PAPER_TRADING_DAYS_MIN}`
+        failures.push(
+          `Insufficient trading days: ${report.tradingDays} < ${THRESHOLDS.PAPER_TRADING_DAYS_MIN}`
         );
       }
     }
+    log.warn({ failures }, "Validation failures");
   }
 }
 
 main().catch((error) => {
-  console.error("Error:", error);
+  log.error({ error: error instanceof Error ? error.message : String(error) }, "Error");
   process.exit(1);
 });

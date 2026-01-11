@@ -14,6 +14,14 @@
 import { mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "fetch-massive-fixtures",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // Configuration
@@ -36,9 +44,10 @@ const RATE_LIMIT_DELAY_MS = 15000;
 const POLYGON_KEY = Bun.env.POLYGON_KEY;
 
 if (!POLYGON_KEY) {
-  console.error("❌ Missing required environment variable: POLYGON_KEY");
-  console.error("\nCreate .env.local with your Polygon/Massive.com API key.");
-  console.error("Sign up at: https://dashboard.massive.com/signup");
+  log.error(
+    { required: "POLYGON_KEY" },
+    "Missing required environment variable. Create .env.local with your Polygon/Massive.com API key. Sign up at: https://dashboard.massive.com/signup"
+  );
   process.exit(1);
 }
 
@@ -81,14 +90,14 @@ async function fetchAndSave(
   description: string
 ): Promise<boolean> {
   const url = `${BASE_URL}${endpoint}${endpoint.includes("?") ? "&" : "?"}apiKey=${POLYGON_KEY}`;
-  console.log(`→ Fetching ${description}...`);
+  log.info({ description, endpoint }, "Fetching endpoint");
 
   try {
     const res = await fetch(url);
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`  ✗ HTTP ${res.status}: ${body.slice(0, 200)}`);
+      log.error({ description, status: res.status, body: body.slice(0, 200) }, "HTTP error");
 
       // Save error response for testing purposes
       if (res.status === 403) {
@@ -106,7 +115,7 @@ async function fetchAndSave(
             2
           )
         );
-        console.log(`  ⚠ Saved error response to ${filename}`);
+        log.warn({ filename }, "Saved error response (requires paid tier)");
       }
       return false;
     }
@@ -114,10 +123,10 @@ async function fetchAndSave(
     const data = await res.json();
     const filepath = join(FIXTURES_DIR, filename);
     await Bun.write(filepath, JSON.stringify(data, null, 2));
-    console.log(`  ✓ Saved to ${filename}`);
+    log.info({ filename }, "Saved fixture");
     return true;
   } catch (err) {
-    console.error(`  ✗ Error: ${err instanceof Error ? err.message : String(err)}`);
+    log.error({ description, error: err instanceof Error ? err.message : String(err) }, "Fetch error");
     return false;
   }
 }
@@ -127,16 +136,14 @@ async function fetchAndSave(
 // ============================================
 
 async function main(): Promise<void> {
-  console.log("\n🟣 Massive.com (Polygon.io) Fixture Generator\n");
-  console.log(`Using API: ${BASE_URL}`);
-  console.log(`Output: ${FIXTURES_DIR}`);
-  console.log(`Rate limit: ${RATE_LIMIT_DELAY_MS / 1000}s between requests\n`);
+  const { from, to } = getDateRange();
+  log.info(
+    { baseUrl: BASE_URL, outputDir: FIXTURES_DIR, rateLimitSeconds: RATE_LIMIT_DELAY_MS / 1000, from, to },
+    "Massive.com (Polygon.io) Fixture Generator starting"
+  );
 
   // Ensure fixtures directory exists
   await ensureDirectory(FIXTURES_DIR);
-
-  const { from, to } = getDateRange();
-  console.log(`Date range: ${from} to ${to}\n`);
 
   let success = 0;
   let failed = 0;
@@ -154,7 +161,7 @@ async function main(): Promise<void> {
     failed++;
   }
 
-  console.log(`  (waiting ${RATE_LIMIT_DELAY_MS / 1000}s for rate limit...)`);
+  log.info({ delaySeconds: RATE_LIMIT_DELAY_MS / 1000 }, "Waiting for rate limit");
   await sleep(RATE_LIMIT_DELAY_MS);
 
   // 2. Fetch daily candles for SPY
@@ -170,7 +177,7 @@ async function main(): Promise<void> {
     failed++;
   }
 
-  console.log(`  (waiting ${RATE_LIMIT_DELAY_MS / 1000}s for rate limit...)`);
+  log.info({ delaySeconds: RATE_LIMIT_DELAY_MS / 1000 }, "Waiting for rate limit");
   await sleep(RATE_LIMIT_DELAY_MS);
 
   // 3. Fetch latest quote for AAPL
@@ -180,7 +187,7 @@ async function main(): Promise<void> {
     failed++;
   }
 
-  console.log(`  (waiting ${RATE_LIMIT_DELAY_MS / 1000}s for rate limit...)`);
+  log.info({ delaySeconds: RATE_LIMIT_DELAY_MS / 1000 }, "Waiting for rate limit");
   await sleep(RATE_LIMIT_DELAY_MS);
 
   // 4. Fetch trades for AAPL
@@ -190,7 +197,7 @@ async function main(): Promise<void> {
     failed++;
   }
 
-  console.log(`  (waiting ${RATE_LIMIT_DELAY_MS / 1000}s for rate limit...)`);
+  log.info({ delaySeconds: RATE_LIMIT_DELAY_MS / 1000 }, "Waiting for rate limit");
   await sleep(RATE_LIMIT_DELAY_MS);
 
   // 5. Fetch option chain for AAPL (may fail on free tier)
@@ -207,16 +214,17 @@ async function main(): Promise<void> {
   }
 
   // Summary
-  console.log("\n" + "─".repeat(40));
-  console.log(`✓ Massive fixtures complete: ${success} succeeded, ${failed} failed`);
+  log.info({ success, failed }, "Massive fixtures complete");
 
   if (failed > 0) {
-    console.log("\n⚠️  Some fetches failed. This may be expected for free tier limitations.");
-    console.log("   Option chain endpoints require a paid subscription.");
+    log.warn(
+      {},
+      "Some fetches failed. This may be expected for free tier limitations. Option chain endpoints require a paid subscription."
+    );
   }
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  log.error({ error: err instanceof Error ? err.message : String(err) }, "Fatal error");
   process.exit(1);
 });

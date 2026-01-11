@@ -17,6 +17,14 @@
 
 import { readFile, writeFile, exists } from "node:fs/promises";
 import { join } from "node:path";
+import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+
+const log: LifecycleLogger = createNodeLogger({
+  service: "update-indicator-exports",
+  level: "info",
+  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  pretty: true,
+});
 
 // ============================================
 // Types
@@ -135,7 +143,7 @@ async function updateCategoryIndex(name: string, category: Category): Promise<vo
 
   // Verify indicator file exists
   if (!(await exists(indicatorPath))) {
-    console.error(`Error: Indicator file not found: ${indicatorPath}`);
+    log.error({ indicatorPath }, "Indicator file not found");
     process.exit(1);
   }
 
@@ -154,14 +162,14 @@ async function updateCategoryIndex(name: string, category: Category): Promise<vo
 
   // Check if already exported
   if (indexContent.includes(`from "./${name}"`)) {
-    console.log(`Indicator ${name} already exported from ${category}/index.ts`);
+    log.info({ name, category }, "Indicator already exported from index");
     return;
   }
 
   // Find exported symbols from the indicator file
-  console.log(`Analyzing exports from ${indicatorPath}...`);
+  log.info({ indicatorPath }, "Analyzing exports");
   const symbols = await findExportedSymbols(indicatorPath);
-  console.log(`Found ${symbols.length} exports: ${symbols.join(", ")}`);
+  log.info({ count: symbols.length, symbols: symbols.join(", ") }, "Found exports");
 
   // Generate export statement
   const exportStatement = generateExportStatement(name, symbols);
@@ -170,7 +178,7 @@ async function updateCategoryIndex(name: string, category: Category): Promise<vo
   const newContent = indexContent.trimEnd() + "\n\n" + exportStatement;
 
   await writeFile(indexPath, newContent, "utf-8");
-  console.log(`Updated ${indexPath}`);
+  log.info({ indexPath }, "Updated index file");
 }
 
 // ============================================
@@ -200,7 +208,7 @@ async function removeFromCustomIndex(name: string): Promise<void> {
   content = content.replace(/\n{3,}/g, "\n\n");
 
   await writeFile(customIndexPath, content, "utf-8");
-  console.log(`Removed ${name} from custom/index.ts`);
+  log.info({ name }, "Removed from custom/index.ts");
 }
 
 // ============================================
@@ -211,8 +219,10 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   if (args.length < 2) {
-    console.error("Usage: bun run scripts/update-indicator-exports.ts <name> <category>");
-    console.error("Categories: momentum, trend, volatility, volume, custom");
+    log.error(
+      { usage: "bun run scripts/update-indicator-exports.ts <name> <category>", categories: VALID_CATEGORIES },
+      "Invalid arguments"
+    );
     process.exit(1);
   }
 
@@ -220,12 +230,11 @@ async function main(): Promise<void> {
   const category = categoryArg as Category;
 
   if (!VALID_CATEGORIES.includes(category)) {
-    console.error(`Invalid category: ${category}`);
-    console.error(`Valid categories: ${VALID_CATEGORIES.join(", ")}`);
+    log.error({ category, validCategories: VALID_CATEGORIES }, "Invalid category");
     process.exit(1);
   }
 
-  console.log(`Updating exports for indicator: ${name} -> ${category}`);
+  log.info({ name, category }, "Updating exports for indicator");
 
   // Update category index
   await updateCategoryIndex(name, category);
@@ -235,10 +244,10 @@ async function main(): Promise<void> {
     await removeFromCustomIndex(name);
   }
 
-  console.log("Done!");
+  log.info({}, "Done");
 }
 
 main().catch((error) => {
-  console.error("Error:", error);
+  log.error({ error: error instanceof Error ? error.message : String(error) }, "Error");
   process.exit(1);
 });
