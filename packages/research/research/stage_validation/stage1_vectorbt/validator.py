@@ -1,123 +1,27 @@
 """
-Stage 1: VectorBT Fast Scan Validation
+Stage 1 Validator for VectorBT-based validation.
 
-Vectorized backtesting validation using VectorBT for fast parameter scanning
-and initial performance gates. This is the first validation stage that filters
-candidates before expensive event-driven testing.
-
-See: docs/plans/20-research-to-production-pipeline.md - Phase 3
-
-Gate Thresholds:
-| Metric | Threshold | Purpose |
-|--------|-----------|---------|
-| Sharpe Ratio | > 1.0 | Risk-adjusted returns |
-| Sortino Ratio | > 1.2 | Downside risk |
-| Win Rate | > 45% | Trade success rate |
-| Max Drawdown | < 25% | Capital preservation |
-| IC (Information Coefficient) | > 0.03 | Predictive power |
-| ICIR | > 0.5 | IC consistency |
+Main Stage1Validator class that orchestrates parameter scanning,
+IC computation, sensitivity analysis, and gate checking.
 """
 
 from __future__ import annotations
 
 import itertools
 import logging
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
-import vectorbt as vbt
 from scipy import stats
 
+from .runner import run_backtest, to_pandas
+from .types import Stage1Gates, Stage1Results
+
 if TYPE_CHECKING:
-    from ..strategies.base import ResearchFactor
+    from ...strategies.base import ResearchFactor
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Stage1Results:
-    """Results from VectorBT Stage 1 validation."""
-
-    factor_id: str
-    """Unique identifier for the factor."""
-
-    best_params: dict[str, Any]
-    """Best performing parameter combination."""
-
-    parameter_sensitivity: dict[str, float]
-    """Sensitivity scores per parameter (lower = more stable)."""
-
-    # Performance metrics
-    sharpe: float
-    """Sharpe ratio (annualized)."""
-
-    sortino: float
-    """Sortino ratio (downside deviation)."""
-
-    calmar: float
-    """Calmar ratio (return / max drawdown)."""
-
-    max_drawdown: float
-    """Maximum drawdown as decimal (0.25 = 25%)."""
-
-    win_rate: float
-    """Win rate as decimal (0.55 = 55%)."""
-
-    profit_factor: float
-    """Gross profits / gross losses."""
-
-    # Information metrics
-    ic_mean: float
-    """Mean Information Coefficient (Pearson correlation with forward returns)."""
-
-    icir: float
-    """IC Information Ratio (IC mean / IC std)."""
-
-    rank_ic: float
-    """Rank IC (Spearman correlation with forward returns)."""
-
-    # Gate results
-    passed_gates: bool
-    """Whether all gates passed."""
-
-    gate_violations: list[str] = field(default_factory=list)
-    """List of gate violation descriptions."""
-
-    # Metadata
-    num_combinations_tested: int = 0
-    """Total parameter combinations evaluated."""
-
-    scan_duration_seconds: float = 0.0
-    """Time taken for validation."""
-
-
-@dataclass
-class Stage1Gates:
-    """
-    Gate thresholds for Stage 1 validation.
-
-    Factors must pass all gates to proceed to Stage 2.
-    """
-
-    sharpe_min: float = 1.0
-    """Minimum Sharpe ratio."""
-
-    sortino_min: float = 1.2
-    """Minimum Sortino ratio."""
-
-    win_rate_min: float = 0.45
-    """Minimum win rate (45%)."""
-
-    max_drawdown_max: float = 0.25
-    """Maximum allowed drawdown (25%)."""
-
-    ic_min: float = 0.03
-    """Minimum IC."""
-
-    icir_min: float = 0.5
-    """Minimum ICIR."""
 
 
 class Stage1Validator:
@@ -148,13 +52,7 @@ class Stage1Validator:
         self.factor = factor
         self.data = data
         self.gates = gates or Stage1Gates()
-        self._pd_data = self._to_pandas(data)
-
-    def _to_pandas(self, data: pl.DataFrame) -> Any:
-        """Convert Polars DataFrame to pandas for VectorBT compatibility."""
-        import pandas as pd
-
-        return pd.DataFrame({col: data[col].to_list() for col in data.columns})
+        self._pd_data = to_pandas(data)
 
     async def run_parameter_scan(
         self,
@@ -179,7 +77,7 @@ class Stage1Validator:
 
             try:
                 signals = self.factor.compute_signal(self.data)
-                metrics = self._run_backtest(signals)
+                metrics = run_backtest(signals, self._pd_data)
                 results.append(
                     {
                         "params": params,
@@ -191,53 +89,6 @@ class Stage1Validator:
                 continue
 
         return results
-
-    def _run_backtest(self, signals: pl.Series) -> dict[str, float]:
-        """Run a single backtest and extract metrics."""
-        # Convert signals to numpy
-        signals_np = signals.to_numpy()
-
-        # Generate entry/exit signals
-        entries = signals_np > 0
-        exits = signals_np < 0
-
-        # Run VectorBT backtest
-        pf = vbt.Portfolio.from_signals(
-            close=self._pd_data["close"],
-            entries=entries,
-            exits=exits,
-            fees=0.001,  # 10 bps
-            freq="1D",
-        )
-
-        # Extract stats
-        stats_dict = pf.stats()
-
-        def safe_get(key: str, default: float = 0.0) -> float:
-            import pandas as pd
-
-            val = stats_dict.get(key, default)
-            return float(val) if pd.notna(val) else default
-
-        # Calculate profit factor from trades
-        profit_factor = 0.0
-        if len(pf.trades.records) > 0:
-            trades = pf.trades.records_readable
-            returns = trades["Return"].values
-            wins = returns[returns > 0]
-            losses = returns[returns < 0]
-            if len(losses) > 0 and np.sum(np.abs(losses)) > 0:
-                profit_factor = float(np.sum(wins) / np.sum(np.abs(losses)))
-
-        return {
-            "sharpe": safe_get("Sharpe Ratio", 0.0),
-            "sortino": safe_get("Sortino Ratio", 0.0),
-            "calmar": safe_get("Calmar Ratio", 0.0),
-            "max_drawdown": safe_get("Max Drawdown [%]", 0.0) / 100.0,
-            "win_rate": safe_get("Win Rate [%]", 0.0) / 100.0,
-            "profit_factor": profit_factor,
-            "num_trades": int(safe_get("Total Trades", 0)),
-        }
 
     async def run_parameter_sensitivity(
         self,
@@ -257,7 +108,7 @@ class Stage1Validator:
         Args:
             best_params: Best performing parameters
             n_iterations: Number of jitter iterations per parameter
-            jitter_pct: Maximum jitter as percentage of value (0.1 = ±10%)
+            jitter_pct: Maximum jitter as percentage of value (0.1 = +/-10%)
 
         Returns:
             Dictionary mapping parameter names to sensitivity scores
@@ -265,13 +116,12 @@ class Stage1Validator:
         """
         self.factor.set_parameters(best_params)
         base_signals = self.factor.compute_signal(self.data)
-        base_metrics = self._run_backtest(base_signals)
+        base_metrics = run_backtest(base_signals, self._pd_data)
         base_sharpe = base_metrics["sharpe"]
 
         sensitivities: dict[str, float] = {}
 
         for param_name, param_value in best_params.items():
-            # Only jitter numeric parameters
             if not isinstance(param_value, (int, float)):
                 sensitivities[param_name] = 0.0
                 continue
@@ -279,11 +129,9 @@ class Stage1Validator:
             sharpe_deltas: list[float] = []
 
             for _ in range(n_iterations):
-                # Apply random jitter
                 jitter_factor = 1 + np.random.uniform(-jitter_pct, jitter_pct)
                 jittered_value = param_value * jitter_factor
 
-                # Ensure integer params stay integers
                 if isinstance(param_value, int):
                     jittered_value = int(round(jittered_value))
 
@@ -292,19 +140,16 @@ class Stage1Validator:
 
                 try:
                     jittered_signals = self.factor.compute_signal(self.data)
-                    jittered_metrics = self._run_backtest(jittered_signals)
+                    jittered_metrics = run_backtest(jittered_signals, self._pd_data)
                     jittered_sharpe = jittered_metrics["sharpe"]
                     delta = abs(jittered_sharpe - base_sharpe)
-                    # Only append valid deltas
                     if not np.isnan(delta):
                         sharpe_deltas.append(delta)
                 except Exception:
                     continue
 
-            # Sensitivity = mean absolute deviation of Sharpe
             if sharpe_deltas:
                 sens = float(np.mean(sharpe_deltas))
-                # Handle NaN values - treat as 0 (no measurable sensitivity)
                 sensitivities[param_name] = sens if not np.isnan(sens) else 0.0
             else:
                 sensitivities[param_name] = 0.0
@@ -336,11 +181,9 @@ class Stage1Validator:
         self.factor.set_parameters(params)
         signals = self.factor.compute_signal(self.data)
 
-        # Compute forward returns
         close = self.data["close"]
         forward_returns = close.shift(-forward_periods) / close - 1
 
-        # Create mask for valid data
         signals_arr = signals.to_numpy()
         returns_arr = forward_returns.to_numpy()
 
@@ -351,18 +194,15 @@ class Stage1Validator:
         if len(valid_signals) < rolling_window:
             return 0.0, 0.0, 0.0
 
-        # IC = Pearson correlation
         ic_mean = float(np.corrcoef(valid_signals, valid_returns)[0, 1])
         if np.isnan(ic_mean):
             ic_mean = 0.0
 
-        # Rank IC = Spearman correlation
         rank_ic_result = stats.spearmanr(valid_signals, valid_returns)
         rank_ic = (
             float(rank_ic_result.correlation) if not np.isnan(rank_ic_result.correlation) else 0.0
         )
 
-        # ICIR = rolling IC mean / std
         ics: list[float] = []
         for i in range(rolling_window, len(valid_signals) - forward_periods):
             window_signals = valid_signals[i - rolling_window : i]
@@ -395,31 +235,25 @@ class Stage1Validator:
         """
         violations: list[str] = []
 
-        # Sharpe
         if metrics.get("sharpe", 0) < self.gates.sharpe_min:
             violations.append(f"sharpe {metrics.get('sharpe', 0):.3f} < {self.gates.sharpe_min}")
 
-        # Sortino
         if metrics.get("sortino", 0) < self.gates.sortino_min:
             violations.append(f"sortino {metrics.get('sortino', 0):.3f} < {self.gates.sortino_min}")
 
-        # Win rate
         if metrics.get("win_rate", 0) < self.gates.win_rate_min:
             violations.append(
                 f"win_rate {metrics.get('win_rate', 0):.3f} < {self.gates.win_rate_min}"
             )
 
-        # Max drawdown (note: higher is worse)
         if metrics.get("max_drawdown", 1.0) > self.gates.max_drawdown_max:
             violations.append(
                 f"max_drawdown {metrics.get('max_drawdown', 1.0):.3f} > {self.gates.max_drawdown_max}"
             )
 
-        # IC
         if metrics.get("ic", 0) < self.gates.ic_min:
             violations.append(f"ic {metrics.get('ic', 0):.4f} < {self.gates.ic_min}")
 
-        # ICIR
         if metrics.get("icir", 0) < self.gates.icir_min:
             violations.append(f"icir {metrics.get('icir', 0):.3f} < {self.gates.icir_min}")
 
@@ -449,11 +283,9 @@ class Stage1Validator:
 
         start_time = time.time()
 
-        # 1. Parameter scan
         scan_results = await self.run_parameter_scan(param_grid)
 
         if not scan_results:
-            # No valid results
             return Stage1Results(
                 factor_id=self.factor.metadata.factor_id,
                 best_params={},
@@ -473,20 +305,16 @@ class Stage1Validator:
                 scan_duration_seconds=time.time() - start_time,
             )
 
-        # Find best by Sharpe ratio
         best = max(scan_results, key=lambda x: x.get("sharpe", 0))
         best_params = best["params"]
 
-        # 2. IC computation
         ic_mean, icir, rank_ic = self.compute_ic(best_params)
 
-        # 3. Parameter sensitivity
         sensitivity = await self.run_parameter_sensitivity(
             best_params,
             n_iterations=n_sensitivity_iterations,
         )
 
-        # 4. Gate checking
         gate_metrics = {
             "sharpe": best.get("sharpe", 0),
             "sortino": best.get("sortino", 0),
