@@ -77,7 +77,14 @@ export async function getOptionChain(
 
   const chain = response.data.chain;
   if (!chain || !chain.options || chain.options.length === 0) {
-    throw new Error(`No options found for underlying: ${underlying}`);
+    // Return empty chain with informative message instead of throwing
+    console.warn(
+      `[options] No options found for ${underlying} - Alpaca Options Data subscription may be required`
+    );
+    return {
+      underlying,
+      expirations: [],
+    };
   }
 
   // Group options by expiration

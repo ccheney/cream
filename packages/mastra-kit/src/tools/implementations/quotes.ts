@@ -49,11 +49,18 @@ export async function getQuotes(ctx: ExecutionContext, instruments: string[]): P
     }
   }
 
-  // Verify all requested symbols were returned
+  // Log warning for any missing symbols (ADRs, OTC, etc. may not be available)
   const foundSymbols = new Set(quotes.map((q) => q.symbol));
   const missingSymbols = instruments.filter((s) => !foundSymbols.has(s));
   if (missingSymbols.length > 0) {
-    throw new Error(`Missing quotes for symbols: ${missingSymbols.join(", ")}`);
+    console.warn(
+      `[quotes] Missing quotes for symbols (may be ADR/OTC): ${missingSymbols.join(", ")}`
+    );
+  }
+
+  // Return partial results even if some symbols are missing
+  if (quotes.length === 0) {
+    throw new Error(`No quotes available for any requested symbols: ${instruments.join(", ")}`);
   }
 
   return quotes;
