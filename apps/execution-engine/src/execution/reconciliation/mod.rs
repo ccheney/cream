@@ -5,8 +5,24 @@
 //!
 //! Reference: docs/plans/07-execution.md (Reconciliation on Restart, Orphaned Order Detection)
 
+mod config;
+mod discrepancy;
+mod error;
+mod orphan;
+mod report;
+mod snapshot;
+
+pub use config::{CriticalDiscrepancyAction, ReconciliationConfig};
+pub use discrepancy::{Discrepancy, DiscrepancySeverity, DiscrepancyType};
+pub use error::ReconciliationError;
+pub use orphan::{OrphanResolution, OrphanType, OrphanedOrder};
+pub use report::ReconciliationReport;
+pub use snapshot::{
+    BrokerAccountSnapshot, BrokerOrderSnapshot, BrokerPositionSnapshot, BrokerStateSnapshot,
+    LocalPositionSnapshot,
+};
+
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,288 +33,6 @@ use tracing::{debug, error, info, warn};
 use super::alpaca::AlpacaAdapter;
 use super::state::OrderStateManager;
 use crate::models::{OrderState, OrderStatus};
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-/// Configuration for reconciliation behavior.
-#[derive(Debug, Clone)]
-pub struct ReconciliationConfig {
-    /// Run reconciliation on startup.
-    pub on_startup: bool,
-    /// Run reconciliation on reconnect.
-    pub on_reconnect: bool,
-    /// Periodic audit interval in seconds (0 = disabled).
-    pub periodic_interval_secs: u64,
-    /// Protection window for recent orders (don't mark as orphaned).
-    pub protection_window_secs: u64,
-    /// Max order age for cleanup eligibility.
-    pub max_order_age_secs: u64,
-    /// Position quantity variance tolerance (0 = exact match required).
-    pub position_qty_tolerance: Decimal,
-    /// Position price variance percentage (0.01 = 1%).
-    pub position_price_tolerance_pct: Decimal,
-    /// Action on critical discrepancy.
-    pub on_critical_discrepancy: CriticalDiscrepancyAction,
-    /// Automatically resolve orphaned orders.
-    pub auto_resolve_orphans: bool,
-}
-
-impl Default for ReconciliationConfig {
-    fn default() -> Self {
-        Self {
-            on_startup: true,
-            on_reconnect: true,
-            periodic_interval_secs: 300,  // 5 minutes
-            protection_window_secs: 1800, // 30 minutes
-            max_order_age_secs: 86400,    // 24 hours
-            position_qty_tolerance: Decimal::ZERO,
-            position_price_tolerance_pct: Decimal::new(1, 2), // 1%
-            on_critical_discrepancy: CriticalDiscrepancyAction::Halt,
-            auto_resolve_orphans: true,
-        }
-    }
-}
-
-/// Action to take on critical discrepancy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CriticalDiscrepancyAction {
-    /// Halt trading (recommended for LIVE).
-    Halt,
-    /// Log and continue (for PAPER/testing).
-    LogAndContinue,
-    /// Alert operator and continue.
-    Alert,
-}
-
-// ============================================================================
-// Discrepancy Types
-// ============================================================================
-
-/// Type of resource with discrepancy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DiscrepancyType {
-    /// Order state mismatch.
-    Order,
-    /// Position mismatch.
-    Position,
-    /// Balance/equity mismatch.
-    Balance,
-}
-
-/// Severity of discrepancy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
-pub enum DiscrepancySeverity {
-    /// Informational only.
-    Info,
-    /// Warning, may need attention.
-    Warning,
-    /// Critical, requires immediate action.
-    Critical,
-}
-
-/// A detected discrepancy between local and broker state.
-#[derive(Debug, Clone, Serialize)]
-pub struct Discrepancy {
-    /// Type of discrepancy.
-    pub discrepancy_type: DiscrepancyType,
-    /// Identifier (order ID, symbol, etc.).
-    pub identifier: String,
-    /// Local state description.
-    pub local_state: String,
-    /// Broker state description.
-    pub broker_state: String,
-    /// Severity level.
-    pub severity: DiscrepancySeverity,
-    /// Whether this can be auto-resolved.
-    pub auto_resolvable: bool,
-    /// Suggested resolution action.
-    pub suggested_action: String,
-    /// Detection timestamp.
-    pub detected_at: String,
-}
-
-// ============================================================================
-// Orphaned Order Types
-// ============================================================================
-
-/// Type of orphaned order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OrphanType {
-    /// Broker has order we don't know about.
-    UnknownInBroker,
-    /// Local has order broker doesn't.
-    MissingInBroker,
-    /// Both exist but status disagrees.
-    StateMismatch,
-    /// Old order from previous session still active.
-    Zombie,
-}
-
-impl std::fmt::Display for OrphanType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnknownInBroker => write!(f, "UNKNOWN_IN_BROKER"),
-            Self::MissingInBroker => write!(f, "MISSING_IN_BROKER"),
-            Self::StateMismatch => write!(f, "STATE_MISMATCH"),
-            Self::Zombie => write!(f, "ZOMBIE"),
-        }
-    }
-}
-
-/// An orphaned order detected during reconciliation.
-#[derive(Debug, Clone, Serialize)]
-pub struct OrphanedOrder {
-    /// Type of orphan.
-    pub orphan_type: OrphanType,
-    /// Order ID (local or broker).
-    pub order_id: String,
-    /// Broker order ID if available.
-    pub broker_order_id: Option<String>,
-    /// Symbol/instrument.
-    pub symbol: String,
-    /// Local status if available.
-    pub local_status: Option<String>,
-    /// Broker status if available.
-    pub broker_status: Option<String>,
-    /// Order age in seconds.
-    pub age_secs: u64,
-    /// Detection timestamp.
-    pub detected_at: String,
-}
-
-/// Resolution action for orphaned order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OrphanResolution {
-    /// Cancel the order at broker.
-    Cancel,
-    /// Adopt the order into local state.
-    Adopt,
-    /// Sync local state from broker.
-    SyncFromBroker,
-    /// Mark as failed in local state.
-    MarkFailed,
-    /// Ignore (order is within protection window).
-    Ignore,
-}
-
-impl std::fmt::Display for OrphanResolution {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Cancel => write!(f, "CANCEL"),
-            Self::Adopt => write!(f, "ADOPT"),
-            Self::SyncFromBroker => write!(f, "SYNC_FROM_BROKER"),
-            Self::MarkFailed => write!(f, "MARK_FAILED"),
-            Self::Ignore => write!(f, "IGNORE"),
-        }
-    }
-}
-
-// ============================================================================
-// Broker State (for comparison)
-// ============================================================================
-
-/// Snapshot of broker order state.
-#[derive(Debug, Clone)]
-pub struct BrokerOrderSnapshot {
-    /// Unique broker-assigned order identifier.
-    pub order_id: String,
-    /// Client-provided order identifier for correlation.
-    pub client_order_id: Option<String>,
-    /// Trading symbol (e.g., "AAPL", "SPY").
-    pub symbol: String,
-    /// Order status (e.g., "new", "filled", "canceled").
-    pub status: String,
-    /// Order side ("buy" or "sell").
-    pub side: String,
-    /// Total order quantity.
-    pub qty: Decimal,
-    /// Quantity already filled.
-    pub filled_qty: Decimal,
-    /// Order creation timestamp.
-    pub created_at: String,
-}
-
-/// Snapshot of broker position.
-#[derive(Debug, Clone)]
-pub struct BrokerPositionSnapshot {
-    /// Trading symbol (e.g., "AAPL", "SPY").
-    pub symbol: String,
-    /// Position quantity (absolute value).
-    pub qty: Decimal,
-    /// Position direction ("long" or "short").
-    pub side: String,
-    /// Average entry price per share.
-    pub avg_entry_price: Decimal,
-    /// Current market value of the position.
-    pub market_value: Decimal,
-    /// Unrealized profit/loss at current market price.
-    pub unrealized_pl: Decimal,
-}
-
-/// Snapshot of broker account.
-#[derive(Debug, Clone)]
-pub struct BrokerAccountSnapshot {
-    /// Total account equity (cash + positions).
-    pub equity: Decimal,
-    /// Available cash balance.
-    pub cash: Decimal,
-    /// Available buying power for new trades.
-    pub buying_power: Decimal,
-}
-
-/// Complete broker state snapshot.
-#[derive(Debug, Clone)]
-pub struct BrokerStateSnapshot {
-    /// All open and recent orders from the broker.
-    pub orders: Vec<BrokerOrderSnapshot>,
-    /// All current positions held at the broker.
-    pub positions: Vec<BrokerPositionSnapshot>,
-    /// Current account balance and buying power.
-    pub account: BrokerAccountSnapshot,
-    /// Timestamp when this snapshot was captured.
-    pub fetched_at: String,
-}
-
-// ============================================================================
-// Reconciliation Report
-// ============================================================================
-
-/// Result of a reconciliation run.
-#[derive(Debug, Clone, Serialize)]
-pub struct ReconciliationReport {
-    /// All discrepancies found.
-    pub discrepancies: Vec<Discrepancy>,
-    /// Orphaned orders detected.
-    pub orphaned_orders: Vec<OrphanedOrder>,
-    /// Number of orders compared.
-    pub orders_compared: usize,
-    /// Number of positions compared.
-    pub positions_compared: usize,
-    /// Whether reconciliation passed (no critical issues).
-    pub passed: bool,
-    /// Number of auto-resolved issues.
-    pub auto_resolved: usize,
-    /// Reconciliation timestamp.
-    pub completed_at: String,
-    /// Duration in milliseconds.
-    pub duration_ms: u64,
-}
-
-impl ReconciliationReport {
-    /// Check if there are any critical discrepancies.
-    #[must_use]
-    pub fn has_critical(&self) -> bool {
-        self.discrepancies
-            .iter()
-            .any(|d| d.severity == DiscrepancySeverity::Critical)
-    }
-}
-
-// ============================================================================
-// Reconciliation Manager
-// ============================================================================
 
 /// Manages order and position reconciliation.
 pub struct ReconciliationManager {
@@ -874,41 +608,6 @@ impl ReconciliationManager {
     }
 }
 
-// ============================================================================
-// Local Position Tracking
-// ============================================================================
-
-/// Local position snapshot for comparison.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocalPositionSnapshot {
-    /// Symbol.
-    pub symbol: String,
-    /// Quantity (signed).
-    pub qty: Decimal,
-    /// Average entry price.
-    pub avg_entry_price: Decimal,
-}
-
-// ============================================================================
-// Reconciliation Error
-// ============================================================================
-
-/// Errors from reconciliation operations.
-#[derive(Debug, thiserror::Error)]
-pub enum ReconciliationError {
-    /// Broker API error.
-    #[error("Broker error: {0}")]
-    BrokerError(String),
-
-    /// Invalid state for operation.
-    #[error("Invalid state: {0}")]
-    InvalidState(String),
-}
-
-// ============================================================================
-// Broker State Fetcher
-// ============================================================================
-
 /// Fetch complete broker state for reconciliation.
 ///
 /// This function queries the Alpaca broker for all orders, positions, and account
@@ -983,10 +682,6 @@ pub async fn fetch_broker_state(
         fetched_at: now.to_rfc3339(),
     })
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -1258,10 +953,6 @@ mod tests {
         assert!(!manager.is_trading_halted().await);
     }
 
-    // ============================================================================
-    // Position Reconciliation Tests
-    // ============================================================================
-
     #[test]
     fn test_compare_positions_no_discrepancies() {
         let config = make_config();
@@ -1366,17 +1057,5 @@ mod tests {
         let discrepancies = manager.compare_positions(&broker_positions, &local_positions);
         assert_eq!(discrepancies.len(), 1);
         assert_eq!(discrepancies[0].broker_state, "NO_POSITION");
-    }
-
-    #[test]
-    fn test_orphan_resolution_display() {
-        assert_eq!(format!("{}", OrphanResolution::Cancel), "CANCEL");
-        assert_eq!(format!("{}", OrphanResolution::Adopt), "ADOPT");
-        assert_eq!(
-            format!("{}", OrphanResolution::SyncFromBroker),
-            "SYNC_FROM_BROKER"
-        );
-        assert_eq!(format!("{}", OrphanResolution::MarkFailed), "MARK_FAILED");
-        assert_eq!(format!("{}", OrphanResolution::Ignore), "IGNORE");
     }
 }
