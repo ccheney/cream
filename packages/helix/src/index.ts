@@ -101,6 +101,18 @@ export {
   wasEdgeRecordedBy,
   weightedTraverse,
 } from "./queries/graph";
+// GraphRAG unified search
+export {
+  type CompanyResult,
+  type ExternalEventResult,
+  type FilingChunkResult,
+  type GraphRAGSearchOptions,
+  type GraphRAGSearchResult,
+  type NewsItemResult,
+  searchGraphContext,
+  searchGraphContextByCompany,
+  type TranscriptChunkResult,
+} from "./queries/graphrag";
 // Mutations
 export {
   type BatchMutationResult,
