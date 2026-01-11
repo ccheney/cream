@@ -9,7 +9,7 @@
     },
     "test": {
       "dependsOn": ["^build", "build"],
-      "outputs": ["coverage/**"],
+      "outputs": [],
       "env": ["CREAM_ENV"],
       "passThroughEnv": ["CREAM_ENV"]
     },
