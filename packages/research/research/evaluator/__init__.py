@@ -32,7 +32,7 @@ from research.evaluator.expected_value import (
     estimate_probabilities,
     estimate_scratch_probability,
 )
-from research.evaluator.llm_judge import LLMJudge
+from research.evaluator.llm_judge import CacheEntry, LLMJudge
 from research.evaluator.perturbation import (
     PlanPerturbationGenerator,
     identify_perturbation_type,
@@ -45,7 +45,9 @@ from research.evaluator.post_execution import (
     OutcomeScore,
     PostExecutionEvaluator,
 )
-from research.evaluator.post_execution import TradeOutcome as ExecutedTradeOutcome
+from research.evaluator.post_execution import (
+    TradeOutcome as ExecutedTradeOutcome,
+)
 from research.evaluator.pre_execution import (
     DimensionScores,
     PlanScore,
@@ -82,6 +84,7 @@ __all__ = [
     "Action",
     "Attribution",
     "BradleyTerryRewardModel",
+    "CacheEntry",
     "CalibrationDriftDetector",
     "CounterfactualEstimator",
     "DimensionScores",
