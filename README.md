@@ -12,40 +12,40 @@ flowchart LR
     subgraph O1[" "]
         direction TB
         O1T["`**OBSERVE**`"]
-        observe[["`Market Snapshot
-        OHLCV · Options · Quotes
-        News · Earnings · Macro`"]]
-        O1T ~~~ observe
+        O1C[["`Market Snapshot
+OHLCV · Options · Quotes
+News · Earnings · Macro`"]]
+        O1T ~~~ O1C
     end
 
     subgraph O2[" "]
         direction TB
         O2T["`**ORIENT**`"]
-        orient[["`Context + Memory
-        GraphRAG Retrieval
-        Regime Classification
-        Prediction Markets`"]]
-        O2T ~~~ orient
+        O2C[["`Context + Memory
+GraphRAG Retrieval
+Regime Classification
+Prediction Markets`"]]
+        O2T ~~~ O2C
     end
 
     subgraph D[" "]
         direction TB
         DT["`**DECIDE**`"]
-        decide[["`8-Agent Consensus
-        3 Analysts → Bull vs Bear
-        Trader → Risk + Critic
-        DecisionPlan Output`"]]
-        DT ~~~ decide
+        DC[["`8-Agent Consensus
+3 Analysts → Bull vs Bear
+Trader → Risk + Critic
+DecisionPlan Output`"]]
+        DT ~~~ DC
     end
 
     subgraph A[" "]
         direction TB
         AT["`**ACT**`"]
-        act[["`Rust Execution
-        Constraint Validation
-        Order Routing → Alpaca
-        Persist to HelixDB`"]]
-        AT ~~~ act
+        AC[["`Rust Execution
+Constraint Validation
+Order Routing → Alpaca
+Persist to HelixDB`"]]
+        AT ~~~ AC
     end
 
     O1 ==> O2 ==> D ==> A
@@ -57,8 +57,8 @@ flowchart LR
     classDef act fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
     classDef title fill:none,stroke:none,color:#3D3832,font-weight:bold
 
-    class O1,O1T,observe observe
-    class O2,O2T,orient orient
-    class D,DT,decide decide
-    class A,AT,act act
+    class O1,O1T,O1C observe
+    class O2,O2T,O2C orient
+    class D,DT,DC decide
+    class A,AT,AC act
 ```
