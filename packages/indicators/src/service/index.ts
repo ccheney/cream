@@ -5,4 +5,19 @@
  * Orchestrates calculators, caching, and persistence.
  */
 
-export {};
+export {
+  createIndicatorService,
+  DEFAULT_SERVICE_CONFIG,
+  IndicatorService,
+  type CorporateActionsRepository,
+  type FundamentalRepository,
+  type IndicatorServiceConfig,
+  type IndicatorServiceDependencies,
+  type LiquidityCalculator,
+  type MarketDataProvider,
+  type OptionsCalculator,
+  type OptionsDataProvider,
+  type PriceCalculator,
+  type SentimentRepository,
+  type ShortInterestRepository,
+} from "./indicator-service";
