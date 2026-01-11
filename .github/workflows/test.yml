@@ -238,8 +238,8 @@ jobs:
         run: |
           docker build -t cream/execution-engine:test -f apps/execution-engine/Dockerfile .
 
-      - name: Run integration tests
-        run: CREAM_ENV=BACKTEST bun test ./**/tests/integration/*.test.ts --timeout 120000
+      - name: Run e2e & integration tests
+        run: bun run test:e2e
 
   # ============================================
   # Lint and Type Check
