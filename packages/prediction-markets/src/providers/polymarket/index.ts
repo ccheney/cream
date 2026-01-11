@@ -24,8 +24,19 @@ export {
   PolymarketEventSchema,
   type PolymarketMarket,
   PolymarketMarketSchema,
-} from "./client";
+} from "./client.js";
+export {
+  createRateLimiterState,
+  enforceRateLimit,
+  getMarketTypeFromQuery,
+  getRelatedInstruments,
+  handleApiError,
+  parseNumericValue,
+  type RateLimiterState,
+} from "./helpers.js";
 
+export { calculateScores } from "./scoring.js";
+export { calculateLiquidityScore, transformEvent, transformMarket } from "./transform.js";
 export {
   type BookMessage,
   BookMessageSchema,
@@ -42,4 +53,4 @@ export {
   type PolymarketWebSocketMessage,
   type PriceChangeMessage,
   PriceChangeMessageSchema,
-} from "./websocket";
+} from "./websocket.js";

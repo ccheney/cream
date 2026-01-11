@@ -17,128 +17,40 @@ import type {
   PredictionMarketScores,
   PredictionMarketType,
 } from "@cream/domain";
-import { z } from "zod";
-import { AuthenticationError, type PredictionMarketProvider, RateLimitError } from "../../types";
+import type { PredictionMarketProvider } from "../../types.js";
+import {
+  createRateLimiterState,
+  enforceRateLimit,
+  getMarketTypeFromQuery,
+  handleApiError,
+  type RateLimiterState,
+} from "./helpers.js";
+import { calculateScores } from "./scoring.js";
+import { transformEvent, transformMarket } from "./transform.js";
+import {
+  type ClobOrderbook,
+  ClobOrderbookSchema,
+  DEFAULT_SEARCH_QUERIES,
+  POLYMARKET_RATE_LIMITS,
+  type PolymarketClientOptions,
+  type PolymarketEvent,
+  PolymarketEventSchema,
+  PolymarketMarketSchema,
+} from "./types.js";
 
-/**
- * Rate limits for Polymarket APIs (requests per 10 seconds)
- * @see https://docs.polymarket.com/getting-started/rate-limits
- */
-export const POLYMARKET_RATE_LIMITS = {
-  general: 15000, // 15,000 req/10s
-  clob_book_price: 1500, // 1,500 req/10s
-  data_trades: 200, // 200 req/10s
-  gamma_markets: 300, // 300 req/10s
-  gamma_events: 500, // 500 req/10s
-};
-
-/**
- * Helper to parse JSON-encoded string arrays from Polymarket API
- * The API returns outcomes/outcomePrices as JSON strings like "[\"Yes\", \"No\"]"
- */
-const jsonStringArray = z.union([z.array(z.string()), z.string()]).transform((val): string[] => {
-  if (Array.isArray(val)) {
-    return val;
-  }
-  try {
-    const parsed = JSON.parse(val);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-});
-
-/**
- * Polymarket market response schema (from Gamma API)
- */
-export const PolymarketMarketSchema = z.object({
-  id: z.string(),
-  question: z.string(),
-  slug: z.string().optional(),
-  outcomes: jsonStringArray.optional(),
-  outcomePrices: jsonStringArray.optional(),
-  volume: z.union([z.string(), z.number()]).optional().nullable(),
-  volume24hr: z.union([z.string(), z.number()]).optional().nullable(),
-  liquidity: z.union([z.string(), z.number()]).optional().nullable(),
-  active: z.boolean().optional(),
-  closed: z.boolean().optional(),
-  endDate: z.string().optional(),
-  createdAt: z.string().optional(),
-  // Token IDs for CLOB API queries (also JSON-encoded string from API)
-  clobTokenIds: jsonStringArray.optional(),
-});
-export type PolymarketMarket = z.infer<typeof PolymarketMarketSchema>;
-
-/**
- * Polymarket event response schema (from Gamma API)
- */
-export const PolymarketEventSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  slug: z.string().optional(),
-  description: z.string().optional(),
-  markets: z.array(PolymarketMarketSchema).optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  active: z.boolean().optional(),
-});
-export type PolymarketEvent = z.infer<typeof PolymarketEventSchema>;
-
-/**
- * CLOB price response schema
- */
-export const ClobPriceSchema = z.object({
-  price: z.string(),
-  side: z.string().optional(),
-});
-export type ClobPrice = z.infer<typeof ClobPriceSchema>;
-
-/**
- * CLOB orderbook response schema
- */
-export const ClobOrderbookSchema = z.object({
-  market: z.string().optional(),
-  asset_id: z.string().optional(),
-  hash: z.string().optional(),
-  bids: z
-    .array(
-      z.object({
-        price: z.string(),
-        size: z.string(),
-      })
-    )
-    .optional(),
-  asks: z
-    .array(
-      z.object({
-        price: z.string(),
-        size: z.string(),
-      })
-    )
-    .optional(),
-});
-export type ClobOrderbook = z.infer<typeof ClobOrderbookSchema>;
-
-/**
- * Default search queries for relevant market types
- */
-export const DEFAULT_SEARCH_QUERIES: Record<string, string[]> = {
-  FED_RATE: ["Federal Reserve", "Fed rate", "interest rate", "FOMC"],
-  ECONOMIC_DATA: ["inflation", "CPI", "GDP", "unemployment", "jobs"],
-  RECESSION: ["recession", "economic downturn"],
-  GEOPOLITICAL: ["tariff", "trade war", "sanctions"],
-  REGULATORY: ["SEC", "regulation", "antitrust"],
-  ELECTION: ["election", "president", "congress"],
-};
-
-export interface PolymarketClientOptions {
-  /** CLOB API base URL */
-  clobEndpoint?: string;
-  /** Gamma API base URL */
-  gammaEndpoint?: string;
-  /** Search queries to use for fetching markets */
-  searchQueries?: string[];
-}
+export {
+  type ClobOrderbook,
+  ClobOrderbookSchema,
+  type ClobPrice,
+  ClobPriceSchema,
+  DEFAULT_SEARCH_QUERIES,
+  POLYMARKET_RATE_LIMITS,
+  type PolymarketClientOptions,
+  type PolymarketEvent,
+  PolymarketEventSchema,
+  type PolymarketMarket,
+  PolymarketMarketSchema,
+} from "./types.js";
 
 /**
  * Client for the Polymarket prediction markets APIs
@@ -151,26 +63,132 @@ export class PolymarketClient implements PredictionMarketProvider {
   private readonly clobEndpoint: string;
   private readonly gammaEndpoint: string;
   private readonly searchQueries: string[];
-
-  private lastRequestTime = 0;
-  private requestCount = 0;
-  private readonly rateLimit = POLYMARKET_RATE_LIMITS.gamma_markets;
+  private readonly rateLimiter: RateLimiterState;
 
   constructor(options: PolymarketClientOptions = {}) {
     this.clobEndpoint = options.clobEndpoint ?? "https://clob.polymarket.com";
     this.gammaEndpoint = options.gammaEndpoint ?? "https://gamma-api.polymarket.com";
     this.searchQueries = options.searchQueries ?? ["Federal Reserve", "inflation", "recession"];
+    this.rateLimiter = createRateLimiterState();
   }
 
-  /**
-   * Fetch markets by market types
-   */
   async fetchMarkets(
     marketTypes: (typeof PredictionMarketType.options)[number][]
   ): Promise<PredictionMarketEvent[]> {
-    const events: PredictionMarketEvent[] = [];
+    const queries = this.collectSearchQueries(marketTypes);
+    const events = await this.fetchEventsForQueries(queries);
+    return this.deduplicateEvents(events);
+  }
 
+  async fetchMarketByTicker(marketId: string): Promise<PredictionMarketEvent | null> {
+    await enforceRateLimit(this.rateLimiter, POLYMARKET_RATE_LIMITS.gamma_markets);
+
+    try {
+      const response = await fetch(`${this.gammaEndpoint}/markets/${marketId}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const parsed = PolymarketMarketSchema.safeParse(data);
+
+      if (!parsed.success) {
+        return null;
+      }
+
+      return transformMarket(parsed.data, "ECONOMIC_DATA");
+    } catch (error) {
+      handleApiError(error);
+      return null;
+    }
+  }
+
+  calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores {
+    return calculateScores(events);
+  }
+
+  async searchMarkets(query: string): Promise<PolymarketEvent[]> {
+    await enforceRateLimit(this.rateLimiter, POLYMARKET_RATE_LIMITS.gamma_markets);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        events_status: "open",
+      });
+
+      const response = await fetch(`${this.gammaEndpoint}/public-search?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as { events?: unknown[] };
+      const eventData = data.events;
+
+      if (!Array.isArray(eventData)) {
+        return [];
+      }
+
+      return eventData
+        .map((item) => PolymarketEventSchema.safeParse(item))
+        .filter((result) => result.success)
+        .map((result) => result.data);
+    } catch (error) {
+      handleApiError(error);
+      return [];
+    }
+  }
+
+  async getMidpoint(tokenId: string): Promise<number | null> {
+    await enforceRateLimit(this.rateLimiter, POLYMARKET_RATE_LIMITS.clob_book_price);
+
+    try {
+      const response = await fetch(`${this.clobEndpoint}/midpoint?token_id=${tokenId}`);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = (await response.json()) as { mid?: string };
+
+      if (typeof data.mid === "string") {
+        return Number.parseFloat(data.mid);
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getOrderbook(tokenId: string): Promise<ClobOrderbook | null> {
+    await enforceRateLimit(this.rateLimiter, POLYMARKET_RATE_LIMITS.clob_book_price);
+
+    try {
+      const response = await fetch(`${this.clobEndpoint}/book?token_id=${tokenId}`);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      const parsed = ClobOrderbookSchema.safeParse(data);
+
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private collectSearchQueries(
+    marketTypes: (typeof PredictionMarketType.options)[number][]
+  ): Set<string> {
     const queries = new Set<string>();
+
     for (const type of marketTypes) {
       const typeQueries = DEFAULT_SEARCH_QUERIES[type] ?? [];
       for (const q of typeQueries) {
@@ -184,22 +202,35 @@ export class PolymarketClient implements PredictionMarketProvider {
       }
     }
 
+    return queries;
+  }
+
+  private async fetchEventsForQueries(queries: Set<string>): Promise<PredictionMarketEvent[]> {
+    const events: PredictionMarketEvent[] = [];
+
     for (const query of queries) {
-      await this.enforceRateLimit();
+      await enforceRateLimit(this.rateLimiter, POLYMARKET_RATE_LIMITS.gamma_markets);
+
       try {
         const searchResults = await this.searchMarkets(query);
+
         for (const event of searchResults) {
-          const transformed = this.transformEvent(event, this.getMarketType(query));
+          const transformed = transformEvent(event, getMarketTypeFromQuery(query));
           if (transformed) {
             events.push(transformed);
           }
         }
       } catch (error) {
-        this.handleApiError(error);
+        handleApiError(error);
       }
     }
 
+    return events;
+  }
+
+  private deduplicateEvents(events: PredictionMarketEvent[]): PredictionMarketEvent[] {
     const seen = new Set<string>();
+
     return events.filter((e) => {
       if (seen.has(e.eventId)) {
         return false;
@@ -207,315 +238,6 @@ export class PolymarketClient implements PredictionMarketProvider {
       seen.add(e.eventId);
       return true;
     });
-  }
-
-  /**
-   * Fetch a specific market by ID (token ID for CLOB)
-   */
-  async fetchMarketByTicker(marketId: string): Promise<PredictionMarketEvent | null> {
-    await this.enforceRateLimit();
-
-    try {
-      const response = await fetch(`${this.gammaEndpoint}/markets/${marketId}`);
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const parsed = PolymarketMarketSchema.safeParse(data);
-      if (!parsed.success) {
-        return null;
-      }
-
-      return this.transformMarket(parsed.data, "ECONOMIC_DATA");
-    } catch (error) {
-      this.handleApiError(error);
-      return null;
-    }
-  }
-
-  /**
-   * Calculate aggregated scores from prediction market events
-   */
-  calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores {
-    const scores: PredictionMarketScores = {};
-
-    const fedMarkets = events.filter((e) => e.payload.marketType === "FED_RATE");
-    if (fedMarkets.length > 0) {
-      for (const market of fedMarkets) {
-        for (const outcome of market.payload.outcomes) {
-          const outcomeLower = outcome.outcome.toLowerCase();
-          if (outcomeLower.includes("cut") || outcomeLower.includes("decrease")) {
-            scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, outcome.probability);
-          }
-          if (outcomeLower.includes("hike") || outcomeLower.includes("increase")) {
-            scores.fedHikeProbability = Math.max(
-              scores.fedHikeProbability ?? 0,
-              outcome.probability
-            );
-          }
-        }
-      }
-    }
-
-    const recessionMarkets = events.filter((e) =>
-      e.payload.marketQuestion.toLowerCase().includes("recession")
-    );
-    if (recessionMarkets.length > 0) {
-      // biome-ignore lint/style/noNonNullAssertion: length check ensures element exists
-      const market = recessionMarkets[0]!;
-      const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
-      if (yesOutcome) {
-        scores.recessionProbability12m = yesOutcome.probability;
-      }
-    }
-
-    const uncertaintySignals: number[] = [];
-    if (scores.fedCutProbability !== undefined && scores.fedHikeProbability !== undefined) {
-      const maxProb = Math.max(scores.fedCutProbability, scores.fedHikeProbability);
-      const minProb = Math.min(scores.fedCutProbability, scores.fedHikeProbability);
-      if (maxProb > 0) {
-        uncertaintySignals.push(minProb / maxProb);
-      }
-    }
-
-    if (uncertaintySignals.length > 0) {
-      scores.macroUncertaintyIndex =
-        uncertaintySignals.reduce((a, b) => a + b, 0) / uncertaintySignals.length;
-    }
-
-    return scores;
-  }
-
-  async searchMarkets(query: string): Promise<PolymarketEvent[]> {
-    await this.enforceRateLimit();
-
-    try {
-      // Use /public-search endpoint with 'q' parameter for text search
-      // Filter for open events only (events_status=open)
-      const params = new URLSearchParams({
-        q: query,
-        events_status: "open",
-      });
-
-      const response = await fetch(`${this.gammaEndpoint}/public-search?${params}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as { events?: unknown[] };
-
-      // /public-search returns { events: [...], tags: [...], profiles: [...] }
-      const eventData = data.events;
-      if (!Array.isArray(eventData)) {
-        return [];
-      }
-
-      const events: PolymarketEvent[] = [];
-      for (const item of eventData) {
-        const parsed = PolymarketEventSchema.safeParse(item);
-        if (parsed.success) {
-          events.push(parsed.data);
-        }
-      }
-
-      return events;
-    } catch (error) {
-      this.handleApiError(error);
-      return [];
-    }
-  }
-
-  async getMidpoint(tokenId: string): Promise<number | null> {
-    await this.enforceRateLimit();
-
-    try {
-      const response = await fetch(`${this.clobEndpoint}/midpoint?token_id=${tokenId}`);
-      if (!response.ok) {
-        return null;
-      }
-
-      const data = (await response.json()) as { mid?: string };
-      if (typeof data.mid === "string") {
-        return Number.parseFloat(data.mid);
-      }
-
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  async getOrderbook(tokenId: string): Promise<ClobOrderbook | null> {
-    await this.enforceRateLimit();
-
-    try {
-      const response = await fetch(`${this.clobEndpoint}/book?token_id=${tokenId}`);
-      if (!response.ok) {
-        return null;
-      }
-
-      const data = await response.json();
-      const parsed = ClobOrderbookSchema.safeParse(data);
-      return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private transformEvent(
-    event: PolymarketEvent,
-    marketType: (typeof PredictionMarketType.options)[number]
-  ): PredictionMarketEvent | null {
-    const market = event.markets?.[0];
-    if (!market) {
-      return null;
-    }
-
-    return this.transformMarket(market, marketType, event);
-  }
-
-  private transformMarket(
-    market: PolymarketMarket,
-    marketType: (typeof PredictionMarketType.options)[number],
-    _event?: PolymarketEvent
-  ): PredictionMarketEvent {
-    const outcomes: PredictionMarketEvent["payload"]["outcomes"] = [];
-
-    const outcomeNames = market.outcomes ?? ["Yes", "No"];
-    const outcomePrices = market.outcomePrices ?? [];
-
-    for (let i = 0; i < outcomeNames.length; i++) {
-      const name = outcomeNames[i] ?? `Outcome ${i + 1}`;
-      const priceStr = outcomePrices[i];
-      const price = priceStr ? Number.parseFloat(priceStr) : 0;
-
-      outcomes.push({
-        outcome: name,
-        probability: price,
-        price: price,
-        volume24h: market.volume24hr
-          ? typeof market.volume24hr === "string"
-            ? Number.parseFloat(market.volume24hr)
-            : market.volume24hr
-          : undefined,
-      });
-    }
-
-    return {
-      eventId: `pm_polymarket_${market.id}`,
-      eventType: "PREDICTION_MARKET",
-      eventTime: market.endDate ?? new Date().toISOString(),
-      payload: {
-        platform: "POLYMARKET",
-        marketType,
-        marketTicker: market.id,
-        marketQuestion: market.question,
-        outcomes,
-        lastUpdated: new Date().toISOString(),
-        volume24h: market.volume24hr
-          ? typeof market.volume24hr === "string"
-            ? Number.parseFloat(market.volume24hr)
-            : market.volume24hr
-          : undefined,
-        liquidityScore: this.calculateLiquidityScore(market),
-      },
-      relatedInstrumentIds: this.getRelatedInstruments(marketType),
-    };
-  }
-
-  /**
-   * Get market type from search query
-   */
-  private getMarketType(query: string): (typeof PredictionMarketType.options)[number] {
-    const queryLower = query.toLowerCase();
-
-    for (const [type, queries] of Object.entries(DEFAULT_SEARCH_QUERIES)) {
-      for (const q of queries) {
-        if (queryLower.includes(q.toLowerCase())) {
-          return type as (typeof PredictionMarketType.options)[number];
-        }
-      }
-    }
-
-    return "ECONOMIC_DATA";
-  }
-
-  private calculateLiquidityScore(market: PolymarketMarket): number {
-    let score = 0;
-
-    if (market.volume24hr) {
-      const volume =
-        typeof market.volume24hr === "string"
-          ? Number.parseFloat(market.volume24hr)
-          : market.volume24hr;
-      // $100k volume considered high liquidity
-      score += Math.min(volume / 100000, 0.5);
-    }
-
-    if (market.liquidity) {
-      const liquidity =
-        typeof market.liquidity === "string"
-          ? Number.parseFloat(market.liquidity)
-          : market.liquidity;
-      // $50k liquidity considered high
-      score += Math.min(liquidity / 50000, 0.5);
-    }
-
-    return Math.min(score, 1);
-  }
-
-  private getRelatedInstruments(marketType: string): string[] {
-    switch (marketType) {
-      case "FED_RATE":
-        return ["XLF", "TLT", "IYR", "SHY"];
-      case "ECONOMIC_DATA":
-        return ["SPY", "QQQ", "TLT"];
-      case "RECESSION":
-        return ["SPY", "VIX", "TLT", "GLD"];
-      default:
-        return [];
-    }
-  }
-
-  private async enforceRateLimit(): Promise<void> {
-    const now = Date.now();
-    const elapsed = now - this.lastRequestTime;
-
-    if (elapsed < 10000) {
-      this.requestCount++;
-      if (this.requestCount >= this.rateLimit) {
-        const waitTime = 10000 - elapsed;
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-        this.requestCount = 0;
-      }
-    } else {
-      this.requestCount = 1;
-    }
-
-    this.lastRequestTime = Date.now();
-  }
-
-  private handleApiError(error: unknown): never {
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-
-      if (message.includes("401") || message.includes("unauthorized")) {
-        throw new AuthenticationError(
-          "POLYMARKET",
-          "Authentication failed - check API credentials"
-        );
-      }
-
-      if (message.includes("429") || message.includes("rate limit")) {
-        throw new RateLimitError("POLYMARKET", 10000);
-      }
-    }
-
-    throw error;
   }
 }
 
