@@ -237,6 +237,123 @@ Use [testcontainers](https://github.com/testcontainers/testcontainers-node) for 
 - **Do NOT modify linting rules** (Biome, Clippy, Ruff configs) without explicit approval
 - **Do NOT modify code coverage requirements** or thresholds without explicit approval
 
+## ES2024 TypeScript Patterns
+
+This codebase uses ES2024 features with TypeScript 7 (tsgo). tsgo provides 10x faster type-checking.
+
+### Non-Mutating Array Methods
+
+Prefer ES2024 non-mutating methods over their mutating counterparts:
+
+```typescript
+// ✅ Good - non-mutating
+const sorted = items.toSorted((a, b) => a.value - b.value);
+const reversed = items.toReversed();
+const modified = items.toSpliced(1, 1, newItem);
+
+// ❌ Bad - mutating
+items.sort((a, b) => a.value - b.value);  // mutates in place
+items.reverse();                           // mutates in place
+items.splice(1, 1, newItem);              // mutates in place
+```
+
+### Grouping with Object.groupBy / Map.groupBy
+
+Use native grouping methods instead of manual reduce patterns:
+
+```typescript
+// ✅ Good - Object.groupBy for string keys
+const byCategory = Object.groupBy(items, (item) => item.category);
+
+// ✅ Good - Map.groupBy for computed keys or when Map is needed
+const byDate = Map.groupBy(events, (event) => event.date.toISOString());
+
+// Handle undefined keys with sentinel pattern
+const UNGROUPED = "__ungrouped__";
+const grouped = Object.groupBy(items, (item) => item.group ?? UNGROUPED);
+const ungrouped = grouped[UNGROUPED] ?? [];
+delete grouped[UNGROUPED];
+
+// ❌ Bad - manual reduce
+const byCategory = items.reduce((acc, item) => {
+  (acc[item.category] ??= []).push(item);
+  return acc;
+}, {});
+```
+
+### Set Methods
+
+Use ES2024 Set methods for set operations:
+
+```typescript
+// ✅ Good - ES2024 Set methods
+const intersection = setA.intersection(setB);
+const union = setA.union(setB);
+const difference = setA.difference(setB);
+
+// Multi-set intersection with reduce
+const allIntersection = sets.slice(1).reduce(
+  (acc, set) => acc.intersection(set),
+  sets[0]
+);
+
+// ❌ Bad - manual implementation
+const intersection = new Set([...setA].filter(x => setB.has(x)));
+const union = new Set([...setA, ...setB]);
+```
+
+### Promise.withResolvers
+
+Use `Promise.withResolvers()` for deferred promises:
+
+```typescript
+// ✅ Good - Promise.withResolvers
+const { promise, resolve, reject } = Promise.withResolvers<string>();
+
+ws.addEventListener("open", () => resolve("connected"));
+ws.addEventListener("error", () => reject(new Error("failed")));
+
+return promise;
+
+// ❌ Bad - executor pattern with external variables
+let resolve: (value: string) => void;
+let reject: (error: Error) => void;
+const promise = new Promise<string>((res, rej) => {
+  resolve = res;
+  reject = rej;
+});
+```
+
+### Bun Native WebSocket
+
+Use Bun's native WebSocket API (browser-compatible) instead of the `ws` library:
+
+```typescript
+// ✅ Good - Bun native WebSocket
+const ws = new WebSocket(url);
+ws.addEventListener("open", () => {});
+ws.addEventListener("message", (event) => { /* event.data */ });
+ws.addEventListener("close", (event) => { /* event.code, event.reason */ });
+
+// ❌ Bad - ws library (Node.js-specific)
+import WebSocket from "ws";
+ws.on("open", () => {});
+ws.on("message", (data: Buffer) => {});
+```
+
+### TypeScript Configuration
+
+The base tsconfig includes ES2024 and ESNext.Collection for all modern features:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024", "ESNext.Collection"]
+  }
+}
+```
+
 ## Database Limitations (Turso)
 
 **IMPORTANT: Do NOT use CHECK constraints in SQL migrations.**
