@@ -18,6 +18,7 @@ import { z } from "zod/v4";
  * - quotes: Real-time price quotes (bid, ask, last, volume)
  * - trades: Real-time trade executions (time & sales)
  * - options: Options contract quotes and trades
+ * - indicators: Real-time indicator updates (RSI, ATR, momentum, etc.)
  * - orders: Order status updates (submitted, filled, cancelled)
  * - decisions: Trading decisions from agents
  * - agents: Agent output and reasoning
@@ -31,6 +32,7 @@ export const Channel = z.enum([
   "quotes",
   "trades",
   "options",
+  "indicators",
   "orders",
   "decisions",
   "agents",
@@ -60,6 +62,7 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
   quotes: "Real-time price quotes (bid, ask, last, volume)",
   trades: "Real-time trade executions (time & sales)",
   options: "Options contract quotes and trades",
+  indicators: "Real-time indicator updates (RSI, ATR, momentum, volatility)",
   orders: "Order status updates (submitted, filled, cancelled)",
   decisions: "Trading decisions from agents",
   agents: "Agent output and reasoning",

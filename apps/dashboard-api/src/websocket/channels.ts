@@ -196,6 +196,31 @@ export function broadcastTrade(symbol: string, message: ServerMessage): number {
 }
 
 /**
+ * Broadcast indicator to connections subscribed to a specific symbol.
+ */
+export function broadcastIndicator(symbol: string, message: ServerMessage): number {
+  let sent = 0;
+  const deadConnections: string[] = [];
+  const upperSymbol = symbol.toUpperCase();
+
+  for (const [connectionId, ws] of connections) {
+    if (ws.data.channels.has("indicators") && ws.data.symbols.has(upperSymbol)) {
+      if (sendMessage(ws, message)) {
+        sent++;
+      } else {
+        deadConnections.push(connectionId);
+      }
+    }
+  }
+
+  for (const connectionId of deadConnections) {
+    removeConnection(connectionId);
+  }
+
+  return sent;
+}
+
+/**
  * Broadcast aggregate to connections subscribed to a specific symbol.
  * Reuses 'quotes' channel because chart subscribers use the same symbol subscription logic.
  */

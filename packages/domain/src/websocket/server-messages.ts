@@ -670,6 +670,59 @@ export const BacktestErrorMessageSchema = z.object({
 export type BacktestErrorMessage = z.infer<typeof BacktestErrorMessageSchema>;
 
 // ============================================
+// Indicator Message
+// ============================================
+
+/**
+ * Real-time indicator data schema.
+ */
+export const IndicatorDataSchema = z.object({
+  /** Symbol */
+  symbol: z.string(),
+  /** Timestamp */
+  timestamp: z.string(),
+  /** Price-based indicators */
+  price: z.object({
+    rsi_14: z.number().nullable(),
+    atr_14: z.number().nullable(),
+    sma_20: z.number().nullable(),
+    sma_50: z.number().nullable(),
+    sma_200: z.number().nullable(),
+    ema_9: z.number().nullable(),
+    ema_12: z.number().nullable(),
+    ema_21: z.number().nullable(),
+    macd_line: z.number().nullable(),
+    macd_signal: z.number().nullable(),
+    macd_histogram: z.number().nullable(),
+    bollinger_upper: z.number().nullable(),
+    bollinger_middle: z.number().nullable(),
+    bollinger_lower: z.number().nullable(),
+    bollinger_bandwidth: z.number().nullable(),
+    stochastic_k: z.number().nullable(),
+    stochastic_d: z.number().nullable(),
+    momentum_1m: z.number().nullable(),
+    momentum_3m: z.number().nullable(),
+    momentum_12m: z.number().nullable(),
+    realized_vol_20d: z.number().nullable(),
+  }),
+});
+
+export type IndicatorData = z.infer<typeof IndicatorDataSchema>;
+
+/**
+ * Real-time indicator update.
+ *
+ * @example
+ * { type: "indicator", data: { symbol: "AAPL", price: { rsi_14: 55.2, ... } } }
+ */
+export const IndicatorMessageSchema = z.object({
+  type: z.literal("indicator"),
+  data: IndicatorDataSchema,
+});
+
+export type IndicatorMessage = z.infer<typeof IndicatorMessageSchema>;
+
+// ============================================
 // Server Message Union
 // ============================================
 
@@ -683,6 +736,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   OptionsQuoteMessageSchema,
   OptionsAggregateMessageSchema,
   OptionsTradeMessageSchema,
+  IndicatorMessageSchema,
   OrderMessageSchema,
   DecisionMessageSchema,
   DecisionPlanMessageSchema,

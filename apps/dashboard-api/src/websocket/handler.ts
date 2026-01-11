@@ -21,6 +21,7 @@ export {
   broadcastDecisionPlan,
   broadcastFilingsSyncComplete,
   broadcastFilingsSyncProgress,
+  broadcastIndicator,
   broadcastOptionsQuote,
   broadcastQuote,
   broadcastToBacktest,

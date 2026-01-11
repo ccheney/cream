@@ -4,6 +4,18 @@
  * Real-time data streaming for the dashboard.
  */
 
+// Indicator data streaming
+export {
+  getActiveIndicatorSymbols,
+  getCachedIndicator,
+  initIndicatorDataStreaming,
+  isIndicatorStreamingConnected,
+  shutdownIndicatorDataStreaming,
+  subscribeIndicatorSymbol,
+  subscribeIndicatorSymbols,
+  unsubscribeIndicatorSymbol,
+} from "./indicator-data.js";
+
 // Stock market data streaming
 export {
   getActiveSymbols,
