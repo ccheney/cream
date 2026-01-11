@@ -371,6 +371,170 @@ pub(super) struct AlpacaPositionResponse {
 }
 
 // ============================================================================
+// Options Data Types
+// ============================================================================
+
+/// Response from GET /v1beta1/options/snapshots endpoint.
+#[derive(Debug, Deserialize)]
+pub struct AlpacaOptionSnapshotsResponse {
+    /// Map of option symbol to snapshot.
+    pub snapshots: HashMap<String, AlpacaOptionSnapshot>,
+}
+
+/// Single option snapshot from Alpaca options data API.
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AlpacaOptionSnapshot {
+    /// Latest quote for the option.
+    #[serde(default)]
+    pub latest_quote: Option<AlpacaOptionQuote>,
+    /// Latest trade for the option.
+    #[serde(default)]
+    pub latest_trade: Option<AlpacaOptionTrade>,
+    /// Greeks for the option.
+    #[serde(default)]
+    pub greeks: Option<AlpacaOptionGreeks>,
+    /// Implied volatility.
+    #[serde(default)]
+    pub implied_volatility: Option<f64>,
+}
+
+/// Option quote from Alpaca.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AlpacaOptionQuote {
+    /// Timestamp.
+    pub t: String,
+    /// Ask price.
+    pub ap: f64,
+    /// Ask size.
+    #[serde(rename = "as")]
+    pub ask_size: i32,
+    /// Bid price.
+    pub bp: f64,
+    /// Bid size.
+    pub bs: i32,
+    /// Ask exchange.
+    #[serde(default)]
+    pub ax: Option<String>,
+    /// Bid exchange.
+    #[serde(default)]
+    pub bx: Option<String>,
+    /// Condition.
+    #[serde(default)]
+    pub c: Option<String>,
+}
+
+/// Option trade from Alpaca.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AlpacaOptionTrade {
+    /// Timestamp.
+    pub t: String,
+    /// Price.
+    pub p: f64,
+    /// Size.
+    pub s: i32,
+    /// Exchange.
+    #[serde(default)]
+    pub x: Option<String>,
+    /// Condition.
+    #[serde(default)]
+    pub c: Option<String>,
+}
+
+/// Option Greeks from Alpaca.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AlpacaOptionGreeks {
+    /// Delta.
+    #[serde(default)]
+    pub delta: Option<f64>,
+    /// Gamma.
+    #[serde(default)]
+    pub gamma: Option<f64>,
+    /// Theta.
+    #[serde(default)]
+    pub theta: Option<f64>,
+    /// Vega.
+    #[serde(default)]
+    pub vega: Option<f64>,
+    /// Rho.
+    #[serde(default)]
+    pub rho: Option<f64>,
+}
+
+/// Option contract details parsed from OCC symbol.
+#[derive(Debug, Clone)]
+pub struct AlpacaOptionContract {
+    /// Full OCC symbol.
+    pub symbol: String,
+    /// Underlying symbol.
+    pub underlying: String,
+    /// Expiration date (YYYY-MM-DD).
+    pub expiration: String,
+    /// Option type (call or put).
+    pub option_type: OptionType,
+    /// Strike price.
+    pub strike: f64,
+}
+
+/// Option type enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionType {
+    /// Call option.
+    Call,
+    /// Put option.
+    Put,
+}
+
+impl AlpacaOptionContract {
+    /// Parse an OCC symbol into contract details.
+    ///
+    /// OCC format: ROOT (up to 6 chars padded) + YYMMDD + C/P + strike * 1000 (8 digits)
+    /// e.g., "AAPL  240119C00185000" -> { underlying: "AAPL", expiration: "2024-01-19", type: "call", strike: 185 }
+    #[must_use]
+    pub fn parse_occ_symbol(symbol: &str) -> Option<Self> {
+        // Remove all spaces and convert to uppercase
+        let normalized: String = symbol.chars().filter(|c| !c.is_whitespace()).collect();
+        let normalized = normalized.to_uppercase();
+
+        // OSI format: ROOT + YYMMDD + C/P + 8 digit strike
+        // Minimum length: 1 (root) + 6 (date) + 1 (type) + 8 (strike) = 16
+        if normalized.len() < 16 {
+            return None;
+        }
+
+        // Extract components from the end (strike is always 8 digits, type is 1 char, date is 6 digits)
+        let strike = normalized[normalized.len() - 8..].parse::<u64>().ok()? as f64 / 1000.0;
+        let type_char = normalized.chars().nth(normalized.len() - 9)?;
+        let date_str = &normalized[normalized.len() - 15..normalized.len() - 9];
+        let underlying = normalized[..normalized.len() - 15].to_string();
+
+        let option_type = match type_char {
+            'C' => OptionType::Call,
+            'P' => OptionType::Put,
+            _ => return None,
+        };
+
+        if date_str.len() != 6 || !date_str.chars().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+
+        // Parse date: YYMMDD -> YYYY-MM-DD
+        let yy: u32 = date_str[0..2].parse().ok()?;
+        let mm = &date_str[2..4];
+        let dd = &date_str[4..6];
+        let year = if yy >= 70 { 1900 + yy } else { 2000 + yy };
+
+        Some(Self {
+            symbol: symbol.to_string(),
+            underlying,
+            expiration: format!("{year}-{mm}-{dd}"),
+            option_type,
+            strike,
+        })
+    }
+}
+
+// ============================================================================
 // Helper functions for parsing Alpaca enums
 // ============================================================================
 

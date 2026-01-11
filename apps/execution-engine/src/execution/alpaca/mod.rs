@@ -13,7 +13,10 @@ mod fees;
 mod options;
 
 pub use account::{AccountInfo, Position};
-pub use api_types::{AlpacaBar, AlpacaBarsResponse, AlpacaQuote, AlpacaQuotesResponse};
+pub use api_types::{
+    AlpacaBar, AlpacaBarsResponse, AlpacaOptionContract, AlpacaOptionSnapshotsResponse,
+    AlpacaQuote, AlpacaQuotesResponse, OptionType,
+};
 pub use error::AlpacaError;
 pub use fees::{FeeBreakdown, RegulatoryFeeCalculator};
 pub use options::OptionsOrderValidator;
@@ -733,6 +736,31 @@ impl AlpacaAdapter {
         tracing::debug!(
             symbols = ?symbols,
             "Fetching latest quotes from Alpaca data API"
+        );
+
+        self.data_request(&query).await
+    }
+
+    /// Get option snapshots for an underlying symbol from the Alpaca Options Data API.
+    ///
+    /// Fetches option chain snapshots from the `/v1beta1/options/snapshots/{underlying}` endpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying` - The underlying symbol (e.g., "SPY", "AAPL")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails.
+    pub async fn get_option_snapshots(
+        &self,
+        underlying: &str,
+    ) -> Result<AlpacaOptionSnapshotsResponse, AlpacaError> {
+        let query = format!("/v1beta1/options/snapshots/{underlying}?feed=indicative");
+
+        tracing::debug!(
+            underlying = %underlying,
+            "Fetching option snapshots from Alpaca data API"
         );
 
         self.data_request(&query).await
