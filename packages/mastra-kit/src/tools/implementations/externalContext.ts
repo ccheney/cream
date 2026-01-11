@@ -154,6 +154,12 @@ export async function extractNewsContext(
 /**
  * Extract and analyze earnings transcript
  *
+ * @deprecated Use `graphrag_query` tool instead for unified semantic search
+ * across filings, transcripts, news, and events. This tool requires FMP Ultimate
+ * tier subscription ($149/month) and is narrowly scoped to single company/quarter.
+ *
+ * See docs/plans/34-graphrag-query-tool.md for migration details.
+ *
  * Fetches earnings call transcript and runs deep extraction:
  * 1. Fetches transcript from FMP API
  * 2. Parses speaker segments and executive comments
@@ -168,6 +174,11 @@ export async function extractTranscript(
   ctx: ExecutionContext,
   params: ExtractTranscriptParams
 ): Promise<ExtractTranscriptResult> {
+  console.warn(
+    "[DEPRECATED] extractTranscript is deprecated. Use graphrag_query instead. " +
+      "See docs/plans/34-graphrag-query-tool.md for migration details."
+  );
+
   const { symbol, year, quarter, dryRun = false } = params;
 
   // In backtest mode, return empty result

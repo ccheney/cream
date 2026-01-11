@@ -143,7 +143,17 @@ type ExtractTranscriptOutput = z.infer<typeof ExtractTranscriptOutputSchema>;
 
 export const extractTranscriptTool = createTool({
   id: "extract_transcript",
-  description: `Deep extraction and analysis of earnings call transcripts.
+  description: `[DEPRECATED - Use graphrag_query instead]
+
+This tool requires FMP Ultimate tier subscription ($149/month) and is narrowly
+scoped to single company/quarter queries. Use graphrag_query for unified semantic
+search across filings, transcripts, news, and events with graph traversal.
+
+See docs/plans/34-graphrag-query-tool.md for migration details.
+
+---
+
+Deep extraction and analysis of earnings call transcripts.
 
 Use this tool when you need to analyze earnings calls for:
 - Executive sentiment and tone analysis

@@ -51,9 +51,51 @@ const result = await runConsensusLoop(
 Categories:
 - **Market Data** - get_quotes, get_market_snapshots, get_option_chain
 - **Technical** - recalc_indicator, check_indicator_trigger
-- **Fundamentals** - search_filings, extract_transcript
+- **Fundamentals** - search_filings, graphrag_query
 - **External** - web_search, news_search
 - **Portfolio** - get_portfolio_state
+
+### graphrag_query
+
+Unified semantic search across SEC filings, earnings transcripts, news, and events
+with automatic company discovery via graph traversal.
+
+```typescript
+import { graphragQueryTool } from "@cream/mastra-kit";
+
+// Use via agent tool call
+const result = await agent.callTool("graphrag_query", {
+  query: "what are semiconductor companies saying about capacity constraints?",
+  limit: 15,
+});
+
+// Or filter to specific company
+const result = await agent.callTool("graphrag_query", {
+  query: "revenue guidance changes",
+  symbol: "AAPL",
+  limit: 10,
+});
+```
+
+**Parameters:**
+
+| Param  | Type   | Required | Description                           |
+|--------|--------|----------|---------------------------------------|
+| query  | string | Yes      | Natural language query                |
+| symbol | string | No       | Filter to specific company ticker     |
+| limit  | number | No       | Max results per type (default: 10)    |
+
+**Returns:**
+
+- `filingChunks` - SEC 10-K, 10-Q, 8-K filing sections
+- `transcriptChunks` - Earnings call transcript segments with speaker
+- `newsItems` - News articles with sentiment scores
+- `externalEvents` - Market events (macro, regulatory, etc.)
+- `companies` - Discovered companies via graph traversal
+- `executionTimeMs` - Query execution time
+
+**Note:** This tool replaces the deprecated `extract_transcript` tool. See
+`docs/plans/34-graphrag-query-tool.md` for migration details.
 
 ## Quality Scoring
 
