@@ -23,14 +23,14 @@ use crate::models::Environment;
 
 /// Market data service implementation.
 ///
-/// Provides market data from Alpaca and Databento feeds.
+/// Provides market data from Alpaca feed.
 pub struct MarketDataServiceImpl {
     /// Alpaca adapter for market data queries.
     alpaca: Arc<crate::execution::AlpacaAdapter>,
     /// Trading environment.
     environment: Environment,
-    /// Feed controller for Databento (optional).
-    feed_controller: Option<Arc<crate::feed::FeedController>>,
+    /// Alpaca feed controller for real-time streaming (optional).
+    feed_controller: Option<Arc<crate::feed::AlpacaController>>,
     /// Shutdown sender for feed lifecycle.
     shutdown_tx: Option<tokio::sync::broadcast::Sender<()>>,
 }
@@ -56,12 +56,12 @@ impl MarketDataServiceImpl {
         }
     }
 
-    /// Create a new market data service with a feed controller.
+    /// Create a new market data service with an Alpaca feed controller.
     #[must_use]
     pub fn with_feed_controller(
         alpaca: crate::execution::AlpacaAdapter,
         environment: Environment,
-        feed_controller: Arc<crate::feed::FeedController>,
+        feed_controller: Arc<crate::feed::AlpacaController>,
         shutdown_tx: tokio::sync::broadcast::Sender<()>,
     ) -> Self {
         Self {
@@ -94,14 +94,14 @@ impl MarketDataService for MarketDataServiceImpl {
         // Create a channel for streaming market data
         let (tx, rx) = mpsc::channel(128);
 
-        // Start the Databento feed if we have a controller
+        // Start the Alpaca feed if we have a controller
         if let (Some(feed_controller), Some(shutdown_tx)) =
             (&self.feed_controller, &self.shutdown_tx)
         {
             let shutdown_rx = shutdown_tx.subscribe();
             let started = feed_controller.start(symbols.clone(), shutdown_rx);
             if started {
-                tracing::info!("Started Databento feed for subscription");
+                tracing::info!("Started Alpaca feed for subscription");
             } else {
                 tracing::debug!("Feed already running or unavailable");
             }

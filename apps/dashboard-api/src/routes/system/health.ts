@@ -82,14 +82,19 @@ async function checkBroker(): Promise<ServiceHealth> {
 async function checkMarketData(): Promise<ServiceHealth> {
   const start = performance.now();
   try {
-    const apiKey = process.env.POLYGON_KEY;
-    if (!apiKey) {
-      return { status: "degraded", message: "API key not configured" };
+    // Alpaca is the unified market data + broker provider
+    const hasKeys = process.env.ALPACA_KEY && process.env.ALPACA_SECRET;
+    if (!hasKeys) {
+      return { status: "degraded", message: "API keys not configured" };
     }
-    const response = await fetch(
-      `https://api.polygon.io/v3/reference/tickers/AAPL?apiKey=${apiKey}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
+    // Use Alpaca data API to check market data availability
+    const response = await fetch("https://data.alpaca.markets/v2/stocks/AAPL/quotes/latest", {
+      headers: {
+        "APCA-API-KEY-ID": process.env.ALPACA_KEY ?? "",
+        "APCA-API-SECRET-KEY": process.env.ALPACA_SECRET ?? "",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
     return {
       status: response.ok ? "ok" : "error",
       latencyMs: Math.round(performance.now() - start),

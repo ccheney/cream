@@ -4,9 +4,9 @@
  * Provider-specific implementations of the MarketDataAdapter interface.
  */
 
+// Alpaca adapter (primary for PAPER/LIVE)
 export {
-  createConnectedDatabentoAdapter,
-  createDatabentoAdapter,
-  type DatabentoAdapterConfig,
-  DatabentoMarketDataAdapter,
-} from "./databento-adapter";
+  AlpacaMarketDataAdapter,
+  createAlpacaAdapterFromEnv,
+  isAlpacaAdapterAvailable,
+} from "./alpaca-adapter";

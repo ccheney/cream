@@ -44,7 +44,7 @@ pub use constraints::{
     PortfolioConstraints,
 };
 pub use environment::EnvironmentConfig;
-pub use feeds::{DatabentoConfig, FeedsConfig};
+pub use feeds::{AlpacaFeedConfig, FeedsConfig};
 pub use observability::{LoggingConfig, ObservabilityConfig};
 pub use persistence::PersistenceConfig;
 pub use pricing::PricingConfig;
@@ -421,8 +421,8 @@ server:
   bind_address: "127.0.0.1"
 
 feeds:
-  databento:
-    dataset: "XNAS.ITCH"
+  alpaca:
+    feed: "sip"
     reconnect_delay_ms: 2000
 
 brokers:
@@ -463,7 +463,7 @@ environment:
         };
 
         assert_eq!(config.server.bind_address, "127.0.0.1");
-        assert_eq!(config.feeds.databento.reconnect_delay_ms, 2000);
+        assert_eq!(config.feeds.alpaca.reconnect_delay_ms, 2000);
         assert_eq!(config.brokers.alpaca.base_url, "https://api.alpaca.markets");
         assert!((config.pricing.risk_free_rate - 0.04).abs() < f64::EPSILON);
         assert!((config.constraints.per_instrument.max_notional - 100_000.0).abs() < 1e-10);

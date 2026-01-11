@@ -4,10 +4,11 @@
  * Calculates portfolio VaR using historical simulation or parametric methods.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import type { PolygonClient } from "@cream/marketdata";
-import { createPolygonClientFromEnv } from "@cream/marketdata";
+import type { AlpacaMarketDataClient } from "@cream/marketdata";
+import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata";
 import type { PositionForExposure } from "./types.js";
 
 // ============================================
@@ -225,12 +226,22 @@ export async function calculateVaR(options: CalculateVaROptions): Promise<VaRMet
   const to = formatDate(new Date());
   const from = getFromDate(lookbackDays);
 
-  // Create Polygon client
-  let client: PolygonClient;
-  try {
-    client = createPolygonClientFromEnv();
-  } catch {
+  // Create Alpaca client
+  let client: AlpacaMarketDataClient;
+  if (!isAlpacaConfigured()) {
     // If no API key, return zero VaR
+    return {
+      oneDay95: 0,
+      oneDay99: 0,
+      tenDay95: 0,
+      method: "parametric",
+    };
+  }
+
+  try {
+    client = createAlpacaClientFromEnv();
+  } catch {
+    // If client creation fails, return zero VaR
     return {
       oneDay95: 0,
       oneDay99: 0,
@@ -245,13 +256,10 @@ export async function calculateVaR(options: CalculateVaROptions): Promise<VaRMet
   await Promise.all(
     positions.map(async (position) => {
       try {
-        const response = await client.getAggregates(position.symbol, 1, "day", from, to, {
-          adjusted: true,
-          sort: "asc",
-        });
+        const bars = await client.getBars(position.symbol, "1Day", from, to);
 
-        if (response.results && response.results.length > 0) {
-          const prices = response.results.map((bar) => bar.c);
+        if (bars.length > 0) {
+          const prices = bars.map((bar) => bar.close);
           returnsBySymbol[position.symbol] = calculateReturns(prices);
         }
       } catch {

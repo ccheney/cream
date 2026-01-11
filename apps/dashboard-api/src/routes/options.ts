@@ -2,21 +2,28 @@
  * Options Chain API Routes
  *
  * Routes for fetching options chain data, expirations, and snapshots.
- * Returns real data from Polygon.io/Massive API - NO mock data.
+ * Returns real data from Alpaca Market Data API - NO mock data.
  *
  * @see docs/plans/ui/40-streaming-data-integration.md Part 2.1
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { type OptionSnapshotResult, PolygonClient } from "@cream/marketdata";
+import {
+  type AlpacaMarketDataClient,
+  type AlpacaOptionContract,
+  type AlpacaOptionSnapshot,
+  createAlpacaClientFromEnv,
+  isAlpacaConfigured,
+} from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import log from "../logger.js";
 
 // ============================================
-// Polygon Client (singleton)
+// Alpaca Client (singleton)
 // ============================================
 
-let polygonClient: PolygonClient | null = null;
+let alpacaClient: AlpacaMarketDataClient | null = null;
 
 // ============================================
 // Cache (configurable TTL)
@@ -47,23 +54,20 @@ function setCache<T>(key: string, data: T): void {
   chainCache.set(key, { data, timestamp: Date.now() });
 }
 
-function getPolygonClient(): PolygonClient {
-  if (polygonClient) {
-    return polygonClient;
+function getAlpacaClient(): AlpacaMarketDataClient {
+  if (alpacaClient) {
+    return alpacaClient;
   }
 
-  const apiKey = process.env.POLYGON_KEY;
-  if (!apiKey) {
+  if (!isAlpacaConfigured()) {
     throw new HTTPException(503, {
-      message: "Options data service unavailable: POLYGON_KEY not configured",
+      message: "Options data service unavailable: ALPACA_KEY/ALPACA_SECRET not configured",
     });
   }
 
   try {
-    const tier =
-      (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "starter";
-    polygonClient = new PolygonClient({ apiKey, tier });
-    return polygonClient;
+    alpacaClient = createAlpacaClientFromEnv();
+    return alpacaClient;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     throw new HTTPException(503, {
@@ -183,23 +187,20 @@ function classifyExpirationType(date: string): "weekly" | "monthly" | "quarterly
   return "weekly";
 }
 
-function transformSnapshotToContract(
-  snapshot: OptionSnapshotResult
-): z.infer<typeof OptionsContractSchema> | null {
-  if (!snapshot.details) {
-    return null;
-  }
-
-  const lastPrice = snapshot.day?.close ?? null;
+function transformToContract(
+  contract: AlpacaOptionContract,
+  snapshot: AlpacaOptionSnapshot | undefined
+): z.infer<typeof OptionsContractSchema> {
+  const lastPrice = snapshot?.latestTrade?.price ?? contract.closePrice ?? null;
 
   return {
-    symbol: snapshot.details.ticker,
-    bid: snapshot.last_quote?.bid ?? lastPrice,
-    ask: snapshot.last_quote?.ask ?? lastPrice,
+    symbol: contract.symbol,
+    bid: snapshot?.latestQuote?.bidPrice ?? lastPrice,
+    ask: snapshot?.latestQuote?.askPrice ?? lastPrice,
     last: lastPrice,
-    volume: snapshot.day?.volume ?? null,
-    openInterest: snapshot.open_interest ?? null,
-    impliedVolatility: snapshot.implied_volatility ?? null,
+    volume: null, // Alpaca doesn't provide volume in option snapshots
+    openInterest: contract.openInterest ?? null,
+    impliedVolatility: snapshot?.impliedVolatility ?? null,
   };
 }
 
@@ -247,12 +248,14 @@ app.openapi(chainRoute, async (c) => {
     return c.json(cached, 200);
   }
 
-  const client = getPolygonClient();
+  const client = getAlpacaClient();
 
   try {
     // Get underlying price first
-    const tickerSnapshot = await client.getTickerSnapshot(upperUnderlying);
-    const underlyingPrice = tickerSnapshot?.day?.c ?? tickerSnapshot?.lastTrade?.p ?? null;
+    const stockSnapshots = await client.getSnapshots([upperUnderlying]);
+    const stockSnapshot = stockSnapshots.get(upperUnderlying);
+    const underlyingPrice =
+      stockSnapshot?.dailyBar?.close ?? stockSnapshot?.latestTrade?.price ?? null;
 
     // Calculate strike range bounds
     let strikePriceGte: number | undefined;
@@ -263,8 +266,8 @@ app.openapi(chainRoute, async (c) => {
       strikePriceLte = Math.ceil(underlyingPrice * (1 + rangeMultiplier));
     }
 
-    // Fetch options snapshot
-    const snapshotResponse = await client.getOptionChainSnapshot(upperUnderlying, {
+    // Fetch option contracts
+    const contracts = await client.getOptionContracts(upperUnderlying, {
       expirationDateGte: expiration,
       expirationDateLte: expiration,
       strikePriceGte,
@@ -272,7 +275,7 @@ app.openapi(chainRoute, async (c) => {
       limit: 250,
     });
 
-    if (!snapshotResponse.results || snapshotResponse.results.length === 0) {
+    if (contracts.length === 0) {
       // Return empty chain
       const emptyResponse = {
         underlying: upperUnderlying,
@@ -285,11 +288,15 @@ app.openapi(chainRoute, async (c) => {
       return c.json(emptyResponse, 200);
     }
 
+    // Get snapshots for all contracts (quotes, greeks)
+    const contractSymbols = contracts.map((c) => c.symbol);
+    const optionSnapshots = await client.getOptionSnapshots(contractSymbols);
+
     // Extract unique expirations
     const expirationSet = new Set<string>();
-    for (const result of snapshotResponse.results) {
-      if (result.details?.expiration_date) {
-        expirationSet.add(result.details.expiration_date);
+    for (const contract of contracts) {
+      if (contract.expirationDate) {
+        expirationSet.add(contract.expirationDate);
       }
     }
     const expirations = Array.from(expirationSet).sort();
@@ -303,13 +310,10 @@ app.openapi(chainRoute, async (c) => {
       }
     >();
 
-    for (const result of snapshotResponse.results) {
-      if (!result.details) {
-        continue;
-      }
-
-      const strike = result.details.strike_price;
-      const contract = transformSnapshotToContract(result);
+    for (const contract of contracts) {
+      const strike = contract.strikePrice;
+      const snapshot = optionSnapshots.get(contract.symbol);
+      const transformed = transformToContract(contract, snapshot);
 
       if (!strikeMap.has(strike)) {
         strikeMap.set(strike, { call: null, put: null });
@@ -319,20 +323,20 @@ app.openapi(chainRoute, async (c) => {
       if (!row) {
         continue;
       }
-      if (result.details.contract_type === "call") {
-        row.call = contract;
+      if (contract.type === "call") {
+        row.call = transformed;
       } else {
-        row.put = contract;
+        row.put = transformed;
       }
     }
 
     // Build chain array sorted by strike
     const chain = Array.from(strikeMap.entries())
       .sort(([a], [b]) => a - b)
-      .map(([strike, contracts]) => ({
+      .map(([strike, contractPair]) => ({
         strike,
-        call: contracts.call,
-        put: contracts.put,
+        call: contractPair.call,
+        put: contractPair.put,
       }));
 
     // Find ATM strike
@@ -397,17 +401,17 @@ app.openapi(expirationsRoute, async (c) => {
     return c.json(cached, 200);
   }
 
-  const client = getPolygonClient();
+  const client = getAlpacaClient();
 
   try {
     // Fetch option contracts to get all expiration dates
-    // Polygon API caps at 1000 per request - for high-volume symbols this may only show
+    // Alpaca API caps at 1000 per request - for high-volume symbols this may only show
     // nearby expirations. Pagination would be needed for full LEAPS coverage.
-    const contractsResponse = await client.getOptionContracts(upperUnderlying, {
+    const contracts = await client.getOptionContracts(upperUnderlying, {
       limit: 1000,
     });
 
-    if (!contractsResponse.results || contractsResponse.results.length === 0) {
+    if (contracts.length === 0) {
       const emptyResponse = {
         underlying: upperUnderlying,
         expirations: [],
@@ -418,8 +422,8 @@ app.openapi(expirationsRoute, async (c) => {
 
     // Extract unique expiration dates
     const expirationSet = new Set<string>();
-    for (const contract of contractsResponse.results) {
-      expirationSet.add(contract.expiration_date);
+    for (const contract of contracts) {
+      expirationSet.add(contract.expirationDate);
     }
 
     // Build expirations array with DTE and type
@@ -487,7 +491,7 @@ app.openapi(quoteRoute, async (c) => {
     return c.json(cached, 200);
   }
 
-  const client = getPolygonClient();
+  const client = getAlpacaClient();
 
   try {
     // Parse the OCC option symbol to extract underlying
@@ -511,24 +515,12 @@ app.openapi(quoteRoute, async (c) => {
     const day = expStr.slice(4, 6);
     const expiration = `${year}-${month}-${day}`;
     const strike = Number.parseInt(strikeStr, 10) / 1000;
-    const contractType = typeChar === "C" ? "call" : "put";
 
-    // Fetch snapshot for this specific contract
-    const snapshotResponse = await client.getOptionChainSnapshot(underlying, {
-      contractType,
-      expirationDateGte: expiration,
-      expirationDateLte: expiration,
-      strikePriceGte: strike - 0.01,
-      strikePriceLte: strike + 0.01,
-      limit: 10,
-    });
+    // Get snapshot for this specific contract
+    const snapshots = await client.getOptionSnapshots([upperContract]);
+    const snapshot = snapshots.get(upperContract);
 
-    // Find the exact contract
-    const result = snapshotResponse.results?.find(
-      (r) => r.details?.ticker.toUpperCase() === upperContract
-    );
-
-    if (!result || !result.details) {
+    if (!snapshot) {
       throw new HTTPException(404, {
         message: `Option contract not found: ${upperContract}`,
       });
@@ -540,17 +532,17 @@ app.openapi(quoteRoute, async (c) => {
       expiration,
       strike,
       right: (typeChar === "C" ? "CALL" : "PUT") as "CALL" | "PUT",
-      bid: result.last_quote?.bid ?? null,
-      ask: result.last_quote?.ask ?? null,
-      last: result.day?.close ?? null,
-      volume: result.day?.volume ?? null,
-      openInterest: result.open_interest ?? null,
-      impliedVolatility: result.implied_volatility ?? null,
+      bid: snapshot.latestQuote?.bidPrice ?? null,
+      ask: snapshot.latestQuote?.askPrice ?? null,
+      last: snapshot.latestTrade?.price ?? null,
+      volume: null, // Alpaca doesn't provide volume in option snapshots
+      openInterest: null, // Alpaca doesn't provide OI in snapshots, only in contracts
+      impliedVolatility: snapshot.impliedVolatility ?? null,
       greeks: {
-        delta: result.greeks?.delta ?? null,
-        gamma: result.greeks?.gamma ?? null,
-        theta: result.greeks?.theta ?? null,
-        vega: result.greeks?.vega ?? null,
+        delta: snapshot.greeks?.delta ?? null,
+        gamma: snapshot.greeks?.gamma ?? null,
+        theta: snapshot.greeks?.theta ?? null,
+        vega: snapshot.greeks?.vega ?? null,
       },
     };
 

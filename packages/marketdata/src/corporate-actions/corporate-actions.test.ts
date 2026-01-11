@@ -3,7 +3,10 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { Dividend, StockSplit } from "../providers/polygon";
+import type {
+  AlpacaCorporateActionDividend,
+  AlpacaCorporateActionSplit,
+} from "../providers/alpaca";
 import {
   adjustCandleForSplits,
   adjustCandlesForSplits,
@@ -62,15 +65,16 @@ describe("Stock Splits", () => {
   });
 
   describe("toSplitAdjustment", () => {
-    it("should convert Polygon split to SplitAdjustment", () => {
-      const polygonSplit: StockSplit = {
-        ticker: "AAPL",
-        execution_date: "2024-08-01",
-        split_from: 1,
-        split_to: 4,
+    it("should convert Alpaca split to SplitAdjustment", () => {
+      const alpacaSplit: AlpacaCorporateActionSplit = {
+        symbol: "AAPL",
+        exDate: "2024-08-01",
+        processDate: "2024-08-01",
+        oldRate: 1,
+        newRate: 4,
       };
 
-      const result = toSplitAdjustment(polygonSplit);
+      const result = toSplitAdjustment(alpacaSplit);
 
       expect(result.symbol).toBe("AAPL");
       expect(result.executionDate).toBe("2024-08-01");
@@ -81,14 +85,15 @@ describe("Stock Splits", () => {
     });
 
     it("should detect reverse split", () => {
-      const polygonSplit: StockSplit = {
-        ticker: "GE",
-        execution_date: "2021-08-02",
-        split_from: 8,
-        split_to: 1,
+      const alpacaSplit: AlpacaCorporateActionSplit = {
+        symbol: "GE",
+        exDate: "2021-08-02",
+        processDate: "2021-08-02",
+        oldRate: 8,
+        newRate: 1,
       };
 
-      const result = toSplitAdjustment(polygonSplit);
+      const result = toSplitAdjustment(alpacaSplit);
 
       expect(result.ratio).toBe(0.125);
       expect(result.isReverse).toBe(true);
@@ -305,42 +310,40 @@ describe("Stock Splits", () => {
 
 describe("Dividends", () => {
   describe("toDividendInfo", () => {
-    it("should convert Polygon dividend to DividendInfo", () => {
-      const polygonDiv: Dividend = {
-        ticker: "AAPL",
-        cash_amount: 0.24,
-        currency: "USD",
-        ex_dividend_date: "2024-02-09",
-        record_date: "2024-02-12",
-        pay_date: "2024-02-15",
-        declaration_date: "2024-02-01",
-        dividend_type: "CD",
-        frequency: 4,
+    it("should convert Alpaca dividend to DividendInfo", () => {
+      const alpacaDiv: AlpacaCorporateActionDividend = {
+        symbol: "AAPL",
+        rate: 0.24,
+        exDate: "2024-02-09",
+        recordDate: "2024-02-12",
+        payableDate: "2024-02-15",
+        special: false,
       };
 
-      const result = toDividendInfo(polygonDiv);
+      const result = toDividendInfo(alpacaDiv);
 
       expect(result.symbol).toBe("AAPL");
       expect(result.cashAmount).toBe(0.24);
       expect(result.currency).toBe("USD");
       expect(result.exDividendDate).toBe("2024-02-09");
       expect(result.dividendType).toBe("CD");
-      expect(result.frequency).toBe(4);
+      expect(result.frequency).toBeNull();
     });
 
-    it("should handle missing optional fields", () => {
-      const polygonDiv: Dividend = {
-        ticker: "MSFT",
-        cash_amount: 0.75,
-        ex_dividend_date: "2024-03-01",
-        dividend_type: "CD",
+    it("should handle special dividend", () => {
+      const alpacaDiv: AlpacaCorporateActionDividend = {
+        symbol: "MSFT",
+        rate: 3.0,
+        exDate: "2024-03-01",
+        special: true,
       };
 
-      const result = toDividendInfo(polygonDiv);
+      const result = toDividendInfo(alpacaDiv);
 
       expect(result.currency).toBe("USD");
       expect(result.recordDate).toBeNull();
       expect(result.payDate).toBeNull();
+      expect(result.dividendType).toBe("SC");
     });
   });
 

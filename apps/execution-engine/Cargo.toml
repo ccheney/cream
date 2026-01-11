@@ -41,6 +41,7 @@ arrow-schema = "57.1.0"
 arrow-array = "57.1.0"
 arrow-ipc = "57.1.0"
 futures = "0.3"
+futures-util = "0.3"
 
 # HTTP server (using Axum for JSON API until buf generate is available)
 axum = "0.8.8"
@@ -87,9 +88,9 @@ rust_decimal_macros = "1.39.0"
 # Parallel processing
 rayon = "1.11"
 
-# Databento market data feed
-databento = { version = "0.38", features = ["live"] }
-time = "0.3"  # Required by databento for heartbeat_interval
+# Alpaca market data feed (WebSocket-first, primary provider)
+alpaca-websocket = "0.3"
+alpaca-base = "0.25"
 
 # Concurrency primitives
 parking_lot = "0.12"

@@ -19,10 +19,10 @@ import {
   isGoldenCross,
 } from "@cream/indicators";
 import {
-  type AggregateBar,
-  createPolygonClientFromEnv,
-  type PolygonClient,
-  type Timespan,
+  type AlpacaBar,
+  type AlpacaMarketDataClient,
+  type AlpacaTimeframe,
+  createAlpacaClientFromEnv,
 } from "@cream/marketdata";
 import type { Backtest } from "@cream/storage";
 import { z } from "zod/v4";
@@ -124,14 +124,14 @@ export type StrategyConfig = z.infer<typeof StrategyConfigSchema>;
 // ============================================
 
 /**
- * Map backtest timeframes to Polygon API timespans and multipliers.
+ * Map backtest timeframes to Alpaca API timeframes.
  */
-const TIMEFRAME_MAP: Record<BacktestTimeframe, { multiplier: number; timespan: Timespan }> = {
-  "1Min": { multiplier: 1, timespan: "minute" },
-  "5Min": { multiplier: 5, timespan: "minute" },
-  "15Min": { multiplier: 15, timespan: "minute" },
-  "1Hour": { multiplier: 1, timespan: "hour" },
-  "1Day": { multiplier: 1, timespan: "day" },
+const TIMEFRAME_MAP: Record<BacktestTimeframe, AlpacaTimeframe> = {
+  "1Min": "1Min",
+  "5Min": "5Min",
+  "15Min": "15Min",
+  "1Hour": "1Hour",
+  "1Day": "1Day",
 };
 
 /**
@@ -190,42 +190,38 @@ df.to_parquet("${path}")
 // ============================================
 
 /**
- * Convert Polygon aggregate bars to OHLCV rows.
+ * Convert Alpaca bars to OHLCV rows.
  */
-function convertBarsToOhlcv(bars: AggregateBar[]): OhlcvRow[] {
+function convertBarsToOhlcv(bars: AlpacaBar[]): OhlcvRow[] {
   return bars.map((bar) => ({
-    timestamp: new Date(bar.t).toISOString(),
-    open: bar.o,
-    high: bar.h,
-    low: bar.l,
-    close: bar.c,
-    volume: bar.v,
+    timestamp: new Date(bar.timestamp).toISOString(),
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume,
   }));
 }
 
 /**
- * Fetch historical OHLCV data from Polygon.
+ * Fetch historical OHLCV data from Alpaca.
  */
 async function fetchHistoricalData(
-  client: PolygonClient,
+  client: AlpacaMarketDataClient,
   symbol: string,
   startDate: string,
   endDate: string,
   timeframe: BacktestTimeframe
 ): Promise<OhlcvRow[]> {
-  const { multiplier, timespan } = TIMEFRAME_MAP[timeframe];
+  const alpacaTimeframe = TIMEFRAME_MAP[timeframe];
 
-  const response = await client.getAggregates(symbol, multiplier, timespan, startDate, endDate, {
-    adjusted: true,
-    sort: "asc",
-    limit: 50000,
-  });
+  const bars = await client.getBars(symbol, alpacaTimeframe, startDate, endDate, 50000);
 
-  if (!response.results || response.results.length === 0) {
+  if (bars.length === 0) {
     throw new Error(`No market data found for ${symbol} from ${startDate} to ${endDate}`);
   }
 
-  return convertBarsToOhlcv(response.results);
+  return convertBarsToOhlcv(bars);
 }
 
 // ============================================
@@ -512,7 +508,7 @@ function generateSignals(ohlcv: OhlcvRow[], strategy: StrategyConfig): SignalRow
  * @returns Path to the generated Parquet file
  */
 export async function prepareBacktestData(backtest: Backtest): Promise<string> {
-  const client = createPolygonClientFromEnv();
+  const client = createAlpacaClientFromEnv();
 
   // Get first symbol from universe (single symbol for MVP)
   const symbol = backtest.universe[0];
@@ -546,7 +542,7 @@ export async function prepareBacktestData(backtest: Backtest): Promise<string> {
  * @returns Path to the generated signals Parquet file
  */
 export async function prepareSignals(backtest: Backtest): Promise<string> {
-  const client = createPolygonClientFromEnv();
+  const client = createAlpacaClientFromEnv();
 
   // Get first symbol
   const symbol = backtest.universe[0];

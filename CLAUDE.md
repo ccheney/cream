@@ -36,7 +36,7 @@ packages/
   helix/                # HelixDB client
   helix-schema/         # HelixDB schema definitions
   broker/               # Alpaca Markets integration
-  marketdata/           # Polygon/Massive adapters
+  marketdata/           # Alpaca market data (unified provider)
   universe/             # Trading universe resolution
   indicators/           # Technical indicators (RSI, ATR, SMA)
   regime/               # Market regime classification
@@ -97,10 +97,8 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 | Variable | BACKTEST | PAPER | LIVE | Description |
 |----------|----------|-------|------|-------------|
 | `CREAM_ENV` | ✓ | ✓ | ✓ | Trading environment |
-| `ALPACA_KEY` | - | ✓ | ✓ | Alpaca API key |
+| `ALPACA_KEY` | - | ✓ | ✓ | Alpaca API key (market data + trading) |
 | `ALPACA_SECRET` | - | ✓ | ✓ | Alpaca API secret |
-| `POLYGON_KEY` | - | - | ✓ | Polygon/Massive API key |
-| `DATABENTO_KEY` | - | - | ✓ | Databento API key |
 | `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` | - | - | ✓ | LLM API key |
 | `GOOGLE_CLIENT_ID` | - | ✓ | ✓ | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | - | ✓ | ✓ | Google OAuth client secret |
@@ -124,9 +122,7 @@ ALPACA_KEY=                  # Alpaca API key
 ALPACA_SECRET=               # Alpaca API secret
 ALPACA_BASE_URL=             # Alpaca base URL (auto-set by environment)
 
-# Market Data
-POLYGON_KEY=                 # Polygon/Massive API key
-DATABENTO_KEY=               # Databento execution-grade data
+# Market Data (Alpaca is the unified provider via ALPACA_KEY/ALPACA_SECRET above)
 FMP_KEY=                     # FMP fundamentals/transcripts
 ALPHAVANTAGE_KEY=            # Alpha Vantage macro indicators
 

@@ -1,10 +1,12 @@
 /**
  * Quote Message Handling
  *
- * Handles incoming quote and trade messages from Massive.
+ * Handles incoming quote and trade messages from Alpaca.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import type { MassiveQuoteMessage, MassiveTradeMessage } from "@cream/marketdata";
+import type { AlpacaWsQuoteMessage, AlpacaWsTradeMessage } from "@cream/marketdata";
 import { broadcastOptionsQuote } from "../../websocket/handler.js";
 import { extractUnderlying } from "./cache.js";
 import { SIGNIFICANT_MOVE_THRESHOLD } from "./constants.js";
@@ -12,10 +14,10 @@ import { quoteCache } from "./state.js";
 import type { CachedQuote } from "./types.js";
 
 /**
- * Handle quote message from Massive.
+ * Handle quote message from Alpaca.
  */
-export function handleQuoteMessage(msg: MassiveQuoteMessage): void {
-  const contract = msg.sym;
+export function handleQuoteMessage(msg: AlpacaWsQuoteMessage): void {
+  const contract = msg.S; // Alpaca uses S for symbol
   const underlying = extractUnderlying(contract);
 
   const cached = quoteCache.get(contract);
@@ -25,7 +27,7 @@ export function handleQuoteMessage(msg: MassiveQuoteMessage): void {
     ask: msg.ap,
     last: cached?.last ?? (msg.bp + msg.ap) / 2,
     volume: cached?.volume ?? 0,
-    timestamp: new Date(msg.t / 1e6),
+    timestamp: new Date(msg.t), // Alpaca uses RFC-3339 timestamp string
     cachedAt: new Date(),
   };
 
@@ -55,10 +57,10 @@ export function handleQuoteMessage(msg: MassiveQuoteMessage): void {
 }
 
 /**
- * Handle trade message from Massive.
+ * Handle trade message from Alpaca.
  */
-export function handleTradeMessage(msg: MassiveTradeMessage): void {
-  const contract = msg.sym;
+export function handleTradeMessage(msg: AlpacaWsTradeMessage): void {
+  const contract = msg.S; // Alpaca uses S for symbol
   const underlying = extractUnderlying(contract);
 
   const cached = quoteCache.get(contract);
@@ -68,7 +70,7 @@ export function handleTradeMessage(msg: MassiveTradeMessage): void {
     ask: cached?.ask ?? msg.p,
     last: msg.p,
     volume: (cached?.volume ?? 0) + msg.s,
-    timestamp: new Date(msg.t / 1e6),
+    timestamp: new Date(msg.t), // Alpaca uses RFC-3339 timestamp string
     cachedAt: new Date(),
   });
 
@@ -79,7 +81,7 @@ export function handleTradeMessage(msg: MassiveTradeMessage): void {
       underlying,
       price: msg.p,
       size: msg.s,
-      timestamp: new Date(msg.t / 1e6).toISOString(),
+      timestamp: new Date(msg.t).toISOString(),
     },
   });
 }

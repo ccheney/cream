@@ -8,17 +8,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist",
+    "build": "bun build src/index.ts --outdir dist --target bun",
     "test": "CREAM_ENV=BACKTEST bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/ tests/",
     "format": "biome format --write src/ tests/"
   },
   "dependencies": {
+    "@alpacahq/typescript-sdk": "0.0.32-preview",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
-    "@cream/logger": "workspace:*",
     "@cream/indicators": "workspace:*",
+    "@cream/logger": "workspace:*",
     "@cream/regime": "workspace:*",
     "@cream/universe": "workspace:*",
     "@types/ws": "8.18.1",

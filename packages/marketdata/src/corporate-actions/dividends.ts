@@ -12,7 +12,7 @@
  * @see docs/plans/02-data-layer.md
  */
 
-import type { Dividend } from "../providers/polygon";
+import type { AlpacaCorporateActionDividend } from "../providers/alpaca";
 
 // ============================================
 // Types
@@ -57,19 +57,19 @@ export interface DividendAdjustedReturn {
 // ============================================
 
 /**
- * Convert Polygon Dividend to DividendInfo.
+ * Convert Alpaca Corporate Action Dividend to DividendInfo.
  */
-export function toDividendInfo(dividend: Dividend): DividendInfo {
+export function toDividendInfo(dividend: AlpacaCorporateActionDividend): DividendInfo {
   return {
-    symbol: dividend.ticker,
-    cashAmount: dividend.cash_amount,
-    currency: dividend.currency ?? "USD",
-    exDividendDate: dividend.ex_dividend_date,
-    recordDate: dividend.record_date ?? null,
-    payDate: dividend.pay_date ?? null,
-    declarationDate: dividend.declaration_date ?? null,
-    dividendType: dividend.dividend_type as "CD" | "SC" | "LT" | "ST",
-    frequency: dividend.frequency ?? null,
+    symbol: dividend.symbol,
+    cashAmount: dividend.rate,
+    currency: "USD", // Alpaca doesn't provide currency, default to USD
+    exDividendDate: dividend.exDate,
+    recordDate: dividend.recordDate ?? null,
+    payDate: dividend.payableDate ?? null,
+    declarationDate: null, // Not provided by Alpaca
+    dividendType: dividend.special ? "SC" : "CD",
+    frequency: null, // Not provided by Alpaca
   };
 }
 

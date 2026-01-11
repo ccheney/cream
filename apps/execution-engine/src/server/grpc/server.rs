@@ -137,18 +137,18 @@ pub fn build_grpc_services() -> Result<
     ))
 }
 
-/// Build gRPC services with a feed controller for Databento streaming.
+/// Build gRPC services with an Alpaca feed controller for streaming.
 ///
 /// # Arguments
 ///
-/// * `feed_controller` - Feed controller for managing Databento feed
+/// * `feed_controller` - Alpaca feed controller for real-time market data
 /// * `shutdown_tx` - Shutdown broadcast sender for feed lifecycle
 ///
 /// # Errors
 ///
 /// Returns an error if the execution service fails to initialize.
 pub fn build_grpc_services_with_feed(
-    feed_controller: Arc<crate::feed::FeedController>,
+    feed_controller: Arc<crate::feed::AlpacaController>,
     shutdown_tx: tokio::sync::broadcast::Sender<()>,
 ) -> Result<
     (

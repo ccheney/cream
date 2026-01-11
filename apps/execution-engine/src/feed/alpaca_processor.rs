@@ -1,6 +1,6 @@
-//! Feed message processor.
+//! Alpaca feed message processor.
 //!
-//! Processes incoming market data messages from the Databento feed
+//! Processes incoming market data messages from the Alpaca feed
 //! and updates the microstructure state manager.
 //!
 //! # Architecture
@@ -9,7 +9,7 @@
 //! from a channel and updating shared state:
 //!
 //! ```text
-//! DatabentoFeed ──> mpsc::Receiver ──> FeedProcessor ──> MicrostructureManager
+//! AlpacaFeed ──> mpsc::Receiver ──> AlpacaProcessor ──> MicrostructureManager
 //! ```
 
 use parking_lot::Mutex;
@@ -18,27 +18,28 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
-use super::{DatabentoMessage, MicrostructureManager, QuoteUpdate, TradeUpdate};
+use super::alpaca::AlpacaMessage;
+use super::{MicrostructureManager, QuoteUpdate, TradeUpdate};
 
 // ============================================================================
-// Feed Processor
+// Alpaca Processor
 // ============================================================================
 
-/// Processes Databento feed messages and updates microstructure state.
+/// Processes Alpaca feed messages and updates microstructure state.
 ///
 /// This processor runs as a background task, receiving messages from the
 /// feed channel and updating the shared microstructure manager.
-pub struct FeedProcessor {
+pub struct AlpacaProcessor {
     /// Receiver for feed messages.
-    rx: mpsc::Receiver<DatabentoMessage>,
+    rx: mpsc::Receiver<AlpacaMessage>,
     /// Shared microstructure manager.
     microstructure: Arc<Mutex<MicrostructureManager>>,
     /// Whether to log each message (useful for debugging).
     verbose: bool,
 }
 
-impl FeedProcessor {
-    /// Create a new feed processor.
+impl AlpacaProcessor {
+    /// Create a new Alpaca processor.
     ///
     /// # Arguments
     ///
@@ -46,7 +47,7 @@ impl FeedProcessor {
     /// * `microstructure` - Shared microstructure manager
     #[must_use]
     pub fn new(
-        rx: mpsc::Receiver<DatabentoMessage>,
+        rx: mpsc::Receiver<AlpacaMessage>,
         microstructure: Arc<Mutex<MicrostructureManager>>,
     ) -> Self {
         Self {
@@ -69,47 +70,63 @@ impl FeedProcessor {
     /// - The channel sender is dropped (feed stopped)
     /// - An unrecoverable error occurs
     pub async fn run(mut self) {
-        info!("Feed processor started");
+        info!("Alpaca processor started");
         let mut message_count: u64 = 0;
         let mut trade_count: u64 = 0;
         let mut quote_count: u64 = 0;
+        let mut bar_count: u64 = 0;
 
         while let Some(msg) = self.rx.recv().await {
             message_count += 1;
 
             match msg {
-                DatabentoMessage::Trade {
+                AlpacaMessage::Trade {
                     symbol,
                     price,
                     size,
-                    ts_event,
+                    ts_event: _,
                 } => {
                     trade_count += 1;
-                    self.handle_trade(&symbol, price, size, ts_event);
+                    self.handle_trade(&symbol, price, size);
                 }
 
-                DatabentoMessage::Quote {
+                AlpacaMessage::Quote {
                     symbol,
                     bid,
                     ask,
                     bid_size,
                     ask_size,
-                    ts_event,
+                    ts_event: _,
                 } => {
                     quote_count += 1;
-                    self.handle_quote(&symbol, bid, ask, bid_size, ask_size, ts_event);
+                    self.handle_quote(&symbol, bid, ask, bid_size, ask_size);
                 }
 
-                DatabentoMessage::Connected => {
-                    info!("Feed connected notification received");
+                AlpacaMessage::Bar {
+                    symbol,
+                    close,
+                    volume: _,
+                    ts_event: _,
+                    ..
+                } => {
+                    bar_count += 1;
+                    if self.verbose {
+                        debug!(symbol = %symbol, close = %close, "Received bar");
+                    }
+                    // Bars are informational - we don't update microstructure
+                    // since we're using real-time quotes/trades
                 }
 
-                DatabentoMessage::Disconnected { reason } => {
-                    warn!(reason = %reason, "Feed disconnected notification received");
+                AlpacaMessage::Connected => {
+                    info!("Alpaca feed connected notification received");
                 }
 
-                DatabentoMessage::Error { message } => {
-                    warn!(error = %message, "Feed error notification received");
+                AlpacaMessage::Disconnected { reason } => {
+                    warn!(reason = %reason, "Alpaca feed disconnected notification received");
+                }
+
+                AlpacaMessage::Error { message } => {
+                    warn!(error = %message, "Alpaca feed error notification received");
                 }
             }
 
@@ -119,7 +136,8 @@ impl FeedProcessor {
                     total = message_count,
                     trades = trade_count,
                     quotes = quote_count,
-                    "Feed processor progress"
+                    bars = bar_count,
+                    "Alpaca processor progress"
                 );
             }
         }
@@ -128,18 +146,19 @@ impl FeedProcessor {
             total = message_count,
             trades = trade_count,
             quotes = quote_count,
-            "Feed processor stopped"
+            bars = bar_count,
+            "Alpaca processor stopped"
         );
     }
 
     /// Handle a trade message.
-    fn handle_trade(&self, symbol: &str, price: Decimal, size: Decimal, _ts_event: i64) {
+    fn handle_trade(&self, symbol: &str, price: Decimal, size: Decimal) {
         if self.verbose {
             debug!(
                 symbol = %symbol,
                 price = %price,
                 size = %size,
-                "Processing trade"
+                "Processing Alpaca trade"
             );
         }
 
@@ -156,14 +175,13 @@ impl FeedProcessor {
         ask: Decimal,
         bid_size: Decimal,
         ask_size: Decimal,
-        _ts_event: i64,
     ) {
         if self.verbose {
             debug!(
                 symbol = %symbol,
                 bid = %bid,
                 ask = %ask,
-                "Processing quote"
+                "Processing Alpaca quote"
             );
         }
 
@@ -177,13 +195,13 @@ impl FeedProcessor {
 // Builder
 // ============================================================================
 
-/// Builder for creating a feed processor with shared state.
-pub struct FeedProcessorBuilder {
+/// Builder for creating an Alpaca processor with shared state.
+pub struct AlpacaProcessorBuilder {
     microstructure: Arc<Mutex<MicrostructureManager>>,
     verbose: bool,
 }
 
-impl FeedProcessorBuilder {
+impl AlpacaProcessorBuilder {
     /// Create a new builder with a microstructure manager.
     #[must_use]
     pub fn new(microstructure: Arc<Mutex<MicrostructureManager>>) -> Self {
@@ -202,8 +220,8 @@ impl FeedProcessorBuilder {
 
     /// Build the processor with the given receiver.
     #[must_use]
-    pub fn build(self, rx: mpsc::Receiver<DatabentoMessage>) -> FeedProcessor {
-        FeedProcessor::new(rx, self.microstructure).with_verbose(self.verbose)
+    pub fn build(self, rx: mpsc::Receiver<AlpacaMessage>) -> AlpacaProcessor {
+        AlpacaProcessor::new(rx, self.microstructure).with_verbose(self.verbose)
     }
 }
 
@@ -225,7 +243,7 @@ mod tests {
     async fn test_processor_handles_trade() {
         let (tx, rx) = mpsc::channel(100);
         let manager = create_test_manager();
-        let processor = FeedProcessor::new(rx, Arc::clone(&manager));
+        let processor = AlpacaProcessor::new(rx, Arc::clone(&manager));
 
         // Spawn processor
         let handle = tokio::spawn(async move {
@@ -233,37 +251,37 @@ mod tests {
         });
 
         // Send a trade
-        tx.send(DatabentoMessage::Trade {
+        tx.send(AlpacaMessage::Trade {
             symbol: "AAPL".to_string(),
             price: dec!(150.50),
             size: dec!(100),
             ts_event: 0,
         })
         .await
-        .unwrap();
+        .expect("send failed");
 
         // Close channel to stop processor
         drop(tx);
-        handle.await.unwrap();
+        handle.await.expect("task panicked");
 
         // Verify state was updated
         let mut state = manager.lock();
         let aapl_state = state.snapshot("AAPL");
         assert!(aapl_state.is_some());
-        assert_eq!(aapl_state.unwrap().last_trade, dec!(150.50));
+        assert_eq!(aapl_state.expect("should exist").last_trade, dec!(150.50));
     }
 
     #[tokio::test]
     async fn test_processor_handles_quote() {
         let (tx, rx) = mpsc::channel(100);
         let manager = create_test_manager();
-        let processor = FeedProcessor::new(rx, Arc::clone(&manager));
+        let processor = AlpacaProcessor::new(rx, Arc::clone(&manager));
 
         let handle = tokio::spawn(async move {
             processor.run().await;
         });
 
-        tx.send(DatabentoMessage::Quote {
+        tx.send(AlpacaMessage::Quote {
             symbol: "MSFT".to_string(),
             bid: dec!(380.00),
             ask: dec!(380.10),
@@ -272,15 +290,15 @@ mod tests {
             ts_event: 0,
         })
         .await
-        .unwrap();
+        .expect("send failed");
 
         drop(tx);
-        handle.await.unwrap();
+        handle.await.expect("task panicked");
 
         let mut state = manager.lock();
         let msft_state = state.snapshot("MSFT");
         assert!(msft_state.is_some());
-        let ms = msft_state.unwrap();
+        let ms = msft_state.expect("should exist");
         assert_eq!(ms.bid, dec!(380.00));
         assert_eq!(ms.ask, dec!(380.10));
     }
@@ -289,27 +307,29 @@ mod tests {
     async fn test_processor_handles_connection_events() {
         let (tx, rx) = mpsc::channel(100);
         let manager = create_test_manager();
-        let processor = FeedProcessor::new(rx, Arc::clone(&manager));
+        let processor = AlpacaProcessor::new(rx, Arc::clone(&manager));
 
         let handle = tokio::spawn(async move {
             processor.run().await;
         });
 
         // These should not crash
-        tx.send(DatabentoMessage::Connected).await.unwrap();
-        tx.send(DatabentoMessage::Disconnected {
+        tx.send(AlpacaMessage::Connected)
+            .await
+            .expect("send failed");
+        tx.send(AlpacaMessage::Disconnected {
             reason: "test".to_string(),
         })
         .await
-        .unwrap();
-        tx.send(DatabentoMessage::Error {
+        .expect("send failed");
+        tx.send(AlpacaMessage::Error {
             message: "test error".to_string(),
         })
         .await
-        .unwrap();
+        .expect("send failed");
 
         drop(tx);
-        handle.await.unwrap();
+        handle.await.expect("task panicked");
     }
 
     #[test]
@@ -317,7 +337,7 @@ mod tests {
         let manager = create_test_manager();
         let (_tx, rx) = mpsc::channel(100);
 
-        let processor = FeedProcessorBuilder::new(manager).verbose(true).build(rx);
+        let processor = AlpacaProcessorBuilder::new(manager).verbose(true).build(rx);
 
         assert!(processor.verbose);
     }

@@ -40,7 +40,7 @@ use execution_engine::{
     OrderStateManager, StatePersistence,
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
-    feed::FeedController,
+    feed::AlpacaController,
     safety::ConnectionMonitor,
     server::{build_flight_server, build_grpc_services_with_feed, create_router},
 };
@@ -531,7 +531,7 @@ async fn reconciliation_loop(
     }
 }
 
-/// Create a `FeedController` for managing the Databento market data feed.
+/// Create an `AlpacaController` for managing the Alpaca market data feed.
 ///
 /// The controller manages the feed lifecycle dynamically - the feed is started
 /// when TypeScript calls `SubscribeMarketData` with symbols from runtime config.
@@ -539,26 +539,27 @@ async fn reconciliation_loop(
 /// # Returns
 ///
 /// The feed controller for use by gRPC services, or None in BACKTEST mode.
-fn create_feed_controller(config: &Config, env: Environment) -> Option<Arc<FeedController>> {
+fn create_feed_controller(config: &Config, env: Environment) -> Option<Arc<AlpacaController>> {
     // Skip feed in BACKTEST mode
     if env == Environment::Backtest {
-        tracing::info!("Databento feed disabled in BACKTEST mode");
+        tracing::info!("Alpaca feed disabled in BACKTEST mode");
         return None;
     }
 
-    // Create feed controller with Databento config
-    let controller = Arc::new(FeedController::new(config.feeds.databento.clone()));
+    // Create feed controller with Alpaca config
+    let controller = Arc::new(AlpacaController::new(config.feeds.alpaca.clone()));
 
     // Log status based on API key availability
-    if config.feeds.databento.api_key.is_empty() {
+    if config.feeds.alpaca.api_key.is_empty() {
         tracing::warn!(
-            "DATABENTO_KEY not set - Databento feed will not start. \
+            "ALPACA_KEY not set - Alpaca feed will not start. \
              Set the environment variable and call SubscribeMarketData."
         );
     } else {
         tracing::info!(
-            dataset = %config.feeds.databento.dataset,
-            "Databento feed controller ready - waiting for SubscribeMarketData call"
+            feed = %config.feeds.alpaca.feed,
+            paper = config.feeds.alpaca.paper,
+            "Alpaca feed controller ready - waiting for SubscribeMarketData call"
         );
     }
 

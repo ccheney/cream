@@ -2,16 +2,16 @@
  * Quote Routes
  *
  * Endpoints for single and batch stock quotes.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import {
   ErrorSchema,
+  getAlpacaClient,
   getCached,
-  getDaysAgo,
-  getPolygonClient,
-  getTodayNY,
   type Quote,
   type QuoteError,
   QuoteSchema,
@@ -31,56 +31,48 @@ async function fetchQuote(symbol: string): Promise<Quote | QuoteError> {
     return cached;
   }
 
-  const client = getPolygonClient();
-  const todayNY = getTodayNY();
-  const recentFrom = getDaysAgo(7);
+  const client = getAlpacaClient();
 
   try {
-    const recentBarsResponse = await client.getAggregates(symbol, 1, "day", recentFrom, todayNY, {
-      limit: 5,
-      sort: "desc",
-    });
+    // Use Alpaca snapshot which provides latest quote, trade, and daily bar
+    const snapshots = await client.getSnapshots([symbol]);
+    const snapshot = snapshots.get(symbol);
 
-    const recentBars = recentBarsResponse.results ?? [];
-    if (recentBars.length === 0) {
+    if (!snapshot) {
       return { symbol, error: "No data available" };
     }
 
-    const latestBar = recentBars[0];
-    const prevBar = recentBars[1];
+    const latestQuote = snapshot.latestQuote;
+    const latestTrade = snapshot.latestTrade;
+    const dailyBar = snapshot.dailyBar;
+    const prevBar = snapshot.prevDailyBar;
 
-    let lastPrice = latestBar?.c ?? 0;
-    let lastVolume = latestBar?.v ?? 0;
-    let lastTimestamp = latestBar ? new Date(latestBar.t) : new Date();
-    const prevClose = prevBar?.c ?? lastPrice;
+    // Determine prices from available data
+    const bid = latestQuote?.bidPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
+    const ask = latestQuote?.askPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
+    const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
+    const volume = dailyBar?.volume ?? 0;
+    const prevClose = prevBar?.close ?? dailyBar?.close ?? lastPrice;
 
-    try {
-      const todayResponse = await client.getAggregates(symbol, 1, "minute", todayNY, todayNY, {
-        limit: 1,
-        sort: "desc",
-      });
-      const todayBar = todayResponse.results?.[0];
-      if (todayBar) {
-        lastPrice = todayBar.c;
-        lastVolume = todayBar.v;
-        lastTimestamp = new Date(todayBar.t);
-      }
-    } catch {
-      // If today's intraday data unavailable, use daily bar
-    }
-
+    // Calculate change percent
     const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
-    const spread = lastPrice * 0.001;
+
+    // Determine timestamp from available data
+    const timestamp =
+      latestTrade?.timestamp ??
+      latestQuote?.timestamp ??
+      dailyBar?.timestamp ??
+      new Date().toISOString();
 
     const quote: Quote = {
       symbol,
-      bid: Math.round((lastPrice - spread) * 100) / 100,
-      ask: Math.round((lastPrice + spread) * 100) / 100,
+      bid: Math.round(bid * 100) / 100,
+      ask: Math.round(ask * 100) / 100,
       last: lastPrice,
-      volume: lastVolume,
+      volume,
       prevClose,
       changePercent: Math.round(changePercent * 100) / 100,
-      timestamp: lastTimestamp.toISOString(),
+      timestamp: typeof timestamp === "string" ? timestamp : new Date(timestamp).toISOString(),
     };
     setCache(cacheKey, quote);
     return quote;
@@ -88,6 +80,83 @@ async function fetchQuote(symbol: string): Promise<Quote | QuoteError> {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { symbol, error: message };
   }
+}
+
+async function fetchQuotesBatch(symbols: string[]): Promise<Map<string, Quote | QuoteError>> {
+  const client = getAlpacaClient();
+  const results = new Map<string, Quote | QuoteError>();
+
+  // Check cache first
+  const uncachedSymbols: string[] = [];
+  for (const symbol of symbols) {
+    const cacheKey = `quote:${symbol}`;
+    const cached = getCached<Quote>(cacheKey);
+    if (cached) {
+      results.set(symbol, cached);
+    } else {
+      uncachedSymbols.push(symbol);
+    }
+  }
+
+  if (uncachedSymbols.length === 0) {
+    return results;
+  }
+
+  try {
+    // Fetch snapshots for all uncached symbols at once
+    const snapshots = await client.getSnapshots(uncachedSymbols);
+
+    for (const symbol of uncachedSymbols) {
+      const snapshot = snapshots.get(symbol);
+
+      if (!snapshot) {
+        results.set(symbol, { symbol, error: "No data available" });
+        continue;
+      }
+
+      const latestQuote = snapshot.latestQuote;
+      const latestTrade = snapshot.latestTrade;
+      const dailyBar = snapshot.dailyBar;
+      const prevBar = snapshot.prevDailyBar;
+
+      const bid = latestQuote?.bidPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
+      const ask = latestQuote?.askPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
+      const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
+      const volume = dailyBar?.volume ?? 0;
+      const prevClose = prevBar?.close ?? dailyBar?.close ?? lastPrice;
+      const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
+      const timestamp =
+        latestTrade?.timestamp ??
+        latestQuote?.timestamp ??
+        dailyBar?.timestamp ??
+        new Date().toISOString();
+
+      const quote: Quote = {
+        symbol,
+        bid: Math.round(bid * 100) / 100,
+        ask: Math.round(ask * 100) / 100,
+        last: lastPrice,
+        volume,
+        prevClose,
+        changePercent: Math.round(changePercent * 100) / 100,
+        timestamp: typeof timestamp === "string" ? timestamp : new Date(timestamp).toISOString(),
+      };
+
+      const cacheKey = `quote:${symbol}`;
+      setCache(cacheKey, quote);
+      results.set(symbol, quote);
+    }
+  } catch (_err) {
+    // If batch fetch fails, try individual fetches
+    for (const symbol of uncachedSymbols) {
+      if (!results.has(symbol)) {
+        const result = await fetchQuote(symbol);
+        results.set(symbol, result);
+      }
+    }
+  }
+
+  return results;
 }
 
 function isQuoteError(result: Quote | QuoteError): result is QuoteError {
@@ -123,13 +192,14 @@ app.openapi(quotesRoute, async (c) => {
   const { symbols } = c.req.valid("query");
   const symbolList = symbols.split(",").map((s) => s.trim().toUpperCase());
 
-  const results: Array<Quote | QuoteError> = [];
-  for (const symbol of symbolList) {
-    const result = await fetchQuote(symbol);
-    results.push(result);
-  }
+  // Use batch fetch for efficiency
+  const resultsMap = await fetchQuotesBatch(symbolList);
 
+  const results = symbolList
+    .map((s) => resultsMap.get(s))
+    .filter((r): r is Quote | QuoteError => r !== undefined);
   const successful = results.filter((r): r is Quote => !isQuoteError(r));
+
   if (successful.length === 0) {
     throw new HTTPException(503, {
       message: "Failed to fetch quotes from market data provider",

@@ -2,8 +2,11 @@
  * Candle Routes
  *
  * Endpoints for OHLCV candlestick data.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import type { AlpacaTimeframe } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import log from "../../logger.js";
@@ -12,18 +15,27 @@ import {
   type Candle,
   CandleSchema,
   ErrorSchema,
+  getAlpacaClient,
   getCached,
   getDaysAgo,
-  getPolygonClient,
   getTodayNY,
   isMarketHours,
   setCache,
-  TIMESPAN_MAP,
   type Timeframe,
   TimeframeSchema,
 } from "./types.js";
 
 const app = new OpenAPIHono();
+
+// Map internal timeframes to Alpaca timeframes
+const ALPACA_TIMEFRAME_MAP: Record<Timeframe, AlpacaTimeframe> = {
+  "1m": "1Min",
+  "5m": "5Min",
+  "15m": "15Min",
+  "1h": "1Hour",
+  "4h": "4Hour",
+  "1d": "1Day",
+};
 
 // ============================================
 // Routes
@@ -68,88 +80,83 @@ app.openapi(candlesRoute, async (c) => {
   }
   log.debug({ cacheKey }, "Cache miss for candles - fetching fresh data");
 
-  const client = getPolygonClient();
-  const tf = TIMESPAN_MAP[timeframe as Timeframe];
+  const client = getAlpacaClient();
+  const alpacaTimeframe = ALPACA_TIMEFRAME_MAP[timeframe as Timeframe];
   const todayNY = getTodayNY();
+  const isIntraday = timeframe !== "1d";
 
   let fromStr: string;
-  if (tf.timespan === "day") {
-    fromStr = getDaysAgo(365);
-  } else {
+  if (isIntraday) {
     fromStr = getDaysAgo(7);
+  } else {
+    fromStr = getDaysAgo(365);
   }
 
   // Scale fetchLimit based on timeframe to ensure enough market-hours bars survive filtering
-  const safetyFactor = tf.multiplier <= 1 ? 1.5 : tf.multiplier <= 5 ? 3 : 5;
-  const fetchLimit = Math.min(Math.ceil(limit * safetyFactor) + 100, 50000);
+  const safetyFactor = timeframe === "1m" ? 1.5 : timeframe === "5m" ? 3 : 5;
+  const fetchLimit = Math.min(Math.ceil(limit * safetyFactor) + 100, 10000);
 
   try {
-    const response = await client.getAggregates(
-      upperSymbol,
-      tf.multiplier,
-      tf.timespan,
-      fromStr,
-      todayNY,
-      { limit: fetchLimit, sort: "desc" }
-    );
+    const bars = await client.getBars(upperSymbol, alpacaTimeframe, fromStr, todayNY, fetchLimit);
 
     log.debug(
       {
         symbol: upperSymbol,
         timeframe,
-        count: response.results?.length ?? 0,
+        count: bars.length,
         from: fromStr,
         to: todayNY,
       },
-      "Fetched candles from API"
+      "Fetched candles from Alpaca"
     );
 
-    if (!response.results || response.results.length === 0) {
-      log.warn({ symbol: upperSymbol, timeframe }, "No candle data returned from API");
+    if (!bars || bars.length === 0) {
+      log.warn({ symbol: upperSymbol, timeframe }, "No candle data returned from Alpaca");
       throw new HTTPException(503, {
         message: `No candle data available for ${upperSymbol}`,
       });
     }
 
-    let filteredResults = response.results;
-    if (tf.timespan !== "day") {
-      const beforeCount = response.results.length;
-      filteredResults = response.results.filter((bar) => isMarketHours(new Date(bar.t)));
+    // Filter to market hours for intraday timeframes
+    let filteredBars = bars;
+    if (isIntraday) {
+      const beforeCount = bars.length;
+      filteredBars = bars.filter((bar) => isMarketHours(new Date(bar.timestamp)));
       log.debug(
-        { symbol: upperSymbol, timeframe, beforeCount, afterCount: filteredResults.length },
+        { symbol: upperSymbol, timeframe, beforeCount, afterCount: filteredBars.length },
         "Applied market hours filter"
       );
     }
 
-    filteredResults.sort((a, b) => a.t - b.t);
+    // Sort by timestamp ascending
+    filteredBars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const startIndex = Math.max(0, filteredResults.length - limit);
-    const recentResults = filteredResults.slice(startIndex);
+    // Take the most recent 'limit' bars
+    const startIndex = Math.max(0, filteredBars.length - limit);
+    const recentBars = filteredBars.slice(startIndex);
 
-    if (recentResults.length > 0) {
-      const first = recentResults[0];
-      const last = recentResults[recentResults.length - 1];
-      const firstTimestamp = first ? new Date(first.t).toISOString() : null;
-      const lastTimestamp = last ? new Date(last.t).toISOString() : null;
+    if (recentBars.length > 0) {
+      const first = recentBars[0];
+      const last = recentBars[recentBars.length - 1];
       log.debug(
         {
           symbol: upperSymbol,
           timeframe,
-          count: recentResults.length,
-          firstTimestamp,
-          lastTimestamp,
+          count: recentBars.length,
+          firstTimestamp: first?.timestamp,
+          lastTimestamp: last?.timestamp,
         },
         "Returning candles"
       );
     }
 
-    const candles: Candle[] = recentResults.map((bar) => ({
-      timestamp: new Date(bar.t).toISOString(),
-      open: bar.o,
-      high: bar.h,
-      low: bar.l,
-      close: bar.c,
-      volume: bar.v,
+    const candles: Candle[] = recentBars.map((bar) => ({
+      timestamp: bar.timestamp, // Already ISO format from Alpaca
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume,
     }));
 
     setCache(cacheKey, candles);

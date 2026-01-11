@@ -4,10 +4,11 @@
  * Calculates pairwise correlation matrix for portfolio positions.
  *
  * @see docs/plans/ui/05-api-endpoints.md Risk section
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import type { PolygonClient } from "@cream/marketdata";
-import { createPolygonClientFromEnv } from "@cream/marketdata";
+import type { AlpacaMarketDataClient } from "@cream/marketdata";
+import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata";
 
 // ============================================
 // Types
@@ -156,12 +157,18 @@ export async function calculateCorrelationMatrix(
   const to = formatDate(new Date());
   const from = getFromDate(lookbackDays);
 
-  // Create Polygon client
-  let client: PolygonClient;
-  try {
-    client = createPolygonClientFromEnv();
-  } catch {
+  // Create Alpaca client
+  let client: AlpacaMarketDataClient;
+  if (!isAlpacaConfigured()) {
     // If no API key, return identity matrix
+    const matrix = symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
+    return { symbols, matrix, highCorrelationPairs: [] };
+  }
+
+  try {
+    client = createAlpacaClientFromEnv();
+  } catch {
+    // If client creation fails, return identity matrix
     const matrix = symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
     return { symbols, matrix, highCorrelationPairs: [] };
   }
@@ -172,13 +179,10 @@ export async function calculateCorrelationMatrix(
   await Promise.all(
     symbols.map(async (symbol) => {
       try {
-        const response = await client.getAggregates(symbol, 1, "day", from, to, {
-          adjusted: true,
-          sort: "asc",
-        });
+        const bars = await client.getBars(symbol, "1Day", from, to);
 
-        if (response.results && response.results.length > 0) {
-          priceData[symbol] = response.results.map((bar) => bar.c);
+        if (bars.length > 0) {
+          priceData[symbol] = bars.map((bar) => bar.close);
         }
       } catch {
         // Skip symbols with fetch errors

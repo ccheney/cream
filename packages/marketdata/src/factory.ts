@@ -3,14 +3,13 @@
  *
  * Environment-aware factory for creating market data adapters.
  * - BACKTEST: Uses mock adapters with deterministic fixture data
- * - PAPER/LIVE: Uses real provider clients (Polygon, Databento, FMP)
+ * - PAPER/LIVE: Uses Alpaca for unified market data
  *
- * @see docs/plans/02-data-layer.md
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 import { type CreamEnvironment, requireEnv } from "@cream/domain";
-import type { AggregateBar, PolygonClient, Snapshot } from "./providers/polygon";
-import { createPolygonClientFromEnv } from "./providers/polygon";
+import { AlpacaMarketDataAdapter, isAlpacaAdapterAvailable } from "./adapters/alpaca-adapter.js";
 
 // ============================================
 // Types
@@ -86,7 +85,7 @@ export interface MarketDataAdapter {
   /**
    * Get the adapter type for logging.
    */
-  getType(): "mock" | "polygon" | "databento";
+  getType(): "mock" | "alpaca" | "polygon" | "databento";
 }
 
 // ============================================
@@ -208,122 +207,11 @@ export class MockMarketDataAdapter implements MarketDataAdapter {
 }
 
 // ============================================
-// Polygon Adapter (for PAPER/LIVE)
+// Re-export Alpaca Adapter
 // ============================================
 
-/**
- * Polygon.io adapter for real market data.
- * Used in PAPER and LIVE modes.
- */
-export class PolygonMarketDataAdapter implements MarketDataAdapter {
-  private readonly client: PolygonClient;
-
-  constructor(client: PolygonClient) {
-    this.client = client;
-  }
-
-  getType(): "polygon" {
-    return "polygon";
-  }
-
-  isReady(): boolean {
-    return true;
-  }
-
-  async getCandles(
-    symbol: string,
-    timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
-    from: string,
-    to: string
-  ): Promise<AdapterCandle[]> {
-    const { multiplier, timespan } = this.parseTimeframe(timeframe);
-
-    const response = await this.client.getAggregates(symbol, multiplier, timespan, from, to, {
-      adjusted: true,
-      sort: "asc",
-    });
-
-    if (!response.results) {
-      return [];
-    }
-
-    return response.results.map((bar: AggregateBar) => ({
-      timestamp: bar.t,
-      open: bar.o,
-      high: bar.h,
-      low: bar.l,
-      close: bar.c,
-      volume: bar.v,
-      vwap: bar.vw,
-    }));
-  }
-
-  async getQuote(symbol: string): Promise<AdapterQuote | null> {
-    const snapshot = await this.client.getTickerSnapshot(symbol);
-    if (!snapshot) {
-      return null;
-    }
-
-    return this.snapshotToQuote(snapshot);
-  }
-
-  async getQuotes(symbols: string[]): Promise<Map<string, AdapterQuote>> {
-    const quotes = new Map<string, AdapterQuote>();
-
-    const response = await this.client.getAllTickersSnapshot(symbols);
-    if (!response.tickers) {
-      return quotes;
-    }
-
-    for (const snapshot of response.tickers) {
-      const quote = this.snapshotToQuote(snapshot);
-      if (quote) {
-        quotes.set(snapshot.ticker, quote);
-      }
-    }
-
-    return quotes;
-  }
-
-  private snapshotToQuote(snapshot: Snapshot): AdapterQuote | null {
-    const lastQuote = snapshot.lastQuote;
-    const lastTrade = snapshot.lastTrade;
-
-    if (!lastQuote && !lastTrade) {
-      return null;
-    }
-
-    return {
-      symbol: snapshot.ticker,
-      bid: lastQuote?.p ?? 0,
-      ask: lastQuote?.P ?? 0,
-      bidSize: lastQuote?.s ?? 0,
-      askSize: lastQuote?.S ?? 0,
-      last: lastTrade?.p ?? snapshot.day?.c ?? 0,
-      timestamp: lastQuote?.t ?? lastTrade?.t ?? Date.now(),
-    };
-  }
-
-  private parseTimeframe(timeframe: string): {
-    multiplier: number;
-    timespan: "minute" | "hour" | "day";
-  } {
-    switch (timeframe) {
-      case "1m":
-        return { multiplier: 1, timespan: "minute" };
-      case "5m":
-        return { multiplier: 5, timespan: "minute" };
-      case "15m":
-        return { multiplier: 15, timespan: "minute" };
-      case "1h":
-        return { multiplier: 1, timespan: "hour" };
-      case "1d":
-        return { multiplier: 1, timespan: "day" };
-      default:
-        return { multiplier: 1, timespan: "hour" };
-    }
-  }
-}
+// Re-export AlpacaMarketDataAdapter for backward compatibility
+export { AlpacaMarketDataAdapter } from "./adapters/alpaca-adapter.js";
 
 // ============================================
 // Factory Functions
@@ -349,7 +237,7 @@ export class MarketDataConfigError extends Error {
  * Create a market data adapter based on the current environment.
  *
  * - BACKTEST: Returns MockMarketDataAdapter with deterministic fixture data
- * - PAPER/LIVE: Returns PolygonMarketDataAdapter with real market data
+ * - PAPER/LIVE: Returns AlpacaMarketDataAdapter with real market data
  *
  * @param env - Optional environment override (uses CREAM_ENV if not provided)
  * @returns Market data adapter
@@ -368,14 +256,12 @@ export function createMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapt
     return new MockMarketDataAdapter();
   }
 
-  // PAPER/LIVE mode requires real API key
-  const polygonKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
-  if (!polygonKey) {
-    throw new MarketDataConfigError("polygon", "POLYGON_KEY");
+  // PAPER/LIVE mode requires Alpaca API keys
+  if (!isAlpacaAdapterAvailable()) {
+    throw new MarketDataConfigError("alpaca", "ALPACA_KEY and ALPACA_SECRET");
   }
 
-  const polygonClient = createPolygonClientFromEnv();
-  return new PolygonMarketDataAdapter(polygonClient);
+  return new AlpacaMarketDataAdapter();
 }
 
 /**

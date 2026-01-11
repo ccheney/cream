@@ -2,9 +2,15 @@
  * Market Route Types
  *
  * Shared schemas, cache utilities, and types used across market routes.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { PolygonClient } from "@cream/marketdata";
+import {
+  type AlpacaMarketDataClient,
+  createAlpacaClientFromEnv,
+  isAlpacaConfigured,
+} from "@cream/marketdata";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
@@ -131,28 +137,28 @@ export function setCache<T>(key: string, data: T): void {
 }
 
 // ============================================
-// Polygon Client Singleton
+// Alpaca Client Singleton
 // ============================================
 
-let polygonClient: PolygonClient | null = null;
+let alpacaClient: AlpacaMarketDataClient | null = null;
 
-export function getPolygonClient(): PolygonClient {
-  if (polygonClient) {
-    return polygonClient;
+export function getAlpacaClient(): AlpacaMarketDataClient {
+  if (alpacaClient) {
+    return alpacaClient;
   }
 
-  const apiKey = process.env.POLYGON_KEY;
-  if (!apiKey) {
+  if (!isAlpacaConfigured()) {
     throw new HTTPException(503, {
-      message: "Market data service unavailable: POLYGON_KEY not configured",
+      message: "Market data service unavailable: ALPACA_KEY/ALPACA_SECRET not configured",
     });
   }
 
-  const tier =
-    (process.env.POLYGON_TIER as "free" | "starter" | "developer" | "advanced") ?? "starter";
-  polygonClient = new PolygonClient({ apiKey, tier });
-  return polygonClient;
+  alpacaClient = createAlpacaClientFromEnv();
+  return alpacaClient;
 }
+
+// Legacy alias for gradual migration
+export const getPolygonClient = getAlpacaClient;
 
 // ============================================
 // Utility Functions

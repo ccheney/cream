@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import type { AggregatesResponse, PolygonClient } from "../providers/polygon";
+import type { AlpacaBar, AlpacaMarketDataClient } from "../providers/alpaca";
 import {
   aggregateCandles,
   type Candle,
@@ -17,29 +17,77 @@ import {
 // Mock Data
 // ============================================
 
-const mockAggregatesResponse: AggregatesResponse = {
-  ticker: "AAPL",
-  queryCount: 5,
-  resultsCount: 5,
-  adjusted: true,
-  status: "OK",
-  results: [
-    { o: 150.0, h: 152.0, l: 149.0, c: 151.0, v: 1000000, vw: 150.5, t: 1704067200000, n: 5000 },
-    { o: 151.0, h: 153.0, l: 150.0, c: 152.0, v: 1100000, vw: 151.5, t: 1704070800000, n: 5500 },
-    { o: 152.0, h: 154.0, l: 151.0, c: 153.0, v: 1200000, vw: 152.5, t: 1704074400000, n: 6000 },
-    { o: 153.0, h: 155.0, l: 152.0, c: 154.0, v: 1300000, vw: 153.5, t: 1704078000000, n: 6500 },
-    { o: 154.0, h: 156.0, l: 153.0, c: 155.0, v: 1400000, vw: 154.5, t: 1704081600000, n: 7000 },
-  ],
-};
+const mockBars: AlpacaBar[] = [
+  {
+    symbol: "AAPL",
+    open: 150.0,
+    high: 152.0,
+    low: 149.0,
+    close: 151.0,
+    volume: 1000000,
+    vwap: 150.5,
+    timestamp: "2024-01-01T09:00:00Z",
+    tradeCount: 5000,
+  },
+  {
+    symbol: "AAPL",
+    open: 151.0,
+    high: 153.0,
+    low: 150.0,
+    close: 152.0,
+    volume: 1100000,
+    vwap: 151.5,
+    timestamp: "2024-01-01T10:00:00Z",
+    tradeCount: 5500,
+  },
+  {
+    symbol: "AAPL",
+    open: 152.0,
+    high: 154.0,
+    low: 151.0,
+    close: 153.0,
+    volume: 1200000,
+    vwap: 152.5,
+    timestamp: "2024-01-01T11:00:00Z",
+    tradeCount: 6000,
+  },
+  {
+    symbol: "AAPL",
+    open: 153.0,
+    high: 155.0,
+    low: 152.0,
+    close: 154.0,
+    volume: 1300000,
+    vwap: 153.5,
+    timestamp: "2024-01-01T12:00:00Z",
+    tradeCount: 6500,
+  },
+  {
+    symbol: "AAPL",
+    open: 154.0,
+    high: 156.0,
+    low: 153.0,
+    close: 155.0,
+    volume: 1400000,
+    vwap: 154.5,
+    timestamp: "2024-01-01T13:00:00Z",
+    tradeCount: 7000,
+  },
+];
 
-function createMockPolygonClient(): PolygonClient {
+function createMockAlpacaClient(): AlpacaMarketDataClient {
   return {
-    getAggregates: mock(() => Promise.resolve(mockAggregatesResponse)),
-    getPreviousClose: mock(() => Promise.resolve(mockAggregatesResponse)),
-    getOptionContracts: mock(() => Promise.resolve({ results: [], status: "OK" })),
-    getAllTickersSnapshot: mock(() => Promise.resolve({ tickers: [], status: "OK" })),
-    getTickerSnapshot: mock(() => Promise.resolve(undefined)),
-  } as unknown as PolygonClient;
+    getBars: mock(() => Promise.resolve(mockBars)),
+    getQuotes: mock(() => Promise.resolve(new Map())),
+    getQuote: mock(() => Promise.resolve(null)),
+    getSnapshots: mock(() => Promise.resolve(new Map())),
+    getLatestTrades: mock(() => Promise.resolve(new Map())),
+    getOptionContracts: mock(() => Promise.resolve([])),
+    getOptionSnapshots: mock(() => Promise.resolve(new Map())),
+    getOptionExpirations: mock(() => Promise.resolve([])),
+    getStockSplits: mock(() => Promise.resolve([])),
+    getDividends: mock(() => Promise.resolve([])),
+  } as unknown as AlpacaMarketDataClient;
 }
 
 function createMockStorage(): CandleStorage & { candles: Candle[] } {
@@ -70,14 +118,14 @@ function createMockStorage(): CandleStorage & { candles: Candle[] } {
 // ============================================
 
 describe("CandleIngestionService", () => {
-  let polygonClient: PolygonClient;
+  let alpacaClient: AlpacaMarketDataClient;
   let storage: CandleStorage & { candles: Candle[] };
   let service: CandleIngestionService;
 
   beforeEach(() => {
-    polygonClient = createMockPolygonClient();
+    alpacaClient = createMockAlpacaClient();
     storage = createMockStorage();
-    service = new CandleIngestionService(polygonClient, storage);
+    service = new CandleIngestionService(alpacaClient, storage);
   });
 
   describe("ingestSymbol", () => {
@@ -96,7 +144,7 @@ describe("CandleIngestionService", () => {
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("converts Polygon bars to candle format correctly", async () => {
+    it("converts Alpaca bars to candle format correctly", async () => {
       await service.ingestSymbol("AAPL", {
         from: "2024-01-01",
         to: "2024-01-05",
@@ -119,18 +167,9 @@ describe("CandleIngestionService", () => {
 
     it("handles empty results", async () => {
       const emptyClient = {
-        ...polygonClient,
-        getAggregates: mock(() =>
-          Promise.resolve({
-            ticker: "UNKNOWN",
-            queryCount: 0,
-            resultsCount: 0,
-            adjusted: true,
-            status: "OK",
-            results: [],
-          })
-        ),
-      } as unknown as PolygonClient;
+        ...alpacaClient,
+        getBars: mock(() => Promise.resolve([])),
+      } as unknown as AlpacaMarketDataClient;
 
       const svc = new CandleIngestionService(emptyClient, storage);
       const result = await svc.ingestSymbol("UNKNOWN", {
@@ -146,9 +185,9 @@ describe("CandleIngestionService", () => {
 
     it("handles API errors gracefully", async () => {
       const errorClient = {
-        ...polygonClient,
-        getAggregates: mock(() => Promise.reject(new Error("API rate limit exceeded"))),
-      } as unknown as PolygonClient;
+        ...alpacaClient,
+        getBars: mock(() => Promise.reject(new Error("API rate limit exceeded"))),
+      } as unknown as AlpacaMarketDataClient;
 
       const svc = new CandleIngestionService(errorClient, storage);
       const result = await svc.ingestSymbol("AAPL", {
@@ -196,14 +235,14 @@ describe("CandleIngestionService", () => {
       const result = await service.incrementalUpdate("AAPL", "1h");
 
       expect(result.symbol).toBe("AAPL");
-      expect(polygonClient.getAggregates).toHaveBeenCalled();
+      expect(alpacaClient.getBars).toHaveBeenCalled();
     });
 
     it("backfills 30 days if no existing data", async () => {
       const result = await service.incrementalUpdate("NEW", "1h");
 
       expect(result.symbol).toBe("NEW");
-      expect(polygonClient.getAggregates).toHaveBeenCalled();
+      expect(alpacaClient.getBars).toHaveBeenCalled();
     });
   });
 });

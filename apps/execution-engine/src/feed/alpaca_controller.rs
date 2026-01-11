@@ -1,6 +1,6 @@
-//! Feed Controller
+//! Alpaca Feed Controller
 //!
-//! Manages the Databento feed lifecycle and provides an interface for
+//! Manages the Alpaca feed lifecycle and provides an interface for
 //! dynamic symbol subscription from gRPC services.
 //!
 //! The controller allows TypeScript services to:
@@ -14,24 +14,24 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, watch};
 use tracing::{info, warn};
 
-use super::{
-    DatabentoFeed, DatabentoFeedConfig, FeedProcessor, MicrostructureManager, create_feed_channel,
-};
-use crate::config::DatabentoConfig;
+use super::alpaca::{AlpacaFeed, AlpacaFeedConfig};
+use super::alpaca_processor::AlpacaProcessor;
+use super::{MicrostructureManager, create_alpaca_feed_channel};
+use crate::config::AlpacaFeedConfig as AlpacaConfig;
 
 // ============================================================================
-// Feed Controller
+// Alpaca Feed Controller
 // ============================================================================
 
-/// Controller for managing the Databento feed lifecycle.
+/// Controller for managing the Alpaca feed lifecycle.
 ///
 /// Provides an interface for gRPC services to start, stop, and update
 /// feed subscriptions dynamically based on runtime config.
-pub struct FeedController {
+pub struct AlpacaController {
     /// Shared microstructure manager.
     microstructure: Arc<Mutex<MicrostructureManager>>,
     /// Feed configuration.
-    config: DatabentoConfig,
+    config: AlpacaConfig,
     /// Currently subscribed symbols.
     subscribed_symbols: Arc<Mutex<HashSet<String>>>,
     /// Channel to signal feed restart with new symbols.
@@ -40,14 +40,14 @@ pub struct FeedController {
     is_running: Arc<Mutex<bool>>,
 }
 
-impl FeedController {
-    /// Create a new feed controller.
+impl AlpacaController {
+    /// Create a new Alpaca feed controller.
     ///
     /// # Arguments
     ///
-    /// * `config` - Databento configuration
+    /// * `config` - Alpaca configuration
     #[must_use]
-    pub fn new(config: DatabentoConfig) -> Self {
+    pub fn new(config: AlpacaConfig) -> Self {
         let (symbol_update_tx, _) = watch::channel(Vec::new());
 
         Self {
@@ -91,11 +91,11 @@ impl FeedController {
     ///
     /// `true` if the feed was started, `false` if already running (symbols updated).
     pub fn start(&self, symbols: Vec<String>, shutdown_rx: broadcast::Receiver<()>) -> bool {
-        // Check if API key is configured
-        if self.config.api_key.is_empty() {
+        // Check if API credentials are configured
+        if self.config.api_key.is_empty() || self.config.api_secret.is_empty() {
             warn!(
-                "DATABENTO_KEY not set - feed cannot start. \
-                 Set the environment variable and restart."
+                "ALPACA_KEY or ALPACA_SECRET not set - feed cannot start. \
+                 Set the environment variables and restart."
             );
             return false;
         }
@@ -112,7 +112,7 @@ impl FeedController {
         if *is_running {
             info!(
                 symbol_count = symbols.len(),
-                "Feed already running, updating symbols"
+                "Alpaca feed already running, updating symbols"
             );
             // Send update signal
             let _ = self.symbol_update_tx.send(symbols);
@@ -142,46 +142,46 @@ impl FeedController {
 
     /// Spawn the feed and processor tasks.
     fn spawn_feed(&self, symbols: Vec<String>, shutdown_rx: broadcast::Receiver<()>) {
-        let feed_config = DatabentoFeedConfig::from(&self.config);
+        let feed_config = AlpacaFeedConfig::from(&self.config);
         let microstructure = Arc::clone(&self.microstructure);
         let is_running = Arc::clone(&self.is_running);
 
         // Create feed channel
-        let (tx, rx) = create_feed_channel(Some(10_000));
+        let (tx, rx) = create_alpaca_feed_channel(Some(10_000));
 
         // Spawn feed processor
-        let processor = FeedProcessor::new(rx, microstructure);
+        let processor = AlpacaProcessor::new(rx, microstructure);
         tokio::spawn(async move {
             processor.run().await;
         });
 
         // Spawn feed consumer
-        let feed = DatabentoFeed::new(feed_config, tx);
+        let feed = AlpacaFeed::new(feed_config, tx);
         let mut shutdown = shutdown_rx;
 
         tokio::spawn(async move {
             tokio::select! {
                 result = feed.start(symbols) => {
                     if let Err(e) = result {
-                        tracing::error!(error = %e, "Databento feed error");
+                        tracing::error!(error = %e, "Alpaca feed error");
                     }
                     // Mark as not running when feed exits
                     *is_running.lock() = false;
                 }
                 _ = shutdown.recv() => {
-                    tracing::info!("Databento feed shutting down");
+                    tracing::info!("Alpaca feed shutting down");
                     *is_running.lock() = false;
                 }
             }
         });
 
-        info!("Databento feed started");
+        info!("Alpaca feed started");
     }
 }
 
-impl std::fmt::Debug for FeedController {
+impl std::fmt::Debug for AlpacaController {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FeedController")
+        f.debug_struct("AlpacaController")
             .field("is_running", &self.is_running())
             .field("subscribed_symbols", &self.subscribed_symbols())
             .finish()
@@ -196,20 +196,22 @@ impl std::fmt::Debug for FeedController {
 mod tests {
     use super::*;
 
-    fn create_test_config() -> DatabentoConfig {
-        DatabentoConfig {
+    fn create_test_config() -> AlpacaConfig {
+        AlpacaConfig {
             api_key: String::new(), // Empty key for testing
-            dataset: "XNAS.ITCH".to_string(),
+            api_secret: String::new(),
+            feed: "sip".to_string(),
             reconnect_delay_ms: 1000,
             max_reconnect_attempts: 3,
             symbols: vec![],
+            paper: true,
         }
     }
 
     #[test]
     fn test_new_controller() {
         let config = create_test_config();
-        let controller = FeedController::new(config);
+        let controller = AlpacaController::new(config);
 
         assert!(!controller.is_running());
         assert!(controller.subscribed_symbols().is_empty());
@@ -218,7 +220,7 @@ mod tests {
     #[test]
     fn test_microstructure_access() {
         let config = create_test_config();
-        let controller = FeedController::new(config);
+        let controller = AlpacaController::new(config);
 
         let manager = controller.microstructure();
         // Should be able to lock and access
@@ -228,7 +230,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_without_api_key() {
         let config = create_test_config();
-        let controller = FeedController::new(config);
+        let controller = AlpacaController::new(config);
 
         let (shutdown_tx, _) = broadcast::channel(1);
         let shutdown_rx = shutdown_tx.subscribe();
@@ -242,7 +244,7 @@ mod tests {
     #[test]
     fn test_stop_clears_symbols() {
         let config = create_test_config();
-        let controller = FeedController::new(config);
+        let controller = AlpacaController::new(config);
 
         // Manually set some symbols
         {

@@ -1,13 +1,15 @@
 /**
  * Subscription Manager
  *
- * Manages WebSocket subscription limits for Massive options API.
+ * Manages WebSocket subscription limits for Alpaca options API.
  * Handles connection pooling (1000 contracts per connection) with
  * priority-based subscription management.
  *
  * @see docs/plans/ui/40-streaming-data-integration.md Part 6
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import { isAlpacaConfigured } from "@cream/marketdata";
 import { cleanExpiredCache, getCachedQuote } from "./cache.js";
 import { createConnectionPool } from "./pool.js";
 import { clearAllState, connectionPools, isInitialized, setInitialized } from "./state.js";
@@ -31,8 +33,7 @@ export async function initSubscriptionManager(): Promise<void> {
     return;
   }
 
-  const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
-  if (!apiKey) {
+  if (!isAlpacaConfigured()) {
     return;
   }
 

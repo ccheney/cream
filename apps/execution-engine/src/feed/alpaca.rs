@@ -1,26 +1,35 @@
-//! Databento market data feed consumer.
+//! Alpaca WebSocket feed consumer.
 //!
-//! Provides real-time market data streaming using the official `databento` crate.
+//! Provides real-time market data streaming using the `alpaca-websocket` crate.
 //! Integrates with existing health tracking, gap recovery, and circuit breaker infrastructure.
 //!
 //! # Architecture
 //!
+//! **100% WebSocket streaming. No HTTP fallback. No polling.**
+//!
 //! ```text
 //! ┌─────────────────┐     ┌──────────────────┐     ┌────────────────────┐
-//! │  DatabentoFeed  │────>│ tokio::mpsc      │────>│ MicrostructureMan  │
+//! │   AlpacaFeed    │────>│ tokio::mpsc      │────>│ MicrostructureMan  │
 //! │  (ws consumer)  │     │ channel          │     │ (order book state) │
 //! └─────────────────┘     └──────────────────┘     └────────────────────┘
 //! ```
 //!
+//! # WebSocket Endpoints
+//!
+//! - Stocks (SIP): `wss://stream.data.alpaca.markets/v2/sip`
+//! - Stocks (IEX): `wss://stream.data.alpaca.markets/v2/iex`
+//! - Options: `wss://stream.data.alpaca.markets/v1beta1/options`
+//! - Crypto: `wss://stream.data.alpaca.markets/v1beta3/crypto/us`
+//!
 //! # Usage
 //!
 //! ```ignore
-//! use execution_engine::feed::{DatabentoFeed, DatabentoMessage};
+//! use execution_engine::feed::{AlpacaFeed, AlpacaMessage};
 //! use tokio::sync::mpsc;
 //!
-//! let config = DatabentoConfig::default();
-//! let (tx, rx) = mpsc::channel(1000);
-//! let feed = DatabentoFeed::new(config, tx);
+//! let config = AlpacaFeedConfig::from_env();
+//! let (tx, rx) = mpsc::channel(10_000);
+//! let feed = AlpacaFeed::new(config, tx);
 //!
 //! // Spawn the feed consumer
 //! tokio::spawn(async move {
@@ -28,11 +37,9 @@
 //! });
 //! ```
 
-use databento::{
-    LiveClient,
-    dbn::{Mbp1Msg, PitSymbolMap, SType, Schema, TradeMsg},
-    live::Subscription,
-};
+use alpaca_base::{Credentials, Environment};
+use alpaca_websocket::{AlpacaWebSocketClient, MarketDataUpdate, SubscriptionBuilder};
+use futures_util::StreamExt;
 use rust_decimal::Decimal;
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,7 +48,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
 use super::{FeedHealthTracker, GapRecoveryManager};
-use crate::config::DatabentoConfig;
+use crate::config::AlpacaFeedConfig as AlpacaConfig;
 use crate::resilience::CircuitBreaker;
 
 // ============================================================================
@@ -61,15 +68,15 @@ const MAX_RECONNECT_ATTEMPTS: u32 = 10;
 // Error Types
 // ============================================================================
 
-/// Errors from the Databento feed.
+/// Errors from the Alpaca feed.
 #[derive(Debug, Error)]
-pub enum DatabentoError {
+pub enum AlpacaError {
     /// Failed to build the client.
-    #[error("failed to build Databento client: {0}")]
+    #[error("failed to build Alpaca client: {0}")]
     ClientBuild(String),
 
     /// Failed to connect.
-    #[error("failed to connect to Databento: {0}")]
+    #[error("failed to connect to Alpaca: {0}")]
     Connection(String),
 
     /// Failed to subscribe.
@@ -85,7 +92,7 @@ pub enum DatabentoError {
     ChannelSend,
 
     /// API key not configured.
-    #[error("DATABENTO_KEY environment variable not set")]
+    #[error("ALPACA_KEY or ALPACA_SECRET environment variable not set")]
     MissingApiKey,
 
     /// Reconnection failed after max attempts.
@@ -97,9 +104,12 @@ pub enum DatabentoError {
 // Message Types
 // ============================================================================
 
-/// Messages emitted by the Databento feed.
+/// Messages emitted by the Alpaca feed.
+///
+/// These messages are compatible with the existing `FeedProcessor` which
+/// expects trade and quote updates for the microstructure manager.
 #[derive(Debug, Clone)]
-pub enum DatabentoMessage {
+pub enum AlpacaMessage {
     /// A trade occurred.
     Trade {
         /// Symbol.
@@ -108,7 +118,7 @@ pub enum DatabentoMessage {
         price: Decimal,
         /// Trade size.
         size: Decimal,
-        /// Event timestamp (nanoseconds since epoch).
+        /// Event timestamp (milliseconds since epoch).
         ts_event: i64,
     },
 
@@ -124,7 +134,25 @@ pub enum DatabentoMessage {
         bid_size: Decimal,
         /// Ask size.
         ask_size: Decimal,
-        /// Event timestamp (nanoseconds since epoch).
+        /// Event timestamp (milliseconds since epoch).
+        ts_event: i64,
+    },
+
+    /// OHLCV bar (aggregated).
+    Bar {
+        /// Symbol.
+        symbol: String,
+        /// Open price.
+        open: Decimal,
+        /// High price.
+        high: Decimal,
+        /// Low price.
+        low: Decimal,
+        /// Close price.
+        close: Decimal,
+        /// Volume.
+        volume: u64,
+        /// Event timestamp (milliseconds since epoch).
         ts_event: i64,
     },
 
@@ -148,58 +176,85 @@ pub enum DatabentoMessage {
 // Feed Configuration
 // ============================================================================
 
-/// Configuration for the Databento feed.
+/// Configuration for the Alpaca feed.
 #[derive(Debug, Clone)]
-pub struct DatabentoFeedConfig {
+pub struct AlpacaFeedConfig {
     /// API key.
     pub api_key: String,
-    /// Dataset (e.g., "XNAS.ITCH" for NASDAQ).
-    pub dataset: String,
+    /// API secret.
+    pub api_secret: String,
+    /// Feed type: "sip" for Algo Trader Plus, "iex" for Basic.
+    pub feed: String,
     /// Reconnection delay.
     pub reconnect_delay: Duration,
     /// Maximum reconnection attempts.
     pub max_reconnect_attempts: u32,
     /// Channel buffer size.
     pub channel_buffer: usize,
+    /// Whether to use paper trading environment.
+    pub paper: bool,
 }
 
-impl From<&DatabentoConfig> for DatabentoFeedConfig {
-    fn from(config: &DatabentoConfig) -> Self {
+impl From<&AlpacaConfig> for AlpacaFeedConfig {
+    fn from(config: &AlpacaConfig) -> Self {
         Self {
             api_key: config.api_key.clone(),
-            dataset: config.dataset.clone(),
+            api_secret: config.api_secret.clone(),
+            feed: config.feed.clone(),
             reconnect_delay: Duration::from_millis(config.reconnect_delay_ms),
             max_reconnect_attempts: config.max_reconnect_attempts,
             channel_buffer: DEFAULT_CHANNEL_BUFFER,
+            paper: config.paper,
         }
     }
 }
 
-impl Default for DatabentoFeedConfig {
+impl Default for AlpacaFeedConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            dataset: "XNAS.ITCH".to_string(),
+            api_secret: String::new(),
+            feed: "sip".to_string(),
             reconnect_delay: DEFAULT_RECONNECT_DELAY,
             max_reconnect_attempts: MAX_RECONNECT_ATTEMPTS,
             channel_buffer: DEFAULT_CHANNEL_BUFFER,
+            paper: true,
+        }
+    }
+}
+
+impl AlpacaFeedConfig {
+    /// Create configuration from environment variables.
+    #[must_use]
+    pub fn from_env() -> Self {
+        let cream_env = std::env::var("CREAM_ENV").unwrap_or_else(|_| "PAPER".to_string());
+        let paper = cream_env != "LIVE";
+
+        Self {
+            api_key: std::env::var("ALPACA_KEY").unwrap_or_default(),
+            api_secret: std::env::var("ALPACA_SECRET").unwrap_or_default(),
+            feed: std::env::var("ALPACA_FEED").unwrap_or_else(|_| "sip".to_string()),
+            paper,
+            ..Default::default()
         }
     }
 }
 
 // ============================================================================
-// Databento Feed
+// Alpaca Feed
 // ============================================================================
 
-/// Databento real-time market data feed consumer.
+/// Alpaca real-time market data feed consumer.
 ///
-/// Connects to Databento's live API and streams market data (trades, quotes)
+/// Connects to Alpaca's WebSocket API and streams market data (trades, quotes, bars)
 /// to a channel for processing by the microstructure manager.
-pub struct DatabentoFeed {
+///
+/// **Architecture:** 100% WebSocket. No HTTP fallback. No polling.
+pub struct AlpacaFeed {
     /// Configuration.
-    config: DatabentoFeedConfig,
+    config: AlpacaFeedConfig,
     /// Message sender channel.
-    tx: mpsc::Sender<DatabentoMessage>,
+    tx: mpsc::Sender<AlpacaMessage>,
     /// Health tracker for monitoring feed quality.
     health_tracker: FeedHealthTracker,
     /// Gap recovery manager for detecting missed messages.
@@ -208,17 +263,17 @@ pub struct DatabentoFeed {
     circuit_breaker: Option<Arc<CircuitBreaker>>,
 }
 
-impl DatabentoFeed {
-    /// Create a new Databento feed.
+impl AlpacaFeed {
+    /// Create a new Alpaca feed.
     ///
     /// # Arguments
     ///
     /// * `config` - Feed configuration
     /// * `tx` - Channel sender for outgoing messages
     #[must_use]
-    pub fn new(config: DatabentoFeedConfig, tx: mpsc::Sender<DatabentoMessage>) -> Self {
-        let health_tracker = FeedHealthTracker::new("databento");
-        let gap_manager = GapRecoveryManager::new("databento");
+    pub fn new(config: AlpacaFeedConfig, tx: mpsc::Sender<AlpacaMessage>) -> Self {
+        let health_tracker = FeedHealthTracker::new("alpaca");
+        let gap_manager = GapRecoveryManager::new("alpaca");
 
         Self {
             config,
@@ -233,11 +288,11 @@ impl DatabentoFeed {
     ///
     /// # Arguments
     ///
-    /// * `config` - Databento configuration from YAML
+    /// * `config` - Alpaca configuration from YAML
     /// * `tx` - Channel sender
     #[must_use]
-    pub fn from_config(config: &DatabentoConfig, tx: mpsc::Sender<DatabentoMessage>) -> Self {
-        Self::new(DatabentoFeedConfig::from(config), tx)
+    pub fn from_config(config: &AlpacaConfig, tx: mpsc::Sender<AlpacaMessage>) -> Self {
+        Self::new(AlpacaFeedConfig::from(config), tx)
     }
 
     /// Set the circuit breaker for connection resilience.
@@ -273,15 +328,16 @@ impl DatabentoFeed {
     /// Returns an error if:
     /// - API key is not configured
     /// - Maximum reconnection attempts exceeded
-    pub async fn start(mut self, symbols: Vec<String>) -> Result<(), DatabentoError> {
-        if self.config.api_key.is_empty() {
-            return Err(DatabentoError::MissingApiKey);
+    pub async fn start(mut self, symbols: Vec<String>) -> Result<(), AlpacaError> {
+        if self.config.api_key.is_empty() || self.config.api_secret.is_empty() {
+            return Err(AlpacaError::MissingApiKey);
         }
 
         info!(
-            dataset = %self.config.dataset,
+            feed = %self.config.feed,
             symbols = ?symbols,
-            "Starting Databento feed"
+            paper = %self.config.paper,
+            "Starting Alpaca feed"
         );
 
         let mut reconnect_attempts = 0;
@@ -289,7 +345,7 @@ impl DatabentoFeed {
         loop {
             match self.run_connection(&symbols).await {
                 Ok(()) => {
-                    info!("Databento feed ended normally");
+                    info!("Alpaca feed ended normally");
                     break;
                 }
                 Err(e) => {
@@ -298,13 +354,13 @@ impl DatabentoFeed {
                         error = %e,
                         attempt = reconnect_attempts,
                         max_attempts = self.config.max_reconnect_attempts,
-                        "Databento feed error"
+                        "Alpaca feed error"
                     );
 
                     // Send disconnected message
                     let _ = self
                         .tx
-                        .send(DatabentoMessage::Disconnected {
+                        .send(AlpacaMessage::Disconnected {
                             reason: e.to_string(),
                         })
                         .await;
@@ -315,7 +371,7 @@ impl DatabentoFeed {
                     }
 
                     if reconnect_attempts >= self.config.max_reconnect_attempts {
-                        return Err(DatabentoError::ReconnectionFailed(reconnect_attempts));
+                        return Err(AlpacaError::ReconnectionFailed(reconnect_attempts));
                     }
 
                     // Exponential backoff
@@ -330,136 +386,86 @@ impl DatabentoFeed {
     }
 
     /// Run a single connection attempt.
-    async fn run_connection(&mut self, symbols: &[String]) -> Result<(), DatabentoError> {
+    async fn run_connection(&mut self, symbols: &[String]) -> Result<(), AlpacaError> {
         // Check circuit breaker
         if let Some(ref breaker) = self.circuit_breaker {
             if !breaker.is_call_permitted() {
-                return Err(DatabentoError::Connection(
-                    "circuit breaker open".to_string(),
-                ));
+                return Err(AlpacaError::Connection("circuit breaker open".to_string()));
             }
         }
 
-        // Build client - use the builder pattern correctly
-        let builder = LiveClient::builder()
-            .key(&self.config.api_key)
-            .map_err(|e| DatabentoError::ClientBuild(e.to_string()))?
-            .dataset(&self.config.dataset);
+        // Build credentials
+        let credentials =
+            Credentials::new(self.config.api_key.clone(), self.config.api_secret.clone());
 
-        let mut client = builder
-            .build()
+        // Determine environment
+        let environment = if self.config.paper {
+            Environment::Paper
+        } else {
+            Environment::Live
+        };
+
+        // Build client
+        let client = AlpacaWebSocketClient::new(credentials, environment);
+
+        info!("Connecting to Alpaca WebSocket");
+
+        // Subscribe to market data using the builder
+        let subscription = SubscriptionBuilder::new()
+            .quotes(symbols.iter().map(String::as_str))
+            .trades(symbols.iter().map(String::as_str))
+            .bars(symbols.iter().map(String::as_str))
+            .build();
+
+        let mut stream = client
+            .subscribe_market_data(subscription)
             .await
-            .map_err(|e| DatabentoError::Connection(e.to_string()))?;
+            .map_err(|e| AlpacaError::Subscription(e.to_string()))?;
 
-        info!("Connected to Databento");
-
-        // Subscribe to trades
-        let symbols_vec: Vec<&str> = symbols.iter().map(String::as_str).collect();
-
-        client
-            .subscribe(
-                Subscription::builder()
-                    .symbols(symbols_vec.clone())
-                    .schema(Schema::Trades)
-                    .stype_in(SType::RawSymbol)
-                    .build(),
-            )
-            .await
-            .map_err(|e| DatabentoError::Subscription(e.to_string()))?;
-
-        // Subscribe to BBO quotes (mbp-1)
-        client
-            .subscribe(
-                Subscription::builder()
-                    .symbols(symbols_vec)
-                    .schema(Schema::Mbp1)
-                    .stype_in(SType::RawSymbol)
-                    .build(),
-            )
-            .await
-            .map_err(|e| DatabentoError::Subscription(e.to_string()))?;
-
-        info!(symbols = ?symbols, "Subscribed to trades and quotes");
-
-        // Start the stream
-        client
-            .start()
-            .await
-            .map_err(|e| DatabentoError::Stream(e.to_string()))?;
+        info!(symbols = ?symbols, "Subscribed to Alpaca market data");
 
         // Send connected message
         self.tx
-            .send(DatabentoMessage::Connected)
+            .send(AlpacaMessage::Connected)
             .await
-            .map_err(|_| DatabentoError::ChannelSend)?;
+            .map_err(|_| AlpacaError::ChannelSend)?;
 
         // Record success in circuit breaker
         if let Some(ref breaker) = self.circuit_breaker {
             breaker.record_success();
         }
 
-        // Process messages
-        let mut symbol_map = PitSymbolMap::new();
+        // Process messages - stream forever via WebSocket
+        while let Some(update) = stream.next().await {
+            match update {
+                MarketDataUpdate::Trade { symbol, trade } => {
+                    let ts_event = trade.timestamp.timestamp_millis();
 
-        while let Some(record) = client
-            .next_record()
-            .await
-            .map_err(|e| DatabentoError::Stream(e.to_string()))?
-        {
-            // Update symbol map
-            if let Err(e) = symbol_map.on_record(record) {
-                warn!(error = %e, "Failed to update symbol map");
-                continue;
-            }
-
-            // Process trade messages
-            if let Some(trade) = record.get::<TradeMsg>() {
-                let instrument_id = trade.hd.instrument_id;
-                let symbol = symbol_map
-                    .get(instrument_id)
-                    .map(ToString::to_string)
-                    .unwrap_or_default();
-
-                if !symbol.is_empty() {
-                    #[allow(clippy::cast_possible_wrap)]
-                    let ts_event = trade.hd.ts_event as i64;
-
-                    let msg = DatabentoMessage::Trade {
+                    let msg = AlpacaMessage::Trade {
                         symbol,
                         price: Self::convert_price(trade.price),
                         size: Decimal::from(trade.size),
                         ts_event,
                     };
 
-                    // Record latency for health tracking
                     let latency = Self::calculate_latency(ts_event);
                     self.health_tracker.record_message(latency);
 
                     self.tx
                         .send(msg)
                         .await
-                        .map_err(|_| DatabentoError::ChannelSend)?;
+                        .map_err(|_| AlpacaError::ChannelSend)?;
                 }
-            }
 
-            // Process quote (MBP-1) messages
-            if let Some(quote) = record.get::<Mbp1Msg>() {
-                let instrument_id = quote.hd.instrument_id;
-                let symbol = symbol_map
-                    .get(instrument_id)
-                    .map(ToString::to_string)
-                    .unwrap_or_default();
+                MarketDataUpdate::Quote { symbol, quote } => {
+                    let ts_event = quote.timestamp.timestamp_millis();
 
-                if !symbol.is_empty() {
-                    #[allow(clippy::cast_possible_wrap)]
-                    let ts_event = quote.hd.ts_event as i64;
-
-                    let msg = DatabentoMessage::Quote {
+                    let msg = AlpacaMessage::Quote {
                         symbol,
-                        bid: Self::convert_price(quote.levels[0].bid_px),
-                        ask: Self::convert_price(quote.levels[0].ask_px),
-                        bid_size: Decimal::from(quote.levels[0].bid_sz),
-                        ask_size: Decimal::from(quote.levels[0].ask_sz),
+                        bid: Self::convert_price(quote.bid_price),
+                        ask: Self::convert_price(quote.ask_price),
+                        bid_size: Decimal::from(quote.bid_size),
+                        ask_size: Decimal::from(quote.ask_size),
                         ts_event,
                     };
 
@@ -469,33 +475,56 @@ impl DatabentoFeed {
                     self.tx
                         .send(msg)
                         .await
-                        .map_err(|_| DatabentoError::ChannelSend)?;
+                        .map_err(|_| AlpacaError::ChannelSend)?;
+                }
+
+                MarketDataUpdate::Bar { symbol, bar } => {
+                    let ts_event = bar.timestamp.timestamp_millis();
+
+                    let msg = AlpacaMessage::Bar {
+                        symbol,
+                        open: Self::convert_price(bar.open),
+                        high: Self::convert_price(bar.high),
+                        low: Self::convert_price(bar.low),
+                        close: Self::convert_price(bar.close),
+                        volume: bar.volume,
+                        ts_event,
+                    };
+
+                    let latency = Self::calculate_latency(ts_event);
+                    self.health_tracker.record_message(latency);
+
+                    self.tx
+                        .send(msg)
+                        .await
+                        .map_err(|_| AlpacaError::ChannelSend)?;
                 }
             }
 
-            debug!("Processed record");
+            debug!("Processed Alpaca message");
         }
 
         Ok(())
     }
 
-    /// Convert Databento fixed-point price to Decimal.
-    fn convert_price(price: i64) -> Decimal {
-        Decimal::new(price, 9)
+    /// Convert f64 price to Decimal with appropriate precision.
+    fn convert_price(price: f64) -> Decimal {
+        // Use from_f64_retain for better precision
+        Decimal::try_from(price).unwrap_or_else(|_| Decimal::ZERO)
     }
 
     /// Calculate latency from event timestamp.
-    fn calculate_latency(ts_event_nanos: i64) -> Duration {
-        let now_nanos = std::time::SystemTime::now()
+    fn calculate_latency(ts_event_millis: i64) -> Duration {
+        let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos() as i64)
+            .map(|d| d.as_millis() as i64)
             .unwrap_or(0);
 
-        let latency_nanos = now_nanos.saturating_sub(ts_event_nanos);
+        let latency_millis = now_millis.saturating_sub(ts_event_millis);
 
         // Clamp to reasonable range (0 to 10 seconds)
         #[allow(clippy::cast_sign_loss)]
-        Duration::from_nanos(latency_nanos.clamp(0, 10_000_000_000) as u64)
+        Duration::from_millis(latency_millis.clamp(0, 10_000) as u64)
     }
 }
 
@@ -503,7 +532,7 @@ impl DatabentoFeed {
 // Channel Creation Helper
 // ============================================================================
 
-/// Create a channel pair for Databento feed messages.
+/// Create a channel pair for Alpaca feed messages.
 ///
 /// # Arguments
 ///
@@ -513,12 +542,9 @@ impl DatabentoFeed {
 ///
 /// A tuple of (sender, receiver) for the message channel.
 #[must_use]
-pub fn create_feed_channel(
+pub fn create_alpaca_feed_channel(
     buffer_size: Option<usize>,
-) -> (
-    mpsc::Sender<DatabentoMessage>,
-    mpsc::Receiver<DatabentoMessage>,
-) {
+) -> (mpsc::Sender<AlpacaMessage>, mpsc::Receiver<AlpacaMessage>) {
     mpsc::channel(buffer_size.unwrap_or(DEFAULT_CHANNEL_BUFFER))
 }
 
@@ -532,66 +558,74 @@ mod tests {
 
     #[test]
     fn test_convert_price() {
-        // 150.50 dollars = 150_500_000_000 in Databento fixed-point
-        let price = DatabentoFeed::convert_price(150_500_000_000);
-        assert_eq!(price.to_string(), "150.500000000");
+        let price = AlpacaFeed::convert_price(150.50);
+        assert_eq!(price.to_string(), "150.5");
+
+        let zero = AlpacaFeed::convert_price(0.0);
+        assert_eq!(zero, Decimal::ZERO);
     }
 
     #[test]
-    fn test_config_from_databento_config() {
-        let config = DatabentoConfig {
+    fn test_config_from_alpaca_config() {
+        let config = AlpacaConfig {
             api_key: "test-key".to_string(),
-            dataset: "XNAS.ITCH".to_string(),
+            api_secret: "test-secret".to_string(),
+            feed: "sip".to_string(),
             reconnect_delay_ms: 2000,
             max_reconnect_attempts: 3,
             symbols: vec!["AAPL".to_string(), "MSFT".to_string()],
+            paper: true,
         };
 
-        let feed_config = DatabentoFeedConfig::from(&config);
+        let feed_config = AlpacaFeedConfig::from(&config);
         assert_eq!(feed_config.api_key, "test-key");
-        assert_eq!(feed_config.dataset, "XNAS.ITCH");
+        assert_eq!(feed_config.api_secret, "test-secret");
+        assert_eq!(feed_config.feed, "sip");
         assert_eq!(feed_config.reconnect_delay, Duration::from_millis(2000));
         assert_eq!(feed_config.max_reconnect_attempts, 3);
+        assert!(feed_config.paper);
     }
 
     #[test]
     fn test_default_config() {
-        let config = DatabentoFeedConfig::default();
+        let config = AlpacaFeedConfig::default();
         assert!(config.api_key.is_empty());
-        assert_eq!(config.dataset, "XNAS.ITCH");
+        assert!(config.api_secret.is_empty());
+        assert_eq!(config.feed, "sip");
         assert_eq!(config.reconnect_delay, DEFAULT_RECONNECT_DELAY);
         assert_eq!(config.max_reconnect_attempts, MAX_RECONNECT_ATTEMPTS);
+        assert!(config.paper);
     }
 
     #[tokio::test]
     async fn test_feed_requires_api_key() {
-        let config = DatabentoFeedConfig::default();
+        let config = AlpacaFeedConfig::default();
         let (tx, _rx) = mpsc::channel(100);
-        let feed = DatabentoFeed::new(config, tx);
+        let feed = AlpacaFeed::new(config, tx);
 
         let result = feed.start(vec!["AAPL".to_string()]).await;
-        assert!(matches!(result, Err(DatabentoError::MissingApiKey)));
+        assert!(matches!(result, Err(AlpacaError::MissingApiKey)));
     }
 
     #[test]
     fn test_create_feed_channel() {
-        let (tx, _rx) = create_feed_channel(Some(100));
+        let (tx, _rx) = create_alpaca_feed_channel(Some(100));
         assert!(!tx.is_closed());
     }
 
     #[test]
     fn test_latency_calculation() {
-        let now_nanos = std::time::SystemTime::now()
+        let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as i64;
+            .expect("time")
+            .as_millis() as i64;
 
-        // Event 1ms ago
-        let event_ts = now_nanos - 1_000_000;
-        let latency = DatabentoFeed::calculate_latency(event_ts);
+        // Event 100ms ago
+        let event_ts = now_millis - 100;
+        let latency = AlpacaFeed::calculate_latency(event_ts);
 
-        // Should be approximately 1ms (allow for test execution time)
-        assert!(latency.as_micros() >= 900);
-        assert!(latency.as_micros() < 100_000); // Less than 100ms
+        // Should be approximately 100ms (allow for test execution time)
+        assert!(latency.as_millis() >= 90);
+        assert!(latency.as_millis() < 1000);
     }
 }

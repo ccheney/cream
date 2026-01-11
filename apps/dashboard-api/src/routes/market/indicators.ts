@@ -2,24 +2,36 @@
  * Indicators Routes
  *
  * Endpoints for computed technical indicators (RSI, ATR, SMA, EMA, MACD).
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import type { AlpacaTimeframe } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import {
   ErrorSchema,
+  getAlpacaClient,
   getCached,
-  getPolygonClient,
   type Indicators,
   IndicatorsSchema,
   isMarketHours,
   setCache,
-  TIMESPAN_MAP,
   type Timeframe,
   TimeframeSchema,
 } from "./types.js";
 
 const app = new OpenAPIHono();
+
+// Map internal timeframes to Alpaca timeframes
+const ALPACA_TIMEFRAME_MAP: Record<Timeframe, AlpacaTimeframe> = {
+  "1m": "1Min",
+  "5m": "5Min",
+  "15m": "15Min",
+  "1h": "1Hour",
+  "4h": "4Hour",
+  "1d": "1Day",
+};
 
 // ============================================
 // Indicator Calculation Functions
@@ -130,41 +142,42 @@ app.openapi(indicatorsRoute, async (c) => {
     return c.json(cached, 200);
   }
 
-  const client = getPolygonClient();
-  const tf = TIMESPAN_MAP[timeframe as Timeframe];
+  const client = getAlpacaClient();
+  const alpacaTimeframe = ALPACA_TIMEFRAME_MAP[timeframe as Timeframe];
+  const isIntraday = timeframe !== "1d";
 
   const to = new Date();
   const from = new Date();
-  if (tf.timespan === "day") {
-    from.setDate(from.getDate() - 300);
-  } else {
+  if (isIntraday) {
     from.setDate(from.getDate() - 60);
+  } else {
+    from.setDate(from.getDate() - 300);
   }
 
   try {
-    const response = await client.getAggregates(
+    const bars = await client.getBars(
       upperSymbol,
-      tf.multiplier,
-      tf.timespan,
+      alpacaTimeframe,
       from.toISOString().slice(0, 10),
       to.toISOString().slice(0, 10),
-      { limit: 50000 }
+      10000
     );
 
-    if (!response.results || response.results.length === 0) {
+    if (!bars || bars.length === 0) {
       throw new HTTPException(503, {
         message: `No market data available for ${upperSymbol}`,
       });
     }
 
-    let bars = response.results;
-    if (tf.timespan !== "day") {
-      bars = response.results.filter((bar) => isMarketHours(new Date(bar.t)));
+    // Filter to market hours for intraday
+    let filteredBars = bars;
+    if (isIntraday) {
+      filteredBars = bars.filter((bar) => isMarketHours(new Date(bar.timestamp)));
     }
 
-    const closes = bars.map((b) => b.c);
-    const highs = bars.map((b) => b.h);
-    const lows = bars.map((b) => b.l);
+    const closes = filteredBars.map((b) => b.close);
+    const highs = filteredBars.map((b) => b.high);
+    const lows = filteredBars.map((b) => b.low);
 
     const ema12Val = ema(closes, 12);
     const ema26Val = ema(closes, 26);

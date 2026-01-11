@@ -4,21 +4,23 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  AlpacaMarketDataAdapter,
   createMarketDataAdapter,
   getMarketDataAdapter,
   isMarketDataAvailable,
   MarketDataConfigError,
   MockMarketDataAdapter,
-  PolygonMarketDataAdapter,
 } from "./factory";
 
 describe("MarketDataFactory", () => {
   const originalEnv = process.env.CREAM_ENV;
-  const originalPolygonKey = process.env.POLYGON_KEY;
+  const originalAlpacaKey = process.env.ALPACA_KEY;
+  const originalAlpacaSecret = process.env.ALPACA_SECRET;
 
   beforeEach(() => {
     // Reset environment
-    delete process.env.POLYGON_KEY;
+    delete process.env.ALPACA_KEY;
+    delete process.env.ALPACA_SECRET;
   });
 
   afterEach(() => {
@@ -28,10 +30,15 @@ describe("MarketDataFactory", () => {
     } else {
       delete process.env.CREAM_ENV;
     }
-    if (originalPolygonKey) {
-      process.env.POLYGON_KEY = originalPolygonKey;
+    if (originalAlpacaKey) {
+      process.env.ALPACA_KEY = originalAlpacaKey;
     } else {
-      delete process.env.POLYGON_KEY;
+      delete process.env.ALPACA_KEY;
+    }
+    if (originalAlpacaSecret) {
+      process.env.ALPACA_SECRET = originalAlpacaSecret;
+    } else {
+      delete process.env.ALPACA_SECRET;
     }
   });
 
@@ -43,37 +50,42 @@ describe("MarketDataFactory", () => {
       expect(adapter.getType()).toBe("mock");
     });
 
-    test("returns PolygonMarketDataAdapter for PAPER with API key", () => {
+    test("returns AlpacaMarketDataAdapter for PAPER with API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      process.env.POLYGON_KEY = "test-key";
+      process.env.ALPACA_KEY = "test-key";
+      process.env.ALPACA_SECRET = "test-secret";
       const adapter = createMarketDataAdapter();
-      expect(adapter).toBeInstanceOf(PolygonMarketDataAdapter);
-      expect(adapter.getType()).toBe("polygon");
+      expect(adapter).toBeInstanceOf(AlpacaMarketDataAdapter);
+      expect(adapter.getType()).toBe("alpaca");
     });
 
-    test("returns PolygonMarketDataAdapter for LIVE with API key", () => {
+    test("returns AlpacaMarketDataAdapter for LIVE with API keys", () => {
       process.env.CREAM_ENV = "LIVE";
-      process.env.POLYGON_KEY = "test-key";
+      process.env.ALPACA_KEY = "test-key";
+      process.env.ALPACA_SECRET = "test-secret";
       const adapter = createMarketDataAdapter();
-      expect(adapter).toBeInstanceOf(PolygonMarketDataAdapter);
-      expect(adapter.getType()).toBe("polygon");
+      expect(adapter).toBeInstanceOf(AlpacaMarketDataAdapter);
+      expect(adapter.getType()).toBe("alpaca");
     });
 
-    test("throws MarketDataConfigError for PAPER without API key", () => {
+    test("throws MarketDataConfigError for PAPER without API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      delete process.env.POLYGON_KEY;
+      delete process.env.ALPACA_KEY;
+      delete process.env.ALPACA_SECRET;
       expect(() => createMarketDataAdapter()).toThrow(MarketDataConfigError);
     });
 
-    test("throws MarketDataConfigError for LIVE without API key", () => {
+    test("throws MarketDataConfigError for LIVE without API keys", () => {
       process.env.CREAM_ENV = "LIVE";
-      delete process.env.POLYGON_KEY;
+      delete process.env.ALPACA_KEY;
+      delete process.env.ALPACA_SECRET;
       expect(() => createMarketDataAdapter()).toThrow(MarketDataConfigError);
     });
 
     test("accepts explicit environment override", () => {
       process.env.CREAM_ENV = "LIVE";
-      process.env.POLYGON_KEY = "test-key";
+      process.env.ALPACA_KEY = "test-key";
+      process.env.ALPACA_SECRET = "test-secret";
       const adapter = createMarketDataAdapter("BACKTEST");
       expect(adapter).toBeInstanceOf(MockMarketDataAdapter);
     });
@@ -87,19 +99,21 @@ describe("MarketDataFactory", () => {
       expect(adapter?.getType()).toBe("mock");
     });
 
-    test("returns null for PAPER without API key", () => {
+    test("returns null for PAPER without API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      delete process.env.POLYGON_KEY;
+      delete process.env.ALPACA_KEY;
+      delete process.env.ALPACA_SECRET;
       const adapter = getMarketDataAdapter();
       expect(adapter).toBeNull();
     });
 
-    test("returns adapter for PAPER with API key", () => {
+    test("returns adapter for PAPER with API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      process.env.POLYGON_KEY = "test-key";
+      process.env.ALPACA_KEY = "test-key";
+      process.env.ALPACA_SECRET = "test-secret";
       const adapter = getMarketDataAdapter();
       expect(adapter).not.toBeNull();
-      expect(adapter?.getType()).toBe("polygon");
+      expect(adapter?.getType()).toBe("alpaca");
     });
   });
 
@@ -109,15 +123,17 @@ describe("MarketDataFactory", () => {
       expect(isMarketDataAvailable()).toBe(true);
     });
 
-    test("returns false for PAPER without API key", () => {
+    test("returns false for PAPER without API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      delete process.env.POLYGON_KEY;
+      delete process.env.ALPACA_KEY;
+      delete process.env.ALPACA_SECRET;
       expect(isMarketDataAvailable()).toBe(false);
     });
 
-    test("returns true for PAPER with API key", () => {
+    test("returns true for PAPER with API keys", () => {
       process.env.CREAM_ENV = "PAPER";
-      process.env.POLYGON_KEY = "test-key";
+      process.env.ALPACA_KEY = "test-key";
+      process.env.ALPACA_SECRET = "test-secret";
       expect(isMarketDataAvailable()).toBe(true);
     });
   });

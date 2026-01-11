@@ -3,32 +3,32 @@
  *
  * Unified API clients for all market data providers.
  *
+ * Primary provider: Alpaca Markets (Algo Trader Plus) for unified market data.
+ *
  * @example
  * ```ts
  * import {
- *   createDatabentoClientFromEnv,
- *   createPolygonClientFromEnv,
+ *   createAlpacaClientFromEnv,
+ *   createAlpacaStocksClientFromEnv,
  *   createFmpClientFromEnv,
  *   createAlphaVantageClientFromEnv,
  * } from "@cream/marketdata";
  *
- * // Execution-grade feed (real-time quotes, order book, trades)
- * const databento = createDatabentoClientFromEnv();
- * await databento.connect();
- * databento.on((event) => {
- *   if (event.type === "message") {
- *     console.log("Market data:", event.message);
+ * // Alpaca REST API (candles, quotes, options)
+ * const alpaca = createAlpacaClientFromEnv();
+ * const bars = await alpaca.getBars("AAPL", "1Hour", "2026-01-01", "2026-01-05");
+ * const quotes = await alpaca.getQuotes(["AAPL", "MSFT"]);
+ * const options = await alpaca.getOptionSnapshots(["AAPL250117C00150000"]);
+ *
+ * // Alpaca WebSocket (real-time streaming)
+ * const ws = createAlpacaStocksClientFromEnv("sip");
+ * await ws.connect();
+ * ws.on((event) => {
+ *   if (event.type === "quote") {
+ *     console.log(`${event.message.S}: $${event.message.bp}/$${event.message.ap}`);
  *   }
  * });
- * await databento.subscribe({
- *   dataset: "XNAS.ITCH",
- *   schema: "mbp-1",
- *   symbols: ["AAPL", "MSFT"],
- * });
- *
- * // Cognitive feed (candles, options)
- * const polygon = createPolygonClientFromEnv();
- * const candles = await polygon.getAggregates("AAPL", 1, "hour", "2026-01-01", "2026-01-05");
+ * ws.subscribe("quotes", ["AAPL", "MSFT"]);
  *
  * // Fundamentals (transcripts, filings)
  * const fmp = createFmpClientFromEnv();
@@ -39,7 +39,7 @@
  * const yields = await av.getTreasuryYield("10year", "daily");
  * ```
  *
- * @see docs/plans/02-data-layer.md
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 // Base client
@@ -93,13 +93,13 @@ export {
 export {
   type AdapterCandle,
   type AdapterQuote,
+  AlpacaMarketDataAdapter,
   createMarketDataAdapter,
   getMarketDataAdapter,
   isMarketDataAvailable,
   type MarketDataAdapter,
   MarketDataConfigError,
   MockMarketDataAdapter,
-  PolygonMarketDataAdapter,
 } from "./factory";
 // Candle ingestion
 export {

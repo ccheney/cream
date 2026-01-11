@@ -2,18 +2,26 @@
 //!
 //! This module handles real-time market data ingestion, microstructure tracking,
 //! gap recovery, and feed health monitoring.
+//!
+//! # Feed Provider
+//!
+//! **Alpaca**: WebSocket-first, unified market data provider (Algo Trader Plus)
 
-pub mod controller;
-pub mod databento;
+pub mod alpaca;
+pub mod alpaca_controller;
+pub mod alpaca_processor;
 pub mod gap_recovery;
 pub mod health;
 pub mod microstructure;
-pub mod processor;
 
-pub use controller::FeedController;
-pub use databento::{
-    DatabentoError, DatabentoFeed, DatabentoFeedConfig, DatabentoMessage, create_feed_channel,
+// Alpaca feed exports (primary provider)
+pub use alpaca::{
+    AlpacaError, AlpacaFeed, AlpacaFeedConfig, AlpacaMessage, create_alpaca_feed_channel,
 };
+pub use alpaca_controller::AlpacaController;
+pub use alpaca_processor::{AlpacaProcessor, AlpacaProcessorBuilder};
+
+// Infrastructure
 pub use gap_recovery::{
     GapDetectionResult, GapRecoveryAction, GapRecoveryConfig, GapRecoveryManager, GapType,
 };
@@ -22,4 +30,3 @@ pub use microstructure::{
     DepthLevel, MicrostructureManager, MicrostructureState, MicrostructureTracker, QuoteUpdate,
     TradeSide, TradeUpdate,
 };
-pub use processor::{FeedProcessor, FeedProcessorBuilder};

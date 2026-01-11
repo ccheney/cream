@@ -1,14 +1,15 @@
 /**
  * Candle Ingestion Service
  *
- * Orchestrates fetching OHLCV candles from Polygon/Massive API
+ * Orchestrates fetching OHLCV candles from Alpaca API
  * and storing them in Turso database.
  *
  * @see docs/plans/02-data-layer.md
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 import { z } from "zod";
-import type { AggregateBar, PolygonClient, Timespan } from "../providers/polygon";
+import type { AlpacaBar, AlpacaMarketDataClient, AlpacaTimeframe } from "../providers/alpaca";
 
 // ============================================
 // Types
@@ -67,15 +68,15 @@ export interface IngestionOptions {
 // Timeframe Mapping
 // ============================================
 
-const TIMEFRAME_TO_POLYGON: Record<Timeframe, { multiplier: number; timespan: Timespan }> = {
-  "1m": { multiplier: 1, timespan: "minute" },
-  "5m": { multiplier: 5, timespan: "minute" },
-  "15m": { multiplier: 15, timespan: "minute" },
-  "30m": { multiplier: 30, timespan: "minute" },
-  "1h": { multiplier: 1, timespan: "hour" },
-  "4h": { multiplier: 4, timespan: "hour" },
-  "1d": { multiplier: 1, timespan: "day" },
-  "1w": { multiplier: 1, timespan: "week" },
+const TIMEFRAME_TO_ALPACA: Record<Timeframe, AlpacaTimeframe> = {
+  "1m": "1Min",
+  "5m": "5Min",
+  "15m": "15Min",
+  "30m": "30Min",
+  "1h": "1Hour",
+  "4h": "4Hour",
+  "1d": "1Day",
+  "1w": "1Week",
 };
 
 const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
@@ -101,7 +102,7 @@ export interface CandleStorage {
 
 export class CandleIngestionService {
   constructor(
-    private polygonClient: PolygonClient,
+    private alpacaClient: AlpacaMarketDataClient,
     private storage: CandleStorage
   ) {}
 
@@ -121,27 +122,26 @@ export class CandleIngestionService {
     };
 
     try {
-      // Fetch from Polygon
-      const polygonConfig = TIMEFRAME_TO_POLYGON[options.timeframe];
-      const response = await this.polygonClient.getAggregates(
+      // Fetch from Alpaca
+      const alpacaTimeframe = TIMEFRAME_TO_ALPACA[options.timeframe];
+      const bars = await this.alpacaClient.getBars(
         symbol,
-        polygonConfig.multiplier,
-        polygonConfig.timespan,
+        alpacaTimeframe,
         options.from,
         options.to,
-        { adjusted: true, sort: "asc", limit: 50000 }
+        50000
       );
 
-      if (!response.results || response.results.length === 0) {
+      if (bars.length === 0) {
         result.errors.push(`No candles returned for ${symbol}`);
         result.durationMs = Date.now() - startTime;
         return result;
       }
 
-      result.candlesFetched = response.results.length;
+      result.candlesFetched = bars.length;
 
       // Convert to candles
-      const candles = this.convertToCandles(symbol, options.timeframe, response.results);
+      const candles = this.convertToCandles(symbol, options.timeframe, bars);
 
       // Detect gaps if requested
       if (options.detectGaps !== false) {
@@ -245,20 +245,20 @@ export class CandleIngestionService {
   }
 
   /**
-   * Convert Polygon bars to Candle format
+   * Convert Alpaca bars to Candle format
    */
-  private convertToCandles(symbol: string, timeframe: Timeframe, bars: AggregateBar[]): Candle[] {
+  private convertToCandles(symbol: string, timeframe: Timeframe, bars: AlpacaBar[]): Candle[] {
     return bars.map((bar) => ({
       symbol,
       timeframe,
-      timestamp: new Date(bar.t).toISOString(),
-      open: bar.o,
-      high: bar.h,
-      low: bar.l,
-      close: bar.c,
-      volume: bar.v,
-      vwap: bar.vw ?? null,
-      tradeCount: bar.n ?? null,
+      timestamp: bar.timestamp,
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume,
+      vwap: bar.vwap ?? null,
+      tradeCount: bar.tradeCount ?? null,
       adjusted: true,
     }));
   }

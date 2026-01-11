@@ -4,7 +4,7 @@
  * Configuration constants for options subscription management.
  */
 
-/** Maximum contracts per Massive WebSocket connection */
+/** Maximum contracts per Alpaca WebSocket connection */
 export const MAX_CONTRACTS_PER_CONNECTION = 1000;
 
 /** Threshold to spawn new connection (90% of limit) */

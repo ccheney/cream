@@ -2,9 +2,11 @@
  * Subscription Manager Types
  *
  * Type definitions for options subscription management.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import type { MassiveWebSocketClient } from "@cream/marketdata";
+import type { AlpacaWebSocketClient } from "@cream/marketdata";
 
 /**
  * Subscription priority levels.
@@ -46,7 +48,7 @@ export interface CachedQuote {
 }
 
 export interface ConnectionPool {
-  client: MassiveWebSocketClient;
+  client: AlpacaWebSocketClient;
   contracts: Set<string>;
   isConnected: boolean;
   reconnectAttempts: number;

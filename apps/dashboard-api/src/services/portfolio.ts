@@ -3,9 +3,15 @@
  *
  * Unified service for portfolio-related operations.
  * Handles position retrieval, options data enrichment, and performance metrics.
+ *
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { createPolygonClientFromEnv, parseOptionTicker } from "@cream/marketdata";
+import {
+  type AlpacaMarketDataClient,
+  createAlpacaClientFromEnv,
+  parseOptionTicker,
+} from "@cream/marketdata";
 import { getPositionsRepo } from "../db.js";
 import log from "../logger.js";
 import { systemState } from "../routes/system.js";
@@ -41,15 +47,15 @@ export interface OptionsPosition {
 
 export class PortfolioService {
   private static instance: PortfolioService;
-  private _polygonClient?: ReturnType<typeof createPolygonClientFromEnv>;
+  private _alpacaClient?: AlpacaMarketDataClient;
 
   private constructor() {}
 
-  private get polygonClient() {
-    if (!this._polygonClient) {
-      this._polygonClient = createPolygonClientFromEnv();
+  private get alpacaClient() {
+    if (!this._alpacaClient) {
+      this._alpacaClient = createAlpacaClientFromEnv();
     }
-    return this._polygonClient;
+    return this._alpacaClient;
   }
 
   /** Reset singleton for testing */
@@ -137,39 +143,38 @@ export class PortfolioService {
 
     const results: OptionsPosition[] = [];
 
-    // Fetch chain snapshots for each underlying
+    // Fetch snapshots for each underlying group
     for (const [underlying, items] of byUnderlying.entries()) {
       try {
-        // Fetch snapshot for the underlying's option chain
-        // We can filter by expiration/strike if needed, but for now getting the chain
-        // is the best way to get Greeks.
-        // Optimization: limit to relevant strikes/dates if possible.
-        // For now, just fetch the chain snapshot.
-        const chainSnapshot = await this.polygonClient.getOptionChainSnapshot(underlying, {
-          limit: 250, // Hope our positions are in the top 250 liquid ones or broadly returned
-        });
-
-        const snapshotMap = new Map(
-          chainSnapshot.results?.map((r) => [r.details?.ticker, r]) ?? []
-        );
-
-        if (!items) {
+        if (!items || items.length === 0) {
           continue;
         }
 
+        // Get option symbols for this underlying
+        const optionSymbols = items
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+          .map((item) => item.pos.symbol);
+
+        // Fetch option snapshots for all contracts (includes greeks)
+        const optionSnapshots = await this.alpacaClient.getOptionSnapshots(optionSymbols);
+
+        // Get underlying price from stock snapshot
+        const stockSnapshots = await this.alpacaClient.getSnapshots([underlying]);
+        const stockSnapshot = stockSnapshots.get(underlying);
+        const underlyingPrice =
+          stockSnapshot?.dailyBar?.close ?? stockSnapshot?.latestTrade?.price ?? 0;
+
         for (const item of items) {
-          // items is not undefined here
           if (!item) {
             continue;
           }
 
-          const marketData = snapshotMap.get(item.pos.symbol);
-          const underlyingPrice = marketData?.underlying_asset?.price ?? 0;
+          const marketData = optionSnapshots.get(item.pos.symbol);
 
           // Fallback values if market data missing
           const currentPrice =
-            marketData?.last_quote?.midpoint ??
-            marketData?.day?.close ??
+            marketData?.latestTrade?.price ??
+            marketData?.latestQuote?.bidPrice ??
             item.pos.currentPrice ??
             0;
 

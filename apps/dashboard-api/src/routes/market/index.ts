@@ -37,9 +37,10 @@ export {
   CACHE_VERSION,
   CandleSchema,
   ErrorSchema,
+  getAlpacaClient,
   getCached,
   getDaysAgo,
-  getPolygonClient,
+  getPolygonClient, // Legacy alias for getAlpacaClient
   getTodayNY,
   IndicatorsSchema,
   isMarketHours,

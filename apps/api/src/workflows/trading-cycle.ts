@@ -320,7 +320,10 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   analystOutputs = analystsResult.result;
 
   if (!analystOutputs.news || !analystOutputs.fundamentals) {
-    const missing = [!analystOutputs.news && "news", !analystOutputs.fundamentals && "fundamentals"].filter(Boolean);
+    const missing = [
+      !analystOutputs.news && "news",
+      !analystOutputs.fundamentals && "fundamentals",
+    ].filter(Boolean);
     log.error({ cycleId, phase: "analysts", missing }, "Analyst agents returned undefined outputs");
     emitAgentEvent("news_analyst", "error", {
       error: !analystOutputs.news ? "Returned undefined" : undefined,

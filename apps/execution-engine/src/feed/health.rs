@@ -505,11 +505,11 @@ mod tests {
 
     #[test]
     fn test_provider_name() {
-        let tracker = FeedHealthTracker::new("databento");
-        assert_eq!(tracker.provider(), "databento");
+        let tracker = FeedHealthTracker::new("alpaca");
+        assert_eq!(tracker.provider(), "alpaca");
 
         let metrics = tracker.metrics();
-        assert_eq!(metrics.provider, "databento");
+        assert_eq!(metrics.provider, "alpaca");
     }
 
     #[test]

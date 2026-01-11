@@ -8,11 +8,12 @@
  * - IV percentile
  *
  * @see docs/plans/08-options.md (Option Candidate Selection)
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 import { z } from "zod";
 import type { IVPercentileCalculator } from "./options/ivPercentile";
-import type { PolygonClient } from "./providers/polygon";
+import type { AlpacaMarketDataClient } from "./providers/alpaca";
 
 // ============================================
 // Types
@@ -214,7 +215,7 @@ interface CacheEntry {
  * Option chain scanner with filtering and ranking.
  */
 export class OptionChainScanner {
-  private client: PolygonClient;
+  private client: AlpacaMarketDataClient;
   private cache: Map<string, CacheEntry> = new Map();
   private cacheTtlMs: number;
   private priceInvalidationPct: number;
@@ -223,13 +224,13 @@ export class OptionChainScanner {
   /**
    * Create a new scanner.
    *
-   * @param client - Polygon API client
+   * @param client - Alpaca market data client
    * @param cacheTtlMs - Cache TTL in milliseconds (default: 5 minutes)
    * @param priceInvalidationPct - Invalidate cache on this % price move (default: 1%)
    * @param ivPercentileCalculator - Optional IV percentile calculator for filtering by IV rank
    */
   constructor(
-    client: PolygonClient,
+    client: AlpacaMarketDataClient,
     cacheTtlMs = 5 * 60 * 1000, // 5 minutes
     priceInvalidationPct = 0.01, // 1%
     ivPercentileCalculator?: IVPercentileCalculator
@@ -428,26 +429,26 @@ export class OptionChainScanner {
    * Fetch raw option chain from provider.
    */
   private async fetchChain(underlying: string): Promise<OptionWithMarketData[]> {
-    const response = await this.client.getOptionContracts(underlying, {
+    const contracts = await this.client.getOptionContracts(underlying, {
       limit: 1000,
     });
 
-    if (!response.results) {
+    if (contracts.length === 0) {
       return [];
     }
 
     const today = new Date();
 
-    return response.results.map((contract) => {
-      const expDate = new Date(contract.expiration_date);
+    return contracts.map((contract) => {
+      const expDate = new Date(contract.expirationDate);
       const dte = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
       return {
-        ticker: contract.ticker,
-        underlying: contract.underlying_ticker,
-        type: contract.contract_type,
-        expiration: contract.expiration_date,
-        strike: contract.strike_price,
+        ticker: contract.symbol,
+        underlying: contract.underlyingSymbol,
+        type: contract.type,
+        expiration: contract.expirationDate,
+        strike: contract.strikePrice,
         dte,
       };
     });
@@ -457,8 +458,9 @@ export class OptionChainScanner {
    * Get underlying price.
    */
   private async getUnderlyingPrice(underlying: string): Promise<number> {
-    const snapshot = await this.client.getTickerSnapshot(underlying);
-    return snapshot?.lastTrade?.p ?? snapshot?.day?.c ?? 0;
+    const snapshots = await this.client.getSnapshots([underlying]);
+    const snapshot = snapshots.get(underlying);
+    return snapshot?.latestTrade?.price ?? snapshot?.dailyBar?.close ?? 0;
   }
 
   /**

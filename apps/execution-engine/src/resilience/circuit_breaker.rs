@@ -106,21 +106,6 @@ impl CircuitBreakerConfig {
         Self::default()
     }
 
-    /// Configuration optimized for Databento feed.
-    ///
-    /// More sensitive for market data (lower threshold, larger window, shorter open).
-    #[must_use]
-    pub const fn databento() -> Self {
-        Self {
-            failure_rate_threshold: 0.3, // 30% - more sensitive
-            sliding_window_size: 50,     // Larger window
-            minimum_calls: 10,
-            wait_duration_in_open: Duration::from_secs(5), // Shorter open
-            permitted_calls_in_half_open: 5,
-            call_timeout: Duration::from_secs(3),
-        }
-    }
-
     /// Configuration optimized for IBKR.
     ///
     /// Longer timeouts for slower API.
@@ -512,8 +497,6 @@ pub struct CircuitBreakerMetrics {
 pub struct ServiceCircuitBreakers {
     /// Circuit breaker for Alpaca API.
     pub alpaca: Option<CircuitBreaker>,
-    /// Circuit breaker for Databento feed.
-    pub databento: Option<CircuitBreaker>,
     /// Circuit breaker for IBKR.
     pub ibkr: Option<CircuitBreaker>,
 }
@@ -527,10 +510,6 @@ impl ServiceCircuitBreakers {
                 "alpaca",
                 CircuitBreakerConfig::alpaca(),
             )),
-            databento: Some(CircuitBreaker::new(
-                "databento",
-                CircuitBreakerConfig::databento(),
-            )),
             ibkr: Some(CircuitBreaker::new("ibkr", CircuitBreakerConfig::ibkr())),
         }
     }
@@ -541,9 +520,6 @@ impl ServiceCircuitBreakers {
         let mut metrics = Vec::new();
 
         if let Some(ref breaker) = self.alpaca {
-            metrics.push(breaker.metrics());
-        }
-        if let Some(ref breaker) = self.databento {
             metrics.push(breaker.metrics());
         }
         if let Some(ref breaker) = self.ibkr {
@@ -754,18 +730,10 @@ mod tests {
         let breakers = ServiceCircuitBreakers::with_defaults();
 
         assert!(breakers.alpaca.is_some());
-        assert!(breakers.databento.is_some());
         assert!(breakers.ibkr.is_some());
 
         let metrics = breakers.all_metrics();
-        assert_eq!(metrics.len(), 3);
-    }
-
-    #[test]
-    fn test_databento_config() {
-        let config = CircuitBreakerConfig::databento();
-        assert!((config.failure_rate_threshold - 0.3).abs() < f64::EPSILON); // 30%
-        assert_eq!(config.sliding_window_size, 50);
+        assert_eq!(metrics.len(), 2);
     }
 
     #[test]

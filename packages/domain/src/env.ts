@@ -115,9 +115,7 @@ const envSchema = z.object({
   HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
   HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
 
-  // Market Data Providers
-  DATABENTO_KEY: z.string().optional().describe("Databento API key for execution-grade data"),
-  POLYGON_KEY: z.string().optional().describe("Polygon/Massive API key for candles and options"),
+  // Market Data Providers (Alpaca is unified provider via ALPACA_KEY/ALPACA_SECRET)
   FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
   ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
 
@@ -172,8 +170,6 @@ function parseEnv(): EnvConfig {
     HELIX_URL: Bun.env.HELIX_URL ?? process.env.HELIX_URL,
     HELIX_HOST: Bun.env.HELIX_HOST ?? process.env.HELIX_HOST,
     HELIX_PORT: Bun.env.HELIX_PORT ?? process.env.HELIX_PORT,
-    DATABENTO_KEY: Bun.env.DATABENTO_KEY ?? process.env.DATABENTO_KEY,
-    POLYGON_KEY: Bun.env.POLYGON_KEY ?? process.env.POLYGON_KEY,
     FMP_KEY: Bun.env.FMP_KEY ?? process.env.FMP_KEY,
     ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
     ALPACA_KEY: Bun.env.ALPACA_KEY ?? process.env.ALPACA_KEY,
@@ -325,14 +321,7 @@ export interface EnvValidationResult {
 const ENVIRONMENT_REQUIREMENTS: Record<CreamEnvironment, (keyof EnvConfig)[]> = {
   BACKTEST: [],
   PAPER: ["ALPACA_KEY", "ALPACA_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
-  LIVE: [
-    "ALPACA_KEY",
-    "ALPACA_SECRET",
-    "POLYGON_KEY",
-    "DATABENTO_KEY",
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-  ],
+  LIVE: ["ALPACA_KEY", "ALPACA_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
 };
 
 /**
@@ -449,8 +438,6 @@ export function getEnvVarDocumentation(): Array<{
     { name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
     { name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },
     { name: "HELIX_PORT", required: "no", description: "HelixDB port (alternative to HELIX_URL)" },
-    { name: "DATABENTO_KEY", required: "LIVE", description: "Databento API key" },
-    { name: "POLYGON_KEY", required: "LIVE", description: "Polygon/Massive API key" },
     { name: "FMP_KEY", required: "no", description: "FMP API key for fundamentals" },
     {
       name: "ALPHAVANTAGE_KEY",

@@ -13,9 +13,6 @@ pub struct CircuitBreakerConfig {
     /// Alpaca-specific settings.
     #[serde(default)]
     pub alpaca: Option<CircuitBreakerSettings>,
-    /// Databento-specific settings.
-    #[serde(default)]
-    pub databento: Option<CircuitBreakerSettings>,
 }
 
 /// Circuit breaker settings.
@@ -74,15 +71,6 @@ impl CircuitBreakerConfig {
     #[must_use]
     pub fn alpaca_config(&self) -> crate::resilience::CircuitBreakerConfig {
         self.alpaca.as_ref().map_or_else(
-            || self.default.to_resilience_config(),
-            CircuitBreakerSettings::to_resilience_config,
-        )
-    }
-
-    /// Get the circuit breaker config for Databento, falling back to defaults.
-    #[must_use]
-    pub fn databento_config(&self) -> crate::resilience::CircuitBreakerConfig {
-        self.databento.as_ref().map_or_else(
             || self.default.to_resilience_config(),
             CircuitBreakerSettings::to_resilience_config,
         )

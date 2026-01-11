@@ -1,23 +1,25 @@
 /**
  * Options Data Streaming Service
  *
- * Connects to Massive WebSocket for real-time options data
+ * Connects to Alpaca WebSocket for real-time options data
  * and broadcasts updates to connected dashboard clients.
  *
- * Options symbols use OCC format: O:{underlying}{YYMMDD}{C|P}{strike}
- * Example: O:AAPL250117C00100000 = AAPL Jan 17, 2025 $100 Call
+ * Options symbols use OCC format: {underlying}{YYMMDD}{C|P}{strike}
+ * Example: AAPL250117C00100000 = AAPL Jan 17, 2025 $100 Call
  *
  * @see docs/plans/ui/06-websocket.md
+ * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
 import {
-  createMassiveOptionsClientFromEnv,
-  type MassiveAggregateMessage,
-  MassiveConnectionState,
-  type MassiveEvent,
-  type MassiveQuoteMessage,
-  type MassiveTradeMessage,
-  type MassiveWebSocketClient,
+  AlpacaConnectionState,
+  type AlpacaWebSocketClient,
+  type AlpacaWsBarMessage,
+  type AlpacaWsEvent,
+  type AlpacaWsQuoteMessage,
+  type AlpacaWsTradeMessage,
+  createAlpacaOptionsClientFromEnv,
+  isAlpacaConfigured,
 } from "@cream/marketdata";
 import log from "../logger.js";
 import { broadcastOptionsQuote } from "../websocket/handler.js";
@@ -26,14 +28,14 @@ import { broadcastOptionsQuote } from "../websocket/handler.js";
 // State
 // ============================================
 
-let massiveOptionsClient: MassiveWebSocketClient | null = null;
+let alpacaOptionsClient: AlpacaWebSocketClient | null = null;
 let isInitialized = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Active options contract subscriptions from dashboard clients.
- * Format: O:AAPL250117C00100000
+ * Format: AAPL250117C00100000
  */
 const activeContracts = new Set<string>();
 
@@ -60,11 +62,11 @@ const optionsCache = new Map<
 
 /**
  * Extract underlying symbol from OCC options symbol.
- * Format: O:{underlying}{YYMMDD}{C|P}{strike}
- * Example: O:AAPL250117C00100000 -> AAPL
+ * Format: {underlying}{YYMMDD}{C|P}{strike}
+ * Example: AAPL250117C00100000 -> AAPL
  */
 function extractUnderlying(contract: string): string {
-  // Remove O: prefix if present
+  // Remove O: prefix if present (legacy format)
   const symbol = contract.startsWith("O:") ? contract.slice(2) : contract;
   // Find first digit (start of date portion) and extract underlying
   const dateStart = symbol.search(/\d/);
@@ -80,33 +82,32 @@ function extractUnderlying(contract: string): string {
 
 /**
  * Initialize the options data streaming service.
- * Connects to Massive Options WebSocket and sets up event handlers.
+ * Connects to Alpaca Options WebSocket and sets up event handlers.
  */
 export async function initOptionsDataStreaming(): Promise<void> {
   if (isInitialized) {
     return;
   }
 
-  // Check if POLYGON_KEY is available
-  const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
-  if (!apiKey) {
-    log.warn("POLYGON_KEY not set, options data streaming disabled");
+  // Check if Alpaca credentials are available
+  if (!isAlpacaConfigured()) {
+    log.warn("ALPACA_KEY/ALPACA_SECRET not set, options data streaming disabled");
     return;
   }
 
-  log.info("Initializing options data streaming");
+  log.info("Initializing options data streaming with Alpaca");
 
   try {
-    massiveOptionsClient = createMassiveOptionsClientFromEnv("delayed");
+    alpacaOptionsClient = createAlpacaOptionsClientFromEnv();
 
     // Set up event handlers
-    massiveOptionsClient.on(handleOptionsEvent);
+    alpacaOptionsClient.on(handleOptionsEvent);
 
     // Connect
-    await massiveOptionsClient.connect();
+    await alpacaOptionsClient.connect();
     isInitialized = true;
     reconnectAttempts = 0;
-    log.info("Options data streaming connected");
+    log.info("Options data streaming connected to Alpaca");
   } catch (error) {
     log.warn(
       { error: error instanceof Error ? error.message : String(error) },
@@ -120,9 +121,9 @@ export async function initOptionsDataStreaming(): Promise<void> {
  */
 export function shutdownOptionsDataStreaming(): void {
   log.info({ activeContracts: activeContracts.size }, "Shutting down options data streaming");
-  if (massiveOptionsClient) {
-    massiveOptionsClient.disconnect();
-    massiveOptionsClient = null;
+  if (alpacaOptionsClient) {
+    alpacaOptionsClient.disconnect();
+    alpacaOptionsClient = null;
   }
   isInitialized = false;
   activeContracts.clear();
@@ -135,37 +136,30 @@ export function shutdownOptionsDataStreaming(): void {
 // ============================================
 
 /**
- * Handle events from Massive Options WebSocket.
+ * Handle events from Alpaca Options WebSocket.
  */
-function handleOptionsEvent(event: MassiveEvent): void {
+function handleOptionsEvent(event: AlpacaWsEvent): void {
   switch (event.type) {
     case "connected":
-      log.debug("Massive Options WebSocket connected");
+      log.debug("Alpaca Options WebSocket connected");
       break;
 
     case "authenticated":
-      log.info(
-        { activeContracts: activeContracts.size },
-        "Massive Options WebSocket authenticated"
-      );
+      log.info({ activeContracts: activeContracts.size }, "Alpaca Options WebSocket authenticated");
       // Resubscribe to active contracts after reconnection
       if (activeContracts.size > 0) {
-        const subscriptions = Array.from(activeContracts).map((c) => `Q.${c}`);
-        massiveOptionsClient?.subscribe(subscriptions).catch((error) => {
-          log.error(
-            { error: error instanceof Error ? error.message : String(error) },
-            "Failed to resubscribe to options data"
-          );
-        });
+        const contracts = Array.from(activeContracts);
+        alpacaOptionsClient?.subscribe("quotes", contracts);
+        alpacaOptionsClient?.subscribe("trades", contracts);
       }
       break;
 
     case "subscribed":
-      log.debug({ params: event.params }, "Subscribed to options symbols");
+      log.debug({ subscriptions: event.subscriptions }, "Subscribed to options symbols");
       break;
 
-    case "aggregate":
-      handleOptionsAggregateMessage(event.message);
+    case "bar":
+      handleOptionsBarMessage(event.message);
       break;
 
     case "quote":
@@ -177,19 +171,22 @@ function handleOptionsEvent(event: MassiveEvent): void {
       break;
 
     case "disconnected":
-      log.warn("Massive Options WebSocket disconnected");
+      log.warn({ reason: event.reason }, "Alpaca Options WebSocket disconnected");
       break;
 
     case "reconnecting":
       reconnectAttempts = event.attempt;
       log.info(
         { attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-        "Reconnecting to Massive Options WebSocket"
+        "Reconnecting to Alpaca Options WebSocket"
       );
       break;
 
     case "error":
-      log.error({ error: event.error, reconnectAttempts }, "Massive Options WebSocket error");
+      log.error(
+        { code: event.code, message: event.message, reconnectAttempts },
+        "Alpaca Options WebSocket error"
+      );
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         log.error("Max reconnect attempts reached, options data streaming disabled");
         isInitialized = false;
@@ -199,10 +196,10 @@ function handleOptionsEvent(event: MassiveEvent): void {
 }
 
 /**
- * Handle options aggregate messages.
+ * Handle options bar messages.
  */
-function handleOptionsAggregateMessage(msg: MassiveAggregateMessage): void {
-  const contract = msg.sym; // OCC format
+function handleOptionsBarMessage(msg: AlpacaWsBarMessage): void {
+  const contract = msg.S; // OCC format
   const underlying = extractUnderlying(contract);
 
   // Update cache
@@ -214,7 +211,7 @@ function handleOptionsAggregateMessage(msg: MassiveAggregateMessage): void {
     ask: cached?.ask ?? 0,
     last: msg.c,
     volume: msg.v,
-    timestamp: new Date(msg.e),
+    timestamp: new Date(msg.t),
   });
 
   // Broadcast to subscribed clients for this contract
@@ -228,7 +225,7 @@ function handleOptionsAggregateMessage(msg: MassiveAggregateMessage): void {
       low: msg.l,
       close: msg.c,
       volume: msg.v,
-      timestamp: new Date(msg.e).toISOString(),
+      timestamp: new Date(msg.t).toISOString(),
     },
   });
 }
@@ -236,8 +233,8 @@ function handleOptionsAggregateMessage(msg: MassiveAggregateMessage): void {
 /**
  * Handle options quote messages with bid/ask updates.
  */
-function handleOptionsQuoteMessage(msg: MassiveQuoteMessage): void {
-  const contract = msg.sym;
+function handleOptionsQuoteMessage(msg: AlpacaWsQuoteMessage): void {
+  const contract = msg.S;
   const underlying = extractUnderlying(contract);
 
   // Get cached data
@@ -250,7 +247,7 @@ function handleOptionsQuoteMessage(msg: MassiveQuoteMessage): void {
     ask: msg.ap,
     last: cached?.last ?? (msg.bp + msg.ap) / 2,
     volume: cached?.volume ?? 0,
-    timestamp: new Date(msg.t / 1e6), // Nanoseconds to milliseconds
+    timestamp: new Date(msg.t), // RFC-3339 timestamp
   });
 
   // Broadcast to subscribed clients for this contract
@@ -264,7 +261,7 @@ function handleOptionsQuoteMessage(msg: MassiveQuoteMessage): void {
       bidSize: msg.bs,
       askSize: msg.as,
       last: cached?.last ?? (msg.bp + msg.ap) / 2,
-      timestamp: new Date(msg.t / 1e6).toISOString(),
+      timestamp: new Date(msg.t).toISOString(),
     },
   });
 }
@@ -272,8 +269,8 @@ function handleOptionsQuoteMessage(msg: MassiveQuoteMessage): void {
 /**
  * Handle options trade messages.
  */
-function handleOptionsTradeMessage(msg: MassiveTradeMessage): void {
-  const contract = msg.sym;
+function handleOptionsTradeMessage(msg: AlpacaWsTradeMessage): void {
+  const contract = msg.S;
   const underlying = extractUnderlying(contract);
 
   // Update cache with last trade price
@@ -284,7 +281,7 @@ function handleOptionsTradeMessage(msg: MassiveTradeMessage): void {
     ask: cached?.ask ?? msg.p,
     last: msg.p,
     volume: (cached?.volume ?? 0) + msg.s,
-    timestamp: new Date(msg.t / 1e6),
+    timestamp: new Date(msg.t),
   });
 
   // Broadcast to subscribed clients for this contract
@@ -295,7 +292,7 @@ function handleOptionsTradeMessage(msg: MassiveTradeMessage): void {
       underlying,
       price: msg.p,
       size: msg.s,
-      timestamp: new Date(msg.t / 1e6).toISOString(),
+      timestamp: new Date(msg.t).toISOString(),
     },
   });
 }
@@ -308,20 +305,25 @@ function handleOptionsTradeMessage(msg: MassiveTradeMessage): void {
  * Subscribe to options data for a contract.
  * Called when a dashboard client subscribes to an options contract.
  *
- * @param contract OCC format contract symbol (e.g., O:AAPL250117C00100000)
+ * @param contract OCC format contract symbol (e.g., AAPL250117C00100000)
  */
 export async function subscribeContract(contract: string): Promise<void> {
-  const upperContract = contract.toUpperCase();
+  // Normalize: remove O: prefix if present, convert to uppercase
+  let normalizedContract = contract.toUpperCase();
+  if (normalizedContract.startsWith("O:")) {
+    normalizedContract = normalizedContract.slice(2);
+  }
 
-  if (activeContracts.has(upperContract)) {
+  if (activeContracts.has(normalizedContract)) {
     return; // Already subscribed
   }
 
-  activeContracts.add(upperContract);
+  activeContracts.add(normalizedContract);
 
-  if (massiveOptionsClient?.isConnected()) {
+  if (alpacaOptionsClient?.isConnected()) {
     // Subscribe to quotes and trades for this contract
-    await massiveOptionsClient.subscribe([`Q.${upperContract}`, `T.${upperContract}`]);
+    alpacaOptionsClient.subscribe("quotes", [normalizedContract]);
+    alpacaOptionsClient.subscribe("trades", [normalizedContract]);
   }
 }
 
@@ -329,7 +331,15 @@ export async function subscribeContract(contract: string): Promise<void> {
  * Subscribe to multiple contracts at once.
  */
 export async function subscribeContracts(contracts: string[]): Promise<void> {
-  const newContracts = contracts.map((c) => c.toUpperCase()).filter((c) => !activeContracts.has(c));
+  const newContracts = contracts
+    .map((c) => {
+      let normalized = c.toUpperCase();
+      if (normalized.startsWith("O:")) {
+        normalized = normalized.slice(2);
+      }
+      return normalized;
+    })
+    .filter((c) => !activeContracts.has(c));
 
   if (newContracts.length === 0) {
     return;
@@ -339,10 +349,10 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     activeContracts.add(contract);
   }
 
-  if (massiveOptionsClient?.isConnected()) {
+  if (alpacaOptionsClient?.isConnected()) {
     // Subscribe to both quotes and trades
-    const subscriptions = newContracts.flatMap((c) => [`Q.${c}`, `T.${c}`]);
-    await massiveOptionsClient.subscribe(subscriptions);
+    alpacaOptionsClient.subscribe("quotes", newContracts);
+    alpacaOptionsClient.subscribe("trades", newContracts);
   }
 }
 
@@ -350,17 +360,21 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
  * Unsubscribe from options data for a contract.
  */
 export async function unsubscribeContract(contract: string): Promise<void> {
-  const upperContract = contract.toUpperCase();
+  let normalizedContract = contract.toUpperCase();
+  if (normalizedContract.startsWith("O:")) {
+    normalizedContract = normalizedContract.slice(2);
+  }
 
-  if (!activeContracts.has(upperContract)) {
+  if (!activeContracts.has(normalizedContract)) {
     return; // Not subscribed
   }
 
-  activeContracts.delete(upperContract);
-  optionsCache.delete(upperContract);
+  activeContracts.delete(normalizedContract);
+  optionsCache.delete(normalizedContract);
 
-  if (massiveOptionsClient?.isConnected()) {
-    await massiveOptionsClient.unsubscribe([`Q.${upperContract}`, `T.${upperContract}`]);
+  if (alpacaOptionsClient?.isConnected()) {
+    alpacaOptionsClient.unsubscribe("quotes", [normalizedContract]);
+    alpacaOptionsClient.unsubscribe("trades", [normalizedContract]);
   }
 }
 
@@ -381,7 +395,11 @@ export function getCachedOptionsQuote(contract: string): {
   vega?: number;
   timestamp: Date;
 } | null {
-  return optionsCache.get(contract.toUpperCase()) ?? null;
+  let normalizedContract = contract.toUpperCase();
+  if (normalizedContract.startsWith("O:")) {
+    normalizedContract = normalizedContract.slice(2);
+  }
+  return optionsCache.get(normalizedContract) ?? null;
 }
 
 /**
@@ -395,7 +413,7 @@ export function getActiveContracts(): string[] {
  * Check if options streaming is initialized and connected.
  */
 export function isOptionsStreamingConnected(): boolean {
-  return isInitialized && massiveOptionsClient?.getState() === MassiveConnectionState.AUTHENTICATED;
+  return isInitialized && alpacaOptionsClient?.getState() === AlpacaConnectionState.AUTHENTICATED;
 }
 
 // ============================================

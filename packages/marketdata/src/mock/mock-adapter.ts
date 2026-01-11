@@ -8,7 +8,53 @@
  * @see docs/plans/17-mock-data-layer.md
  */
 
-import type { AggregateBar, AggregatesResponse, Snapshot } from "../providers/polygon";
+// Local types for fixture data (matches legacy Polygon format in fixtures)
+interface FixtureAggregateBar {
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  v: number;
+  vw?: number;
+  t: number;
+  n?: number;
+}
+
+interface FixtureAggregatesResponse {
+  ticker: string;
+  queryCount: number;
+  resultsCount: number;
+  adjusted: boolean;
+  status: string;
+  results: FixtureAggregateBar[];
+}
+
+interface FixtureSnapshot {
+  ticker: string;
+  day?: {
+    o: number;
+    h: number;
+    l: number;
+    c: number;
+    v: number;
+    vw?: number;
+  };
+  lastQuote?: {
+    P: number;
+    S: number;
+    p: number;
+    s: number;
+    t: number;
+  };
+  lastTrade?: {
+    p: number;
+    s: number;
+    t: number;
+  };
+  todaysChange?: number;
+  todaysChangePerc?: number;
+  updated: number;
+}
 
 // ============================================
 // Fixture Imports
@@ -286,13 +332,13 @@ export class MockAdapter {
     }
 
     const tfData = candleData[timeframe as keyof typeof candleData] as
-      | AggregatesResponse
+      | FixtureAggregatesResponse
       | undefined;
     if (!tfData?.results) {
       return [];
     }
 
-    return tfData.results.map((bar: AggregateBar) => ({
+    return tfData.results.map((bar: FixtureAggregateBar) => ({
       timestamp: bar.t,
       open: bar.o,
       high: bar.h,
@@ -617,7 +663,7 @@ export class MockAdapter {
   /**
    * Build a mock market snapshot for a symbol.
    */
-  async buildSnapshot(symbol: string): Promise<Snapshot | null> {
+  async buildSnapshot(symbol: string): Promise<FixtureSnapshot | null> {
     await this.maybeThrowError();
     await this.simulateLatency();
 

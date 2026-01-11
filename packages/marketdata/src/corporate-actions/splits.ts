@@ -10,7 +10,7 @@
  * @see docs/plans/02-data-layer.md
  */
 
-import type { StockSplit } from "../providers/polygon";
+import type { AlpacaCorporateActionSplit } from "../providers/alpaca";
 
 // ============================================
 // Types
@@ -65,17 +65,18 @@ export function calculateSplitRatio(splitTo: number, splitFrom: number): number 
 }
 
 /**
- * Convert Polygon StockSplit to SplitAdjustment.
+ * Convert Alpaca Corporate Action Split to SplitAdjustment.
  */
-export function toSplitAdjustment(split: StockSplit): SplitAdjustment {
-  const ratio = calculateSplitRatio(split.split_to, split.split_from);
+export function toSplitAdjustment(split: AlpacaCorporateActionSplit): SplitAdjustment {
+  // Alpaca uses newRate:oldRate format (e.g., 4:1 split has newRate=4, oldRate=1)
+  const ratio = calculateSplitRatio(split.newRate, split.oldRate);
 
   return {
-    symbol: split.ticker,
-    executionDate: split.execution_date,
+    symbol: split.symbol,
+    executionDate: split.exDate,
     ratio,
-    splitTo: split.split_to,
-    splitFrom: split.split_from,
+    splitTo: split.newRate,
+    splitFrom: split.oldRate,
     isReverse: ratio < 1,
   };
 }
