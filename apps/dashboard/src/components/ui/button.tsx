@@ -13,7 +13,7 @@ import {
   Checkmark,
   ERROR_STATE_DURATION,
   SUCCESS_STATE_DURATION,
-} from "./success-feedback";
+} from "./success-feedback/index.js";
 
 // ============================================
 // Types
@@ -371,5 +371,5 @@ IconButton.displayName = "IconButton";
 // Exports
 // ============================================
 
-export type { ButtonState } from "./success-feedback";
+export type { ButtonState } from "./success-feedback/index.js";
 export default Button;

@@ -12,7 +12,7 @@ import type {
   CheckmarkProps,
   SuccessButtonProps,
   UseAsyncButtonOptions,
-} from "./success-feedback";
+} from "./success-feedback/index.js";
 
 // ============================================
 // ButtonState Type Tests
@@ -183,17 +183,17 @@ describe("UseAsyncButtonOptions Type", () => {
 
 describe("Constants", () => {
   it("exports CHECKMARK_ANIMATION_DURATION", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.CHECKMARK_ANIMATION_DURATION).toBe(300);
   });
 
   it("exports SUCCESS_STATE_DURATION", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.SUCCESS_STATE_DURATION).toBe(2000);
   });
 
   it("exports ERROR_STATE_DURATION", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.ERROR_STATE_DURATION).toBe(3000);
   });
 });
@@ -204,32 +204,32 @@ describe("Constants", () => {
 
 describe("Module Exports", () => {
   it("exports Checkmark component", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(typeof module.Checkmark).toBe("function");
   });
 
   it("exports SuccessText component", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(typeof module.SuccessText).toBe("function");
   });
 
   it("exports SuccessButton component", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(typeof module.SuccessButton).toBe("function");
   });
 
   it("exports useAsyncButton hook", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(typeof module.useAsyncButton).toBe("function");
   });
 
   it("exports InlineSuccess component", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(typeof module.InlineSuccess).toBe("function");
   });
 
   it("exports default as SuccessButton", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.default).toBe(module.SuccessButton);
   });
 });

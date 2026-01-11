@@ -352,12 +352,12 @@ describe("Button State Machine", () => {
   });
 
   it("success duration is 2000ms", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.SUCCESS_STATE_DURATION).toBe(2000);
   });
 
   it("error duration is 3000ms", async () => {
-    const module = await import("./success-feedback.js");
+    const module = await import("./success-feedback/index.js");
     expect(module.ERROR_STATE_DURATION).toBe(3000);
   });
 });
