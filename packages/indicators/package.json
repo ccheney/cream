@@ -20,6 +20,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@cream/logger": "workspace:*",
     "@cream/storage": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260109.1",
     "typescript": "^5.7.3"

@@ -17,6 +17,7 @@
   "dependencies": {
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
+    "@cream/logger": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/regime": "workspace:*",
     "@cream/universe": "workspace:*",

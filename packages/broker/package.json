@@ -20,8 +20,9 @@
     "format": "biome format --write src/ tests/"
   },
   "dependencies": {
+    "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
-    "@cream/config": "workspace:*"
+    "@cream/logger": "workspace:*"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",

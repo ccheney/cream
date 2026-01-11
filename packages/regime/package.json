@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@cream/config": "workspace:*",
-    "@cream/indicators": "workspace:*"
+    "@cream/indicators": "workspace:*",
+    "@cream/logger": "workspace:*"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
