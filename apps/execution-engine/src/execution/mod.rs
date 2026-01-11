@@ -10,7 +10,7 @@
 
 mod alpaca;
 mod backtest;
-mod gateway;
+pub mod gateway;
 pub mod persistence;
 pub mod reconciliation;
 pub mod recovery;
@@ -25,7 +25,8 @@ pub use alpaca::{
 };
 pub use backtest::{BacktestAdapter, RecordedOrder};
 pub use gateway::{
-    BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, SubmitOrdersError,
+    BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, MockBrokerAdapter,
+    SubmitOrdersError,
 };
 pub use persistence::{
     OrderSnapshot, PersistenceError, RecoveryState, StatePersistence, StateSnapshot,
