@@ -17,6 +17,8 @@
  * @see docs/plans/05-agents.md
  */
 
+import { createConsensusLogger } from "@cream/logger";
+import { log } from "./logger.js";
 import type {
   ApprovalVerdict,
   ConsensusInput,
@@ -86,35 +88,7 @@ const DEFAULT_ESCALATION: EscalationConfig = {
   enabled: true,
 };
 
-const DEFAULT_LOGGER: ConsensusLogger = {
-  info: (message, data) => {
-    if (data) {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.info(`[consensus] ${message}`, data);
-    } else {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.info(`[consensus] ${message}`);
-    }
-  },
-  warn: (message, data) => {
-    if (data) {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.warn(`[consensus] ${message}`, data);
-    } else {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.warn(`[consensus] ${message}`);
-    }
-  },
-  error: (message, data) => {
-    if (data) {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.error(`[consensus] ${message}`, data);
-    } else {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for consensus debugging
-      console.error(`[consensus] ${message}`);
-    }
-  },
-};
+const DEFAULT_LOGGER: ConsensusLogger = createConsensusLogger(log);
 
 const DEFAULT_CONFIG: ConsensusGateConfig = {
   maxIterations: 3,
@@ -668,11 +642,10 @@ export async function runConsensusLoop(
       riskManager = createTimeoutRiskOutput();
       critic = createTimeoutCriticOutput();
       timeoutStatus = "RISK_MANAGER_TIMEOUT"; // Use timeout status for now
-      // biome-ignore lint/suspicious/noConsole: Log agent errors for debugging
-      console.error("[consensus] Approval agents failed", {
-        error: approvalResult.error,
-        agent: approvalResult.agentName,
-      });
+      log.error(
+        { error: approvalResult.error, agent: approvalResult.agentName },
+        "Approval agents failed"
+      );
     } else {
       riskManager = approvalResult.result.riskManager;
       critic = approvalResult.result.critic;

@@ -6,6 +6,7 @@
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
 import type { FMPStockNews } from "@cream/universe";
+import { log } from "../../logger.js";
 import { getFMPClient } from "../clients.js";
 import type { EconomicEvent, NewsItem } from "../types.js";
 
@@ -174,9 +175,10 @@ export async function getEconomicCalendar(
       };
     });
   } catch (error) {
-    // Log but don't fail - economic calendar is supplementary context
-    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-    console.warn("Failed to fetch economic calendar:", error);
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to fetch economic calendar"
+    );
     return [];
   }
 }
@@ -240,9 +242,10 @@ export async function searchNews(
 
     return results;
   } catch (error) {
-    // Log but don't fail - news is supplementary context
-    // biome-ignore lint/suspicious/noConsole: Intentional - debug logging
-    console.warn("Failed to fetch news:", error);
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to fetch news"
+    );
     return [];
   }
 }

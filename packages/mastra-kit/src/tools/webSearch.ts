@@ -9,6 +9,7 @@
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
 import { z } from "zod";
+import { log } from "../logger.js";
 import { createTavilyClientFromEnv, type TavilyClient } from "./providers/tavily.js";
 
 export type WebSearchSource = "all" | "reddit" | "x" | "substack" | "blogs" | "news" | "financial";
@@ -296,11 +297,9 @@ export function checkAndLogRateLimitAlerts(provider: keyof typeof RATE_LIMITS = 
   const alerts = rateLimitAlerter.check(provider);
   for (const alert of alerts) {
     if (alert.severity === "critical") {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for rate limit alerts
-      console.error("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
+      log.error({ alert }, "Rate limit alert");
     } else {
-      // biome-ignore lint/suspicious/noConsole: Intentional logging for rate limit alerts
-      console.warn("[RATE_LIMIT_ALERT]", JSON.stringify(alert));
+      log.warn({ alert }, "Rate limit alert");
     }
   }
 }
@@ -444,25 +443,16 @@ export interface WebSearchLogEntry {
 function logWebSearch(
   entry: Partial<WebSearchLogEntry> & { event: WebSearchLogEntry["event"] }
 ): void {
-  const fullEntry: WebSearchLogEntry = {
-    timestamp: new Date().toISOString(),
-    level: "info",
-    provider: "tavily",
-    cached: false,
-    executionTimeMs: 0,
-    queryHash: "",
-    ...entry,
-  };
+  const { level = "info", ...data } = entry;
+  const message = "Web search event";
 
-  // biome-ignore lint/suspicious/noConsole: Intentional structured logging
-  const logFn =
-    fullEntry.level === "error"
-      ? console.error
-      : fullEntry.level === "warn"
-        ? console.warn
-        : console.log;
-
-  logFn("[WEB_SEARCH]", JSON.stringify(fullEntry));
+  if (level === "error") {
+    log.error(data, message);
+  } else if (level === "warn") {
+    log.warn(data, message);
+  } else {
+    log.info(data, message);
+  }
 }
 
 const MAX_QUERY_LENGTH = 500;
@@ -561,13 +551,7 @@ interface AuditLogEntry {
  * Log an audit entry for security monitoring
  */
 function logAudit(entry: Omit<AuditLogEntry, "timestamp">): void {
-  const fullEntry: AuditLogEntry = {
-    timestamp: new Date().toISOString(),
-    ...entry,
-  };
-  // In production, this would go to a dedicated audit log system
-  // biome-ignore lint/suspicious/noConsole: Intentional audit logging
-  console.log("[AUDIT]", JSON.stringify(fullEntry));
+  log.info({ audit: entry }, "Audit event");
 }
 
 // ============================================
@@ -759,8 +743,7 @@ export async function webSearch(
   // 1. Validate and parse params
   const parsed = WebSearchParamsSchema.safeParse(params);
   if (!parsed.success) {
-    // biome-ignore lint/suspicious/noConsole: Intentional warning log for invalid params
-    console.warn("[webSearch] Invalid params:", parsed.error.message);
+    log.warn({ error: parsed.error.message }, "Invalid web search params");
     return createEmptyResponse(params.query ?? "", startTime);
   }
   const { maxAgeHours, sources, topic, maxResults, symbols } = parsed.data;
@@ -857,8 +840,7 @@ export async function webSearch(
   // 6. Check for Tavily client
   const client = getTavilyClient();
   if (!client) {
-    // biome-ignore lint/suspicious/noConsole: Intentional warning log for missing API key
-    console.warn("[webSearch] TAVILY_API_KEY not configured");
+    log.warn({}, "TAVILY_API_KEY not configured");
     return createEmptyResponse(query, startTime);
   }
 
