@@ -1,6 +1,6 @@
 # Cream
 
-Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through a 10-agent consensus network.
+Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through an 8-agent consensus network.
 
 ## Status
 
@@ -8,28 +8,59 @@ Agentic trading system for US equities and options combining LLM-based reasoning
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              OODA Loop (Hourly)                              │
-├─────────────────┬─────────────────┬─────────────────┬───────────────────────┤
-│     OBSERVE     │      ORIENT     │      DECIDE     │          ACT          │
-├─────────────────┼─────────────────┼─────────────────┼───────────────────────┤
-│ Market data     │ HelixDB         │ 10-agent        │ Rust execution        │
-│ OHLCV candles   │ retrieval       │ consensus       │ engine validates      │
-│ Positions       │ Indicators      │ network         │ & routes orders       │
-│ News/events     │ Regime classify │ produces plan   │ via Alpaca            │
-└─────────────────┴─────────────────┴─────────────────┴───────────────────────┘
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
+flowchart LR
+    subgraph OBSERVE["OBSERVE"]
+        O1["`Market data
+        OHLCV candles
+        Positions
+        News/events`"]
+    end
 
-                         ┌──────────────────────┐
-                         │   Decision Plan      │
-                         │   requires DUAL      │
-                         │   approval from      │
-                         │   Risk Manager AND   │
-                         │   Critic             │
-                         └──────────────────────┘
+    subgraph ORIENT["ORIENT"]
+        O2["`HelixDB retrieval
+        Indicators
+        Regime classify`"]
+    end
+
+    subgraph DECIDE["DECIDE"]
+        O3["`8-agent
+        consensus
+        network
+        produces plan`"]
+    end
+
+    subgraph ACT["ACT"]
+        O4["`Rust execution
+        engine validates
+        & routes orders
+        via Alpaca`"]
+    end
+
+    OBSERVE --> ORIENT --> DECIDE --> ACT
+
+    ACT --> Approval
+
+    subgraph Approval["Dual Approval Gate"]
+        Risk["`**Risk Manager**`"]
+        Critic["`**Critic**`"]
+    end
+
+    classDef observe fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
+    classDef orient fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
+    classDef decide fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
+    classDef act fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
+    classDef approval fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
+
+    class O1 observe
+    class O2 orient
+    class O3 decide
+    class O4 act
+    class Risk,Critic approval
 ```
 
-### Agent Consensus Network (10 Agents)
+### Agent Consensus Network (8 Agents)
 
 | Phase | Agent | Role |
 |-------|-------|------|
@@ -90,7 +121,7 @@ cream/
 │   ├── indicators/                 # Technical indicators (RSI, ATR, SMA)
 │   ├── regime/                     # Market regime classification
 │   ├── metrics/                    # Risk-adjusted performance metrics
-│   ├── mastra-kit/                 # 10 agents, 30+ tools, consensus gate
+│   ├── mastra-kit/                 # 8 agents, 30+ tools, consensus gate
 │   ├── external-context/           # News/sentiment extraction pipeline
 │   ├── filings/                    # SEC EDGAR filing ingestion
 │   ├── prediction-markets/         # Kalshi/Polymarket integration
@@ -108,7 +139,7 @@ cream/
 
 ### API (`apps/api`)
 
-Mastra orchestration server running the hourly OODA loop with 10-agent consensus.
+Mastra orchestration server running the hourly OODA loop with 8-agent consensus.
 
 **Port**: 4111
 
@@ -217,7 +248,7 @@ Python chart analysis service.
 
 | Package | Purpose |
 |---------|---------|
-| `@cream/mastra-kit` | 10 agents, 30+ tools, dual-approval consensus |
+| `@cream/mastra-kit` | 8 agents, 30+ tools, dual-approval consensus |
 | `@cream/external-context` | Claude extraction pipeline for news/sentiment |
 | `@cream/filings` | SEC EDGAR ingestion (10-K, 10-Q, 8-K) |
 | `@cream/prediction-markets` | Kalshi/Polymarket clients, arbitrage detection |
@@ -238,32 +269,6 @@ Python chart analysis service.
 |----------|---------|------|
 | **HelixDB** | Graph + Vector | Trade memory, semantic relationships, document embeddings |
 | **Turso** | Relational | Decisions, orders, positions, config, backtests |
-
-### HelixDB Schema
-
-**Node Types**: TradeDecision, TradeLifecycleEvent, ExternalEvent, FilingChunk, TranscriptChunk, NewsItem, Company, MacroEntity, ThesisMemory, Indicator
-
-**Edge Types**: INFLUENCED_DECISION, FILED_BY, TRANSCRIPT_FOR, MENTIONS_COMPANY, RELATES_TO_MACRO, RELATED_TO, DEPENDS_ON, AFFECTED_BY, MENTIONED_IN, HAS_EVENT, THESIS_INCLUDES
-
-**Performance**: Vector search ~2ms, graph traversal <1ms
-
-**Retrieval**: Hybrid GraphRAG with Reciprocal Rank Fusion (k=60)
-
-### Turso Schema
-
-**Migration 001**: decisions, agent_outputs, orders, positions, position_history, portfolio_snapshots, config_versions
-
-**Migration 002**: alerts, system_state, backtests, backtest_trades, backtest_equity, user_preferences
-
-**Migration 003**: candles, corporate_actions, universe_cache, features, regime_labels
-
-**Migration 004**: thesis_state, thesis_state_history
-
-**Migration 005**: index_constituents, ticker_changes, universe_snapshots
-
-**Migration 006**: prediction_market_snapshots, prediction_market_signals, prediction_market_arbitrage
-
-**Migration 011**: trading_config, agent_configs, universe_configs
 
 ---
 
@@ -333,8 +338,7 @@ CREAM_BROKER=ALPACA                 # Broker selection
 ### Databases
 
 ```bash
-TURSO_DATABASE_URL=file:local.db    # Local SQLite or Turso URL
-TURSO_AUTH_TOKEN=                   # Turso Cloud auth
+TURSO_DATABASE_URL=                 # Self-hosted Turso URL
 HELIX_URL=http://localhost:6969    # HelixDB endpoint
 ```
 
@@ -385,37 +389,31 @@ ALLOWED_ORIGINS=                    # CORS origins
 
 ---
 
-## Risk Constraints
-
-### Per-Instrument
-
-- Max units: 1,000 shares/contracts
-- Max notional: $50,000
-- Max % equity: 10%
-
-### Portfolio
-
-- Max gross notional: $500,000
-- Max net notional: $250,000
-- Max leverage: 2.0x
-
-### Options Greeks
-
-- Max delta notional: $100,000
-- Max gamma: 1,000
-- Max vega: $5,000
-- Max theta: -$500/day
-
----
-
 ## Configuration System
 
 Runtime configuration stored in database (no YAML fallback):
 
 ### Promotion Workflow
 
-```
-DRAFT (editing) → TEST (sandbox) → ACTIVE (production)
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
+flowchart LR
+    Draft["`**DRAFT**
+    editing`"]
+    Test["`**TEST**
+    sandbox`"]
+    Active["`**ACTIVE**
+    production`"]
+
+    Draft -->|promote| Test -->|promote| Active
+
+    classDef draft fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
+    classDef test fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
+    classDef active fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
+
+    class Draft draft
+    class Test test
+    class Active active
 ```
 
 ### Config Tables
@@ -461,50 +459,47 @@ DRAFT (editing) → TEST (sandbox) → ACTIVE (production)
 
 ### Deployment (Hetzner + Vercel DNS)
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
+flowchart TB
+    subgraph Internet["Internet"]
+        User([User])
+    end
+
+    subgraph Hetzner["Hetzner VPS (cpx31)"]
+        subgraph Caddy["Caddy (Auto-HTTPS)"]
+            Route1["cream.broker"]
+            Route2["api.cream.broker"]
+        end
+
+        subgraph Services["Docker Services"]
+            Dashboard["`**Dashboard**
+            :3000`"]
+            DashAPI["`**Dashboard API**
+            :3001`"]
+            Worker["`**Worker**
+            :3002`"]
+        end
+    end
+
+    subgraph Data["Data Layer"]
+        Turso[("`**Turso**
+        SQLite`")]
+    end
+
+    User --> Route1 --> Dashboard
+    User --> Route2 --> DashAPI
+    Dashboard --> DashAPI
+    DashAPI --> Turso
+    Worker --> Turso
+
+    classDef internet fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
+    classDef caddy fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
+    classDef service fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
+    classDef data fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
+
+    class User internet
+    class Route1,Route2 caddy
+    class Dashboard,DashAPI,Worker service
+    class Turso data
 ```
-┌─────────────────────────────────────────────────┐
-│              Hetzner VPS (cpx31)                 │
-│                                                  │
-│   Caddy (Auto-HTTPS)                            │
-│     cream.broker → dashboard:3000               │
-│     api.cream.broker → dashboard-api:3001       │
-│                                                  │
-│   Services: Dashboard, Dashboard API, Worker    │
-│   External: Turso Cloud                         │
-└─────────────────────────────────────────────────┘
-```
-
-### Cost (~$64/month)
-
-- Hetzner cpx31: ~$15
-- Turso Pro: ~$29
-- Vercel Pro: ~$20
-
----
-
-## Decision Plan Schema
-
-```typescript
-interface DecisionPlan {
-  cycleId: string;
-  asOfTimestamp: ISO8601Timestamp;
-  environment: "BACKTEST" | "PAPER" | "LIVE";
-  decisions: Decision[];
-}
-
-interface Decision {
-  instrument: Instrument;
-  action: "BUY" | "SELL" | "HOLD" | "INCREASE" | "REDUCE" | "NO_TRADE";
-  direction: "LONG" | "SHORT" | "FLAT";
-  size: { quantity: number; unit: "SHARES" | "CONTRACTS"; };
-  riskLevels: {
-    stopLossLevel: number;      // MANDATORY
-    takeProfitLevel: number;    // MANDATORY
-  };
-  strategyFamily: "TREND" | "MEAN_REVERSION" | "EVENT_DRIVEN" | "VOLATILITY";
-  rationale: string;
-  confidence: number;           // [0.0, 1.0]
-}
-```
-
-**Validation**: Minimum 1.5:1 risk-reward ratio enforced.
