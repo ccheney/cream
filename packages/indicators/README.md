@@ -1,99 +1,198 @@
 # @cream/indicators
 
-Technical indicators for the Cream trading system.
+Technical indicator calculation engine for the Cream trading system.
 
 ## Overview
 
-Provides:
+The v2 indicator engine provides academically-validated technical, fundamental, and alternative data indicators. It distinguishes between:
 
-- **Core Indicators** - RSI, Stochastic, SMA, EMA, ATR, Bollinger Bands
-- **Pipeline** - Multi-timeframe calculation
-- **Transforms** - Z-score, percentile rank, returns
-- **Synthesis** - Dynamic indicator generation and validation
+1. **Real-time indicators** - Computed on-demand from market data (price, volume, options)
+2. **Batch indicators** - Computed nightly from external sources (fundamentals, filings, short interest, sentiment)
 
-## Indicators
+See [docs/plans/33-indicator-engine-v2.md](../../docs/plans/33-indicator-engine-v2.md) for complete architecture.
 
-### Momentum
-- **RSI** - Relative Strength Index (period: 14)
-- **Stochastic** - K and D lines (K: 14, D: 3)
-
-### Trend
-- **SMA** - Simple Moving Average (20, 50, 200)
-- **EMA** - Exponential Moving Average (9, 21)
-
-### Volatility
-- **ATR** - Average True Range (period: 14)
-- **Bollinger Bands** - Center, upper, lower, bandwidth (period: 20, stddev: 2)
-
-### Volume
-- **Volume SMA** - Volume relative to average (period: 20)
-
-## Usage
-
-### Single Timeframe
+## Quick Start
 
 ```typescript
-import { calculateIndicators } from "@cream/indicators";
+import {
+  IndicatorService,
+  createIndicatorService,
+  type IndicatorSnapshot,
+} from "@cream/indicators";
 
-const snapshot = calculateIndicators(candles, "1h");
-console.log(snapshot.values["rsi_14_1h"]);
-```
-
-### Multi-Timeframe
-
-```typescript
-import { calculateMultiTimeframeIndicators } from "@cream/indicators";
-
-const combined = calculateMultiTimeframeIndicators(
-  new Map([["1h", candles1h], ["4h", candles4h]])
-);
-```
-
-### Historical (Backtesting)
-
-```typescript
-import { calculateHistoricalIndicators, getRequiredWarmupPeriod } from "@cream/indicators";
-
-const warmup = getRequiredWarmupPeriod(config);
-const snapshots = calculateHistoricalIndicators(candles, "1d", config, warmup);
-```
-
-### Transforms
-
-```typescript
-import { applyTransforms } from "@cream/indicators";
-
-const transformed = applyTransforms(candles, "1h", {
-  zscore: { enabled: true, params: { lookback: 20 } },
-  returns: { enabled: true, params: { periods: [1, 5, 20] } },
+// Create service with dependencies
+const service = createIndicatorService({
+  marketData: alpacaMarketData,
+  optionsProvider: alpacaOptionsProvider,
+  fundamentalRepo: tursoFundamentalsRepo,
+  // ... other repos
 });
+
+// Get complete indicator snapshot for a symbol
+const snapshot: IndicatorSnapshot = await service.getSnapshot("AAPL");
+
+// Access indicators by category
+console.log(snapshot.price.rsi_14);        // 65.5
+console.log(snapshot.liquidity.vwap);      // 175.42
+console.log(snapshot.sentiment.overall_score); // 0.6
+```
+
+## API Reference
+
+### IndicatorService
+
+The main service for fetching and calculating indicators.
+
+```typescript
+interface IndicatorService {
+  // Get complete snapshot for a symbol
+  getSnapshot(symbol: string): Promise<IndicatorSnapshot>;
+
+  // Get snapshots for multiple symbols
+  getSnapshots(symbols: string[]): Promise<Map<string, IndicatorSnapshot>>;
+
+  // Get only price-based indicators
+  getPriceIndicators(symbol: string): Promise<PriceIndicators>;
+}
+```
+
+### IndicatorSnapshot
+
+The unified indicator format returned by `getSnapshot()`:
+
+```typescript
+interface IndicatorSnapshot {
+  symbol: string;
+  timestamp: number;
+
+  // Real-time (from Alpaca bars)
+  price: PriceIndicators;      // RSI, SMA, EMA, ATR, MACD, Bollinger, Stochastic
+  liquidity: LiquidityIndicators;  // Bid-ask spread, VWAP, Amihud illiquidity
+  options: OptionsIndicators;      // IV skew, put/call ratio, term structure, Greeks
+
+  // Batch (from external sources)
+  value: ValueIndicators;          // P/E, P/B, EV/EBITDA, dividend yield
+  quality: QualityIndicators;      // ROE, ROA, gross profitability, Beneish M-score
+  short_interest: ShortInterestIndicators;  // Short ratio, days to cover
+  sentiment: SentimentIndicators;  // News sentiment, social sentiment
+  corporate: CorporateIndicators;  // Earnings dates, dividends, splits
+
+  // Context
+  market: MarketIndicators;        // Sector, market cap, beta
+  metadata: IndicatorMetadata;     // Data quality, timestamps
+}
+```
+
+### Price Calculators
+
+Pure functions for calculating individual indicators from OHLCV bars:
+
+```typescript
+import {
+  calculateRSI,
+  calculateSMA,
+  calculateEMA,
+  calculateATR,
+  calculateMACD,
+  calculateBollingerBands,
+  calculateStochastic,
+  isGoldenCross,
+  isDeathCross,
+} from "@cream/indicators";
+
+// Single value calculations
+const rsi = calculateRSI(bars, 14);           // RSIResult | null
+const sma = calculateSMA(bars, 20);           // number | null
+const atr = calculateATR(bars, 14);           // number | null
+
+// Series calculations (for charts/backtesting)
+import {
+  calculateRSISeries,
+  calculateSMASeries,
+  calculateMACDSeries,
+} from "@cream/indicators";
+
+const rsiSeries = calculateRSISeries(bars, 14);   // RSIResult[]
+const smaSeries = calculateSMASeries(bars, 20);   // SMAResult[]
+
+// Crossover detection
+const isEntry = isGoldenCross(prevFast, prevSlow, currFast, currSlow);
+const isExit = isDeathCross(prevFast, prevSlow, currFast, currSlow);
+```
+
+### Liquidity Calculators
+
+```typescript
+import {
+  calculateBidAskSpread,
+  calculateAmihudIlliquidity,
+  calculateTurnoverRatio,
+  calculateVWAP,
+} from "@cream/indicators";
+
+const spread = calculateBidAskSpread(bidPrice, askPrice);
+const amihud = calculateAmihudIlliquidity(returns, volume);
+```
+
+### Batch Jobs
+
+For populating batch indicators from external data sources:
+
+```typescript
+import {
+  FundamentalsBatchJob,
+  ShortInterestBatchJob,
+  SentimentAggregationJob,
+  CorporateActionsBatchJob,
+} from "@cream/indicators";
+
+// Run fundamentals batch (scheduled nightly)
+const job = new FundamentalsBatchJob(fmpClient, fundamentalsRepo);
+const result = await job.run(symbols);
+console.log(`Processed ${result.processed}, Failed: ${result.failed}`);
+```
+
+## Batch Job Schedule
+
+| Job | Frequency | Data Source | Purpose |
+|-----|-----------|-------------|---------|
+| `FundamentalsBatchJob` | Daily | FMP API | Value & quality metrics |
+| `ShortInterestBatchJob` | Bi-monthly | FINRA | Short interest data |
+| `SentimentAggregationJob` | Hourly | News/Social | Sentiment scores |
+| `CorporateActionsBatchJob` | Daily | Alpaca | Earnings, dividends, splits |
+
+## Data Quality
+
+Each snapshot includes metadata about data freshness:
+
+```typescript
+const snapshot = await service.getSnapshot("AAPL");
+
+console.log(snapshot.metadata.data_quality);     // "COMPLETE" | "PARTIAL" | "STALE"
+console.log(snapshot.metadata.missing_fields);   // ["options"] if unavailable
+console.log(snapshot.metadata.price_updated_at); // timestamp
 ```
 
 ## Configuration
 
-```typescript
-const config = {
-  rsi: { enabled: true, period: 14 },
-  sma: { enabled: true, periods: [20, 50, 200] },
-  atr: { enabled: true, period: 14 },
-  bollinger: { enabled: true, period: 20, stdDev: 2 },
-};
-```
-
-## Synthesis
-
-For dynamic indicator generation with ML validation:
+The service accepts configuration for caching and timeouts:
 
 ```typescript
-import { runValidationPipeline, IndicatorMonitor } from "@cream/indicators";
-
-const validation = await runValidationPipeline({
-  hypothesis,
-  historicalData: candles,
-  config: { gates: ["dsr", "pbo", "ic", "orthogonality"] },
+const service = createIndicatorService({
+  // ... providers
+}, {
+  cache: {
+    priceIndicatorsTTL: 30_000,    // 30s for price data
+    batchIndicatorsTTL: 3600_000, // 1hr for batch data
+  },
+  timeouts: {
+    marketDataMs: 5000,
+    optionsDataMs: 10000,
+  },
 });
 ```
 
 ## Dependencies
 
-- `@cream/storage` - Features repository
+- `@cream/storage` - Repository interfaces for batch data
+- `@cream/logger` - Structured logging

@@ -10,7 +10,7 @@
 
 process.env.CREAM_ENV = "BACKTEST";
 
-import { describe, expect, it, beforeAll } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { createTestContext } from "@cream/domain";
 import type { IndicatorSnapshot } from "@cream/indicators";
 
@@ -31,7 +31,7 @@ function createMockIndicatorSnapshot(symbol: string): IndicatorSnapshot {
       atr_14: basePrice * 0.02,
       sma_20: basePrice * 0.98,
       sma_50: basePrice * 0.95,
-      sma_200: basePrice * 0.90,
+      sma_200: basePrice * 0.9,
       ema_9: basePrice * 0.995,
       ema_12: basePrice * 0.99,
       ema_21: basePrice * 0.985,
@@ -42,7 +42,7 @@ function createMockIndicatorSnapshot(symbol: string): IndicatorSnapshot {
       bollinger_upper: basePrice * 1.05,
       bollinger_middle: basePrice,
       bollinger_lower: basePrice * 0.95,
-      bollinger_bandwidth: 0.10,
+      bollinger_bandwidth: 0.1,
       bollinger_percentb: 0.5,
       stochastic_k: 65,
       stochastic_d: 60,
@@ -50,7 +50,7 @@ function createMockIndicatorSnapshot(symbol: string): IndicatorSnapshot {
       momentum_3m: 0.08,
       momentum_6m: 0.15,
       momentum_12m: 0.25,
-      realized_vol_20d: 0.20,
+      realized_vol_20d: 0.2,
       parkinson_vol_20d: 0.18,
     },
     liquidity: {
@@ -72,7 +72,7 @@ function createMockIndicatorSnapshot(symbol: string): IndicatorSnapshot {
       front_month_iv: 0.24,
       back_month_iv: 0.26,
       vrp: 0.03,
-      realized_vol_20d: 0.20,
+      realized_vol_20d: 0.2,
       net_delta: 0.5,
       net_gamma: 0.01,
       net_theta: -0.05,
@@ -88,10 +88,10 @@ function createMockIndicatorSnapshot(symbol: string): IndicatorSnapshot {
       cape_10yr: null,
     },
     quality: {
-      gross_profitability: 0.40,
+      gross_profitability: 0.4,
       roe: 0.35,
       roa: 0.15,
-      asset_growth: 0.10,
+      asset_growth: 0.1,
       accruals_ratio: 0.02,
       cash_flow_quality: 0.85,
       beneish_m_score: -2.5,
@@ -145,25 +145,23 @@ beforeAll(() => {
   }
 });
 
-// Import workflow and prompts modules
-import {
-  executeTradingCycle,
-  type WorkflowInput,
-} from "../src/workflows/trading-cycle.js";
-import { fetchFixtureSnapshot } from "../src/workflows/steps/trading-cycle/observe.js";
 import {
   buildIndicatorContext,
   buildIndicatorSummary,
-  formatPriceIndicators,
   formatLiquidityIndicators,
-  formatValueIndicators,
+  formatPriceIndicators,
   formatSentimentIndicators,
   formatShortInterestIndicators,
-  interpretRSI,
-  interpretMACD,
-  interpretStochastic,
+  formatValueIndicators,
   interpretBollingerPercentB,
+  interpretMACD,
+  interpretRSI,
+  interpretStochastic,
 } from "../src/agents/prompts.js";
+import { fetchFixtureSnapshot } from "../src/workflows/steps/trading-cycle/observe.js";
+// Import workflow and prompts modules
+import { executeTradingCycle, type WorkflowInput } from "../src/workflows/trading-cycle.js";
+
 // Note: Only interpretBollingerPercentB exists (not interpretBollingerBands)
 
 // ============================================
@@ -253,7 +251,9 @@ describe("Observe Phase - Indicator Integration", () => {
       expect(snapshot.price.sma_20).toBeGreaterThan(0);
       expect(snapshot.price.macd_line).toBeDefined();
       // Use correct field names: bollinger_upper, bollinger_lower
-      expect(snapshot.price.bollinger_upper).toBeGreaterThan(snapshot.price.bollinger_lower as number);
+      expect(snapshot.price.bollinger_upper).toBeGreaterThan(
+        snapshot.price.bollinger_lower as number
+      );
     });
 
     it("should have valid liquidity indicators", () => {
