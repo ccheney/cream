@@ -1,5 +1,5 @@
 """
-DSR: Deflated Sharpe Ratio
+DSR Validator: Main Deflated Sharpe Ratio validation logic.
 
 Implements the Deflated Sharpe Ratio (DSR) calculation that corrects for
 multiple testing bias, non-normal returns, and sample size.
@@ -23,75 +23,19 @@ DSR addresses this by:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
 from scipy.stats import norm
 
+from .helpers import compute_kurtosis, compute_skewness, compute_strategy_returns
+from .types import CombinedStatisticalResults, DSRConfig, DSRResults
+
 if TYPE_CHECKING:
-    from ..strategies.base import ResearchFactor
+    from ...strategies.base import ResearchFactor
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DSRResults:
-    """Results from Deflated Sharpe Ratio analysis."""
-
-    factor_id: str
-    """Unique identifier for the factor."""
-
-    observed_sharpe: float
-    """Annualized Sharpe ratio from backtest."""
-
-    expected_max_sharpe: float
-    """Expected maximum Sharpe under null hypothesis given n_trials."""
-
-    dsr_pvalue: float
-    """Probability that observed Sharpe is statistically significant."""
-
-    sharpe_std: float
-    """Standard error of Sharpe estimate (adjusted for non-normality)."""
-
-    skewness: float
-    """Sample skewness of returns."""
-
-    kurtosis: float
-    """Sample excess kurtosis of returns."""
-
-    n_observations: int
-    """Number of return observations."""
-
-    n_trials: int
-    """Number of strategies tested (for multiple testing correction)."""
-
-    min_backtest_length: int
-    """Minimum backtest length required for statistical significance."""
-
-    passed: bool
-    """Whether DSR p-value exceeds threshold."""
-
-    gate_threshold: float
-    """Threshold used for gate checking."""
-
-    params: dict[str, Any]
-    """Parameters used for validation."""
-
-
-@dataclass
-class DSRConfig:
-    """Configuration for DSR validation."""
-
-    pvalue_threshold: float = 0.95
-    """Minimum DSR p-value required (95% confidence)."""
-
-    annualization_factor: int = 252
-    """Annualization factor (252 for daily, 12 for monthly)."""
-
-    min_observations: int = 100
-    """Minimum observations required for DSR calculation."""
 
 
 class DSRValidator:
@@ -112,7 +56,6 @@ class DSRValidator:
     Reference: https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf
     """
 
-    # Euler-Mascheroni constant
     EULER_GAMMA = 0.5772156649
 
     def __init__(
@@ -133,42 +76,12 @@ class DSRValidator:
         self.config = config or DSRConfig()
 
     def _skewness(self, x: np.ndarray) -> float:
-        """
-        Compute sample skewness.
-
-        Skewness measures asymmetry of the return distribution.
-        Negative skewness (fat left tail) is common in equity returns.
-        """
-        n = len(x)
-        if n < 3:
-            return 0.0
-
-        mean = np.mean(x)
-        std = np.std(x, ddof=1)
-        if std == 0:
-            return 0.0
-
-        return (n / ((n - 1) * (n - 2))) * np.sum(((x - mean) / std) ** 3)
+        """Compute sample skewness."""
+        return compute_skewness(x)
 
     def _kurtosis(self, x: np.ndarray) -> float:
-        """
-        Compute sample excess kurtosis.
-
-        Excess kurtosis > 0 indicates fat tails (more extreme events
-        than normal distribution). Financial returns typically have
-        positive excess kurtosis.
-        """
-        n = len(x)
-        if n < 4:
-            return 0.0
-
-        mean = np.mean(x)
-        std = np.std(x, ddof=1)
-        if std == 0:
-            return 0.0
-
-        m4 = np.mean((x - mean) ** 4)
-        return (m4 / std**4) - 3
+        """Compute sample excess kurtosis."""
+        return compute_kurtosis(x)
 
     def _expected_max_sharpe(self, sharpe_std: float, n_trials: int) -> float:
         """
@@ -376,44 +289,6 @@ class DSRValidator:
         )
 
 
-@dataclass
-class CombinedStatisticalResults:
-    """Combined results from CPCV (PBO) and DSR validation."""
-
-    factor_id: str
-    """Unique identifier for the factor."""
-
-    pbo: float
-    """Probability of Backtest Overfitting from CPCV."""
-
-    dsr_pvalue: float
-    """DSR p-value for multiple testing correction."""
-
-    observed_sharpe: float
-    """Observed Sharpe ratio."""
-
-    expected_max_sharpe: float
-    """Expected max Sharpe under null hypothesis."""
-
-    sharpe_distribution: list[float]
-    """OOS Sharpe distribution from CPCV."""
-
-    n_trials_corrected: int
-    """Number of trials used in correction."""
-
-    min_backtest_length: int
-    """Minimum required backtest length."""
-
-    passed_pbo: bool
-    """Whether PBO gate passed (< 50% overfitting probability)."""
-
-    passed_dsr: bool
-    """Whether DSR gate passed (> 95% confidence)."""
-
-    passed_all: bool
-    """Whether all statistical gates passed."""
-
-
 async def compute_full_statistical_validation(
     factor: ResearchFactor,
     data: pl.DataFrame,
@@ -438,7 +313,7 @@ async def compute_full_statistical_validation(
     Returns:
         CombinedStatisticalResults with both PBO and DSR validation
     """
-    from .cpcv import CPCVValidator
+    from ..cpcv import CPCVValidator
 
     # Run CPCV for PBO
     cpcv = CPCVValidator(factor, data)
@@ -447,7 +322,7 @@ async def compute_full_statistical_validation(
     # Compute returns for DSR
     factor.set_parameters(params)
     signals = factor.compute_signal(data)
-    returns = _compute_strategy_returns(data, signals)
+    returns = compute_strategy_returns(data, signals)
 
     # Run DSR
     dsr = DSRValidator(n_trials=n_prior_trials)
@@ -473,28 +348,3 @@ async def compute_full_statistical_validation(
         passed_dsr=passed_dsr,
         passed_all=passed_pbo and passed_dsr,
     )
-
-
-def _compute_strategy_returns(data: pl.DataFrame, signals: pl.Series) -> pl.Series:
-    """
-    Compute strategy returns from signals.
-
-    Simple implementation: buy on signal > 0, sell on signal < 0.
-
-    Args:
-        data: DataFrame with 'close' column
-        signals: Signal series
-
-    Returns:
-        Strategy returns series
-    """
-    close = data["close"]
-    price_returns = close.pct_change()
-
-    # Position: 1 when signal > 0, -1 when signal < 0, 0 otherwise
-    positions = (signals > 0).cast(pl.Float64) - (signals < 0).cast(pl.Float64)
-
-    # Strategy return = position[t-1] * price_return[t]
-    strategy_returns = positions.shift(1) * price_returns
-
-    return strategy_returns.fill_null(0.0)

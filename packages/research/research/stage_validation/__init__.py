@@ -19,6 +19,7 @@ from .dsr import (
     DSRConfig,
     DSRResults,
     DSRValidator,
+    _compute_strategy_returns,
     compute_full_statistical_validation,
 )
 from .stage1_vectorbt import Stage1Gates, Stage1Results, Stage1Validator
@@ -45,6 +46,7 @@ __all__ = [
     "DSRConfig",
     "DSRResults",
     "DSRValidator",
+    "_compute_strategy_returns",
     "compute_full_statistical_validation",
     # Stage 1 validation
     "Stage1Gates",
