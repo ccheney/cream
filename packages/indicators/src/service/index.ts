@@ -36,6 +36,10 @@ export {
   type IndicatorCacheConfig,
 } from "./indicator-cache";
 export {
+  type BatchProgress,
+  type BatchProgressCallback,
+  type BatchSnapshotOptions,
+  type BatchSnapshotResult,
   type CorporateActionsRepository,
   createIndicatorService,
   DEFAULT_SERVICE_CONFIG,

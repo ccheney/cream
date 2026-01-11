@@ -40,6 +40,22 @@ import {
 import type { IndicatorCache } from "./indicator-cache";
 
 // ============================================
+// Helpers
+// ============================================
+
+/**
+ * Chunk an array into smaller arrays of specified size.
+ * Used for concurrent batch processing with rate limiting.
+ */
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+// ============================================
 // Provider Interfaces (for dependency injection)
 // ============================================
 
@@ -134,6 +150,8 @@ export interface IndicatorServiceConfig {
   enableCache: boolean;
   /** Skip cache read (useful for forcing fresh data) */
   bypassCache: boolean;
+  /** Concurrency limit for batch operations (default: 5) */
+  batchConcurrency: number;
 }
 
 export const DEFAULT_SERVICE_CONFIG: IndicatorServiceConfig = {
@@ -142,7 +160,68 @@ export const DEFAULT_SERVICE_CONFIG: IndicatorServiceConfig = {
   includeOptionsIndicators: true,
   enableCache: true,
   bypassCache: false,
+  batchConcurrency: 5,
 };
+
+// ============================================
+// Batch Operation Types
+// ============================================
+
+/**
+ * Progress callback for batch operations
+ */
+export type BatchProgressCallback = (progress: BatchProgress) => void;
+
+/**
+ * Progress information for batch operations
+ */
+export interface BatchProgress {
+  /** Total number of symbols being processed */
+  total: number;
+  /** Number of symbols completed */
+  completed: number;
+  /** Number of symbols fetched from cache */
+  cached: number;
+  /** Number of symbols with errors */
+  failed: number;
+  /** Current symbol being processed (if any) */
+  currentSymbol?: string;
+}
+
+/**
+ * Options for batch snapshot retrieval
+ */
+export interface BatchSnapshotOptions {
+  /** Override concurrency limit for this batch */
+  concurrency?: number;
+  /** Progress callback for tracking batch progress */
+  onProgress?: BatchProgressCallback;
+  /** Skip cache for this batch (force fresh data) */
+  bypassCache?: boolean;
+}
+
+/**
+ * Result of a batch snapshot operation with metadata
+ */
+export interface BatchSnapshotResult {
+  /** Map of symbol to snapshot */
+  snapshots: Map<string, IndicatorSnapshot>;
+  /** Symbols that failed with their error messages */
+  errors: Map<string, string>;
+  /** Metadata about the batch operation */
+  metadata: {
+    /** Total symbols requested */
+    total: number;
+    /** Successfully retrieved (including cached) */
+    successful: number;
+    /** Retrieved from cache */
+    cached: number;
+    /** Failed to retrieve */
+    failed: number;
+    /** Total execution time in ms */
+    executionTimeMs: number;
+  };
+}
 
 // ============================================
 // Service Dependencies
@@ -364,23 +443,169 @@ export class IndicatorService {
 
   /**
    * Get indicator snapshots for multiple symbols.
-   * Executes in parallel for efficiency.
+   * Basic parallel execution with default concurrency.
+   * For more control, use getSnapshotsBatch().
    */
   async getSnapshots(symbols: string[]): Promise<Map<string, IndicatorSnapshot>> {
-    const results = new Map<string, IndicatorSnapshot>();
+    const result = await this.getSnapshotsBatch(symbols);
+    return result.snapshots;
+  }
 
-    const promises = symbols.map(async (symbol) => {
-      try {
-        const snapshot = await this.getSnapshot(symbol);
-        results.set(symbol, snapshot);
-      } catch (error) {
-        log.warn({ symbol, error }, "Failed to get snapshot for symbol");
-        results.set(symbol, createEmptySnapshot(symbol));
+  /**
+   * Get indicator snapshots for multiple symbols with full batch control.
+   *
+   * Features:
+   * - Configurable concurrency limit
+   * - Cache-first: checks cache before fetching
+   * - Progress callback for long-running operations
+   * - Per-symbol error tracking
+   * - Detailed execution metadata
+   *
+   * @example
+   * ```typescript
+   * const result = await service.getSnapshotsBatch(
+   *   ["AAPL", "MSFT", "GOOGL", ...largeList],
+   *   {
+   *     concurrency: 10,
+   *     onProgress: (progress) => {
+   *       console.log(`${progress.completed}/${progress.total}`);
+   *     }
+   *   }
+   * );
+   *
+   * console.log(`Success: ${result.metadata.successful}`);
+   * console.log(`Cached: ${result.metadata.cached}`);
+   * console.log(`Failed: ${result.metadata.failed}`);
+   * ```
+   */
+  async getSnapshotsBatch(
+    symbols: string[],
+    options: BatchSnapshotOptions = {}
+  ): Promise<BatchSnapshotResult> {
+    const startTime = Date.now();
+    const concurrency = options.concurrency ?? this.config.batchConcurrency;
+    const bypassCache = options.bypassCache ?? this.config.bypassCache;
+
+    const snapshots = new Map<string, IndicatorSnapshot>();
+    const errors = new Map<string, string>();
+    let cachedCount = 0;
+    let completed = 0;
+
+    // Deduplicate and normalize symbols
+    const normalizedSymbols = [...new Set(symbols.map((s) => s.toUpperCase()))];
+    const total = normalizedSymbols.length;
+
+    if (total === 0) {
+      return {
+        snapshots,
+        errors,
+        metadata: {
+          total: 0,
+          successful: 0,
+          cached: 0,
+          failed: 0,
+          executionTimeMs: Date.now() - startTime,
+        },
+      };
+    }
+
+    // Emit initial progress
+    if (options.onProgress) {
+      options.onProgress({ total, completed: 0, cached: 0, failed: 0 });
+    }
+
+    // Check cache first to determine which symbols need fetching
+    const symbolsToFetch: string[] = [];
+
+    if (this.config.enableCache && !bypassCache && this.deps.cache) {
+      for (const symbol of normalizedSymbols) {
+        const cached = this.deps.cache.getSnapshot(symbol);
+        if (cached) {
+          snapshots.set(symbol, cached);
+          cachedCount++;
+          completed++;
+          log.debug({ symbol }, "Batch: Retrieved from cache");
+        } else {
+          symbolsToFetch.push(symbol);
+        }
       }
-    });
 
-    await Promise.all(promises);
-    return results;
+      // Emit progress after cache check
+      if (options.onProgress && cachedCount > 0) {
+        options.onProgress({ total, completed, cached: cachedCount, failed: 0 });
+      }
+    } else {
+      symbolsToFetch.push(...normalizedSymbols);
+    }
+
+    // Fetch remaining symbols in concurrent batches
+    if (symbolsToFetch.length > 0) {
+      const chunks = chunkArray(symbolsToFetch, concurrency);
+
+      for (const chunk of chunks) {
+        const chunkPromises = chunk.map(async (symbol) => {
+          try {
+            // Emit progress for current symbol
+            if (options.onProgress) {
+              options.onProgress({
+                total,
+                completed,
+                cached: cachedCount,
+                failed: errors.size,
+                currentSymbol: symbol,
+              });
+            }
+
+            const snapshot = await this.getSnapshot(symbol);
+            snapshots.set(symbol, snapshot);
+            completed++;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            errors.set(symbol, errorMessage);
+            snapshots.set(symbol, createEmptySnapshot(symbol));
+            completed++;
+            log.warn({ symbol, error: errorMessage }, "Batch: Failed to get snapshot");
+          }
+        });
+
+        await Promise.all(chunkPromises);
+
+        // Emit progress after each chunk
+        if (options.onProgress) {
+          options.onProgress({
+            total,
+            completed,
+            cached: cachedCount,
+            failed: errors.size,
+          });
+        }
+      }
+    }
+
+    const executionTimeMs = Date.now() - startTime;
+
+    log.info(
+      {
+        total,
+        successful: snapshots.size - errors.size,
+        cached: cachedCount,
+        failed: errors.size,
+        executionTimeMs,
+      },
+      "Batch snapshot operation completed"
+    );
+
+    return {
+      snapshots,
+      errors,
+      metadata: {
+        total,
+        successful: snapshots.size - errors.size,
+        cached: cachedCount,
+        failed: errors.size,
+        executionTimeMs,
+      },
+    };
   }
 
   /**

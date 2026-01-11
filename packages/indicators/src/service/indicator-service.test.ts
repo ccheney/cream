@@ -619,3 +619,268 @@ describe("IndicatorService - Integration", () => {
     expect(snapshot3.price.rsi_14).toBe(52);
   });
 });
+
+// ============================================================
+// Batch getSnapshotsBatch Tests
+// ============================================================
+
+describe("IndicatorService.getSnapshotsBatch", () => {
+  test("returns snapshots for multiple symbols", async () => {
+    const service = new IndicatorService(createFullDependencies());
+
+    const result = await service.getSnapshotsBatch(["AAPL", "MSFT", "GOOG"]);
+
+    expect(result.snapshots.size).toBe(3);
+    expect(result.snapshots.get("AAPL")).toBeDefined();
+    expect(result.snapshots.get("MSFT")).toBeDefined();
+    expect(result.snapshots.get("GOOG")).toBeDefined();
+    expect(result.metadata.total).toBe(3);
+    expect(result.metadata.successful).toBe(3);
+    expect(result.metadata.failed).toBe(0);
+  });
+
+  test("normalizes symbols to uppercase and deduplicates", async () => {
+    const deps = createFullDependencies();
+    const service = new IndicatorService(deps, { enableCache: false });
+
+    const result = await service.getSnapshotsBatch(["aapl", "AAPL", "Aapl"]);
+
+    // Should only fetch once due to deduplication (all are same symbol)
+    expect(result.snapshots.size).toBe(1);
+    expect(result.snapshots.get("AAPL")).toBeDefined();
+    expect(result.metadata.total).toBe(1);
+  });
+
+  test("returns empty result for empty symbols array", async () => {
+    const service = new IndicatorService(createFullDependencies());
+
+    const result = await service.getSnapshotsBatch([]);
+
+    expect(result.snapshots.size).toBe(0);
+    expect(result.errors.size).toBe(0);
+    expect(result.metadata.total).toBe(0);
+    expect(result.metadata.executionTimeMs).toBeGreaterThanOrEqual(0);
+  });
+
+  test("uses cache for previously fetched symbols", async () => {
+    const deps = createFullDependencies();
+    let fetchCount = 0;
+    deps.marketData = {
+      async getBars() {
+        fetchCount++;
+        return createMockBars(200);
+      },
+      async getQuote() {
+        return createMockQuote();
+      },
+    };
+
+    const service = new IndicatorService(deps);
+
+    // First batch - all fresh
+    await service.getSnapshotsBatch(["AAPL", "MSFT"]);
+    expect(fetchCount).toBe(2);
+
+    // Second batch - AAPL cached, GOOG fresh
+    const result = await service.getSnapshotsBatch(["AAPL", "GOOG"]);
+    expect(fetchCount).toBe(3); // Only GOOG fetched
+
+    expect(result.metadata.cached).toBe(1);
+    expect(result.metadata.successful).toBe(2);
+  });
+
+  test("respects bypassCache at instance level", async () => {
+    const deps = createFullDependencies();
+    let fetchCount = 0;
+    deps.marketData = {
+      async getBars() {
+        fetchCount++;
+        return createMockBars(200);
+      },
+      async getQuote() {
+        return createMockQuote();
+      },
+    };
+
+    // Create service with bypassCache at instance level
+    const service = new IndicatorService(deps, { bypassCache: true });
+
+    // First batch
+    await service.getSnapshotsBatch(["AAPL", "MSFT"]);
+    expect(fetchCount).toBe(2);
+
+    // Second batch - should still refetch because bypassCache is true
+    const result = await service.getSnapshotsBatch(["AAPL", "MSFT"]);
+    expect(fetchCount).toBe(4); // Both refetched
+
+    expect(result.metadata.cached).toBe(0);
+  });
+
+  test("respects custom concurrency limit", async () => {
+    const deps = createFullDependencies();
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
+
+    deps.marketData = {
+      async getBars() {
+        currentConcurrent++;
+        maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        currentConcurrent--;
+        return createMockBars(200);
+      },
+      async getQuote() {
+        return createMockQuote();
+      },
+    };
+
+    const service = new IndicatorService(deps, { enableCache: false });
+
+    // With concurrency of 2, process 6 symbols
+    await service.getSnapshotsBatch(["A", "B", "C", "D", "E", "F"], { concurrency: 2 });
+
+    // Max concurrent should not exceed 2
+    expect(maxConcurrent).toBeLessThanOrEqual(2);
+  });
+
+  test("calls progress callback during batch processing", async () => {
+    const service = new IndicatorService(createFullDependencies(), { enableCache: false });
+    const progressCalls: Array<{ total: number; completed: number; cached: number }> = [];
+
+    await service.getSnapshotsBatch(["AAPL", "MSFT", "GOOG"], {
+      onProgress: (progress) => {
+        progressCalls.push({
+          total: progress.total,
+          completed: progress.completed,
+          cached: progress.cached,
+        });
+      },
+    });
+
+    // Should have multiple progress calls
+    expect(progressCalls.length).toBeGreaterThan(0);
+
+    // First call should show initial state
+    expect(progressCalls[0].total).toBe(3);
+    expect(progressCalls[0].completed).toBe(0);
+
+    // Final call should show completion
+    const lastCall = progressCalls[progressCalls.length - 1];
+    expect(lastCall.completed).toBe(3);
+  });
+
+  test("returns partial data when market data fails (graceful handling)", async () => {
+    // Note: getSnapshot handles errors gracefully and returns partial data
+    // rather than throwing. This is by design for resilience.
+    const deps = createFullDependencies();
+    deps.marketData = {
+      async getBars(symbol) {
+        if (symbol === "FAIL") {
+          throw new Error("Market data unavailable for FAIL");
+        }
+        return createMockBars(200);
+      },
+      async getQuote() {
+        return createMockQuote();
+      },
+    };
+    // Use a price calculator that returns empty when no bars
+    deps.priceCalculator = {
+      calculate(bars) {
+        if (bars.length === 0) {
+          return createEmptyPriceIndicators();
+        }
+        const indicators = createEmptyPriceIndicators();
+        indicators.rsi_14 = 55.5;
+        return indicators;
+      },
+    };
+
+    const service = new IndicatorService(deps, { enableCache: false });
+
+    const result = await service.getSnapshotsBatch(["AAPL", "FAIL", "GOOG"]);
+
+    // All symbols get snapshots (graceful handling - no errors thrown)
+    expect(result.snapshots.size).toBe(3);
+    expect(result.metadata.successful).toBe(3);
+
+    // FAIL symbol gets partial data (empty price indicators due to no bars)
+    expect(result.snapshots.get("FAIL")).toBeDefined();
+    expect(result.snapshots.get("FAIL")!.price.rsi_14).toBeNull();
+
+    // Working symbols have full data
+    expect(result.snapshots.get("AAPL")!.price.rsi_14).toBe(55.5);
+    expect(result.snapshots.get("GOOG")!.price.rsi_14).toBe(55.5);
+  });
+
+  test("returns empty indicators when all market data fails (graceful handling)", async () => {
+    // Note: getSnapshot handles errors gracefully and returns partial data
+    const deps = createFullDependencies();
+    deps.marketData = {
+      async getBars() {
+        throw new Error("Service unavailable");
+      },
+      async getQuote() {
+        throw new Error("Service unavailable");
+      },
+    };
+    // Use a price calculator that returns empty when no bars
+    deps.priceCalculator = {
+      calculate(bars) {
+        if (bars.length === 0) {
+          return createEmptyPriceIndicators();
+        }
+        const indicators = createEmptyPriceIndicators();
+        indicators.rsi_14 = 55.5;
+        return indicators;
+      },
+    };
+    deps.liquidityCalculator = {
+      calculate(bars) {
+        if (bars.length === 0) {
+          return createEmptyLiquidityIndicators();
+        }
+        const indicators = createEmptyLiquidityIndicators();
+        indicators.bid_ask_spread = 0.05;
+        return indicators;
+      },
+    };
+
+    const service = new IndicatorService(deps, { enableCache: false });
+
+    const result = await service.getSnapshotsBatch(["AAPL", "MSFT"]);
+
+    // All symbols get snapshots with partial/empty data
+    expect(result.snapshots.size).toBe(2);
+    expect(result.metadata.successful).toBe(2);
+
+    // Snapshots have empty price indicators (no market data)
+    expect(result.snapshots.get("AAPL")!.price.rsi_14).toBeNull();
+    expect(result.snapshots.get("MSFT")!.price.rsi_14).toBeNull();
+
+    // But batch indicators (fundamentals) still work
+    expect(result.snapshots.get("AAPL")!.value.pe_ratio_ttm).toBe(25.5);
+    expect(result.snapshots.get("MSFT")!.value.pe_ratio_ttm).toBe(25.5);
+  });
+
+  test("includes execution time in metadata", async () => {
+    const service = new IndicatorService(createFullDependencies());
+
+    const result = await service.getSnapshotsBatch(["AAPL", "MSFT"]);
+
+    expect(result.metadata.executionTimeMs).toBeGreaterThanOrEqual(0);
+    expect(typeof result.metadata.executionTimeMs).toBe("number");
+  });
+
+  test("getSnapshots delegates to getSnapshotsBatch", async () => {
+    const service = new IndicatorService(createFullDependencies());
+
+    const result = await service.getSnapshots(["AAPL", "MSFT"]);
+
+    // getSnapshots returns just the Map (not the full BatchSnapshotResult)
+    expect(result instanceof Map).toBe(true);
+    expect(result.size).toBe(2);
+    expect(result.get("AAPL")).toBeDefined();
+    expect(result.get("MSFT")).toBeDefined();
+  });
+});
