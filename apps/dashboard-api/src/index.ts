@@ -261,18 +261,35 @@ export type AppType = typeof app;
 if (import.meta.main) {
   const port = parseInt(process.env.PORT ?? "3001", 10);
 
+  log.info({ port, allowedOrigins }, "Starting Dashboard API server");
+
   // Start heartbeat for WebSocket connections
   startHeartbeat();
 
   // Initialize market data streaming (non-blocking)
-  initMarketDataStreaming().catch((_error) => {});
+  initMarketDataStreaming().catch((error) => {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Market data streaming initialization failed"
+    );
+  });
 
   // Initialize options data streaming (non-blocking)
-  initOptionsDataStreaming().catch((_error) => {});
+  initOptionsDataStreaming().catch((error) => {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Options data streaming initialization failed"
+    );
+  });
 
   // Start event publisher for broadcasting events to WebSocket clients
   const publisher = getEventPublisher();
-  publisher.start().catch((_error) => {});
+  publisher.start().catch((error) => {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Event publisher failed to start"
+    );
+  });
 
   const server = Bun.serve({
     port,
@@ -304,24 +321,21 @@ if (import.meta.main) {
     websocket: websocketHandler,
   });
 
-  // Graceful shutdown
-  process.on("SIGINT", () => {
-    resetEventPublisher();
-    shutdownMarketDataStreaming();
-    shutdownOptionsDataStreaming();
-    closeAllConnections("Server shutting down");
-    closeDb();
-    server.stop();
-    process.exit(0);
-  });
+  log.info({ port, url: `http://localhost:${port}` }, "Dashboard API server ready");
 
-  process.on("SIGTERM", () => {
+  // Graceful shutdown
+  const gracefulShutdown = (signal: string) => {
+    log.info({ signal }, "Received shutdown signal, initiating graceful shutdown");
     resetEventPublisher();
     shutdownMarketDataStreaming();
     shutdownOptionsDataStreaming();
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();
+    log.info("Dashboard API server shutdown complete");
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 }

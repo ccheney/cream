@@ -12,6 +12,7 @@
  */
 
 import type { z } from "zod";
+import { log } from "./logger.js";
 
 // ============================================
 // Types
@@ -198,6 +199,7 @@ export class RestClient {
     const url = this.buildUrl(path, options.params);
     const headers = this.buildHeaders(options.headers);
     const timeout = options.timeoutMs ?? this.config.timeoutMs;
+    const method = options.method ?? "GET";
 
     // Apply rate limiting
     if (!options.skipRateLimit && this.rateLimiter) {
@@ -206,11 +208,14 @@ export class RestClient {
 
     const retryConfig = this.config.retry ?? DEFAULT_RETRY;
     let lastError: ApiError | undefined;
+    const startTime = Date.now();
+
+    log.debug({ method, path, timeout }, "Market data API request");
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
       try {
         const response = await this.executeRequest(url, {
-          method: options.method ?? "GET",
+          method,
           headers,
           body: options.body ? JSON.stringify(options.body) : undefined,
           timeout,
@@ -218,6 +223,9 @@ export class RestClient {
 
         // Parse and validate response
         const data = await response.json();
+
+        const latencyMs = Date.now() - startTime;
+        log.debug({ method, path, status: response.status, latencyMs }, "Market data API response");
 
         if (schema) {
           return schema.parse(data);
@@ -228,6 +236,11 @@ export class RestClient {
         lastError = this.classifyError(error);
 
         if (!lastError.retryable || attempt >= retryConfig.maxRetries) {
+          const latencyMs = Date.now() - startTime;
+          log.error(
+            { method, path, status: lastError.status, error: lastError.message, latencyMs },
+            "Market data API error"
+          );
           throw lastError;
         }
 
@@ -235,6 +248,11 @@ export class RestClient {
         const delay = Math.min(
           retryConfig.initialDelayMs * retryConfig.backoffMultiplier ** attempt,
           retryConfig.maxDelayMs
+        );
+
+        log.warn(
+          { method, path, attempt: attempt + 1, delayMs: delay, error: lastError.message },
+          "Market data API retry"
         );
 
         await this.sleep(delay);

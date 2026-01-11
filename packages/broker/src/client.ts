@@ -7,6 +7,7 @@
  * @see docs/plans/07-execution.md
  */
 
+import { log } from "./logger.js";
 import type { Account, Order, OrderRequest, Position, TradingEnvironment } from "./types.js";
 import { BrokerError } from "./types.js";
 import { generateOrderId, validateLegRatios } from "./utils.js";
@@ -165,12 +166,17 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
       "Content-Type": "application/json",
     };
 
+    const startTime = Date.now();
+    log.debug({ method, path, environment }, "Alpaca API request");
+
     try {
       const response = await fetch(url, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
       });
+
+      const latencyMs = Date.now() - startTime;
 
       if (!response.ok) {
         const errorBody = await response.text();
@@ -185,11 +191,17 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 
         // Map HTTP status to error code
         const errorCode = mapHttpStatusToErrorCode(response.status, errorMessage);
+        log.error(
+          { method, path, status: response.status, errorCode, latencyMs },
+          "Alpaca API error"
+        );
         throw new BrokerError(errorMessage, errorCode);
       }
 
       // Handle empty responses (e.g., DELETE)
       const text = await response.text();
+      log.debug({ method, path, status: response.status, latencyMs }, "Alpaca API response");
+
       if (!text) {
         return undefined as T;
       }
@@ -199,6 +211,12 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
       if (error instanceof BrokerError) {
         throw error;
       }
+
+      const latencyMs = Date.now() - startTime;
+      log.error(
+        { method, path, error: error instanceof Error ? error.message : "Unknown", latencyMs },
+        "Alpaca API network error"
+      );
 
       throw new BrokerError(
         `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -301,12 +319,38 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
         }));
       }
 
+      log.info(
+        {
+          clientOrderId: orderRequest.clientOrderId,
+          symbol: orderRequest.symbol,
+          side: orderRequest.side,
+          qty: orderRequest.qty,
+          type: orderRequest.type,
+          environment,
+        },
+        "Submitting order"
+      );
+
       const data = await request<AlpacaOrderResponse>("POST", "/v2/orders", payload);
-      return mapOrder(data);
+      const order = mapOrder(data);
+
+      log.info(
+        {
+          orderId: order.id,
+          clientOrderId: order.clientOrderId,
+          symbol: order.symbol,
+          status: order.status,
+        },
+        "Order submitted"
+      );
+
+      return order;
     },
 
     async cancelOrder(orderId: string): Promise<void> {
+      log.info({ orderId, environment }, "Cancelling order");
       await request<void>("DELETE", `/v2/orders/${orderId}`);
+      log.info({ orderId }, "Order cancelled");
     },
 
     async getOrder(orderId: string): Promise<Order | null> {
@@ -327,15 +371,24 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
     },
 
     async closePosition(symbol: string, qty?: number): Promise<Order> {
+      log.info({ symbol, qty, environment }, "Closing position");
       const path =
         qty !== undefined ? `/v2/positions/${symbol}?qty=${qty}` : `/v2/positions/${symbol}`;
       const data = await request<AlpacaOrderResponse>("DELETE", path);
-      return mapOrder(data);
+      const order = mapOrder(data);
+      log.info(
+        { symbol, orderId: order.id, status: order.status },
+        "Position close order submitted"
+      );
+      return order;
     },
 
     async closeAllPositions(): Promise<Order[]> {
+      log.info({ environment }, "Closing all positions");
       const data = await request<AlpacaOrderResponse[]>("DELETE", "/v2/positions");
-      return data.map(mapOrder);
+      const orders = data.map(mapOrder);
+      log.info({ orderCount: orders.length }, "All positions close orders submitted");
+      return orders;
     },
 
     async isMarketOpen(): Promise<boolean> {

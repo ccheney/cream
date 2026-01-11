@@ -19,6 +19,7 @@ import {
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+import { log } from "../logger.js";
 
 /**
  * Create ExecutionContext for step invocation.
@@ -174,6 +175,7 @@ export const executeOrdersStep = createStep({
 
     // If not approved, skip execution
     if (!approved) {
+      log.info("Order execution skipped - plan not approved");
       return {
         ordersSubmitted: 0,
         ordersRejected: 0,
@@ -184,6 +186,11 @@ export const executeOrdersStep = createStep({
 
     const decisions = (adjustedPlan?.decisions ?? []) as unknown as Decision[];
     const tradableDecisions = decisions.filter((d) => d.action !== "HOLD");
+
+    log.info(
+      { totalDecisions: decisions.length, tradableDecisions: tradableDecisions.length },
+      "Starting order execution"
+    );
 
     // Create context at step boundary
     const ctx = createStepContext();
@@ -200,6 +207,11 @@ export const executeOrdersStep = createStep({
         return generateDeterministicOrderId("backtest", cycleId, decisionIdentifier);
       });
 
+      log.debug(
+        { cycleId, orderCount: orderIds.length },
+        "Backtest mode - generated deterministic order IDs"
+      );
+
       return {
         ordersSubmitted: orderIds.length,
         ordersRejected: 0,
@@ -212,6 +224,7 @@ export const executeOrdersStep = createStep({
     const client = getBrokerClient(ctx);
     if (!client) {
       // No broker credentials - return deterministic mock order IDs for dev/testing
+      log.warn({ cycleId }, "Broker credentials not configured - using mock order IDs");
       const orderIds = tradableDecisions.map((decision: Decision, index: number) => {
         // Use decisionId if available, otherwise fall back to symbol/instrumentId or index
         const decisionIdentifier =
@@ -227,17 +240,28 @@ export const executeOrdersStep = createStep({
     }
 
     // Submit orders in parallel
+    log.info(
+      { environment: ctx.environment, orderCount: tradableDecisions.length },
+      "Submitting orders to broker"
+    );
+
     const orderPromises = tradableDecisions.map(async (decision) => {
       const orderRequest = decisionToOrderRequest(decision);
       if (!orderRequest) {
+        log.warn({ decisionId: decision.decisionId }, "Invalid decision - skipping order");
         return { success: false, error: `Invalid decision: ${decision.decisionId}` };
       }
 
       try {
         const order = await client.submitOrder(orderRequest);
+        log.info(
+          { orderId: order.id, symbol: decision.instrumentId, action: decision.action },
+          "Order submitted successfully"
+        );
         return { success: true, orderId: order.id };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        log.error({ symbol: decision.instrumentId, error: message }, "Order submission failed");
         return { success: false, error: `${decision.instrumentId}: ${message}` };
       }
     });
@@ -246,6 +270,11 @@ export const executeOrdersStep = createStep({
 
     const submitted = results.filter((r) => r.success);
     const rejected = results.filter((r) => !r.success);
+
+    log.info(
+      { submitted: submitted.length, rejected: rejected.length },
+      "Order execution complete"
+    );
 
     return {
       ordersSubmitted: submitted.length,

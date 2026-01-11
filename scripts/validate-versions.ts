@@ -11,9 +11,25 @@
  * - 2: Runtime not found (Bun, Rust, Python missing)
  */
 
-import { readdir, exists } from "node:fs/promises";
+import { exists } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { parseArgs } from "node:util";
+import { createNodeLogger } from "@cream/logger";
+
+const log = createNodeLogger({
+  service: "validate-versions",
+  level: "info",
+  pretty: true,
+});
+
+/**
+ * Print formatted CLI output directly to stdout.
+ * Use this for formatted tables and user-facing output.
+ * Use log.info/log.error for structured logging events.
+ */
+function print(message: string): void {
+  process.stdout.write(message + "\n");
+}
 
 // ============================================
 // Types
@@ -441,9 +457,9 @@ function formatResult(result: VersionConstraint): string {
 }
 
 function printSummary(results: CheckResult): void {
-  console.log("\n" + colors.bold("━".repeat(60)));
-  console.log(colors.bold("Summary"));
-  console.log(colors.bold("━".repeat(60)));
+  print("\n" + colors.bold("━".repeat(60)));
+  print(colors.bold("Summary"));
+  print(colors.bold("━".repeat(60)));
 
   const total = `Total checks: ${results.total}`;
   const passed = colors.green(`✓ Passed: ${results.passed}`);
@@ -453,7 +469,12 @@ function printSummary(results: CheckResult): void {
   const missing =
     results.missing > 0 ? colors.red(`? Missing: ${results.missing}`) : `? Missing: 0`;
 
-  console.log(`${total} | ${passed} | ${failed} | ${warnings} | ${missing}`);
+  print(`${total} | ${passed} | ${failed} | ${warnings} | ${missing}`);
+
+  log.info(
+    { total: results.total, passed: results.passed, failed: results.failed, warnings: results.warnings, missing: results.missing },
+    "Version validation complete"
+  );
 }
 
 // ============================================
@@ -470,7 +491,7 @@ async function main(): Promise<void> {
   });
 
   if (values.help) {
-    console.log(`
+    print(`
 ${colors.bold("Version Validation Script")}
 
 Validates all runtime and package versions against requirements.
@@ -491,14 +512,16 @@ ${colors.bold("Exit Codes:")}
     process.exit(0);
   }
 
-  console.log(colors.bold("\n🔍 Validating versions...\n"));
+  log.info("Starting version validation");
+  print(colors.bold("\n🔍 Validating versions...\n"));
 
   // Find project root (where package.json is)
   let rootDir = process.cwd();
   while (!(await exists(join(rootDir, "package.json")))) {
     const parent = dirname(rootDir);
     if (parent === rootDir) {
-      console.error(colors.red("Could not find project root (package.json)"));
+      log.error("Could not find project root (package.json)");
+      print(colors.red("Could not find project root (package.json)"));
       process.exit(2);
     }
     rootDir = parent;
@@ -514,8 +537,8 @@ ${colors.bold("Exit Codes:")}
   };
 
   // Runtime checks
-  console.log(colors.bold("Runtimes"));
-  console.log("─".repeat(60));
+  print(colors.bold("Runtimes"));
+  print("─".repeat(60));
 
   const runtimeChecks = await Promise.all([
     checkBunVersion(),
@@ -525,44 +548,44 @@ ${colors.bold("Exit Codes:")}
   ]);
 
   for (const result of runtimeChecks) {
-    console.log(formatResult(result));
+    print(formatResult(result));
     allResults.push(result);
   }
 
   // TypeScript packages
-  console.log("\n" + colors.bold("TypeScript Packages"));
-  console.log("─".repeat(60));
+  print("\n" + colors.bold("TypeScript Packages"));
+  print("─".repeat(60));
 
   const tsResults = await checkTypeScriptPackages(rootDir);
   for (const result of tsResults) {
-    console.log(formatResult(result));
+    print(formatResult(result));
     allResults.push(result);
   }
 
   // Rust crates
-  console.log("\n" + colors.bold("Rust Crates"));
-  console.log("─".repeat(60));
+  print("\n" + colors.bold("Rust Crates"));
+  print("─".repeat(60));
 
   const rustResults = await checkRustCrates(rootDir);
   if (rustResults.length === 0) {
-    console.log(colors.dim("  No Cargo.toml found or no crates to check"));
+    print(colors.dim("  No Cargo.toml found or no crates to check"));
   } else {
     for (const result of rustResults) {
-      console.log(formatResult(result));
+      print(formatResult(result));
       allResults.push(result);
     }
   }
 
   // Python packages
-  console.log("\n" + colors.bold("Python Packages"));
-  console.log("─".repeat(60));
+  print("\n" + colors.bold("Python Packages"));
+  print("─".repeat(60));
 
   const pyResults = await checkPythonPackages(rootDir);
   if (pyResults.length === 0) {
-    console.log(colors.dim("  No pyproject.toml found or no packages to check"));
+    print(colors.dim("  No pyproject.toml found or no packages to check"));
   } else {
     for (const result of pyResults) {
-      console.log(formatResult(result));
+      print(formatResult(result));
       allResults.push(result);
     }
   }
@@ -594,25 +617,29 @@ ${colors.bold("Exit Codes:")}
   );
 
   if (runtimeMissing) {
-    console.log(colors.red("\n❌ Required runtime not found. Install missing runtimes first."));
+    log.error({ missing: runtimeChecks.filter(r => r.status === "missing").map(r => r.name) }, "Required runtime not found");
+    print(colors.red("\n❌ Required runtime not found. Install missing runtimes first."));
     process.exit(2);
   }
 
   if (summary.failed > 0) {
-    console.log(colors.red("\n❌ Version validation failed. Fix the issues above."));
+    log.error({ failed: summary.failed }, "Version validation failed");
+    print(colors.red("\n❌ Version validation failed. Fix the issues above."));
     process.exit(1);
   }
 
   if (summary.warnings > 0) {
-    console.log(colors.yellow("\n⚠️  Version validation passed with warnings."));
+    log.warn({ warnings: summary.warnings }, "Version validation passed with warnings");
+    print(colors.yellow("\n⚠️  Version validation passed with warnings."));
   } else {
-    console.log(colors.green("\n✅ All versions validated successfully!"));
+    print(colors.green("\n✅ All versions validated successfully!"));
   }
 
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error(colors.red("Fatal error:"), err);
+  log.error({ error: err instanceof Error ? err.message : String(err) }, "Fatal error during version validation");
+  print(colors.red("Fatal error:") + " " + String(err));
   process.exit(1);
 });

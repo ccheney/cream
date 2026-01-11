@@ -27,6 +27,7 @@ import {
   type UnsubscribeOptionsMessage,
   type UnsubscribeSymbolsMessage,
 } from "../../../../packages/domain/src/websocket/index.js";
+import log from "../logger.js";
 import {
   getCachedQuote,
   subscribeSymbols as subscribeToStreaming,
@@ -995,6 +996,15 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
   const metadata = ws.data;
   connections.set(metadata.connectionId, ws);
 
+  log.info(
+    {
+      connectionId: metadata.connectionId,
+      userId: metadata.userId,
+      totalConnections: connections.size,
+    },
+    "WebSocket client connected"
+  );
+
   sendMessage(ws, {
     type: "system_status",
     data: {
@@ -1011,8 +1021,17 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
 /**
  * Handle WebSocket close.
  */
-export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: string): void {
+export function handleClose(ws: WebSocketWithMetadata, code: number, reason: string): void {
   const metadata = ws.data;
+  log.info(
+    {
+      connectionId: metadata.connectionId,
+      code,
+      reason,
+      remainingConnections: connections.size - 1,
+    },
+    "WebSocket client disconnected"
+  );
   removeConnection(metadata.connectionId);
   cleanupBacktestSubscriptions(ws);
 }
@@ -1020,8 +1039,9 @@ export function handleClose(ws: WebSocketWithMetadata, _code: number, _reason: s
 /**
  * Handle WebSocket error.
  */
-export function handleError(ws: WebSocketWithMetadata, _error: Error): void {
+export function handleError(ws: WebSocketWithMetadata, error: Error): void {
   const metadata = ws.data;
+  log.error({ connectionId: metadata.connectionId, error: error.message }, "WebSocket error");
   removeConnection(metadata.connectionId);
   cleanupBacktestSubscriptions(ws);
 }
@@ -1072,6 +1092,13 @@ export function closeStaleConnections(): number {
     }
   }
 
+  if (closed > 0) {
+    log.info(
+      { closedCount: closed, remainingConnections: connections.size },
+      "Closed stale WebSocket connections"
+    );
+  }
+
   return closed;
 }
 
@@ -1109,6 +1136,9 @@ export function stopHeartbeat(): void {
  * Close all connections gracefully.
  */
 export function closeAllConnections(reason = "Server shutting down"): void {
+  const connectionCount = connections.size;
+  log.info({ connectionCount, reason }, "Closing all WebSocket connections");
+
   for (const [_connectionId, ws] of connections) {
     try {
       ws.close(1001, reason);
@@ -1119,6 +1149,7 @@ export function closeAllConnections(reason = "Server shutting down"): void {
 
   connections.clear();
   stopHeartbeat();
+  log.info("All WebSocket connections closed");
 }
 
 // ============================================

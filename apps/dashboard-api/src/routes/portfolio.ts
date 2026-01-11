@@ -14,6 +14,7 @@ import {
   getPortfolioSnapshotsRepo,
   getPositionsRepo,
 } from "../db.js";
+import log from "../logger.js";
 import { portfolioService } from "../services/portfolio.js";
 import { systemState } from "./system.js";
 
@@ -642,26 +643,46 @@ app.openapi(closePositionRoute, async (c) => {
 
   const position = await positionsRepo.findById(id);
   if (!position) {
+    log.warn({ positionId: id }, "Close position request for non-existent position");
     return c.json({ error: "Position not found" }, 404);
   }
 
-  // Create a close order
-  const orderId = crypto.randomUUID();
-  const order = await ordersRepo.create({
-    id: orderId,
-    decisionId: null,
-    symbol: position.symbol,
-    side: position.side === "LONG" ? "SELL" : "BUY",
-    quantity: position.quantity,
-    orderType: body.marketOrder ? "MARKET" : "LIMIT",
-    limitPrice: body.limitPrice ?? null,
-    environment: position.environment,
-  });
+  log.info(
+    { positionId: id, symbol: position.symbol, quantity: position.quantity, side: position.side },
+    "Closing position"
+  );
 
-  return c.json({
-    orderId: order.id,
-    message: `Close order submitted for ${position.symbol}`,
-  });
+  try {
+    // Create a close order
+    const orderId = crypto.randomUUID();
+    const order = await ordersRepo.create({
+      id: orderId,
+      decisionId: null,
+      symbol: position.symbol,
+      side: position.side === "LONG" ? "SELL" : "BUY",
+      quantity: position.quantity,
+      orderType: body.marketOrder ? "MARKET" : "LIMIT",
+      limitPrice: body.limitPrice ?? null,
+      environment: position.environment,
+    });
+
+    log.info({ positionId: id, orderId: order.id, symbol: position.symbol }, "Close order created");
+
+    return c.json({
+      orderId: order.id,
+      message: `Close order submitted for ${position.symbol}`,
+    });
+  } catch (error) {
+    log.error(
+      {
+        positionId: id,
+        symbol: position.symbol,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Failed to create close order"
+    );
+    throw error;
+  }
 });
 
 export default app;
