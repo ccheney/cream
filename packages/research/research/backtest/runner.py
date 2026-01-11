@@ -56,9 +56,25 @@ class BacktestConfig:
         )
 
 
+def sanitize_for_json(obj: Any) -> Any:
+    """Recursively sanitize values for JSON (handle inf/nan)."""
+    import math
+
+    if isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    return obj
+
+
 def emit(event: dict[str, Any]) -> None:
     """Write JSON event to stdout (one per line)."""
-    print(json.dumps(event), flush=True)
+    sanitized = sanitize_for_json(event)
+    print(json.dumps(sanitized), flush=True)
 
 
 def run_backtest(config: BacktestConfig) -> None:
