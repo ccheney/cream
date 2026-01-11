@@ -93,50 +93,50 @@ export class KalshiWebSocketClient {
     this.connectionState = "connecting";
     const url = this.config.demo ? KALSHI_DEMO_WEBSOCKET_URL : KALSHI_WEBSOCKET_URL;
 
-    return new Promise((resolve, reject) => {
-      try {
-        const wsOptions = this.isAuthenticated()
-          ? { headers: generateAuthHeaders(this.config.apiKeyId, this.config.privateKeyPem) }
-          : undefined;
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    try {
+      const wsOptions = this.isAuthenticated()
+        ? { headers: generateAuthHeaders(this.config.apiKeyId, this.config.privateKeyPem) }
+        : undefined;
 
-        this.ws = new WebSocket(url, wsOptions);
+      this.ws = new WebSocket(url, wsOptions);
 
-        this.ws.onopen = () => {
-          this.connectionState = "connected";
-          this.reconnectAttempts = 0;
-          this.startHeartbeat();
-          this.resubscribe();
-          for (const cb of this.onConnectCallbacks) {
-            cb();
-          }
-          resolve();
-        };
+      this.ws.onopen = () => {
+        this.connectionState = "connected";
+        this.reconnectAttempts = 0;
+        this.startHeartbeat();
+        this.resubscribe();
+        for (const cb of this.onConnectCallbacks) {
+          cb();
+        }
+        resolve();
+      };
 
-        this.ws.onclose = (event) => {
-          this.handleDisconnect(event.reason);
-        };
+      this.ws.onclose = (event) => {
+        this.handleDisconnect(event.reason);
+      };
 
-        this.ws.onerror = () => {
-          const error = new Error("WebSocket connection error");
-          for (const cb of this.onErrorCallbacks) {
-            cb(error);
-          }
-          if (this.connectionState === "connecting") {
-            reject(error);
-          }
-        };
+      this.ws.onerror = () => {
+        const error = new Error("WebSocket connection error");
+        for (const cb of this.onErrorCallbacks) {
+          cb(error);
+        }
+        if (this.connectionState === "connecting") {
+          reject(error);
+        }
+      };
 
-        this.ws.onmessage = (event) => {
-          handleMessage(event.data, {
-            cache: this.cache,
-            subscriptions: this.subscriptions,
-          });
-        };
-      } catch (error) {
-        this.connectionState = "disconnected";
-        reject(error);
-      }
-    });
+      this.ws.onmessage = (event) => {
+        handleMessage(event.data, {
+          cache: this.cache,
+          subscriptions: this.subscriptions,
+        });
+      };
+    } catch (error) {
+      this.connectionState = "disconnected";
+      reject(error as Error);
+    }
+    return promise;
   }
 
   disconnect(): void {

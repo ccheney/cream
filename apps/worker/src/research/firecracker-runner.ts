@@ -248,37 +248,37 @@ export class FirecrackerRunner {
     // Use Node.js http module with Unix socket
     const http = await import("node:http");
 
-    return new Promise((resolve, reject) => {
-      const options = {
-        socketPath,
-        path: endpoint,
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      };
+    const { promise, resolve, reject } = Promise.withResolvers<unknown>();
+    const options = {
+      socketPath,
+      path: endpoint,
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
 
-      const req = http.request(options, (res) => {
-        let data = "";
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
-        res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(data ? JSON.parse(data) : null);
-          } else {
-            reject(new Error(`API request failed: ${res.statusCode} ${data}`));
-          }
-        });
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
       });
-
-      req.on("error", reject);
-
-      if (body) {
-        req.write(JSON.stringify(body));
-      }
-      req.end();
+      res.on("end", () => {
+        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data ? JSON.parse(data) : null);
+        } else {
+          reject(new Error(`API request failed: ${res.statusCode} ${data}`));
+        }
+      });
     });
+
+    req.on("error", reject);
+
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
+    req.end();
+    return promise;
   }
 
   /**

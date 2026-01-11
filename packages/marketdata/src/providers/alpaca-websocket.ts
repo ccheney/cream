@@ -401,37 +401,37 @@ export class AlpacaWebSocketClient {
     this.state = AlpacaConnectionState.CONNECTING;
     const endpoint = this.getEndpoint();
 
-    return new Promise((resolve, reject) => {
-      try {
-        this.ws = new WebSocket(endpoint);
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    try {
+      this.ws = new WebSocket(endpoint);
 
-        this.ws.on("open", () => {
-          this.state = AlpacaConnectionState.CONNECTED;
-        });
+      this.ws.on("open", () => {
+        this.state = AlpacaConnectionState.CONNECTED;
+      });
 
-        this.ws.on("message", (data: Buffer) => {
-          this.handleMessage(data, resolve);
-        });
+      this.ws.on("message", (data: Buffer) => {
+        this.handleMessage(data, resolve);
+      });
 
-        this.ws.on("error", (error: Error) => {
-          this.handleError(error);
-          if (this.state === AlpacaConnectionState.CONNECTING) {
-            reject(error);
-          }
-        });
+      this.ws.on("error", (error: Error) => {
+        this.handleError(error);
+        if (this.state === AlpacaConnectionState.CONNECTING) {
+          reject(error);
+        }
+      });
 
-        this.ws.on("close", (code: number, reason: Buffer) => {
-          this.handleClose(code, reason.toString());
-        });
+      this.ws.on("close", (code: number, reason: Buffer) => {
+        this.handleClose(code, reason.toString());
+      });
 
-        this.ws.on("pong", () => {
-          this.lastPongTime = Date.now();
-        });
-      } catch (error) {
-        this.state = AlpacaConnectionState.ERROR;
-        reject(error);
-      }
-    });
+      this.ws.on("pong", () => {
+        this.lastPongTime = Date.now();
+      });
+    } catch (error) {
+      this.state = AlpacaConnectionState.ERROR;
+      reject(error as Error);
+    }
+    return promise;
   }
 
   /**

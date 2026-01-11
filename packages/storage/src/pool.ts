@@ -463,17 +463,17 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
         return connection;
       } catch {
         // At max capacity, wait for a connection
-        return new Promise<T>((resolve, reject) => {
-          const timer = setTimeout(() => {
-            const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
-            if (index >= 0) {
-              pending.splice(index, 1);
-            }
-            reject(new Error(`Acquire timeout after ${acquireTimeout}ms`));
-          }, acquireTimeout);
+        const { promise, resolve, reject } = Promise.withResolvers<T>();
+        const timer = setTimeout(() => {
+          const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
+          if (index >= 0) {
+            pending.splice(index, 1);
+          }
+          reject(new Error(`Acquire timeout after ${acquireTimeout}ms`));
+        }, acquireTimeout);
 
-          pending.push({ resolve, reject, timer });
-        });
+        pending.push({ resolve, reject, timer });
+        return promise;
       }
     },
 
@@ -696,22 +696,22 @@ export function createHttpPool(config: HttpPoolConfig = {}): HttpPool {
         });
       }
 
-      return new Promise<T>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
-          if (index >= 0) {
-            pending.splice(index, 1);
-          }
-          reject(new Error(`[${name}] Request timeout after ${timeout}ms`));
-        }, timeout);
+      const { promise, resolve, reject } = Promise.withResolvers<T>();
+      const timer = setTimeout(() => {
+        const index = pending.findIndex((p) => p.resolve === resolve && p.reject === reject);
+        if (index >= 0) {
+          pending.splice(index, 1);
+        }
+        reject(new Error(`[${name}] Request timeout after ${timeout}ms`));
+      }, timeout);
 
-        pending.push({
-          fn: fn as () => Promise<unknown>,
-          resolve: resolve as (value: unknown) => void,
-          reject,
-          timer,
-        });
+      pending.push({
+        fn: fn as () => Promise<unknown>,
+        resolve: resolve as (value: unknown) => void,
+        reject,
+        timer,
       });
+      return promise;
     },
 
     getStats(): { active: number; pending: number; maxConcurrent: number } {

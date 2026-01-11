@@ -254,43 +254,43 @@ export class PolymarketWebSocketClient {
 
     this.connectionState = "connecting";
 
-    return new Promise((resolve, reject) => {
-      try {
-        this.ws = new WebSocket(POLYMARKET_WEBSOCKET_URL);
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    try {
+      this.ws = new WebSocket(POLYMARKET_WEBSOCKET_URL);
 
-        this.ws.onopen = () => {
-          this.connectionState = "connected";
-          this.reconnectAttempts = 0;
-          this.startHeartbeat();
-          this.resubscribe();
-          for (const cb of this.onConnectCallbacks) {
-            cb();
-          }
-          resolve();
-        };
+      this.ws.onopen = () => {
+        this.connectionState = "connected";
+        this.reconnectAttempts = 0;
+        this.startHeartbeat();
+        this.resubscribe();
+        for (const cb of this.onConnectCallbacks) {
+          cb();
+        }
+        resolve();
+      };
 
-        this.ws.onclose = (event) => {
-          this.handleDisconnect(event.reason);
-        };
+      this.ws.onclose = (event) => {
+        this.handleDisconnect(event.reason);
+      };
 
-        this.ws.onerror = () => {
-          const error = new Error("WebSocket connection error");
-          for (const cb of this.onErrorCallbacks) {
-            cb(error);
-          }
-          if (this.connectionState === "connecting") {
-            reject(error);
-          }
-        };
+      this.ws.onerror = () => {
+        const error = new Error("WebSocket connection error");
+        for (const cb of this.onErrorCallbacks) {
+          cb(error);
+        }
+        if (this.connectionState === "connecting") {
+          reject(error);
+        }
+      };
 
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event.data as string);
-        };
-      } catch (error) {
-        this.connectionState = "disconnected";
-        reject(error);
-      }
-    });
+      this.ws.onmessage = (event) => {
+        this.handleMessage(event.data as string);
+      };
+    } catch (error) {
+      this.connectionState = "disconnected";
+      reject(error as Error);
+    }
+    return promise;
   }
 
   disconnect(): void {
