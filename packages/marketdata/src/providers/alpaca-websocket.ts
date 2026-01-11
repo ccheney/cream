@@ -24,8 +24,9 @@
  */
 
 import { decode as msgpackDecode } from "@msgpack/msgpack";
-import WebSocket from "ws";
 import { z } from "zod";
+
+// Use Bun's native WebSocket (browser-compatible API)
 
 // ============================================
 // Constants & Endpoints
@@ -405,28 +406,29 @@ export class AlpacaWebSocketClient {
     try {
       this.ws = new WebSocket(endpoint);
 
-      this.ws.on("open", () => {
+      this.ws.addEventListener("open", () => {
         this.state = AlpacaConnectionState.CONNECTED;
       });
 
-      this.ws.on("message", (data: Buffer) => {
-        this.handleMessage(data, resolve);
+      this.ws.addEventListener("message", (event: MessageEvent) => {
+        this.handleMessage(event.data, resolve);
       });
 
-      this.ws.on("error", (error: Error) => {
+      this.ws.addEventListener("error", () => {
+        const error = new Error("WebSocket connection error");
         this.handleError(error);
         if (this.state === AlpacaConnectionState.CONNECTING) {
           reject(error);
         }
       });
 
-      this.ws.on("close", (code: number, reason: Buffer) => {
-        this.handleClose(code, reason.toString());
+      this.ws.addEventListener("close", (event: CloseEvent) => {
+        this.handleClose(event.code, event.reason);
       });
 
-      this.ws.on("pong", () => {
-        this.lastPongTime = Date.now();
-      });
+      // Note: Bun native WebSocket handles protocol-level ping/pong automatically
+      // The lastPongTime tracking is maintained via message activity
+      this.lastPongTime = Date.now();
     } catch (error) {
       this.state = AlpacaConnectionState.ERROR;
       reject(error as Error);
@@ -538,21 +540,24 @@ export class AlpacaWebSocketClient {
   /**
    * Parse incoming message data.
    * Options stream uses msgpack, others use JSON.
+   * Bun native WebSocket provides string for text or ArrayBuffer for binary.
    */
-  private parseMessage(data: Buffer): unknown[] {
+  private parseMessage(data: string | ArrayBuffer): unknown[] {
     if (this.usesMsgpack()) {
-      // Decode msgpack binary data
+      // Decode msgpack binary data (comes as ArrayBuffer from Bun)
       try {
-        const decoded = msgpackDecode(data);
+        const buffer =
+          data instanceof ArrayBuffer ? new Uint8Array(data) : new TextEncoder().encode(data);
+        const decoded = msgpackDecode(buffer);
         return Array.isArray(decoded) ? decoded : [decoded];
       } catch {
         return [];
       }
     }
 
-    // Parse JSON
+    // Parse JSON (comes as string from Bun)
     try {
-      const text = data.toString("utf-8");
+      const text = typeof data === "string" ? data : new TextDecoder().decode(data);
       const parsed = JSON.parse(text);
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch {
@@ -562,8 +567,14 @@ export class AlpacaWebSocketClient {
 
   /**
    * Handle incoming WebSocket messages.
+   * Bun native WebSocket provides string for text or ArrayBuffer for binary.
    */
-  private handleMessage(data: Buffer, connectResolve?: (value: undefined) => void): void {
+  private handleMessage(
+    data: string | ArrayBuffer,
+    connectResolve?: (value: undefined) => void
+  ): void {
+    // Update lastPongTime on any message activity (replaces explicit pong handling)
+    this.lastPongTime = Date.now();
     try {
       const messages = this.parseMessage(data);
 
@@ -764,20 +775,21 @@ export class AlpacaWebSocketClient {
   }
 
   /**
-   * Start ping timer to keep connection alive.
+   * Start connection monitor to detect stale connections.
+   * Bun native WebSocket handles protocol-level ping/pong automatically.
+   * We monitor message activity to detect if the connection has gone stale.
    */
   private startPing(): void {
     this.lastPongTime = Date.now();
 
     this.pingTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const timeSinceLastPong = Date.now() - this.lastPongTime;
-        if (timeSinceLastPong > this.config.pingIntervalS * 2 * 1000) {
+        const timeSinceLastActivity = Date.now() - this.lastPongTime;
+        // Close connection if no activity for 2x ping interval
+        if (timeSinceLastActivity > this.config.pingIntervalS * 2 * 1000) {
           this.ws.close();
-          return;
         }
-
-        this.ws.ping();
+        // Bun native WebSocket handles protocol pings automatically
       }
     }, this.config.pingIntervalS * 1000);
   }

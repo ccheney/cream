@@ -22,8 +22,6 @@
     "@cream/logger": "workspace:*",
     "@cream/regime": "workspace:*",
     "@cream/universe": "workspace:*",
-    "@types/ws": "8.18.1",
-    "ws": "8.19.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
