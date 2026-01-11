@@ -65,7 +65,7 @@ def compute_technical_score(plan: Any, context: Any) -> float:
 
 
 def compute_memory_score(
-    plan: Any,
+    plan: Any,  # noqa: ARG001
     context: Any,
     memory_context: dict[str, Any] | None,
 ) -> float:

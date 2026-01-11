@@ -80,10 +80,7 @@ class SpreadSlippage(SlippageModel):
             spread: Bid-ask spread in dollars. If None, uses default_spread_bps.
         """
         del side, size, is_exit, kwargs  # Unused
-        if spread is not None:
-            spread_pct = spread / price
-        else:
-            spread_pct = self.default_spread_bps / 10_000
+        spread_pct = spread / price if spread is not None else self.default_spread_bps / 10_000
 
         return spread_pct * self.spread_fraction
 
