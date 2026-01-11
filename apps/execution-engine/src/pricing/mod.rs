@@ -31,5 +31,5 @@ mod strategy;
 pub use iv::{IvError, IvSolver, IvSolverConfig, OptionKind};
 pub use strategy::{
     LegDirection, OptionsStrategy, StrategyBuilder, StrategyBuilderConfig, StrategyError,
-    StrategyLeg, StrategyType,
+    StrategyLeg, StrategyType, validate_balanced_spread,
 };
