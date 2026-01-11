@@ -140,6 +140,25 @@ export {
   GraphRAGQueryOutputSchema,
   graphragQueryTool,
 } from "./graphragTools.js";
+// Indicator tools
+export {
+  GetIndicatorInputSchema,
+  GetIndicatorOutputSchema,
+  GetValidatedIndicatorsInputSchema,
+  GetValidatedIndicatorsOutputSchema,
+  getIndicatorTool,
+  getValidatedIndicatorsTool,
+  IngestIndicatorInputSchema,
+  IngestIndicatorOutputSchema,
+  indicatorTools,
+  ingestIndicatorTool,
+  SearchByCategoryInputSchema,
+  SearchByCategoryOutputSchema,
+  SearchSimilarIndicatorsInputSchema,
+  SearchSimilarIndicatorsOutputSchema,
+  searchIndicatorsByCategoryTool,
+  searchSimilarIndicatorsTool,
+} from "./indicatorTools.js";
 // Macro exposure tools
 export {
   type CompaniesAffectedInput,

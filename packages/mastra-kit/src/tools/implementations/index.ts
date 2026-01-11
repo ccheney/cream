@@ -30,6 +30,15 @@ export {
   graphragQuery,
 } from "./graphrag.js";
 export { helixQuery } from "./helix.js";
+export {
+  getIndicator,
+  getValidatedIndicators,
+  type IndicatorDetails,
+  type IndicatorSearchResult,
+  ingestIndicator,
+  searchIndicatorsByCategory,
+  searchSimilarIndicators,
+} from "./indicatorIngestion.js";
 export { recalcIndicator } from "./indicators.js";
 export { getGreeks, getOptionChain, parseOSISymbol } from "./options.js";
 export { getPortfolioState } from "./portfolio.js";
