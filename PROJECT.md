@@ -1,6 +1,6 @@
 # Cream
 
-Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through an 8-agent consensus network.
+Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through a 7-agent consensus network, plus 2 specialized agents for dynamic indicator synthesis (9 total).
 
 ## Status
 
@@ -74,6 +74,101 @@ flowchart LR
 
 **Consensus Rule**: Plans execute only when **both** Risk Manager and Critic approve. Up to 3 revision iterations if rejected.
 
+### Dynamic Indicator Synthesis (2 Additional Agents)
+
+Two specialized agents operate **outside** the trading consensus network to autonomously generate, validate, and deploy new technical indicators when existing signals fail to capture market dynamics.
+
+| Agent | Role |
+|-------|------|
+| **Idea Agent** | Generates novel alpha factor hypotheses based on regime gaps and academic research |
+| **Indicator Researcher** | Formulates indicator hypotheses with economic rationale and falsification criteria |
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
+flowchart TB
+    subgraph Trigger["1. TRIGGER DETECTION"]
+        T1["`**Orient Phase**
+        detects regime gap
+        + IC decay`"]
+    end
+
+    subgraph Hypothesis["2. HYPOTHESIS GENERATION"]
+        H1["`**Idea Agent**
+        Academic research
+        Alpha factor gaps`"]
+        H2["`**Indicator Researcher**
+        Economic rationale
+        Falsification criteria`"]
+    end
+
+    subgraph Implement["3. IMPLEMENTATION"]
+        I1["`**Claude Code**
+        Write indicator code
+        AST similarity check`"]
+    end
+
+    subgraph Validate["4. VALIDATION PIPELINE"]
+        V1["`DSR`"]
+        V2["`PBO`"]
+        V3["`IC`"]
+        V4["`Walk-Forward`"]
+        V5["`Orthogonality`"]
+    end
+
+    subgraph Paper["5. PAPER TRADING"]
+        P1["`**30 days**
+        Realized vs Backtested
+        Sharpe comparison`"]
+    end
+
+    subgraph Production["6. PRODUCTION"]
+        PR["`**PR Creation**
+        Human review
+        Merge & deploy`"]
+        Mon["`**Monitoring**
+        Daily IC tracking
+        Auto-retirement`"]
+    end
+
+    Trigger --> Hypothesis
+    H1 --> H2
+    Hypothesis --> Implement
+    Implement --> Validate
+    V1 --> V2 --> V3 --> V4 --> V5
+    Validate -->|~4% survive| Paper
+    Paper -->|pass| Production
+    PR --> Mon
+
+    classDef trigger fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
+    classDef hypothesis fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
+    classDef implement fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
+    classDef validate fill:#FFEDD5,stroke:#EA580C,stroke-width:2px,color:#3D3832
+    classDef paper fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
+    classDef production fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
+
+    class T1 trigger
+    class H1,H2 hypothesis
+    class I1 implement
+    class V1,V2,V3,V4,V5 validate
+    class P1 paper
+    class PR,Mon production
+```
+
+**Trigger Conditions** (all must be met):
+- Regime gap detected (market phenomenon not captured)
+- Rolling 30-day IC < 0.02 for 5+ days
+- 30+ days since last generation attempt
+- Capacity available (< 20 active indicators)
+
+**Validation Gates** (~4% survival rate):
+- **DSR** (Deflated Sharpe Ratio) - p-value > 0.95
+- **PBO** (Probability of Backtest Overfitting) - < 0.50
+- **IC** (Information Coefficient) - mean > 0.02, std < 0.03
+- **Walk-Forward** - efficiency > 0.50
+- **Orthogonality** - max correlation < 0.70, VIF < 5
+
+**Retirement Conditions**: IC decay (< 0.01 for 30 days), signal crowding, capacity limits.
+
 ---
 
 ## Technology Stack
@@ -137,7 +232,7 @@ cream/
 
 ### API (`apps/api`)
 
-Mastra orchestration server running the hourly OODA loop with 8-agent consensus.
+Mastra orchestration server running the hourly OODA loop with 7-agent consensus (+2 for indicator synthesis).
 
 **Port**: 4111
 
@@ -237,7 +332,7 @@ Rust gRPC server for deterministic order validation and routing.
 
 | Package | Purpose |
 |---------|---------|
-| `@cream/mastra-kit` | 8 agents, 30+ tools, dual-approval consensus |
+| `@cream/mastra-kit` | 9 agents, 30+ tools, dual-approval consensus |
 | `@cream/external-context` | Claude extraction pipeline for news/sentiment |
 | `@cream/filings` | SEC EDGAR ingestion (10-K, 10-Q, 8-K) |
 | `@cream/prediction-markets` | Kalshi/Polymarket clients, arbitrage detection |
