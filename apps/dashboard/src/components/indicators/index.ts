@@ -37,6 +37,10 @@ export {
 } from "./PriceIndicators";
 export { RetireButton } from "./RetireButton";
 export {
+  SentimentIndicators as SentimentWidget,
+  type SentimentIndicatorsProps,
+} from "./SentimentIndicators";
+export {
   ShortInterestIndicators as ShortInterestWidget,
   type ShortInterestIndicatorsProps,
 } from "./ShortInterestIndicators";
