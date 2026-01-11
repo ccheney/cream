@@ -35,7 +35,7 @@ dependencies = [
     "skfolio>=0.15",  # CPCV and portfolio optimization
 
     # LLM Integration
-    "google-generativeai>=0.8",  # Google Gemini API for LLM-as-judge
+    "google-genai>=1.57",  # Google Gemini API for LLM-as-judge
     "tenacity>=9.0",  # Retry logic with exponential backoff
 
     # Options Greeks computation
@@ -185,7 +185,7 @@ check_untyped_defs = false
 # Third-party modules without stubs
 [[tool.mypy.overrides]]
 module = [
-    "google.generativeai.*",
+    "google.genai.*",
     "vectorbt.*",
     "nautilus_trader.*",
     "sklearn.*",

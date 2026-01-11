@@ -52,7 +52,7 @@ __all__ = [
     "check_originality_batch",
     "subtree_similarity",
     "compute_factor_hash",
-    # Hypothesis alignment (requires google-generativeai)
+    # Hypothesis alignment (requires google-genai)
     "Hypothesis",
     "AlignmentResult",
     "HypothesisAlignmentEvaluator",

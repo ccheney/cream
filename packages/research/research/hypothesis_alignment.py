@@ -148,9 +148,9 @@ class HypothesisAlignmentEvaluator:
     def _get_client(self) -> Any:
         """Lazily initialize the Gemini client."""
         if self._client is None:
-            import google.generativeai as genai
+            from google import genai
 
-            self._client = genai.GenerativeModel(self.model)
+            self._client = genai.Client()
         return self._client
 
     def _build_evaluation_prompt(
@@ -250,7 +250,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 
         try:
             client = self._get_client()
-            response = client.generate_content(prompt)
+            response = client.models.generate_content(model=self.model, contents=prompt)
             response_text = response.text
 
             data = self._parse_response(response_text)
@@ -303,7 +303,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
 
         try:
             client = self._get_client()
-            response = client.generate_content(prompt)
+            response = client.models.generate_content(model=self.model, contents=prompt)
             response_text = response.text
 
             data = self._parse_response(response_text)

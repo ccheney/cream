@@ -46,7 +46,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from research.evaluator.rule_scorer import ScoringResult
@@ -108,10 +109,9 @@ class LLMJudge:
                 "API key required: pass api_key argument or set GOOGLE_API_KEY environment variable"
             )
 
-        # Configure Gemini
-        genai.configure(api_key=self.api_key)
+        # Create Gemini client
+        self.client = genai.Client(api_key=self.api_key)
         self.model_name = model or self.DEFAULT_MODEL
-        self.model = genai.GenerativeModel(self.model_name)
 
         # Cache for responses
         self.enable_cache = enable_cache
@@ -141,9 +141,10 @@ class LLMJudge:
             Exception: If all retries fail
         """
         try:
-            response = await self.model.generate_content_async(
-                prompt,
-                generation_config=genai.GenerationConfig(
+            response = await self.client.aio.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
                     temperature=self.TEMPERATURE,
                 ),
             )
