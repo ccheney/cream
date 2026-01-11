@@ -45,10 +45,12 @@ const RecalcIndicatorInputSchema = z.object({
 });
 
 const RecalcIndicatorOutputSchema = z.object({
-  indicator: z.string(),
-  symbol: z.string(),
-  values: z.array(z.number()),
-  timestamps: z.array(z.string()),
+  indicator: z.string().describe("Indicator type that was calculated (RSI, SMA, etc.)"),
+  symbol: z.string().describe("Symbol the indicator was calculated for"),
+  values: z
+    .array(z.number())
+    .describe("Indicator values, most recent last. Length matches timestamps"),
+  timestamps: z.array(z.string()).describe("ISO 8601 timestamps for each value, oldest to newest"),
 });
 
 export const recalcIndicatorTool = createTool({
@@ -87,18 +89,28 @@ const EconomicCalendarInputSchema = z.object({
 });
 
 const EconomicEventSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  date: z.string(),
-  time: z.string(),
-  impact: z.enum(["high", "medium", "low"]),
-  forecast: z.string().nullable(),
-  previous: z.string().nullable(),
-  actual: z.string().nullable(),
+  id: z.string().describe("Unique event identifier"),
+  name: z.string().describe("Event name (e.g., 'FOMC Rate Decision', 'Non-Farm Payrolls')"),
+  date: z.string().describe("Event date in YYYY-MM-DD format"),
+  time: z.string().describe("Event time in HH:MM format (usually Eastern)"),
+  impact: z
+    .enum(["high", "medium", "low"])
+    .describe("Market impact level. High = major volatility expected"),
+  forecast: z
+    .string()
+    .nullable()
+    .describe("Consensus forecast value. Null if no forecast available"),
+  previous: z.string().nullable().describe("Previous release value for comparison"),
+  actual: z
+    .string()
+    .nullable()
+    .describe("Actual released value. Null if event hasn't occurred yet"),
 });
 
 const EconomicCalendarOutputSchema = z.object({
-  events: z.array(EconomicEventSchema),
+  events: z
+    .array(EconomicEventSchema)
+    .describe("Economic events in the date range, sorted by date"),
 });
 
 export const economicCalendarTool = createTool({
@@ -131,17 +143,19 @@ const NewsSearchInputSchema = z.object({
 });
 
 const NewsItemSchema = z.object({
-  id: z.string(),
-  headline: z.string(),
-  summary: z.string(),
-  source: z.string(),
-  publishedAt: z.string(),
-  symbols: z.array(z.string()),
-  sentiment: z.enum(["positive", "negative", "neutral"]),
+  id: z.string().describe("Unique news article identifier"),
+  headline: z.string().describe("Article headline/title. Key for quick scanning"),
+  summary: z.string().describe("Article summary or first paragraph. May be truncated"),
+  source: z.string().describe("News source name (e.g., 'Reuters', 'Bloomberg', 'SEC Filings')"),
+  publishedAt: z.string().describe("Publication timestamp in ISO 8601 format"),
+  symbols: z.array(z.string()).describe("Ticker symbols mentioned or tagged in the article"),
+  sentiment: z
+    .enum(["positive", "negative", "neutral"])
+    .describe("Article sentiment based on keyword analysis"),
 });
 
 const NewsSearchOutputSchema = z.object({
-  news: z.array(NewsItemSchema),
+  news: z.array(NewsItemSchema).describe("News articles matching the query, most recent first"),
 });
 
 export const newsSearchTool = createTool({
@@ -174,9 +188,13 @@ const HelixQueryInputSchema = z.object({
 });
 
 const HelixQueryOutputSchema = z.object({
-  nodes: z.array(z.unknown()),
-  edges: z.array(z.unknown()),
-  metadata: z.record(z.string(), z.unknown()),
+  nodes: z
+    .array(z.unknown())
+    .describe("Graph nodes returned by query. Structure depends on query type"),
+  edges: z.array(z.unknown()).describe("Graph edges/relationships between nodes"),
+  metadata: z
+    .record(z.string(), z.unknown())
+    .describe("Query metadata: timing, match count, similarity scores"),
 });
 
 export const helixQueryTool = createTool({
