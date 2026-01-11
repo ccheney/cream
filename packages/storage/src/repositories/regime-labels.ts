@@ -29,7 +29,7 @@ export type RegimeType = z.infer<typeof RegimeTypeSchema>;
 
 export const RegimeLabelSchema = z.object({
   id: z.number().optional(),
-  symbol: z.string(), // '_MARKET' for market-wide regime
+  symbol: z.string().describe("Ticker symbol or '_MARKET' for market-wide regime"),
   timestamp: z.string().datetime(),
   timeframe: RegimeTimeframeSchema,
   regime: RegimeTypeSchema,

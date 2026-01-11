@@ -36,7 +36,7 @@ export const IndexConstituentSchema = z.object({
   id: z.number().optional(),
   indexId: IndexIdSchema,
   symbol: z.string().min(1),
-  dateAdded: z.string(), // ISO8601 date
+  dateAdded: z.string().describe("Date symbol was added to index in ISO8601 format"),
   dateRemoved: z.string().nullable().optional(),
   reasonAdded: z.string().nullable().optional(),
   reasonRemoved: z.string().nullable().optional(),
@@ -53,7 +53,7 @@ export const TickerChangeSchema = z.object({
   id: z.number().optional(),
   oldSymbol: z.string().min(1),
   newSymbol: z.string().min(1),
-  changeDate: z.string(), // ISO8601 date
+  changeDate: z.string().describe("Date of ticker change in ISO8601 format"),
   changeType: ChangeTypeSchema,
   conversionRatio: z.number().nullable().optional(),
   reason: z.string().nullable().optional(),
@@ -65,7 +65,7 @@ export type TickerChange = z.infer<typeof TickerChangeSchema>;
 
 export const UniverseSnapshotSchema = z.object({
   id: z.number().optional(),
-  snapshotDate: z.string(), // ISO8601 date
+  snapshotDate: z.string().describe("Point-in-time date of universe snapshot in ISO8601 format"),
   indexId: IndexIdSchema,
   tickers: z.array(z.string()),
   tickerCount: z.number(),

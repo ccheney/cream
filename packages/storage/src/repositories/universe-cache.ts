@@ -20,8 +20,8 @@ export type SourceType = z.infer<typeof SourceTypeSchema>;
 export const UniverseCacheSchema = z.object({
   id: z.number().optional(),
   sourceType: SourceTypeSchema,
-  sourceId: z.string(), // e.g., 'SP500', 'QQQ', 'custom-tech'
-  sourceHash: z.string(), // Hash for cache invalidation
+  sourceId: z.string().describe("Universe source identifier (e.g., 'SP500', 'QQQ', 'custom-tech')"),
+  sourceHash: z.string().describe("Content hash for cache invalidation"),
   tickers: z.array(z.string()),
   tickerCount: z.number(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
@@ -37,7 +37,7 @@ export const UniverseCacheInsertSchema = UniverseCacheSchema.omit({
   cachedAt: true,
   tickerCount: true,
 }).extend({
-  tickerCount: z.number().optional(), // Will be computed from tickers
+  tickerCount: z.number().optional().describe("Computed from tickers array length"),
 });
 export type UniverseCacheInsert = z.infer<typeof UniverseCacheInsertSchema>;
 

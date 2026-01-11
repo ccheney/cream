@@ -27,7 +27,7 @@ export const CorporateActionSchema = z.object({
   id: z.number().optional(),
   symbol: z.string(),
   actionType: ActionTypeSchema,
-  exDate: z.string(), // YYYY-MM-DD
+  exDate: z.string().describe("Ex-dividend or effective date in YYYY-MM-DD format"),
   recordDate: z.string().nullable().optional(),
   payDate: z.string().nullable().optional(),
   ratio: z.number().nullable().optional(),
