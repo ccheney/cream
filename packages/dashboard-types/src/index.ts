@@ -5,5 +5,5 @@
  * Import from here to ensure type consistency across both apps.
  */
 
-export * from "./api.js";
+export * from "./api/index.js";
 export * from "./websocket.js";
