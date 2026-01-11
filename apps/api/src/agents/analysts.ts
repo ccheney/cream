@@ -7,7 +7,12 @@
 import { z } from "zod";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildPredictionMarketContext, buildRegimeContext } from "./prompts.js";
+import {
+  buildIndicatorContext,
+  buildIndicatorSummary,
+  buildPredictionMarketContext,
+  buildRegimeContext,
+} from "./prompts.js";
 import { FundamentalsAnalysisSchema, SentimentAnalysisSchema } from "./schemas.js";
 import type {
   AgentContext,
@@ -48,6 +53,10 @@ export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAn
     (e) => e.sourceType === "news" || e.sourceType === "press_release"
   );
 
+  // Build indicator context with sentiment signals
+  const indicatorContext = buildIndicatorContext(context.indicators);
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Analyze news and sentiment for the following instruments:
 
 Current News from Pipeline:
@@ -55,9 +64,19 @@ ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
 
 Recent Historical Events (from database):
 ${JSON.stringify(newsEvents, null, 2)}
-
+${indicatorContext}${indicatorSummary ? `\n${indicatorSummary}` : ""}
 Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Use the sentiment indicators above to contextualize your analysis:
+- overall_score: Aggregated sentiment from news and social sources (-1 to 1)
+- sentiment_strength: Confidence level of the sentiment signal
+- news_volume: Number of recent news articles (high volume may indicate event risk)
+- event_risk: Flag indicating significant upcoming or recent events
+- classification: Sentiment category (STRONG_BULLISH to STRONG_BEARISH)
+
+When sentiment indicators conflict with news content, highlight this divergence.
+If event_risk is true, pay special attention to potential catalysts.`;
 
   const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
@@ -199,6 +218,10 @@ export async function runNewsAnalystStreaming(
     (e) => e.sourceType === "news" || e.sourceType === "press_release"
   );
 
+  // Build indicator context with sentiment signals
+  const indicatorContext = buildIndicatorContext(context.indicators);
+  const indicatorSummary = buildIndicatorSummary(context.indicators);
+
   const prompt = `Analyze news and sentiment for the following instruments:
 
 Current News from Pipeline:
@@ -206,9 +229,19 @@ ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
 
 Recent Historical Events (from database):
 ${JSON.stringify(newsEvents, null, 2)}
-
+${indicatorContext}${indicatorSummary ? `\n${indicatorSummary}` : ""}
 Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}`;
+Cycle ID: ${context.cycleId}
+
+IMPORTANT: Use the sentiment indicators above to contextualize your analysis:
+- overall_score: Aggregated sentiment from news and social sources (-1 to 1)
+- sentiment_strength: Confidence level of the sentiment signal
+- news_volume: Number of recent news articles (high volume may indicate event risk)
+- event_risk: Flag indicating significant upcoming or recent events
+- classification: Sentiment category (STRONG_BULLISH to STRONG_BEARISH)
+
+When sentiment indicators conflict with news content, highlight this divergence.
+If event_risk is true, pay special attention to potential catalysts.`;
 
   const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
