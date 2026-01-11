@@ -173,11 +173,25 @@ export interface DerivedFromEdge {
 // ============================================
 
 /**
- * INSPIRED_BY edge - hypothesis to academic paper
+ * INSPIRED_BY edge - hypothesis to hypothesis
  *
- * Tracks which academic papers inspired a hypothesis.
+ * Tracks which hypotheses inspired a new hypothesis.
  */
 export interface InspiredByEdge {
+  source_id: string; // ResearchHypothesis.hypothesis_id (new)
+  target_id: string; // ResearchHypothesis.hypothesis_id (inspiration)
+  /** How the original hypothesis inspired the new one */
+  relevance: string;
+  /** Timestamp when link was created */
+  created_at: string;
+}
+
+/**
+ * CITES_PAPER edge - hypothesis to academic paper
+ *
+ * Tracks which academic papers were cited by a hypothesis.
+ */
+export interface CitesPaperEdge {
   source_id: string; // ResearchHypothesis.hypothesis_id
   target_id: string; // AcademicPaper.paper_id
   /** How the paper supports the hypothesis */

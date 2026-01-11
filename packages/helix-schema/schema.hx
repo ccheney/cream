@@ -282,11 +282,76 @@ E::THESIS_INCLUDES {
 }
 
 // ============================================
-// Indicator Synthesis Edges
+// Indicator & Research Graph Edges
 // ============================================
-// NOTE: Edge definitions for new vector types are disabled
-// due to a HelixDB code generator bug that produces invalid Rust code.
-// These relationships are tracked in the TypeScript types and can be
-// managed at the application layer until the bug is resolved.
-// Edge types: SIMILAR_TO, USED_IN_DECISION, DERIVED_FROM,
-//             INSPIRED_BY, IMPROVES_ON, GENERATED_FACTOR
+
+// Indicator-to-Indicator similarity edges
+E::SIMILAR_TO {
+    From: Indicator,
+    To: Indicator,
+    Properties: {
+        similarity_score: F64,
+        computed_at: String
+    }
+}
+
+// Track which indicators influenced trading decisions
+E::USED_IN_DECISION {
+    From: Indicator,
+    To: TradeDecision,
+    Properties: {
+        signal_value: F64,
+        decision_weight: F64
+    }
+}
+
+// Indicator derivation lineage
+E::DERIVED_FROM {
+    From: Indicator,
+    To: Indicator,
+    Properties: {
+        derivation_type: String,
+        derived_at: String
+    }
+}
+
+// Hypothesis inspiration chain (to papers or other hypotheses)
+E::INSPIRED_BY {
+    From: ResearchHypothesis,
+    To: ResearchHypothesis,
+    Properties: {
+        relevance: String,
+        created_at: String
+    }
+}
+
+// Paper inspiration for hypotheses
+E::CITES_PAPER {
+    From: ResearchHypothesis,
+    To: AcademicPaper,
+    Properties: {
+        relevance: String,
+        created_at: String
+    }
+}
+
+// Track hypothesis iterations and improvements
+E::IMPROVES_ON {
+    From: ResearchHypothesis,
+    To: ResearchHypothesis,
+    Properties: {
+        improvement_type: String,
+        improvement_description: String,
+        created_at: String
+    }
+}
+
+// Link hypothesis to generated factor/indicator
+E::GENERATED_FACTOR {
+    From: ResearchHypothesis,
+    To: Indicator,
+    Properties: {
+        validated_at: String,
+        environment: String
+    }
+}

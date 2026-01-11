@@ -517,15 +517,65 @@ QUERY GetPaperById(paper_id: String) =>
 // ============================================
 // Indicator Graph Traversal Queries
 // ============================================
-// NOTE: Graph traversal queries for new edge types are disabled
-// due to a HelixDB code generator bug that produces invalid Rust code.
-// The edges are defined in schema.hx and can be traversed via raw queries.
-// See: https://github.com/helixdb/helix/issues (code generator bug)
+
+QUERY GetSimilarIndicators(indicator_id: String) =>
+    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
+    similar <- indicator::Out<SIMILAR_TO>
+    RETURN similar
+
+QUERY GetIndicatorsUsedInDecision(decision_id: String) =>
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    indicators <- decision::In<USED_IN_DECISION>
+    RETURN indicators
+
+QUERY GetDerivedIndicators(indicator_id: String) =>
+    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
+    derived <- indicator::In<DERIVED_FROM>
+    RETURN derived
+
+QUERY GetSourceIndicator(indicator_id: String) =>
+    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
+    source <- indicator::Out<DERIVED_FROM>
+    RETURN source
 
 // ============================================
 // Hypothesis Graph Traversal Queries
 // ============================================
-// NOTE: Disabled due to same code generator bug as above.
+
+QUERY GetHypothesisInspirations(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    inspirations <- hypothesis::Out<INSPIRED_BY>
+    RETURN inspirations
+
+QUERY GetInspiredHypotheses(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    inspired <- hypothesis::In<INSPIRED_BY>
+    RETURN inspired
+
+QUERY GetImprovedHypotheses(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    improved <- hypothesis::In<IMPROVES_ON>
+    RETURN improved
+
+QUERY GetHypothesisIndicator(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    indicator <- hypothesis::Out<GENERATED_FACTOR>
+    RETURN indicator
+
+QUERY GetIndicatorHypothesis(indicator_id: String) =>
+    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
+    hypothesis <- indicator::In<GENERATED_FACTOR>
+    RETURN hypothesis
+
+QUERY GetHypothesisPapers(hypothesis_id: String) =>
+    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
+    papers <- hypothesis::Out<CITES_PAPER>
+    RETURN papers
+
+QUERY GetCitingHypotheses(paper_id: String) =>
+    paper <- V<AcademicPaper>::WHERE(_::{paper_id}::EQ(paper_id))
+    hypotheses <- paper::In<CITES_PAPER>
+    RETURN hypotheses
 
 // ============================================
 // GraphRAG Unified Search Queries

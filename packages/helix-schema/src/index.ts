@@ -58,6 +58,7 @@ export { EMBEDDED_FIELDS, NODE_TYPES } from "./node-types.js";
 
 export type {
   AffectedByEdge,
+  CitesPaperEdge,
   DependsOnEdge,
   DerivedFromEdge,
   FiledByEdge,
