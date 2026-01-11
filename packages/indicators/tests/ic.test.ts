@@ -14,7 +14,7 @@ import {
   pearsonCorrelation,
   spearmanCorrelation,
   timeSeriesIC,
-} from "../src/synthesis/ic.js";
+} from "../src/synthesis/ic/index.js";
 
 // ============================================
 // Rank Computation Tests

@@ -78,10 +78,13 @@ export {
   crossSectionalIC,
   evaluateIC,
   IC_DEFAULTS,
+  type ICAnalysisOptions,
   type ICAnalysisResult,
   ICAnalysisResultSchema,
   type ICDecayResult,
   ICDecayResultSchema,
+  type ICEvaluation,
+  type ICSignificanceThresholds,
   type ICStats,
   ICStatsSchema,
   type ICValue,
@@ -90,7 +93,7 @@ export {
   pearsonCorrelation,
   spearmanCorrelation,
   timeSeriesIC,
-} from "./ic.js";
+} from "./ic/index.js";
 // Production Monitoring
 export {
   computeHealthStatus,

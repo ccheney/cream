@@ -5,7 +5,7 @@
  */
 
 import { calculateDSR, type DSRResult } from "../dsr.js";
-import { calculateICStats, IC_DEFAULTS, timeSeriesIC } from "../ic.js";
+import { calculateICStats, IC_DEFAULTS, timeSeriesIC } from "../ic/index.js";
 import { checkOrthogonality, type OrthogonalityResult } from "../orthogonality.js";
 import { computePBO, PBO_DEFAULTS, type PBOResult } from "../pbo.js";
 import { type WalkForwardResult, WF_DEFAULTS, walkForwardValidation } from "../walkForward.js";

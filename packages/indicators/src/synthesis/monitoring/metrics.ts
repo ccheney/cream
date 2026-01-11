@@ -5,7 +5,7 @@
  */
 
 import type { TursoClient } from "@cream/storage";
-import { crossSectionalIC, spearmanCorrelation } from "../ic.js";
+import { crossSectionalIC, spearmanCorrelation } from "../ic/index.js";
 import { generateId, mean, std, sum, today } from "./helpers.js";
 import type { DailyICMetrics, DecisionAttribution, RollingMetrics } from "./types.js";
 import { MONITORING_DEFAULTS } from "./types.js";
