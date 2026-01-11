@@ -28,7 +28,7 @@
 //! }
 //! ```
 
-mod constraints;
+pub mod constraints;
 pub mod sizing;
 
 pub use constraints::{
