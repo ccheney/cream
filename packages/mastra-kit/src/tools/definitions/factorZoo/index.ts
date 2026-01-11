@@ -1,5 +1,5 @@
 /**
- * Mastra Factor Zoo Tool Definitions
+ * Factor Zoo Module
  *
  * Tools for managing the Factor Zoo and computing Mega-Alpha signals
  * following AlphaForge Algorithm 2 methodology.
@@ -8,10 +8,18 @@
  * @see https://arxiv.org/html/2406.18394v1 - AlphaForge paper
  */
 
+// Tool factories
+export { createCheckFactorDecayTool } from "./checkFactorDecay.js";
+export { createComputeMegaAlphaTool } from "./computeMegaAlpha.js";
+export { createComputeMegaAlphaForSymbolsTool } from "./computeMegaAlphaForSymbols.js";
+export { createGetActiveFactorsTool } from "./getActiveFactors.js";
+export { createGetCurrentWeightsTool } from "./getCurrentWeights.js";
+export { createGetFactorContextTool } from "./getFactorContext.js";
+export { createGetFactorZooStatsTool } from "./getFactorZooStats.js";
+export { createRunDecayMonitorTool } from "./runDecayMonitor.js";
+// Schemas and types
 export {
-  // Types
   type CheckFactorDecayInput,
-  // Schemas
   CheckFactorDecayInputSchema,
   type CheckFactorDecayOutput,
   CheckFactorDecayOutputSchema,
@@ -23,16 +31,6 @@ export {
   ComputeMegaAlphaInputSchema,
   type ComputeMegaAlphaOutput,
   ComputeMegaAlphaOutputSchema,
-  // Tool factories
-  createCheckFactorDecayTool,
-  createComputeMegaAlphaForSymbolsTool,
-  createComputeMegaAlphaTool,
-  createGetActiveFactorsTool,
-  createGetCurrentWeightsTool,
-  createGetFactorContextTool,
-  createGetFactorZooStatsTool,
-  createRunDecayMonitorTool,
-  createUpdateDailyWeightsTool,
   type GetActiveFactorsInput,
   GetActiveFactorsInputSchema,
   type GetActiveFactorsOutput,
@@ -57,4 +55,5 @@ export {
   UpdateDailyWeightsInputSchema,
   type UpdateDailyWeightsOutput,
   UpdateDailyWeightsOutputSchema,
-} from "./factorZoo/index.js";
+} from "./schemas.js";
+export { createUpdateDailyWeightsTool } from "./updateDailyWeights.js";
