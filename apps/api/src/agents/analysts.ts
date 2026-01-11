@@ -105,6 +105,9 @@ export async function runFundamentalsAnalyst(
   const regimeContext = buildRegimeContext(context.regimeLabels);
   const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
 
+  // Build indicator context with value and quality factors
+  const indicatorContext = buildIndicatorContext(context.indicators);
+
   const prompt = `Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
@@ -112,7 +115,7 @@ ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
 ${regimeContext}${predictionMarketContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
-
+${indicatorContext}
 Symbols to analyze: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}
 
@@ -120,6 +123,22 @@ The market regime classification reflects the current market environment.
 Use this context to assess whether fundamental drivers align with or diverge from the regime.
 HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.
 
+VALUE FACTORS from the indicators above:
+- pe_ratio_ttm / pe_ratio_forward: Valuation relative to earnings
+- pb_ratio: Price to book value
+- ev_ebitda: Enterprise value multiple
+- earnings_yield: Inverse of P/E, useful for comparisons
+- dividend_yield: Income component of return
+
+QUALITY FACTORS from the indicators above:
+- gross_profitability: Novy-Marx factor - higher is better
+- roe / roa: Return metrics
+- asset_growth: Cooper factor - high growth often predicts lower returns
+- accruals_ratio: Sloan factor - high accruals suggest lower quality
+- cash_flow_quality: OCF/Net Income ratio
+- beneish_m_score: Score > -2.22 suggests manipulation risk
+
+Use these quantitative factors to support or challenge qualitative assessments.
 ${
   context.predictionMarketSignals
     ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
@@ -279,6 +298,9 @@ export async function runFundamentalsAnalystStreaming(
   const regimeContext = buildRegimeContext(context.regimeLabels);
   const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
 
+  // Build indicator context with value and quality factors
+  const indicatorContext = buildIndicatorContext(context.indicators);
+
   const prompt = `Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
@@ -286,7 +308,7 @@ ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
 ${regimeContext}${predictionMarketContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
-
+${indicatorContext}
 Symbols to analyze: ${context.symbols.join(", ")}
 Cycle ID: ${context.cycleId}
 
@@ -294,6 +316,22 @@ The market regime classification reflects the current market environment.
 Use this context to assess whether fundamental drivers align with or diverge from the regime.
 HIGH_VOL regimes may warrant more conservative positioning; BULL_TREND supports growth exposure.
 
+VALUE FACTORS from the indicators above:
+- pe_ratio_ttm / pe_ratio_forward: Valuation relative to earnings
+- pb_ratio: Price to book value
+- ev_ebitda: Enterprise value multiple
+- earnings_yield: Inverse of P/E, useful for comparisons
+- dividend_yield: Income component of return
+
+QUALITY FACTORS from the indicators above:
+- gross_profitability: Novy-Marx factor - higher is better
+- roe / roa: Return metrics
+- asset_growth: Cooper factor - high growth often predicts lower returns
+- accruals_ratio: Sloan factor - high accruals suggest lower quality
+- cash_flow_quality: OCF/Net Income ratio
+- beneish_m_score: Score > -2.22 suggests manipulation risk
+
+Use these quantitative factors to support or challenge qualitative assessments.
 ${
   context.predictionMarketSignals
     ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
