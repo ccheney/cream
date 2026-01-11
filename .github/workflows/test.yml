@@ -239,10 +239,7 @@ jobs:
           docker build -t cream/execution-engine:test -f apps/execution-engine/Dockerfile .
 
       - name: Run integration tests
-        run: bun test:integration
-        env:
-          CREAM_ENV: BACKTEST
-          # Testcontainers will use the locally built image
+        run: CREAM_ENV=BACKTEST bun test ./**/tests/integration/*.test.ts --timeout 120000
 
   # ============================================
   # Lint and Type Check
