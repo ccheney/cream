@@ -31,7 +31,6 @@ export {
 
 export {
   assessRetrievalQuality,
-  // RRF integration
   assessRRFQuality,
   type CorrectionAttempt,
   type CorrectionLogEntry,
@@ -40,27 +39,21 @@ export {
   type CorrectionStrategyConfig,
   type CorrectiveRetrievalOptions,
   type CorrectiveRetrievalResult,
-  // Quality assessment functions
   calculateAvgScore,
-  // Correction strategies
   calculateBroadenedK,
-  // Logging and metrics
   calculateCorrectionMetrics,
   calculateCoverageScore,
   calculateDiversityScore,
   calculateLoweredThreshold,
-  // Corrective retrieval pipeline
   correctiveRetrieval,
   createCorrectionLogEntry,
   DEFAULT_BROADENING_FACTOR,
   DEFAULT_DIVERSITY_THRESHOLD,
   DEFAULT_MIN_RESULTS,
-  // Constants
   DEFAULT_QUALITY_THRESHOLD,
   DEFAULT_QUALITY_THRESHOLDS,
   generateExpansionTerms,
   MAX_CORRECTION_ATTEMPTS,
-  // Types
   type QualityAssessment,
   type QualityThresholds,
   type RetrievalFunction,
@@ -69,7 +62,7 @@ export {
   shouldCorrectRRF,
   THRESHOLD_REDUCTION_STEP,
   withCorrectiveRetrieval,
-} from "./corrective";
+} from "./corrective/index.js";
 
 // ============================================
 // Situation Brief
