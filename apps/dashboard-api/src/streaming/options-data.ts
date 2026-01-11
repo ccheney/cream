@@ -109,10 +109,22 @@ export async function initOptionsDataStreaming(): Promise<void> {
     reconnectAttempts = 0;
     log.info("Options data streaming connected to Alpaca");
   } catch (error) {
-    log.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Options data streaming initialization failed, server will start without streaming"
-    );
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    // WebSocket upgrade failure (101 status) typically means missing subscription
+    if (errorMsg.includes("101")) {
+      log.warn(
+        "Alpaca Options WebSocket not available - Alpaca Options Data subscription may be required. " +
+          "Options chain API (via gRPC) is still available."
+      );
+    } else {
+      log.warn(
+        { error: errorMsg },
+        "Options data streaming initialization failed, server will start without streaming"
+      );
+    }
+    // Clean up client to prevent reconnection attempts
+    alpacaOptionsClient?.disconnect();
+    alpacaOptionsClient = null;
   }
 }
 
@@ -183,12 +195,24 @@ function handleOptionsEvent(event: AlpacaWsEvent): void {
       break;
 
     case "error":
-      log.error(
-        { code: event.code, message: event.message, reconnectAttempts },
-        "Alpaca Options WebSocket error"
-      );
+      // 101 status code error typically means missing Alpaca Options Data subscription
+      if (event.message?.includes("101")) {
+        if (reconnectAttempts === 0) {
+          log.warn(
+            { code: event.code, message: event.message },
+            "Alpaca Options WebSocket rejected - Alpaca Options Data subscription may be required"
+          );
+        }
+      } else {
+        log.error(
+          { code: event.code, message: event.message, reconnectAttempts },
+          "Alpaca Options WebSocket error"
+        );
+      }
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        log.error("Max reconnect attempts reached, options data streaming disabled");
+        log.warn(
+          "Max reconnect attempts reached, options streaming disabled (option chain API still available)"
+        );
         isInitialized = false;
       }
       break;
