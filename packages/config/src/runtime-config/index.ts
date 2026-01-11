@@ -1,12 +1,17 @@
 /**
- * Runtime Configuration Service
- *
- * Central service for loading all runtime configuration from the database.
- * NO YAML fallback - if the database is not seeded, operations throw errors.
+ * Runtime Configuration Module
  *
  * @see docs/plans/22-self-service-dashboard.md (Phase 2)
  */
 
+export { getDefaultConstraints } from "./defaults.js";
+export { RuntimeConfigError } from "./error.js";
+export {
+  describeFieldChange,
+  findChangedFields,
+  generateChangeDescription,
+} from "./history.js";
+export { createRuntimeConfigService, RuntimeConfigService } from "./service.js";
 export type {
   AgentConfigsRepository,
   ConfigHistoryEntry,
@@ -30,9 +35,12 @@ export type {
   TradingEnvironment,
   UniverseConfigsRepository,
   ValidationError,
-} from "./runtime-config/index.js";
+} from "./types.js";
 export {
-  createRuntimeConfigService,
-  RuntimeConfigError,
-  RuntimeConfigService,
-} from "./runtime-config/index.js";
+  validateAgentConfigs,
+  validateConstraintsConfig,
+  validateCrossConfig,
+  validateForPromotion,
+  validateTradingConfig,
+  validateUniverseConfig,
+} from "./validation.js";
