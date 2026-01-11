@@ -6,6 +6,7 @@
 
 export { ActiveIndicatorsTable } from "./ActiveIndicatorsTable";
 export { ActivityFeed } from "./ActivityFeed";
+export { BatchJobStatus, type BatchJobStatusProps } from "./BatchJobStatus";
 export {
   FundamentalsIndicators as FundamentalsIndicatorsWidget,
   type FundamentalsIndicatorsProps,
