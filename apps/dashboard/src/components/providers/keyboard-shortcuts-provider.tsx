@@ -120,17 +120,9 @@ function ShortcutsHelpDialog({
   shortcuts,
 }: ShortcutsHelpDialogProps): ReactNode {
   const grouped = useMemo(() => {
-    const groups: Record<string, KeyboardShortcut[]> = {};
+    const groups = Object.groupBy(shortcuts, (s) => s.group ?? "General");
 
-    for (const shortcut of shortcuts) {
-      const group = shortcut.group ?? "General";
-      if (!groups[group]) {
-        groups[group] = [];
-      }
-      groups[group].push(shortcut);
-    }
-
-    const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+    const sortedGroups = Object.entries(groups).toSorted(([a], [b]) => {
       if (a === "General") {
         return -1;
       }
@@ -140,7 +132,7 @@ function ShortcutsHelpDialog({
       return a.localeCompare(b);
     });
 
-    return sortedGroups;
+    return sortedGroups as [string, KeyboardShortcut[]][];
   }, [shortcuts]);
 
   return (

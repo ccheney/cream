@@ -85,27 +85,17 @@ export function CommandPalette({
     const scored = commands
       .map((item) => ({ item, score: scoreMatch(search, item) }))
       .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score);
+      .toSorted((a, b) => b.score - a.score);
 
     return scored.map(({ item }) => item);
   }, [commands, search, recentIds]);
 
   const groupedCommands = useMemo((): GroupedCommands => {
-    const groups: Record<string, CommandItem[]> = {};
-    const ungrouped: CommandItem[] = [];
-
-    for (const command of filteredCommands) {
-      if (command.group) {
-        if (!groups[command.group]) {
-          groups[command.group] = [];
-        }
-        (groups[command.group] as CommandItem[]).push(command);
-      } else {
-        ungrouped.push(command);
-      }
-    }
-
-    return { groups, ungrouped };
+    const UNGROUPED = "__ungrouped__";
+    const allGroups = Object.groupBy(filteredCommands, (c) => c.group ?? UNGROUPED);
+    const ungrouped = allGroups[UNGROUPED] ?? [];
+    const { [UNGROUPED]: _, ...groups } = allGroups;
+    return { groups: groups as Record<string, CommandItem[]>, ungrouped };
   }, [filteredCommands]);
 
   useEffect(() => {

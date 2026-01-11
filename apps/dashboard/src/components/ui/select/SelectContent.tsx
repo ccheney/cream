@@ -54,22 +54,11 @@ export function SelectContent({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const groupedOptions = useMemo((): GroupedOptions => {
-    const groups: Record<string, SelectOption[]> = {};
-    const ungrouped: SelectOption[] = [];
-
-    for (const option of options) {
-      if (option.group) {
-        const group = option.group;
-        if (!groups[group]) {
-          groups[group] = [];
-        }
-        (groups[group] as SelectOption[]).push(option);
-      } else {
-        ungrouped.push(option);
-      }
-    }
-
-    return { groups, ungrouped };
+    const UNGROUPED = "__ungrouped__";
+    const allGroups = Object.groupBy(options, (o) => o.group ?? UNGROUPED);
+    const ungrouped = allGroups[UNGROUPED] ?? [];
+    const { [UNGROUPED]: _, ...groups } = allGroups;
+    return { groups: groups as Record<string, SelectOption[]>, ungrouped };
   }, [options]);
 
   useEffect(() => {

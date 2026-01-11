@@ -220,20 +220,16 @@ export function filterRecentMacroReleases(
 export function groupByIndicator(
   releases: ParsedMacroRelease[]
 ): Map<string, ParsedMacroRelease[]> {
-  const groups = new Map<string, ParsedMacroRelease[]>();
-
-  for (const release of releases) {
-    const key = release.indicator;
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)?.push(release);
-  }
+  const groups = Map.groupBy(releases, (r) => r.indicator);
 
   // Sort each group by date descending
-  for (const [, releases] of groups) {
-    releases.sort((a, b) => b.date.getTime() - a.date.getTime());
+  const sortedGroups = new Map<string, ParsedMacroRelease[]>();
+  for (const [key, groupReleases] of groups) {
+    sortedGroups.set(
+      key,
+      groupReleases.toSorted((a, b) => b.date.getTime() - a.date.getTime())
+    );
   }
 
-  return groups;
+  return sortedGroups;
 }

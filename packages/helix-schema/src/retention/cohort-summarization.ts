@@ -76,19 +76,10 @@ export function groupDecisionsForSummarization(
   decisions: TradeDecisionInfo[],
   periodFormatter: (date: Date) => string = formatQuarterlyPeriod
 ): Map<string, TradeDecisionInfo[]> {
-  const groups = new Map<string, TradeDecisionInfo[]>();
-
-  for (const decision of decisions) {
+  return Map.groupBy(decisions, (decision) => {
     const period = periodFormatter(decision.createdAt);
-    const key = `${period}:${decision.instrumentId}:${decision.regimeLabel}`;
-
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)?.push(decision);
-  }
-
-  return groups;
+    return `${period}:${decision.instrumentId}:${decision.regimeLabel}`;
+  });
 }
 
 /**
