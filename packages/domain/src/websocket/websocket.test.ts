@@ -63,16 +63,7 @@ describe("Channel Enum", () => {
 describe("AgentType Enum", () => {
   it("accepts all valid agent types", () => {
     // WebSocket uses abbreviated agent type names (see channel.ts comments)
-    const validTypes = [
-      "technical",
-      "news",
-      "fundamentals",
-      "bullish",
-      "bearish",
-      "trader",
-      "risk",
-      "critic",
-    ];
+    const validTypes = ["news", "fundamentals", "bullish", "bearish", "trader", "risk", "critic"];
 
     for (const type of validTypes) {
       expect(AgentType.safeParse(type).success).toBe(true);
