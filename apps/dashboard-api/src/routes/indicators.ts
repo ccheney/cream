@@ -179,127 +179,9 @@ app.openapi(listIndicatorsRoute, async (c) => {
   return c.json({ indicators });
 });
 
-// GET /api/indicators/:id - Get indicator detail
-const getIndicatorRoute = createRoute({
-  method: "get",
-  path: "/:id",
-  request: {
-    params: z.object({
-      id: z.string(),
-    }),
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            indicator: IndicatorDetailSchema,
-          }),
-        },
-      },
-      description: "Indicator detail",
-    },
-    404: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            error: z.string(),
-          }),
-        },
-      },
-      description: "Indicator not found",
-    },
-  },
-  tags: ["Indicators"],
-});
-
-// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
-app.openapi(getIndicatorRoute, async (c) => {
-  const { id } = c.req.valid("param");
-  const db = await getDbClient();
-
-  const rows = await db.execute("SELECT * FROM indicators WHERE id = ?", [id]);
-  const row = rows[0];
-  if (!row) {
-    throw new HTTPException(404, { message: "Indicator not found" });
-  }
-  const indicator = {
-    id: row.id as string,
-    name: row.name as string,
-    category: row.category as string,
-    status: row.status as "staging" | "paper" | "production" | "retired",
-    hypothesis: row.hypothesis as string,
-    economicRationale: row.economic_rationale as string,
-    generatedAt: row.generated_at as string,
-    generatedBy: row.generated_by as string,
-    promotedAt: row.promoted_at as string | null,
-    retiredAt: row.retired_at as string | null,
-    validationReport: row.validation_report ? JSON.parse(row.validation_report as string) : null,
-    paperTradingReport: row.paper_trading_report
-      ? JSON.parse(row.paper_trading_report as string)
-      : null,
-    paperTradingStart: row.paper_trading_start as string | null,
-    paperTradingEnd: row.paper_trading_end as string | null,
-    prUrl: row.pr_url as string | null,
-    codeHash: row.code_hash as string | null,
-  };
-
-  return c.json({ indicator });
-});
-
-// GET /api/indicators/:id/ic-history - Get IC history
-const getICHistoryRoute = createRoute({
-  method: "get",
-  path: "/:id/ic-history",
-  request: {
-    params: z.object({
-      id: z.string(),
-    }),
-    query: z.object({
-      days: z.coerce.number().min(1).max(365).default(30),
-    }),
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            history: z.array(ICHistoryEntrySchema),
-          }),
-        },
-      },
-      description: "IC history for indicator",
-    },
-  },
-  tags: ["Indicators"],
-});
-
-app.openapi(getICHistoryRoute, async (c) => {
-  const { id } = c.req.valid("param");
-  const { days } = c.req.valid("query");
-  const db = await getDbClient();
-
-  const rows = await db.execute(
-    `
-      SELECT date, ic_value, ic_std, decisions_used_in, decisions_correct
-      FROM indicator_ic_history
-      WHERE indicator_id = ?
-      ORDER BY date DESC
-      LIMIT ?
-    `,
-    [id, days]
-  );
-
-  const history = rows.map((row) => ({
-    date: row.date as string,
-    icValue: row.ic_value as number,
-    icStd: row.ic_std as number,
-    decisionsUsedIn: row.decisions_used_in as number,
-    decisionsCorrect: row.decisions_correct as number,
-  }));
-
-  return c.json({ history });
-});
+// ============================================
+// Static Routes (must be registered before /:id to avoid matching issues)
+// ============================================
 
 // GET /api/indicators/trigger-status - Get current trigger conditions
 const getTriggerStatusRoute = createRoute({
@@ -418,74 +300,6 @@ app.openapi(getTriggerStatusRoute, async (c) => {
     lastCheck: new Date().toISOString(),
     recommendation,
   });
-});
-
-// POST /api/indicators/:id/retire - Retire an indicator
-const retireIndicatorRoute = createRoute({
-  method: "post",
-  path: "/:id/retire",
-  request: {
-    params: z.object({
-      id: z.string(),
-    }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            reason: z.string().optional(),
-          }),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            success: z.boolean(),
-          }),
-        },
-      },
-      description: "Indicator retired successfully",
-    },
-    404: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            error: z.string(),
-          }),
-        },
-      },
-      description: "Indicator not found",
-    },
-  },
-  tags: ["Indicators"],
-});
-
-// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
-app.openapi(retireIndicatorRoute, async (c) => {
-  const { id } = c.req.valid("param");
-  const { reason } = c.req.valid("json");
-  const db = await getDbClient();
-
-  const result = await db.run(
-    `
-      UPDATE indicators
-      SET status = 'retired',
-          retired_at = datetime('now'),
-          retirement_reason = ?,
-          updated_at = datetime('now')
-      WHERE id = ? AND status != 'retired'
-    `,
-    [reason ?? "Manual retirement", id]
-  );
-
-  if (result.changes === 0) {
-    throw new HTTPException(404, { message: "Indicator not found or already retired" });
-  }
-
-  return c.json({ success: true });
 });
 
 // GET /api/indicators/paper-trading - Get paper trading indicators
@@ -654,6 +468,200 @@ app.openapi(getActivityRoute, async (c) => {
   }));
 
   return c.json({ activities });
+});
+
+// ============================================
+// Parameterized Routes (after static routes)
+// ============================================
+
+// GET /api/indicators/:id - Get indicator detail
+const getIndicatorRoute = createRoute({
+  method: "get",
+  path: "/:id",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            indicator: IndicatorDetailSchema,
+          }),
+        },
+      },
+      description: "Indicator detail",
+    },
+    404: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+          }),
+        },
+      },
+      description: "Indicator not found",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(getIndicatorRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const db = await getDbClient();
+
+  const rows = await db.execute("SELECT * FROM indicators WHERE id = ?", [id]);
+  const row = rows[0];
+  if (!row) {
+    throw new HTTPException(404, { message: "Indicator not found" });
+  }
+  const indicator = {
+    id: row.id as string,
+    name: row.name as string,
+    category: row.category as string,
+    status: row.status as "staging" | "paper" | "production" | "retired",
+    hypothesis: row.hypothesis as string,
+    economicRationale: row.economic_rationale as string,
+    generatedAt: row.generated_at as string,
+    generatedBy: row.generated_by as string,
+    promotedAt: row.promoted_at as string | null,
+    retiredAt: row.retired_at as string | null,
+    validationReport: row.validation_report ? JSON.parse(row.validation_report as string) : null,
+    paperTradingReport: row.paper_trading_report
+      ? JSON.parse(row.paper_trading_report as string)
+      : null,
+    paperTradingStart: row.paper_trading_start as string | null,
+    paperTradingEnd: row.paper_trading_end as string | null,
+    prUrl: row.pr_url as string | null,
+    codeHash: row.code_hash as string | null,
+  };
+
+  return c.json({ indicator });
+});
+
+// GET /api/indicators/:id/ic-history - Get IC history
+const getICHistoryRoute = createRoute({
+  method: "get",
+  path: "/:id/ic-history",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+    query: z.object({
+      days: z.coerce.number().min(1).max(365).default(30),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            history: z.array(ICHistoryEntrySchema),
+          }),
+        },
+      },
+      description: "IC history for indicator",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+app.openapi(getICHistoryRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const { days } = c.req.valid("query");
+  const db = await getDbClient();
+
+  const rows = await db.execute(
+    `
+      SELECT date, ic_value, ic_std, decisions_used_in, decisions_correct
+      FROM indicator_ic_history
+      WHERE indicator_id = ?
+      ORDER BY date DESC
+      LIMIT ?
+    `,
+    [id, days]
+  );
+
+  const history = rows.map((row) => ({
+    date: row.date as string,
+    icValue: row.ic_value as number,
+    icStd: row.ic_std as number,
+    decisionsUsedIn: row.decisions_used_in as number,
+    decisionsCorrect: row.decisions_correct as number,
+  }));
+
+  return c.json({ history });
+});
+
+// POST /api/indicators/:id/retire - Retire an indicator
+const retireIndicatorRoute = createRoute({
+  method: "post",
+  path: "/:id/retire",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            reason: z.string().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+          }),
+        },
+      },
+      description: "Indicator retired successfully",
+    },
+    404: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+          }),
+        },
+      },
+      description: "Indicator not found",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(retireIndicatorRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const { reason } = c.req.valid("json");
+  const db = await getDbClient();
+
+  const result = await db.run(
+    `
+      UPDATE indicators
+      SET status = 'retired',
+          retired_at = datetime('now'),
+          retirement_reason = ?,
+          updated_at = datetime('now')
+      WHERE id = ? AND status != 'retired'
+    `,
+    [reason ?? "Manual retirement", id]
+  );
+
+  if (result.changes === 0) {
+    throw new HTTPException(404, { message: "Indicator not found or already retired" });
+  }
+
+  return c.json({ success: true });
 });
 
 // ============================================
