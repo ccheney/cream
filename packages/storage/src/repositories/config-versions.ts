@@ -154,7 +154,9 @@ export class ConfigVersionsRepository {
     const config2 = await this.findByIdOrThrow(id2);
 
     const differences: { path: string; value1: unknown; value2: unknown }[] = [];
-    const allKeys = new Set([...Object.keys(config1.config), ...Object.keys(config2.config)]);
+    const allKeys = new Set(Object.keys(config1.config)).union(
+      new Set(Object.keys(config2.config))
+    );
 
     for (const key of allKeys) {
       const v1 = config1.config[key];

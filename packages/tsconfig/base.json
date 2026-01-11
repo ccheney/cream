@@ -3,7 +3,7 @@
   "display": "Cream Base TypeScript Configuration",
   "compilerOptions": {
     "target": "ES2024",
-    "lib": ["ES2024"],
+    "lib": ["ES2024", "ESNext.Collection"],
     "module": "Preserve",
     "moduleResolution": "bundler",
     "moduleDetection": "force",

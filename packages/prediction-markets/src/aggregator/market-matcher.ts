@@ -114,11 +114,8 @@ export class MarketMatcher {
       return 0;
     }
 
-    // Jaccard similarity
-    const intersection = new Set([...wordsA].filter((w) => wordsB.has(w)));
-    const union = new Set([...wordsA, ...wordsB]);
-
-    return intersection.size / union.size;
+    // Jaccard similarity using ES2024 Set methods
+    return wordsA.intersection(wordsB).size / wordsA.union(wordsB).size;
   }
 
   /**
@@ -177,10 +174,7 @@ export class MarketMatcher {
     const namesA = new Set(outcomesA.map((o) => o.outcome.toLowerCase()));
     const namesB = new Set(outcomesB.map((o) => o.outcome.toLowerCase()));
 
-    const intersection = new Set([...namesA].filter((n) => namesB.has(n)));
-    const union = new Set([...namesA, ...namesB]);
-
-    return intersection.size / union.size;
+    return namesA.intersection(namesB).size / namesA.union(namesB).size;
   }
 
   /**

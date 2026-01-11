@@ -135,9 +135,10 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
   if (!firstSet) {
     return [];
   }
-  const intersection = new Set(
-    Array.from(firstSet).filter((symbol) => symbolSets.every((set) => set.has(symbol)))
-  );
+  // Multi-set intersection using ES2024 Set.prototype.intersection()
+  const intersection = symbolSets
+    .slice(1)
+    .reduce<Set<string>>((acc, set) => acc.intersection(set), firstSet);
 
   const symbolMap = new Map<string, ResolvedInstrument>();
 
