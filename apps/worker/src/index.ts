@@ -22,6 +22,7 @@ import {
   resetRuntimeConfigService,
   validateHelixDBOrExit,
 } from "./db";
+import { log } from "./logger";
 import {
   getSubscriptionStatus,
   startMarketDataSubscription,
@@ -106,8 +107,7 @@ async function loadConfig(environment: RuntimeEnvironment): Promise<FullRuntimeC
  * Reload configuration (called on SIGHUP)
  */
 async function reloadConfig(): Promise<void> {
-  // biome-ignore lint/suspicious/noConsole: Config reload notification is intentional
-  console.log("🔄 Reloading configuration...");
+  log.info({}, "Reloading configuration");
 
   // Reset the service to force fresh load
   resetRuntimeConfigService();
@@ -123,16 +123,14 @@ async function reloadConfig(): Promise<void> {
     oldIntervals.predictionMarketsIntervalMs !== newIntervals.predictionMarketsIntervalMs;
 
   if (tradingIntervalChanged || predictionIntervalChanged) {
-    // biome-ignore lint/suspicious/noConsole: Interval change notification is intentional
-    console.log("📊 Intervals changed, rescheduling...");
+    log.info({}, "Intervals changed, rescheduling");
 
     // Cancel existing timers and reschedule
     stopScheduler();
     startScheduler();
   }
 
-  // biome-ignore lint/suspicious/noConsole: Config reload confirmation is intentional
-  console.log("✅ Configuration reloaded");
+  log.info({}, "Configuration reloaded");
 }
 
 // ============================================
@@ -152,8 +150,7 @@ function generateCycleId(): string {
 
 async function runTradingCycle(): Promise<void> {
   if (state.running.tradingCycle) {
-    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
-    console.log("⏭️  Skipping trading cycle - previous run still in progress");
+    log.info({}, "Skipping trading cycle - previous run still in progress");
     return;
   }
 
@@ -189,8 +186,7 @@ async function runTradingCycle(): Promise<void> {
  */
 async function runPredictionMarkets(): Promise<void> {
   if (state.running.predictionMarkets) {
-    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
-    console.log("⏭️  Skipping prediction markets - previous run still in progress");
+    log.info({}, "Skipping prediction markets - previous run still in progress");
     return;
   }
 
@@ -217,16 +213,14 @@ async function runPredictionMarkets(): Promise<void> {
  */
 async function runFilingsSync(): Promise<void> {
   if (state.running.filingsSync) {
-    // biome-ignore lint/suspicious/noConsole: Skip notification is intentional
-    console.log("⏭️  Skipping filings sync - previous run still in progress");
+    log.info({}, "Skipping filings sync - previous run still in progress");
     return;
   }
 
   state.running.filingsSync = true;
   state.lastRun.filingsSync = new Date();
 
-  // biome-ignore lint/suspicious/noConsole: Filings sync start is intentional
-  console.log("📄 Starting SEC filings sync...");
+  log.info({}, "Starting SEC filings sync");
 
   try {
     const dbClient = await getDbClient();
@@ -243,15 +237,18 @@ async function runFilingsSync(): Promise<void> {
       environment: state.environment,
     });
 
-    // biome-ignore lint/suspicious/noConsole: Filings sync result is intentional
-    console.log(
-      `📄 Filings sync complete: ${result.filingsIngested} filings, ${result.chunksCreated} chunks ` +
-        `(${result.durationMs}ms)`
+    log.info(
+      {
+        filingsIngested: result.filingsIngested,
+        chunksCreated: result.chunksCreated,
+        durationMs: result.durationMs,
+      },
+      "Filings sync complete"
     );
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: Error is intentional
-    console.error(
-      `❌ Filings sync failed: ${error instanceof Error ? error.message : "Unknown error"}`
+    log.error(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      "Filings sync failed"
     );
   } finally {
     state.running.filingsSync = false;
@@ -357,9 +354,13 @@ function startScheduler(): void {
   const msUntilHour = calculateNextHourMs();
   const msUntil15Min = calculateNext15MinMs();
   const msUntil6AM = calculateNext6AMESTMs();
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(
-    `⏰ Scheduler started: trading cycle in ${Math.round(msUntilHour / 60000)}m, predictions in ${Math.round(msUntil15Min / 60000)}m, filings in ${Math.round(msUntil6AM / 3600000)}h`
+  log.info(
+    {
+      tradingCycleMinutes: Math.round(msUntilHour / 60000),
+      predictionsMinutes: Math.round(msUntil15Min / 60000),
+      filingsHours: Math.round(msUntil6AM / 3600000),
+    },
+    "Scheduler started"
   );
   scheduleTradingCycle();
   schedulePredictionMarkets();
@@ -468,9 +469,9 @@ async function main() {
     // Warn if no LLM key is set (needed for OODA agent execution)
     // OODA agents use Gemini exclusively via GOOGLE_GENERATIVE_AI_API_KEY
     if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      // biome-ignore lint/suspicious/noConsole: Startup warning is intentional
-      console.warn(
-        "⚠️  GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
+      log.warn(
+        {},
+        "GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
       );
     }
   }
@@ -485,12 +486,10 @@ async function main() {
   try {
     config = await loadConfig(environment);
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: Fatal error is intentional
-    console.error(
-      `❌ Failed to load config from database: ${error instanceof Error ? error.message : "Unknown error"}`
+    log.error(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      "Failed to load config from database. Run 'bun run db:seed' to initialize."
     );
-    // biome-ignore lint/suspicious/noConsole: Fatal error is intentional
-    console.error("   Run 'bun run db:seed' to initialize the database configuration.");
     process.exit(1);
   }
 
@@ -519,42 +518,38 @@ async function main() {
   };
 
   const intervals = getIntervals();
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(`🚀 Worker starting [env=${environment}, config=${config.trading.id}]`);
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(
-    `📊 Intervals: trading=${intervals.tradingCycleIntervalMs}ms, predictions=${intervals.predictionMarketsIntervalMs}ms`
+  log.info({ environment, configId: config.trading.id }, "Worker starting");
+  log.info(
+    {
+      tradingCycleIntervalMs: intervals.tradingCycleIntervalMs,
+      predictionMarketsIntervalMs: intervals.predictionMarketsIntervalMs,
+    },
+    "Intervals configured"
   );
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(`📈 Instruments: ${getInstruments().join(", ")}`);
+  log.info({ instruments: getInstruments() }, "Instruments configured");
 
   // Start health server
   startHealthServer();
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(`🏥 Health endpoint listening on port ${HEALTH_PORT}`);
+  log.info({ port: HEALTH_PORT }, "Health endpoint listening");
 
   // Start market data subscription to execution engine
   // This triggers the Rust side to start the Databento feed
   const instruments = getInstruments();
-  // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-  console.log(`📡 Starting market data subscription for ${instruments.length} symbols...`);
+  log.info({ symbolCount: instruments.length }, "Starting market data subscription");
   await startMarketDataSubscription(instruments).catch((error) => {
-    // biome-ignore lint/suspicious/noConsole: Non-fatal error is intentional
-    console.warn(
-      `⚠️  Market data subscription failed: ${error instanceof Error ? error.message : "Unknown error"}. ` +
-        `Execution engine may not be running.`
+    log.warn(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      "Market data subscription failed. Execution engine may not be running."
     );
   });
 
   // Skip scheduling if disabled (dev mode)
   if (state.schedulerDisabled) {
-    // biome-ignore lint/suspicious/noConsole: Startup info is intentional
-    console.log("⏸️  Scheduler disabled (SCHEDULER_DISABLED=true). Health endpoint only.");
+    log.info({}, "Scheduler disabled (SCHEDULER_DISABLED=true). Health endpoint only.");
   } else {
     // Run immediately if configured
     if (state.runOnStartup) {
-      // biome-ignore lint/suspicious/noConsole: Startup run notification is intentional
-      console.log("▶️  Running cycles on startup...");
+      log.info({}, "Running cycles on startup");
       await Promise.all([runTradingCycle(), runPredictionMarkets()]);
     }
 
@@ -565,8 +560,10 @@ async function main() {
   // Handle config reload on SIGHUP
   process.on("SIGHUP", () => {
     reloadConfig().catch((error) => {
-      // biome-ignore lint/suspicious/noConsole: Error is intentional
-      console.error("❌ Config reload failed:", error);
+      log.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Config reload failed"
+      );
     });
   });
 

@@ -10,6 +10,7 @@ import {
   type MarketDataServiceClient,
   type Quote,
 } from "@cream/domain/grpc";
+import { log } from "./logger";
 
 // ============================================
 // Configuration
@@ -79,14 +80,12 @@ export async function startMarketDataSubscription(
   onUpdate?: (quote: Quote) => void
 ): Promise<void> {
   if (subscriptionState.active) {
-    // biome-ignore lint/suspicious/noConsole: Intentional logging
-    console.log("[MarketData] Subscription already active, updating symbols...");
+    log.info({}, "Subscription already active, updating symbols");
     await stopMarketDataSubscription();
   }
 
   if (symbols.length === 0) {
-    // biome-ignore lint/suspicious/noConsole: Intentional logging
-    console.warn("[MarketData] No symbols provided, skipping subscription");
+    log.warn({}, "No symbols provided, skipping subscription");
     return;
   }
 
@@ -95,18 +94,17 @@ export async function startMarketDataSubscription(
   subscriptionState.abortController = new AbortController();
   subscriptionState.updateCount = 0;
 
-  // biome-ignore lint/suspicious/noConsole: Intentional logging
-  console.log(
-    `[MarketData] Starting subscription for ${symbols.length} symbols: ${symbols.join(", ")}`
-  );
+  log.info({ symbolCount: symbols.length, symbols: symbols.join(", ") }, "Starting subscription");
 
   const client = getMarketDataClient();
 
   // Start the subscription in a background task
   // The connection stays open and streams market data updates
   runSubscriptionLoop(client, symbols, onUpdate).catch((error) => {
-    // biome-ignore lint/suspicious/noConsole: Error logging
-    console.error("[MarketData] Subscription error:", error);
+    log.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Subscription error"
+    );
     subscriptionState.active = false;
   });
 }
@@ -141,8 +139,7 @@ async function runSubscriptionLoop(
 
         // Log periodic updates (every 100 updates)
         if (subscriptionState.updateCount % 100 === 0) {
-          // biome-ignore lint/suspicious/noConsole: Intentional logging
-          console.log(`[MarketData] Received ${subscriptionState.updateCount} updates`);
+          log.info({ updateCount: subscriptionState.updateCount }, "Received market data updates");
         }
 
         // Check if we should stop
@@ -165,9 +162,9 @@ async function runSubscriptionLoop(
 
       if (isConnectionError && retryCount < MAX_CONNECTION_RETRIES) {
         retryCount++;
-        // biome-ignore lint/suspicious/noConsole: Intentional logging
-        console.log(
-          `[MarketData] Execution engine not ready, retrying in ${retryDelay}ms (attempt ${retryCount}/${MAX_CONNECTION_RETRIES})...`
+        log.info(
+          { retryDelayMs: retryDelay, attempt: retryCount, maxAttempts: MAX_CONNECTION_RETRIES },
+          "Execution engine not ready, retrying"
         );
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
         // Exponential backoff with max 30s
@@ -188,8 +185,7 @@ export async function stopMarketDataSubscription(): Promise<void> {
     return;
   }
 
-  // biome-ignore lint/suspicious/noConsole: Intentional logging
-  console.log("[MarketData] Stopping subscription...");
+  log.info({}, "Stopping subscription");
 
   subscriptionState.active = false;
 
@@ -201,10 +197,7 @@ export async function stopMarketDataSubscription(): Promise<void> {
   // Give the loop time to exit cleanly
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // biome-ignore lint/suspicious/noConsole: Intentional logging
-  console.log(
-    `[MarketData] Subscription stopped (received ${subscriptionState.updateCount} updates)`
-  );
+  log.info({ updateCount: subscriptionState.updateCount }, "Subscription stopped");
 }
 
 /**
