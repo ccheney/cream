@@ -7,25 +7,35 @@
  * @see docs/research/indicator-validation-statistics.md Section 5
  */
 
+// Correlation Functions
+export {
+  computeCorrelationMatrix,
+  computePairwiseCorrelations,
+  pearsonCorrelation,
+} from "./correlation.js";
+// Selection and Evaluation
+export {
+  checkOrthogonality,
+  evaluateOrthogonality,
+  isIndicatorOrthogonal,
+  rankByOrthogonality,
+} from "./selection.js";
+// Types and Schemas
 export {
   type CorrelationResult,
   CorrelationResultSchema,
-  checkOrthogonality,
-  computeAllVIFs,
-  computeCorrelationMatrix,
-  computePairwiseCorrelations,
-  computeVIF,
-  evaluateOrthogonality,
-  isIndicatorOrthogonal,
   ORTHOGONALITY_DEFAULTS,
   type OrthogonalityInput,
   OrthogonalityInputSchema,
   type OrthogonalityResult,
   OrthogonalityResultSchema,
-  orthogonalize,
-  orthogonalizeMultiple,
-  pearsonCorrelation,
-  rankByOrthogonality,
   type VIFResult,
   VIFResultSchema,
-} from "./orthogonality/index.js";
+} from "./types.js";
+// VIF and Orthogonalization
+export {
+  computeAllVIFs,
+  computeVIF,
+  orthogonalize,
+  orthogonalizeMultiple,
+} from "./weighting.js";
