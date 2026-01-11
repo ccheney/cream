@@ -86,7 +86,7 @@ async def run_nautilus_backtest(
 
 
 def _compute_fallback_metrics(
-    factor: ResearchFactor,
+    factor: ResearchFactor,  # noqa: ARG001
     data: pl.DataFrame,
     signals: pl.Series,
 ) -> dict[str, Any]:
