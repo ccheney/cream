@@ -11,7 +11,7 @@ import {
   VALIDATION_DEFAULTS,
   ValidationInputSchema,
   validateAndRank,
-} from "../src/synthesis/validationPipeline.js";
+} from "../src/synthesis/validationPipeline/index.js";
 
 // ============================================
 // Helper Functions

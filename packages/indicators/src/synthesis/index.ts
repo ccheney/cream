@@ -242,7 +242,7 @@ export {
   validateAndRank,
   type WalkForwardGateResult,
   WalkForwardGateResultSchema,
-} from "./validationPipeline.js";
+} from "./validationPipeline/index.js";
 // Walk-Forward Validation
 export {
   compareWalkForwardMethods,
