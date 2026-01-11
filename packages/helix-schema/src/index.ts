@@ -86,20 +86,26 @@ export type {
   CBRQualityMetrics,
   CBRRetrievalOptions,
   CBRRetrievalResult,
+  HelixClient as CBRHelixClient,
+  QueryResult as CBRQueryResult,
+  SearchSimilarDecisionsResult,
   SimilarityFeatures,
-} from "./cbr.js";
+} from "./cbr/index.js";
 export {
   buildMemoryContext,
   calculateCBRQuality,
   convertToRetrievedCase,
+  DEFAULT_CBR_OPTIONS,
+  executeVectorSearch,
   extractSimilarityFeatures,
   generateCBRSituationBrief,
+  generateShortSummary,
   retainCase,
   retrieveMemoryContext,
   retrieveSimilarCases,
   SIMILARITY_WEIGHTS,
   updateCaseOutcome,
-} from "./cbr.js";
+} from "./cbr/index.js";
 
 // ============================================
 // Embedding Generation
