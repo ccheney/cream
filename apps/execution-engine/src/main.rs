@@ -53,6 +53,10 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load .env file - searches current directory and parent directories
+    // This is optional - missing .env is fine if env vars are set externally
+    let _ = dotenvy::dotenv();
+
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
     let config_path = parse_config_path(&args);

@@ -75,6 +75,7 @@ rand = "0.9"
 # Configuration
 config = "0.15.19"
 regex = "1.12.2"
+dotenvy = "0.15"  # Load .env files
 
 # HTTP client for broker APIs
 reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
