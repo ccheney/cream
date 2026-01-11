@@ -27,6 +27,7 @@ import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 import { createMarketDataAdapter } from "@cream/marketdata";
 import {
   ConsensusGate,
+  createResearchTriggerService,
   type DecisionPlan,
   getPortfolioState,
   type PortfolioStateResponse,
@@ -35,7 +36,12 @@ import {
 } from "@cream/mastra-kit";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 import { InstrumentSchema, InstrumentType } from "@cream/schema-gen/cream/v1/common";
-import type { CreateDecisionInput } from "@cream/storage";
+import type {
+  CloseReason,
+  CreateDecisionInput,
+  ThesisState,
+  ThesisStateRepository,
+} from "@cream/storage";
 import {
   FIXTURE_TIMESTAMP,
   getCandleFixtures,
@@ -46,6 +52,10 @@ import {
   createHelixOrchestrator,
   type HelixOrchestrator,
 } from "../../workflows/steps/helixOrchestrator.js";
+import {
+  ingestClosedThesis,
+  type ThesisIngestionInput,
+} from "../../workflows/steps/thesisMemoryIngestion.js";
 import {
   type AgentConfigEntry,
   type AgentContext,
@@ -68,9 +78,11 @@ import {
 } from "../agents/mastra-agents.js";
 import {
   getDecisionsRepo,
+  getFactorZooRepo,
   getHelixClient,
   getRegimeLabelsRepo,
   getRuntimeConfigService,
+  getThesisStateRepo,
   type RuntimeEnvironment,
 } from "../db.js";
 import { ExecutionEngineError, getExecutionEngineClient, OrderSide } from "../grpc/index.js";
@@ -141,6 +153,321 @@ function getHelixOrchestrator(): HelixOrchestrator | null {
   });
 
   return helixOrchestrator;
+}
+
+// ============================================
+// Thesis Lifecycle Integration
+// ============================================
+
+/**
+ * Thesis update tracking for workflow result
+ */
+export interface ThesisUpdate {
+  thesisId: string;
+  instrumentId: string;
+  fromState: ThesisState | null;
+  toState: ThesisState;
+  action: string;
+  reason?: string;
+}
+
+/**
+ * Research trigger result
+ */
+export interface ResearchTriggerResult {
+  triggered: boolean;
+  trigger?: {
+    type: string;
+    severity: string;
+    reason: string;
+  };
+  // hypothesis field will be populated when IdeaAgent is wired up
+  hypothesis?: {
+    hypothesisId: string;
+    title: string;
+  };
+}
+
+/**
+ * Process thesis state for a decision.
+ * Creates new thesis for entries, updates state for transitions, closes for exits.
+ */
+async function processThesisForDecision(
+  repo: ThesisStateRepository,
+  decision: {
+    instrumentId: string;
+    action: string;
+    direction?: string;
+    stopLoss?: number;
+    takeProfit?: number;
+    rationale?: { summary?: string };
+  },
+  environment: string,
+  cycleId: string,
+  currentPrice?: number
+): Promise<ThesisUpdate | null> {
+  const { instrumentId, action, stopLoss, takeProfit, rationale } = decision;
+
+  try {
+    // Find existing active thesis for this instrument
+    const activeThesis = await repo.findActiveForInstrument(instrumentId, environment);
+
+    if (action === "BUY" || action === "SELL") {
+      if (!activeThesis) {
+        // Create new thesis in WATCHING state, then immediately enter
+        const thesisId = `thesis-${cycleId}-${instrumentId}`;
+        await repo.create({
+          thesisId,
+          instrumentId,
+          state: "WATCHING",
+          entryThesis: rationale?.summary ?? `${action} signal detected`,
+          invalidationConditions: stopLoss ? `Stop loss at ${stopLoss}` : undefined,
+          conviction: 0.7, // Default conviction
+          currentStop: stopLoss,
+          currentTarget: takeProfit,
+          environment,
+        });
+
+        // Immediately transition to ENTERED
+        if (currentPrice && stopLoss) {
+          await repo.enterPosition(thesisId, currentPrice, stopLoss, takeProfit, cycleId);
+          return {
+            thesisId,
+            instrumentId,
+            fromState: null,
+            toState: "ENTERED",
+            action,
+            reason: "New position entered",
+          };
+        }
+
+        return {
+          thesisId,
+          instrumentId,
+          fromState: null,
+          toState: "WATCHING",
+          action,
+          reason: "New thesis created",
+        };
+      }
+      // Existing thesis - update state based on current state
+      if (activeThesis.state === "WATCHING" && currentPrice && stopLoss) {
+        await repo.enterPosition(
+          activeThesis.thesisId,
+          currentPrice,
+          stopLoss,
+          takeProfit,
+          cycleId
+        );
+        return {
+          thesisId: activeThesis.thesisId,
+          instrumentId,
+          fromState: "WATCHING",
+          toState: "ENTERED",
+          action,
+          reason: "Position entered from watchlist",
+        };
+      }
+      if (activeThesis.state === "ENTERED" && action === "BUY") {
+        // Adding to position
+        await repo.transitionState(activeThesis.thesisId, {
+          toState: "ADDING",
+          triggerReason: "Adding to position",
+          cycleId,
+          priceAtTransition: currentPrice,
+        });
+        return {
+          thesisId: activeThesis.thesisId,
+          instrumentId,
+          fromState: "ENTERED",
+          toState: "ADDING",
+          action,
+          reason: "Adding to position",
+        };
+      }
+    } else if (action === "CLOSE" && activeThesis) {
+      // Close the thesis
+      const closeReason = mapDecisionToCloseReason(decision);
+      await repo.close(activeThesis.thesisId, closeReason, currentPrice, undefined, cycleId);
+      return {
+        thesisId: activeThesis.thesisId,
+        instrumentId,
+        fromState: activeThesis.state,
+        toState: "CLOSED",
+        action,
+        reason: closeReason,
+      };
+    } else if (action === "HOLD" && !activeThesis) {
+      // Create thesis in WATCHING state for monitoring
+      const thesisId = `thesis-${cycleId}-${instrumentId}`;
+      await repo.create({
+        thesisId,
+        instrumentId,
+        state: "WATCHING",
+        entryThesis: rationale?.summary ?? "Monitoring for entry opportunity",
+        environment,
+      });
+      return {
+        thesisId,
+        instrumentId,
+        fromState: null,
+        toState: "WATCHING",
+        action,
+        reason: "Added to watchlist",
+      };
+    }
+
+    return null;
+  } catch (error) {
+    log.error(
+      {
+        instrumentId,
+        action,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Failed to process thesis for decision"
+    );
+    return null;
+  }
+}
+
+/**
+ * Map decision action/context to thesis close reason
+ */
+function mapDecisionToCloseReason(decision: {
+  action: string;
+  rationale?: { summary?: string };
+}): CloseReason {
+  const summary = decision.rationale?.summary?.toLowerCase() ?? "";
+  if (summary.includes("stop") || summary.includes("loss")) {
+    return "STOP_HIT";
+  }
+  if (summary.includes("target") || summary.includes("profit")) {
+    return "TARGET_HIT";
+  }
+  if (summary.includes("invalid") || summary.includes("broke")) {
+    return "INVALIDATED";
+  }
+  if (summary.includes("time") || summary.includes("decay")) {
+    return "TIME_DECAY";
+  }
+  return "MANUAL";
+}
+
+/**
+ * Check for research triggers and optionally spawn IdeaAgent.
+ */
+async function checkResearchTriggersAndSpawnIdea(
+  regimeLabels: Record<string, { regime: string; confidence: number }>,
+  environment: string
+): Promise<ResearchTriggerResult> {
+  // Skip in BACKTEST mode
+  if (environment === "BACKTEST") {
+    return { triggered: false };
+  }
+
+  try {
+    const factorZooRepo = await getFactorZooRepo();
+    const triggerService = createResearchTriggerService({ factorZoo: factorZooRepo });
+
+    // Get active regimes
+    const activeRegimes = Object.values(regimeLabels).map((r) => r.regime);
+    const primaryRegime = activeRegimes[0] ?? "RANGE";
+
+    const result = await triggerService.shouldTriggerResearch({
+      currentRegime: primaryRegime,
+      activeRegimes,
+      activeFactorIds: [], // Will be populated when Factor Zoo has active factors
+      timestamp: new Date().toISOString(),
+    });
+
+    if (!result.shouldTrigger || !result.trigger) {
+      return { triggered: false };
+    }
+
+    log.info(
+      {
+        triggerType: result.trigger.type,
+        severity: result.trigger.severity,
+        suggestedFocus: result.trigger.suggestedFocus,
+      },
+      "Research trigger detected"
+    );
+
+    // Spawn IdeaAgent to generate hypothesis
+    // Note: In production, this would use a real LLM provider
+    // For now, log the trigger and return without hypothesis generation
+    // TODO: Wire up LLM provider for IdeaAgent
+    return {
+      triggered: true,
+      trigger: {
+        type: result.trigger.type,
+        severity: result.trigger.severity,
+        reason: result.trigger.suggestedFocus,
+      },
+    };
+  } catch (error) {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to check research triggers"
+    );
+    return { triggered: false };
+  }
+}
+
+/**
+ * Ingest closed theses into HelixDB memory.
+ */
+async function ingestClosedThesesForCycle(
+  cycleId: string,
+  _environment: string, // Reserved for future regime lookup
+  thesisUpdates: ThesisUpdate[]
+): Promise<{ ingested: number; errors: string[] }> {
+  const closedUpdates = thesisUpdates.filter((u) => u.toState === "CLOSED");
+  if (closedUpdates.length === 0) {
+    return { ingested: 0, errors: [] };
+  }
+
+  const client = getHelixClient();
+  const embedder = getEmbeddingClient();
+  if (!client || !embedder) {
+    return { ingested: 0, errors: ["HelixDB or embedder not available"] };
+  }
+
+  const repo = await getThesisStateRepo();
+  const errors: string[] = [];
+  let ingested = 0;
+
+  for (const update of closedUpdates) {
+    try {
+      const thesis = await repo.findById(update.thesisId);
+      if (!thesis) {
+        continue;
+      }
+
+      // Determine regime at entry/exit (approximation using current regime)
+      const currentRegime = "RANGE"; // Default fallback - ideally would lookup from stored regime labels
+
+      const input: ThesisIngestionInput = {
+        thesis,
+        entryRegime: currentRegime,
+        exitRegime: currentRegime,
+        relatedDecisionIds: [],
+      };
+
+      const result = await ingestClosedThesis(input, client, embedder);
+      if (result.success) {
+        ingested++;
+      } else if (result.skippedReason) {
+        errors.push(`${update.thesisId}: ${result.skippedReason}`);
+      }
+    } catch (error) {
+      errors.push(`${update.thesisId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  log.info({ cycleId, ingested, errors: errors.length }, "Thesis memory ingestion complete");
+  return { ingested, errors };
 }
 
 // ============================================
@@ -359,6 +686,12 @@ export interface WorkflowResult {
   mode: "STUB" | "LLM";
   /** Config version ID used for this cycle (for audit trail) */
   configVersion: string | null;
+  /** Thesis lifecycle updates made during this cycle */
+  thesisUpdates?: ThesisUpdate[];
+  /** Research trigger detection result */
+  researchTrigger?: ResearchTriggerResult;
+  /** Thesis memory ingestion result */
+  thesisMemoryIngestion?: { ingested: number; errors: string[] };
 }
 
 // ============================================
@@ -1144,6 +1477,22 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     computeAndStoreRegimes(marketSnapshot),
   ]);
 
+  // Check for research triggers (REGIME_GAP, ALPHA_DECAY, etc.)
+  const researchTriggerResult = await checkResearchTriggersAndSpawnIdea(
+    regimeLabels,
+    context.environment
+  );
+  if (researchTriggerResult.triggered) {
+    log.info(
+      {
+        cycleId,
+        triggerType: researchTriggerResult.trigger?.type,
+        severity: researchTriggerResult.trigger?.severity,
+      },
+      "Research trigger activated - hypothesis generation may be pending"
+    );
+  }
+
   // Build agent context with external news, macro data, regime classifications, prediction markets, and agent configs
   const agentContext: AgentContext = {
     cycleId,
@@ -1626,6 +1975,64 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   }
 
   // ============================================
+  // Thesis Lifecycle Management
+  // ============================================
+  const thesisUpdates: ThesisUpdate[] = [];
+  if (consensusResult.approved) {
+    try {
+      const thesisRepo = await getThesisStateRepo();
+
+      for (const decision of consensusResult.plan.decisions) {
+        // Get the latest close price from candle data
+        const candleData = marketSnapshot.candles[decision.instrumentId];
+        const currentPrice =
+          candleData && candleData.length > 0
+            ? candleData[candleData.length - 1]?.close
+            : undefined;
+        const update = await processThesisForDecision(
+          thesisRepo,
+          {
+            instrumentId: decision.instrumentId,
+            action: decision.action,
+            direction: decision.direction,
+            stopLoss: decision.stopLoss?.price,
+            takeProfit: decision.takeProfit?.price,
+            rationale: decision.rationale,
+          },
+          context.environment,
+          cycleId,
+          currentPrice
+        );
+        if (update) {
+          thesisUpdates.push(update);
+        }
+      }
+
+      if (thesisUpdates.length > 0) {
+        log.info(
+          {
+            cycleId,
+            thesisCount: thesisUpdates.length,
+            updates: thesisUpdates.map((u) => ({
+              thesisId: u.thesisId,
+              action: u.action,
+              fromState: u.fromState,
+              toState: u.toState,
+            })),
+          },
+          "Thesis lifecycle updates processed"
+        );
+      }
+    } catch (error) {
+      log.error(
+        { cycleId, error: error instanceof Error ? error.message : String(error) },
+        "Failed to process thesis lifecycle"
+      );
+      // Don't fail the cycle - thesis updates are non-critical
+    }
+  }
+
+  // ============================================
   // Update HelixDB Memory (Act Phase - Memory)
   // ============================================
   const orchestrator = getHelixOrchestrator();
@@ -1735,6 +2142,18 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     context
   );
 
+  // ============================================
+  // Thesis Memory Ingestion
+  // ============================================
+  let thesisMemoryIngestion: { ingested: number; errors: string[] } | undefined;
+  if (thesisUpdates.length > 0) {
+    thesisMemoryIngestion = await ingestClosedThesesForCycle(
+      cycleId,
+      context.environment,
+      thesisUpdates
+    );
+  }
+
   log.info(
     {
       cycleId,
@@ -1743,6 +2162,9 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       ordersSubmitted: orderSubmission.submitted,
       orderIds: orderSubmission.orderIds,
       errors: orderSubmission.errors,
+      thesisUpdatesCount: thesisUpdates.length,
+      researchTriggered: researchTriggerResult.triggered,
+      thesisMemoryIngested: thesisMemoryIngestion?.ingested ?? 0,
     },
     "Trading cycle complete"
   );
@@ -1754,6 +2176,9 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     orderSubmission,
     mode: "LLM",
     configVersion,
+    thesisUpdates: thesisUpdates.length > 0 ? thesisUpdates : undefined,
+    researchTrigger: researchTriggerResult.triggered ? researchTriggerResult : undefined,
+    thesisMemoryIngestion,
   };
 }
 

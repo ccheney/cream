@@ -109,8 +109,11 @@ describe("Trading Cycle Workflow Schema", () => {
       const output: TradingCycleOutput = {
         cycleId: "test-cycle-123",
         success: true,
+        approved: true,
         ordersExecuted: 0,
         memoryId: "mem-123",
+        thesisUpdates: [],
+        researchTriggered: false,
       };
       const result = tradingCycleWorkflow.outputSchema.safeParse(output);
       expect(result.success).toBe(true);
@@ -120,7 +123,10 @@ describe("Trading Cycle Workflow Schema", () => {
       const output: TradingCycleOutput = {
         cycleId: "test-cycle-123",
         success: true,
+        approved: true,
         ordersExecuted: 0,
+        thesisUpdates: [],
+        researchTriggered: false,
       };
       const result = tradingCycleWorkflow.outputSchema.safeParse(output);
       expect(result.success).toBe(true);
@@ -130,7 +136,10 @@ describe("Trading Cycle Workflow Schema", () => {
       const output: TradingCycleOutput = {
         cycleId: "test-cycle-123",
         success: false,
+        approved: false,
         ordersExecuted: 0,
+        thesisUpdates: [],
+        researchTriggered: false,
       };
       const result = tradingCycleWorkflow.outputSchema.safeParse(output);
       expect(result.success).toBe(true);
@@ -171,7 +180,7 @@ describe("Trading Cycle Workflow Schema", () => {
 
 describe("Trading Cycle Workflow Configuration", () => {
   it("should have correct workflow id", () => {
-    expect(tradingCycleWorkflow.id).toBe("trading-cycle");
+    expect(tradingCycleWorkflow.id).toBe("trading-cycle-mastra");
   });
 
   it("should have description", () => {
