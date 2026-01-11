@@ -139,6 +139,9 @@ export {
 } from "./orthogonality.js";
 // Paper Trading Validation
 export {
+  type ActionConfidence,
+  type ActionRecommendation,
+  type AggregatedResults,
   aggregatePaperTradingResults,
   type BacktestedMetrics,
   BacktestedMetricsSchema,
@@ -150,14 +153,16 @@ export {
   PAPER_TRADING_DEFAULTS,
   type PaperSignal,
   PaperSignalSchema,
+  type PaperTradingAction,
   type PaperTradingConfig,
   PaperTradingConfigSchema,
   type PaperTradingResult,
   PaperTradingResultSchema,
+  type PaperTradingStatus,
   type RealizedMetrics,
   RealizedMetricsSchema,
   tradingDaysBetween,
-} from "./paperTrading.js";
+} from "./paperTrading/index.js";
 // Probability of Backtest Overfitting (PBO)
 export {
   type CSCVCombinationResult,

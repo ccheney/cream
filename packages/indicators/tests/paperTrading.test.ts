@@ -18,7 +18,7 @@ import {
   type PaperSignal,
   type PaperTradingConfig,
   tradingDaysBetween,
-} from "../src/synthesis/paperTrading.js";
+} from "../src/synthesis/paperTrading/index.js";
 
 // ============================================
 // Test Helpers
