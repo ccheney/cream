@@ -29,6 +29,7 @@ import {
   alertsRoutes,
   backtestRoutes,
   batchStatusRoutes,
+  batchTriggerRoutes,
   configRoutes,
   decisionsRoutes,
   filingsRoutes,
@@ -212,6 +213,7 @@ app.route("/api/preferences", preferencesRoutes);
 app.route("/api/indicators", indicatorsRoutes);
 app.route("/api/indicators", priceIndicatorsRoutes);
 app.route("/api/indicators", batchStatusRoutes);
+app.route("/api/indicators", batchTriggerRoutes);
 app.route("/api/research", researchRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
