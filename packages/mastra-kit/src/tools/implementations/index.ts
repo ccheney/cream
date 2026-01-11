@@ -16,6 +16,11 @@ export {
   extractTranscript,
 } from "./externalContext.js";
 export { getEconomicCalendar, searchNews } from "./fmp.js";
+export {
+  type GraphRAGQueryParams,
+  type GraphRAGQueryResult,
+  graphragQuery,
+} from "./graphrag.js";
 export { helixQuery } from "./helix.js";
 export { recalcIndicator } from "./indicators.js";
 export { getGreeks, getOptionChain, parseOSISymbol } from "./options.js";
