@@ -526,3 +526,35 @@ QUERY GetPaperById(paper_id: String) =>
 // Hypothesis Graph Traversal Queries
 // ============================================
 // NOTE: Disabled due to same code generator bug as above.
+
+// ============================================
+// GraphRAG Unified Search Queries
+// ============================================
+
+// Unified cross-type vector search with graph traversal
+// Returns filings, transcripts, news, events and their connected companies
+QUERY SearchGraphContext(query: String, limit: I64) =>
+    filing_chunks <- SearchV<FilingChunk>(Embed(query), limit)
+    transcript_chunks <- SearchV<TranscriptChunk>(Embed(query), limit)
+    news_items <- SearchV<NewsItem>(Embed(query), limit)
+    external_events <- SearchV<ExternalEvent>(Embed(query), limit)
+    filing_companies <- filing_chunks::Out<FILED_BY>
+    transcript_companies <- transcript_chunks::Out<TRANSCRIPT_FOR>
+    news_companies <- news_items::Out<MENTIONS_COMPANY>
+    RETURN filing_chunks, transcript_chunks, news_items, external_events,
+           filing_companies, transcript_companies, news_companies
+
+// Filtered search with related company traversal
+// First finds results for a specific company, then discovers related companies
+QUERY SearchGraphContextByCompany(query: String, company_symbol: String, limit: I64) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    filing_chunks <- SearchV<FilingChunk>(Embed(query), limit)
+        ::WHERE(_::{company_symbol}::EQ(company_symbol))
+    transcript_chunks <- SearchV<TranscriptChunk>(Embed(query), limit)
+        ::WHERE(_::{company_symbol}::EQ(company_symbol))
+    news_items <- SearchV<NewsItem>(Embed(query), limit)
+    news_companies <- news_items::Out<MENTIONS_COMPANY>
+    related_companies <- company::Out<RELATED_TO>
+    dependent_companies <- company::Out<DEPENDS_ON>
+    RETURN filing_chunks, transcript_chunks, news_items, company,
+           news_companies, related_companies, dependent_companies
