@@ -2,61 +2,84 @@
  * Retention Module
  *
  * Active forgetting policy based on Ebbinghaus forgetting curve.
+ *
+ * Implements adaptive data retention based on cognitive memory research.
+ * The forgetting curve demonstrates exponential decay of memory retention:
+ *
+ *   R = e^(-t/S)
+ *
+ * where:
+ *   R = retention strength (0-1)
+ *   t = time elapsed
+ *   S = memory strength (stability)
+ *
+ * @see docs/plans/04-memory-helixdb.md - Memory Compaction and Cleanup
+ * @see https://en.wikipedia.org/wiki/Forgetting_curve
  */
 
+// Re-export access tracking
+export { daysSinceLastAccess, recordAccess } from "./access-tracking.js";
+// Re-export cohort summarization
 export {
-  type AccessRecord,
-  // Batch processing
-  batchGetForgettingDecisions,
+  createTradeCohortSummary,
+  formatMonthlyPeriod,
+  formatQuarterlyPeriod,
+  groupDecisionsForSummarization,
+} from "./cohort-summarization.js";
+// Re-export constants
+export {
   COMPLIANCE_PERIOD_DAYS,
-  // Metrics
-  calculateForgettingMetrics,
+  DECAY_CONSTANT_DAYS,
+  DELETION_THRESHOLD,
+  EDGE_COUNT_NORMALIZATION_FACTOR,
+  FREQUENCY_SCALE_FACTOR,
+  INFINITE_RETENTION,
+  PNL_NORMALIZATION_FACTOR,
+  SUMMARIZATION_THRESHOLD,
+} from "./constants.js";
+// Re-export decay calculations
+export {
   calculateFrequency,
   calculateImportance,
-  // Core forgetting functions
   calculateRecency,
   calculateRetentionScore,
-  // Trade cohort summarization
-  createTradeCohortSummary,
-  // Constants
-  DECAY_CONSTANT_DAYS,
-  DEFAULT_PRUNING_CONFIG,
-  DELETION_THRESHOLD,
-  daysSinceLastAccess,
-  EDGE_COUNT_NORMALIZATION_FACTOR,
-  type EdgeInfo,
+  hasComplianceOverride,
+  shouldDelete,
+  shouldSummarize,
+} from "./decay.js";
+// Re-export decision functions
+export {
+  batchGetForgettingDecisions,
+  filterForDeletion,
+  filterForSummarization,
+  getForgettingDecision,
+} from "./decisions.js";
+
+// Re-export graph pruning
+export {
   evaluateSubgraphForMerge,
+  findHubsTooPrune,
+  findIsolatedNodes,
+  pruneEdgesByWeight,
+} from "./graph-pruning.js";
+// Re-export metrics
+export { calculateForgettingMetrics } from "./metrics.js";
+// Re-export types
+export {
+  type AccessRecord,
+  DEFAULT_PRUNING_CONFIG,
+  type EdgeInfo,
   type ForgettingDecision,
-  // Types
   ForgettingEnvironment,
   type ForgettingEnvironment as ForgettingEnvironmentType,
   type ForgettingMetrics,
   ForgettingNodeType,
   type ForgettingNodeType as ForgettingNodeTypeValue,
-  FREQUENCY_SCALE_FACTOR,
-  filterForDeletion,
-  filterForSummarization,
-  findHubsTooPrune,
-  findIsolatedNodes,
-  formatMonthlyPeriod,
-  formatQuarterlyPeriod,
   type GraphPruningAction,
   type GraphPruningConfig,
-  getForgettingDecision,
-  groupDecisionsForSummarization,
-  hasComplianceOverride,
-  INFINITE_RETENTION,
   type NodeConnectivity,
   type NodeInfo,
-  PNL_NORMALIZATION_FACTOR,
-  // Graph pruning
-  pruneEdgesByWeight,
   type RetentionScoreBreakdown,
-  // Access tracking
-  recordAccess,
-  SUMMARIZATION_THRESHOLD,
-  shouldDelete,
-  shouldSummarize,
   type TradeCohortSummary,
   type TradeDecisionInfo,
-} from "./forgetting";
+} from "./types.js";
