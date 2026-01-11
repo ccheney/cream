@@ -25,6 +25,16 @@ export {
   type ExtractedEvent,
 } from "./event-ingestion.js";
 export {
+  calculateHypothesisQualityScore,
+  createHypothesisIngestionService,
+  type HypothesisIngestionOptions,
+  type HypothesisIngestionResult,
+  HypothesisIngestionService,
+  type HypothesisInput,
+  type HypothesisUpdateInput,
+  type SimilarHypothesis,
+} from "./hypothesis-ingestion.js";
+export {
   type CompanySensitivity,
   calculateRollingCorrelation,
   correlationToSensitivity,
