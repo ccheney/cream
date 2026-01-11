@@ -1,8 +1,12 @@
 /**
  * Mastra Configuration
  *
- * For Phase 4, we use a simplified configuration with stub agents.
- * The full Mastra instance with real LLM agents will be added in Phase 8.
+ * Provides workflow and agent exports for the trading system.
+ *
+ * The step-based Mastra workflow is under development in tradingCycle.ts.
+ * Currently using the inline implementation (trading-cycle.ts) for production.
+ *
+ * @see docs/plans/21-mastra-workflow-refactor.md
  */
 
 import { agents } from "../agents/stub-agents.js";

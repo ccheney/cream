@@ -85,8 +85,11 @@ export async function initMarketDataStreaming(): Promise<void> {
   // Check if POLYGON_KEY is available
   const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
   if (!apiKey) {
+    log.warn("POLYGON_KEY not set, market data streaming disabled");
     return;
   }
+
+  log.info("Initializing market data streaming");
 
   try {
     massiveClient = createMassiveStocksClientFromEnv("delayed");
@@ -98,8 +101,12 @@ export async function initMarketDataStreaming(): Promise<void> {
     await massiveClient.connect();
     isInitialized = true;
     reconnectAttempts = 0;
-  } catch (_error) {
-    // Don't throw - allow server to start without streaming
+    log.info("Market data streaming connected");
+  } catch (error) {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Market data streaming initialization failed, server will start without streaming"
+    );
   }
 }
 
@@ -107,6 +114,7 @@ export async function initMarketDataStreaming(): Promise<void> {
  * Shutdown the market data streaming service.
  */
 export function shutdownMarketDataStreaming(): void {
+  log.info({ activeSymbols: activeSymbols.size }, "Shutting down market data streaming");
   if (massiveClient) {
     massiveClient.disconnect();
     massiveClient = null;
@@ -114,6 +122,7 @@ export function shutdownMarketDataStreaming(): void {
   isInitialized = false;
   activeSymbols.clear();
   quoteCache.clear();
+  log.info("Market data streaming shutdown complete");
 }
 
 // ============================================
@@ -126,9 +135,11 @@ export function shutdownMarketDataStreaming(): void {
 function handleMassiveEvent(event: MassiveEvent): void {
   switch (event.type) {
     case "connected":
+      log.debug("Massive WebSocket connected");
       break;
 
     case "authenticated":
+      log.info({ activeSymbols: activeSymbols.size }, "Massive WebSocket authenticated");
       // Resubscribe to active symbols after reconnection
       if (activeSymbols.size > 0) {
         // Subscribe to aggregates (AM), trades (T), and quotes (Q)
@@ -148,6 +159,7 @@ function handleMassiveEvent(event: MassiveEvent): void {
       break;
 
     case "subscribed":
+      log.debug({ params: event.params }, "Subscribed to market data symbols");
       break;
 
     case "aggregate":
@@ -163,14 +175,21 @@ function handleMassiveEvent(event: MassiveEvent): void {
       break;
 
     case "disconnected":
+      log.warn("Massive WebSocket disconnected");
       break;
 
     case "reconnecting":
       reconnectAttempts = event.attempt;
+      log.info(
+        { attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+        "Reconnecting to Massive WebSocket"
+      );
       break;
 
     case "error":
+      log.error({ error: event.error, reconnectAttempts }, "Massive WebSocket error");
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        log.error("Max reconnect attempts reached, market data streaming disabled");
         isInitialized = false;
       }
       break;

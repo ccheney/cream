@@ -19,6 +19,7 @@ import {
   type MassiveTradeMessage,
   type MassiveWebSocketClient,
 } from "@cream/marketdata";
+import log from "../logger.js";
 import { broadcastOptionsQuote } from "../websocket/handler.js";
 
 // ============================================
@@ -89,8 +90,11 @@ export async function initOptionsDataStreaming(): Promise<void> {
   // Check if POLYGON_KEY is available
   const apiKey = process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY;
   if (!apiKey) {
+    log.warn("POLYGON_KEY not set, options data streaming disabled");
     return;
   }
+
+  log.info("Initializing options data streaming");
 
   try {
     massiveOptionsClient = createMassiveOptionsClientFromEnv("delayed");
@@ -102,8 +106,12 @@ export async function initOptionsDataStreaming(): Promise<void> {
     await massiveOptionsClient.connect();
     isInitialized = true;
     reconnectAttempts = 0;
-  } catch (_error) {
-    // Don't throw - allow server to start without streaming
+    log.info("Options data streaming connected");
+  } catch (error) {
+    log.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Options data streaming initialization failed, server will start without streaming"
+    );
   }
 }
 
@@ -111,6 +119,7 @@ export async function initOptionsDataStreaming(): Promise<void> {
  * Shutdown the options data streaming service.
  */
 export function shutdownOptionsDataStreaming(): void {
+  log.info({ activeContracts: activeContracts.size }, "Shutting down options data streaming");
   if (massiveOptionsClient) {
     massiveOptionsClient.disconnect();
     massiveOptionsClient = null;
@@ -118,6 +127,7 @@ export function shutdownOptionsDataStreaming(): void {
   isInitialized = false;
   activeContracts.clear();
   optionsCache.clear();
+  log.info("Options data streaming shutdown complete");
 }
 
 // ============================================
@@ -130,19 +140,28 @@ export function shutdownOptionsDataStreaming(): void {
 function handleOptionsEvent(event: MassiveEvent): void {
   switch (event.type) {
     case "connected":
+      log.debug("Massive Options WebSocket connected");
       break;
 
     case "authenticated":
+      log.info(
+        { activeContracts: activeContracts.size },
+        "Massive Options WebSocket authenticated"
+      );
       // Resubscribe to active contracts after reconnection
       if (activeContracts.size > 0) {
         const subscriptions = Array.from(activeContracts).map((c) => `Q.${c}`);
-        massiveOptionsClient?.subscribe(subscriptions).catch(() => {
-          // Silently handle subscription failures
+        massiveOptionsClient?.subscribe(subscriptions).catch((error) => {
+          log.error(
+            { error: error instanceof Error ? error.message : String(error) },
+            "Failed to resubscribe to options data"
+          );
         });
       }
       break;
 
     case "subscribed":
+      log.debug({ params: event.params }, "Subscribed to options symbols");
       break;
 
     case "aggregate":
@@ -158,14 +177,21 @@ function handleOptionsEvent(event: MassiveEvent): void {
       break;
 
     case "disconnected":
+      log.warn("Massive Options WebSocket disconnected");
       break;
 
     case "reconnecting":
       reconnectAttempts = event.attempt;
+      log.info(
+        { attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+        "Reconnecting to Massive Options WebSocket"
+      );
       break;
 
     case "error":
+      log.error({ error: event.error, reconnectAttempts }, "Massive Options WebSocket error");
       if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        log.error("Max reconnect attempts reached, options data streaming disabled");
         isInitialized = false;
       }
       break;

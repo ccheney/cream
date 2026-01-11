@@ -19,6 +19,7 @@ import {
   createTursoClient,
   DecisionsRepository,
   ExternalEventsRepository,
+  FactorZooRepository,
   OrdersRepository,
   PositionsRepository,
   PredictionMarketsRepository,
@@ -194,6 +195,14 @@ export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
 export async function getDecisionsRepo(): Promise<DecisionsRepository> {
   const client = await getDbClient();
   return new DecisionsRepository(client);
+}
+
+/**
+ * Get factor zoo repository
+ */
+export async function getFactorZooRepo(): Promise<FactorZooRepository> {
+  const client = await getDbClient();
+  return new FactorZooRepository(client);
 }
 
 // ============================================
