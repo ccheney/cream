@@ -36,16 +36,16 @@ const GetQuotesInputSchema = z.object({
 });
 
 const QuoteSchema = z.object({
-  symbol: z.string(),
-  bid: z.number(),
-  ask: z.number(),
-  last: z.number(),
-  volume: z.number(),
-  timestamp: z.string(),
+  symbol: z.string().describe("Ticker symbol (e.g., AAPL, SPY, MSFT)"),
+  bid: z.number().describe("Highest price buyer willing to pay. Use for sell limit orders"),
+  ask: z.number().describe("Lowest price seller willing to accept. Use for buy limit orders"),
+  last: z.number().describe("Most recent trade price. May differ from bid/ask in illiquid markets"),
+  volume: z.number().describe("Total shares traded today. Higher = better liquidity"),
+  timestamp: z.string().describe("Quote timestamp in ISO 8601 format"),
 });
 
 const GetQuotesOutputSchema = z.object({
-  quotes: z.array(QuoteSchema),
+  quotes: z.array(QuoteSchema).describe("Real-time quotes for requested instruments"),
 });
 
 export const getQuotesTool = createTool({
@@ -70,19 +70,21 @@ export const getQuotesTool = createTool({
 const GetPortfolioStateInputSchema = z.object({});
 
 const PortfolioPositionSchema = z.object({
-  symbol: z.string(),
-  quantity: z.number(),
-  averageCost: z.number(),
-  marketValue: z.number(),
-  unrealizedPnL: z.number(),
+  symbol: z.string().describe("Ticker symbol of held position"),
+  quantity: z.number().describe("Number of shares held. Positive = long, negative = short"),
+  averageCost: z.number().describe("Average cost basis per share including commissions"),
+  marketValue: z.number().describe("Current position value = quantity × current price"),
+  unrealizedPnL: z
+    .number()
+    .describe("Unrealized profit/loss = marketValue - (quantity × averageCost)"),
 });
 
 const GetPortfolioStateOutputSchema = z.object({
-  positions: z.array(PortfolioPositionSchema),
-  buyingPower: z.number(),
-  totalEquity: z.number(),
-  dayPnL: z.number(),
-  totalPnL: z.number(),
+  positions: z.array(PortfolioPositionSchema).describe("All current positions in the portfolio"),
+  buyingPower: z.number().describe("Available cash for new trades. Consider margin requirements"),
+  totalEquity: z.number().describe("Total account value = cash + positions market value"),
+  dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),
+  totalPnL: z.number().describe("All-time realized + unrealized profit/loss"),
 });
 
 export const getPortfolioStateTool = createTool({
@@ -109,26 +111,32 @@ const GetOptionChainInputSchema = z.object({
 });
 
 const OptionContractSchema = z.object({
-  symbol: z.string(),
-  strike: z.number(),
-  expiration: z.string(),
-  type: z.enum(["call", "put"]),
-  bid: z.number(),
-  ask: z.number(),
-  last: z.number(),
-  volume: z.number(),
-  openInterest: z.number(),
+  symbol: z.string().describe("OCC option symbol in standard format (e.g., AAPL240119C00185000)"),
+  strike: z.number().describe("Strike price of the option contract"),
+  expiration: z.string().describe("Expiration date in YYYY-MM-DD format"),
+  type: z.enum(["call", "put"]).describe("Option type: call (right to buy) or put (right to sell)"),
+  bid: z.number().describe("Best bid price. Use for selling options"),
+  ask: z.number().describe("Best ask price. Use for buying options"),
+  last: z.number().describe("Last traded price. May be stale for illiquid strikes"),
+  volume: z.number().describe("Contracts traded today. Higher = better liquidity"),
+  openInterest: z.number().describe("Total open contracts. Higher = more liquid, easier to exit"),
 });
 
 const OptionExpirationSchema = z.object({
-  expiration: z.string(),
-  calls: z.array(OptionContractSchema),
-  puts: z.array(OptionContractSchema),
+  expiration: z.string().describe("Expiration date in YYYY-MM-DD format"),
+  calls: z
+    .array(OptionContractSchema)
+    .describe("All call options for this expiration, sorted by strike"),
+  puts: z
+    .array(OptionContractSchema)
+    .describe("All put options for this expiration, sorted by strike"),
 });
 
 const GetOptionChainOutputSchema = z.object({
-  underlying: z.string(),
-  expirations: z.array(OptionExpirationSchema),
+  underlying: z.string().describe("Underlying stock/ETF symbol for this option chain"),
+  expirations: z
+    .array(OptionExpirationSchema)
+    .describe("All available expirations with their contracts"),
 });
 
 export const getOptionChainTool = createTool({
