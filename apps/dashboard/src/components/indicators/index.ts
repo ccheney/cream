@@ -36,5 +36,9 @@ export {
   type PriceIndicatorsProps,
 } from "./PriceIndicators";
 export { RetireButton } from "./RetireButton";
+export {
+  ShortInterestIndicators as ShortInterestWidget,
+  type ShortInterestIndicatorsProps,
+} from "./ShortInterestIndicators";
 export { TriggerStatusCard } from "./TriggerStatusCard";
 export { ValidationReport } from "./ValidationReport";
