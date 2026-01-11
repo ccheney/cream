@@ -23,7 +23,7 @@ export {
   parsePackageJson,
   scanPackages,
   validatePackageDependencies,
-} from "./dependencyValidation";
+} from "./dependencyValidation/index.js";
 // Health Checks
 export {
   type ComponentHealthConfig,
