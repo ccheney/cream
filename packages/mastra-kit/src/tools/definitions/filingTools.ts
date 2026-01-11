@@ -40,20 +40,20 @@ const SearchFilingsInputSchema = z.object({
 });
 
 const FilingChunkSummarySchema = z.object({
-  chunkId: z.string(),
-  filingId: z.string(),
-  symbol: z.string(),
-  filingType: z.string(),
-  filingDate: z.string(),
-  content: z.string(),
-  chunkIndex: z.number(),
-  score: z.number().optional(),
+  chunkId: z.string().describe("Unique identifier for this content chunk"),
+  filingId: z.string().describe("SEC filing accession number"),
+  symbol: z.string().describe("Company ticker symbol"),
+  filingType: z.string().describe("SEC form type (10-K, 10-Q, 8-K, DEF14A, etc.)"),
+  filingDate: z.string().describe("Filing date in YYYY-MM-DD format"),
+  content: z.string().describe("Text content of this chunk, relevant to the search query"),
+  chunkIndex: z.number().describe("Position of chunk within the filing (0-indexed)"),
+  score: z.number().optional().describe("Semantic similarity score (higher = more relevant)"),
 });
 
 const SearchFilingsOutputSchema = z.object({
-  chunks: z.array(FilingChunkSummarySchema),
-  totalFound: z.number(),
-  query: z.string(),
+  chunks: z.array(FilingChunkSummarySchema).describe("Matching filing chunks, sorted by relevance"),
+  totalFound: z.number().describe("Total matches found (may exceed returned chunks)"),
+  query: z.string().describe("Original search query used"),
 });
 
 export const searchFilingsTool = createTool({
