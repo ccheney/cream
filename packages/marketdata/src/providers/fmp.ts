@@ -172,7 +172,10 @@ export const EarningsEventSchema = z.object({
   symbol: z.string(),
   eps: z.number().nullable(),
   epsEstimated: z.number().nullable(),
-  time: z.string().nullable(), // "bmo" (before market open), "amc" (after market close)
+  time: z
+    .string()
+    .nullable()
+    .describe("Earnings release time: 'bmo' (before market open), 'amc' (after market close)"),
   revenue: z.number().nullable(),
   revenueEstimated: z.number().nullable(),
   updatedFromDate: z.string().optional(),
