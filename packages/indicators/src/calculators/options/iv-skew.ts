@@ -30,7 +30,7 @@ export const OptionsContractSchema = z.object({
   symbol: z.string(),
   underlyingSymbol: z.string(),
   strike: z.number(),
-  expiration: z.string(), // ISO date
+  expiration: z.string().describe("Option expiration date in ISO format (YYYY-MM-DD)"),
   optionType: z.enum(["call", "put"]),
   impliedVolatility: z.number(),
   delta: z.number(),

@@ -27,12 +27,12 @@ import { z } from "zod";
  * Single option position
  */
 export const OptionPositionSchema = z.object({
-  symbol: z.string(), // Option symbol
+  symbol: z.string().describe("OCC option symbol (e.g., AAPL240119C00185000)"),
   underlyingSymbol: z.string(),
   optionType: z.enum(["call", "put"]),
   strike: z.number(),
-  expiration: z.string(), // ISO date
-  quantity: z.number(), // Positive = long, negative = short
+  expiration: z.string().describe("Option expiration date in ISO format (YYYY-MM-DD)"),
+  quantity: z.number().describe("Number of contracts: positive=long, negative=short"),
   delta: z.number(),
   gamma: z.number(),
   theta: z.number(),
