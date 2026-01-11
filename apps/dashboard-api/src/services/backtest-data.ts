@@ -274,12 +274,7 @@ function generateSMACrossoverSignals(
     const currSlow = slowSMA[slowIdx]?.value;
     const prevSlow = slowSMA[slowIdx - 1]?.value;
 
-    if (
-      currFast === undefined ||
-      prevFast === undefined ||
-      currSlow === undefined ||
-      prevSlow === undefined
-    ) {
+    if (currFast == null || prevFast == null || currSlow == null || prevSlow == null) {
       return { timestamp: row.timestamp, entries: false, exits: false };
     }
 

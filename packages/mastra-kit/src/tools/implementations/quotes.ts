@@ -53,9 +53,6 @@ export async function getQuotes(ctx: ExecutionContext, instruments: string[]): P
   const foundSymbols = new Set(quotes.map((q) => q.symbol));
   const missingSymbols = instruments.filter((s) => !foundSymbols.has(s));
   if (missingSymbols.length > 0) {
-    console.warn(
-      `[quotes] Missing quotes for symbols (may be ADR/OTC): ${missingSymbols.join(", ")}`
-    );
   }
 
   // Return partial results even if some symbols are missing

@@ -10,7 +10,7 @@ import {
   calculateZScore,
   extractFeatures,
   extractSingleFeature,
-  getMinimumOHLCVBarCount,
+  getMinimumCandleCount,
   normalizeFeatures,
 } from "../src/features";
 import {
@@ -71,7 +71,11 @@ function generateTrendingOHLCVBars(
   return candles;
 }
 
-function generateRangeBoundOHLCVBars(basePrice: number, count: number, volatility = 0.01): OHLCVBar[] {
+function generateRangeBoundOHLCVBars(
+  basePrice: number,
+  count: number,
+  volatility = 0.01
+): OHLCVBar[] {
   const candles: OHLCVBar[] = [];
   const baseDate = new Date("2024-01-01");
 
@@ -195,9 +199,9 @@ describe("Feature Extraction", () => {
     });
   });
 
-  describe("getMinimumOHLCVBarCount", () => {
+  describe("getMinimumCandleCount", () => {
     it("returns correct minimum", () => {
-      const min = getMinimumOHLCVBarCount();
+      const min = getMinimumCandleCount();
       expect(min).toBe(21); // 20 + 1
     });
   });

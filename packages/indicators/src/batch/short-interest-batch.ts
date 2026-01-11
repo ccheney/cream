@@ -14,10 +14,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import type {
-  CreateShortInterestInput,
-  ShortInterestRepository,
-} from "@cream/storage/repositories";
+import type { CreateShortInterestInput, ShortInterestRepository } from "@cream/storage";
 import { log } from "../logger.js";
 import type { BatchJobResult } from "./fundamentals-batch.js";
 

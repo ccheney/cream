@@ -58,7 +58,9 @@ export function calculateVWAP(bars: OHLCVBar[]): VWAPResult | null {
   let validBars = 0;
 
   for (const bar of bars) {
-    if (bar.volume <= 0) continue;
+    if (bar.volume <= 0) {
+      continue;
+    }
 
     const typicalPrice = calculateTypicalPrice(bar);
     cumulativePV += typicalPrice * bar.volume;
@@ -92,7 +94,9 @@ export function calculateVWAP(bars: OHLCVBar[]): VWAPResult | null {
  * @returns Deviation as percentage
  */
 export function calculateVWAPDeviation(currentPrice: number, vwap: number): number {
-  if (vwap <= 0) return 0;
+  if (vwap <= 0) {
+    return 0;
+  }
   return ((currentPrice - vwap) / vwap) * 100;
 }
 

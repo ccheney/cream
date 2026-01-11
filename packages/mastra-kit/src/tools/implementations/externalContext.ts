@@ -174,11 +174,6 @@ export async function extractTranscript(
   ctx: ExecutionContext,
   params: ExtractTranscriptParams
 ): Promise<ExtractTranscriptResult> {
-  console.warn(
-    "[DEPRECATED] extractTranscript is deprecated. Use graphrag_query instead. " +
-      "See docs/plans/34-graphrag-query-tool.md for migration details."
-  );
-
   const { symbol, year, quarter, dryRun = false } = params;
 
   // In backtest mode, return empty result

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, mock, test } from "bun:test";
-import type { CorporateActionsRepository } from "@cream/storage/repositories";
+import type { CorporateActionsRepository } from "@cream/storage";
 import {
   type AlpacaCorporateAction,
   type AlpacaCorporateActionsClient,

@@ -5,7 +5,7 @@
  */
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import type { CreateSentimentInput, SentimentRepository } from "@cream/storage/repositories";
+import type { CreateSentimentInput, SentimentRepository } from "@cream/storage";
 import {
   aggregateSentimentScores,
   calculateRecencyWeight,
@@ -44,11 +44,14 @@ function createMockDataProvider(
   };
 }
 
-function createMockRepository(): SentimentRepository & {
+// Mock repository type for testing - extends SentimentRepository with tracking
+type MockSentimentRepository = SentimentRepository & {
   upsertCalls: CreateSentimentInput[];
-} {
+};
+
+function createMockRepository(): MockSentimentRepository {
   const upsertCalls: CreateSentimentInput[] = [];
-  return {
+  const mockRepo = {
     upsertCalls,
     upsert: mock((input: CreateSentimentInput) => {
       upsertCalls.push(input);
@@ -74,7 +77,15 @@ function createMockRepository(): SentimentRepository & {
     findLatestBySymbol: mock(() => Promise.resolve(null)),
     findBySymbol: mock(() => Promise.resolve([])),
     findWithFilters: mock(() =>
-      Promise.resolve({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 })
+      Promise.resolve({
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      })
     ),
     findMostPositive: mock(() => Promise.resolve([])),
     findMostNegative: mock(() => Promise.resolve([])),
@@ -84,6 +95,8 @@ function createMockRepository(): SentimentRepository & {
     deleteOlderThan: mock(() => Promise.resolve(0)),
     count: mock(() => Promise.resolve(0)),
   };
+  // Cast to SentimentRepository to bypass private client property check
+  return mockRepo as unknown as MockSentimentRepository;
 }
 
 // ============================================
@@ -196,19 +209,13 @@ describe("calculateSentimentStrength", () => {
   });
 
   it("returns higher strength for high confidence", () => {
-    const highConfidence = calculateSentimentStrength([
-      { confidence: 0.9, weight: 1.0 },
-    ]);
-    const lowConfidence = calculateSentimentStrength([
-      { confidence: 0.3, weight: 1.0 },
-    ]);
+    const highConfidence = calculateSentimentStrength([{ confidence: 0.9, weight: 1.0 }]);
+    const lowConfidence = calculateSentimentStrength([{ confidence: 0.3, weight: 1.0 }]);
     expect(highConfidence!).toBeGreaterThan(lowConfidence!);
   });
 
   it("increases with volume (up to a point)", () => {
-    const singleEntry = calculateSentimentStrength([
-      { confidence: 0.8, weight: 1.0 },
-    ]);
+    const singleEntry = calculateSentimentStrength([{ confidence: 0.8, weight: 1.0 }]);
     const multipleEntries = calculateSentimentStrength([
       { confidence: 0.8, weight: 1.0 },
       { confidence: 0.8, weight: 1.0 },
@@ -260,16 +267,12 @@ describe("detectEventRisk", () => {
   });
 
   it("returns false for low-importance events", () => {
-    const result = detectEventRisk([
-      createMockSentiment({ eventType: "earnings", importance: 2 }),
-    ]);
+    const result = detectEventRisk([createMockSentiment({ eventType: "earnings", importance: 2 })]);
     expect(result).toBe(false);
   });
 
   it("returns true for high-importance earnings", () => {
-    const result = detectEventRisk([
-      createMockSentiment({ eventType: "earnings", importance: 4 }),
-    ]);
+    const result = detectEventRisk([createMockSentiment({ eventType: "earnings", importance: 4 })]);
     expect(result).toBe(true);
   });
 
@@ -407,9 +410,7 @@ describe("SentimentAggregationJob", () => {
     });
 
     it("normalizes symbol to uppercase", async () => {
-      const sentimentData = [
-        createMockSentiment({ symbol: "aapl" }),
-      ];
+      const sentimentData = [createMockSentiment({ symbol: "aapl" })];
       mockProvider = createMockDataProvider(sentimentData);
 
       const job = new SentimentAggregationJob(mockProvider, mockRepo);
@@ -429,7 +430,7 @@ describe("SentimentAggregationJob", () => {
       const job = new SentimentAggregationJob(mockProvider, mockRepo);
       await job.run(["AAPL", "MSFT"], "2024-01-15");
 
-      const ids = mockRepo.upsertCalls.map((c) => c.id);
+      const ids = mockRepo.upsertCalls.map((c: CreateSentimentInput) => c.id);
       expect(ids[0]).toMatch(/^sent_/);
       expect(ids[1]).toMatch(/^sent_/);
       expect(ids[0]).not.toBe(ids[1]);

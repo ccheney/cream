@@ -111,10 +111,14 @@ export function calculateATRSeries(bars: OHLCVBar[], period = 14): ATRResult[] {
 
   for (let i = 0; i < trueRanges.length; i++) {
     const nextBar = bars[i + 1];
-    if (!nextBar) continue;
+    if (!nextBar) {
+      continue;
+    }
 
     const tr = trueRanges[i];
-    if (tr === undefined) continue;
+    if (tr === undefined) {
+      continue;
+    }
 
     if (i < period - 1) {
       results.push({ value: null, timestamp: nextBar.timestamp });

@@ -254,7 +254,9 @@ describe("VWAP Calculation", () => {
     // Set some volumes to zero
     for (let i = 0; i < 10; i++) {
       const bar = bars[i];
-      if (bar) bar.volume = 0;
+      if (bar) {
+        bar.volume = 0;
+      }
     }
 
     const result = adapter.calculate(bars, null);

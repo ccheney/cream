@@ -7,7 +7,7 @@ import type { OHLCVBar } from "@cream/indicators";
 import {
   classifyRegime,
   createRuleBasedClassifier,
-  getRequiredOHLCVBarCount,
+  getRequiredCandleCount,
   hasEnoughData,
   type RegimeInput,
 } from "../src/ruleBasedClassifier";
@@ -278,9 +278,9 @@ describe("Rule-Based Regime Classifier", () => {
     });
   });
 
-  describe("getRequiredOHLCVBarCount", () => {
+  describe("getRequiredCandleCount", () => {
     test("returns correct count for default config", () => {
-      const count = getRequiredOHLCVBarCount();
+      const count = getRequiredCandleCount();
       // Default slow MA is 50, ATR is 14, need max + 1
       expect(count).toBe(51);
     });
@@ -292,7 +292,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_high: 80,
         volatility_percentile_low: 20,
       };
-      const count = getRequiredOHLCVBarCount(config);
+      const count = getRequiredCandleCount(config);
       expect(count).toBe(101);
     });
 
@@ -303,7 +303,7 @@ describe("Rule-Based Regime Classifier", () => {
         volatility_percentile_high: 80,
         volatility_percentile_low: 20,
       };
-      const count = getRequiredOHLCVBarCount(config);
+      const count = getRequiredCandleCount(config);
       // ATR period (14) is greater than slow MA (10)
       expect(count).toBe(15);
     });
@@ -373,7 +373,7 @@ describe("Rule-Based Regime Classifier", () => {
 
   describe("Edge Cases", () => {
     test("handles minimum required candles", () => {
-      const count = getRequiredOHLCVBarCount();
+      const count = getRequiredCandleCount();
       const candles = createTrendingOHLCVBars(100, "up", count);
 
       const result = classifyRegime({ candles });

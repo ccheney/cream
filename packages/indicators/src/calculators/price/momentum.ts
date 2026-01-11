@@ -69,10 +69,7 @@ export interface MultiPeriodMomentum {
  * // result.roc = 3.5 (3.5% return)
  * ```
  */
-export function calculateMomentum(
-  bars: OHLCVBar[],
-  period: number,
-): MomentumResult | null {
+export function calculateMomentum(bars: OHLCVBar[], period: number): MomentumResult | null {
   if (bars.length < period + 1 || period <= 0) {
     return null;
   }
@@ -107,10 +104,7 @@ export function calculateMomentum(
 /**
  * Calculate momentum series
  */
-export function calculateMomentumSeries(
-  bars: OHLCVBar[],
-  period: number,
-): MomentumResult[] {
+export function calculateMomentumSeries(bars: OHLCVBar[], period: number): MomentumResult[] {
   const results: MomentumResult[] = [];
 
   if (bars.length < period + 1 || period <= 0) {
@@ -153,9 +147,7 @@ export function calculateMomentumSeries(
  * @param bars - OHLCV bars (oldest first)
  * @returns Multi-period momentum results
  */
-export function calculateMultiPeriodMomentum(
-  bars: OHLCVBar[],
-): MultiPeriodMomentum | null {
+export function calculateMultiPeriodMomentum(bars: OHLCVBar[]): MultiPeriodMomentum | null {
   const standardPeriods = [21, 63, 126, 252];
   const byPeriod = new Map<number, MomentumResult>();
 
@@ -183,7 +175,7 @@ export function calculateMultiPeriodMomentum(
  */
 export function calculateCustomMomentumPeriods(
   bars: OHLCVBar[],
-  periods: number[],
+  periods: number[]
 ): MultiPeriodMomentum | null {
   const byPeriod = new Map<number, MomentumResult>();
 
@@ -225,12 +217,24 @@ export type MomentumStrength =
  * @returns Momentum classification
  */
 export function classifyMomentum(roc: number): MomentumStrength {
-  if (roc > 20) return "strong_bullish";
-  if (roc > 10) return "bullish";
-  if (roc > 3) return "weak_bullish";
-  if (roc >= -3) return "neutral";
-  if (roc >= -10) return "weak_bearish";
-  if (roc >= -20) return "bearish";
+  if (roc > 20) {
+    return "strong_bullish";
+  }
+  if (roc > 10) {
+    return "bullish";
+  }
+  if (roc > 3) {
+    return "weak_bullish";
+  }
+  if (roc >= -3) {
+    return "neutral";
+  }
+  if (roc >= -10) {
+    return "weak_bearish";
+  }
+  if (roc >= -20) {
+    return "bearish";
+  }
   return "strong_bearish";
 }
 
@@ -240,17 +244,23 @@ export function classifyMomentum(roc: number): MomentumStrength {
  * Checks if all periods show consistent direction
  */
 export function detectMomentumTrend(
-  multiPeriod: MultiPeriodMomentum,
+  multiPeriod: MultiPeriodMomentum
 ): "uptrend" | "downtrend" | "mixed" {
   const values = Array.from(multiPeriod.byPeriod.values());
 
-  if (values.length === 0) return "mixed";
+  if (values.length === 0) {
+    return "mixed";
+  }
 
   const allPositive = values.every((r) => r.roc > 0);
   const allNegative = values.every((r) => r.roc < 0);
 
-  if (allPositive) return "uptrend";
-  if (allNegative) return "downtrend";
+  if (allPositive) {
+    return "uptrend";
+  }
+  if (allNegative) {
+    return "downtrend";
+  }
   return "mixed";
 }
 
@@ -265,18 +275,26 @@ export function detectMomentumTrend(
  */
 export function calculateMomentumAcceleration(
   shortTermRoc: number,
-  longTermRoc: number,
+  longTermRoc: number
 ): "accelerating" | "decelerating" | "stable" {
   // Acceleration = short-term momentum > long-term momentum (in same direction)
 
   if (shortTermRoc > 0 && longTermRoc > 0) {
-    if (shortTermRoc > longTermRoc * 1.2) return "accelerating";
-    if (shortTermRoc < longTermRoc * 0.8) return "decelerating";
+    if (shortTermRoc > longTermRoc * 1.2) {
+      return "accelerating";
+    }
+    if (shortTermRoc < longTermRoc * 0.8) {
+      return "decelerating";
+    }
   }
 
   if (shortTermRoc < 0 && longTermRoc < 0) {
-    if (shortTermRoc < longTermRoc * 1.2) return "accelerating";
-    if (shortTermRoc > longTermRoc * 0.8) return "decelerating";
+    if (shortTermRoc < longTermRoc * 1.2) {
+      return "accelerating";
+    }
+    if (shortTermRoc > longTermRoc * 0.8) {
+      return "decelerating";
+    }
   }
 
   return "stable";
@@ -297,7 +315,9 @@ export function calculateMomentumScore(multiPeriod: MultiPeriodMomentum): number
   for (let i = 0; i < periods.length; i++) {
     const period = periods[i];
     const weight = weights[i];
-    if (period === undefined || weight === undefined) continue;
+    if (period === undefined || weight === undefined) {
+      continue;
+    }
 
     const result = multiPeriod.byPeriod.get(period);
     if (result) {
@@ -308,7 +328,9 @@ export function calculateMomentumScore(multiPeriod: MultiPeriodMomentum): number
     }
   }
 
-  if (totalWeight === 0) return null;
+  if (totalWeight === 0) {
+    return null;
+  }
 
   return weightedSum / totalWeight;
 }

@@ -20,15 +20,29 @@ describe("Observe Phase Types", () => {
         instruments: ["AAPL", "MSFT"],
         candles: {
           AAPL: [
-            { timestamp: 1704499200000, open: 150, high: 155, low: 149, close: 154, volume: 1000000 },
+            {
+              timestamp: 1704499200000,
+              open: 150,
+              high: 155,
+              low: 149,
+              close: 154,
+              volume: 1000000,
+            },
           ],
           MSFT: [
-            { timestamp: 1704499200000, open: 400, high: 410, low: 398, close: 405, volume: 500000 },
+            {
+              timestamp: 1704499200000,
+              open: 400,
+              high: 410,
+              low: 398,
+              close: 405,
+              volume: 500000,
+            },
           ],
         },
         quotes: {
           AAPL: { bid: 153.95, ask: 154.05, bidSize: 100, askSize: 100, timestamp: 1704499200000 },
-          MSFT: { bid: 404.90, ask: 405.10, bidSize: 200, askSize: 200, timestamp: 1704499200000 },
+          MSFT: { bid: 404.9, ask: 405.1, bidSize: 200, askSize: 200, timestamp: 1704499200000 },
         },
         timestamp: 1704499200000,
       };
@@ -43,7 +57,14 @@ describe("Observe Phase Types", () => {
         instruments: ["AAPL"],
         candles: {
           AAPL: [
-            { timestamp: 1704499200000, open: 150, high: 155, low: 149, close: 154, volume: 1000000 },
+            {
+              timestamp: 1704499200000,
+              open: 150,
+              high: 155,
+              low: 149,
+              close: 154,
+              volume: 1000000,
+            },
           ],
         },
         quotes: {
@@ -65,15 +86,15 @@ describe("Observe Phase Types", () => {
             {
               timestamp: 1704499200000,
               open: 150.25,
-              high: 155.50,
-              low: 149.00,
+              high: 155.5,
+              low: 149.0,
               close: 154.75,
               volume: 1234567,
             },
           ],
         },
         quotes: {
-          AAPL: { bid: 154.70, ask: 154.80, bidSize: 100, askSize: 100, timestamp: 1704499200000 },
+          AAPL: { bid: 154.7, ask: 154.8, bidSize: 100, askSize: 100, timestamp: 1704499200000 },
         },
         timestamp: 1704499200000,
       };
@@ -82,8 +103,8 @@ describe("Observe Phase Types", () => {
       expect(candle).toBeDefined();
       expect(candle?.timestamp).toBe(1704499200000);
       expect(candle?.open).toBe(150.25);
-      expect(candle?.high).toBe(155.50);
-      expect(candle?.low).toBe(149.00);
+      expect(candle?.high).toBe(155.5);
+      expect(candle?.low).toBe(149.0);
       expect(candle?.close).toBe(154.75);
       expect(candle?.volume).toBe(1234567);
     });
@@ -98,8 +119,8 @@ describe("Observe Phase Types", () => {
         },
         quotes: {
           AAPL: {
-            bid: 154.70,
-            ask: 154.80,
+            bid: 154.7,
+            ask: 154.8,
             bidSize: 500,
             askSize: 300,
             timestamp: 1704499200000,
@@ -110,8 +131,8 @@ describe("Observe Phase Types", () => {
 
       const quote = snapshot.quotes.AAPL;
       expect(quote).toBeDefined();
-      expect(quote?.bid).toBe(154.70);
-      expect(quote?.ask).toBe(154.80);
+      expect(quote?.bid).toBe(154.7);
+      expect(quote?.ask).toBe(154.8);
       expect(quote?.bidSize).toBe(500);
       expect(quote?.askSize).toBe(300);
       expect(quote?.timestamp).toBe(1704499200000);

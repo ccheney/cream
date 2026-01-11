@@ -56,9 +56,5 @@ export {
   type ShortInterestRepository,
 } from "./indicator-service";
 export { createLiquidityCalculator, LiquidityCalculatorAdapter } from "./liquidity-calculator";
-export {
-  createOptionsCalculator,
-  OptionsCalculatorAdapter,
-  type OptionsCalculatorInput,
-} from "./options-calculator";
+export { createOptionsCalculator, OptionsCalculatorAdapter } from "./options-calculator";
 export { createPriceCalculator, PriceCalculatorAdapter } from "./price-calculator";

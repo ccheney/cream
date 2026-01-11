@@ -33,11 +33,7 @@ export interface VolatilityResult {
   timestamp: number;
 }
 
-export type VolatilityMethod =
-  | "close_to_close"
-  | "parkinson"
-  | "garman_klass"
-  | "yang_zhang";
+export type VolatilityMethod = "close_to_close" | "parkinson" | "garman_klass" | "yang_zhang";
 
 export interface VolatilityComparison {
   /** Close-to-close volatility */
@@ -69,7 +65,7 @@ export interface VolatilityComparison {
 export function calculateCloseToCloseVolatility(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VolatilityResult | null {
   if (bars.length < period + 1) {
     return null;
@@ -82,8 +78,12 @@ export function calculateCloseToCloseVolatility(
     const current = recentBars[i];
     const previous = recentBars[i - 1];
 
-    if (!current || !previous) continue;
-    if (previous.close <= 0 || current.close <= 0) continue;
+    if (!current || !previous) {
+      continue;
+    }
+    if (previous.close <= 0 || current.close <= 0) {
+      continue;
+    }
 
     const logReturn = Math.log(current.close / previous.close);
     logReturns.push(logReturn);
@@ -125,7 +125,7 @@ export function calculateCloseToCloseVolatility(
 export function calculateParkinsonVolatility(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VolatilityResult | null {
   if (bars.length < period) {
     return null;
@@ -138,7 +138,9 @@ export function calculateParkinsonVolatility(
   let validBars = 0;
 
   for (const bar of recentBars) {
-    if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) continue;
+    if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) {
+      continue;
+    }
 
     const logRange = Math.log(bar.high / bar.low);
     sumSquaredLogRange += logRange ** 2;
@@ -177,7 +179,7 @@ export function calculateParkinsonVolatility(
 export function calculateGarmanKlassVolatility(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VolatilityResult | null {
   if (bars.length < period) {
     return null;
@@ -188,8 +190,12 @@ export function calculateGarmanKlassVolatility(
   let validBars = 0;
 
   for (const bar of recentBars) {
-    if (bar.high <= 0 || bar.low <= 0 || bar.open <= 0 || bar.close <= 0) continue;
-    if (bar.high < bar.low) continue;
+    if (bar.high <= 0 || bar.low <= 0 || bar.open <= 0 || bar.close <= 0) {
+      continue;
+    }
+    if (bar.high < bar.low) {
+      continue;
+    }
 
     const logHL = Math.log(bar.high / bar.low);
     const logCO = Math.log(bar.close / bar.open);
@@ -224,14 +230,14 @@ export function calculateGarmanKlassVolatility(
 export function calculateVolatilityComparison(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VolatilityComparison {
   const c2c = calculateCloseToCloseVolatility(bars, period, annualizationFactor);
   const parkinson = calculateParkinsonVolatility(bars, period, annualizationFactor);
   const gk = calculateGarmanKlassVolatility(bars, period, annualizationFactor);
 
   const values = [c2c?.volatility, parkinson?.volatility, gk?.volatility].filter(
-    (v): v is number => v !== null && v !== undefined,
+    (v): v is number => v !== null && v !== undefined
   );
 
   const average = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
@@ -254,7 +260,7 @@ export function calculateVolatilitySeries(
   bars: OHLCVBar[],
   period = 20,
   method: VolatilityMethod = "close_to_close",
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VolatilityResult[] {
   const results: VolatilityResult[] = [];
 
@@ -295,11 +301,21 @@ export type VolatilityLevel = "very_low" | "low" | "normal" | "high" | "very_hig
  * - Extreme: > 60%
  */
 export function classifyVolatility(volatility: number): VolatilityLevel {
-  if (volatility < 0.10) return "very_low";
-  if (volatility < 0.15) return "low";
-  if (volatility < 0.25) return "normal";
-  if (volatility < 0.40) return "high";
-  if (volatility < 0.60) return "very_high";
+  if (volatility < 0.1) {
+    return "very_low";
+  }
+  if (volatility < 0.15) {
+    return "low";
+  }
+  if (volatility < 0.25) {
+    return "normal";
+  }
+  if (volatility < 0.4) {
+    return "high";
+  }
+  if (volatility < 0.6) {
+    return "very_high";
+  }
   return "extreme";
 }
 
@@ -308,7 +324,7 @@ export function classifyVolatility(volatility: number): VolatilityLevel {
  */
 export function calculateVolatilityPercentile(
   currentVol: number,
-  historicalVols: number[],
+  historicalVols: number[]
 ): number | null {
   if (historicalVols.length === 0) {
     return null;
@@ -323,7 +339,7 @@ export function calculateVolatilityPercentile(
  */
 export function detectVolatilityRegimeChange(
   recentVols: number[],
-  threshold = 0.5,
+  threshold = 0.5
 ): "increasing" | "decreasing" | "stable" {
   if (recentVols.length < 3) {
     return "stable";
@@ -341,7 +357,11 @@ export function detectVolatilityRegimeChange(
 
   const change = (recentAvg - olderAvg) / olderAvg;
 
-  if (change > threshold) return "increasing";
-  if (change < -threshold) return "decreasing";
+  if (change > threshold) {
+    return "increasing";
+  }
+  if (change < -threshold) {
+    return "decreasing";
+  }
   return "stable";
 }

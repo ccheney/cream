@@ -135,7 +135,7 @@ export interface PortfolioRiskSummary {
  */
 export function aggregateGreeks(
   positions: OptionPosition[],
-  stockPositions: StockPosition[] = [],
+  stockPositions: StockPosition[] = []
 ): AggregatedGreeksResult {
   const byUnderlying = new Map<string, UnderlyingGreeks>();
 
@@ -262,7 +262,7 @@ export function calculatePortfolioRiskSummary(
   positions: OptionPosition[],
   stockPositions: StockPosition[] = [],
   portfolioNotional: number | null = null,
-  topN = 5,
+  topN = 5
 ): PortfolioRiskSummary {
   const aggregated = aggregateGreeks(positions, stockPositions);
 
@@ -303,7 +303,7 @@ export function aggregateGreeksForUnderlying(
   positions: OptionPosition[],
   underlyingSymbol: string,
   stockShares = 0,
-  underlyingPrice: number | null = null,
+  underlyingPriceParam: number | null = null
 ): UnderlyingGreeks {
   const filtered = positions.filter((p) => p.underlyingSymbol === underlyingSymbol);
 
@@ -314,6 +314,7 @@ export function aggregateGreeksForUnderlying(
   let callDelta = 0;
   let putDelta = 0;
   let optionPositions = 0;
+  let underlyingPrice = underlyingPriceParam;
 
   for (const pos of filtered) {
     const contractMultiplier = 100;
@@ -377,8 +378,10 @@ export function calculateDeltaNeutralHedge(currentDelta: number): number {
  */
 export function calculateGammaScalpLevel(
   currentGamma: number,
-  targetDeltaChange: number,
+  targetDeltaChange: number
 ): number | null {
-  if (currentGamma === 0) return null;
+  if (currentGamma === 0) {
+    return null;
+  }
   return targetDeltaChange / currentGamma;
 }

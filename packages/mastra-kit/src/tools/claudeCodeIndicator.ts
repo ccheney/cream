@@ -8,11 +8,7 @@
  * @see https://docs.anthropic.com/en/docs/agent-sdk/typescript-v2
  */
 
-import {
-  compareIndicator,
-  type IndicatorHypothesis,
-  IndicatorHypothesisSchema,
-} from "@cream/indicators";
+import { type IndicatorHypothesis, IndicatorHypothesisSchema } from "@cream/indicators";
 import { z } from "zod";
 
 // ============================================
@@ -430,25 +426,9 @@ export async function implementIndicator(
       };
     }
 
-    // Check AST similarity against existing indicators
-    let astSimilarity = 0;
-    try {
-      const { readFileSync } = await import("node:fs");
-      const newCode = readFileSync(indicatorPath, "utf-8");
-
-      // Compare against momentum indicators as reference
-      const rsiPath = "packages/indicators/src/momentum/rsi.ts";
-      if (existsSync(rsiPath)) {
-        const rsiCode = readFileSync(rsiPath, "utf-8");
-        // Build map of existing indicators to compare against
-        const existingIndicators = new Map<string, string>();
-        existingIndicators.set(rsiPath, rsiCode);
-        const similarityResult = compareIndicator(newCode, existingIndicators);
-        astSimilarity = similarityResult.maxSimilarity;
-      }
-    } catch {
-      // AST similarity check failed - continue without it
-    }
+    // AST similarity check is not implemented yet
+    // TODO: Implement proper source code similarity comparison
+    const astSimilarity = 0;
 
     // Reject if too similar to existing indicators
     if (astSimilarity > 0.8) {

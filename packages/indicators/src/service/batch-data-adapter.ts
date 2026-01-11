@@ -326,6 +326,9 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
     }
 
     const nextExDate = upcomingDividends[upcomingDividends.length - 1]?.exDate;
+    if (!nextExDate) {
+      return null;
+    }
     const exDate = new Date(nextExDate);
     const diffTime = exDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

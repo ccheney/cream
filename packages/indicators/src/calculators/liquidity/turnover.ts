@@ -85,10 +85,18 @@ export function calculateTurnover(bars: OHLCVBar[], period = 20): TurnoverResult
 export type VolumeActivity = "very_low" | "low" | "normal" | "high" | "very_high";
 
 export function classifyVolumeActivity(volumeRatio: number): VolumeActivity {
-  if (volumeRatio < 0.5) return "very_low";
-  if (volumeRatio < 0.8) return "low";
-  if (volumeRatio < 1.5) return "normal";
-  if (volumeRatio < 2.5) return "high";
+  if (volumeRatio < 0.5) {
+    return "very_low";
+  }
+  if (volumeRatio < 0.8) {
+    return "low";
+  }
+  if (volumeRatio < 1.5) {
+    return "normal";
+  }
+  if (volumeRatio < 2.5) {
+    return "high";
+  }
   return "very_high";
 }
 
@@ -100,6 +108,8 @@ export function classifyVolumeActivity(volumeRatio: number): VolumeActivity {
  * @returns Turnover ratio (0-1 range typically)
  */
 export function calculateTrueTurnover(volume: number, sharesOutstanding: number): number {
-  if (sharesOutstanding <= 0) return 0;
+  if (sharesOutstanding <= 0) {
+    return 0;
+  }
   return volume / sharesOutstanding;
 }

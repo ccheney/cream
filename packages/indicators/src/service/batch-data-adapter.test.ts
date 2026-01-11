@@ -308,7 +308,10 @@ describe("SentimentRepositoryAdapter", () => {
   });
 
   test("classifies sentiment correctly for different score ranges", async () => {
-    const testCases = [
+    const testCases: Array<{
+      score: number;
+      expected: "STRONG_BULLISH" | "BULLISH" | "NEUTRAL" | "BEARISH" | "STRONG_BEARISH";
+    }> = [
       { score: 0.8, expected: "STRONG_BULLISH" },
       { score: 0.6, expected: "STRONG_BULLISH" },
       { score: 0.4, expected: "BULLISH" },

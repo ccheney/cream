@@ -52,7 +52,9 @@ export interface BollingerBandsResult {
  * Calculate standard deviation
  */
 function calculateStdDev(values: number[], mean: number): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {
+    return 0;
+  }
 
   const sumSquaredDiff = values.reduce((sum, val) => sum + (val - mean) ** 2, 0);
   return Math.sqrt(sumSquaredDiff / values.length);
@@ -79,7 +81,7 @@ function calculateStdDev(values: number[], mean: number): number {
 export function calculateBollingerBands(
   bars: OHLCVBar[],
   period = 20,
-  multiplier = 2,
+  multiplier = 2
 ): BollingerBandsResult | null {
   if (bars.length < period || period <= 0) {
     return null;
@@ -105,7 +107,9 @@ export function calculateBollingerBands(
 
   // Calculate %B
   const lastBar = bars[bars.length - 1];
-  if (!lastBar) return null;
+  if (!lastBar) {
+    return null;
+  }
 
   const currentPrice = lastBar.close;
   const bandRange = upper - lower;
@@ -133,7 +137,7 @@ export function calculateBollingerBands(
 export function calculateBollingerBandsSeries(
   bars: OHLCVBar[],
   period = 20,
-  multiplier = 2,
+  multiplier = 2
 ): BollingerBandsResult[] {
   const results: BollingerBandsResult[] = [];
 
@@ -171,12 +175,24 @@ export type BollingerPosition =
  * @returns Position classification
  */
 export function classifyBollingerPosition(percentB: number): BollingerPosition {
-  if (percentB > 1.0) return "above_upper";
-  if (percentB >= 0.95) return "at_upper";
-  if (percentB > 0.55) return "upper_half";
-  if (percentB >= 0.45) return "at_middle";
-  if (percentB > 0.05) return "lower_half";
-  if (percentB >= 0.0) return "at_lower";
+  if (percentB > 1.0) {
+    return "above_upper";
+  }
+  if (percentB >= 0.95) {
+    return "at_upper";
+  }
+  if (percentB > 0.55) {
+    return "upper_half";
+  }
+  if (percentB >= 0.45) {
+    return "at_middle";
+  }
+  if (percentB > 0.05) {
+    return "lower_half";
+  }
+  if (percentB >= 0.0) {
+    return "at_lower";
+  }
   return "below_lower";
 }
 
@@ -198,10 +214,18 @@ export type BandwidthLevel = "squeeze" | "low" | "normal" | "high" | "extreme";
  * @returns Classification
  */
 export function classifyBandwidth(bandwidth: number): BandwidthLevel {
-  if (bandwidth < 5) return "squeeze";
-  if (bandwidth < 10) return "low";
-  if (bandwidth < 15) return "normal";
-  if (bandwidth < 25) return "high";
+  if (bandwidth < 5) {
+    return "squeeze";
+  }
+  if (bandwidth < 10) {
+    return "low";
+  }
+  if (bandwidth < 15) {
+    return "normal";
+  }
+  if (bandwidth < 25) {
+    return "high";
+  }
   return "extreme";
 }
 
@@ -212,10 +236,7 @@ export function classifyBandwidth(bandwidth: number): BandwidthLevel {
  * @param threshold - Percentile threshold for squeeze (default: 10th percentile)
  * @returns Whether current bandwidth indicates a squeeze
  */
-export function detectBollingerSqueeze(
-  bandwidthHistory: number[],
-  threshold = 10,
-): boolean {
+export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 10): boolean {
   if (bandwidthHistory.length < 20) {
     return false;
   }
@@ -244,7 +265,7 @@ export function detectBollingerSqueeze(
  */
 export function detectBandWalking(
   recentPercentB: number[],
-  walkThreshold = 0.8,
+  walkThreshold = 0.8
 ): "upper" | "lower" | null {
   if (recentPercentB.length < 3) {
     return null;
@@ -253,7 +274,11 @@ export function detectBandWalking(
   const upperWalk = recentPercentB.every((pb) => pb >= walkThreshold);
   const lowerWalk = recentPercentB.every((pb) => pb <= 1 - walkThreshold);
 
-  if (upperWalk) return "upper";
-  if (lowerWalk) return "lower";
+  if (upperWalk) {
+    return "upper";
+  }
+  if (lowerWalk) {
+    return "lower";
+  }
   return null;
 }

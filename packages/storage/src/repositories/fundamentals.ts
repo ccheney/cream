@@ -271,7 +271,9 @@ export class FundamentalsRepository {
    * Bulk upsert fundamental indicators
    */
   async bulkUpsert(inputs: CreateFundamentalIndicatorsInput[]): Promise<number> {
-    if (inputs.length === 0) return 0;
+    if (inputs.length === 0) {
+      return 0;
+    }
 
     try {
       let upserted = 0;
@@ -334,7 +336,9 @@ export class FundamentalsRepository {
    * Find latest fundamental indicators for multiple symbols
    */
   async findLatestBySymbols(symbols: string[]): Promise<FundamentalIndicators[]> {
-    if (symbols.length === 0) return [];
+    if (symbols.length === 0) {
+      return [];
+    }
 
     const placeholders = symbols.map(() => "?").join(", ");
     const rows = await this.client.execute<Row>(

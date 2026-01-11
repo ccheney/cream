@@ -170,10 +170,7 @@ app.openapi(getBatchStatusRoute, async (c) => {
           running: (summaryRow?.running as number) ?? 0,
           completed: (summaryRow?.completed as number) ?? 0,
           failed: (summaryRow?.failed as number) ?? 0,
-          last_completed: lastCompleted as Record<
-            z.infer<typeof SyncRunTypeSchema>,
-            string | null
-          >,
+          last_completed: lastCompleted as Record<z.infer<typeof SyncRunTypeSchema>, string | null>,
         },
       },
       200
@@ -215,7 +212,6 @@ const getSyncRunRoute = createRoute({
   tags: ["Indicators"],
 });
 
-// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(getSyncRunRoute, async (c) => {
   const { id } = c.req.valid("param");
 

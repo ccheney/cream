@@ -58,10 +58,10 @@ export {
   detectEventRisk,
   type EventType,
   type ExtractedSentiment,
+  type RawSentimentClassification,
   // Batch job
   SentimentAggregationJob,
   type SentimentBatchJobConfig,
-  type SentimentClassification,
   // Sentiment data provider interface
   type SentimentDataProvider,
   type SentimentScoringConfig,

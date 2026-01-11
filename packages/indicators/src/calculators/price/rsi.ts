@@ -66,7 +66,9 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
   for (let i = 1; i < bars.length; i++) {
     const current = bars[i];
     const previous = bars[i - 1];
-    if (!current || !previous) continue;
+    if (!current || !previous) {
+      continue;
+    }
     changes.push(current.close - previous.close);
   }
 
@@ -80,7 +82,9 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
 
   for (let i = 0; i < period; i++) {
     const change = changes[i];
-    if (change === undefined) continue;
+    if (change === undefined) {
+      continue;
+    }
     if (change > 0) {
       avgGain += change;
     } else {
@@ -94,7 +98,9 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
   // Wilder's smoothing for subsequent values
   for (let i = period; i < changes.length; i++) {
     const change = changes[i];
-    if (change === undefined) continue;
+    if (change === undefined) {
+      continue;
+    }
 
     const gain = change > 0 ? change : 0;
     const loss = change < 0 ? Math.abs(change) : 0;
@@ -143,7 +149,9 @@ export function calculateRSISeries(bars: OHLCVBar[], period = 14): RSIResult[] {
   for (let i = 1; i < bars.length; i++) {
     const current = bars[i];
     const previous = bars[i - 1];
-    if (!current || !previous) continue;
+    if (!current || !previous) {
+      continue;
+    }
     changes.push(current.close - previous.close);
   }
 
@@ -153,7 +161,9 @@ export function calculateRSISeries(bars: OHLCVBar[], period = 14): RSIResult[] {
 
   for (let i = 0; i < period; i++) {
     const change = changes[i];
-    if (change === undefined) continue;
+    if (change === undefined) {
+      continue;
+    }
     if (change > 0) {
       avgGain += change;
     } else {
@@ -188,7 +198,9 @@ export function calculateRSISeries(bars: OHLCVBar[], period = 14): RSIResult[] {
   // Calculate subsequent values using Wilder's smoothing
   for (let i = period; i < changes.length; i++) {
     const change = changes[i];
-    if (change === undefined) continue;
+    if (change === undefined) {
+      continue;
+    }
 
     const gain = change > 0 ? change : 0;
     const loss = change < 0 ? Math.abs(change) : 0;
@@ -239,12 +251,24 @@ export type RSILevel =
  * @returns Classification
  */
 export function classifyRSI(rsi: number): RSILevel {
-  if (rsi >= 80) return "extreme_overbought";
-  if (rsi >= 70) return "overbought";
-  if (rsi >= 55) return "neutral_bullish";
-  if (rsi >= 45) return "neutral";
-  if (rsi >= 30) return "neutral_bearish";
-  if (rsi >= 20) return "oversold";
+  if (rsi >= 80) {
+    return "extreme_overbought";
+  }
+  if (rsi >= 70) {
+    return "overbought";
+  }
+  if (rsi >= 55) {
+    return "neutral_bullish";
+  }
+  if (rsi >= 45) {
+    return "neutral";
+  }
+  if (rsi >= 30) {
+    return "neutral_bearish";
+  }
+  if (rsi >= 20) {
+    return "oversold";
+  }
   return "extreme_oversold";
 }
 
@@ -261,7 +285,7 @@ export function detectRSIDivergence(
   priceHighs: [number, number],
   priceLows: [number, number],
   rsiHighs: [number, number],
-  rsiLows: [number, number],
+  rsiLows: [number, number]
 ): "bullish" | "bearish" | null {
   // Bullish divergence: lower price lows, but higher RSI lows
   if (priceLows[1] < priceLows[0] && rsiLows[1] > rsiLows[0]) {

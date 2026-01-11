@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 import batchTriggerRoutes from "./batch-trigger";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse = any;
+
 // Mock data for indicator_sync_runs
 const mockSyncRuns: Array<{
   id: string;
@@ -88,7 +91,7 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(202);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.run_id).toBeDefined();
       expect(data.job_type).toBe("fundamentals");
       expect(data.status).toBe("pending");
@@ -108,7 +111,7 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(202);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.symbols_count).toBe(3);
       expect(data.message).toContain("3 symbols");
     });
@@ -123,7 +126,7 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(202);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.job_type).toBe("sentiment");
     });
 
@@ -137,7 +140,7 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(202);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.job_type).toBe("corporate_actions");
     });
 
@@ -202,7 +205,9 @@ describe("Batch Trigger Routes", () => {
 
       // Clean up
       const idx = mockSyncRuns.findIndex((r) => r.id === "run-existing");
-      if (idx >= 0) mockSyncRuns.splice(idx, 1);
+      if (idx >= 0) {
+        mockSyncRuns.splice(idx, 1);
+      }
     });
   });
 
@@ -225,13 +230,15 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.success).toBe(true);
       expect(data.message).toContain("run-to-cancel");
 
       // Clean up
       const idx = mockSyncRuns.findIndex((r) => r.id === "run-to-cancel");
-      if (idx >= 0) mockSyncRuns.splice(idx, 1);
+      if (idx >= 0) {
+        mockSyncRuns.splice(idx, 1);
+      }
     });
 
     test("cancels a running job", async () => {
@@ -251,12 +258,14 @@ describe("Batch Trigger Routes", () => {
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      const data = (await res.json()) as ApiResponse;
       expect(data.success).toBe(true);
 
       // Clean up
       const idx = mockSyncRuns.findIndex((r) => r.id === "run-running");
-      if (idx >= 0) mockSyncRuns.splice(idx, 1);
+      if (idx >= 0) {
+        mockSyncRuns.splice(idx, 1);
+      }
     });
 
     test("returns 404 for non-existent job", async () => {
@@ -287,7 +296,9 @@ describe("Batch Trigger Routes", () => {
 
       // Clean up
       const idx = mockSyncRuns.findIndex((r) => r.id === "run-completed");
-      if (idx >= 0) mockSyncRuns.splice(idx, 1);
+      if (idx >= 0) {
+        mockSyncRuns.splice(idx, 1);
+      }
     });
 
     test("returns 409 when trying to cancel failed job", async () => {
@@ -310,7 +321,9 @@ describe("Batch Trigger Routes", () => {
 
       // Clean up
       const idx = mockSyncRuns.findIndex((r) => r.id === "run-failed");
-      if (idx >= 0) mockSyncRuns.splice(idx, 1);
+      if (idx >= 0) {
+        mockSyncRuns.splice(idx, 1);
+      }
     });
   });
 });

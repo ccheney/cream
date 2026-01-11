@@ -70,13 +70,13 @@ describe("buildImplementationPrompt", () => {
         expectedICRange: [0.02, 0.08] as [number, number],
         maxCorrelationWithExisting: 0.3,
         targetTimeframe: "1d",
-        applicableRegimes: ["TRENDING", "MEAN_REVERTING", "VOLATILE"],
+        applicableRegimes: ["TRENDING", "RANGING", "VOLATILE"],
       },
     });
     const prompt = buildImplementationPrompt(hypothesis, mockExistingPatterns);
 
     expect(prompt).toContain("TRENDING");
-    expect(prompt).toContain("MEAN_REVERTING");
+    expect(prompt).toContain("RANGING");
     expect(prompt).toContain("VOLATILE");
   });
 

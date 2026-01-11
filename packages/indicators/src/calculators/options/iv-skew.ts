@@ -108,9 +108,11 @@ export interface SkewTermStructure {
 function findContractByDelta(
   contracts: OptionsContract[],
   targetDelta: number,
-  optionType: "call" | "put",
+  optionType: "call" | "put"
 ): OptionsContract | null {
-  if (contracts.length === 0) return null;
+  if (contracts.length === 0) {
+    return null;
+  }
 
   const targetAbsDelta = Math.abs(targetDelta);
 
@@ -118,8 +120,12 @@ function findContractByDelta(
   let minDiff = Infinity;
 
   for (const contract of contracts) {
-    if (contract.optionType !== optionType) continue;
-    if (contract.impliedVolatility <= 0) continue;
+    if (contract.optionType !== optionType) {
+      continue;
+    }
+    if (contract.impliedVolatility <= 0) {
+      continue;
+    }
 
     const absDelta = Math.abs(contract.delta);
     const diff = Math.abs(absDelta - targetAbsDelta);
@@ -155,10 +161,7 @@ function findContractByDelta(
  * // result.skew = 0.05 (5% higher IV in puts than calls)
  * ```
  */
-export function calculateIVSkew(
-  chain: OptionsChain,
-  targetDelta = 0.25,
-): IVSkewResult | null {
+export function calculateIVSkew(chain: OptionsChain, targetDelta = 0.25): IVSkewResult | null {
   if (targetDelta <= 0 || targetDelta >= 0.5) {
     return null;
   }
@@ -220,10 +223,7 @@ export function calculateATMIV(chain: OptionsChain): number | null {
  * @param targetDelta - Delta level for OTM options
  * @returns Normalized skew (e.g., 0.10 = 10% of ATM IV)
  */
-export function calculateNormalizedSkew(
-  chain: OptionsChain,
-  targetDelta = 0.25,
-): number | null {
+export function calculateNormalizedSkew(chain: OptionsChain, targetDelta = 0.25): number | null {
   const skewResult = calculateIVSkew(chain, targetDelta);
   const atmIV = calculateATMIV(chain);
 
@@ -247,25 +247,29 @@ export function calculateNormalizedSkew(
 export function calculateSkewTermStructure(
   chains: OptionsChain[],
   targetDelta = 0.25,
-  referenceDate: Date = new Date(),
+  referenceDate: Date = new Date()
 ): SkewTermStructure | null {
   if (chains.length === 0) {
     return null;
   }
 
   const symbol = chains[0]?.underlyingSymbol;
-  if (!symbol) return null;
+  if (!symbol) {
+    return null;
+  }
 
   const expirations: SkewTermStructure["expirations"] = [];
 
   for (const chain of chains) {
     const skewResult = calculateIVSkew(chain, targetDelta);
-    if (!skewResult) continue;
+    if (!skewResult) {
+      continue;
+    }
 
     const expiryDate = new Date(chain.expiration);
     const daysToExpiry = Math.max(
       0,
-      Math.ceil((expiryDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24)),
+      Math.ceil((expiryDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24))
     );
 
     expirations.push({
@@ -308,9 +312,17 @@ export type SkewLevel = "extreme_bearish" | "bearish" | "neutral" | "bullish" | 
  * @returns Classification
  */
 export function classifySkew(skew: number): SkewLevel {
-  if (skew > 0.10) return "extreme_bearish";
-  if (skew > 0.03) return "bearish";
-  if (skew >= -0.03) return "neutral";
-  if (skew >= -0.10) return "bullish";
+  if (skew > 0.1) {
+    return "extreme_bearish";
+  }
+  if (skew > 0.03) {
+    return "bearish";
+  }
+  if (skew >= -0.03) {
+    return "neutral";
+  }
+  if (skew >= -0.1) {
+    return "bullish";
+  }
   return "extreme_bullish";
 }

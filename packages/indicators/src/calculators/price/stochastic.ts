@@ -69,21 +69,31 @@ const DEFAULT_SETTINGS: StochasticSettings = {
  * Calculate raw %K for a single window
  */
 function calculateRawK(bars: OHLCVBar[]): number | null {
-  if (bars.length === 0) return null;
+  if (bars.length === 0) {
+    return null;
+  }
 
   let lowestLow = Infinity;
   let highestHigh = -Infinity;
 
   for (const bar of bars) {
-    if (bar.low < lowestLow) lowestLow = bar.low;
-    if (bar.high > highestHigh) highestHigh = bar.high;
+    if (bar.low < lowestLow) {
+      lowestLow = bar.low;
+    }
+    if (bar.high > highestHigh) {
+      highestHigh = bar.high;
+    }
   }
 
   const range = highestHigh - lowestLow;
-  if (range <= 0) return 50; // No price movement
+  if (range <= 0) {
+    return 50; // No price movement
+  }
 
   const lastBar = bars[bars.length - 1];
-  if (!lastBar) return null;
+  if (!lastBar) {
+    return null;
+  }
 
   return ((lastBar.close - lowestLow) / range) * 100;
 }
@@ -105,7 +115,7 @@ function calculateRawK(bars: OHLCVBar[]): number | null {
  */
 export function calculateStochastic(
   bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {},
+  settings: Partial<StochasticSettings> = {}
 ): StochasticResult | null {
   const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
@@ -131,7 +141,9 @@ export function calculateStochastic(
 
   // Current %K
   const k = kValues[kValues.length - 1];
-  if (k === undefined) return null;
+  if (k === undefined) {
+    return null;
+  }
 
   // Calculate %D (SMA of last dPeriod %K values)
   const recentKValues = kValues.slice(-dPeriod);
@@ -159,7 +171,7 @@ export function calculateStochastic(
  */
 export function calculateSlowStochastic(
   bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {},
+  settings: Partial<StochasticSettings> = {}
 ): SlowStochasticResult | null {
   const { kPeriod, dPeriod, slowKPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
@@ -196,7 +208,9 @@ export function calculateSlowStochastic(
 
   // Current Slow %K
   const slowK = slowKValues[slowKValues.length - 1];
-  if (slowK === undefined) return null;
+  if (slowK === undefined) {
+    return null;
+  }
 
   // Calculate Slow %D
   const recentSlowK = slowKValues.slice(-slowKPeriod);
@@ -204,7 +218,9 @@ export function calculateSlowStochastic(
 
   // Current Fast %K for reference
   const k = kValues[kValues.length - 1];
-  if (k === undefined) return null;
+  if (k === undefined) {
+    return null;
+  }
 
   const lastBar = bars[bars.length - 1];
 
@@ -222,7 +238,7 @@ export function calculateSlowStochastic(
  */
 export function calculateStochasticSeries(
   bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {},
+  settings: Partial<StochasticSettings> = {}
 ): StochasticResult[] {
   const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
   const results: StochasticResult[] = [];
@@ -274,10 +290,18 @@ export type StochasticLevel =
  * Classify Stochastic reading
  */
 export function classifyStochastic(k: number): StochasticLevel {
-  if (k >= 90) return "extreme_overbought";
-  if (k >= 80) return "overbought";
-  if (k <= 10) return "extreme_oversold";
-  if (k <= 20) return "oversold";
+  if (k >= 90) {
+    return "extreme_overbought";
+  }
+  if (k >= 80) {
+    return "overbought";
+  }
+  if (k <= 10) {
+    return "extreme_oversold";
+  }
+  if (k <= 20) {
+    return "oversold";
+  }
   return "neutral";
 }
 
@@ -286,7 +310,7 @@ export function classifyStochastic(k: number): StochasticLevel {
  */
 export function detectStochasticCrossover(
   current: StochasticResult,
-  previous: StochasticResult,
+  previous: StochasticResult
 ): "bullish" | "bearish" | "none" {
   const currentDiff = current.k - current.d;
   const previousDiff = previous.k - previous.d;
@@ -309,7 +333,7 @@ export function detectStochasticCrossover(
  */
 export function detectStochasticHook(
   current: StochasticResult,
-  previous: StochasticResult,
+  previous: StochasticResult
 ): "bullish_hook" | "bearish_hook" | "none" {
   // Bullish hook: crossing up through 20
   if (previous.k <= 20 && current.k > 20) {

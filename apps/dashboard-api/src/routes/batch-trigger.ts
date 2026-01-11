@@ -19,12 +19,7 @@ const app = new OpenAPIHono();
 // Schema Definitions
 // ============================================
 
-const JobTypeSchema = z.enum([
-  "fundamentals",
-  "short_interest",
-  "sentiment",
-  "corporate_actions",
-]);
+const JobTypeSchema = z.enum(["fundamentals", "short_interest", "sentiment", "corporate_actions"]);
 
 const TriggerRequestSchema = z.object({
   job_type: JobTypeSchema,
@@ -203,7 +198,6 @@ const cancelBatchJobRoute = createRoute({
   tags: ["Indicators"],
 });
 
-// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(cancelBatchJobRoute, async (c) => {
   const { id } = c.req.valid("param");
 
@@ -211,10 +205,7 @@ app.openapi(cancelBatchJobRoute, async (c) => {
     const db = await getDbClient();
 
     // Check current status
-    const rows = await db.execute(
-      `SELECT status FROM indicator_sync_runs WHERE id = ?`,
-      [id]
-    );
+    const rows = await db.execute(`SELECT status FROM indicator_sync_runs WHERE id = ?`, [id]);
 
     if (rows.length === 0) {
       throw new HTTPException(404, { message: `Job ${id} not found` });

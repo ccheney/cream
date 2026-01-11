@@ -183,8 +183,14 @@ export async function buildSnapshot(
     );
   }
 
-  const indicatorSnapshot = calculateMultiTimeframeIndicators(candleMap, indicatorConfig);
-  const indicators: IndicatorValues = indicatorSnapshot?.values ?? {};
+  const indicatorSnapshot = calculateMultiTimeframeIndicators(primaryCandles, indicatorConfig);
+  // Flatten multi-timeframe indicators to flat key-value map
+  const indicators: IndicatorValues = {};
+  for (const [timeframe, values] of Object.entries(indicatorSnapshot)) {
+    for (const [key, value] of Object.entries(values)) {
+      indicators[`${key}_${timeframe}`] = value;
+    }
+  }
 
   let normalized: NormalizedValues = {};
   if (config.includeNormalized) {
@@ -193,7 +199,7 @@ export async function buildSnapshot(
       primaryTimeframe,
       DEFAULT_TRANSFORM_CONFIG
     );
-    normalized = transformResult?.values ?? {};
+    normalized = transformResult ?? {};
   }
 
   const regimeInput = { candles: primaryCandles };

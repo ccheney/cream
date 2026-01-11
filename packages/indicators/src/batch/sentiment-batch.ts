@@ -13,7 +13,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import type { CreateSentimentInput, SentimentRepository } from "@cream/storage/repositories";
+import type { CreateSentimentInput, SentimentRepository } from "@cream/storage";
 import { log } from "../logger.js";
 import type { BatchJobResult } from "./fundamentals-batch.js";
 
@@ -22,9 +22,11 @@ import type { BatchJobResult } from "./fundamentals-batch.js";
 // ============================================
 
 /**
- * Sentiment classification from external-context extraction
+ * Raw sentiment classification from external-context extraction.
+ * Note: Different from the 5-level SentimentClassification in types/ which is
+ * used for final indicator output.
  */
-export type SentimentClassification = "bullish" | "bearish" | "neutral";
+export type RawSentimentClassification = "bullish" | "bearish" | "neutral";
 
 /**
  * Event type for risk detection
@@ -48,7 +50,7 @@ export interface ExtractedSentiment {
   /** Source type */
   sourceType: "news" | "transcript" | "press_release" | "social";
   /** Sentiment classification */
-  sentiment: SentimentClassification;
+  sentiment: RawSentimentClassification;
   /** Confidence in the classification (0-1) */
   confidence: number;
   /** Event type for risk detection */
@@ -174,7 +176,7 @@ function sleep(ms: number): Promise<void> {
  * @returns Numeric score (-1.0 to 1.0)
  */
 export function computeSentimentScore(
-  sentiment: SentimentClassification,
+  sentiment: RawSentimentClassification,
   confidence: number,
   config: SentimentScoringConfig = {}
 ): number {
@@ -193,7 +195,6 @@ export function computeSentimentScore(
     case "bearish":
       baseScore = bearishBase;
       break;
-    case "neutral":
     default:
       baseScore = neutralBase;
   }
@@ -220,7 +221,7 @@ export function calculateRecencyWeight(
 ): number {
   const ageMs = referenceTime.getTime() - eventTime.getTime();
   const ageHours = ageMs / (1000 * 60 * 60);
-  return Math.pow(0.5, ageHours / halfLifeHours);
+  return 0.5 ** (ageHours / halfLifeHours);
 }
 
 /**
@@ -311,10 +312,7 @@ export function detectEventRisk(sentiments: ExtractedSentiment[]): boolean {
   ];
 
   return sentiments.some(
-    (s) =>
-      s.eventType &&
-      riskEventTypes.includes(s.eventType) &&
-      (s.importance ?? 0) >= 3
+    (s) => s.eventType && riskEventTypes.includes(s.eventType) && (s.importance ?? 0) >= 3
   );
 }
 
@@ -383,10 +381,7 @@ export class SentimentAggregationJob {
       try {
         await this.processSymbol(upperSymbol, date);
         processed++;
-        log.debug(
-          { symbol: upperSymbol, processed, total: symbols.length },
-          "Processed symbol"
-        );
+        log.debug({ symbol: upperSymbol, processed, total: symbols.length }, "Processed symbol");
       } catch (error) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -415,16 +410,10 @@ export class SentimentAggregationJob {
    */
   private async processSymbol(symbol: string, date: string): Promise<void> {
     // Fetch sentiment data for the date
-    const sentimentData = await this.fetchSentimentWithRetry(
-      [symbol],
-      date,
-      date
-    );
+    const sentimentData = await this.fetchSentimentWithRetry([symbol], date, date);
 
     // Filter to only this symbol
-    const symbolData = sentimentData.filter(
-      (s) => s.symbol.toUpperCase() === symbol
-    );
+    const symbolData = sentimentData.filter((s) => s.symbol.toUpperCase() === symbol);
 
     // Aggregate sentiment
     const aggregated = await this.aggregateSentiment(symbol, date, symbolData);

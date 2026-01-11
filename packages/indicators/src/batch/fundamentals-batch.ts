@@ -13,10 +13,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import type {
-  CreateFundamentalIndicatorsInput,
-  FundamentalsRepository,
-} from "@cream/storage/repositories";
+import type { CreateFundamentalIndicatorsInput, FundamentalsRepository } from "@cream/storage";
 import { log } from "../logger.js";
 
 // ============================================

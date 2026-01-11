@@ -5,10 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import type {
-  CreateFundamentalIndicatorsInput,
-  FundamentalsRepository,
-} from "@cream/storage/repositories";
+import type { CreateFundamentalIndicatorsInput, FundamentalsRepository } from "@cream/storage";
 import {
   calculateAccrualsRatio,
   calculateAssetGrowth,

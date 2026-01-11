@@ -77,7 +77,9 @@ export function calculateEMA(bars: OHLCVBar[], period: number): EMAResult | null
   let sum = 0;
   for (let i = 0; i < period; i++) {
     const bar = bars[i];
-    if (!bar) return null;
+    if (!bar) {
+      return null;
+    }
     sum += bar.close;
   }
   let ema = sum / period;
@@ -85,7 +87,9 @@ export function calculateEMA(bars: OHLCVBar[], period: number): EMAResult | null
   // Calculate EMA for remaining bars
   for (let i = period; i < bars.length; i++) {
     const bar = bars[i];
-    if (!bar) continue;
+    if (!bar) {
+      continue;
+    }
     ema = bar.close * multiplier + ema * (1 - multiplier);
   }
 
@@ -118,7 +122,9 @@ export function calculateEMASeries(bars: OHLCVBar[], period: number): EMAResult[
   let sum = 0;
   for (let i = 0; i < period; i++) {
     const bar = bars[i];
-    if (!bar) return results;
+    if (!bar) {
+      return results;
+    }
     sum += bar.close;
   }
   let ema = sum / period;
@@ -136,7 +142,9 @@ export function calculateEMASeries(bars: OHLCVBar[], period: number): EMAResult[
   // Calculate EMA for remaining bars
   for (let i = period; i < bars.length; i++) {
     const bar = bars[i];
-    if (!bar) continue;
+    if (!bar) {
+      continue;
+    }
 
     ema = bar.close * multiplier + ema * (1 - multiplier);
 
@@ -165,10 +173,7 @@ export function calculateEMASeries(bars: OHLCVBar[], period: number): EMAResult[
  * // result.emas.get(200) = 148.20
  * ```
  */
-export function calculateMultipleEMAs(
-  bars: OHLCVBar[],
-  periods: number[],
-): MultiEMAResult | null {
+export function calculateMultipleEMAs(bars: OHLCVBar[], periods: number[]): MultiEMAResult | null {
   if (bars.length === 0 || periods.length === 0) {
     return null;
   }
@@ -210,7 +215,7 @@ export function calculateMultipleEMAs(
 export function detectEMACrossover(
   bars: OHLCVBar[],
   fastPeriod: number,
-  slowPeriod: number,
+  slowPeriod: number
 ): "bullish_crossover" | "bearish_crossover" | "no_crossover" | null {
   if (bars.length < slowPeriod + 2) {
     return null;
@@ -253,6 +258,8 @@ export function detectEMACrossover(
  * @returns Percentage above/below EMA
  */
 export function calculatePriceToEMA(price: number, ema: number): number | null {
-  if (ema <= 0) return null;
+  if (ema <= 0) {
+    return null;
+  }
   return ((price - ema) / ema) * 100;
 }

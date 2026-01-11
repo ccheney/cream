@@ -76,7 +76,7 @@ const DEFAULT_SETTINGS: MACDSettings = {
  */
 export function calculateMACD(
   bars: OHLCVBar[],
-  settings: MACDSettings = DEFAULT_SETTINGS,
+  settings: MACDSettings = DEFAULT_SETTINGS
 ): MACDResult | null {
   const { fastPeriod, slowPeriod, signalPeriod } = settings;
 
@@ -94,7 +94,9 @@ export function calculateMACD(
   let fastSum = 0;
   for (let i = 0; i < fastPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return null;
+    if (!bar) {
+      return null;
+    }
     fastSum += bar.close;
   }
   let fastEMA = fastSum / fastPeriod;
@@ -103,7 +105,9 @@ export function calculateMACD(
   let slowSum = 0;
   for (let i = 0; i < slowPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return null;
+    if (!bar) {
+      return null;
+    }
     slowSum += bar.close;
   }
   let slowEMA = slowSum / slowPeriod;
@@ -111,7 +115,9 @@ export function calculateMACD(
   // Calculate EMAs up to the point where we can start MACD line
   for (let i = fastPeriod; i < slowPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return null;
+    if (!bar) {
+      return null;
+    }
     fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
   }
 
@@ -120,7 +126,9 @@ export function calculateMACD(
 
   for (let i = slowPeriod; i < bars.length; i++) {
     const bar = bars[i];
-    if (!bar) return null;
+    if (!bar) {
+      return null;
+    }
 
     fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
     slowEMA = bar.close * slowMultiplier + slowEMA * (1 - slowMultiplier);
@@ -136,7 +144,9 @@ export function calculateMACD(
   let signalSum = 0;
   for (let i = 0; i < signalPeriod; i++) {
     const val = macdValues[i];
-    if (val === undefined) return null;
+    if (val === undefined) {
+      return null;
+    }
     signalSum += val;
   }
   let signalLine = signalSum / signalPeriod;
@@ -144,12 +154,16 @@ export function calculateMACD(
   // Calculate signal line for remaining values
   for (let i = signalPeriod; i < macdValues.length; i++) {
     const macdVal = macdValues[i];
-    if (macdVal === undefined) return null;
+    if (macdVal === undefined) {
+      return null;
+    }
     signalLine = macdVal * signalMultiplier + signalLine * (1 - signalMultiplier);
   }
 
   const macdLine = macdValues[macdValues.length - 1];
-  if (macdLine === undefined) return null;
+  if (macdLine === undefined) {
+    return null;
+  }
 
   const histogram = macdLine - signalLine;
   const lastBar = bars[bars.length - 1];
@@ -173,7 +187,7 @@ export function calculateMACD(
  */
 export function calculateMACDSeries(
   bars: OHLCVBar[],
-  settings: MACDSettings = DEFAULT_SETTINGS,
+  settings: MACDSettings = DEFAULT_SETTINGS
 ): MACDResult[] {
   const { fastPeriod, slowPeriod, signalPeriod } = settings;
   const results: MACDResult[] = [];
@@ -191,7 +205,9 @@ export function calculateMACDSeries(
   let fastSum = 0;
   for (let i = 0; i < fastPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return results;
+    if (!bar) {
+      return results;
+    }
     fastSum += bar.close;
   }
   let fastEMA = fastSum / fastPeriod;
@@ -200,7 +216,9 @@ export function calculateMACDSeries(
   let slowSum = 0;
   for (let i = 0; i < slowPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return results;
+    if (!bar) {
+      return results;
+    }
     slowSum += bar.close;
   }
   let slowEMA = slowSum / slowPeriod;
@@ -208,7 +226,9 @@ export function calculateMACDSeries(
   // Calculate EMAs up to slow period
   for (let i = fastPeriod; i < slowPeriod; i++) {
     const bar = bars[i];
-    if (!bar) return results;
+    if (!bar) {
+      return results;
+    }
     fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
   }
 
@@ -217,7 +237,9 @@ export function calculateMACDSeries(
 
   for (let i = slowPeriod; i < bars.length; i++) {
     const bar = bars[i];
-    if (!bar) continue;
+    if (!bar) {
+      continue;
+    }
 
     fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
     slowEMA = bar.close * slowMultiplier + slowEMA * (1 - slowMultiplier);
@@ -233,7 +255,9 @@ export function calculateMACDSeries(
   let signalSum = 0;
   for (let i = 0; i < signalPeriod; i++) {
     const val = macdValues[i];
-    if (val === undefined) return results;
+    if (val === undefined) {
+      return results;
+    }
     signalSum += val;
   }
   let signalLine = signalSum / signalPeriod;
@@ -255,7 +279,9 @@ export function calculateMACDSeries(
   // Calculate remaining values
   for (let i = signalPeriod; i < macdValues.length; i++) {
     const macdVal = macdValues[i];
-    if (macdVal === undefined) continue;
+    if (macdVal === undefined) {
+      continue;
+    }
 
     signalLine = macdVal * signalMultiplier + signalLine * (1 - signalMultiplier);
 
@@ -285,7 +311,7 @@ export function calculateMACDSeries(
  */
 export function detectMACDCrossover(
   current: MACDResult,
-  previous: MACDResult,
+  previous: MACDResult
 ): "bullish" | "bearish" | "none" {
   const currentDiff = current.macdLine - current.signalLine;
   const previousDiff = previous.macdLine - previous.signalLine;
@@ -305,7 +331,7 @@ export function detectMACDCrossover(
  */
 export function detectZeroLineCrossover(
   current: MACDResult,
-  previous: MACDResult,
+  previous: MACDResult
 ): "bullish" | "bearish" | "none" {
   if (previous.macdLine <= 0 && current.macdLine > 0) {
     return "bullish";
@@ -333,12 +359,14 @@ export type MACDMomentum =
  */
 export function classifyMACDMomentum(
   current: MACDResult,
-  previous: MACDResult | null = null,
+  previous: MACDResult | null = null
 ): MACDMomentum {
   const histogram = current.histogram;
 
   if (histogram > 0) {
-    if (!previous) return histogram > 0.5 ? "strong_bullish" : "bullish";
+    if (!previous) {
+      return histogram > 0.5 ? "strong_bullish" : "bullish";
+    }
     if (histogram > previous.histogram) {
       return histogram > 0.5 ? "strong_bullish" : "bullish";
     }
@@ -346,7 +374,9 @@ export function classifyMACDMomentum(
   }
 
   if (histogram < 0) {
-    if (!previous) return histogram < -0.5 ? "strong_bearish" : "bearish";
+    if (!previous) {
+      return histogram < -0.5 ? "strong_bearish" : "bearish";
+    }
     if (histogram < previous.histogram) {
       return histogram < -0.5 ? "strong_bearish" : "bearish";
     }

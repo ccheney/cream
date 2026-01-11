@@ -112,8 +112,14 @@ export function calculateAverageBidAskSpread(quotes: Quote[]): BidAskSpreadResul
 export type SpreadQuality = "tight" | "normal" | "wide" | "very_wide";
 
 export function classifySpreadQuality(spreadPct: number): SpreadQuality {
-  if (spreadPct < 0.05) return "tight";
-  if (spreadPct < 0.20) return "normal";
-  if (spreadPct < 0.50) return "wide";
+  if (spreadPct < 0.05) {
+    return "tight";
+  }
+  if (spreadPct < 0.2) {
+    return "normal";
+  }
+  if (spreadPct < 0.5) {
+    return "wide";
+  }
   return "very_wide";
 }

@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 import batchStatusRoutes from "./batch-status";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse = any;
+
 // Mock database
 const mockSyncRuns = [
   {
@@ -128,7 +131,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.runs).toBeDefined();
     expect(Array.isArray(data.runs)).toBe(true);
     expect(data.summary).toBeDefined();
@@ -142,7 +145,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status?limit=2");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.runs.length).toBeLessThanOrEqual(2);
   });
 
@@ -150,7 +153,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status?type=fundamentals");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.runs.every((r: { run_type: string }) => r.run_type === "fundamentals")).toBe(true);
   });
 
@@ -158,7 +161,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status?status=completed");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.runs.every((r: { status: string }) => r.status === "completed")).toBe(true);
   });
 
@@ -166,7 +169,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.summary.last_completed).toBeDefined();
     expect(data.summary.last_completed).toHaveProperty("fundamentals");
     expect(data.summary.last_completed).toHaveProperty("short_interest");
@@ -178,7 +181,7 @@ describe("Batch Status Routes", () => {
     const res = await batchStatusRoutes.request("/batch/status/run-001");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as ApiResponse;
     expect(data.run).toBeDefined();
     expect(data.run.id).toBe("run-001");
     expect(data.run.run_type).toBe("fundamentals");

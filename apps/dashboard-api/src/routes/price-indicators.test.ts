@@ -1,13 +1,21 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 import priceIndicatorsRoutes from "./price-indicators";
 
+// Type for price indicators response
+interface PriceIndicatorsResponse {
+  symbol: string;
+  timeframe: string;
+  timestamp: number;
+  indicators: Record<string, number | null>;
+}
+
 beforeAll(() => {
   process.env.ALPACA_KEY = "test";
   process.env.ALPACA_SECRET = "test";
 });
 
 // Generate mock bars with realistic price data
-function generateMockBars(count: number, basePrice: number = 150) {
+function generateMockBars(count: number, basePrice = 150) {
   const bars = [];
   let price = basePrice;
   const now = new Date();
@@ -59,7 +67,7 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/AAPL/price");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     expect(data.symbol).toBe("AAPL");
     expect(data.timeframe).toBe("1h");
     expect(data.timestamp).toBeDefined();
@@ -91,7 +99,7 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/AAPL/price?timeframe=1d");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     expect(data.symbol).toBe("AAPL");
     expect(data.timeframe).toBe("1d");
   });
@@ -100,7 +108,7 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/aapl/price");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     expect(data.symbol).toBe("AAPL");
   });
 
@@ -116,7 +124,7 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/AAPL/price");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     // RSI should be between 0 and 100
     if (data.indicators.rsi_14 !== null) {
       expect(data.indicators.rsi_14).toBeGreaterThanOrEqual(0);
@@ -128,15 +136,14 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/AAPL/price");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     // Upper band should be greater than middle, which should be greater than lower
-    if (
-      data.indicators.bollinger_upper !== null &&
-      data.indicators.bollinger_middle !== null &&
-      data.indicators.bollinger_lower !== null
-    ) {
-      expect(data.indicators.bollinger_upper).toBeGreaterThan(data.indicators.bollinger_middle);
-      expect(data.indicators.bollinger_middle).toBeGreaterThan(data.indicators.bollinger_lower);
+    const upper = data.indicators.bollinger_upper;
+    const middle = data.indicators.bollinger_middle;
+    const lower = data.indicators.bollinger_lower;
+    if (upper != null && middle != null && lower != null) {
+      expect(upper!).toBeGreaterThan(middle!);
+      expect(middle!).toBeGreaterThan(lower!);
     }
   });
 
@@ -144,7 +151,7 @@ describe("Price Indicators Routes", () => {
     const res = await priceIndicatorsRoutes.request("/AAPL/price");
     expect(res.status).toBe(200);
 
-    const data = await res.json();
+    const data = (await res.json()) as PriceIndicatorsResponse;
     // Stochastic K and D should be between 0 and 100
     if (data.indicators.stochastic_k !== null) {
       expect(data.indicators.stochastic_k).toBeGreaterThanOrEqual(0);

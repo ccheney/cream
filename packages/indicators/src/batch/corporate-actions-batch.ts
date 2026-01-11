@@ -13,10 +13,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import type {
-  CorporateActionInsert,
-  CorporateActionsRepository,
-} from "@cream/storage/repositories";
+import type { CorporateActionInsert, CorporateActionsRepository } from "@cream/storage";
 import { log } from "../logger.js";
 import type { BatchJobResult } from "./fundamentals-batch.js";
 

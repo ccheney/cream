@@ -60,8 +60,12 @@ export function calculateAmihud(bars: OHLCVBar[], period = 20): AmihudResult | n
     const current = recentBars[i];
     const previous = recentBars[i - 1];
 
-    if (!current || !previous) continue;
-    if (previous.close <= 0 || current.volume <= 0) continue;
+    if (!current || !previous) {
+      continue;
+    }
+    if (previous.close <= 0 || current.volume <= 0) {
+      continue;
+    }
 
     // Calculate daily return
     const dailyReturn = (current.close - previous.close) / previous.close;
@@ -105,8 +109,14 @@ export function calculateAmihud(bars: OHLCVBar[], period = 20): AmihudResult | n
 export type LiquidityClass = "highly_liquid" | "liquid" | "moderate" | "illiquid";
 
 export function classifyAmihudLiquidity(illiquidity: number): LiquidityClass {
-  if (illiquidity < 1e-10) return "highly_liquid";
-  if (illiquidity < 1e-8) return "liquid";
-  if (illiquidity < 1e-6) return "moderate";
+  if (illiquidity < 1e-10) {
+    return "highly_liquid";
+  }
+  if (illiquidity < 1e-8) {
+    return "liquid";
+  }
+  if (illiquidity < 1e-6) {
+    return "moderate";
+  }
   return "illiquid";
 }

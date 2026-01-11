@@ -16,7 +16,7 @@
  */
 
 import type { RegimeLabel, RuleBasedConfig } from "@cream/config";
-import { type OHLCVBar, calculateATR, calculateSMA } from "@cream/indicators";
+import { calculateATR, calculateSMA, type OHLCVBar } from "@cream/indicators";
 
 export interface RegimeInput {
   /** Recent price candles (oldest first) */

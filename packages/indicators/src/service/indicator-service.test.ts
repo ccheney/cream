@@ -761,12 +761,15 @@ describe("IndicatorService.getSnapshotsBatch", () => {
     expect(progressCalls.length).toBeGreaterThan(0);
 
     // First call should show initial state
-    expect(progressCalls[0].total).toBe(3);
-    expect(progressCalls[0].completed).toBe(0);
+    const firstCall = progressCalls[0];
+    expect(firstCall).toBeDefined();
+    expect(firstCall?.total).toBe(3);
+    expect(firstCall?.completed).toBe(0);
 
     // Final call should show completion
     const lastCall = progressCalls[progressCalls.length - 1];
-    expect(lastCall.completed).toBe(3);
+    expect(lastCall).toBeDefined();
+    expect(lastCall?.completed).toBe(3);
   });
 
   test("returns partial data when market data fails (graceful handling)", async () => {

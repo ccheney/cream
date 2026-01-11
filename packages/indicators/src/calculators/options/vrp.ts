@@ -77,7 +77,7 @@ export interface VRPTermStructure {
 export function calculateRealizedVolatility(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): number | null {
   if (bars.length < period + 1) {
     return null;
@@ -90,8 +90,12 @@ export function calculateRealizedVolatility(
     const current = recentBars[i];
     const previous = recentBars[i - 1];
 
-    if (!current || !previous) continue;
-    if (previous.close <= 0 || current.close <= 0) continue;
+    if (!current || !previous) {
+      continue;
+    }
+    if (previous.close <= 0 || current.close <= 0) {
+      continue;
+    }
 
     const logReturn = Math.log(current.close / previous.close);
     logReturns.push(logReturn);
@@ -125,7 +129,7 @@ export function calculateRealizedVolatility(
 export function calculateParkinsonVolatility(
   bars: OHLCVBar[],
   period = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): number | null {
   if (bars.length < period) {
     return null;
@@ -138,7 +142,9 @@ export function calculateParkinsonVolatility(
   let validBars = 0;
 
   for (const bar of recentBars) {
-    if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) continue;
+    if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) {
+      continue;
+    }
 
     const logRange = Math.log(bar.high / bar.low);
     sumSquaredLogRange += logRange ** 2;
@@ -181,7 +187,7 @@ export function calculateVRP(
   impliedVolatility: number,
   bars: OHLCVBar[],
   realizedVolPeriod = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VRPResult | null {
   if (impliedVolatility < 0) {
     return null;
@@ -190,7 +196,7 @@ export function calculateVRP(
   const realizedVolatility = calculateRealizedVolatility(
     bars,
     realizedVolPeriod,
-    annualizationFactor,
+    annualizationFactor
   );
 
   if (realizedVolatility === null) {
@@ -220,7 +226,7 @@ export function calculateVRPWithParkinson(
   impliedVolatility: number,
   bars: OHLCVBar[],
   realizedVolPeriod = 20,
-  annualizationFactor = 252,
+  annualizationFactor = 252
 ): VRPResult | null {
   if (impliedVolatility < 0) {
     return null;
@@ -229,7 +235,7 @@ export function calculateVRPWithParkinson(
   const realizedVolatility = calculateParkinsonVolatility(
     bars,
     realizedVolPeriod,
-    annualizationFactor,
+    annualizationFactor
   );
 
   if (realizedVolatility === null) {
@@ -263,7 +269,7 @@ export function calculateVRPWithParkinson(
 export function calculateVRPTermStructure(
   ivByDays: Map<number, number>,
   bars: OHLCVBar[],
-  symbol: string,
+  symbol: string
 ): VRPTermStructure | null {
   if (ivByDays.size === 0) {
     return null;
@@ -274,7 +280,9 @@ export function calculateVRPTermStructure(
   for (const [days, impliedVol] of ivByDays) {
     // Use matching lookback period for RV
     const realizedVol = calculateRealizedVolatility(bars, days);
-    if (realizedVol === null) continue;
+    if (realizedVol === null) {
+      continue;
+    }
 
     horizons.push({
       days,
@@ -314,10 +322,18 @@ export type VRPLevel = "very_rich" | "rich" | "fair" | "cheap" | "very_cheap";
  */
 export function classifyVRPLevel(vrp: number): VRPLevel {
   // Thresholds in absolute vol terms
-  if (vrp > 0.10) return "very_rich"; // >10% premium, great for selling
-  if (vrp > 0.03) return "rich"; // 3-10% premium
-  if (vrp >= -0.02) return "fair"; // -2% to 3%
-  if (vrp >= -0.05) return "cheap"; // -5% to -2%
+  if (vrp > 0.1) {
+    return "very_rich"; // >10% premium, great for selling
+  }
+  if (vrp > 0.03) {
+    return "rich"; // 3-10% premium
+  }
+  if (vrp >= -0.02) {
+    return "fair"; // -2% to 3%
+  }
+  if (vrp >= -0.05) {
+    return "cheap"; // -5% to -2%
+  }
   return "very_cheap"; // <-5%, avoid selling, consider buying
 }
 
@@ -330,7 +346,7 @@ export function classifyVRPLevel(vrp: number): VRPLevel {
  */
 export function calculateVRPPercentile(
   currentVRP: number,
-  historicalVRPs: number[],
+  historicalVRPs: number[]
 ): number | null {
   if (historicalVRPs.length === 0) {
     return null;

@@ -29,7 +29,9 @@ mock.module("../../src/db", () => ({
 mock.module("@cream/marketdata", () => ({
   createAlpacaClientFromEnv: () => ({
     getBars: async (symbol: string) => {
-      if (symbol === "INVALID") return [];
+      if (symbol === "INVALID") {
+        return [];
+      }
       // Generate 300 bars for indicator calculations
       const bars = [];
       let price = 150;
@@ -52,11 +54,11 @@ mock.module("@cream/marketdata", () => ({
   isAlpacaConfigured: () => true,
 }));
 
+import batchStatusRoutes from "../../src/routes/batch-status";
+import batchTriggerRoutes from "../../src/routes/batch-trigger";
 // Import routes after mocking
 import indicatorsRoutes from "../../src/routes/indicators";
 import priceIndicatorsRoutes from "../../src/routes/price-indicators";
-import batchStatusRoutes from "../../src/routes/batch-status";
-import batchTriggerRoutes from "../../src/routes/batch-trigger";
 
 // ============================================
 // Test Data Seeding
@@ -193,17 +195,7 @@ async function seedSyncRuns(): Promise<void> {
   await client.run(
     `INSERT INTO indicator_sync_runs (id, run_type, started_at, completed_at, symbols_processed, symbols_failed, status, error_message, environment)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      "run-003",
-      "sentiment",
-      new Date().toISOString(),
-      null,
-      50,
-      0,
-      "running",
-      null,
-      "BACKTEST",
-    ]
+    ["run-003", "sentiment", new Date().toISOString(), null, 50, 0, "running", null, "BACKTEST"]
   );
 
   await client.run(

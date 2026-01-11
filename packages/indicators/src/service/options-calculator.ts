@@ -1,129 +1,74 @@
 /**
  * OptionsCalculatorAdapter
  *
- * Wraps all options-based calculators (IV Skew, Term Structure, VRP,
- * Put/Call Ratio, Greeks Aggregator) into a unified interface for
- * the IndicatorService.
+ * Adapter that fetches options indicators from an OptionsDataProvider
+ * and returns them as an OptionsIndicators object.
  *
  * Implements the OptionsCalculator interface expected by IndicatorService.
+ *
+ * Note: This adapter uses a simple provider interface that returns pre-calculated
+ * values. For raw options chain calculations, use the calculators directly:
+ * - calculators/options/iv-skew.ts
+ * - calculators/options/put-call-ratio.ts
+ * - calculators/options/vrp.ts
+ * - calculators/options/term-structure.ts
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import {
-  aggregateGreeks,
-  calculateAggregatedPutCallRatio,
-  calculateATMIV,
-  calculateIVSkew,
-  calculateTermStructureSlope,
-  calculateVRP,
-  type OptionPosition,
-  type OptionsChain,
-} from "../calculators/options";
-import { createEmptyOptionsIndicators, type OHLCVBar, type OptionsIndicators } from "../types";
-import type { OptionsCalculator } from "./indicator-service";
-
-/**
- * Input data for options calculations.
- *
- * Provides all necessary options market data for computing
- * options-derived indicators.
- */
-export interface OptionsCalculatorInput {
-  /** Options chains (one per expiration) */
-  chains: OptionsChain[];
-  /** Current option positions for Greeks aggregation */
-  positions?: OptionPosition[];
-  /** OHLCV bars for realized volatility (VRP calculation) */
-  bars: OHLCVBar[];
-}
+import { createEmptyOptionsIndicators, type OptionsIndicators } from "../types";
+import type { OptionsCalculator, OptionsDataProvider } from "./indicator-service";
 
 /**
  * Default implementation of OptionsCalculator.
  *
- * Calculates all options-based technical indicators from options chains
- * and position data.
+ * Fetches options indicators from an OptionsDataProvider and constructs
+ * the OptionsIndicators object. Most fields return null as they require
+ * raw options chain data not available through the simple provider interface.
+ *
+ * For full options calculations with raw chain data, use the calculators directly.
  */
 export class OptionsCalculatorAdapter implements OptionsCalculator {
   /**
-   * Calculate all options-based indicators.
+   * Fetch options indicators from provider.
    *
-   * @param chains - Options chains (one per expiration)
-   * @param positions - Current option positions for Greeks
-   * @param bars - OHLCV bars for realized volatility
-   * @returns OptionsIndicators object with all calculated values
+   * @param symbol - Stock symbol
+   * @param provider - Options data provider
+   * @returns OptionsIndicators object with available values
    *
    * @example
    * ```typescript
    * const adapter = new OptionsCalculatorAdapter();
-   * const chains = await optionsData.getChains("AAPL");
-   * const positions = await portfolio.getOptionsPositions("AAPL");
-   * const bars = await marketData.getBars("AAPL", 30);
-   * const indicators = adapter.calculate(chains, positions, bars);
-   * console.log(indicators.iv_skew_25d); // 0.03
+   * const provider = { ... };
+   * const indicators = await adapter.calculate("AAPL", provider);
+   * console.log(indicators.atm_iv); // 0.25
    * ```
    */
-  calculate(
-    chains: OptionsChain[],
-    positions: OptionPosition[],
-    bars: OHLCVBar[]
-  ): OptionsIndicators {
-    if (chains.length === 0) {
-      return createEmptyOptionsIndicators();
-    }
+  async calculate(symbol: string, provider: OptionsDataProvider): Promise<OptionsIndicators> {
+    // Fetch available indicators from provider in parallel
+    const [atmIV, ivSkew, putCallRatio] = await Promise.all([
+      provider.getImpliedVolatility(symbol),
+      provider.getIVSkew(symbol),
+      provider.getPutCallRatio(symbol),
+    ]);
 
-    // Find front-month chain (closest expiration)
-    const sortedChains = [...chains].sort((a, b) => {
-      return new Date(a.expiration).getTime() - new Date(b.expiration).getTime();
-    });
-    const frontChain = sortedChains[0];
+    // Start with empty indicators
+    const indicators = createEmptyOptionsIndicators();
 
-    // Calculate ATM IV from front-month
-    const atmIV = frontChain ? calculateATMIV(frontChain) : null;
+    // Fill in values from provider
+    indicators.atm_iv = atmIV;
+    indicators.iv_skew_25d = ivSkew;
+    indicators.put_call_ratio_volume = putCallRatio;
 
-    // Calculate IV Skew
-    const skewResult = frontChain ? calculateIVSkew(frontChain, 0.25) : null;
+    // Note: The following fields require raw options chain data
+    // and are not available through the simple provider interface:
+    // - iv_put_25d, iv_call_25d (need options chain)
+    // - put_call_ratio_oi (need open interest data)
+    // - term_structure_slope, front_month_iv, back_month_iv (need multiple expirations)
+    // - vrp, realized_vol_20d (need OHLCV bars)
+    // - net_delta, net_gamma, net_theta, net_vega (need positions)
 
-    // Calculate Put/Call Ratio
-    const pcrResult = calculateAggregatedPutCallRatio(chains);
-
-    // Calculate Term Structure
-    const termStructure = calculateTermStructureSlope(chains);
-
-    // Calculate VRP (IV - Realized Vol)
-    const vrpResult = atmIV !== null ? calculateVRP(atmIV, bars, 20) : null;
-
-    // Aggregate Greeks if positions provided
-    const greeksResult = positions.length > 0 ? aggregateGreeks(positions) : null;
-
-    return {
-      // Implied Volatility
-      atm_iv: atmIV,
-
-      // IV Skew
-      iv_skew_25d: skewResult?.skew ?? null,
-      iv_put_25d: skewResult?.putIV ?? null,
-      iv_call_25d: skewResult?.callIV ?? null,
-
-      // Put/Call Ratio
-      put_call_ratio_volume: pcrResult?.volumeRatio ?? null,
-      put_call_ratio_oi: pcrResult?.openInterestRatio ?? null,
-
-      // Term Structure
-      term_structure_slope: termStructure?.slope ?? null,
-      front_month_iv: termStructure?.frontIV ?? null,
-      back_month_iv: termStructure?.backIV ?? null,
-
-      // VRP
-      vrp: vrpResult?.vrp ?? null,
-      realized_vol_20d: vrpResult?.realizedVolatility ?? null,
-
-      // Greeks
-      net_delta: greeksResult?.netDelta ?? null,
-      net_gamma: greeksResult?.netGamma ?? null,
-      net_theta: greeksResult?.netTheta ?? null,
-      net_vega: greeksResult?.netVega ?? null,
-    };
+    return indicators;
   }
 }
 

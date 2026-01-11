@@ -10,42 +10,41 @@
  */
 
 export {
+  type AggregatedGreeksResult,
+  aggregateGreeks,
+  aggregateGreeksForUnderlying,
+  calculateDeltaNeutralHedge,
+  calculateGammaScalpLevel,
+  calculatePortfolioRiskSummary,
+  type OptionPosition,
+  OptionPositionSchema,
+  type PortfolioRiskSummary,
+  type StockPosition,
+  type UnderlyingGreeks,
+} from "./greeks-aggregator";
+export {
   calculateATMIV,
   calculateIVSkew,
   calculateNormalizedSkew,
   calculateSkewTermStructure,
   classifySkew,
-  OptionsContractSchema,
+  type IVSkewResult,
   type OptionsChain,
   type OptionsContract,
-  type IVSkewResult,
+  OptionsContractSchema,
   type SkewLevel,
   type SkewTermStructure,
 } from "./iv-skew";
-
 export {
+  type AggregatedPutCallRatio,
   calculateAggregatedPutCallRatio,
   calculatePutCallRatio,
   calculateRelativePCR,
   classifyPCRSentiment,
   isExtremePCR,
-  type AggregatedPutCallRatio,
   type PCRSentiment,
   type PutCallRatioResult,
 } from "./put-call-ratio";
-
-export {
-  calculateParkinsonVolatility,
-  calculateRealizedVolatility,
-  calculateVRP,
-  calculateVRPPercentile,
-  calculateVRPTermStructure,
-  calculateVRPWithParkinson,
-  classifyVRPLevel,
-  type VRPLevel,
-  type VRPResult,
-  type VRPTermStructure,
-} from "./vrp";
 
 export {
   buildTermStructure,
@@ -59,17 +58,15 @@ export {
   type TermStructureResult,
   type TermStructureShape,
 } from "./term-structure";
-
 export {
-  aggregateGreeks,
-  aggregateGreeksForUnderlying,
-  calculateDeltaNeutralHedge,
-  calculateGammaScalpLevel,
-  calculatePortfolioRiskSummary,
-  OptionPositionSchema,
-  type AggregatedGreeksResult,
-  type OptionPosition,
-  type PortfolioRiskSummary,
-  type StockPosition,
-  type UnderlyingGreeks,
-} from "./greeks-aggregator";
+  // Note: calculateParkinsonVolatility and calculateRealizedVolatility are not exported
+  // to avoid conflicts with price/volatility.ts. Use those for standalone volatility calculations.
+  calculateVRP,
+  calculateVRPPercentile,
+  calculateVRPTermStructure,
+  calculateVRPWithParkinson,
+  classifyVRPLevel,
+  type VRPLevel,
+  type VRPResult,
+  type VRPTermStructure,
+} from "./vrp";

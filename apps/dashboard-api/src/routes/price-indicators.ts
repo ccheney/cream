@@ -97,13 +97,17 @@ const LOOKBACK_DAYS: Record<Timeframe, number> = {
 // ============================================
 
 function sma(data: number[], period: number): number | null {
-  if (data.length < period) return null;
+  if (data.length < period) {
+    return null;
+  }
   const slice = data.slice(-period);
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
 function ema(data: number[], period: number): number | null {
-  if (data.length < period) return null;
+  if (data.length < period) {
+    return null;
+  }
   const k = 2 / (period + 1);
   let emaVal = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
   for (let i = period; i < data.length; i++) {
@@ -116,7 +120,9 @@ function ema(data: number[], period: number): number | null {
 }
 
 function rsi(data: number[], period: number): number | null {
-  if (data.length < period + 1) return null;
+  if (data.length < period + 1) {
+    return null;
+  }
   let gains = 0;
   let losses = 0;
   for (let i = data.length - period; i < data.length; i++) {
@@ -124,8 +130,11 @@ function rsi(data: number[], period: number): number | null {
     const prev = data[i - 1];
     if (curr !== undefined && prev !== undefined) {
       const diff = curr - prev;
-      if (diff > 0) gains += diff;
-      else losses -= diff;
+      if (diff > 0) {
+        gains += diff;
+      } else {
+        losses -= diff;
+      }
     }
   }
   const rs = gains / (losses || 1);
@@ -133,7 +142,9 @@ function rsi(data: number[], period: number): number | null {
 }
 
 function atr(highs: number[], lows: number[], closes: number[], period: number): number | null {
-  if (highs.length < period + 1) return null;
+  if (highs.length < period + 1) {
+    return null;
+  }
   let sum = 0;
   for (let i = highs.length - period; i < highs.length; i++) {
     const hi = highs[i];
@@ -152,7 +163,9 @@ function bollingerBands(
   period: number,
   stdDevMultiplier: number
 ): { upper: number; middle: number; lower: number; bandwidth: number; percentB: number } | null {
-  if (data.length < period) return null;
+  if (data.length < period) {
+    return null;
+  }
   const slice = data.slice(-period);
   const middle = slice.reduce((a, b) => a + b, 0) / period;
   const variance = slice.reduce((sum, val) => sum + (val - middle) ** 2, 0) / period;
@@ -172,7 +185,9 @@ function stochastic(
   kPeriod: number,
   dPeriod: number
 ): { k: number; d: number } | null {
-  if (closes.length < kPeriod + dPeriod - 1) return null;
+  if (closes.length < kPeriod + dPeriod - 1) {
+    return null;
+  }
 
   const kValues: number[] = [];
   for (let i = kPeriod - 1; i < closes.length; i++) {
@@ -185,7 +200,9 @@ function stochastic(
     kValues.push(k);
   }
 
-  if (kValues.length < dPeriod) return null;
+  if (kValues.length < dPeriod) {
+    return null;
+  }
   const k = kValues[kValues.length - 1] ?? 0;
   const d = kValues.slice(-dPeriod).reduce((a, b) => a + b, 0) / dPeriod;
   return { k, d };
@@ -359,7 +376,10 @@ app.openapi(getPriceIndicatorsRoute, async (c) => {
       throw error;
     }
     const message = error instanceof Error ? error.message : "Unknown error";
-    log.warn({ symbol: upperSymbol, timeframe, error: message }, "Failed to calculate price indicators");
+    log.warn(
+      { symbol: upperSymbol, timeframe, error: message },
+      "Failed to calculate price indicators"
+    );
     throw new HTTPException(503, {
       message: `Failed to calculate price indicators for ${upperSymbol}: ${message}`,
     });

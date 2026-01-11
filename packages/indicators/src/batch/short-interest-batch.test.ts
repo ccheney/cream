@@ -7,8 +7,9 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   CreateShortInterestInput,
+  ShortInterestIndicators,
   ShortInterestRepository,
-} from "@cream/storage/repositories";
+} from "@cream/storage";
 import {
   calculateShortInterestMomentum,
   calculateShortInterestRatio,
@@ -59,20 +60,57 @@ function createMockSharesProvider(
   };
 }
 
-function createMockRepository(): ShortInterestRepository & {
+// Mock repository type for testing - extends ShortInterestRepository with tracking
+type MockShortInterestRepository = ShortInterestRepository & {
   upsertCalls: CreateShortInterestInput[];
-} {
+};
+
+function createMockRepository(): MockShortInterestRepository {
   const upsertCalls: CreateShortInterestInput[] = [];
-  return {
+  const mockRepo = {
     upsertCalls,
     upsert: mock((input: CreateShortInterestInput) => {
       upsertCalls.push(input);
-      return Promise.resolve();
+      // Return a mock ShortInterestIndicators that matches the input
+      return Promise.resolve({
+        id: input.id,
+        symbol: input.symbol,
+        settlementDate: input.settlementDate,
+        shortInterest: input.shortInterest,
+        shortInterestRatio: input.shortInterestRatio ?? null,
+        shortPctFloat: input.shortPctFloat ?? null,
+        daysToCover: input.daysToCover ?? null,
+        shortInterestChange: input.shortInterestChange ?? null,
+        source: input.source ?? "FINRA",
+        fetchedAt: new Date().toISOString(),
+      });
     }),
     findBySymbol: mock(() => Promise.resolve([])),
     findBySymbolAndDate: mock(() => Promise.resolve(null)),
     findLatestBySymbol: mock(() => Promise.resolve(null)),
+    // Unused methods - provide minimal mocks
+    create: mock(() => Promise.resolve({} as ShortInterestIndicators)),
+    bulkUpsert: mock(() => Promise.resolve(0)),
+    findById: mock(() => Promise.resolve(null)),
+    update: mock(() => Promise.resolve(null)),
+    delete: mock(() => Promise.resolve(false)),
+    deleteOlderThan: mock(() => Promise.resolve(0)),
+    findAll: mock(() => Promise.resolve([])),
+    count: mock(() => Promise.resolve(0)),
+    findWithFilters: mock(() =>
+      Promise.resolve({
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      })
+    ),
   };
+  // Cast to ShortInterestRepository to bypass private client property check
+  return mockRepo as unknown as MockShortInterestRepository;
 }
 
 // ============================================
@@ -404,11 +442,24 @@ describe("ShortInterestBatchJob", () => {
 
       // Make upsert fail for AAPL
       let callCount = 0;
-      mockRepo.upsert = mock(async () => {
+      mockRepo.upsert = mock(async (): Promise<ShortInterestIndicators> => {
         callCount++;
         if (callCount === 1) {
           throw new Error("Database error");
         }
+        // Return a mock result for successful calls
+        return {
+          id: `si_${callCount}`,
+          symbol: "MSFT",
+          settlementDate: "2024-01-15",
+          shortInterest: 1000000,
+          shortInterestRatio: 2.5,
+          shortPctFloat: 0.05,
+          daysToCover: 3,
+          shortInterestChange: null,
+          source: "FINRA",
+          fetchedAt: new Date().toISOString(),
+        };
       });
 
       const job = new ShortInterestBatchJob(mockFinra, mockRepo, undefined, {

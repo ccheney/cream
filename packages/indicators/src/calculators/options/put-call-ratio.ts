@@ -127,14 +127,16 @@ export function calculatePutCallRatio(chain: OptionsChain): PutCallRatioResult {
  * @returns Aggregated P/C ratio
  */
 export function calculateAggregatedPutCallRatio(
-  chains: OptionsChain[],
+  chains: OptionsChain[]
 ): AggregatedPutCallRatio | null {
   if (chains.length === 0) {
     return null;
   }
 
   const symbol = chains[0]?.underlyingSymbol;
-  if (!symbol) return null;
+  if (!symbol) {
+    return null;
+  }
 
   let totalPutVolume = 0;
   let totalCallVolume = 0;
@@ -195,10 +197,18 @@ export type PCRSentiment =
  */
 export function classifyPCRSentiment(ratio: number): PCRSentiment {
   // Contrarian: high P/C = bullish (too much fear), low P/C = bearish (too much greed)
-  if (ratio > 1.5) return "extreme_bullish"; // Extreme fear = buy signal
-  if (ratio > 1.0) return "bullish"; // Elevated fear
-  if (ratio >= 0.7) return "neutral"; // Normal range
-  if (ratio >= 0.5) return "bearish"; // Low fear / complacency
+  if (ratio > 1.5) {
+    return "extreme_bullish"; // Extreme fear = buy signal
+  }
+  if (ratio > 1.0) {
+    return "bullish"; // Elevated fear
+  }
+  if (ratio >= 0.7) {
+    return "neutral"; // Normal range
+  }
+  if (ratio >= 0.5) {
+    return "bearish"; // Low fear / complacency
+  }
   return "extreme_bearish"; // Extreme complacency = sell signal
 }
 
@@ -209,11 +219,10 @@ export function classifyPCRSentiment(ratio: number): PCRSentiment {
  * @param historicalAvg - Historical average P/C ratio
  * @returns Ratio relative to history (1.0 = at average)
  */
-export function calculateRelativePCR(
-  currentRatio: number,
-  historicalAvg: number,
-): number | null {
-  if (historicalAvg <= 0) return null;
+export function calculateRelativePCR(currentRatio: number, historicalAvg: number): number | null {
+  if (historicalAvg <= 0) {
+    return null;
+  }
   return currentRatio / historicalAvg;
 }
 
@@ -230,7 +239,7 @@ export function isExtremePCR(
   ratio: number,
   historicalMean: number,
   historicalStd: number,
-  threshold = 2,
+  threshold = 2
 ): { isExtreme: boolean; zScore: number; direction: "high" | "low" | "normal" } {
   if (historicalStd <= 0) {
     return { isExtreme: false, zScore: 0, direction: "normal" };
@@ -240,8 +249,11 @@ export function isExtremePCR(
   const isExtreme = Math.abs(zScore) >= threshold;
 
   let direction: "high" | "low" | "normal" = "normal";
-  if (zScore >= threshold) direction = "high";
-  else if (zScore <= -threshold) direction = "low";
+  if (zScore >= threshold) {
+    direction = "high";
+  } else if (zScore <= -threshold) {
+    direction = "low";
+  }
 
   return { isExtreme, zScore, direction };
 }
