@@ -61,7 +61,13 @@ export {
   type RSILevel,
   type RSIResult,
 } from "./rsi";
-export { calculateSMA, calculateSMASeries, type SMAResult } from "./sma";
+export {
+  calculateSMA,
+  calculateSMASeries,
+  isDeathCross,
+  isGoldenCross,
+  type SMAResult,
+} from "./sma";
 export {
   calculateSlowStochastic,
   calculateStochastic,

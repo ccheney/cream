@@ -11,10 +11,10 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import {
   type Candle,
-  calculateBollingerBands,
-  calculateMACD,
-  calculateRSI,
-  calculateSMA,
+  calculateBollingerBandsSeries,
+  calculateMACDSeries,
+  calculateRSISeries,
+  calculateSMASeries,
   isDeathCross,
   isGoldenCross,
 } from "@cream/indicators";
@@ -250,8 +250,9 @@ function generateSMACrossoverSignals(
   config: z.infer<typeof SMACrossoverConfigSchema>
 ): SignalRow[] {
   const candles = ohlcvToCandles(ohlcv);
-  const fastSMA = calculateSMA(candles, { period: config.fastPeriod });
-  const slowSMA = calculateSMA(candles, { period: config.slowPeriod });
+  // Use series functions with period as number (not object)
+  const fastSMA = calculateSMASeries(candles, config.fastPeriod);
+  const slowSMA = calculateSMASeries(candles, config.slowPeriod);
   const warmup = Math.max(config.fastPeriod, config.slowPeriod);
 
   // Offset between fast and slow SMA arrays
@@ -267,10 +268,11 @@ function generateSMACrossoverSignals(
     const fastIdx = i - fastOffset;
     const slowIdx = i - slowOffset;
 
-    const currFast = fastSMA[fastIdx]?.ma;
-    const prevFast = fastSMA[fastIdx - 1]?.ma;
-    const currSlow = slowSMA[slowIdx]?.ma;
-    const prevSlow = slowSMA[slowIdx - 1]?.ma;
+    // SMAResult uses .value not .ma
+    const currFast = fastSMA[fastIdx]?.value;
+    const prevFast = fastSMA[fastIdx - 1]?.value;
+    const currSlow = slowSMA[slowIdx]?.value;
+    const prevSlow = slowSMA[slowIdx - 1]?.value;
 
     if (
       currFast === undefined ||
@@ -296,7 +298,8 @@ function generateRSISignals(
   config: z.infer<typeof RSIConfigSchema>
 ): SignalRow[] {
   const candles = ohlcvToCandles(ohlcv);
-  const rsiValues = calculateRSI(candles, { period: config.period });
+  // Use series function with period as number (not object)
+  const rsiValues = calculateRSISeries(candles, config.period);
   const warmup = config.period + 1;
 
   let inPosition = false;
@@ -336,10 +339,8 @@ function generateBollingerSignals(
   config: z.infer<typeof BollingerBreakoutConfigSchema>
 ): SignalRow[] {
   const candles = ohlcvToCandles(ohlcv);
-  const bbValues = calculateBollingerBands(candles, {
-    period: config.period,
-    stdDev: config.stdDev,
-  });
+  // Use series function with (bars, period, multiplier)
+  const bbValues = calculateBollingerBandsSeries(candles, config.period, config.stdDev);
   const warmup = config.period;
 
   let inPosition = false;
@@ -371,40 +372,6 @@ function generateBollingerSignals(
 }
 
 /**
- * Calculate signal line for MACD (EMA of MACD line).
- */
-function calculateMACDSignalLine(
-  macdValues: Array<{ timestamp: number; macd: number }>,
-  signalPeriod: number
-): Array<{ timestamp: number; signal: number }> {
-  if (macdValues.length < signalPeriod) {
-    return [];
-  }
-
-  const multiplier = 2 / (signalPeriod + 1);
-
-  // Seed with SMA of first signalPeriod values
-  let sum = 0;
-  for (let i = 0; i < signalPeriod; i++) {
-    sum += macdValues[i]?.macd ?? 0;
-  }
-  let signal = sum / signalPeriod;
-
-  const results: Array<{ timestamp: number; signal: number }> = [
-    { timestamp: macdValues[signalPeriod - 1]?.timestamp ?? 0, signal },
-  ];
-
-  // Calculate remaining EMA values
-  for (let i = signalPeriod; i < macdValues.length; i++) {
-    const macd = macdValues[i]?.macd ?? 0;
-    signal = (macd - signal) * multiplier + signal;
-    results.push({ timestamp: macdValues[i]?.timestamp ?? 0, signal });
-  }
-
-  return results;
-}
-
-/**
  * Generate signals using MACD crossover strategy.
  */
 function generateMACDSignals(
@@ -412,8 +379,12 @@ function generateMACDSignals(
   config: z.infer<typeof MACDCrossoverConfigSchema>
 ): SignalRow[] {
   const candles = ohlcvToCandles(ohlcv);
-  const macdValues = calculateMACD(candles, config.fastPeriod, config.slowPeriod);
-  const signalLine = calculateMACDSignalLine(macdValues, config.signalPeriod);
+  // Use MACDSeries with settings object - returns array with macdLine and signalLine already computed
+  const macdValues = calculateMACDSeries(candles, {
+    fastPeriod: config.fastPeriod,
+    slowPeriod: config.slowPeriod,
+    signalPeriod: config.signalPeriod,
+  });
 
   const warmup = config.slowPeriod + config.signalPeriod;
 
@@ -422,20 +393,17 @@ function generateMACDSignals(
       return { timestamp: row.timestamp, entries: false, exits: false };
     }
 
-    // Offset to align with MACD array
-    const macdOffset = config.slowPeriod - 1;
-    const signalOffset = config.signalPeriod - 1;
-    const macdIdx = i - macdOffset;
-    const signalIdx = macdIdx - signalOffset;
+    // Align index with MACD array (which starts after slowPeriod + signalPeriod bars)
+    const macdIdx = i - warmup;
 
-    if (macdIdx < 1 || signalIdx < 1) {
+    if (macdIdx < 1 || macdIdx >= macdValues.length) {
       return { timestamp: row.timestamp, entries: false, exits: false };
     }
 
-    const currMacd = macdValues[macdIdx]?.macd;
-    const prevMacd = macdValues[macdIdx - 1]?.macd;
-    const currSignal = signalLine[signalIdx]?.signal;
-    const prevSignal = signalLine[signalIdx - 1]?.signal;
+    const currMacd = macdValues[macdIdx]?.macdLine;
+    const prevMacd = macdValues[macdIdx - 1]?.macdLine;
+    const currSignal = macdValues[macdIdx]?.signalLine;
+    const prevSignal = macdValues[macdIdx - 1]?.signalLine;
 
     if (
       currMacd === undefined ||

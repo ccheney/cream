@@ -38,61 +38,72 @@ function calculateIndicatorFromCandles(
   switch (indicator) {
     case "RSI": {
       const period = params.period ?? 14;
-      const rsiResults = calculateRSI(candles, { period });
-      for (const r of rsiResults) {
-        results.push({ value: r.rsi, timestamp: r.timestamp });
+      // calculateRSI returns RSIResult | null for single value, use calculateRSISeries for array
+      const rsiResult = calculateRSI(candles, period);
+      if (rsiResult) {
+        results.push({ value: rsiResult.rsi, timestamp: rsiResult.timestamp });
       }
       break;
     }
     case "SMA": {
       const period = params.period ?? 20;
-      const smaResults = calculateSMA(candles, { period });
-      for (const r of smaResults) {
-        results.push({ value: r.ma, timestamp: r.timestamp });
+      // calculateSMA returns number | null, not an array
+      const smaValue = calculateSMA(candles, period);
+      if (smaValue !== null && candles.length > 0) {
+        const lastBar = candles[candles.length - 1];
+        if (lastBar) {
+          results.push({ value: smaValue, timestamp: lastBar.timestamp });
+        }
       }
       break;
     }
     case "EMA": {
       const period = params.period ?? 20;
-      const emaResults = calculateEMA(candles, { period });
-      for (const r of emaResults) {
-        results.push({ value: r.ma, timestamp: r.timestamp });
+      // calculateEMA returns EMAResult | null (uses .ema not .ma)
+      const emaResult = calculateEMA(candles, period);
+      if (emaResult) {
+        results.push({ value: emaResult.ema, timestamp: emaResult.timestamp });
       }
       break;
     }
     case "ATR": {
       const period = params.period ?? 14;
-      const atrResults = calculateATR(candles, { period });
-      for (const r of atrResults) {
-        results.push({ value: r.atr, timestamp: r.timestamp });
+      // calculateATR returns number | null, not ATRResult
+      const atrValue = calculateATR(candles, period);
+      if (atrValue !== null && candles.length > 0) {
+        const lastBar = candles[candles.length - 1];
+        if (lastBar) {
+          results.push({ value: atrValue, timestamp: lastBar.timestamp });
+        }
       }
       break;
     }
     case "BOLLINGER": {
       const period = params.period ?? 20;
-      const stdDev = params.stdDev ?? 2.0;
-      const bbResults = calculateBollingerBands(candles, { period, stdDev });
-      // Return middle band as the primary value
-      for (const r of bbResults) {
-        results.push({ value: r.middle, timestamp: r.timestamp });
+      const multiplier = params.stdDev ?? 2.0;
+      // calculateBollingerBands takes (bars, period, multiplier)
+      const bbResult = calculateBollingerBands(candles, period, multiplier);
+      if (bbResult) {
+        results.push({ value: bbResult.middle, timestamp: bbResult.timestamp });
       }
       break;
     }
     case "STOCHASTIC": {
       const kPeriod = params.kPeriod ?? 14;
       const dPeriod = params.dPeriod ?? 3;
-      const stochResults = calculateStochastic(candles, { kPeriod, dPeriod, slow: true });
-      // Return %K as the primary value
-      for (const r of stochResults) {
-        results.push({ value: r.k, timestamp: r.timestamp });
+      // calculateStochastic takes settings object
+      const stochResult = calculateStochastic(candles, { kPeriod, dPeriod });
+      if (stochResult) {
+        results.push({ value: stochResult.k, timestamp: stochResult.timestamp });
       }
       break;
     }
     case "VOLUME_SMA": {
       const period = params.period ?? 20;
-      const volResults = calculateVolumeSMA(candles, { period });
-      for (const r of volResults) {
-        results.push({ value: r.volumeSma, timestamp: r.timestamp });
+      // calculateVolumeSMA takes config object
+      const volResult = calculateVolumeSMA(candles, { period });
+      if (volResult) {
+        results.push({ value: volResult.volumeSma, timestamp: volResult.timestamp });
       }
       break;
     }

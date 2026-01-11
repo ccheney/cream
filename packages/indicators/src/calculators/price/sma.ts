@@ -49,3 +49,45 @@ export function calculateSMASeries(bars: OHLCVBar[], period: number): SMAResult[
     return { value: sum / period, timestamp: bar.timestamp };
   });
 }
+
+// ============================================================
+// CROSSOVER DETECTION
+// ============================================================
+
+/**
+ * Detect a golden cross (bullish crossover).
+ * Fast MA crosses above slow MA.
+ *
+ * @param prevFast - Previous fast MA value
+ * @param prevSlow - Previous slow MA value
+ * @param currFast - Current fast MA value
+ * @param currSlow - Current slow MA value
+ * @returns true if golden cross occurred
+ */
+export function isGoldenCross(
+  prevFast: number,
+  prevSlow: number,
+  currFast: number,
+  currSlow: number,
+): boolean {
+  return prevFast <= prevSlow && currFast > currSlow;
+}
+
+/**
+ * Detect a death cross (bearish crossover).
+ * Fast MA crosses below slow MA.
+ *
+ * @param prevFast - Previous fast MA value
+ * @param prevSlow - Previous slow MA value
+ * @param currFast - Current fast MA value
+ * @param currSlow - Current slow MA value
+ * @returns true if death cross occurred
+ */
+export function isDeathCross(
+  prevFast: number,
+  prevSlow: number,
+  currFast: number,
+  currSlow: number,
+): boolean {
+  return prevFast >= prevSlow && currFast < currSlow;
+}
