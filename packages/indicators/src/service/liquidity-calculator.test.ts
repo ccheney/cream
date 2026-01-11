@@ -419,6 +419,11 @@ describe("Integration", () => {
 
     // Values should be reasonable
     expect(result.bid_ask_spread).toBeLessThan(1); // < $1 spread
-    expect(result.vwap!).toBeCloseTo(price, -1); // VWAP near current price
+    // VWAP should be within price range of bars (not necessarily close to final price)
+    const prices = bars.map((b) => b.close);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    expect(result.vwap!).toBeGreaterThanOrEqual(minPrice);
+    expect(result.vwap!).toBeLessThanOrEqual(maxPrice);
   });
 });

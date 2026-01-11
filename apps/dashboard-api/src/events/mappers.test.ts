@@ -170,8 +170,8 @@ describe("mapAgentEvent", () => {
 
   it("maps agentType correctly", () => {
     const result = mapAgentEvent(sampleAgentEvent);
-    // agentType is mapped to domain type names
-    expect((result.message as any).data.agentType).toBe("news_analyst");
+    // agentType is mapped to abbreviated domain type names (see channel.ts)
+    expect((result.message as any).data.agentType).toBe("news");
   });
 
   it("maps status correctly", () => {
