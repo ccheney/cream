@@ -17,7 +17,7 @@ import {
   TickerMessageSchema,
   TradeMessageSchema,
   UnsubscribeCommandSchema,
-} from "./websocket";
+} from "./websocket/index.js";
 
 describe("MarketStateCache", () => {
   it("should store and retrieve market state", () => {

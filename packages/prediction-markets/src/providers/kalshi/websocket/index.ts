@@ -1,44 +1,38 @@
 /**
- * Kalshi API Client
+ * Kalshi WebSocket Client Module
  *
- * Client for interacting with the Kalshi prediction market API.
- * Uses RSA-PSS authentication for API access.
+ * Real-time market data streaming from Kalshi prediction markets.
+ * Supports orderbook deltas, price tickers, and trade notifications.
  *
- * @see https://docs.kalshi.com/sdks/typescript/quickstart
+ * @see https://docs.kalshi.com/websockets/introduction
  */
 
-export {
-  createKalshiClient,
-  createKalshiClientFromEnv,
-  KALSHI_RATE_LIMITS,
-  KalshiClient,
-  type KalshiClientOptions,
-  type KalshiEvent,
-  KalshiEventSchema,
-  type KalshiMarket,
-  KalshiMarketSchema,
-  MARKET_TYPE_TO_SERIES,
-} from "./client";
+// Cache
+export { MarketStateCache } from "./cache.js";
+// Main client
+export { createKalshiWebSocketClient, KalshiWebSocketClient } from "./client.js";
 
-// WebSocket Client
+// Types and schemas
 export {
+  // Types
   type CachedMarketState,
   type ConnectionState,
-  createKalshiWebSocketClient,
+  // Constants
   DEFAULT_RECONNECT_CONFIG,
   HEARTBEAT_INTERVAL_MS,
   KALSHI_DEMO_WEBSOCKET_URL,
   KALSHI_WEBSOCKET_URL,
   type KalshiWebSocketCallback,
   type KalshiWebSocketChannel,
-  KalshiWebSocketClient,
   type KalshiWebSocketConfig,
   type KalshiWebSocketMessage,
   type MarketLifecycleMessage,
+  // Schemas
   MarketLifecycleMessageSchema,
-  MarketStateCache,
   type OrderbookDeltaMessage,
   OrderbookDeltaMessageSchema,
+  type ReconnectConfig,
+  type ResolvedConfig,
   type SubscribeCommand,
   SubscribeCommandSchema,
   type TickerMessage,
@@ -47,4 +41,4 @@ export {
   TradeMessageSchema,
   type UnsubscribeCommand,
   UnsubscribeCommandSchema,
-} from "./websocket/index.js";
+} from "./types.js";
