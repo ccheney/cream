@@ -1,112 +1,26 @@
 """
-Validation Feedback Loop Implementation
+Feedback Generator
 
-Provides structured feedback from validation results to guide hypothesis
-refinement. Max 3 iterations per hypothesis before abandonment.
-
-See: docs/plans/20-research-to-production-pipeline.md - Phase 3
-
-Feedback includes:
-- Gate violations from Stage 1 and Stage 2
-- Regime-specific performance analysis
-- Factor correlation to existing Factor Zoo
-- Modification suggestions
-- Alternative hypothesis suggestions
+Generates structured feedback from validation results to guide hypothesis refinement.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import polars as pl
 
+from .types import FactorZooProtocol, FeedbackConfig, RegimeServiceProtocol, ValidationFeedback
+
 if TYPE_CHECKING:
-    from .hypothesis_alignment import Hypothesis
-    from .stage_validation.stage1_vectorbt import Stage1Results
-    from .stage_validation.stage2_nautilus import Stage2Results
-    from .strategies.base import ResearchFactor
+    from ..hypothesis_alignment import Hypothesis
+    from ..stage_validation.stage1_vectorbt import Stage1Results
+    from ..stage_validation.stage2_nautilus import Stage2Results
+    from ..strategies.base import ResearchFactor
 
 logger = logging.getLogger(__name__)
-
-# Type aliases for external service protocols
-RegimeServiceProtocol = Any
-FactorZooProtocol = Any
-
-
-@dataclass
-class ValidationFeedback:
-    """Structured feedback for hypothesis refinement."""
-
-    factor_id: str
-    """Factor that was validated."""
-
-    hypothesis_id: str
-    """Hypothesis being tested."""
-
-    iteration: int
-    """Current iteration (max 3)."""
-
-    # What failed
-    stage1_violations: list[str]
-    """Gate violations from Stage 1 validation."""
-
-    stage2_violations: list[str]
-    """Gate violations from Stage 2 validation."""
-
-    # Diagnostic analysis
-    regime_performance: dict[str, float]
-    """Sharpe ratio by market regime."""
-
-    parameter_sensitivity: dict[str, float]
-    """Sensitivity of results to each parameter."""
-
-    correlation_to_existing: dict[str, float]
-    """Correlation to existing Factor Zoo factors."""
-
-    # Suggestions
-    suggested_modifications: list[str]
-    """Specific suggestions for improving the factor."""
-
-    alternative_hypotheses: list[str]
-    """Alternative hypotheses if abandoning."""
-
-    # Decision
-    action: Literal["REFINE", "ABANDON", "ACCEPT"]
-    """Next action: refine hypothesis, abandon it, or accept factor."""
-
-    def summary(self) -> str:
-        """Get a human-readable summary of the feedback."""
-        status = {
-            "ACCEPT": "Factor passed all gates",
-            "ABANDON": "Abandoning after max iterations",
-            "REFINE": "Refining hypothesis",
-        }[self.action]
-
-        violations = self.stage1_violations + self.stage2_violations
-        violation_str = ", ".join(violations) if violations else "None"
-
-        return (
-            f"[{self.action}] Iteration {self.iteration}/3 - {status}\n"
-            f"Violations: {violation_str}\n"
-            f"Suggestions: {len(self.suggested_modifications)}"
-        )
-
-
-@dataclass
-class FeedbackConfig:
-    """Configuration for feedback generation."""
-
-    max_iterations: int = 3
-    """Maximum refinement iterations before abandonment."""
-
-    correlation_threshold: float = 0.7
-    """Threshold for high correlation warning."""
-
-    poor_regime_sharpe: float = 0.5
-    """Sharpe threshold for poor regime performance."""
 
 
 class FeedbackGenerator:
@@ -168,29 +82,24 @@ class FeedbackGenerator:
         Returns:
             ValidationFeedback with analysis and suggestions
         """
-        # Determine action
         action = self._determine_action(
             stage1_results,
             stage2_results,
             iteration,
         )
 
-        # Analyze regime-specific performance
         regime_perf: dict[str, float] = {}
         if data is not None:
             regime_perf = await self._analyze_regime_performance(factor, stage1_results, data)
 
-        # Compute correlation to existing factors
         correlations: dict[str, float] = {}
         if data is not None and existing_factors:
             correlations = self._compute_factor_correlations(factor, existing_factors, data)
 
-        # Extract parameter sensitivity from Stage 1 results
         param_sensitivity: dict[str, float] = {}
         if hasattr(stage1_results, "parameter_sensitivity"):
             param_sensitivity = stage1_results.parameter_sensitivity
 
-        # Generate suggestions based on failures
         suggestions = self._generate_suggestions(
             stage1_results.gate_violations,
             stage2_results.gate_violations if stage2_results else [],
@@ -198,7 +107,6 @@ class FeedbackGenerator:
             correlations,
         )
 
-        # Generate alternative hypotheses if abandoning
         alternatives: list[str] = []
         if action == "ABANDON":
             alternatives = self._suggest_alternatives(hypothesis, regime_perf)
@@ -234,12 +142,10 @@ class FeedbackGenerator:
         Returns:
             Action to take: ACCEPT, REFINE, or ABANDON
         """
-        # Accept if all gates passed
         if stage1_results.passed_gates:
             if stage2_results is None or stage2_results.passed_gates:
                 return "ACCEPT"
 
-        # Abandon if max iterations reached
         if iteration >= self.config.max_iterations:
             return "ABANDON"
 
@@ -264,7 +170,6 @@ class FeedbackGenerator:
         """
         regime_sharpes: dict[str, float] = {}
 
-        # If regime service available, use it
         if self.regime_service is not None:
             try:
                 if "timestamp" in data.columns:
@@ -286,7 +191,6 @@ class FeedbackGenerator:
             except Exception as e:
                 logger.warning(f"Regime analysis failed: {e}")
 
-        # Fallback: simple volatility-based regime classification
         if not regime_sharpes:
             regime_sharpes = self._simple_regime_analysis(factor, data)
 
@@ -319,25 +223,20 @@ class FeedbackGenerator:
         if n < 42:
             return regime_sharpes
 
-        # Compute rolling volatility (21-day)
         vol_window = 21
         rolling_vol = np.array(
             [np.std(returns[max(0, i - vol_window) : i]) for i in range(vol_window, n)]
         )
 
-        # Classify into high/low vol regimes
         vol_median = np.median(rolling_vol)
 
-        # Compute factor signals
         signals = factor.compute_signal(data).to_numpy()
         price_returns = np.zeros(len(signals))
         price_returns[1:] = returns
 
-        # Strategy returns
         strategy_returns = signals[:-1] * price_returns[1:]
         strategy_returns = np.append(strategy_returns, 0)
 
-        # Split by regime
         high_vol_idx = np.where(rolling_vol > vol_median)[0] + vol_window
         low_vol_idx = np.where(rolling_vol <= vol_median)[0] + vol_window
 
@@ -385,7 +284,6 @@ class FeedbackGenerator:
             try:
                 existing_signals = existing.compute_signal(data).to_numpy()
 
-                # Handle NaN values
                 mask = ~(np.isnan(new_signals) | np.isnan(existing_signals))
                 if np.sum(mask) > 20:
                     corr = float(np.corrcoef(new_signals[mask], existing_signals[mask])[0, 1])
@@ -419,45 +317,37 @@ class FeedbackGenerator:
         """
         suggestions: list[str] = []
 
-        # Sharpe-related failures
         if any("sharpe" in v.lower() for v in stage1_violations):
             suggestions.append("Consider adding volatility-adjusted position sizing")
             suggestions.append("Review signal timing - ensure signals precede price moves")
             suggestions.append("Try longer lookback periods to capture more persistent signals")
 
-        # Drawdown failures
         if any("drawdown" in v.lower() for v in stage1_violations):
             suggestions.append("Add position size limits based on recent volatility")
             suggestions.append("Consider stop-loss logic to limit drawdown")
             suggestions.append("Reduce position during high-volatility regimes")
 
-        # Win rate failures
         if any("win" in v.lower() for v in stage1_violations):
             suggestions.append("Review entry conditions for better timing")
             suggestions.append("Consider confirmation signals before entry")
 
-        # PBO (overfitting) failures
         if any("pbo" in v.lower() for v in stage2_violations):
             suggestions.append("Reduce number of parameters to minimize overfitting risk")
             suggestions.append("Use simpler, more robust features")
             suggestions.append("Consider using wider parameter ranges to test robustness")
 
-        # DSR p-value failures
         if any("dsr" in v.lower() for v in stage2_violations):
             suggestions.append("Extend backtest period for more statistical significance")
             suggestions.append("The observed Sharpe may not be statistically significant")
 
-        # Walk-forward efficiency failures
         if any("wfe" in v.lower() for v in stage2_violations):
             suggestions.append("Factor may be overfit to in-sample data")
             suggestions.append("Try anchored walk-forward with expanding window")
 
-        # Monte Carlo failures
         if any("mc" in v.lower() or "monte" in v.lower() for v in stage2_violations):
             suggestions.append("Factor is not robust to execution noise")
             suggestions.append("Consider reducing trade frequency")
 
-        # Poor regime coverage
         poor_regimes = [r for r, s in regime_perf.items() if s < self.config.poor_regime_sharpe]
         if poor_regimes:
             regimes_str = ", ".join(poor_regimes)
@@ -466,7 +356,6 @@ class FeedbackGenerator:
                 f"Consider regime-specific logic or targeting a different regime."
             )
 
-        # High correlation with existing factors
         high_corr = [
             f for f, c in correlations.items() if abs(c) > self.config.correlation_threshold
         ]
@@ -496,7 +385,6 @@ class FeedbackGenerator:
         """
         alternatives: list[str] = []
 
-        # Suggest based on regime performance
         best_regime = None
         best_sharpe = float("-inf")
         for regime, sharpe in regime_perf.items():
@@ -510,7 +398,6 @@ class FeedbackGenerator:
                 f"Consider targeting this regime specifically."
             )
 
-        # General alternatives
         alternatives.extend(
             [
                 "Explore behavioral bias rather than structural constraint",
@@ -521,118 +408,3 @@ class FeedbackGenerator:
         )
 
         return alternatives
-
-
-class RefinementOrchestrator:
-    """
-    Orchestrate hypothesis refinement loop.
-
-    Coordinates between validation and feedback generation,
-    running up to MAX_ITERATIONS before abandonment.
-    """
-
-    def __init__(
-        self,
-        feedback_generator: FeedbackGenerator,
-        config: FeedbackConfig | None = None,
-    ) -> None:
-        """
-        Initialize the orchestrator.
-
-        Args:
-            feedback_generator: Generator for validation feedback
-            config: Feedback configuration
-        """
-        self.feedback_gen = feedback_generator
-        self.config = config or FeedbackConfig()
-
-    async def run_refinement_loop(
-        self,
-        factor: ResearchFactor,
-        hypothesis: Hypothesis,
-        data: pl.DataFrame,
-        params: dict[str, Any],
-        existing_factors: list[ResearchFactor] | None = None,
-    ) -> tuple[ResearchFactor, ValidationFeedback]:
-        """
-        Run validation with refinement loop.
-
-        Args:
-            factor: Research factor to validate
-            hypothesis: Research hypothesis
-            data: Historical data
-            params: Factor parameters
-            existing_factors: Optional existing factors for correlation
-
-        Returns:
-            Tuple of (final factor, final feedback)
-        """
-        from .stage_validation import Stage1Validator, Stage2Validator
-
-        current_factor = factor
-        feedback: ValidationFeedback | None = None
-
-        for iteration in range(1, self.config.max_iterations + 1):
-            logger.info(f"Refinement iteration {iteration}/{self.config.max_iterations}")
-
-            # Stage 1 validation
-            stage1_validator = Stage1Validator(current_factor, data)
-            stage1_results = await stage1_validator.validate(params)
-
-            if not stage1_results.passed_gates:
-                feedback = await self.feedback_gen.generate_feedback(
-                    factor=current_factor,
-                    stage1_results=stage1_results,
-                    stage2_results=None,
-                    hypothesis=hypothesis,
-                    iteration=iteration,
-                    data=data,
-                    existing_factors=existing_factors,
-                )
-
-                if feedback.action == "ABANDON":
-                    logger.info(f"Abandoning after iteration {iteration}")
-                    return current_factor, feedback
-
-                logger.info(f"Stage 1 failed, suggestions: {feedback.suggested_modifications}")
-                continue
-
-            # Stage 2 validation
-            stage2_validator = Stage2Validator(current_factor, data)
-            stage2_results = await stage2_validator.validate(params)
-
-            feedback = await self.feedback_gen.generate_feedback(
-                factor=current_factor,
-                stage1_results=stage1_results,
-                stage2_results=stage2_results,
-                hypothesis=hypothesis,
-                iteration=iteration,
-                data=data,
-                existing_factors=existing_factors,
-            )
-
-            if feedback.action == "ACCEPT":
-                logger.info("Factor accepted!")
-                return current_factor, feedback
-            if feedback.action == "ABANDON":
-                logger.info(f"Abandoning after iteration {iteration}")
-                return current_factor, feedback
-
-            logger.info(f"Stage 2 failed, suggestions: {feedback.suggested_modifications}")
-
-        # Max iterations reached without acceptance
-        if feedback is None:
-            # Create final feedback
-            stage1_validator = Stage1Validator(current_factor, data)
-            stage1_results = await stage1_validator.validate(params)
-            feedback = await self.feedback_gen.generate_feedback(
-                factor=current_factor,
-                stage1_results=stage1_results,
-                stage2_results=None,
-                hypothesis=hypothesis,
-                iteration=self.config.max_iterations,
-                data=data,
-                existing_factors=existing_factors,
-            )
-
-        return current_factor, feedback
