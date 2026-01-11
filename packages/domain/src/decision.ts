@@ -108,7 +108,10 @@ export type OptionType = z.infer<typeof OptionType>;
  */
 export const OptionContractSchema = z.object({
   underlying: z.string().min(1),
-  expiration: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
+  expiration: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .describe("Expiration date in YYYY-MM-DD format"),
   strike: z.number().positive(),
   optionType: OptionType,
 });
@@ -140,7 +143,10 @@ export type Instrument = z.infer<typeof InstrumentSchema>;
 export const SizeSchema = z.object({
   quantity: z.number().int().nonnegative(),
   unit: SizeUnit,
-  targetPositionQuantity: z.number().int(), // Signed: positive=long, negative=short
+  targetPositionQuantity: z
+    .number()
+    .int()
+    .describe("Target position signed quantity: positive=long, negative=short"),
 });
 export type Size = z.infer<typeof SizeSchema>;
 
@@ -213,7 +219,7 @@ export const DecisionSchema = z.object({
   orderPlan: OrderPlanSchema,
   riskLevels: RiskLevelsSchema, // MANDATORY - always required
   strategyFamily: StrategyFamily,
-  rationale: z.string().min(10), // Must provide meaningful justification
+  rationale: z.string().min(10).describe("Human-readable justification for the trading decision"),
   confidence: z.number().min(0).max(1),
   references: ReferencesSchema.optional(),
 });
@@ -359,7 +365,10 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
  */
 export const DecisionPlanSchema = z.object({
   cycleId: z.string().min(1),
-  asOfTimestamp: z.string().datetime({ offset: true }), // ISO-8601 with timezone
+  asOfTimestamp: z
+    .string()
+    .datetime({ offset: true })
+    .describe("ISO-8601 timestamp with timezone offset"),
   environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
   decisions: z.array(DecisionSchema),
   portfolioNotes: z.string().optional(),

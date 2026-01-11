@@ -102,7 +102,12 @@ export const ResearchTriggerConfigSchema = z.object({
   maxMonthlyComputeHours: z.number().nonnegative().default(0),
 
   // Alpha decay thresholds
-  alphaDecayICThreshold: z.number().min(0).max(1).default(0.5), // 50% of peak
+  alphaDecayICThreshold: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(0.5)
+    .describe("IC threshold as fraction of peak (0.5 = 50% of peak)"),
   alphaDecayMinDays: z.number().int().positive().default(20),
 
   // Performance degradation thresholds

@@ -178,7 +178,7 @@ export const PositionInsertSchema = z.object({
   id: UuidSchema,
   symbol: TickerSymbolSchema,
   instrumentType: z.enum(["EQUITY", "OPTION"]),
-  quantity: z.number().int(), // Negative for short positions
+  quantity: z.number().int().describe("Position size in shares: negative for short positions"),
   avgEntryPrice: z.number().positive(),
   marketValue: z.number(),
   unrealizedPnl: z.number(),
