@@ -12,7 +12,7 @@ import {
   useThesis,
   useThesisHistory,
 } from "@/hooks/queries";
-import type { Thesis, ThesisHistoryEvent } from "./types.js";
+import type { Thesis, ThesisHistoryEvent } from "./types";
 
 export interface ThesisPageState {
   showInvalidateModal: boolean;

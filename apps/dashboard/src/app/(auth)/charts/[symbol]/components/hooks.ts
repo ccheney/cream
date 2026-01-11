@@ -5,10 +5,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries/index.js";
-import { calculateMAOverlays } from "@/lib/chart-indicators.js";
-import type { ChartTimeframe } from "@/stores/ui-store.js";
-import { CANDLE_LIMITS } from "./types.js";
+import { useCandles, useIndicators, useQuote, useRegime } from "@/hooks/queries/index";
+import { calculateMAOverlays } from "@/lib/chart-indicators";
+import type { ChartTimeframe } from "@/stores/ui-store";
+import { CANDLE_LIMITS } from "./types";
 
 /**
  * Convert UTC timestamp to local time for chart display.

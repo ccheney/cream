@@ -1,7 +1,7 @@
 "use client";
 
 import type { ExecutionDetail } from "@/lib/api/types";
-import { ExecutionTimeline } from "./ExecutionTimeline.js";
+import { ExecutionTimeline } from "./ExecutionTimeline";
 
 export interface ExecutionSectionProps {
   execution: ExecutionDetail | null;

@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { useMemo } from "react";
 import type { EquityDataPoint } from "@/components/charts/EquityCurve";
 import type { EquityPoint } from "@/lib/api/types";
-import type { MonthlyReturn } from "./types.js";
+import type { MonthlyReturn } from "./types";
 
 /**
  * Transforms equity points into chart-compatible data format.

@@ -7,8 +7,8 @@
  */
 
 import { useEffect, useState } from "react";
-import type { ChartPageProps } from "./components/index.js";
-import { ChartContent } from "./components/index.js";
+import type { ChartPageProps } from "./components/index";
+import { ChartContent } from "./components/index";
 
 function PageSkeleton() {
   return (

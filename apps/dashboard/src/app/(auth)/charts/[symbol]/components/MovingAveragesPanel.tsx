@@ -6,10 +6,10 @@
  * Displays moving average values with color indicators and tooltips.
  */
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
-import { DEFAULT_MA_CONFIGS } from "@/lib/chart-indicators.js";
-import { formatPrice } from "./hooks.js";
-import type { MovingAveragesPanelProps } from "./types.js";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DEFAULT_MA_CONFIGS } from "@/lib/chart-indicators";
+import { formatPrice } from "./hooks";
+import type { MovingAveragesPanelProps } from "./types";
 
 interface MADisplayItemProps {
   label: string;

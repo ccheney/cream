@@ -2,8 +2,8 @@
 
 import { useCallback, useId, useState } from "react";
 
-import { CollapsibleContext } from "./context.js";
-import type { CollapsibleProps } from "./types.js";
+import { CollapsibleContext } from "./context";
+import type { CollapsibleProps } from "./types";
 
 /**
  * Collapsible - Container for expandable content.

@@ -2,7 +2,7 @@
  * Command Palette Utility Functions
  */
 
-import type { CommandItem } from "./types.js";
+import type { CommandItem } from "./types";
 
 /**
  * Simple fuzzy match - checks if query chars appear in order

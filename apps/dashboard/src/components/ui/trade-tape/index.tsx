@@ -12,15 +12,15 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useEffect, useMemo, useRef } from "react";
 
-import { useAutoScroll } from "../use-auto-scroll.js";
-import { EmptyState } from "./EmptyState.js";
-import { NewTradesButton } from "./NewTradesButton.js";
-import { StatisticsFooter } from "./StatisticsFooter.js";
-import { TradeRow } from "./TradeRow.js";
-import { TradeTapeHeader } from "./TradeTapeHeader.js";
-import type { TradeStatistics, TradeTapeProps } from "./types.js";
-import { DEFAULT_HIGHLIGHT_THRESHOLD, DEFAULT_MAX_TRADES, TRADE_ITEM_HEIGHT } from "./types.js";
-import { calculateTradesPerMinute, calculateVWAP } from "./utils.js";
+import { useAutoScroll } from "../use-auto-scroll";
+import { EmptyState } from "./EmptyState";
+import { NewTradesButton } from "./NewTradesButton";
+import { StatisticsFooter } from "./StatisticsFooter";
+import { TradeRow } from "./TradeRow";
+import { TradeTapeHeader } from "./TradeTapeHeader";
+import type { TradeStatistics, TradeTapeProps } from "./types";
+import { DEFAULT_HIGHLIGHT_THRESHOLD, DEFAULT_MAX_TRADES, TRADE_ITEM_HEIGHT } from "./types";
+import { calculateTradesPerMinute, calculateVWAP } from "./utils";
 
 /**
  * TradeTape displays real-time Time & Sales data.
@@ -186,12 +186,12 @@ export const TradeTape = memo(function TradeTape({
 });
 
 // Re-export types and utilities for public API
-export type { Trade, TradeSide, TradeStatistics, TradeTapeProps } from "./types.js";
+export type { Trade, TradeSide, TradeStatistics, TradeTapeProps } from "./types";
 export {
   calculateTradesPerMinute,
   calculateVWAP,
   classifyTradeSide,
   formatVolume,
-} from "./utils.js";
+} from "./utils";
 
 export default TradeTape;

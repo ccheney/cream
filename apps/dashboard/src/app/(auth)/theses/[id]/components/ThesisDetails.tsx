@@ -9,8 +9,8 @@
 
 import { format, formatDistanceToNow } from "date-fns";
 import { Clock, Target, TrendingDown, TrendingUp } from "lucide-react";
-import { formatPrice } from "./hooks.js";
-import type { MetricCardProps, SupportingEvidence, ThesisDetailsProps } from "./types.js";
+import { formatPrice } from "./hooks";
+import type { MetricCardProps, SupportingEvidence, ThesisDetailsProps } from "./types";
 
 export function ThesisDetails({ thesis, history }: ThesisDetailsProps) {
   return (

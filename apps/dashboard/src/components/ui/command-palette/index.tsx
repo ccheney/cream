@@ -12,11 +12,11 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
-import { CommandInput } from "./CommandInput.js";
-import { CommandList } from "./CommandList.js";
-import { CommandContext } from "./context.js";
-import type { CommandItem, CommandPaletteProps, GroupedCommands } from "./types.js";
-import { scoreMatch } from "./utils.js";
+import { CommandInput } from "./CommandInput";
+import { CommandList } from "./CommandList";
+import { CommandContext } from "./context";
+import type { CommandItem, CommandPaletteProps, GroupedCommands } from "./types";
+import { scoreMatch } from "./utils";
 
 /**
  * Command Palette - Quick navigation and actions.
@@ -288,6 +288,6 @@ function CommandPaletteContent({
   );
 }
 
-export type { CommandItem, CommandPaletteProps } from "./types.js";
-export { fuzzyMatch, scoreMatch } from "./utils.js";
+export type { CommandItem, CommandPaletteProps } from "./types";
+export { fuzzyMatch, scoreMatch } from "./utils";
 export default CommandPalette;

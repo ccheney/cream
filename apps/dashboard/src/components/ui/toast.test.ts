@@ -15,17 +15,17 @@ import type { Toast, ToastPosition } from "./toast";
 
 describe("Toast Module Exports", () => {
   it("exports ToastItem component", async () => {
-    const module = await import("./toast.js");
+    const module = await import("./toast");
     expect(typeof module.ToastItem).toBe("function");
   });
 
   it("exports ToastContainer component", async () => {
-    const module = await import("./toast.js");
+    const module = await import("./toast");
     expect(typeof module.ToastContainer).toBe("function");
   });
 
   it("exports useToast hook", async () => {
-    const module = await import("./toast.js");
+    const module = await import("./toast");
     expect(typeof module.useToast).toBe("function");
   });
 });
@@ -365,7 +365,7 @@ describe("Toast Dismiss", () => {
 
 describe("Toast Integration", () => {
   it("ToastContainer connects to store", async () => {
-    const storeModule = await import("../../stores/toast-store.js");
+    const storeModule = await import("../../stores/toast-store");
     expect(typeof storeModule.useToastStore).toBe("function");
   });
 

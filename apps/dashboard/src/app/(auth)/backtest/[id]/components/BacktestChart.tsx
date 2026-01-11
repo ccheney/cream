@@ -3,8 +3,8 @@
 import { format } from "date-fns";
 import { EquityCurve, type EquityDataPoint } from "@/components/charts/EquityCurve";
 import type { BacktestTrade } from "@/lib/api/types";
-import { formatCurrency, formatPct } from "./hooks.js";
-import type { MonthlyReturn } from "./types.js";
+import { formatCurrency, formatPct } from "./hooks";
+import type { MonthlyReturn } from "./types";
 
 interface EquityCurveSectionProps {
   data: EquityDataPoint[];

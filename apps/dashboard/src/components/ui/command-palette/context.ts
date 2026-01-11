@@ -5,7 +5,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { CommandContextValue } from "./types.js";
+import type { CommandContextValue } from "./types";
 
 export const CommandContext = createContext<CommandContextValue | null>(null);
 

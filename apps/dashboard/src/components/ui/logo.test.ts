@@ -126,27 +126,27 @@ describe("LogoVariant Type", () => {
 
 describe("SIZE_MAP", () => {
   it("maps xs to 24px", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.SIZE_MAP.xs).toBe(24);
   });
 
   it("maps sm to 32px", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.SIZE_MAP.sm).toBe(32);
   });
 
   it("maps md to 48px", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.SIZE_MAP.md).toBe(48);
   });
 
   it("maps lg to 64px", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.SIZE_MAP.lg).toBe(64);
   });
 
   it("maps xl to 96px", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.SIZE_MAP.xl).toBe(96);
   });
 });
@@ -157,22 +157,22 @@ describe("SIZE_MAP", () => {
 
 describe("Module Exports", () => {
   it("exports Logo component", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(typeof module.Logo).toBe("function");
   });
 
   it("exports LoadingLogo component", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(typeof module.LoadingLogo).toBe("function");
   });
 
   it("exports SIZE_MAP constant", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(typeof module.SIZE_MAP).toBe("object");
   });
 
   it("exports default as Logo", async () => {
-    const module = await import("./logo.js");
+    const module = await import("./logo");
     expect(module.default).toBe(module.Logo);
   });
 });

@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
+import type { EquityDataPoint } from "@/components/charts/EquityCurve";
 import type { OHLCVData } from "./chart-config";
 import {
   appendCandle,

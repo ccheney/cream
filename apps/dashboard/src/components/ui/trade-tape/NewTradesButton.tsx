@@ -8,7 +8,7 @@
 
 import { memo } from "react";
 
-import type { NewTradesButtonProps } from "./types.js";
+import type { NewTradesButtonProps } from "./types";
 
 export const NewTradesButton = memo(function NewTradesButton({
   count,

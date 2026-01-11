@@ -179,72 +179,72 @@ describe("ErrorHandlerOptions Type", () => {
 
 describe("Module Exports", () => {
   it("exports DEFAULT_ERROR_MESSAGES", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.DEFAULT_ERROR_MESSAGES).toBe("object");
   });
 
   it("exports STATUS_TO_ERROR_TYPE", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.STATUS_TO_ERROR_TYPE).toBe("object");
   });
 
   it("exports TRANSIENT_ERROR_TYPES", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES instanceof Set).toBe(true);
   });
 
   it("exports getErrorType function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.getErrorType).toBe("function");
   });
 
   it("exports isResponseError function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.isResponseError).toBe("function");
   });
 
   it("exports isTransientError function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.isTransientError).toBe("function");
   });
 
   it("exports isAuthError function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.isAuthError).toBe("function");
   });
 
   it("exports parseError function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.parseError).toBe("function");
   });
 
   it("exports formatError function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.formatError).toBe("function");
   });
 
   it("exports formatErrorForToast function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.formatErrorForToast).toBe("function");
   });
 
   it("exports ErrorHandler class", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.ErrorHandler).toBe("function");
   });
 
   it("exports createQueryErrorHandler function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.createQueryErrorHandler).toBe("function");
   });
 
   it("exports createRetryCondition function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.createRetryCondition).toBe("function");
   });
 
   it("exports errorHandler instance", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(typeof module.errorHandler).toBe("object");
   });
 });
@@ -255,47 +255,47 @@ describe("Module Exports", () => {
 
 describe("DEFAULT_ERROR_MESSAGES", () => {
   it("has network error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.network).toContain("connect");
   });
 
   it("has timeout error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.timeout).toContain("timed out");
   });
 
   it("has unauthorized error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.unauthorized).toContain("session");
   });
 
   it("has forbidden error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.forbidden).toContain("permission");
   });
 
   it("has not_found error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.not_found).toContain("not found");
   });
 
   it("has validation error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.validation).toContain("input");
   });
 
   it("has rate_limit error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.rate_limit).toContain("requests");
   });
 
   it("has server error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.server).toContain("wrong");
   });
 
   it("has unknown error message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.DEFAULT_ERROR_MESSAGES.unknown).toContain("unexpected");
   });
 });
@@ -306,52 +306,52 @@ describe("DEFAULT_ERROR_MESSAGES", () => {
 
 describe("STATUS_TO_ERROR_TYPE", () => {
   it("maps 400 to validation", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[400]).toBe("validation");
   });
 
   it("maps 401 to unauthorized", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[401]).toBe("unauthorized");
   });
 
   it("maps 403 to forbidden", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[403]).toBe("forbidden");
   });
 
   it("maps 404 to not_found", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[404]).toBe("not_found");
   });
 
   it("maps 408 to timeout", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[408]).toBe("timeout");
   });
 
   it("maps 429 to rate_limit", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[429]).toBe("rate_limit");
   });
 
   it("maps 500 to server", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[500]).toBe("server");
   });
 
   it("maps 502 to server", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[502]).toBe("server");
   });
 
   it("maps 503 to server", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[503]).toBe("server");
   });
 
   it("maps 504 to timeout", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.STATUS_TO_ERROR_TYPE[504]).toBe("timeout");
   });
 });
@@ -362,37 +362,37 @@ describe("STATUS_TO_ERROR_TYPE", () => {
 
 describe("TRANSIENT_ERROR_TYPES", () => {
   it("includes network", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("network")).toBe(true);
   });
 
   it("includes timeout", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("timeout")).toBe(true);
   });
 
   it("includes rate_limit", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("rate_limit")).toBe(true);
   });
 
   it("includes server", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("server")).toBe(true);
   });
 
   it("does not include unauthorized", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("unauthorized")).toBe(false);
   });
 
   it("does not include forbidden", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("forbidden")).toBe(false);
   });
 
   it("does not include validation", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.TRANSIENT_ERROR_TYPES.has("validation")).toBe(false);
   });
 });
@@ -403,32 +403,32 @@ describe("TRANSIENT_ERROR_TYPES", () => {
 
 describe("getErrorType", () => {
   it("returns unknown for null", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType(null)).toBe("unknown");
   });
 
   it("returns unknown for undefined", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType(undefined)).toBe("unknown");
   });
 
   it("returns unknown for plain Error", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType(new Error("test"))).toBe("unknown");
   });
 
   it("returns correct type for status 401", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType({ status: 401 })).toBe("unauthorized");
   });
 
   it("returns correct type for statusCode 500", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType({ statusCode: 500 })).toBe("server");
   });
 
   it("returns unknown for unrecognized status", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.getErrorType({ status: 999 })).toBe("unknown");
   });
 });
@@ -439,27 +439,27 @@ describe("getErrorType", () => {
 
 describe("isResponseError", () => {
   it("returns true for object with status", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isResponseError({ status: 404 })).toBe(true);
   });
 
   it("returns true for object with statusCode", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isResponseError({ statusCode: 500 })).toBe(true);
   });
 
   it("returns false for null", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isResponseError(null)).toBe(false);
   });
 
   it("returns false for plain Error", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isResponseError(new Error("test"))).toBe(false);
   });
 
   it("returns false for plain object", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isResponseError({ message: "error" })).toBe(false);
   });
 });
@@ -470,32 +470,32 @@ describe("isResponseError", () => {
 
 describe("isTransientError", () => {
   it("returns true for network error type", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isTransientError("network")).toBe(true);
   });
 
   it("returns true for timeout error type", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isTransientError("timeout")).toBe(true);
   });
 
   it("returns true for server error type", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isTransientError("server")).toBe(true);
   });
 
   it("returns false for unauthorized error type", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isTransientError("unauthorized")).toBe(false);
   });
 
   it("returns false for validation error type", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isTransientError("validation")).toBe(false);
   });
 
   it("works with ApiError object", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const error: ApiError = {
       type: "network",
       message: "Error",
@@ -512,17 +512,17 @@ describe("isTransientError", () => {
 
 describe("isAuthError", () => {
   it("returns true for unauthorized", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isAuthError("unauthorized")).toBe(true);
   });
 
   it("returns true for forbidden", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isAuthError("forbidden")).toBe(true);
   });
 
   it("returns false for other types", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.isAuthError("network")).toBe(false);
     expect(module.isAuthError("server")).toBe(false);
     expect(module.isAuthError("validation")).toBe(false);
@@ -535,7 +535,7 @@ describe("isAuthError", () => {
 
 describe("parseError", () => {
   it("returns ApiError structure", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const result = module.parseError(new Error("test"));
     expect(result.type).toBe("unknown");
     expect(result.message).toBeDefined();
@@ -544,14 +544,14 @@ describe("parseError", () => {
   });
 
   it("extracts status code from response error", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const result = module.parseError({ status: 404, message: "Not found" });
     expect(result.statusCode).toBe(404);
     expect(result.type).toBe("not_found");
   });
 
   it("uses custom messages when provided", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const result = module.parseError(
       { status: 500 },
       { messages: { server: "Custom server error" } }
@@ -560,7 +560,7 @@ describe("parseError", () => {
   });
 
   it("adds code prefix when provided", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const result = module.parseError({ status: 500 }, { codePrefix: "CREAM" });
     expect(result.code).toContain("CREAM");
   });
@@ -572,7 +572,7 @@ describe("parseError", () => {
 
 describe("formatError", () => {
   it("returns title and message", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const error: ApiError = {
       type: "network",
       message: "Connection failed",
@@ -585,7 +585,7 @@ describe("formatError", () => {
   });
 
   it("includes hint for some error types", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const error: ApiError = {
       type: "unauthorized",
       message: "Session expired",
@@ -597,7 +597,7 @@ describe("formatError", () => {
   });
 
   it("includes code when present", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const error: ApiError = {
       type: "server",
       message: "Error",
@@ -616,7 +616,7 @@ describe("formatError", () => {
 
 describe("formatErrorForToast", () => {
   it("returns title and message only", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const error: ApiError = {
       type: "network",
       message: "Error message",
@@ -636,19 +636,19 @@ describe("formatErrorForToast", () => {
 
 describe("ErrorHandler Class", () => {
   it("can be instantiated with no options", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = new module.ErrorHandler();
     expect(handler).toBeDefined();
   });
 
   it("can be instantiated with options", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = new module.ErrorHandler({ showToast: false });
     expect(handler).toBeDefined();
   });
 
   it("handle method returns ApiError", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = new module.ErrorHandler();
     const result = handler.handle(new Error("test"));
     expect(result.type).toBeDefined();
@@ -656,14 +656,14 @@ describe("ErrorHandler Class", () => {
   });
 
   it("handleSilent method returns ApiError", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = new module.ErrorHandler();
     const result = handler.handleSilent({ status: 500 });
     expect(result.type).toBe("server");
   });
 
   it("setToastFunction accepts function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = new module.ErrorHandler();
     handler.setToastFunction(() => {});
     // Should not throw
@@ -677,13 +677,13 @@ describe("ErrorHandler Class", () => {
 
 describe("createQueryErrorHandler", () => {
   it("returns a function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const handler = module.createQueryErrorHandler(() => {});
     expect(typeof handler).toBe("function");
   });
 
   it("handler can be called with error", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     let called = false;
     const handler = module.createQueryErrorHandler(() => {
       called = true;
@@ -699,32 +699,32 @@ describe("createQueryErrorHandler", () => {
 
 describe("createRetryCondition", () => {
   it("returns a function", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const condition = module.createRetryCondition();
     expect(typeof condition).toBe("function");
   });
 
   it("returns false when failureCount >= maxRetries", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const condition = module.createRetryCondition(3);
     expect(condition(3, { status: 500 })).toBe(false);
     expect(condition(4, { status: 500 })).toBe(false);
   });
 
   it("returns true for transient errors under max", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const condition = module.createRetryCondition(3);
     expect(condition(1, { status: 500 })).toBe(true);
   });
 
   it("returns false for non-transient errors", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const condition = module.createRetryCondition(3);
     expect(condition(1, { status: 401 })).toBe(false);
   });
 
   it("returns false for rate_limit errors", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     const condition = module.createRetryCondition(3);
     expect(condition(1, { status: 429 })).toBe(false);
   });
@@ -736,7 +736,7 @@ describe("createRetryCondition", () => {
 
 describe("errorHandler Instance", () => {
   it("is an ErrorHandler instance", async () => {
-    const module = await import("./error-handler.js");
+    const module = await import("./error-handler");
     expect(module.errorHandler.handle).toBeDefined();
     expect(module.errorHandler.handleSilent).toBeDefined();
   });

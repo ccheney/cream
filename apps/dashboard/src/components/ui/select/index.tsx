@@ -7,12 +7,12 @@
  */
 
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SelectContent } from "./SelectContent.js";
-import { SelectTrigger } from "./SelectTrigger.js";
-import { baseStyles } from "./styles.js";
-import type { SelectOption, SelectProps } from "./types.js";
+import { SelectContent } from "./SelectContent";
+import { SelectTrigger } from "./SelectTrigger";
+import { baseStyles } from "./styles";
+import type { SelectOption, SelectProps } from "./types";
 
-export type { SelectOption, SelectProps } from "./types.js";
+export type { SelectOption, SelectProps } from "./types";
 
 /**
  * Select component with search, multi-select, and grouped options.

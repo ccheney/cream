@@ -5,15 +5,15 @@
  */
 
 import type React from "react";
-import { CheckIcon } from "./icons.js";
+import { CheckIcon } from "./icons";
 import {
   checkboxStyles,
   optionDisabledStyles,
   optionHoverStyles,
   optionSelectedStyles,
   optionStyles,
-} from "./styles.js";
-import type { OptionItemProps } from "./types.js";
+} from "./styles";
+import type { OptionItemProps } from "./types";
 
 export function SelectItem({
   option,

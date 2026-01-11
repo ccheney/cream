@@ -97,17 +97,17 @@ describe("EmptyStateProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports EmptyState component", async () => {
-    const module = await import("./empty-state.js");
+    const module = await import("./empty-state");
     expect(typeof module.EmptyState).toBe("function");
   });
 
   it("exports default as EmptyState", async () => {
-    const module = await import("./empty-state.js");
+    const module = await import("./empty-state");
     expect(module.default).toBe(module.EmptyState);
   });
 
   it("exports preset empty states", async () => {
-    const module = await import("./empty-state.js");
+    const module = await import("./empty-state");
     expect(typeof module.NoPositionsEmptyState).toBe("function");
     expect(typeof module.NoDecisionsEmptyState).toBe("function");
     expect(typeof module.NoDataEmptyState).toBe("function");

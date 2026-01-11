@@ -1,5 +1,5 @@
-import { handleButtonHover, handleButtonReset, styles } from "./styles.js";
-import type { ChartErrorProps } from "./types.js";
+import { handleButtonHover, handleButtonReset, styles } from "./styles";
+import type { ChartErrorProps } from "./types";
 
 export function ChartError({
   error,

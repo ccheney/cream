@@ -1,12 +1,12 @@
 "use client";
 
-import { formatCurrency, formatPct } from "./hooks.js";
+import { formatCurrency, formatPct } from "./hooks";
 import type {
   BacktestMetricsGridProps,
   BenchmarkComparisonProps,
   BestWorstTradesProps,
   MetricCardProps,
-} from "./types.js";
+} from "./types";
 
 export function MetricCard({ label, value, valueColor }: MetricCardProps): React.ReactElement {
   return (

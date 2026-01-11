@@ -8,9 +8,9 @@
 
 import { memo, useCallback } from "react";
 
-import type { TradeItemProps } from "./types.js";
-import { SIDE_CONFIG } from "./types.js";
-import { formatPrice, formatSize, formatTimestamp, getExchangeName } from "./utils.js";
+import type { TradeItemProps } from "./types";
+import { SIDE_CONFIG } from "./types";
+import { formatPrice, formatSize, formatTimestamp, getExchangeName } from "./utils";
 
 export const TradeRow = memo(function TradeRow({
   trade,

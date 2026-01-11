@@ -4,7 +4,7 @@
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import type { DecisionDetail } from "@/lib/api/types";
-import { formatPrice, formatSize, formatStrategy, formatTimeHorizon } from "./utils.js";
+import { formatPrice, formatSize, formatStrategy, formatTimeHorizon } from "./utils";
 
 export interface DecisionDetailsProps {
   decision: DecisionDetail;

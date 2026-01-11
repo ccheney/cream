@@ -11,7 +11,7 @@ import type { Toast, ToastOptions, ToastPosition, ToastVariant } from "./toast-s
 
 // Reset store between tests
 beforeEach(async () => {
-  const module = await import("./toast-store.js");
+  const module = await import("./toast-store");
   module.useToastStore.getState().clearAll();
 });
 
@@ -139,7 +139,7 @@ describe("ToastOptions Type", () => {
 
 describe("Constants", () => {
   it("exports DEFAULT_DURATIONS", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(module.DEFAULT_DURATIONS.success).toBe(4000);
     expect(module.DEFAULT_DURATIONS.info).toBe(4000);
     expect(module.DEFAULT_DURATIONS.warning).toBe(6000);
@@ -147,12 +147,12 @@ describe("Constants", () => {
   });
 
   it("exports MAX_VISIBLE_TOASTS", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(module.MAX_VISIBLE_TOASTS).toBe(3);
   });
 
   it("exports EXIT_ANIMATION_DURATION", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(module.EXIT_ANIMATION_DURATION).toBe(200);
   });
 });
@@ -163,27 +163,27 @@ describe("Constants", () => {
 
 describe("Module Exports", () => {
   it("exports useToastStore", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.useToastStore).toBe("function");
   });
 
   it("exports useToast hook", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.useToast).toBe("function");
   });
 
   it("exports selectToasts selector", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.selectToasts).toBe("function");
   });
 
   it("exports selectPosition selector", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.selectPosition).toBe("function");
   });
 
   it("exports selectHasToasts selector", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.selectHasToasts).toBe("function");
   });
 });
@@ -194,19 +194,19 @@ describe("Module Exports", () => {
 
 describe("Store Initial State", () => {
   it("starts with empty toasts array", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const state = module.useToastStore.getState();
     expect(state.toasts).toEqual([]);
   });
 
   it("default position is bottom-right", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const state = module.useToastStore.getState();
     expect(state.position).toBe("bottom-right");
   });
 
   it("default maxVisible is 3", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const state = module.useToastStore.getState();
     expect(state.maxVisible).toBe(3);
   });
@@ -218,35 +218,35 @@ describe("Store Initial State", () => {
 
 describe("addToast", () => {
   it("adds a toast with generated ID", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const id = module.useToastStore.getState().addToast("success", "Test message");
     expect(id).toContain("toast-");
     expect(module.useToastStore.getState().toasts.length).toBe(1);
   });
 
   it("uses default duration for variant", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test message");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.duration).toBe(4000);
   });
 
   it("allows custom duration", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test message", { duration: 2000 });
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.duration).toBe(2000);
   });
 
   it("adds title when provided", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test message", { title: "Title" });
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.title).toBe("Title");
   });
 
   it("sets createdAt timestamp", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const before = Date.now();
     module.useToastStore.getState().addToast("success", "Test message");
     const after = Date.now();
@@ -262,7 +262,7 @@ describe("addToast", () => {
 
 describe("Queue Management", () => {
   it("maintains FIFO order", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     store.addToast("success", "First");
     store.addToast("info", "Second");
@@ -274,7 +274,7 @@ describe("Queue Management", () => {
   });
 
   it("limits to maxVisible toasts", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     store.addToast("success", "First");
     store.addToast("info", "Second");
@@ -289,7 +289,7 @@ describe("Queue Management", () => {
   });
 
   it("removes oldest when exceeding max", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     store.addToast("success", "1");
     store.addToast("success", "2");
@@ -310,7 +310,7 @@ describe("Queue Management", () => {
 
 describe("removeToast", () => {
   it("removes toast by ID", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const id = module.useToastStore.getState().addToast("success", "Test");
     expect(module.useToastStore.getState().toasts.length).toBe(1);
     module.useToastStore.getState().removeToast(id);
@@ -318,14 +318,14 @@ describe("removeToast", () => {
   });
 
   it("does nothing for non-existent ID", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test");
     module.useToastStore.getState().removeToast("non-existent");
     expect(module.useToastStore.getState().toasts.length).toBe(1);
   });
 
   it("removes correct toast from multiple", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     store.addToast("success", "First");
     const id = store.addToast("info", "Second");
@@ -344,7 +344,7 @@ describe("removeToast", () => {
 
 describe("startDismiss", () => {
   it("sets dismissing flag to true", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const id = module.useToastStore.getState().addToast("success", "Test");
     module.useToastStore.getState().startDismiss(id);
     const toast = module.useToastStore.getState().toasts[0]!;
@@ -352,7 +352,7 @@ describe("startDismiss", () => {
   });
 
   it("only affects targeted toast", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     const id1 = store.addToast("success", "First");
     store.addToast("info", "Second");
@@ -369,7 +369,7 @@ describe("startDismiss", () => {
 
 describe("clearAll", () => {
   it("removes all toasts", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     store.addToast("success", "First");
     store.addToast("info", "Second");
@@ -379,7 +379,7 @@ describe("clearAll", () => {
   });
 
   it("works on empty store", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().clearAll();
     expect(module.useToastStore.getState().toasts.length).toBe(0);
   });
@@ -391,13 +391,13 @@ describe("clearAll", () => {
 
 describe("setPosition", () => {
   it("changes position", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().setPosition("top-left");
     expect(module.useToastStore.getState().position).toBe("top-left");
   });
 
   it("accepts all position values", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const positions: ToastPosition[] = ["top-right", "top-left", "bottom-right", "bottom-left"];
     for (const pos of positions) {
       module.useToastStore.getState().setPosition(pos);
@@ -412,7 +412,7 @@ describe("setPosition", () => {
 
 describe("Convenience Methods", () => {
   it("success() creates success toast", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().success("Success message");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.variant).toBe("success");
@@ -421,7 +421,7 @@ describe("Convenience Methods", () => {
   });
 
   it("error() creates error toast", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().error("Error message");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.variant).toBe("error");
@@ -430,7 +430,7 @@ describe("Convenience Methods", () => {
   });
 
   it("warning() creates warning toast", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().warning("Warning message");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.variant).toBe("warning");
@@ -439,7 +439,7 @@ describe("Convenience Methods", () => {
   });
 
   it("info() creates info toast", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().info("Info message");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.variant).toBe("info");
@@ -448,7 +448,7 @@ describe("Convenience Methods", () => {
   });
 
   it("convenience methods accept options", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().success("Message", { title: "Title", duration: 1000 });
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.title).toBe("Title");
@@ -462,7 +462,7 @@ describe("Convenience Methods", () => {
 
 describe("useToast Hook", () => {
   it("exports useToast function", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     expect(typeof module.useToast).toBe("function");
   });
 
@@ -487,7 +487,7 @@ describe("useToast Hook", () => {
 
 describe("Selectors", () => {
   it("selectToasts returns toasts array", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test");
     const toasts = module.selectToasts(module.useToastStore.getState());
     expect(Array.isArray(toasts)).toBe(true);
@@ -495,7 +495,7 @@ describe("Selectors", () => {
   });
 
   it("selectPosition returns current position", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     // Set to a known value first
     module.useToastStore.getState().setPosition("top-right");
     const position = module.selectPosition(module.useToastStore.getState());
@@ -503,13 +503,13 @@ describe("Selectors", () => {
   });
 
   it("selectHasToasts returns false for empty", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const hasToasts = module.selectHasToasts(module.useToastStore.getState());
     expect(hasToasts).toBe(false);
   });
 
   it("selectHasToasts returns true when toasts exist", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test");
     const hasToasts = module.selectHasToasts(module.useToastStore.getState());
     expect(hasToasts).toBe(true);
@@ -522,21 +522,21 @@ describe("Selectors", () => {
 
 describe("Edge Cases", () => {
   it("handles empty message", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "");
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.message).toBe("");
   });
 
   it("handles zero duration (no auto-dismiss)", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     module.useToastStore.getState().addToast("success", "Test", { duration: 0 });
     const toast = module.useToastStore.getState().toasts[0]!;
     expect(toast!.duration).toBe(0);
   });
 
   it("handles very long message", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const longMessage = "A".repeat(1000);
     module.useToastStore.getState().addToast("success", longMessage);
     const toast = module.useToastStore.getState().toasts[0]!;
@@ -544,7 +544,7 @@ describe("Edge Cases", () => {
   });
 
   it("generates unique IDs", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     const store = module.useToastStore.getState();
     const ids = new Set<string>();
     for (let i = 0; i < 100; i++) {
@@ -562,14 +562,14 @@ describe("Edge Cases", () => {
 
 describe("Integration Patterns", () => {
   it("works with form submission pattern", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     // Simulate form submit success
     module.useToastStore.getState().success("Form submitted successfully");
     expect(module.useToastStore.getState().toasts[0]!.variant).toBe("success");
   });
 
   it("works with API error pattern", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     // Simulate API error
     module.useToastStore.getState().error("Failed to fetch data", { title: "API Error" });
     const toast = module.useToastStore.getState().toasts[0]!;
@@ -578,7 +578,7 @@ describe("Integration Patterns", () => {
   });
 
   it("works with warning notification pattern", async () => {
-    const module = await import("./toast-store.js");
+    const module = await import("./toast-store");
     // Simulate warning
     module.useToastStore.getState().warning("Your session expires in 5 minutes");
     expect(module.useToastStore.getState().toasts[0]!.variant).toBe("warning");

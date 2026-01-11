@@ -6,16 +6,16 @@
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { LoadingSpinner } from "./icons.js";
-import { SelectItem } from "./SelectItem.js";
+import { LoadingSpinner } from "./icons";
+import { SelectItem } from "./SelectItem";
 import {
   dropdownStyles,
   groupLabelStyles,
   loadingStyles,
   optionStyles,
   searchInputStyles,
-} from "./styles.js";
-import type { SelectOption } from "./types.js";
+} from "./styles";
+import type { SelectOption } from "./types";
 
 interface SelectContentProps {
   options: SelectOption[];

@@ -13,7 +13,7 @@ export type {
   ChartSkeletonProps,
   ChartWrapperProps,
   SkeletonVariant,
-} from "./chart-states/index.js";
+} from "./chart-states/index";
 export {
   ChartEmpty,
   ChartError,
@@ -24,4 +24,4 @@ export {
   NoDecisionsEmpty,
   NoPositionsEmpty,
   NoTradesEmpty,
-} from "./chart-states/index.js";
+} from "./chart-states/index";

@@ -21,7 +21,7 @@ import {
   ErrorState,
   ExecutionSection,
   LoadingState,
-} from "./components/index.js";
+} from "./components/index";
 
 export default function DecisionDetailPage(): React.ReactElement {
   const params = useParams();

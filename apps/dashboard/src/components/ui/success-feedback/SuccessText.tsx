@@ -5,9 +5,9 @@
  */
 
 import type React from "react";
-import { checkmarkKeyframes } from "./animations.js";
-import { Checkmark } from "./Checkmark.js";
-import type { SuccessTextProps } from "./types.js";
+import { checkmarkKeyframes } from "./animations";
+import { Checkmark } from "./Checkmark";
+import type { SuccessTextProps } from "./types";
 
 /**
  * Animated success text.

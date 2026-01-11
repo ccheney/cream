@@ -1,7 +1,7 @@
 "use client";
 
 import type { AgentOutput } from "@/lib/api/types";
-import { formatAgentName } from "./utils.js";
+import { formatAgentName } from "./utils";
 
 export interface AgentVoteCardProps {
   output: AgentOutput;

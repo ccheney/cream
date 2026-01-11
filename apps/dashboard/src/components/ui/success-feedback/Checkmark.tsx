@@ -5,8 +5,8 @@
  */
 
 import type React from "react";
-import { CHECKMARK_ANIMATION_DURATION, checkmarkKeyframes } from "./animations.js";
-import type { CheckmarkProps } from "./types.js";
+import { CHECKMARK_ANIMATION_DURATION, checkmarkKeyframes } from "./animations";
+import type { CheckmarkProps } from "./types";
 
 /**
  * Animated checkmark component.

@@ -2,8 +2,8 @@
 
 import { forwardRef, type MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
 
-import { useCollapsibleContext } from "./context.js";
-import { type CollapsibleContentProps, cn } from "./types.js";
+import { useCollapsibleContext } from "./context";
+import { type CollapsibleContentProps, cn } from "./types";
 
 /**
  * CollapsibleContent - Animated content that expands/collapses.

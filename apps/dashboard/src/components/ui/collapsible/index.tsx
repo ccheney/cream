@@ -11,10 +11,10 @@ export {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "./Accordion.js";
-export { Collapsible, Collapsible as default } from "./Collapsible.js";
-export { CollapsibleContent } from "./CollapsibleContent.js";
-export { CollapsibleTrigger } from "./CollapsibleTrigger.js";
+} from "./Accordion";
+export { Collapsible, Collapsible as default } from "./Collapsible";
+export { CollapsibleContent } from "./CollapsibleContent";
+export { CollapsibleTrigger } from "./CollapsibleTrigger";
 export type {
   AccordionContentProps,
   AccordionContextValue,
@@ -26,4 +26,4 @@ export type {
   CollapsibleContextValue,
   CollapsibleProps,
   CollapsibleTriggerProps,
-} from "./types.js";
+} from "./types";

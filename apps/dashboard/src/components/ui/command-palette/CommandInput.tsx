@@ -5,7 +5,7 @@
 "use client";
 
 import type React from "react";
-import { ClearIcon, SearchIcon } from "./icons.js";
+import { ClearIcon, SearchIcon } from "./icons";
 
 export interface CommandInputProps {
   inputRef: React.RefObject<HTMLInputElement | null>;

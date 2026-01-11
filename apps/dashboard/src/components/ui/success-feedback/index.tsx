@@ -12,13 +12,13 @@ export {
   checkmarkKeyframes,
   ERROR_STATE_DURATION,
   SUCCESS_STATE_DURATION,
-} from "./animations.js";
+} from "./animations";
 // Components
-export { Checkmark } from "./Checkmark.js";
-export { InlineSuccess } from "./InlineSuccess.js";
+export { Checkmark } from "./Checkmark";
+export { InlineSuccess } from "./InlineSuccess";
 // Default export
-export { SuccessButton, SuccessButton as default } from "./SuccessButton.js";
-export { SuccessText } from "./SuccessText.js";
+export { SuccessButton, SuccessButton as default } from "./SuccessButton";
+export { SuccessText } from "./SuccessText";
 // Types
 export type {
   ButtonState,
@@ -28,6 +28,6 @@ export type {
   SuccessTextProps,
   UseAsyncButtonOptions,
   UseAsyncButtonReturn,
-} from "./types.js";
+} from "./types";
 // Hooks
-export { useAsyncButton } from "./useAsyncButton.js";
+export { useAsyncButton } from "./useAsyncButton";

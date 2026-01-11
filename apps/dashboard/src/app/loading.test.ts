@@ -14,12 +14,12 @@ import { describe, expect, it } from "bun:test";
 
 describe("Loading Module", () => {
   it("exports default Loading component", async () => {
-    const module = await import("./loading.js");
+    const module = await import("./loading");
     expect(typeof module.default).toBe("function");
   });
 
   it("Loading component is a function", async () => {
-    const module = await import("./loading.js");
+    const module = await import("./loading");
     expect(module.default.length).toBe(0); // No required props
   });
 });
@@ -154,7 +154,7 @@ describe("Loading Integration", () => {
 
   it("imports LoadingLogo component", async () => {
     // Verify Logo module is accessible
-    const logoModule = await import("../components/ui/logo.js");
+    const logoModule = await import("../components/ui/logo");
     expect(typeof logoModule.LoadingLogo).toBe("function");
   });
 

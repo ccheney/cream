@@ -1,5 +1,5 @@
-import { handleButtonHover, handleButtonReset, styles } from "./styles.js";
-import type { ChartEmptyProps } from "./types.js";
+import { handleButtonHover, handleButtonReset, styles } from "./styles";
+import type { ChartEmptyProps } from "./types";
 
 export function ChartEmpty({
   icon = "📊",

@@ -7,7 +7,7 @@
  */
 
 import { Button } from "@/components/ui/button";
-import type { InvalidateModalProps, ModalProps, RealizeModalProps } from "./types.js";
+import type { InvalidateModalProps, ModalProps, RealizeModalProps } from "./types";
 
 export function Modal({ title, children, onClose }: ModalProps) {
   return (

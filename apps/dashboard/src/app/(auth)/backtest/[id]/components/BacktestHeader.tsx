@@ -4,13 +4,13 @@ import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { BacktestProgressBar } from "@/components/backtest";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "./hooks.js";
+import { formatCurrency } from "./hooks";
 import type {
   BacktestHeaderProps,
   BacktestParametersProps,
   BacktestProgressSectionProps,
   BacktestStatus,
-} from "./types.js";
+} from "./types";
 
 function getStatusClasses(status: BacktestStatus): string {
   switch (status) {

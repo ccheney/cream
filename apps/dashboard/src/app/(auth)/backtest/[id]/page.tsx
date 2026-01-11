@@ -22,7 +22,7 @@ import {
   TradeLog,
   useEquityChartData,
   useMonthlyReturns,
-} from "./components/index.js";
+} from "./components/index";
 
 function LoadingSkeleton(): React.ReactElement {
   return (

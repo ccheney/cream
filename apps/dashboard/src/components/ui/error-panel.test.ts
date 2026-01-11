@@ -156,27 +156,27 @@ describe("ErrorAction Type", () => {
 
 describe("Module Exports", () => {
   it("exports ErrorPanel component", async () => {
-    const module = await import("./error-panel.js");
+    const module = await import("./error-panel");
     expect(typeof module.ErrorPanel).toBe("function");
   });
 
   it("exports ErrorInline component", async () => {
-    const module = await import("./error-panel.js");
+    const module = await import("./error-panel");
     expect(typeof module.ErrorInline).toBe("function");
   });
 
   it("exports ApiErrorPanel component", async () => {
-    const module = await import("./error-panel.js");
+    const module = await import("./error-panel");
     expect(typeof module.ApiErrorPanel).toBe("function");
   });
 
   it("exports ConnectionErrorPanel component", async () => {
-    const module = await import("./error-panel.js");
+    const module = await import("./error-panel");
     expect(typeof module.ConnectionErrorPanel).toBe("function");
   });
 
   it("exports default as ErrorPanel", async () => {
-    const module = await import("./error-panel.js");
+    const module = await import("./error-panel");
     expect(module.default).toBe(module.ErrorPanel);
   });
 });

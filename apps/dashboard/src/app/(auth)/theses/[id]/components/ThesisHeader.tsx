@@ -9,8 +9,8 @@
 import { ArrowLeft, CheckCircle, TrendingDown, TrendingUp, XCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { formatPct, formatPrice } from "./hooks.js";
-import type { ThesisHeaderProps } from "./types.js";
+import { formatPct, formatPrice } from "./hooks";
+import type { ThesisHeaderProps } from "./types";
 
 export function ThesisHeader({ thesis, onRealize, onInvalidate }: ThesisHeaderProps) {
   const DirectionIcon = thesis.direction === "BULLISH" ? TrendingUp : TrendingDown;

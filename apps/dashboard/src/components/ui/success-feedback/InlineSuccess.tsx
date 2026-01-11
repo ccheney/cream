@@ -6,9 +6,9 @@
 
 import type React from "react";
 import { useEffect } from "react";
-import { checkmarkKeyframes, SUCCESS_STATE_DURATION } from "./animations.js";
-import { Checkmark } from "./Checkmark.js";
-import type { InlineSuccessProps } from "./types.js";
+import { checkmarkKeyframes, SUCCESS_STATE_DURATION } from "./animations";
+import { Checkmark } from "./Checkmark";
+import type { InlineSuccessProps } from "./types";
 
 /**
  * Inline success indicator for forms.

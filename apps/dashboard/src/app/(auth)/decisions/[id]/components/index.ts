@@ -4,17 +4,17 @@
  * Re-exports all components for the decision detail page.
  */
 
-export { AgentVoteCard, type AgentVoteCardProps } from "./AgentVoteCard.js";
-export { AgentVotesGrid, type AgentVotesGridProps } from "./AgentVotesGrid.js";
-export { BackButton, type BackButtonProps } from "./BackButton.js";
-export { CitationCard, type CitationCardProps } from "./CitationCard.js";
-export { CitationsSection, type CitationsSectionProps } from "./CitationsSection.js";
-export { DecisionDetails, type DecisionDetailsProps } from "./DecisionDetails.js";
-export { DecisionHeader, type DecisionHeaderProps } from "./DecisionHeader.js";
-export { ErrorState, type ErrorStateProps } from "./ErrorState.js";
-export { ExecutionSection, type ExecutionSectionProps } from "./ExecutionSection.js";
-export { ExecutionTimeline, type ExecutionTimelineProps } from "./ExecutionTimeline.js";
-export { LoadingState } from "./LoadingState.js";
+export { AgentVoteCard, type AgentVoteCardProps } from "./AgentVoteCard";
+export { AgentVotesGrid, type AgentVotesGridProps } from "./AgentVotesGrid";
+export { BackButton, type BackButtonProps } from "./BackButton";
+export { CitationCard, type CitationCardProps } from "./CitationCard";
+export { CitationsSection, type CitationsSectionProps } from "./CitationsSection";
+export { DecisionDetails, type DecisionDetailsProps } from "./DecisionDetails";
+export { DecisionHeader, type DecisionHeaderProps } from "./DecisionHeader";
+export { ErrorState, type ErrorStateProps } from "./ErrorState";
+export { ExecutionSection, type ExecutionSectionProps } from "./ExecutionSection";
+export { ExecutionTimeline, type ExecutionTimelineProps } from "./ExecutionTimeline";
+export { LoadingState } from "./LoadingState";
 export {
   actionColors,
   formatAgentName,
@@ -24,4 +24,4 @@ export {
   formatStrategy,
   formatTimeHorizon,
   statusColors,
-} from "./utils.js";
+} from "./utils";

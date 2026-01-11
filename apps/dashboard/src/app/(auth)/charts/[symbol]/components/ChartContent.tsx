@@ -7,17 +7,17 @@
  * Main chart content including quote header, candlestick chart, and indicators.
  */
 
-import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader.js";
-import { StreamPanel } from "@/components/charts/StreamPanel.js";
-import { TradingViewChart } from "@/components/charts/TradingViewChart.js";
-import { getTickerName } from "@/lib/ticker-names.js";
-import { useChartPreferences } from "@/stores/ui-store.js";
-import { ChartControls } from "./ChartControls.js";
-import { ChartHeader } from "./ChartHeader.js";
-import { formatPrice, useChartData, useMAToggle, useStreamToggle } from "./hooks.js";
-import { IndicatorCard } from "./IndicatorCard.js";
-import { MovingAveragesPanel } from "./MovingAveragesPanel.js";
-import type { ChartContentProps, IndicatorStatus } from "./types.js";
+import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
+import { StreamPanel } from "@/components/charts/StreamPanel";
+import { TradingViewChart } from "@/components/charts/TradingViewChart";
+import { getTickerName } from "@/lib/ticker-names";
+import { useChartPreferences } from "@/stores/ui-store";
+import { ChartControls } from "./ChartControls";
+import { ChartHeader } from "./ChartHeader";
+import { formatPrice, useChartData, useMAToggle, useStreamToggle } from "./hooks";
+import { IndicatorCard } from "./IndicatorCard";
+import { MovingAveragesPanel } from "./MovingAveragesPanel";
+import type { ChartContentProps, IndicatorStatus } from "./types";
 
 function QuoteHeaderSkeleton() {
   return (

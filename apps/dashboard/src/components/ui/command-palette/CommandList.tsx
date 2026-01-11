@@ -5,9 +5,9 @@
 "use client";
 
 import type React from "react";
-import { CommandItemRow } from "./CommandItem.js";
-import { LoadingSpinner } from "./icons.js";
-import type { CommandItem, GroupedCommands } from "./types.js";
+import { CommandItemRow } from "./CommandItem";
+import { LoadingSpinner } from "./icons";
+import type { CommandItem, GroupedCommands } from "./types";
 
 export interface CommandListProps {
   listRef: React.RefObject<HTMLDivElement | null>;

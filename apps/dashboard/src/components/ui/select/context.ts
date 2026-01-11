@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext } from "react";
-import type { SelectContextValue } from "./types.js";
+import type { SelectContextValue } from "./types";
 
 export const SelectContext = createContext<SelectContextValue | null>(null);
 

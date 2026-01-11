@@ -5,7 +5,7 @@
 "use client";
 
 import type React from "react";
-import type { CommandItem } from "./types.js";
+import type { CommandItem } from "./types";
 
 export interface CommandItemRowProps {
   command: CommandItem;

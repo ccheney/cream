@@ -1,7 +1,7 @@
 "use client";
 
 import type { Citation } from "@/lib/api/types";
-import { CitationCard } from "./CitationCard.js";
+import { CitationCard } from "./CitationCard";
 
 export interface CitationsSectionProps {
   citations: Citation[];

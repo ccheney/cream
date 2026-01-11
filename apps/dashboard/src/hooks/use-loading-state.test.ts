@@ -254,27 +254,27 @@ describe("withLoading", () => {
 
 describe("Module Exports", () => {
   it("exports useLoadingState hook", async () => {
-    const module = await import("./use-loading-state.js");
+    const module = await import("./use-loading-state");
     expect(typeof module.useLoadingState).toBe("function");
   });
 
   it("exports useMultiLoadingState hook", async () => {
-    const module = await import("./use-loading-state.js");
+    const module = await import("./use-loading-state");
     expect(typeof module.useMultiLoadingState).toBe("function");
   });
 
   it("exports useGlobalLoadingState hook", async () => {
-    const module = await import("./use-loading-state.js");
+    const module = await import("./use-loading-state");
     expect(typeof module.useGlobalLoadingState).toBe("function");
   });
 
   it("exports withLoading helper", async () => {
-    const module = await import("./use-loading-state.js");
+    const module = await import("./use-loading-state");
     expect(typeof module.withLoading).toBe("function");
   });
 
   it("exports default as useLoadingState", async () => {
-    const module = await import("./use-loading-state.js");
+    const module = await import("./use-loading-state");
     expect(module.default).toBe(module.useLoadingState);
   });
 });

@@ -129,72 +129,72 @@ describe("FormDescriptionProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports Form (FormProvider)", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.Form).toBe("function");
   });
 
   it("exports FormField", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormField).toBe("function");
   });
 
   it("exports FormItem", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormItem).toBe("object"); // forwardRef
   });
 
   it("exports FormLabel", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormLabel).toBe("object"); // forwardRef
   });
 
   it("exports FormControl", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormControl).toBe("function");
   });
 
   it("exports FormDescription", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormDescription).toBe("object"); // forwardRef
   });
 
   it("exports FormMessage", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormMessage).toBe("object"); // forwardRef
   });
 
   it("exports FormError (standalone)", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.FormError).toBe("function");
   });
 
   it("exports useFormField hook", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.useFormField).toBe("function");
   });
 
   it("FormItem has displayName", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(module.FormItem.displayName).toBe("FormItem");
   });
 
   it("FormLabel has displayName", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(module.FormLabel.displayName).toBe("FormLabel");
   });
 
   it("FormDescription has displayName", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(module.FormDescription.displayName).toBe("FormDescription");
   });
 
   it("FormMessage has displayName", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(module.FormMessage.displayName).toBe("FormMessage");
   });
 
   it("exports default object with all components", async () => {
-    const module = await import("./form.js");
+    const module = await import("./form");
     expect(typeof module.default).toBe("object");
     expect(module.default.Form).toBeDefined();
     expect(module.default.FormField).toBeDefined();

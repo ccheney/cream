@@ -97,22 +97,22 @@ describe("SpinnerSize Type", () => {
 
 describe("SIZE_MAP", () => {
   it("maps xs to 0.75em", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_MAP.xs).toBe("0.75em");
   });
 
   it("maps sm to 1em", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_MAP.sm).toBe("1em");
   });
 
   it("maps md to 1.5em", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_MAP.md).toBe("1.5em");
   });
 
   it("maps lg to 2em", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_MAP.lg).toBe("2em");
   });
 });
@@ -123,22 +123,22 @@ describe("SIZE_MAP", () => {
 
 describe("SIZE_PX_MAP", () => {
   it("maps xs to 12px", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_PX_MAP.xs).toBe(12);
   });
 
   it("maps sm to 16px", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_PX_MAP.sm).toBe(16);
   });
 
   it("maps md to 24px", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_PX_MAP.md).toBe(24);
   });
 
   it("maps lg to 32px", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.SIZE_PX_MAP.lg).toBe(32);
   });
 });
@@ -149,42 +149,42 @@ describe("SIZE_PX_MAP", () => {
 
 describe("Module Exports", () => {
   it("exports Spinner component", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.Spinner).toBe("function");
   });
 
   it("exports SpinnerDots component", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.SpinnerDots).toBe("function");
   });
 
   it("exports SpinnerBar component", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.SpinnerBar).toBe("function");
   });
 
   it("exports ButtonLoading component", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.ButtonLoading).toBe("function");
   });
 
   it("exports SpinnerOverlay component", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.SpinnerOverlay).toBe("function");
   });
 
   it("exports SIZE_MAP constant", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.SIZE_MAP).toBe("object");
   });
 
   it("exports SIZE_PX_MAP constant", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(typeof module.SIZE_PX_MAP).toBe("object");
   });
 
   it("exports default as Spinner", async () => {
-    const module = await import("./spinner.js");
+    const module = await import("./spinner");
     expect(module.default).toBe(module.Spinner);
   });
 });

@@ -244,20 +244,20 @@ describe("determineFlashDirection", () => {
 
 describe("PriceTicker exports", () => {
   it("exports PriceTicker component", async () => {
-    const module = await import("./price-ticker.js");
+    const module = await import("./price-ticker");
     expect(module.PriceTicker).toBeDefined();
     expect(module.PriceTicker).not.toBeNull();
   });
 
   it("exports default as same as named export", async () => {
-    const module = await import("./price-ticker.js");
+    const module = await import("./price-ticker");
     expect(module.default).toBe(module.PriceTicker);
   });
 });
 
 describe("usePriceFlash exports", () => {
   it("exports usePriceFlash hook", async () => {
-    const module = await import("./use-price-flash.js");
+    const module = await import("./use-price-flash");
     expect(module.usePriceFlash).toBeDefined();
     expect(typeof module.usePriceFlash).toBe("function");
   });
@@ -265,7 +265,7 @@ describe("usePriceFlash exports", () => {
 
 describe("useStaleData exports", () => {
   it("exports useStaleData hook", async () => {
-    const module = await import("./use-stale-data.js");
+    const module = await import("./use-stale-data");
     expect(module.useStaleData).toBeDefined();
     expect(typeof module.useStaleData).toBe("function");
   });

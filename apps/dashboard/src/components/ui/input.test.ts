@@ -98,17 +98,17 @@ describe("InputProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports Input component", async () => {
-    const module = await import("./input.js");
+    const module = await import("./input");
     expect(typeof module.Input).toBe("object"); // forwardRef returns object
   });
 
   it("exports default as Input", async () => {
-    const module = await import("./input.js");
+    const module = await import("./input");
     expect(module.default).toBe(module.Input);
   });
 
   it("Input has displayName", async () => {
-    const module = await import("./input.js");
+    const module = await import("./input");
     expect(module.Input.displayName).toBe("Input");
   });
 });

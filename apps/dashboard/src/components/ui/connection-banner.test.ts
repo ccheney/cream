@@ -210,22 +210,22 @@ describe("Callbacks", () => {
 
 describe("Module Exports", () => {
   it("exports ConnectionBanner component", async () => {
-    const module = await import("./connection-banner.js");
+    const module = await import("./connection-banner");
     expect(typeof module.ConnectionBanner).toBe("function");
   });
 
   it("exports formatRetryTime function", async () => {
-    const module = await import("./connection-banner.js");
+    const module = await import("./connection-banner");
     expect(typeof module.formatRetryTime).toBe("function");
   });
 
   it("exports getStatusMessage function", async () => {
-    const module = await import("./connection-banner.js");
+    const module = await import("./connection-banner");
     expect(typeof module.getStatusMessage).toBe("function");
   });
 
   it("exports default as ConnectionBanner", async () => {
-    const module = await import("./connection-banner.js");
+    const module = await import("./connection-banner");
     expect(module.default).toBe(module.ConnectionBanner);
   });
 });

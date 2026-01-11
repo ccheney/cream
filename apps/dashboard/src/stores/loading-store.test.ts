@@ -451,27 +451,27 @@ describe("Edge Cases", () => {
 
 describe("Module Exports", () => {
   it("exports useLoadingStore", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(typeof module.useLoadingStore).toBe("function");
   });
 
   it("exports LOADING_KEYS", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(typeof module.LOADING_KEYS).toBe("object");
   });
 
   it("exports createLoadingKey", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(typeof module.createLoadingKey).toBe("function");
   });
 
   it("exports parseLoadingKey", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(typeof module.parseLoadingKey).toBe("function");
   });
 
   it("exports selectors", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(typeof module.selectIsLoading).toBe("function");
     expect(typeof module.selectIsAnyLoading).toBe("function");
     expect(typeof module.selectIsLoadingByPrefix).toBe("function");
@@ -479,7 +479,7 @@ describe("Module Exports", () => {
   });
 
   it("exports default as useLoadingStore", async () => {
-    const module = await import("./loading-store.js");
+    const module = await import("./loading-store");
     expect(module.default).toBe(module.useLoadingStore);
   });
 });

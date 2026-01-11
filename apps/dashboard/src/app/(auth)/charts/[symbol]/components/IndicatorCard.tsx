@@ -6,8 +6,8 @@
  * Displays a single technical indicator with loading state and status coloring.
  */
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
-import type { IndicatorCardProps, IndicatorStatus } from "./types.js";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { IndicatorCardProps, IndicatorStatus } from "./types";
 
 const STATUS_COLORS: Record<IndicatorStatus, string> = {
   overbought: "text-red-500",

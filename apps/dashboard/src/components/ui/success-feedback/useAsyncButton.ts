@@ -5,8 +5,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ERROR_STATE_DURATION, SUCCESS_STATE_DURATION } from "./animations.js";
-import type { ButtonState, UseAsyncButtonOptions, UseAsyncButtonReturn } from "./types.js";
+import { ERROR_STATE_DURATION, SUCCESS_STATE_DURATION } from "./animations";
+import type { ButtonState, UseAsyncButtonOptions, UseAsyncButtonReturn } from "./types";
 
 /**
  * Hook for managing async button state.

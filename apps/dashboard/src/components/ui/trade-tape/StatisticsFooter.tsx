@@ -8,8 +8,8 @@
 
 import { memo } from "react";
 
-import type { StatisticsFooterProps } from "./types.js";
-import { formatVolume } from "./utils.js";
+import type { StatisticsFooterProps } from "./types";
+import { formatVolume } from "./utils";
 
 export const StatisticsFooter = memo(function StatisticsFooter({
   stats,

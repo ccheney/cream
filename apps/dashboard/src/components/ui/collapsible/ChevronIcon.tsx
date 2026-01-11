@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "./types.js";
+import { cn } from "./types";
 
 interface ChevronIconProps {
   open: boolean;

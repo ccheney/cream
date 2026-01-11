@@ -1,5 +1,5 @@
-import { shimmerKeyframes, styles } from "./styles.js";
-import type { ChartSkeletonProps } from "./types.js";
+import { shimmerKeyframes, styles } from "./styles";
+import type { ChartSkeletonProps } from "./types";
 
 function Shimmer(): React.ReactElement {
   return (

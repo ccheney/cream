@@ -4,8 +4,8 @@
  * Utility functions for trade classification, formatting, and statistics.
  */
 
-import type { Trade, TradeSide } from "./types.js";
-import { BUY_CONDITIONS, EXCHANGE_NAMES, SELL_CONDITIONS } from "./types.js";
+import type { Trade, TradeSide } from "./types";
+import { BUY_CONDITIONS, EXCHANGE_NAMES, SELL_CONDITIONS } from "./types";
 
 /**
  * Classify trade side from conditions.

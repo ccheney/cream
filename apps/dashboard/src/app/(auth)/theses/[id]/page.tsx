@@ -22,7 +22,7 @@ import {
   ThesisHeader,
   useThesisPageData,
   useThesisPageState,
-} from "./components/index.js";
+} from "./components/index";
 
 export default function ThesisDetailPage() {
   const { id, thesis, thesisLoading, history, invalidateThesis, realizeThesis } =

@@ -5,14 +5,14 @@
  */
 
 import type React from "react";
-import { ChevronIcon } from "./icons.js";
+import { ChevronIcon } from "./icons";
 import {
   disabledStyles,
   errorStyles,
   placeholderStyles,
   triggerOpenStyles,
   triggerStyles,
-} from "./styles.js";
+} from "./styles";
 
 interface SelectTriggerProps {
   displayValue: string | null;

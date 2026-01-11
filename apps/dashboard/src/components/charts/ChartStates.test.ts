@@ -157,27 +157,27 @@ describe("ChartWrapperProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports ChartSkeleton component", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(typeof module.ChartSkeleton).toBe("function");
   });
 
   it("exports ChartError component", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(typeof module.ChartError).toBe("function");
   });
 
   it("exports ChartEmpty component", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(typeof module.ChartEmpty).toBe("function");
   });
 
   it("exports ChartWrapper component", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(typeof module.ChartWrapper).toBe("function");
   });
 
   it("exports preset empty states", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(typeof module.NoPositionsEmpty).toBe("function");
     expect(typeof module.NoDecisionsEmpty).toBe("function");
     expect(typeof module.NoTradesEmpty).toBe("function");
@@ -185,7 +185,7 @@ describe("Module Exports", () => {
   });
 
   it("exports default as ChartWrapper", async () => {
-    const module = await import("./ChartStates.js");
+    const module = await import("./ChartStates");
     expect(module.default).toBe(module.ChartWrapper);
   });
 });

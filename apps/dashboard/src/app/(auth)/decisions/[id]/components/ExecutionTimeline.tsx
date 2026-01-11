@@ -3,7 +3,7 @@
 
 import { format } from "date-fns";
 import type { ExecutionDetail } from "@/lib/api/types";
-import { formatPrice } from "./utils.js";
+import { formatPrice } from "./utils";
 
 export interface ExecutionTimelineProps {
   execution: ExecutionDetail;

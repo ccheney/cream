@@ -419,32 +419,32 @@ describe("Edge Cases", () => {
 
 describe("Module Exports", () => {
   it("exports calculateBackoff function", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(typeof module.calculateBackoff).toBe("function");
   });
 
   it("exports getBackoffSequence function", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(typeof module.getBackoffSequence).toBe("function");
   });
 
   it("exports DEFAULT_OPTIONS", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(typeof module.DEFAULT_OPTIONS).toBe("object");
   });
 
   it("exports ConnectionMonitor class", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(typeof module.ConnectionMonitor).toBe("function");
   });
 
   it("exports createConnectionMonitor factory", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(typeof module.createConnectionMonitor).toBe("function");
   });
 
   it("exports default as ConnectionMonitor", async () => {
-    const module = await import("./connection-monitor.js");
+    const module = await import("./connection-monitor");
     expect(module.default).toBe(module.ConnectionMonitor);
   });
 });

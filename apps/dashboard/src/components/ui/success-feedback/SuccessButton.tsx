@@ -6,10 +6,10 @@
 
 import type React from "react";
 import { useEffect, useRef } from "react";
-import { Spinner } from "../spinner.js";
-import { checkmarkKeyframes, ERROR_STATE_DURATION, SUCCESS_STATE_DURATION } from "./animations.js";
-import { Checkmark } from "./Checkmark.js";
-import type { SuccessButtonProps } from "./types.js";
+import { Spinner } from "../spinner";
+import { checkmarkKeyframes, ERROR_STATE_DURATION, SUCCESS_STATE_DURATION } from "./animations";
+import { Checkmark } from "./Checkmark";
+import type { SuccessButtonProps } from "./types";
 
 /**
  * Button with loading and success state feedback.

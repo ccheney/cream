@@ -8,9 +8,9 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { StreamToggleButton } from "@/components/charts/StreamPanel.js";
-import type { ChartHeaderProps } from "./types.js";
-import { TIMEFRAME_OPTIONS } from "./types.js";
+import { StreamToggleButton } from "@/components/charts/StreamPanel";
+import type { ChartHeaderProps } from "./types";
+import { TIMEFRAME_OPTIONS } from "./types";
 
 export function ChartHeader({
   symbol,

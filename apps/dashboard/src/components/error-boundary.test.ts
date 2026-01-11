@@ -144,22 +144,22 @@ describe("ErrorFallbackProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports ErrorBoundary class", async () => {
-    const module = await import("./error-boundary.js");
+    const module = await import("./error-boundary");
     expect(typeof module.ErrorBoundary).toBe("function");
   });
 
   it("exports DefaultErrorFallback component", async () => {
-    const module = await import("./error-boundary.js");
+    const module = await import("./error-boundary");
     expect(typeof module.DefaultErrorFallback).toBe("function");
   });
 
   it("exports useErrorBoundary hook", async () => {
-    const module = await import("./error-boundary.js");
+    const module = await import("./error-boundary");
     expect(typeof module.useErrorBoundary).toBe("function");
   });
 
   it("exports default as ErrorBoundary", async () => {
-    const module = await import("./error-boundary.js");
+    const module = await import("./error-boundary");
     expect(module.default).toBe(module.ErrorBoundary);
   });
 });

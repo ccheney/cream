@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-import type { AccordionContextValue, CollapsibleContextValue } from "./types.js";
+import type { AccordionContextValue, CollapsibleContextValue } from "./types";
 
 // ============================================
 // Collapsible Context

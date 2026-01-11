@@ -1,8 +1,8 @@
 "use client";
 
 import type { DecisionDetail } from "@/lib/api/types";
-import { BackButton } from "./BackButton.js";
-import { actionColors, statusColors } from "./utils.js";
+import { BackButton } from "./BackButton";
+import { actionColors, statusColors } from "./utils";
 
 export interface DecisionHeaderProps {
   decision: DecisionDetail;

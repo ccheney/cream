@@ -176,23 +176,23 @@ describe("ButtonProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports Button component", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     expect(typeof module.Button).toBe("object"); // forwardRef returns object
   });
 
   it("exports IconButton component", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     expect(typeof module.IconButton).toBe("object"); // forwardRef returns object
   });
 
   it("exports ButtonState type re-export", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     // Type is re-exported, verified by TypeScript compilation
     expect(module).toBeDefined();
   });
 
   it("exports default as Button", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     expect(module.default).toBe(module.Button);
   });
 });
@@ -352,12 +352,12 @@ describe("Button State Machine", () => {
   });
 
   it("success duration is 2000ms", async () => {
-    const module = await import("./success-feedback/index.js");
+    const module = await import("./success-feedback/index");
     expect(module.SUCCESS_STATE_DURATION).toBe(2000);
   });
 
   it("error duration is 3000ms", async () => {
-    const module = await import("./success-feedback/index.js");
+    const module = await import("./success-feedback/index");
     expect(module.ERROR_STATE_DURATION).toBe(3000);
   });
 });
@@ -609,12 +609,12 @@ describe("IconButton", () => {
 
 describe("forwardRef", () => {
   it("Button has displayName", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     expect(module.Button.displayName).toBe("Button");
   });
 
   it("IconButton has displayName", async () => {
-    const module = await import("./button.js");
+    const module = await import("./button");
     expect(module.IconButton.displayName).toBe("IconButton");
   });
 

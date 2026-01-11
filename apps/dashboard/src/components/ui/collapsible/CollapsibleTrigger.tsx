@@ -2,9 +2,9 @@
 
 import { forwardRef } from "react";
 
-import { ChevronIcon } from "./ChevronIcon.js";
-import { useCollapsibleContext } from "./context.js";
-import { type CollapsibleTriggerProps, cn } from "./types.js";
+import { ChevronIcon } from "./ChevronIcon";
+import { useCollapsibleContext } from "./context";
+import { type CollapsibleTriggerProps, cn } from "./types";
 
 /**
  * CollapsibleTrigger - Button to toggle content visibility.

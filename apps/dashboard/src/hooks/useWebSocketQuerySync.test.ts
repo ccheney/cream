@@ -674,23 +674,23 @@ describe("UseWebSocketQuerySyncReturn Type", () => {
 
 describe("Module Exports", () => {
   it("exports queryKeys object", async () => {
-    const module = await import("./useWebSocketQuerySync.js");
+    const module = await import("./useWebSocketQuerySync");
     expect(typeof module.queryKeys).toBe("object");
     expect(typeof module.queryKeys.marketQuote).toBe("function");
   });
 
   it("exports parseServerMessage function", async () => {
-    const module = await import("./useWebSocketQuerySync.js");
+    const module = await import("./useWebSocketQuerySync");
     expect(typeof module.parseServerMessage).toBe("function");
   });
 
   it("exports useWebSocketQuerySync hook", async () => {
-    const module = await import("./useWebSocketQuerySync.js");
+    const module = await import("./useWebSocketQuerySync");
     expect(typeof module.useWebSocketQuerySync).toBe("function");
   });
 
   it("exports default as useWebSocketQuerySync", async () => {
-    const module = await import("./useWebSocketQuerySync.js");
+    const module = await import("./useWebSocketQuerySync");
     expect(module.default).toBe(module.useWebSocketQuerySync);
   });
 });

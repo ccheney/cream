@@ -6,9 +6,9 @@
  * MA overlay toggle buttons for the chart.
  */
 
-import { DEFAULT_MA_CONFIGS } from "@/lib/chart-indicators.js";
-import type { ChartControlsProps } from "./types.js";
-import { MA_OPTIONS } from "./types.js";
+import { DEFAULT_MA_CONFIGS } from "@/lib/chart-indicators";
+import type { ChartControlsProps } from "./types";
+import { MA_OPTIONS } from "./types";
 
 export function ChartControls({ enabledMAs, onToggleMA }: ChartControlsProps) {
   return (

@@ -2,17 +2,17 @@
 
 import { forwardRef, useCallback, useState } from "react";
 
-import { Collapsible } from "./Collapsible.js";
-import { CollapsibleContent } from "./CollapsibleContent.js";
-import { CollapsibleTrigger } from "./CollapsibleTrigger.js";
-import { AccordionContext, useAccordionContext } from "./context.js";
+import { Collapsible } from "./Collapsible";
+import { CollapsibleContent } from "./CollapsibleContent";
+import { CollapsibleTrigger } from "./CollapsibleTrigger";
+import { AccordionContext, useAccordionContext } from "./context";
 import {
   type AccordionContentProps,
   type AccordionItemProps,
   type AccordionProps,
   type AccordionTriggerProps,
   cn,
-} from "./types.js";
+} from "./types";
 
 /**
  * Accordion - Multiple collapsible sections.

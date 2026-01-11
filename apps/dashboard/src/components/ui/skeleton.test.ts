@@ -209,52 +209,52 @@ describe("SkeletonCardProps Type", () => {
 
 describe("Module Exports", () => {
   it("exports Skeleton component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.Skeleton).toBe("function");
   });
 
   it("exports SkeletonText component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonText).toBe("function");
   });
 
   it("exports SkeletonCircle component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonCircle).toBe("function");
   });
 
   it("exports SkeletonCard component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonCard).toBe("function");
   });
 
   it("exports SkeletonContainer component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonContainer).toBe("function");
   });
 
   it("exports SkeletonTableRow component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonTableRow).toBe("function");
   });
 
   it("exports SkeletonChart component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonChart).toBe("function");
   });
 
   it("exports SkeletonStat component", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.SkeletonStat).toBe("function");
   });
 
   it("exports prefersReducedMotion function", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(typeof module.prefersReducedMotion).toBe("function");
   });
 
   it("exports default as Skeleton", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     expect(module.default).toBe(module.Skeleton);
   });
 });
@@ -325,7 +325,7 @@ describe("Animation", () => {
   });
 
   it("prefersReducedMotion returns boolean", async () => {
-    const module = await import("./skeleton.js");
+    const module = await import("./skeleton");
     const result = module.prefersReducedMotion();
     expect(typeof result).toBe("boolean");
   });

@@ -4,7 +4,7 @@
  * TypeScript interfaces and types for the chart page components.
  */
 
-import type { ChartTimeframe } from "@/stores/ui-store.js";
+import type { ChartTimeframe } from "@/stores/ui-store";
 
 export const TIMEFRAME_OPTIONS: ChartTimeframe[] = ["1m", "5m", "15m"];
 

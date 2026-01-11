@@ -12,21 +12,21 @@ export {
   NoDecisionsEmpty,
   NoPositionsEmpty,
   NoTradesEmpty,
-} from "./EmptyState.js";
-export { ChartError } from "./ErrorState.js";
-export { ChartSkeleton } from "./LoadingState.js";
+} from "./EmptyState";
+export { ChartError } from "./ErrorState";
+export { ChartSkeleton } from "./LoadingState";
 export type {
   ChartEmptyProps,
   ChartErrorProps,
   ChartSkeletonProps,
   ChartWrapperProps,
   SkeletonVariant,
-} from "./types.js";
+} from "./types";
 
-import { ChartEmpty } from "./EmptyState.js";
-import { ChartError } from "./ErrorState.js";
-import { ChartSkeleton } from "./LoadingState.js";
-import type { ChartWrapperProps } from "./types.js";
+import { ChartEmpty } from "./EmptyState";
+import { ChartError } from "./ErrorState";
+import { ChartSkeleton } from "./LoadingState";
+import type { ChartWrapperProps } from "./types";
 
 export function ChartWrapper({
   isLoading = false,

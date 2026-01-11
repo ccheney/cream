@@ -9,8 +9,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { EquityDataPoint } from "@/components/charts/EquityCurve.js";
-import type { OHLCVData } from "@/lib/chart-config.js";
+import type { EquityDataPoint } from "@/components/charts/EquityCurve";
+import type { OHLCVData } from "@/lib/chart-config";
 import {
   appendEquityPoint,
   appendSparklineValue,
@@ -23,7 +23,7 @@ import {
   type GaugeUpdate,
   type SparklineUpdate,
   trimData,
-} from "@/lib/chart-updaters.js";
+} from "@/lib/chart-updaters";
 
 export interface UseChartUpdatesOptions {
   /** Chart type to subscribe to */
