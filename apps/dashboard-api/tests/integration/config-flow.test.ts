@@ -145,7 +145,7 @@ describe("Config Flow Integration", () => {
       expect(config.trading.maxConsensusIterations).toBe(3);
       expect(config.universe.source).toBe("static");
       expect(config.universe.staticSymbols).toContain("AAPL");
-      expect(Object.keys(config.agents)).toHaveLength(8);
+      expect(Object.keys(config.agents)).toHaveLength(7);
     });
 
     it("returns correct agent configurations", async () => {

@@ -562,8 +562,8 @@ describe("Stub Agents", () => {
   });
 
   describe("Stub Agent Registry", () => {
-    it("should have all 10 agents in stub registry", () => {
-      expect(Object.keys(stubAgents)).toHaveLength(10);
+    it("should have all 9 agents in stub registry", () => {
+      expect(Object.keys(stubAgents)).toHaveLength(9);
     });
 
     it("should match Mastra config for all stubs", () => {
