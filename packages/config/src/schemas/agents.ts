@@ -17,7 +17,6 @@ import { z } from "zod";
  * Agent identifiers
  */
 export const AgentName = z.enum([
-  "technical_analyst",
   "news_sentiment_analyst",
   "fundamentals_macro_analyst",
   "bullish_research",
@@ -104,11 +103,6 @@ export const AgentsConfigSchema = z.object({
    * Consensus mechanism settings
    */
   consensus: ConsensusConfigSchema.optional(),
-
-  /**
-   * Technical Analyst configuration
-   */
-  technical_analyst: AgentSettingsSchema.optional(),
 
   /**
    * News & Sentiment Analyst configuration

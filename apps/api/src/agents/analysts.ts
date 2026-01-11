@@ -1,25 +1,20 @@
 /**
  * Analyst agents for market analysis.
  *
- * Contains Technical, News & Sentiment, and Fundamentals analyst agents.
+ * Contains News & Sentiment, and Fundamentals analyst agents.
  */
 
 import { z } from "zod";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import { buildPredictionMarketContext, buildRegimeContext } from "./prompts.js";
-import {
-  FundamentalsAnalysisSchema,
-  SentimentAnalysisSchema,
-  TechnicalAnalysisSchema,
-} from "./schemas.js";
+import { FundamentalsAnalysisSchema, SentimentAnalysisSchema } from "./schemas.js";
 import type {
   AgentContext,
   AgentStreamChunk,
   FundamentalsAnalysisOutput,
   OnStreamChunk,
   SentimentAnalysisOutput,
-  TechnicalAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -27,7 +22,6 @@ import type {
 // ============================================
 
 export interface AnalystOutputs {
-  technical: TechnicalAnalysisOutput[];
   news: SentimentAnalysisOutput[];
   fundamentals: FundamentalsAnalysisOutput[];
 }
@@ -35,9 +29,6 @@ export interface AnalystOutputs {
 // ============================================
 // Agent Instances
 // ============================================
-
-/** Technical Analyst - Analyzes price action and indicators */
-export const technicalAnalystAgent = createAgent("technical_analyst");
 
 /** News & Sentiment Analyst - Assesses news impact */
 export const newsAnalystAgent = createAgent("news_analyst");
@@ -48,35 +39,6 @@ export const fundamentalsAnalystAgent = createAgent("fundamentals_analyst");
 // ============================================
 // Execution Functions
 // ============================================
-
-/**
- * Run Technical Analyst agent.
- */
-export async function runTechnicalAnalyst(
-  context: AgentContext
-): Promise<TechnicalAnalysisOutput[]> {
-  const regimeContext = buildRegimeContext(context.regimeLabels);
-
-  const prompt = `Analyze the following instruments:
-${JSON.stringify(context.snapshots, null, 2)}
-${regimeContext}
-Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}
-
-Consider the market regime when assessing trend, momentum, and volatility.
-Regime context should inform your setup classification and technical thesis.`;
-
-  const settings = getAgentRuntimeSettings("technical_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(TechnicalAnalysisSchema) });
-
-  const response = await technicalAnalystAgent.generate(
-    [{ role: "user", content: prompt }],
-    options
-  );
-
-  const result = response.object as TechnicalAnalysisOutput[] | undefined;
-  return result ?? [];
-}
 
 /**
  * Run News & Sentiment Analyst agent.
@@ -165,17 +127,15 @@ ${
  * Run all analyst agents in parallel.
  */
 export async function runAnalystsParallel(context: AgentContext): Promise<{
-  technical: TechnicalAnalysisOutput[];
   news: SentimentAnalysisOutput[];
   fundamentals: FundamentalsAnalysisOutput[];
 }> {
-  const [technical, news, fundamentals] = await Promise.all([
-    runTechnicalAnalyst(context),
+  const [news, fundamentals] = await Promise.all([
     runNewsAnalyst(context),
     runFundamentalsAnalyst(context),
   ]);
 
-  return { technical, news, fundamentals };
+  return { news, fundamentals };
 }
 
 // ============================================
@@ -187,7 +147,7 @@ export async function runAnalystsParallel(context: AgentContext): Promise<{
  */
 function processStreamChunk(
   chunk: { type: string; payload: Record<string, unknown> },
-  agentType: "technical_analyst" | "news_analyst" | "fundamentals_analyst",
+  agentType: "news_analyst" | "fundamentals_analyst",
   onChunk: OnStreamChunk
 ): void {
   const streamChunk: AgentStreamChunk = {
@@ -226,41 +186,6 @@ function processStreamChunk(
       onChunk(streamChunk);
       break;
   }
-}
-
-/**
- * Run Technical Analyst agent with streaming.
- */
-export async function runTechnicalAnalystStreaming(
-  context: AgentContext,
-  onChunk: OnStreamChunk
-): Promise<TechnicalAnalysisOutput[]> {
-  const regimeContext = buildRegimeContext(context.regimeLabels);
-
-  const prompt = `Analyze the following instruments:
-${JSON.stringify(context.snapshots, null, 2)}
-${regimeContext}
-Symbols to analyze: ${context.symbols.join(", ")}
-Cycle ID: ${context.cycleId}
-
-Consider the market regime when assessing trend, momentum, and volatility.
-Regime context should inform your setup classification and technical thesis.`;
-
-  const settings = getAgentRuntimeSettings("technical_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(TechnicalAnalysisSchema) });
-
-  const stream = await technicalAnalystAgent.stream([{ role: "user", content: prompt }], options);
-
-  for await (const chunk of stream.fullStream) {
-    processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "technical_analyst",
-      onChunk
-    );
-  }
-
-  const result = (await stream.object) as TechnicalAnalysisOutput[] | undefined;
-  return result ?? [];
 }
 
 /**
@@ -373,15 +298,13 @@ export async function runAnalystsParallelStreaming(
   context: AgentContext,
   onChunk: OnStreamChunk
 ): Promise<{
-  technical: TechnicalAnalysisOutput[];
   news: SentimentAnalysisOutput[];
   fundamentals: FundamentalsAnalysisOutput[];
 }> {
-  const [technical, news, fundamentals] = await Promise.all([
-    runTechnicalAnalystStreaming(context, onChunk),
+  const [news, fundamentals] = await Promise.all([
     runNewsAnalystStreaming(context, onChunk),
     runFundamentalsAnalystStreaming(context, onChunk),
   ]);
 
-  return { technical, news, fundamentals };
+  return { news, fundamentals };
 }

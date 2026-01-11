@@ -13,8 +13,6 @@ export { FUNDAMENTALS_ANALYST_PROMPT } from "./fundamentalsAnalyst.js";
 export { NEWS_ANALYST_PROMPT } from "./newsAnalyst.js";
 export { RISK_MANAGER_PROMPT } from "./riskManager.js";
 export { SELF_CHECK_PROMPT } from "./selfCheck.js";
-// Individual prompt exports
-export { TECHNICAL_ANALYST_PROMPT } from "./technicalAnalyst.js";
 export { TRADER_PROMPT } from "./trader.js";
 
 import { INDICATOR_RESEARCHER_SYSTEM_PROMPT } from "../agents/indicatorResearcher.js";
@@ -22,12 +20,9 @@ import { BEARISH_RESEARCHER_PROMPT } from "./bearishResearcher.js";
 import { BULLISH_RESEARCHER_PROMPT } from "./bullishResearcher.js";
 import { CRITIC_PROMPT } from "./critic.js";
 import { FUNDAMENTALS_ANALYST_PROMPT } from "./fundamentalsAnalyst.js";
-// Research agent prompts
 import { IDEA_AGENT_SYSTEM_PROMPT } from "./idea-agent.js";
 import { NEWS_ANALYST_PROMPT } from "./newsAnalyst.js";
 import { RISK_MANAGER_PROMPT } from "./riskManager.js";
-// Import for registry
-import { TECHNICAL_ANALYST_PROMPT } from "./technicalAnalyst.js";
 import { TRADER_PROMPT } from "./trader.js";
 
 // ============================================
@@ -35,7 +30,6 @@ import { TRADER_PROMPT } from "./trader.js";
 // ============================================
 
 export const AGENT_PROMPTS: Record<AgentType, string> = {
-  technical_analyst: TECHNICAL_ANALYST_PROMPT,
   news_analyst: NEWS_ANALYST_PROMPT,
   fundamentals_analyst: FUNDAMENTALS_ANALYST_PROMPT,
   bullish_researcher: BULLISH_RESEARCHER_PROMPT,

@@ -1,1 +1,0 @@
-"""Vision service tests."""

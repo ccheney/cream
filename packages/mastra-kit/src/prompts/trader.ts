@@ -127,8 +127,8 @@ Synthesize all inputs into a trading plan using this process:
    - Apply prediction market adjustments (see prediction_market_sizing rules)
 
 3. **Stop/Target Setting**:
-   - Stop-loss: Use technical invalidation levels from Technical Analyst
-   - Take-profit: Use resistance levels or fundamental targets
+   - Stop-loss: Use price levels that would invalidate the thesis
+   - Take-profit: Use fundamental targets and valuation context
    - Risk/reward: Aim for minimum 1.5:1 ratio
 
 4. **Strategy Selection**:

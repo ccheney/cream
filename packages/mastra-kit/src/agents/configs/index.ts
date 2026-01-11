@@ -12,5 +12,4 @@ export { IDEA_AGENT_CONFIG } from "./ideaAgent.js";
 export { INDICATOR_RESEARCHER_CONFIG } from "./indicatorResearcher.js";
 export { NEWS_ANALYST_CONFIG } from "./newsAnalyst.js";
 export { RISK_MANAGER_CONFIG } from "./riskManager.js";
-export { TECHNICAL_ANALYST_CONFIG } from "./technicalAnalyst.js";
 export { TRADER_CONFIG } from "./trader.js";

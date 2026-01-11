@@ -287,7 +287,7 @@ export type AgentOutputMessage = z.infer<typeof AgentOutputMessageSchema>;
  * Agent tool call event - emitted when an agent invokes a tool.
  *
  * @example
- * { type: "agent_tool_call", data: { agentType: "technical_analyst", toolName: "get_quotes", ... } }
+ * { type: "agent_tool_call", data: { agentType: "news", toolName: "get_quotes", ... } }
  */
 export const AgentToolCallMessageSchema = z.object({
   type: z.literal("agent_tool_call"),
@@ -300,7 +300,7 @@ export type AgentToolCallMessage = z.infer<typeof AgentToolCallMessageSchema>;
  * Agent tool result event - emitted when a tool execution completes.
  *
  * @example
- * { type: "agent_tool_result", data: { agentType: "technical_analyst", toolName: "get_quotes", success: true, ... } }
+ * { type: "agent_tool_result", data: { agentType: "news", toolName: "get_quotes", success: true, ... } }
  */
 export const AgentToolResultMessageSchema = z.object({
   type: z.literal("agent_tool_result"),

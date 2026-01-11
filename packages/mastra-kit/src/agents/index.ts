@@ -19,7 +19,6 @@ export {
   INDICATOR_RESEARCHER_CONFIG as INDICATOR_RESEARCHER_MASTRA_CONFIG,
   NEWS_ANALYST_CONFIG,
   RISK_MANAGER_CONFIG,
-  TECHNICAL_ANALYST_CONFIG,
   TRADER_CONFIG,
 } from "./configs/index.js";
 // Re-export specialized agents (not part of trading network)

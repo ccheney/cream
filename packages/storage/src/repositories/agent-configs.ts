@@ -20,7 +20,6 @@ import { fromBoolean, RepositoryError, toBoolean } from "./base.js";
  * Agent types in the consensus network
  */
 export type AgentType =
-  | "technical_analyst"
   | "news_analyst"
   | "fundamentals_analyst"
   | "bullish_researcher"
@@ -33,7 +32,6 @@ export type AgentType =
  * All valid agent types
  */
 export const AGENT_TYPES: AgentType[] = [
-  "technical_analyst",
   "news_analyst",
   "fundamentals_analyst",
   "bullish_researcher",

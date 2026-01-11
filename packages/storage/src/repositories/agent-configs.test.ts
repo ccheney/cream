@@ -54,7 +54,7 @@ describe("AgentConfigsRepository", () => {
       const input: CreateAgentConfigInput = {
         id: "ac-001",
         environment: "PAPER",
-        agentType: "technical_analyst",
+        agentType: "news_analyst",
         systemPromptOverride: "Custom prompt for testing",
         enabled: true,
       };
@@ -63,7 +63,7 @@ describe("AgentConfigsRepository", () => {
 
       expect(result.id).toBe("ac-001");
       expect(result.environment).toBe("PAPER");
-      expect(result.agentType).toBe("technical_analyst");
+      expect(result.agentType).toBe("news_analyst");
       expect(result.systemPromptOverride).toBe("Custom prompt for testing");
       expect(result.enabled).toBe(true);
     });
@@ -438,9 +438,8 @@ describe("AgentConfigsRepository", () => {
   });
 
   describe("AGENT_TYPES constant", () => {
-    test("contains all 8 agent types", () => {
-      expect(AGENT_TYPES).toHaveLength(8);
-      expect(AGENT_TYPES).toContain("technical_analyst");
+    test("contains all 7 agent types", () => {
+      expect(AGENT_TYPES).toHaveLength(7);
       expect(AGENT_TYPES).toContain("news_analyst");
       expect(AGENT_TYPES).toContain("fundamentals_analyst");
       expect(AGENT_TYPES).toContain("bullish_researcher");

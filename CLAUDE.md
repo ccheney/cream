@@ -26,7 +26,6 @@ apps/
   dashboard/            # Next.js 16 trading dashboard
   dashboard-api/        # Hono REST + WebSocket API
   execution-engine/     # Rust gRPC server (order routing, risk)
-  vision-service/       # Python chart analysis
 
 packages/
   domain/               # Zod schemas, environment, time utilities

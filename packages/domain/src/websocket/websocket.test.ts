@@ -82,7 +82,7 @@ describe("AgentType Enum", () => {
   it("rejects invalid agent type", () => {
     expect(AgentType.safeParse("unknown_agent").success).toBe(false);
     // Also reject full internal names - WebSocket uses abbreviated names
-    expect(AgentType.safeParse("technical_analyst").success).toBe(false);
+    expect(AgentType.safeParse("news_analyst").success).toBe(false);
   });
 });
 

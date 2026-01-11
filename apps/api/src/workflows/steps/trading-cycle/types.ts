@@ -60,7 +60,6 @@ export interface ExternalContext {
 export interface AgentStatusEvent {
   cycleId: string;
   agentType:
-    | "technical_analyst"
     | "news_analyst"
     | "fundamentals_analyst"
     | "bullish_researcher"
@@ -152,17 +151,6 @@ export interface MemoryContext {
 // Analysis Types
 // ============================================
 
-export interface TechnicalAnalysis {
-  instrument_id: string;
-  setup_classification: string;
-  key_levels: { support: number[]; resistance: number[]; pivot: number };
-  trend_assessment: string;
-  momentum_assessment: string;
-  volatility_assessment: string;
-  technical_thesis: string;
-  invalidation_conditions: string[];
-}
-
 export interface SentimentAnalysis {
   instrument_id: string;
   event_impacts: unknown[];
@@ -237,7 +225,6 @@ export interface WorkflowState {
   timestamp: string;
   marketSnapshot?: MarketSnapshot;
   memoryContext?: MemoryContext;
-  technicalAnalysis?: TechnicalAnalysis[];
   sentimentAnalysis?: SentimentAnalysis[];
   fundamentalsAnalysis?: FundamentalsAnalysis[];
   bullishResearch?: Research[];

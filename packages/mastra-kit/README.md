@@ -6,7 +6,7 @@ Agent prompts, tools, and consensus infrastructure for the Cream trading system.
 
 Provides:
 
-- **10 Specialized Agents** - Analysis, research, decision, approval
+- **9 Specialized Agents** - Analysis, research, decision, approval
 - **30+ Trading Tools** - Market data, indicators, external context
 - **Dual-Approval Consensus** - Risk Manager + Critic gate
 - **Quality Scoring** - Pre and post execution evaluation
@@ -14,7 +14,6 @@ Provides:
 ## Agent Network
 
 ### Phase 1: Analysis (Parallel)
-- `technical_analyst` - Price action, indicators
 - `news_analyst` - Event impact, sentiment
 - `fundamentals_analyst` - Valuation, macro
 
@@ -83,7 +82,7 @@ All agents use global model from `trading_config.global_model`.
 ```typescript
 import { AGENT_CONFIGS, getAgentConfig } from "@cream/mastra-kit";
 
-const config = getAgentConfig("technical_analyst");
+const config = getAgentConfig("news_analyst");
 ```
 
 ## Dependencies

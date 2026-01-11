@@ -15,7 +15,6 @@
 // ============================================
 
 export const AGENT_TYPES = [
-  "technical_analyst",
   "news_analyst",
   "fundamentals_analyst",
   "bullish_researcher",
@@ -48,29 +47,6 @@ export interface AgentConfig {
 
   /** Tools this agent can use */
   tools: string[];
-}
-
-// ============================================
-// Technical Analyst Output
-// ============================================
-
-export interface KeyLevels {
-  support: number[];
-  resistance: number[];
-  pivot: number;
-}
-
-export type SetupClassification = "BREAKOUT" | "PULLBACK" | "REVERSAL" | "RANGE_BOUND" | "NO_SETUP";
-
-export interface TechnicalAnalysisOutput {
-  instrument_id: string;
-  setup_classification: SetupClassification;
-  key_levels: KeyLevels;
-  trend_assessment: string;
-  momentum_assessment: string;
-  volatility_assessment: string;
-  technical_thesis: string;
-  invalidation_conditions: string[];
 }
 
 // ============================================

@@ -29,7 +29,7 @@ ignore = [
 ]
 
 [lint.isort]
-known-first-party = ["filings_service", "vision_service", "evals", "research"]
+known-first-party = ["research"]
 force-single-line = false
 combine-as-imports = true
 

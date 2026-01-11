@@ -14,7 +14,6 @@ import {
   INDICATOR_RESEARCHER_CONFIG,
   NEWS_ANALYST_CONFIG,
   RISK_MANAGER_CONFIG,
-  TECHNICAL_ANALYST_CONFIG,
   TRADER_CONFIG,
 } from "./configs/index.js";
 
@@ -23,7 +22,6 @@ import {
 // ============================================
 
 export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
-  technical_analyst: TECHNICAL_ANALYST_CONFIG,
   news_analyst: NEWS_ANALYST_CONFIG,
   fundamentals_analyst: FUNDAMENTALS_ANALYST_CONFIG,
   bullish_researcher: BULLISH_RESEARCHER_CONFIG,
@@ -57,11 +55,7 @@ export function getAllAgentConfigs(): AgentConfig[] {
  * Get analyst agents (run in parallel, first phase)
  */
 export function getAnalystAgents(): AgentConfig[] {
-  return [
-    AGENT_CONFIGS.technical_analyst,
-    AGENT_CONFIGS.news_analyst,
-    AGENT_CONFIGS.fundamentals_analyst,
-  ];
+  return [AGENT_CONFIGS.news_analyst, AGENT_CONFIGS.fundamentals_analyst];
 }
 
 /**
@@ -97,7 +91,7 @@ export const EXECUTION_PHASES = [
   {
     phase: 1,
     name: "Analysis",
-    agents: ["technical_analyst", "news_analyst", "fundamentals_analyst"],
+    agents: ["news_analyst", "fundamentals_analyst"],
     parallel: true,
   },
   {

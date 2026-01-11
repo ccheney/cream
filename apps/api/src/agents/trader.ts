@@ -19,7 +19,6 @@ import type {
   FundamentalsAnalysisOutput,
   OnStreamChunk,
   SentimentAnalysisOutput,
-  TechnicalAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -191,7 +190,6 @@ ${
 // ============================================
 
 export interface AnalystOutputs {
-  technical: TechnicalAnalysisOutput[];
   news: SentimentAnalysisOutput[];
   fundamentals: FundamentalsAnalysisOutput[];
 }

@@ -60,12 +60,11 @@ flowchart LR
     class Risk,Critic approval
 ```
 
-### Agent Consensus Network (8 Agents)
+### Agent Consensus Network (7 Agents)
 
 | Phase | Agent | Role |
 |-------|-------|------|
-| **Analysis** (parallel) | Technical Analyst | Price patterns, support/resistance, indicators |
-| | News Analyst | Breaking news, social sentiment |
+| **Analysis** (parallel) | News Analyst | Breaking news, social sentiment |
 | | Fundamentals Analyst | Earnings, economic indicators, prediction markets |
 | **Research** (parallel) | Bullish Researcher | Constructs strongest bull case |
 | | Bearish Researcher | Constructs strongest bear case with counterarguments |
@@ -104,8 +103,7 @@ cream/
 │   ├── worker/                     # Hourly scheduler
 │   ├── dashboard/                  # Next.js 16 trading dashboard
 │   ├── dashboard-api/              # Hono REST + WebSocket API
-│   ├── execution-engine/           # Rust gRPC server
-│   └── vision-service/             # Python chart analysis
+│   └── execution-engine/           # Rust gRPC server
 │
 ├── packages/                       # Shared libraries (23 packages)
 │   ├── domain/                     # Zod schemas, environment, gRPC clients
@@ -200,15 +198,6 @@ Rust gRPC server for deterministic order validation and routing.
 - Backtest simulation with configurable fill/slippage models
 - Crash recovery and reconciliation
 - Options Greeks and multi-leg validation
-
-### Vision Service (`apps/vision-service`)
-
-Python chart analysis service.
-
-**Features**:
-- 11+ candlestick pattern detection
-- Support/resistance level identification
-- Signal generation with confidence scoring
 
 ---
 

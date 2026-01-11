@@ -56,7 +56,6 @@ jobs:
               - '**/Cargo.toml'
               - '**/Cargo.lock'
             python:
-              - 'apps/vision-service/**'
               - 'packages/research/**'
               - '**/pyproject.toml'
               - 'ruff.toml'
@@ -135,43 +134,6 @@ jobs:
 
       - name: Run tests
         run: bun run test:rs
-
-  # ============================================
-  # Python Tests (vision-service only)
-  # Note: @cream/research skipped - requires CUDA/GPU deps too large for CI
-  # ============================================
-  unit-python:
-    name: Python Tests (vision-service)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.14"
-          allow-prereleases: true
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Install dependencies
-        run: |
-          bun install
-          cd apps/vision-service && uv pip install -e ".[dev]" --system
-
-      - name: Run tests
-        # Skip @cream/research - requires CUDA/GPU dependencies too large for CI
-        run: CREAM_ENV=BACKTEST turbo run test --filter=@cream/vision-service
 
   # ============================================
   # Integration Tests (using testcontainers)
@@ -275,7 +237,7 @@ jobs:
   test-gate:
     name: Test Gate
     runs-on: ubuntu-latest
-    needs: [changes, unit-ts, unit-rust, unit-python, integration, lint]
+    needs: [changes, unit-ts, unit-rust, integration, lint]
     if: always()
 
     steps:
@@ -284,7 +246,6 @@ jobs:
           echo "Changes: ${{ needs.changes.result }}"
           echo "TypeScript: ${{ needs.unit-ts.result }}"
           echo "Rust: ${{ needs.unit-rust.result }}"
-          echo "Python: ${{ needs.unit-python.result }}"
           echo "Integration: ${{ needs.integration.result }}"
           echo "Lint: ${{ needs.lint.result }}"
 

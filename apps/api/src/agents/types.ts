@@ -15,7 +15,6 @@ export type {
   FundamentalsAnalysisOutput,
   RiskManagerOutput,
   SentimentAnalysisOutput,
-  TechnicalAnalysisOutput,
 } from "@cream/mastra-kit";
 
 /**

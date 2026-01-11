@@ -80,7 +80,6 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
  * These abbreviated names are used for dashboard display and filtering.
  *
  * Mapping from internal names:
- * - technical_analyst → technical
  * - news_analyst → news
  * - fundamentals_analyst → fundamentals
  * - bullish_researcher → bullish
@@ -90,7 +89,6 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
  * - critic → critic
  */
 export const AgentType = z.enum([
-  "technical",
   "news",
   "fundamentals",
   "bullish",

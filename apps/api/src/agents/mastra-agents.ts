@@ -9,7 +9,7 @@
  * - schemas.ts: All Zod schemas for structured outputs
  * - prompts.ts: Prompt building functions
  * - factory.ts: Agent factory and utilities
- * - analysts.ts: Technical, News, Fundamentals analysts
+ * - analysts.ts: News, Fundamentals analysts
  * - researchers.ts: Bullish/Bearish researchers, Idea Agent, Indicator Researcher
  * - trader.ts: Trader agent
  * - approvers.ts: Risk Manager and Critic agents
@@ -36,7 +36,6 @@ export type {
   OnStreamChunk,
   RiskManagerOutput,
   SentimentAnalysisOutput,
-  TechnicalAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -58,9 +57,6 @@ export {
   runFundamentalsAnalystStreaming,
   runNewsAnalyst,
   runNewsAnalystStreaming,
-  runTechnicalAnalyst,
-  runTechnicalAnalystStreaming,
-  technicalAnalystAgent,
 } from "./analysts.js";
 
 // ============================================
@@ -122,7 +118,7 @@ export {
 // Agent Registry
 // ============================================
 
-import { fundamentalsAnalystAgent, newsAnalystAgent, technicalAnalystAgent } from "./analysts.js";
+import { fundamentalsAnalystAgent, newsAnalystAgent } from "./analysts.js";
 import { criticAgent, riskManagerAgent } from "./approvers.js";
 import {
   bearishResearcherAgent,
@@ -133,7 +129,6 @@ import {
 import { traderAgent } from "./trader.js";
 
 export const mastraAgents = {
-  technical_analyst: technicalAnalystAgent,
   news_analyst: newsAnalystAgent,
   fundamentals_analyst: fundamentalsAnalystAgent,
   bullish_researcher: bullishResearcherAgent,

@@ -138,7 +138,7 @@ sequenceDiagram
 
     rect rgba(217, 119, 6, 0.08)
         Note over W: DECIDE
-        W->>W: Run 8-agent consensus
+        W->>W: Run 7-agent consensus
     end
 
     rect rgba(16, 185, 129, 0.08)
@@ -260,7 +260,6 @@ flowchart TB
 
 | Agent | Model | Role |
 |-------|-------|------|
-| Technical Analyst | Gemini 3 Pro | Price action, indicators, key levels |
 | News Analyst | Gemini 3 Pro | News impact, sentiment, event timing |
 | Fundamentals Analyst | Gemini 3 Pro | Valuation, macro context, prediction markets |
 | Bullish Researcher | Gemini 3 Pro | Long thesis with conviction score |
@@ -279,7 +278,7 @@ delta > 0.3    → BUY/LONG with Kelly-inspired sizing
 delta < -0.3   → SELL/SHORT or CLOSE existing
 
 Every decision requires:
-  - Stop-loss at Technical Analyst's invalidation levels
+  - Stop-loss at price levels that would invalidate thesis
   - Risk/reward minimum 1.5:1
   - Sizing adjusted for macro events (prediction markets)
 ```

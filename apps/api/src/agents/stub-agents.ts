@@ -46,7 +46,6 @@ function createStubAgent(agentType: AgentType): StubAgent {
 // Analyst Agents (Phase 1 - Parallel)
 // ============================================
 
-export const technicalAnalyst = createStubAgent("technical_analyst");
 export const newsAnalyst = createStubAgent("news_analyst");
 export const fundamentalsAnalyst = createStubAgent("fundamentals_analyst");
 
@@ -77,7 +76,6 @@ export const indicatorResearcher = createStubAgent("indicator_researcher");
 // ============================================
 
 export const agents = {
-  technicalAnalyst,
   newsAnalyst,
   fundamentalsAnalyst,
   bullishResearcher,

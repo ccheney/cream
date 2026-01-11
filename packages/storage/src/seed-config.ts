@@ -61,7 +61,6 @@ const DEFAULT_AGENT_CONFIGS: Record<
     enabled: boolean;
   }
 > = {
-  technical_analyst: { enabled: true },
   news_analyst: { enabled: true },
   fundamentals_analyst: { enabled: true },
   bullish_researcher: { enabled: true },

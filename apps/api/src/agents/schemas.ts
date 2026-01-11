@@ -7,27 +7,6 @@
 import { z } from "zod";
 
 // ============================================
-// Technical Analysis Schemas
-// ============================================
-
-export const KeyLevelsSchema = z.object({
-  support: z.array(z.number()),
-  resistance: z.array(z.number()),
-  pivot: z.number(),
-});
-
-export const TechnicalAnalysisSchema = z.object({
-  instrument_id: z.string(),
-  setup_classification: z.enum(["BREAKOUT", "PULLBACK", "REVERSAL", "RANGE_BOUND", "NO_SETUP"]),
-  key_levels: KeyLevelsSchema,
-  trend_assessment: z.string(),
-  momentum_assessment: z.string(),
-  volatility_assessment: z.string(),
-  technical_thesis: z.string(),
-  invalidation_conditions: z.array(z.string()),
-});
-
-// ============================================
 // Sentiment Analysis Schemas
 // ============================================
 
