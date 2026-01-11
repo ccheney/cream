@@ -71,6 +71,9 @@ jobs:
         run: buf generate
         working-directory: packages/schema
 
+      - name: Format generated code
+        run: bunx @biomejs/biome check --write packages/schema-gen/
+
       - name: Check for uncommitted changes
         run: |
           if [[ -n $(git status --porcelain packages/schema-gen/) ]]; then
