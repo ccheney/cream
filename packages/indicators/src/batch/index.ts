@@ -43,3 +43,24 @@ export {
   ShortInterestBatchJob,
   type ShortInterestBatchJobConfig,
 } from "./short-interest-batch.js";
+
+export {
+  // Calculation functions (exported for testing)
+  aggregateSentimentScores,
+  calculateRecencyWeight,
+  calculateSentimentMomentum,
+  calculateSentimentStrength,
+  computeSentimentScore,
+  detectEventRisk,
+  // Types
+  type AggregatedSentiment,
+  type EventType,
+  type ExtractedSentiment,
+  type SentimentClassification,
+  // Sentiment data provider interface
+  type SentimentDataProvider,
+  // Batch job
+  SentimentAggregationJob,
+  type SentimentBatchJobConfig,
+  type SentimentScoringConfig,
+} from "./sentiment-batch.js";
