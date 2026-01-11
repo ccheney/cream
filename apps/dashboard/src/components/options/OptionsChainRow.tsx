@@ -26,31 +26,43 @@ export interface OptionsChainRowProps {
   "data-testid"?: string;
 }
 
-function formatPrice(value: number | null): string {
-  if (value === null) {
+function formatPrice(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) {
     return "—";
   }
-  return value.toFixed(2);
+  const num = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (Number.isNaN(num)) {
+    return "—";
+  }
+  return num.toFixed(2);
 }
 
-function formatVolume(value: number | null): string {
-  if (value === null) {
+function formatVolume(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) {
     return "—";
   }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
+  const num = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (Number.isNaN(num)) {
+    return "—";
   }
-  return value.toString();
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
 }
 
-function formatOI(value: number | null): string {
-  if (value === null) {
+function formatOI(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) {
     return "—";
   }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
+  const num = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (Number.isNaN(num)) {
+    return "—";
   }
-  return value.toString();
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
 }
 
 interface ContractCellProps {
@@ -196,7 +208,7 @@ export const OptionsChainRow = memo(function OptionsChainRow({
         `}
       >
         {isAtm && <span className="mr-1 text-xs">★</span>}
-        {strike.toFixed(2)}
+        {formatPrice(strike)}
       </div>
 
       <div className={putItm && !isAtm ? "bg-red-50/30 dark:bg-red-900/10" : ""}>
