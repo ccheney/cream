@@ -106,7 +106,7 @@ export {
   SecretsManager,
   type SecretsManagerConfig,
   type SecretsProvider,
-} from "./secrets";
+} from "./secrets/index.js";
 // Startup validation utilities
 export {
   createAuditLog,
