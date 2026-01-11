@@ -5,9 +5,6 @@ on:
   pull_request:
     paths:
       - "packages/schema/**"
-      - "buf.yaml"
-      - "buf.gen.yaml"
-      - "buf.lock"
 
 concurrency:
   group: buf-${{ github.workflow }}-${{ github.ref }}
@@ -28,6 +25,9 @@ jobs:
       - name: Setup Buf
         uses: bufbuild/buf-action@v1
         with:
+          # Path to the Buf module
+          input: packages/schema
+
           # Run lint check
           lint: true
 
@@ -35,10 +35,7 @@ jobs:
           breaking: true
 
           # Compare against master branch
-          breaking_against: "https://github.com/${{ github.repository }}.git#branch=master"
-
-          # Buf token for BSR access (optional)
-          # token: ${{ secrets.BUF_TOKEN }}
+          breaking_against: "https://github.com/${{ github.repository }}.git#branch=master,subdir=packages/schema"
 
   # ============================================
   # Protobuf Generation Check
