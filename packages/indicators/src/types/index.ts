@@ -122,12 +122,26 @@ export type LiquidityIndicators = z.infer<typeof LiquidityIndicatorsSchema>;
  * Options-Derived Indicators (Real-time from Alpaca options)
  */
 export const OptionsIndicatorsSchema = z.object({
-  implied_volatility: z.number().nullable(),
-  iv_percentile_30d: z.number().nullable(),
-  iv_skew: z.number().nullable(),
-  put_call_ratio: z.number().nullable(),
-  vrp: z.number().nullable(),
+  // ATM Implied Volatility
+  atm_iv: z.number().nullable(),
+
+  // IV Skew (25-delta)
+  iv_skew_25d: z.number().nullable(),
+  iv_put_25d: z.number().nullable(),
+  iv_call_25d: z.number().nullable(),
+
+  // Put/Call Ratios
+  put_call_ratio_volume: z.number().nullable(),
+  put_call_ratio_oi: z.number().nullable(),
+
+  // Term Structure
   term_structure_slope: z.number().nullable(),
+  front_month_iv: z.number().nullable(),
+  back_month_iv: z.number().nullable(),
+
+  // Volatility Risk Premium
+  vrp: z.number().nullable(),
+  realized_vol_20d: z.number().nullable(),
 
   // Aggregate Greeks (for portfolio positions)
   net_delta: z.number().nullable(),
@@ -489,12 +503,17 @@ export function createEmptyLiquidityIndicators(): LiquidityIndicators {
  */
 export function createEmptyOptionsIndicators(): OptionsIndicators {
   return {
-    implied_volatility: null,
-    iv_percentile_30d: null,
-    iv_skew: null,
-    put_call_ratio: null,
-    vrp: null,
+    atm_iv: null,
+    iv_skew_25d: null,
+    iv_put_25d: null,
+    iv_call_25d: null,
+    put_call_ratio_volume: null,
+    put_call_ratio_oi: null,
     term_structure_slope: null,
+    front_month_iv: null,
+    back_month_iv: null,
+    vrp: null,
+    realized_vol_20d: null,
     net_delta: null,
     net_gamma: null,
     net_theta: null,

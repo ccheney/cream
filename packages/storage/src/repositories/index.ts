@@ -163,6 +163,14 @@ export {
   type TriggerSource,
   type UpdateSyncRunProgress,
 } from "./filings.js";
+// Fundamental indicators (migration 008) - FMP fundamental data
+export {
+  type CreateFundamentalIndicatorsInput,
+  type FundamentalFilters,
+  type FundamentalIndicators,
+  FundamentalsRepository,
+  type UpdateFundamentalIndicatorsInput,
+} from "./fundamentals.js";
 // Historical universe (migration 005) - point-in-time survivorship bias prevention
 export {
   type ChangeType,
@@ -198,6 +206,13 @@ export {
   type ValidationReport,
   type WalkForwardPeriod,
 } from "./indicators.js";
+// Options indicators cache (migration 008) - TTL-based options metrics cache
+export {
+  type CreateOptionsIndicatorsCacheInput,
+  type OptionsIndicatorsCache,
+  OptionsIndicatorsCacheRepository,
+  type UpdateOptionsIndicatorsCacheInput,
+} from "./options-indicators-cache.js";
 export {
   type CreateOrderInput,
   type Order as OrderEntity,
@@ -258,6 +273,22 @@ export {
   type RegimeType,
   RegimeTypeSchema,
 } from "./regime-labels.js";
+// Sentiment indicators (migration 008) - aggregated news/social/analyst sentiment
+export {
+  type CreateSentimentInput,
+  type SentimentFilters,
+  type SentimentIndicators,
+  SentimentRepository,
+  type UpdateSentimentInput,
+} from "./sentiment.js";
+// Short interest indicators (migration 008) - FINRA short interest data
+export {
+  type CreateShortInterestInput,
+  type ShortInterestFilters,
+  type ShortInterestIndicators,
+  ShortInterestRepository,
+  type UpdateShortInterestInput,
+} from "./short-interest.js";
 // Thesis state management (migration 004)
 export {
   type CloseReason,
