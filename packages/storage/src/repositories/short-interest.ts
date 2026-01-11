@@ -117,7 +117,7 @@ export class ShortInterestRepository {
 
     const created = await this.findById(input.id);
     if (!created) {
-      throw new RepositoryError("QUERY_ERROR", "Failed to retrieve created record");
+      throw new RepositoryError("Failed to retrieve created record", "QUERY_ERROR");
     }
     return created;
   }
@@ -158,7 +158,7 @@ export class ShortInterestRepository {
 
     const result = await this.findBySymbolAndDate(input.symbol, input.settlementDate);
     if (!result) {
-      throw new RepositoryError("QUERY_ERROR", "Failed to retrieve upserted record");
+      throw new RepositoryError("Failed to retrieve upserted record", "QUERY_ERROR");
     }
     return result;
   }
@@ -167,7 +167,9 @@ export class ShortInterestRepository {
    * Bulk upsert multiple records
    */
   async bulkUpsert(inputs: CreateShortInterestInput[]): Promise<number> {
-    if (inputs.length === 0) return 0;
+    if (inputs.length === 0) {
+      return 0;
+    }
 
     const now = new Date().toISOString();
     let count = 0;
@@ -214,7 +216,9 @@ export class ShortInterestRepository {
       id,
     ]);
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     return mapRow(row);
   }
 
@@ -230,7 +234,9 @@ export class ShortInterestRepository {
       [symbol, settlementDate]
     );
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     return mapRow(row);
   }
 
@@ -246,7 +252,9 @@ export class ShortInterestRepository {
       [symbol]
     );
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     return mapRow(row);
   }
 

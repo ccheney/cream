@@ -17,11 +17,27 @@ import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
 import { createContext, isBacktest, requireEnv, validateEnvironmentOrExit } from "@cream/domain";
 import { createFilingsIngestionService } from "@cream/filings";
 import {
+  CorporateActionsRepository,
+  FundamentalsRepository,
+  SentimentRepository,
+  ShortInterestRepository,
+} from "@cream/storage";
+import {
   getDbClient,
   getRuntimeConfigService,
   resetRuntimeConfigService,
   validateHelixDBOrExit,
 } from "./db";
+import {
+  createAlpacaCorporateActionsFromEnv,
+  createDefaultConfig,
+  createFINRAClient,
+  createFMPClientFromEnv,
+  createSentimentProviderFromEnv,
+  createSharesOutstandingProviderFromEnv,
+  IndicatorBatchScheduler,
+  type JobState,
+} from "./indicators";
 import { log } from "./logger";
 import {
   getSubscriptionStatus,
@@ -62,6 +78,8 @@ interface WorkerState {
     predictionMarkets: boolean;
     filingsSync: boolean;
   };
+  /** Indicator batch scheduler (v2 engine) */
+  indicatorScheduler: IndicatorBatchScheduler | null;
 }
 
 // State is initialized in main() after config is loaded
@@ -256,6 +274,132 @@ async function runFilingsSync(): Promise<void> {
 }
 
 // ============================================
+// Indicator Batch Scheduler (v2 Engine)
+// ============================================
+
+/**
+ * Initialize and start the indicator batch scheduler.
+ * Creates data provider adapters and repositories, then starts scheduled jobs.
+ */
+async function initIndicatorBatchScheduler(): Promise<void> {
+  // Check if required API keys are available
+  const hasFmpKey = !!(process.env.FMP_KEY ?? Bun.env.FMP_KEY);
+  const hasAlpacaKeys = !!(
+    (process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY) &&
+    (process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET)
+  );
+
+  if (!hasFmpKey && !hasAlpacaKeys) {
+    log.warn(
+      {},
+      "Indicator batch scheduler disabled: FMP_KEY or ALPACA_KEY/ALPACA_SECRET not configured"
+    );
+    return;
+  }
+
+  try {
+    const db = await getDbClient();
+
+    // Create repositories
+    const fundamentalsRepo = new FundamentalsRepository(db);
+    const shortInterestRepo = new ShortInterestRepository(db);
+    const sentimentRepo = new SentimentRepository(db);
+    const corporateActionsRepo = new CorporateActionsRepository(db);
+
+    // Create scheduler config with enabled jobs based on available API keys
+    const schedulerConfig = createDefaultConfig();
+    schedulerConfig.enabled.fundamentals = hasFmpKey;
+    schedulerConfig.enabled.shortInterest = hasFmpKey; // Uses FINRA (no key) + FMP for shares
+    schedulerConfig.enabled.sentiment = hasFmpKey;
+    schedulerConfig.enabled.corporateActions = hasAlpacaKeys;
+
+    // Create data provider adapters (only if keys are available)
+    const fmpClient = hasFmpKey ? createFMPClientFromEnv() : createStubFMPClient();
+    const finraClient = createFINRAClient();
+    const sharesProvider = hasFmpKey
+      ? createSharesOutstandingProviderFromEnv()
+      : createStubSharesProvider();
+    const sentimentProvider = hasFmpKey
+      ? createSentimentProviderFromEnv()
+      : createStubSentimentProvider();
+    const alpacaClient = hasAlpacaKeys
+      ? createAlpacaCorporateActionsFromEnv()
+      : createStubAlpacaClient();
+
+    // Create and start scheduler
+    state.indicatorScheduler = new IndicatorBatchScheduler(
+      {
+        fmpClient,
+        finraClient,
+        sharesProvider,
+        sentimentProvider,
+        alpacaClient,
+        fundamentalsRepo,
+        shortInterestRepo,
+        sentimentRepo,
+        corporateActionsRepo,
+        getSymbols: getInstruments,
+      },
+      schedulerConfig
+    );
+
+    state.indicatorScheduler.start();
+    log.info(
+      {
+        fundamentals: schedulerConfig.enabled.fundamentals,
+        shortInterest: schedulerConfig.enabled.shortInterest,
+        sentiment: schedulerConfig.enabled.sentiment,
+        corporateActions: schedulerConfig.enabled.corporateActions,
+      },
+      "Indicator batch scheduler started"
+    );
+  } catch (error) {
+    log.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Failed to initialize indicator batch scheduler"
+    );
+  }
+}
+
+/**
+ * Get indicator batch job status for health endpoint.
+ */
+function getIndicatorJobStatus(): Record<string, JobState> | null {
+  return state.indicatorScheduler?.getJobStatus() ?? null;
+}
+
+// Stub implementations for when API keys are not available
+function createStubFMPClient() {
+  return {
+    getKeyMetrics: async () => [],
+    getIncomeStatement: async () => [],
+    getBalanceSheet: async () => [],
+    getCashFlowStatement: async () => [],
+    getCompanyProfile: async () => null,
+  };
+}
+
+function createStubSharesProvider() {
+  return {
+    getSharesData: async () => null,
+  };
+}
+
+function createStubSentimentProvider() {
+  return {
+    getSentimentData: async () => [],
+    getHistoricalSentiment: async () => [],
+  };
+}
+
+function createStubAlpacaClient() {
+  return {
+    getCorporateActions: async () => [],
+    getCorporateActionsForSymbols: async () => [],
+  };
+}
+
+// ============================================
 // Scheduler
 // ============================================
 
@@ -402,6 +546,7 @@ function startHealthServer(): void {
         const uptime = Date.now() - state.startedAt.getTime();
 
         const marketDataStatus = getSubscriptionStatus();
+        const indicatorJobs = getIndicatorJobStatus();
         const health = {
           status: "ok",
           uptime_ms: uptime,
@@ -428,6 +573,27 @@ function startHealthServer(): void {
             last_update: marketDataStatus.lastUpdate?.toISOString() ?? null,
             update_count: marketDataStatus.updateCount,
           },
+          indicator_batch_jobs: indicatorJobs
+            ? Object.fromEntries(
+                Object.entries(indicatorJobs).map(([name, job]) => [
+                  name,
+                  {
+                    status: job.status,
+                    last_run: job.lastRun?.toISOString() ?? null,
+                    next_run: job.nextRun?.toISOString() ?? null,
+                    run_count: job.runCount,
+                    last_error: job.lastError,
+                    last_result: job.lastResult
+                      ? {
+                          processed: job.lastResult.processed,
+                          failed: job.lastResult.failed,
+                          duration_ms: job.lastResult.durationMs,
+                        }
+                      : null,
+                  },
+                ])
+              )
+            : null,
           started_at: state.startedAt.toISOString(),
         };
 
@@ -515,6 +681,7 @@ async function main() {
       predictionMarkets: false,
       filingsSync: false,
     },
+    indicatorScheduler: null,
   };
 
   const intervals = getIntervals();
@@ -555,6 +722,9 @@ async function main() {
 
     // Start the schedulers
     startScheduler();
+
+    // Initialize indicator batch scheduler (v2 engine)
+    await initIndicatorBatchScheduler();
   }
 
   // Handle config reload on SIGHUP
@@ -570,12 +740,14 @@ async function main() {
   // Handle shutdown
   process.on("SIGINT", () => {
     stopScheduler();
+    state.indicatorScheduler?.stop();
     stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
     stopScheduler();
+    state.indicatorScheduler?.stop();
     stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });

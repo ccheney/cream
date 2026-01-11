@@ -158,7 +158,7 @@ export class OptionsIndicatorsCacheRepository {
     // Return the entry regardless of expiration (for immediate use)
     const result = await this.getIncludingExpired(input.symbol);
     if (!result) {
-      throw new RepositoryError("QUERY_ERROR", "Failed to retrieve cached record");
+      throw new RepositoryError("Failed to retrieve cached record", "QUERY_ERROR");
     }
     return result;
   }
@@ -167,7 +167,9 @@ export class OptionsIndicatorsCacheRepository {
    * Bulk set multiple cache entries
    */
   async bulkSet(inputs: CreateOptionsIndicatorsCacheInput[]): Promise<number> {
-    if (inputs.length === 0) return 0;
+    if (inputs.length === 0) {
+      return 0;
+    }
 
     const now = new Date().toISOString();
     let count = 0;
@@ -231,7 +233,9 @@ export class OptionsIndicatorsCacheRepository {
       [symbol, now]
     );
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     return mapRow(row);
   }
 
@@ -244,7 +248,9 @@ export class OptionsIndicatorsCacheRepository {
       [symbol]
     );
 
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     return mapRow(row);
   }
 
@@ -252,7 +258,9 @@ export class OptionsIndicatorsCacheRepository {
    * Get multiple cache entries by symbols
    */
   async getMany(symbols: string[]): Promise<Map<string, OptionsIndicatorsCache>> {
-    if (symbols.length === 0) return new Map();
+    if (symbols.length === 0) {
+      return new Map();
+    }
 
     const now = new Date().toISOString();
     const placeholders = symbols.map(() => "?").join(", ");
