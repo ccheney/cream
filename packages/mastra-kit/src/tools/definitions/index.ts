@@ -125,6 +125,30 @@ export {
   GraphRAGQueryOutputSchema,
   graphragQueryTool,
 } from "./graphragTools.js";
+// Macro exposure tools
+export {
+  type CompaniesAffectedInput,
+  CompaniesAffectedInputSchema,
+  type CompaniesAffectedOutput,
+  CompaniesAffectedOutputSchema,
+  type CompanyMacroExposureInput,
+  CompanyMacroExposureInputSchema,
+  type CompanyMacroExposureOutput,
+  CompanyMacroExposureOutputSchema,
+  companiesAffectedByMacroTool,
+  companyMacroExposureTool,
+  type ListMacroFactorsInput,
+  ListMacroFactorsInputSchema,
+  type ListMacroFactorsOutput,
+  ListMacroFactorsOutputSchema,
+  listMacroFactorsTool,
+  macroExposureTools,
+  type PortfolioMacroExposureInput,
+  PortfolioMacroExposureInputSchema,
+  type PortfolioMacroExposureOutput,
+  PortfolioMacroExposureOutputSchema,
+  portfolioMacroExposureTool,
+} from "./macroExposureTools.js";
 // Prediction market tools
 export {
   GetMarketSnapshotsInputSchema,

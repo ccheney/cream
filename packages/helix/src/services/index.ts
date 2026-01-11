@@ -17,7 +17,21 @@ export {
   getMarketCapBucket,
   type SupplyChainRelationship,
 } from "./company-graph-builder.js";
-
+export {
+  type CompanySensitivity,
+  calculateRollingCorrelation,
+  correlationToSensitivity,
+  createMacroGraphBuilder,
+  type EventMacroLink,
+  getSectorDefaultSensitivities,
+  type MacroCategory,
+  MacroGraphBuilder,
+  type MacroGraphBuildOptions,
+  type MacroGraphBuildResult,
+  PREDEFINED_MACRO_ENTITIES,
+  type PredefinedMacroEntity,
+  SECTOR_DEFAULT_SENSITIVITIES,
+} from "./macro-graph-builder.js";
 export {
   createUniverseSyncer,
   instrumentsToCompanyData,
