@@ -37,4 +37,4 @@ export {
   requireMutable,
   type VersionHistoryEntry,
   VersionHistoryEntrySchema,
-} from "./audit";
+} from "./audit/index.js";

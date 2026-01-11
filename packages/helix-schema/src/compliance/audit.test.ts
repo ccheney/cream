@@ -9,7 +9,7 @@ import {
   ImmutabilityViolationError,
   InMemoryAuditStorage,
   requireMutable,
-} from "./audit";
+} from "./audit/index.js";
 
 describe("AuditLogger", () => {
   let storage: InMemoryAuditStorage;
