@@ -1,159 +1,30 @@
 """
-Stage 2: NautilusTrader Event-Driven Validation
+Stage 2 Validator
 
-High-fidelity validation using NautilusTrader for event-driven backtesting
-with realistic execution modeling, slippage, and fill simulation.
-
-See: docs/plans/20-research-to-production-pipeline.md - Phase 3
-
-Stage 2 Gates (Stricter):
-- PBO < 0.5 (max 50% overfitting probability)
-- DSR p-value > 0.95 (95% confidence in Sharpe)
-- Walk-Forward Efficiency > 0.5 (OOS/IS ratio > 50%)
-- MC Sharpe 5th percentile > 0.5 (robust under randomization)
+NautilusTrader-based high-fidelity validation with CPCV, DSR, walk-forward,
+and Monte Carlo robustness testing.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
 
+from .runner import run_nautilus_backtest
+from .types import (
+    MonteCarloResults,
+    Stage2Gates,
+    Stage2Results,
+    WalkForwardResults,
+)
+
 if TYPE_CHECKING:
-    from ..strategies.base import ResearchFactor
+    from ...strategies.base import ResearchFactor
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Stage2Gates:
-    """Stage 2 gate thresholds (stricter than Stage 1)."""
-
-    pbo_max: float = 0.5
-    """Max 50% probability of backtest overfitting."""
-
-    dsr_pvalue_min: float = 0.95
-    """95% confidence in Sharpe ratio."""
-
-    wfe_min: float = 0.5
-    """Walk-forward efficiency minimum (OOS/IS > 50%)."""
-
-    mc_sharpe_5th_min: float = 0.5
-    """Monte Carlo 5th percentile Sharpe minimum."""
-
-
-@dataclass
-class MonteCarloResults:
-    """Results from Monte Carlo robustness testing."""
-
-    sharpe_5th_percentile: float
-    """5th percentile Sharpe from MC simulations."""
-
-    sharpe_median: float
-    """Median Sharpe from MC simulations."""
-
-    drawdown_95th_percentile: float
-    """95th percentile max drawdown from MC simulations."""
-
-    drawdown_median: float
-    """Median max drawdown from MC simulations."""
-
-    n_simulations: int
-    """Number of Monte Carlo simulations run."""
-
-    sharpe_distribution: list[float]
-    """Full Sharpe distribution for analysis."""
-
-
-@dataclass
-class WalkForwardResults:
-    """Results from walk-forward analysis."""
-
-    efficiency: float
-    """Walk-forward efficiency (OOS Sharpe / IS Sharpe)."""
-
-    in_sample_sharpes: list[float]
-    """In-sample Sharpe ratios per period."""
-
-    out_of_sample_sharpes: list[float]
-    """Out-of-sample Sharpe ratios per period."""
-
-    n_periods: int
-    """Number of walk-forward periods."""
-
-    avg_is_sharpe: float
-    """Average in-sample Sharpe."""
-
-    avg_oos_sharpe: float
-    """Average out-of-sample Sharpe."""
-
-
-@dataclass
-class Stage2Results:
-    """Results from NautilusTrader event-driven validation."""
-
-    factor_id: str
-    """Factor identifier."""
-
-    # Performance with realistic execution
-    sharpe_realistic: float
-    """Sharpe ratio with realistic execution."""
-
-    sortino_realistic: float
-    """Sortino ratio with realistic execution."""
-
-    max_drawdown_realistic: float
-    """Maximum drawdown with realistic execution."""
-
-    # Execution quality
-    avg_slippage_bps: float
-    """Average slippage in basis points."""
-
-    fill_rate: float
-    """Order fill rate (filled / submitted)."""
-
-    total_trades: int
-    """Total number of trades executed."""
-
-    # Statistical validation
-    pbo: float
-    """Probability of Backtest Overfitting from CPCV."""
-
-    dsr_pvalue: float
-    """Deflated Sharpe Ratio p-value."""
-
-    observed_sharpe: float
-    """Observed Sharpe ratio from backtest."""
-
-    wfe: float
-    """Walk-Forward Efficiency (OOS/IS ratio)."""
-
-    cpcv_sharpe_dist: list[float]
-    """CPCV Sharpe distribution across folds."""
-
-    # Monte Carlo robustness
-    mc_sharpe_5th_pct: float
-    """5th percentile Sharpe from Monte Carlo."""
-
-    mc_drawdown_95th_pct: float
-    """95th percentile drawdown from Monte Carlo."""
-
-    # Gate results
-    passed_gates: bool
-    """Whether all Stage 2 gates passed."""
-
-    gate_violations: list[str]
-    """List of gate violations (empty if passed)."""
-
-    # Detailed results
-    walk_forward_results: WalkForwardResults | None = None
-    """Detailed walk-forward results."""
-
-    monte_carlo_results: MonteCarloResults | None = None
-    """Detailed Monte Carlo results."""
 
 
 class Stage2Validator:
@@ -215,8 +86,8 @@ class Stage2Validator:
         Returns:
             Stage2Results with all validation metrics
         """
-        from .cpcv import CPCVValidator
-        from .dsr import DSRValidator
+        from ..cpcv import CPCVValidator
+        from ..dsr import DSRValidator
 
         n_mc = n_mc_simulations or self.DEFAULT_MC_SIMULATIONS
         n_periods = n_wf_periods or self.DEFAULT_N_PERIODS
@@ -245,23 +116,10 @@ class Stage2Validator:
         mc_results = await self._run_monte_carlo(returns, n_mc)
 
         # 5. High-fidelity NautilusTrader backtest
-        nautilus_metrics = await self._run_nautilus_backtest(params)
+        nautilus_metrics = await run_nautilus_backtest(self.factor, self.data, params)
 
         # Check gates
-        violations = []
-        if cpcv_results.pbo > self.gates.pbo_max:
-            violations.append(f"PBO {cpcv_results.pbo:.3f} > {self.gates.pbo_max}")
-        if dsr_results.dsr_pvalue < self.gates.dsr_pvalue_min:
-            violations.append(
-                f"DSR p-value {dsr_results.dsr_pvalue:.3f} < {self.gates.dsr_pvalue_min}"
-            )
-        if wf_results.efficiency < self.gates.wfe_min:
-            violations.append(f"WFE {wf_results.efficiency:.3f} < {self.gates.wfe_min}")
-        if mc_results.sharpe_5th_percentile < self.gates.mc_sharpe_5th_min:
-            violations.append(
-                f"MC Sharpe 5th pct {mc_results.sharpe_5th_percentile:.3f} < "
-                f"{self.gates.mc_sharpe_5th_min}"
-            )
+        violations = self._check_gates(cpcv_results, dsr_results, wf_results, mc_results)
 
         return Stage2Results(
             factor_id=self.factor.metadata.factor_id,
@@ -284,6 +142,30 @@ class Stage2Validator:
             monte_carlo_results=mc_results,
         )
 
+    def _check_gates(
+        self,
+        cpcv_results: Any,
+        dsr_results: Any,
+        wf_results: WalkForwardResults,
+        mc_results: MonteCarloResults,
+    ) -> list[str]:
+        """Check all gate thresholds and return violations."""
+        violations = []
+        if cpcv_results.pbo > self.gates.pbo_max:
+            violations.append(f"PBO {cpcv_results.pbo:.3f} > {self.gates.pbo_max}")
+        if dsr_results.dsr_pvalue < self.gates.dsr_pvalue_min:
+            violations.append(
+                f"DSR p-value {dsr_results.dsr_pvalue:.3f} < {self.gates.dsr_pvalue_min}"
+            )
+        if wf_results.efficiency < self.gates.wfe_min:
+            violations.append(f"WFE {wf_results.efficiency:.3f} < {self.gates.wfe_min}")
+        if mc_results.sharpe_5th_percentile < self.gates.mc_sharpe_5th_min:
+            violations.append(
+                f"MC Sharpe 5th pct {mc_results.sharpe_5th_percentile:.3f} < "
+                f"{self.gates.mc_sharpe_5th_min}"
+            )
+        return violations
+
     def _compute_returns(self, signals: pl.Series) -> pl.Series:
         """
         Compute returns from signal series.
@@ -297,7 +179,6 @@ class Stage2Validator:
         close = self.data["close"]
         price_returns = close.pct_change()
 
-        # Strategy returns = signal * price returns (shifted by 1 for execution delay)
         shifted_signals = signals.shift(1).fill_null(0.0)
         strategy_returns = shifted_signals * price_returns
 
@@ -338,7 +219,6 @@ class Stage2Validator:
             if len(is_data) < 20 or len(oos_data) < 10:
                 continue
 
-            # Compute returns for each period
             is_sharpe = self._compute_period_sharpe(is_data, params)
             oos_sharpe = self._compute_period_sharpe(oos_data, params)
 
@@ -348,7 +228,6 @@ class Stage2Validator:
         avg_is = float(np.mean(is_sharpes)) if is_sharpes else 0.0
         avg_oos = float(np.mean(oos_sharpes)) if oos_sharpes else 0.0
 
-        # Walk-Forward Efficiency (avoid division by zero)
         efficiency = avg_oos / avg_is if avg_is > 0 else 0.0
 
         return WalkForwardResults(
@@ -412,7 +291,6 @@ class Stage2Validator:
         nonzero_returns = returns_arr[returns_arr != 0]
 
         if len(nonzero_returns) < 10:
-            # Not enough trades for meaningful MC
             return MonteCarloResults(
                 sharpe_5th_percentile=0.0,
                 sharpe_median=0.0,
@@ -426,24 +304,19 @@ class Stage2Validator:
         drawdown_dist: list[float] = []
 
         for _ in range(n_simulations):
-            # Shuffle trade returns (destroys temporal structure)
             shuffled = np.random.permutation(nonzero_returns)
 
-            # Add execution degradation (random slippage 0-20 bps)
             degradation = np.random.uniform(0, 0.002, len(shuffled))
             degraded = shuffled - np.abs(shuffled) * degradation
 
-            # Compute Sharpe
             if np.std(degraded) > 1e-10:
                 sharpe = float(np.mean(degraded) / np.std(degraded) * np.sqrt(252))
             else:
                 sharpe = 0.0
             sharpe_dist.append(sharpe)
 
-            # Compute max drawdown
             equity = np.cumsum(degraded)
             running_max = np.maximum.accumulate(equity)
-            # Avoid division by zero
             with np.errstate(divide="ignore", invalid="ignore"):
                 drawdowns = np.where(running_max > 0, (running_max - equity) / running_max, 0.0)
             max_dd = float(np.nanmax(drawdowns)) if len(drawdowns) > 0 else 0.0
@@ -457,93 +330,6 @@ class Stage2Validator:
             n_simulations=n_simulations,
             sharpe_distribution=sharpe_dist,
         )
-
-    async def _run_nautilus_backtest(
-        self,
-        params: dict[str, Any],
-    ) -> dict[str, Any]:
-        """
-        Run high-fidelity NautilusTrader backtest.
-
-        Args:
-            params: Factor parameters
-
-        Returns:
-            Dictionary with realistic performance metrics
-        """
-        import pandas as pd
-
-        from ..nautilus_runner import NautilusConfig, NautilusRunner
-
-        # Convert polars to pandas for NautilusTrader
-        prices_pd = self.data.to_pandas()
-        if "timestamp" in prices_pd.columns:
-            prices_pd.set_index("timestamp", inplace=True)
-        elif not isinstance(prices_pd.index, pd.DatetimeIndex):
-            # Generate synthetic datetime index
-            prices_pd.index = pd.date_range(start="2024-01-01", periods=len(prices_pd), freq="D")
-
-        # Generate signals
-        self.factor.set_parameters(params)
-        signals = self.factor.compute_signal(self.data)
-
-        # Create entries/exits DataFrame
-        signals_list = signals.to_list()
-        entries = [s > 0 for s in signals_list]
-        exits = [s < 0 for s in signals_list]
-
-        signals_pd = pd.DataFrame({"entries": entries, "exits": exits}, index=prices_pd.index)
-
-        # Run NautilusTrader backtest
-        config = NautilusConfig(
-            initial_capital=100000.0,
-            log_level="ERROR",  # Suppress noise
-        )
-        runner = NautilusRunner(config)
-
-        try:
-            result = runner.run_backtest(
-                prices=prices_pd,
-                signals=signals_pd,
-                symbol="TEST",
-            )
-
-            return {
-                "sharpe": result.metrics.sharpe,
-                "sortino": result.metrics.sortino,
-                "max_drawdown": result.metrics.max_drawdown,
-                "avg_slippage_bps": config.fill_model.prob_slippage * 10,  # Approximate
-                "fill_rate": 1.0,  # Nautilus has 100% fill rate in backtests
-                "total_trades": result.total_trades,
-            }
-
-        except Exception as e:
-            logger.warning(f"NautilusTrader backtest failed: {e}")
-            # Fallback to simple calculation
-            returns = self._compute_returns(signals)
-            returns_arr = returns.to_numpy()
-
-            sharpe = (
-                float(np.mean(returns_arr) / np.std(returns_arr) * np.sqrt(252))
-                if np.std(returns_arr) > 1e-10
-                else 0.0
-            )
-
-            # Simple drawdown calculation
-            equity = np.cumsum(returns_arr)
-            running_max = np.maximum.accumulate(equity)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                drawdowns = np.where(running_max > 0, (running_max - equity) / running_max, 0.0)
-            max_dd = float(np.nanmax(drawdowns)) if len(drawdowns) > 0 else 0.0
-
-            return {
-                "sharpe": sharpe,
-                "sortino": sharpe * 0.9,  # Approximate
-                "max_drawdown": max_dd,
-                "avg_slippage_bps": 0.0,
-                "fill_rate": 1.0,
-                "total_trades": int(np.sum(np.abs(np.diff(signals.to_numpy())) > 0)),
-            }
 
 
 async def run_full_stage2_validation(

@@ -31,6 +31,9 @@ from .stage2_nautilus import (
     run_full_stage2_validation,
 )
 
+# Re-export from subpackage for backward compatibility
+# The original stage2_nautilus.py has been refactored into stage2_nautilus/
+
 __all__ = [
     # CPCV validation
     "CPCVConfig",
