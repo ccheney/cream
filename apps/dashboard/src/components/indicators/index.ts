@@ -23,6 +23,10 @@ export {
   type ValueIndicators,
 } from "./IndicatorSnapshot";
 export { PaperTradingSection } from "./PaperTradingSection";
+export {
+  PriceIndicators as PriceIndicatorsWidget,
+  type PriceIndicatorsProps,
+} from "./PriceIndicators";
 export { RetireButton } from "./RetireButton";
 export { TriggerStatusCard } from "./TriggerStatusCard";
 export { ValidationReport } from "./ValidationReport";
