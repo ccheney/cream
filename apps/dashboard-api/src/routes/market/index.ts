@@ -1,14 +1,24 @@
 /**
- * Market Data API Routes
+ * Market Routes Index
  *
- * Routes for quotes, candles, indicators, and market regime.
- * Re-exports from modular market routes for backward compatibility.
- *
- * @see docs/plans/ui/05-api-endpoints.md Market Data section
+ * Composes all market sub-routers into a single router.
  */
 
-export { default } from "./market/index.js";
-export const marketRoutes = (await import("./market/index.js")).default;
+import { OpenAPIHono } from "@hono/zod-openapi";
+import candlesRoutes from "./candles.js";
+import indicatorsRoutes from "./indicators.js";
+import quotesRoutes from "./quotes.js";
+import regimeRoutes from "./regime.js";
+
+const app = new OpenAPIHono();
+
+// Mount sub-routers
+app.route("/", quotesRoutes);
+app.route("/", candlesRoutes);
+app.route("/", indicatorsRoutes);
+app.route("/", regimeRoutes);
+
+export default app;
 
 // Re-export types for external use
 export type {
@@ -19,7 +29,7 @@ export type {
   RegimeStatus,
   Timeframe,
   TimespanConfig,
-} from "./market/index.js";
+} from "./types.js";
 // Re-export schemas for external use
 // Re-export utilities for testing
 export {
@@ -42,4 +52,4 @@ export {
   setCache,
   TIMESPAN_MAP,
   TimeframeSchema,
-} from "./market/index.js";
+} from "./types.js";
