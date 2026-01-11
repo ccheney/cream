@@ -5,8 +5,6 @@
  * Uses Connect-ES with gRPC transport for communication.
  */
 
-// biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
-
 import { create } from "@bufbuild/protobuf";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
@@ -30,6 +28,7 @@ import {
   type GrpcClientConfig,
   isRetryableErrorCode,
 } from "../grpc/types.js";
+import { log } from "../logger.js";
 
 /**
  * Decoded Arrow table from Flight response
@@ -101,7 +100,7 @@ export class FlightServiceClient {
         const durationMs = Date.now() - metadata.startTime;
 
         if (this.config.enableLogging) {
-          console.log(`[Flight] ${metadata.requestId} completed in ${durationMs}ms`);
+          log.info({ requestId: metadata.requestId, durationMs }, "Flight call completed");
         }
 
         return { data, metadata, durationMs };
@@ -109,9 +108,9 @@ export class FlightServiceClient {
         lastError = GrpcError.fromConnectError(error, metadata.requestId);
 
         if (this.config.enableLogging) {
-          console.warn(
-            `[Flight] ${metadata.requestId} attempt ${attempt + 1} failed:`,
-            lastError.message
+          log.warn(
+            { requestId: metadata.requestId, attempt: attempt + 1, error: lastError.message },
+            "Flight call attempt failed"
           );
         }
 
@@ -139,7 +138,7 @@ export class FlightServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[Flight] ${metadata.requestId} listFlights`);
+      log.info({ requestId: metadata.requestId }, "Flight listFlights");
     }
 
     const request = create(CriteriaSchema, {
@@ -162,7 +161,7 @@ export class FlightServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[Flight] ${metadata.requestId} getFlightInfo for ${path.join("/")}`);
+      log.info({ requestId: metadata.requestId, path: path.join("/") }, "Flight getFlightInfo");
     }
 
     const descriptor = create(FlightDescriptorSchema, {
@@ -190,7 +189,7 @@ export class FlightServiceClient {
         : new Uint8Array(ticketData);
 
     if (this.config.enableLogging) {
-      console.log(`[Flight] ${metadata.requestId} doGet`);
+      log.info({ requestId: metadata.requestId }, "Flight doGet");
     }
 
     const ticket = create(TicketSchema, {
@@ -280,7 +279,7 @@ export class FlightServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[Flight] ${metadata.requestId} doAction: ${actionType}`);
+      log.info({ requestId: metadata.requestId, actionType }, "Flight doAction");
     }
 
     const action = create(ActionSchema, {
@@ -306,7 +305,7 @@ export class FlightServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[Flight] ${metadata.requestId} listActions`);
+      log.info({ requestId: metadata.requestId }, "Flight listActions");
     }
 
     return this.executeWithRetry(async () => {

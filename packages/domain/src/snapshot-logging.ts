@@ -11,6 +11,7 @@
  * @see docs/plans/03-market-snapshot.md
  */
 
+import { log } from "./logger.js";
 import type { MarketSnapshot, SymbolSnapshot } from "./marketSnapshot";
 import type { SnapshotPerformanceMetrics, SnapshotSizeEstimate } from "./snapshot-limits";
 
@@ -137,22 +138,28 @@ export interface SnapshotDiffResult {
 export function createConsoleLogger(): SnapshotLogger {
   return {
     debug(entry) {
-      if (process.env.LOG_LEVEL === "debug") {
-        // biome-ignore lint/suspicious/noConsole: intentional console logger
-        console.debug(JSON.stringify(entry));
-      }
+      log.debug(
+        { cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
+        entry.message
+      );
     },
     info(entry) {
-      // biome-ignore lint/suspicious/noConsole: intentional console logger
-      console.info(JSON.stringify(entry));
+      log.info(
+        { cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
+        entry.message
+      );
     },
     warn(entry) {
-      // biome-ignore lint/suspicious/noConsole: intentional console logger
-      console.warn(JSON.stringify(entry));
+      log.warn(
+        { cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
+        entry.message
+      );
     },
     error(entry) {
-      // biome-ignore lint/suspicious/noConsole: intentional console logger
-      console.error(JSON.stringify(entry));
+      log.error(
+        { cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
+        entry.message
+      );
     },
   };
 }

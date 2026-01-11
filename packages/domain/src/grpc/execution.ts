@@ -5,8 +5,6 @@
  * Uses Connect-ES with gRPC transport for communication.
  */
 
-// biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
-
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import {
@@ -25,6 +23,7 @@ import {
   type SubmitOrderRequest,
   type SubmitOrderResponse,
 } from "@cream/schema-gen/cream/v1/execution";
+import { log } from "../logger.js";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -90,7 +89,7 @@ export class ExecutionServiceClient {
         const durationMs = Date.now() - metadata.startTime;
 
         if (this.config.enableLogging) {
-          console.log(`[gRPC] ${metadata.requestId} completed in ${durationMs}ms`);
+          log.info({ requestId: metadata.requestId, durationMs }, "gRPC call completed");
         }
 
         return { data, metadata, durationMs };
@@ -98,9 +97,9 @@ export class ExecutionServiceClient {
         lastError = GrpcError.fromConnectError(error, metadata.requestId);
 
         if (this.config.enableLogging) {
-          console.warn(
-            `[gRPC] ${metadata.requestId} attempt ${attempt + 1} failed:`,
-            lastError.message
+          log.warn(
+            { requestId: metadata.requestId, attempt: attempt + 1, error: lastError.message },
+            "gRPC call attempt failed"
           );
         }
 
@@ -129,7 +128,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} checkConstraints`);
+      log.info({ requestId: metadata.requestId }, "gRPC checkConstraints");
     }
 
     return this.executeWithRetry(() => this.client.checkConstraints(request), metadata);
@@ -145,7 +144,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} submitOrder`);
+      log.info({ requestId: metadata.requestId }, "gRPC submitOrder");
     }
 
     return this.executeWithRetry(() => this.client.submitOrder(request), metadata);
@@ -161,7 +160,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} getOrderState`);
+      log.info({ requestId: metadata.requestId }, "gRPC getOrderState");
     }
 
     return this.executeWithRetry(() => this.client.getOrderState(request), metadata);
@@ -177,7 +176,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} cancelOrder`);
+      log.info({ requestId: metadata.requestId }, "gRPC cancelOrder");
     }
 
     return this.executeWithRetry(() => this.client.cancelOrder(request), metadata);
@@ -193,7 +192,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} getAccountState`);
+      log.info({ requestId: metadata.requestId }, "gRPC getAccountState");
     }
 
     return this.executeWithRetry(() => this.client.getAccountState(request), metadata);
@@ -209,7 +208,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} getPositions`);
+      log.info({ requestId: metadata.requestId }, "gRPC getPositions");
     }
 
     return this.executeWithRetry(() => this.client.getPositions(request), metadata);
@@ -228,7 +227,7 @@ export class ExecutionServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} streamExecutions`);
+      log.info({ requestId: metadata.requestId }, "gRPC streamExecutions");
     }
 
     const request = {

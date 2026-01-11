@@ -5,8 +5,6 @@
  * Uses Connect-ES with gRPC transport for communication.
  */
 
-// biome-ignore-all lint/suspicious/noConsole: Intentional logging controlled by enableLogging config
-
 import { create } from "@bufbuild/protobuf";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
@@ -19,6 +17,7 @@ import {
   SubscribeMarketDataRequestSchema,
   type SubscribeMarketDataResponse,
 } from "@cream/schema-gen/cream/v1/market_snapshot";
+import { log } from "../logger.js";
 import { GrpcError, RetryBackoff, sleep } from "./errors.js";
 import {
   DEFAULT_GRPC_CONFIG,
@@ -112,7 +111,7 @@ export class MarketDataServiceClient {
         const durationMs = Date.now() - metadata.startTime;
 
         if (this.config.enableLogging) {
-          console.log(`[gRPC] ${metadata.requestId} completed in ${durationMs}ms`);
+          log.info({ requestId: metadata.requestId, durationMs }, "gRPC call completed");
         }
 
         return { data, metadata, durationMs };
@@ -120,9 +119,9 @@ export class MarketDataServiceClient {
         lastError = GrpcError.fromConnectError(error, metadata.requestId);
 
         if (this.config.enableLogging) {
-          console.warn(
-            `[gRPC] ${metadata.requestId} attempt ${attempt + 1} failed:`,
-            lastError.message
+          log.warn(
+            { requestId: metadata.requestId, attempt: attempt + 1, error: lastError.message },
+            "gRPC call attempt failed"
           );
         }
 
@@ -151,7 +150,10 @@ export class MarketDataServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} getSnapshot for ${input.symbols.length} symbols`);
+      log.info(
+        { requestId: metadata.requestId, symbolCount: input.symbols.length },
+        "gRPC getSnapshot"
+      );
     }
 
     // Convert plain object to protobuf message
@@ -174,7 +176,10 @@ export class MarketDataServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(`[gRPC] ${metadata.requestId} getOptionChain for ${input.underlying}`);
+      log.info(
+        { requestId: metadata.requestId, underlying: input.underlying },
+        "gRPC getOptionChain"
+      );
     }
 
     // Convert plain object to protobuf message
@@ -201,8 +206,9 @@ export class MarketDataServiceClient {
     const metadata = this.createMetadata(cycleId);
 
     if (this.config.enableLogging) {
-      console.log(
-        `[gRPC] ${metadata.requestId} subscribeMarketData for ${input.symbols.length} symbols`
+      log.info(
+        { requestId: metadata.requestId, symbolCount: input.symbols.length },
+        "gRPC subscribeMarketData"
       );
     }
 

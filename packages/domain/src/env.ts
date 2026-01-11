@@ -13,6 +13,7 @@
 
 import { z } from "zod";
 import type { ExecutionContext } from "./context";
+import { log } from "./logger.js";
 
 /**
  * Environment type - controls trading behavior and safety checks
@@ -408,32 +409,27 @@ export function validateEnvironmentOrExit(
   const result = validateEnvironment(ctx, serviceName, additionalRequirements);
 
   if (!result.valid) {
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error(`\n❌ Environment validation failed for ${serviceName}:\n`);
-    for (const error of result.errors) {
-      // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-      console.error(`   • ${error}`);
-    }
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error(`\nEnvironment: ${ctx.environment}`);
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error(`Source: ${ctx.source}`);
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error(`TraceId: ${ctx.traceId}`);
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.error("\nPlease set the required environment variables and restart.\n");
+    log.error(
+      {
+        serviceName,
+        errors: result.errors,
+        environment: ctx.environment,
+        source: ctx.source,
+        traceId: ctx.traceId,
+      },
+      "Environment validation failed"
+    );
     process.exit(1);
   }
 
   if (result.warnings.length > 0) {
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.warn(`\n⚠️  Environment warnings for ${serviceName}:\n`);
-    for (const warning of result.warnings) {
-      // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-      console.warn(`   • ${warning}`);
-    }
-    // biome-ignore lint/suspicious/noConsole: Intentional - startup validation output
-    console.warn("");
+    log.warn(
+      {
+        serviceName,
+        warnings: result.warnings,
+      },
+      "Environment validation warnings"
+    );
   }
 }
 

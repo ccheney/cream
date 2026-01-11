@@ -47,6 +47,7 @@
     "@bufbuild/protobuf": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-node": "^2.1.1",
+    "@cream/logger": "workspace:*",
     "@cream/schema-gen": "workspace:*",
     "apache-arrow": "21.1.0",
     "zod": "^4.3.5"
