@@ -111,6 +111,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -125,8 +130,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Run tests
-        run: cargo test --workspace --manifest-path apps/execution-engine/Cargo.toml
+        run: bun run test:rs
 
   # ============================================
   # Python Tests
@@ -141,6 +149,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -149,11 +162,13 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Run tests
+      - name: Install dependencies
         run: |
-          cd packages/research
-          uv pip install -e ".[dev]" --system
-          uv run --extra dev pytest
+          bun install
+          cd packages/research && uv pip install -e ".[dev]" --system
+
+      - name: Run tests
+        run: bun run test:py
 
   # ============================================
   # Integration Tests (using testcontainers)
