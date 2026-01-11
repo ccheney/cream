@@ -6,6 +6,36 @@
  */
 
 export {
+  type BatchRepositoryAdapters,
+  CorporateActionsRepositoryAdapter,
+  createBatchRepositoryAdapters,
+  createCorporateActionsRepositoryAdapter,
+  createFundamentalRepositoryAdapter,
+  createSentimentRepositoryAdapter,
+  createShortInterestRepositoryAdapter,
+  FundamentalRepositoryAdapter,
+  SentimentRepositoryAdapter,
+  ShortInterestRepositoryAdapter,
+  type TursoCorporateActionRow,
+  type TursoCorporateActionsRepository,
+  type TursoFundamentalRow,
+  type TursoFundamentalsRepository,
+  type TursoRepositories,
+  type TursoSentimentRepository,
+  type TursoSentimentRow,
+  type TursoShortInterestRepository,
+  type TursoShortInterestRow,
+} from "./batch-data-adapter";
+export {
+  type CacheMetrics,
+  type CacheTTLConfig,
+  createIndicatorCache,
+  DEFAULT_CACHE_CONFIG,
+  DEFAULT_TTL_CONFIG,
+  IndicatorCache,
+  type IndicatorCacheConfig,
+} from "./indicator-cache";
+export {
   type CorporateActionsRepository,
   createIndicatorService,
   DEFAULT_SERVICE_CONFIG,
