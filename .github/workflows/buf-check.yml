@@ -1,6 +1,7 @@
 name: Buf Breaking Check
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "packages/schema/**"
