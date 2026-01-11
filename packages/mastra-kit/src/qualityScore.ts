@@ -18,7 +18,7 @@ import {
   OutcomeScorer,
   type OutcomeScoringConfig,
   type OutcomeSummary,
-} from "./outcomeScoring.js";
+} from "./outcomeScoring/index.js";
 import {
   type DecisionQualityScore,
   DecisionScorer,
@@ -369,7 +369,7 @@ export type {
   CompletedTrade,
   OutcomeScore,
   OutcomeSummary,
-} from "./outcomeScoring.js";
+} from "./outcomeScoring/index.js";
 export type {
   DecisionQualityScore,
   MarketContext,
