@@ -40,9 +40,9 @@ pub use recovery::{PortfolioRecovery, RecoveryConfig, RecoveryError, RecoveryRes
 pub use state::{OrderStateManager, TimeoutResult};
 pub use stops::{
     BacktestStopsSimulator, BracketOrder, BracketOrderBuilder, Candle, EnforcementMethod,
-    MonitoredPosition, PriceMonitor, RiskLevelDenomination, SameBarPriority, StopOrderSpec,
-    StopTargetLevels, StopTargetValidator, StopsConfig, StopsEnforcer, StopsError,
-    TakeProfitOrderSpec, TriggerResult,
+    EntryOrderSpec, MonitoredPosition, PriceMonitor, RiskLevelDenomination, SameBarPriority,
+    StopOrderSpec, StopTargetLevels, StopTargetValidator, StopsConfig, StopsEnforcer, StopsError,
+    TakeProfitOrderSpec, TriggerResult, supports_bracket_orders,
 };
 pub use tactics::{
     AdaptiveConfig, AggressiveLimitConfig, IcebergConfig, MarketState, OrderPurpose,
