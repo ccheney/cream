@@ -404,14 +404,11 @@ app.openapi(expirationsRoute, async (c) => {
   const client = getAlpacaClient();
 
   try {
-    // Fetch option contracts to get all expiration dates
-    // Alpaca API caps at 1000 per request - for high-volume symbols this may only show
-    // nearby expirations. Pagination would be needed for full LEAPS coverage.
-    const contracts = await client.getOptionContracts(upperUnderlying, {
-      limit: 1000,
-    });
+    // Use the client's getOptionExpirations which handles pagination
+    // and queries multiple date ranges for high-volume symbols like TSLA
+    const expirationDates = await client.getOptionExpirations(upperUnderlying);
 
-    if (contracts.length === 0) {
+    if (expirationDates.length === 0) {
       const emptyResponse = {
         underlying: upperUnderlying,
         expirations: [],
@@ -420,15 +417,8 @@ app.openapi(expirationsRoute, async (c) => {
       return c.json(emptyResponse, 200);
     }
 
-    // Extract unique expiration dates
-    const expirationSet = new Set<string>();
-    for (const contract of contracts) {
-      expirationSet.add(contract.expirationDate);
-    }
-
     // Build expirations array with DTE and type
-    const expirations = Array.from(expirationSet)
-      .sort()
+    const expirations = expirationDates
       .map((date) => ({
         date,
         dte: calculateDte(date),
