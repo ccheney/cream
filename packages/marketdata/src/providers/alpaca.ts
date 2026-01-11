@@ -675,17 +675,74 @@ export class AlpacaMarketDataClient {
 
   /**
    * Get unique expiration dates for an underlying symbol.
+   *
+   * For high-volume symbols like TSLA, the API may only return near-term contracts
+   * by default. This method queries multiple date ranges and uses pagination to
+   * discover all available expirations up to 12 months out.
    */
   async getOptionExpirations(underlying: string): Promise<string[]> {
     const expirations = new Set<string>();
 
-    const contracts = await this.getOptionContracts(underlying, { limit: 1000 });
+    // Generate date ranges to query (weekly intervals for 3 months, then monthly)
+    const today = new Date();
+    const dateRanges: Array<{ gte: string; lte: string }> = [];
 
-    for (const contract of contracts) {
-      if (contract.expirationDate) {
-        expirations.add(contract.expirationDate);
-      }
+    // First 3 months: query weekly to catch all weeklies
+    for (let week = 0; week < 12; week++) {
+      const start = new Date(today);
+      start.setDate(start.getDate() + week * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+
+      dateRanges.push({
+        gte: start.toISOString().split("T")[0]!,
+        lte: end.toISOString().split("T")[0]!,
+      });
     }
+
+    // Months 4-12: query monthly for monthlies/LEAPs
+    for (let month = 3; month < 12; month++) {
+      const start = new Date(today);
+      start.setMonth(start.getMonth() + month);
+      start.setDate(1);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); // Last day of month
+
+      dateRanges.push({
+        gte: start.toISOString().split("T")[0]!,
+        lte: end.toISOString().split("T")[0]!,
+      });
+    }
+
+    // Query each date range (can run in parallel for speed)
+    const promises = dateRanges.map(async (range) => {
+      try {
+        const response = await this.tradingRequest<{ option_contracts?: unknown[] }>(
+          "/v2/options/contracts",
+          {
+            underlying_symbols: underlying,
+            expiration_date_gte: range.gte,
+            expiration_date_lte: range.lte,
+            limit: 10, // We only need 1 contract per expiration to discover it
+          }
+        );
+
+        if (response?.option_contracts && Array.isArray(response.option_contracts)) {
+          for (const contract of response.option_contracts) {
+            const c = contract as Record<string, unknown>;
+            const expDate = c.expiration_date as string | undefined;
+            if (expDate) {
+              expirations.add(expDate);
+            }
+          }
+        }
+      } catch {
+        // Ignore errors for individual date ranges
+      }
+    });
+
+    await Promise.all(promises);
 
     return Array.from(expirations).sort();
   }
