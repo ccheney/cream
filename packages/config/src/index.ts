@@ -49,7 +49,7 @@ export {
   KeyRotationRegistry,
   type KeyStats,
   type RotationStrategy,
-} from "./keyRotation";
+} from "./keyRotation/index.js";
 // Layer Boundary Validation
 export {
   type ArchitecturalLayer,

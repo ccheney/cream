@@ -3,7 +3,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { createKeyRotationRegistry, KeyRotationManager, KeyRotationRegistry } from "./keyRotation";
+import {
+  createKeyRotationRegistry,
+  KeyRotationManager,
+  KeyRotationRegistry,
+} from "./keyRotation/index.js";
 
 // Silent logger for tests
 const silentLogger = {
