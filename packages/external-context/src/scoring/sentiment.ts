@@ -102,7 +102,7 @@ export function aggregateSentimentScores(
     }
 
     case "median": {
-      const sorted = [...scores].sort((a, b) => a - b);
+      const sorted = scores.toSorted((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
       if (sorted.length % 2 !== 0) {
         const midValue = sorted[mid];

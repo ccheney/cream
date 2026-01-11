@@ -418,7 +418,7 @@ function rankAndLimit(
     return instruments;
   }
 
-  const ranked = [...instruments].sort((a, b) => {
+  const ranked = instruments.toSorted((a, b) => {
     const aVol = a.avgVolume ?? 0;
     const bVol = b.avgVolume ?? 0;
     return bVol - aVol;

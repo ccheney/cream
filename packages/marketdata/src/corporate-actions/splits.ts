@@ -206,7 +206,7 @@ export function adjustCandlesForSplits<T extends CandleWithTimestamp>(
   }
 
   // Sort splits by date (oldest first)
-  const sortedSplits = [...splits].sort(
+  const sortedSplits = splits.toSorted(
     (a, b) => new Date(a.executionDate).getTime() - new Date(b.executionDate).getTime()
   );
 

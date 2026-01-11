@@ -53,7 +53,7 @@ export class MetricsCollector {
    * Get current metrics.
    */
   getMetrics(): QueryMetrics {
-    const sorted = [...this.latencies].sort((a, b) => a - b);
+    const sorted = this.latencies.toSorted((a, b) => a - b);
     const timeoutRate = this.totalQueries > 0 ? this.timeouts / this.totalQueries : 0;
     const cacheHitRate = this.totalQueries > 0 ? this.cacheHits / this.totalQueries : 0;
 

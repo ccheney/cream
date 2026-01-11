@@ -306,7 +306,7 @@ export class FactorZooService {
       const decayRate = isDecaying ? (peakIC - recentIC) / this.config.decayWindow : 0;
 
       let daysInDecay = 0;
-      const sortedHistory = [...history].sort(
+      const sortedHistory = history.toSorted(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       for (const h of sortedHistory) {

@@ -1,8 +1,8 @@
 {
   "extends": "@cream/tsconfig/react.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "ES2022"],
+    "target": "ES2024",
+    "lib": ["dom", "dom.iterable", "ES2024"],
     "types": ["@types/bun"],
     "allowJs": true,
     "skipLibCheck": true,

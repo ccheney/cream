@@ -155,7 +155,7 @@ export function assignRanks<T>(
   source: "vector" | "graph"
 ): RankedResult<T>[] {
   // Sort by score descending
-  const sorted = [...results].sort((a, b) => b.score - a.score);
+  const sorted = results.toSorted((a, b) => b.score - a.score);
 
   let currentRank = 1;
   let previousScore: number | null = null;
@@ -290,7 +290,7 @@ export function fuseMultipleWithRRF<T>(
   // Process each result set
   for (const { method, results } of resultSets) {
     // Sort by score descending and assign ranks
-    const sorted = [...results].sort((a, b) => b.score - a.score);
+    const sorted = results.toSorted((a, b) => b.score - a.score);
 
     let currentRank = 1;
     let previousScore: number | null = null;

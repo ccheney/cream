@@ -46,7 +46,7 @@ describe("Priority Queue Sorting", () => {
   }
 
   function sortByPriority(entries: MockEntry[]): MockEntry[] {
-    return [...entries].sort((a, b) => {
+    return entries.toSorted((a, b) => {
       // Lower priority number = higher importance
       if (a.priority !== b.priority) {
         return a.priority - b.priority;
@@ -127,7 +127,7 @@ describe("Eviction Priority", () => {
 
   function sortForEviction(entries: MockEntry[]): MockEntry[] {
     // Lowest importance first (highest priority number, oldest timestamp)
-    return [...entries].sort((a, b) => {
+    return entries.toSorted((a, b) => {
       if (b.priority !== a.priority) {
         return b.priority - a.priority;
       }

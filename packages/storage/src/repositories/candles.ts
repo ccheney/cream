@@ -155,7 +155,7 @@ export class CandlesRepository {
       [symbol, timeframe, limit]
     );
     // Return in ascending order
-    return rows.map(mapRowToCandle).reverse();
+    return rows.map(mapRowToCandle).toReversed();
   }
 
   /**

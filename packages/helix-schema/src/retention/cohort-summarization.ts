@@ -44,7 +44,7 @@ export function createTradeCohortSummary(
 
   const totalPnl = decisions.reduce((sum, d) => sum + d.realizedPnl, 0);
 
-  const sortedByAbsPnl = [...decisions].sort(
+  const sortedByAbsPnl = decisions.toSorted(
     (a, b) => Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl)
   );
   const notableDecisionIds = sortedByAbsPnl.slice(0, maxNotableDecisions).map((d) => d.decisionId);

@@ -311,7 +311,7 @@ export function parseChartUpdateMessage(raw: unknown): ChartUpdateMessage | null
  * Sort updates by timestamp.
  */
 export function sortByTimestamp<T extends { timestamp: string }>(updates: T[]): T[] {
-  return [...updates].sort((a, b) => {
+  return updates.toSorted((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
     return timeA - timeB;

@@ -104,7 +104,7 @@ export class HistoricalPredictionMarketAdapter {
         continue;
       }
 
-      const sorted = [...snapshots].sort(
+      const sorted = snapshots.toSorted(
         (a, b) => new Date(a.snapshotTime).getTime() - new Date(b.snapshotTime).getTime()
       );
 

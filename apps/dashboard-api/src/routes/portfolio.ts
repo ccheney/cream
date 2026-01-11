@@ -474,7 +474,7 @@ app.openapi(performanceRoute, async (c) => {
   const positionCosts = new Map<string, { qty: number; avgCost: number }>();
 
   // Process orders chronologically to track position costs
-  const sortedOrders = [...orders.data].sort(
+  const sortedOrders = orders.data.toSorted(
     (a, b) =>
       new Date(a.filledAt ?? a.createdAt).getTime() - new Date(b.filledAt ?? b.createdAt).getTime()
   );

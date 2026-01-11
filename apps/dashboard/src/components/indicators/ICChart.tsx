@@ -122,7 +122,7 @@ export function ICChart({ history, isLoading }: ICChartProps) {
 
   // Filter history by time range (assuming history is sorted newest first)
   const filteredHistory = history?.slice(0, timeRange) ?? [];
-  const reversedHistory = [...filteredHistory].reverse(); // Oldest first for chart
+  const reversedHistory = filteredHistory.toReversed(); // Oldest first for chart
   const icValues = reversedHistory.map((h) => h.icValue);
 
   // Calculate metrics

@@ -441,7 +441,7 @@ export function calculateRetrievalStatistics(
     holdingDays.length > 0 ? holdingDays.reduce((sum, d) => sum + d, 0) / holdingDays.length : 0;
 
   // Return distribution
-  const sortedReturns = [...returns].sort((a, b) => a - b);
+  const sortedReturns = returns.toSorted((a, b) => a - b);
   const returnDistribution: ReturnDistribution = {
     p10: percentile(sortedReturns, 10),
     p25: percentile(sortedReturns, 25),

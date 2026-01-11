@@ -310,7 +310,7 @@ function computeLogLikelihood(data: number[][], clusters: GMMCluster[]): number 
  */
 function assignRegimeLabels(clusters: GMMCluster[]): void {
   // Feature indices: 0=returns, 1=volatility, 2=volumeZScore, 3=trendStrength
-  const sorted = [...clusters].sort((a, b) => (a.mean[1] ?? 0) - (b.mean[1] ?? 0));
+  const sorted = clusters.toSorted((a, b) => (a.mean[1] ?? 0) - (b.mean[1] ?? 0));
 
   const lowestVol = sorted[0];
   const highestVol = sorted[sorted.length - 1];

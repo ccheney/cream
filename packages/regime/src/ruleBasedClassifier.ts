@@ -163,7 +163,7 @@ function calculatePercentile(values: number[], target: number): number {
     return 50; // Single element, no comparison possible
   }
 
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const index = sorted.filter((v) => v < target).length;
   return (index / sorted.length) * 100;
 }

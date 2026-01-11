@@ -241,7 +241,7 @@ export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 1
     return false;
   }
 
-  const sorted = [...bandwidthHistory].sort((a, b) => a - b);
+  const sorted = bandwidthHistory.toSorted((a, b) => a - b);
   const percentileIndex = Math.floor((threshold / 100) * sorted.length);
   const percentileValue = sorted[percentileIndex] ?? sorted[0];
 

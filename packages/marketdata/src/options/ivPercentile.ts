@@ -134,7 +134,7 @@ export class IVPercentileCalculator {
     const ivValues = history.map((h) => h.iv);
 
     // Sort for percentile calculation
-    const sorted = [...ivValues].sort((a, b) => a - b);
+    const sorted = ivValues.toSorted((a, b) => a - b);
 
     // Count how many historical values are below current IV
     const belowCount = sorted.filter((iv) => iv < currentIV).length;
@@ -247,7 +247,7 @@ export function calculateIVPercentile(
     return undefined;
   }
 
-  const sorted = [...historicalIVs].sort((a, b) => a - b);
+  const sorted = historicalIVs.toSorted((a, b) => a - b);
   const belowCount = sorted.filter((iv) => iv < currentIV).length;
 
   return (belowCount / sorted.length) * 100;
@@ -345,7 +345,7 @@ export class InMemoryIVHistoryStore {
    * Set complete history for a symbol.
    */
   setHistory(symbol: string, history: IVObservation[]): void {
-    const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = history.toSorted((a, b) => a.date.localeCompare(b.date));
     this.store.set(symbol, sorted);
   }
 

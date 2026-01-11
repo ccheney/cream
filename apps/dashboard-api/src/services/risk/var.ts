@@ -150,7 +150,7 @@ function historicalVaR(
   }
 
   // Sort returns ascending (worst to best)
-  const sortedReturns = [...portfolioReturns].sort((a, b) => a - b);
+  const sortedReturns = portfolioReturns.toSorted((a, b) => a - b);
 
   // Find the percentile index
   const index = Math.floor((1 - confidence) * sortedReturns.length);
