@@ -37,7 +37,7 @@ const sampleCycleEvent: MastraCycleEvent = {
 
 const sampleAgentEvent: MastraAgentEvent = {
   cycleId: "cycle-123",
-  agentType: "technical",
+  agentType: "sentiment",
   status: "complete",
   output: { recommendation: "BUY" },
   reasoning: "Strong RSI signals",
@@ -511,11 +511,11 @@ describe("Integration", () => {
     });
     publisher.emit({
       type: "agent",
-      data: { ...sampleAgentEvent, agentType: "technical", status: "started" },
+      data: { ...sampleAgentEvent, agentType: "sentiment", status: "started" },
     });
     publisher.emit({
       type: "agent",
-      data: { ...sampleAgentEvent, agentType: "technical", status: "complete" },
+      data: { ...sampleAgentEvent, agentType: "sentiment", status: "complete" },
     });
     publisher.emit({
       type: "cycle",

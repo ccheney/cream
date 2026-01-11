@@ -58,7 +58,6 @@ export async function handleAgentsState(ws: WebSocketWithMetadata): Promise<void
     const today = now.slice(0, 10);
 
     const agentDefs = [
-      { type: "technical", displayName: "Technical Analyst" },
       { type: "news", displayName: "News & Sentiment" },
       { type: "fundamentals", displayName: "Fundamentals & Macro" },
       { type: "bullish", displayName: "Bullish Research" },

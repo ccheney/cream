@@ -10,26 +10,12 @@ import type {
   FundamentalsAnalysis,
   Research,
   SentimentAnalysis,
-  TechnicalAnalysis,
   WorkflowDecisionPlan,
 } from "./types.js";
 
 // ============================================
 // Analyst Stubs
 // ============================================
-
-export async function runTechnicalAnalystStub(instruments: string[]): Promise<TechnicalAnalysis[]> {
-  return instruments.map((instrument) => ({
-    instrument_id: instrument,
-    setup_classification: "NO_SETUP",
-    key_levels: { support: [100], resistance: [110], pivot: 105 },
-    trend_assessment: "Neutral, consolidating in range",
-    momentum_assessment: "RSI at 50, neutral momentum",
-    volatility_assessment: "Normal volatility regime",
-    technical_thesis: "No clear setup. Waiting for breakout.",
-    invalidation_conditions: ["Break below 100", "Break above 110"],
-  }));
-}
 
 export async function runNewsAnalystStub(instruments: string[]): Promise<SentimentAnalysis[]> {
   return instruments.map((instrument) => ({

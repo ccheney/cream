@@ -44,7 +44,6 @@ import {
   runTrader,
   runTraderStreaming,
   type SentimentAnalysisOutput,
-  type TechnicalAnalysisOutput,
 } from "../agents/mastra-agents.js";
 import { getDecisionsRepo, getThesisStateRepo } from "../db.js";
 
@@ -71,7 +70,6 @@ import {
   runFundamentalsAnalystStub,
   runNewsAnalystStub,
   runRiskManagerStub,
-  runTechnicalAnalystStub,
   runTraderAgentStub,
   submitOrders,
   type ThesisUpdate,
@@ -95,7 +93,6 @@ export type {
   Research,
   ResearchTriggerResult,
   SentimentAnalysis,
-  TechnicalAnalysis,
   ThesisUpdate,
   WorkflowDecisionPlan,
   WorkflowInput,
@@ -121,8 +118,7 @@ async function executeTradingCycleStub(input: WorkflowInput): Promise<WorkflowRe
   const marketSnapshot = await fetchMarketSnapshot(instruments, context);
   const _memoryContext = await loadMemoryContext(marketSnapshot, context);
 
-  const [_technicalAnalysis, _sentimentAnalysis, _fundamentalsAnalysis] = await Promise.all([
-    runTechnicalAnalystStub(instruments),
+  const [_sentimentAnalysis, _fundamentalsAnalysis] = await Promise.all([
     runNewsAnalystStub(instruments),
     runFundamentalsAnalystStub(instruments),
   ]);
@@ -262,7 +258,6 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   log.info({ cycleId, instruments, phase: "analysts" }, "Starting analyst phase");
 
   const analystStartTime = Date.now();
-  emitAgentEvent("technical_analyst", "running");
   emitAgentEvent("news_analyst", "running");
   emitAgentEvent("fundamentals_analyst", "running");
 
@@ -277,17 +272,12 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
   const analystDuration = Date.now() - analystStartTime;
 
   let analystOutputs: {
-    technical: TechnicalAnalysisOutput[];
     news: SentimentAnalysisOutput[];
     fundamentals: FundamentalsAnalysisOutput[];
   };
 
   if (analystsResult.timedOut) {
     log.warn({ cycleId, phase: "analysts" }, "Analyst agents timed out");
-    emitAgentEvent("technical_analyst", "error", {
-      error: "Timed out",
-      durationMs: analystDuration,
-    });
     emitAgentEvent("news_analyst", "error", { error: "Timed out", durationMs: analystDuration });
     emitAgentEvent("fundamentals_analyst", "error", {
       error: "Timed out",
@@ -305,10 +295,6 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
 
   if (analystsResult.errored) {
     log.error({ cycleId, phase: "analysts", error: analystsResult.error }, "Analyst agents failed");
-    emitAgentEvent("technical_analyst", "error", {
-      error: analystsResult.error,
-      durationMs: analystDuration,
-    });
     emitAgentEvent("news_analyst", "error", {
       error: analystsResult.error,
       durationMs: analystDuration,
@@ -333,17 +319,9 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
 
   analystOutputs = analystsResult.result;
 
-  if (!analystOutputs.technical || !analystOutputs.news || !analystOutputs.fundamentals) {
-    const missing = [
-      !analystOutputs.technical && "technical",
-      !analystOutputs.news && "news",
-      !analystOutputs.fundamentals && "fundamentals",
-    ].filter(Boolean);
+  if (!analystOutputs.news || !analystOutputs.fundamentals) {
+    const missing = [!analystOutputs.news && "news", !analystOutputs.fundamentals && "fundamentals"].filter(Boolean);
     log.error({ cycleId, phase: "analysts", missing }, "Analyst agents returned undefined outputs");
-    emitAgentEvent("technical_analyst", "error", {
-      error: !analystOutputs.technical ? "Returned undefined" : undefined,
-      durationMs: analystDuration,
-    });
     emitAgentEvent("news_analyst", "error", {
       error: !analystOutputs.news ? "Returned undefined" : undefined,
       durationMs: analystDuration,
@@ -366,7 +344,6 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     };
   }
 
-  emitAgentEvent("technical_analyst", "complete", { durationMs: analystDuration });
   emitAgentEvent("news_analyst", "complete", { durationMs: analystDuration });
   emitAgentEvent("fundamentals_analyst", "complete", { durationMs: analystDuration });
 
@@ -374,7 +351,6 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     {
       cycleId,
       phase: "analysts",
-      technicalCount: analystOutputs.technical.length,
       newsCount: analystOutputs.news.length,
       fundamentalsCount: analystOutputs.fundamentals.length,
     },

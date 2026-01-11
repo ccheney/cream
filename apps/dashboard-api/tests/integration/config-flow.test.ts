@@ -64,7 +64,6 @@ async function seedTestConfig(): Promise<void> {
 
   // Create agent configs
   const agentTypes = [
-    "technical_analyst",
     "news_analyst",
     "fundamentals_analyst",
     "bullish_researcher",
@@ -155,7 +154,7 @@ describe("Config Flow Integration", () => {
       const config = await service.getActiveConfig("PAPER");
 
       // Model is now global via trading.globalModel (no per-agent model field)
-      expect(config.agents.technical_analyst.enabled).toBe(true);
+      expect(config.agents.news_analyst.enabled).toBe(true);
       expect(config.agents.trader.enabled).toBe(true);
     });
   });
@@ -196,7 +195,7 @@ describe("Config Flow Integration", () => {
     it("saves agent config changes in draft", async () => {
       await service.saveDraft("PAPER", {
         agents: {
-          technical_analyst: {
+          news_analyst: {
             enabled: false,
           },
         },
@@ -204,7 +203,7 @@ describe("Config Flow Integration", () => {
 
       const draft = await service.getDraft("PAPER");
       // Model is now global via trading.globalModel (no per-agent model field)
-      expect(draft.agents.technical_analyst.enabled).toBe(false);
+      expect(draft.agents.news_analyst.enabled).toBe(false);
     });
 
     it("saves universe config changes in draft", async () => {

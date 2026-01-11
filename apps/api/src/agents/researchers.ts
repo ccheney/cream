@@ -45,9 +45,6 @@ export async function runBullishResearcher(
 ): Promise<BullishResearchOutput[]> {
   const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
 
-Technical Analysis:
-${JSON.stringify(analystOutputs.technical, null, 2)}
-
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -80,9 +77,6 @@ export async function runBearishResearcher(
   analystOutputs: AnalystOutputs
 ): Promise<BearishResearchOutput[]> {
   const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
-
-Technical Analysis:
-${JSON.stringify(analystOutputs.technical, null, 2)}
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -186,9 +180,6 @@ export async function runBullishResearcherStreaming(
 ): Promise<BullishResearchOutput[]> {
   const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
 
-Technical Analysis:
-${JSON.stringify(analystOutputs.technical, null, 2)}
-
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -227,9 +218,6 @@ export async function runBearishResearcherStreaming(
   onChunk: OnStreamChunk
 ): Promise<BearishResearchOutput[]> {
   const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
-
-Technical Analysis:
-${JSON.stringify(analystOutputs.technical, null, 2)}
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}

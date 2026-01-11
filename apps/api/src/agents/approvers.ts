@@ -91,7 +91,6 @@ Decision Plan:
 ${JSON.stringify(plan, null, 2)}
 
 Supporting Analyst Outputs:
-Technical: ${JSON.stringify(analystOutputs.technical, null, 2)}
 News: ${JSON.stringify(analystOutputs.news, null, 2)}
 Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 
@@ -245,7 +244,6 @@ Decision Plan:
 ${JSON.stringify(plan, null, 2)}
 
 Supporting Analyst Outputs:
-Technical: ${JSON.stringify(analystOutputs.technical, null, 2)}
 News: ${JSON.stringify(analystOutputs.news, null, 2)}
 Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 

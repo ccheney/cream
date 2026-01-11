@@ -157,10 +157,9 @@ export const MAX_RESULT_SUMMARY_LENGTH = 500;
 
 /**
  * Map full agent type names to abbreviated names for WebSocket streaming.
- * The backend uses full names (technical_analyst) but the dashboard expects abbreviated names (technical).
+ * The backend uses full names (news_analyst) but the dashboard expects abbreviated names (news).
  */
 export const AGENT_TYPE_MAP: Record<string, AgentType> = {
-  technical_analyst: "technical",
   news_analyst: "news",
   fundamentals_analyst: "fundamentals",
   bullish_researcher: "bullish",

@@ -23,7 +23,6 @@ export const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
 // ============================================
 
 export type AgentType =
-  | "technical_analyst"
   | "news_analyst"
   | "fundamentals_analyst"
   | "bullish_researcher"

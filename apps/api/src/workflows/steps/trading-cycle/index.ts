@@ -24,7 +24,6 @@ export {
   runFundamentalsAnalystStub,
   runNewsAnalystStub,
   runRiskManagerStub,
-  runTechnicalAnalystStub,
   runTraderAgentStub,
 } from "./decide.js";
 // Helix
@@ -58,7 +57,6 @@ export type {
   Research,
   ResearchTriggerResult,
   SentimentAnalysis,
-  TechnicalAnalysis,
   ThesisUpdate,
   WorkflowDecisionPlan,
   WorkflowInput,

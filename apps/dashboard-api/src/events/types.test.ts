@@ -234,7 +234,7 @@ describe("MastraAgentEventSchema", () => {
   it("validates valid agent event", () => {
     const event = {
       cycleId: "cycle-123",
-      agentType: "technical",
+      agentType: "sentiment",
       status: "started",
       timestamp: "2026-01-04T12:00:00.000Z",
     };
@@ -244,7 +244,6 @@ describe("MastraAgentEventSchema", () => {
 
   it("validates all agent types", () => {
     const agentTypes = [
-      "technical",
       "sentiment",
       "fundamentals",
       "bullish",

@@ -45,7 +45,7 @@ const sampleCycleEvent: MastraCycleEvent = {
 
 const sampleAgentEvent: MastraAgentEvent = {
   cycleId: "cycle-123",
-  agentType: "technical",
+  agentType: "sentiment",
   status: "complete",
   output: { recommendation: "BUY" },
   reasoning: "Strong RSI signals",
@@ -171,7 +171,7 @@ describe("mapAgentEvent", () => {
   it("maps agentType correctly", () => {
     const result = mapAgentEvent(sampleAgentEvent);
     // agentType is mapped to domain type names
-    expect((result.message as any).data.agentType).toBe("technical_analyst");
+    expect((result.message as any).data.agentType).toBe("news_analyst");
   });
 
   it("maps status correctly", () => {

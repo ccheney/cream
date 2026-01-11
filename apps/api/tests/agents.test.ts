@@ -1,8 +1,7 @@
 /**
  * Agent Unit Tests
  *
- * Tests for all 10 agents in the trading network:
- * - Technical Analyst
+ * Tests for all 9 agents in the trading network:
  * - News & Sentiment Analyst
  * - Fundamentals & Macro Analyst
  * - Bullish Researcher
@@ -33,7 +32,6 @@ import {
   type FundamentalsAnalysisOutput,
   type RiskManagerOutput,
   type SentimentAnalysisOutput,
-  type TechnicalAnalysisOutput,
 } from "@cream/mastra-kit";
 import { z } from "zod";
 
@@ -48,7 +46,6 @@ import {
   mastraAgents,
   newsAnalystAgent,
   riskManagerAgent,
-  technicalAnalystAgent,
   traderAgent,
 } from "../src/agents/mastra-agents";
 
@@ -62,30 +59,12 @@ import {
   newsAnalyst,
   riskManager,
   agents as stubAgents,
-  technicalAnalyst,
   trader,
 } from "../src/agents/stub-agents";
 
 // ============================================
 // Zod Schemas (mirroring mastra-agents.ts)
 // ============================================
-
-const KeyLevelsSchema = z.object({
-  support: z.array(z.number()),
-  resistance: z.array(z.number()),
-  pivot: z.number(),
-});
-
-const TechnicalAnalysisSchema = z.object({
-  instrument_id: z.string(),
-  setup_classification: z.enum(["BREAKOUT", "PULLBACK", "REVERSAL", "RANGE_BOUND", "NO_SETUP"]),
-  key_levels: KeyLevelsSchema,
-  trend_assessment: z.string(),
-  momentum_assessment: z.string(),
-  volatility_assessment: z.string(),
-  technical_thesis: z.string(),
-  invalidation_conditions: z.array(z.string()),
-});
 
 const EventImpactSchema = z.object({
   event_id: z.string(),
@@ -267,23 +246,6 @@ const CriticOutputSchema = z.object({
 // Test Data Factories
 // ============================================
 
-function createValidTechnicalAnalysis(): TechnicalAnalysisOutput {
-  return {
-    instrument_id: "AAPL",
-    setup_classification: "BREAKOUT",
-    key_levels: {
-      support: [170.0, 165.0, 160.0],
-      resistance: [180.0, 185.0, 190.0],
-      pivot: 175.0,
-    },
-    trend_assessment: "Strong uptrend on daily timeframe",
-    momentum_assessment: "RSI at 62, positive MACD crossover",
-    volatility_assessment: "ATR expanding, VIX at normal levels",
-    technical_thesis: "Breakout above 175 with volume confirmation",
-    invalidation_conditions: ["Break below 170", "Volume divergence"],
-  };
-}
-
 function createValidSentimentAnalysis(): SentimentAnalysisOutput {
   return {
     instrument_id: "AAPL",
@@ -422,13 +384,12 @@ function createValidAgentContext(): AgentContext {
 
 describe("Agent Configuration", () => {
   describe("AGENT_TYPES", () => {
-    it("should have exactly 10 agent types", () => {
-      expect(AGENT_TYPES).toHaveLength(10);
+    it("should have exactly 9 agent types", () => {
+      expect(AGENT_TYPES).toHaveLength(9);
     });
 
     it("should include all expected agent types", () => {
       const expectedTypes: AgentType[] = [
-        "technical_analyst",
         "news_analyst",
         "fundamentals_analyst",
         "bullish_researcher",
@@ -479,11 +440,6 @@ describe("Agent Configuration", () => {
 // ============================================
 
 describe("Mastra Agent Instances", () => {
-  it("should create technical analyst agent", () => {
-    expect(technicalAnalystAgent).toBeDefined();
-    expect(technicalAnalystAgent.id).toBe("technical_analyst");
-  });
-
   it("should create news analyst agent", () => {
     expect(newsAnalystAgent).toBeDefined();
     expect(newsAnalystAgent.id).toBe("news_analyst");
@@ -530,13 +486,12 @@ describe("Mastra Agent Instances", () => {
   });
 
   describe("Agent Registry", () => {
-    it("should have all 10 agents in registry", () => {
-      expect(Object.keys(mastraAgents)).toHaveLength(10);
+    it("should have all 9 agents in registry", () => {
+      expect(Object.keys(mastraAgents)).toHaveLength(9);
     });
 
     it("should have correct agent ids in registry", () => {
       const expectedIds: AgentType[] = [
-        "technical_analyst",
         "news_analyst",
         "fundamentals_analyst",
         "bullish_researcher",
@@ -561,13 +516,6 @@ describe("Mastra Agent Instances", () => {
 // ============================================
 
 describe("Stub Agents", () => {
-  it("should create technical analyst stub", () => {
-    expect(technicalAnalyst).toBeDefined();
-    expect(technicalAnalyst.id).toBe("technical_analyst");
-    expect(technicalAnalyst.name).toBeDefined();
-    expect(technicalAnalyst.systemPrompt).toBeDefined();
-  });
-
   it("should create news analyst stub", () => {
     expect(newsAnalyst).toBeDefined();
     expect(newsAnalyst.id).toBe("news_analyst");
@@ -625,49 +573,6 @@ describe("Stub Agents", () => {
         expect(stub.role).toBe(config.role);
       }
     });
-  });
-});
-
-// ============================================
-// Technical Analyst Output Schema Tests
-// ============================================
-
-describe("Technical Analysis Output Schema", () => {
-  it("should validate valid technical analysis", () => {
-    const valid = createValidTechnicalAnalysis();
-    expect(() => TechnicalAnalysisSchema.parse(valid)).not.toThrow();
-  });
-
-  it("should validate all setup classifications", () => {
-    const classifications = ["BREAKOUT", "PULLBACK", "REVERSAL", "RANGE_BOUND", "NO_SETUP"];
-    for (const classification of classifications) {
-      const analysis = {
-        ...createValidTechnicalAnalysis(),
-        setup_classification: classification,
-      };
-      expect(() => TechnicalAnalysisSchema.parse(analysis)).not.toThrow();
-    }
-  });
-
-  it("should reject invalid setup classification", () => {
-    const invalid = {
-      ...createValidTechnicalAnalysis(),
-      setup_classification: "INVALID",
-    };
-    expect(() => TechnicalAnalysisSchema.parse(invalid)).toThrow();
-  });
-
-  it("should require key levels", () => {
-    const invalid = {
-      ...createValidTechnicalAnalysis(),
-      key_levels: undefined,
-    };
-    expect(() => TechnicalAnalysisSchema.parse(invalid)).toThrow();
-  });
-
-  it("should require instrument_id", () => {
-    const { instrument_id: _, ...withoutId } = createValidTechnicalAnalysis();
-    expect(() => TechnicalAnalysisSchema.parse(withoutId)).toThrow();
   });
 });
 

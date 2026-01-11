@@ -52,7 +52,6 @@ export function mapCycleEvent(event: MastraCycleEvent): BroadcastEvent {
 export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
   // Map event agent types to domain agent types
   const agentTypeMap: Record<MastraAgentEvent["agentType"], string> = {
-    technical: "technical_analyst",
     sentiment: "news_analyst",
     fundamentals: "fundamentals_analyst",
     bullish: "bullish_researcher",

@@ -79,7 +79,6 @@ export type MastraCycleEvent = z.infer<typeof MastraCycleEventSchema>;
 export const MastraAgentEventSchema = z.object({
   cycleId: z.string(),
   agentType: z.enum([
-    "technical",
     "sentiment",
     "fundamentals",
     "bullish",

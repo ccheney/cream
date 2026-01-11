@@ -24,7 +24,6 @@ const app = new OpenAPIHono();
 // ============================================
 
 const AgentTypeSchema = z.enum([
-  "technical",
   "news",
   "fundamentals",
   "bullish",
@@ -76,7 +75,6 @@ const PaginatedOutputsSchema = z.object({
  * Map from API agent types (short) to database agent types (full)
  */
 const API_TO_DB_AGENT_TYPE: Record<string, DbAgentType> = {
-  technical: "technical_analyst",
   news: "news_analyst",
   fundamentals: "fundamentals_analyst",
   bullish: "bullish_researcher",
@@ -87,7 +85,6 @@ const API_TO_DB_AGENT_TYPE: Record<string, DbAgentType> = {
 };
 
 const AGENT_DEFINITIONS = [
-  { type: "technical", displayName: "Technical Analyst" },
   { type: "news", displayName: "News & Sentiment" },
   { type: "fundamentals", displayName: "Fundamentals & Macro" },
   { type: "bullish", displayName: "Bullish Research" },
@@ -101,7 +98,6 @@ const AGENT_DEFINITIONS = [
  * Default prompts for each agent type
  */
 const DEFAULT_PROMPTS: Record<string, string> = {
-  technical: "You are the Technical Analyst agent for the Cream trading system.",
   news: "You are the News & Sentiment agent for the Cream trading system.",
   fundamentals: "You are the Fundamentals & Macro agent for the Cream trading system.",
   bullish: "You are the Bullish Research agent for the Cream trading system.",
