@@ -240,6 +240,23 @@ export const PressReleaseSchema = z.object({
 });
 export type PressRelease = z.infer<typeof PressReleaseSchema>;
 
+/**
+ * Economic calendar event schema.
+ */
+export const EconomicCalendarEventSchema = z.object({
+  date: z.string(),
+  country: z.string(),
+  event: z.string(),
+  actual: z.number().nullable().optional(),
+  previous: z.number().nullable().optional(),
+  estimate: z.number().nullable().optional(),
+  change: z.number().nullable().optional(),
+  changePercentage: z.number().nullable().optional(),
+  unit: z.string().optional(),
+  impact: z.enum(["Low", "Medium", "High"]).optional(),
+});
+export type EconomicCalendarEvent = z.infer<typeof EconomicCalendarEventSchema>;
+
 // ============================================
 // FMP Client
 // ============================================
@@ -552,6 +569,28 @@ export class FmpClient {
       `/${FMP_VERSION}/press-releases/${symbol}`,
       { limit, apikey: this.apiKey },
       z.array(PressReleaseSchema)
+    );
+  }
+
+  // ============================================
+  // Economic Calendar
+  // ============================================
+
+  /**
+   * Get economic calendar events.
+   * Max date range: 90 days.
+   */
+  async getEconomicCalendar(
+    options: {
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+      country?: string; // Default: all countries
+    } = {}
+  ): Promise<EconomicCalendarEvent[]> {
+    return this.client.get(
+      `/${FMP_VERSION}/economic_calendar`,
+      { from: options.from, to: options.to, country: options.country, apikey: this.apiKey },
+      z.array(EconomicCalendarEventSchema)
     );
   }
 }
