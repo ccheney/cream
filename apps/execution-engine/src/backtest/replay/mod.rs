@@ -1,9 +1,9 @@
 //! Historical data replay engine for backtest simulation.
 //!
 //! Provides sequential candle streaming from various data sources:
-//! - Local Parquet/Arrow files
-//! - Arrow Flight RPC for high-performance streaming
+//! - Local Parquet files
 //! - REST API fallback
+//! - In-memory data (for testing)
 //!
 //! Features:
 //! - Multi-instrument timestamp synchronization

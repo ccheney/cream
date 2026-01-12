@@ -12,13 +12,6 @@ use crate::backtest::Candle;
 pub enum DataSourceType {
     /// Local Parquet file.
     Parquet(PathBuf),
-    /// Local Arrow IPC file.
-    ArrowIpc(PathBuf),
-    /// Arrow Flight RPC endpoint.
-    ArrowFlight {
-        /// gRPC endpoint URL.
-        endpoint: String,
-    },
     /// REST API.
     RestApi {
         /// API base URL.

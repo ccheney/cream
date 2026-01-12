@@ -9,14 +9,6 @@ pub enum ReplayError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// Arrow error.
-    #[error("Arrow error: {0}")]
-    Arrow(String),
-
-    /// Flight RPC error.
-    #[error("Flight RPC error: {0}")]
-    FlightRpc(String),
-
     /// No data available for instrument.
     #[error("No data for instrument: {0}")]
     NoData(String),
