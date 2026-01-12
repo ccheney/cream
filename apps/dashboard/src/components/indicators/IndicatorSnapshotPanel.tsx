@@ -10,8 +10,10 @@
 "use client";
 
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useIndicatorSnapshot } from "@/hooks/queries/useMarket";
 import type { DataQuality } from "@/lib/api/types";
+import { isOptionsMarketOpen } from "@/lib/market-hours";
 import { cn } from "@/lib/utils";
 import {
   CorporatePanel,
@@ -124,6 +126,21 @@ export function IndicatorSnapshotPanel({
 }: IndicatorSnapshotPanelProps) {
   const { data, isLoading, isError, error } = useIndicatorSnapshot(symbol);
 
+  // Track market open status for options (updates every minute)
+  const [isMarketClosed, setIsMarketClosed] = useState(!isOptionsMarketOpen());
+
+  useEffect(() => {
+    // Update immediately
+    setIsMarketClosed(!isOptionsMarketOpen());
+
+    // Check every minute
+    const interval = setInterval(() => {
+      setIsMarketClosed(!isOptionsMarketOpen());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (isLoading) {
     return (
       <div
@@ -181,7 +198,11 @@ export function IndicatorSnapshotPanel({
         )}
 
         {sections.includes("options") && (
-          <OptionsIndicatorsPanel data={data.options} freshness={priceFreshness} />
+          <OptionsIndicatorsPanel
+            data={data.options}
+            freshness={priceFreshness}
+            isMarketClosed={isMarketClosed}
+          />
         )}
 
         {sections.includes("value") && (

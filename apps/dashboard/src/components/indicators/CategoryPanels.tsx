@@ -426,29 +426,27 @@ export interface OptionsIndicatorsPanelProps {
   data: OptionsIndicators | null | undefined;
   isLoading?: boolean;
   freshness?: Freshness;
+  /** When true, shows "Market Closed" and uses stale freshness */
+  isMarketClosed?: boolean;
 }
 
 export function OptionsIndicatorsPanel({
   data,
   isLoading,
   freshness = "recent",
+  isMarketClosed = false,
 }: OptionsIndicatorsPanelProps) {
-  // Check if we have any options data
-  const hasOptionsData =
-    data?.atm_iv != null || data?.iv_skew_25d != null || data?.put_call_ratio_volume != null;
+  // When market is closed, override freshness to show stale/recent
+  const effectiveFreshness = isMarketClosed ? "stale" : freshness;
 
   return (
     <IndicatorSection
       title="Options"
       icon={<Activity className="h-4 w-4" />}
       isLoading={isLoading}
-      freshness={freshness}
+      freshness={effectiveFreshness}
+      subtitle={isMarketClosed ? "Market Closed" : undefined}
     >
-      {!isLoading && !hasOptionsData && (
-        <p className="text-xs text-stone-400 dark:text-night-500 mb-3">
-          Options data requires market hours (9:30 AM - 4:00 PM ET)
-        </p>
-      )}
       <IndicatorGrid columns={4}>
         <IndicatorValue
           label="ATM IV"

@@ -21,6 +21,8 @@ export interface IndicatorSectionProps {
   children: React.ReactNode;
   isLoading?: boolean;
   freshness?: Freshness;
+  /** Subtitle shown next to title (e.g., "Market Closed") */
+  subtitle?: string;
   lastUpdated?: string | null;
   defaultOpen?: boolean;
   className?: string;
@@ -68,6 +70,7 @@ export function IndicatorSection({
   children,
   isLoading = false,
   freshness,
+  subtitle,
   lastUpdated,
   defaultOpen = true,
   className,
@@ -94,6 +97,9 @@ export function IndicatorSection({
         <div className="flex items-center gap-2">
           {icon && <span className="text-stone-500 dark:text-night-400">{icon}</span>}
           <span className="font-medium text-stone-700 dark:text-night-200">{title}</span>
+          {subtitle && (
+            <span className="text-xs text-stone-400 dark:text-night-500">({subtitle})</span>
+          )}
           {freshness && <FreshnessBadge freshness={freshness} />}
         </div>
         <ChevronDown

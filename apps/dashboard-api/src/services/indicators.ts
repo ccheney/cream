@@ -11,7 +11,6 @@ import {
   createBatchRepositoryAdapters,
   createIndicatorCache,
   createLiquidityCalculator,
-  createOptionsCalculator,
   createPriceCalculator,
   IndicatorService,
   type MarketDataProvider,
@@ -341,16 +340,12 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
     minDte: 1,
   });
 
-  // Create options calculator
-  const optionsCalculator = createOptionsCalculator();
-
   // Create service with all dependencies
   const service = new IndicatorService(
     {
       marketData,
       priceCalculator,
       liquidityCalculator,
-      optionsCalculator,
       cache,
       optionsData: optionsProvider,
       fundamentalRepo: batchRepos.fundamentalRepo,
