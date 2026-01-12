@@ -102,6 +102,7 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 | `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` | - | - | ✓ | LLM API key |
 | `GOOGLE_CLIENT_ID` | - | ✓ | ✓ | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | - | ✓ | ✓ | Google OAuth client secret |
+| `FRED_API_KEY` | - | Optional | Recommended | FRED economic calendar API key |
 
 ### All Environment Variables
 
