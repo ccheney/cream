@@ -205,12 +205,18 @@ export function IndicatorSnapshotPanel({
         )}
       </div>
 
-      {/* Missing fields warning */}
-      {data.metadata.missing_fields.length > 0 && (
-        <p className="text-xs text-stone-400 dark:text-night-500">
-          Some data unavailable: {data.metadata.missing_fields.join(", ")}
-        </p>
-      )}
+      {/* Missing fields warning - exclude options fields since the Options panel explains market hours */}
+      {(() => {
+        const optionsFields = ["implied_volatility", "iv_skew", "put_call_ratio"];
+        const otherMissing = data.metadata.missing_fields.filter((f) => !optionsFields.includes(f));
+        return (
+          otherMissing.length > 0 && (
+            <p className="text-xs text-stone-400 dark:text-night-500">
+              Some data unavailable: {otherMissing.join(", ")}
+            </p>
+          )
+        );
+      })()}
     </div>
   );
 }

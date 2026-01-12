@@ -433,6 +433,10 @@ export function OptionsIndicatorsPanel({
   isLoading,
   freshness = "recent",
 }: OptionsIndicatorsPanelProps) {
+  // Check if we have any options data
+  const hasOptionsData =
+    data?.atm_iv != null || data?.iv_skew_25d != null || data?.put_call_ratio_volume != null;
+
   return (
     <IndicatorSection
       title="Options"
@@ -440,6 +444,11 @@ export function OptionsIndicatorsPanel({
       isLoading={isLoading}
       freshness={freshness}
     >
+      {!isLoading && !hasOptionsData && (
+        <p className="text-xs text-stone-400 dark:text-night-500 mb-3">
+          Options data requires market hours (9:30 AM - 4:00 PM ET)
+        </p>
+      )}
       <IndicatorGrid columns={4}>
         <IndicatorValue
           label="ATM IV"
