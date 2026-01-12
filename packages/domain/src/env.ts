@@ -118,6 +118,7 @@ const envSchema = z.object({
   // Market Data Providers (Alpaca is unified provider via ALPACA_KEY/ALPACA_SECRET)
   FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
   ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
+  FRED_API_KEY: z.string().optional().describe("FRED API key for economic data"),
 
   // Broker Credentials
   ALPACA_KEY: z.string().optional().describe("Alpaca API key"),
@@ -172,6 +173,7 @@ function parseEnv(): EnvConfig {
     HELIX_PORT: Bun.env.HELIX_PORT ?? process.env.HELIX_PORT,
     FMP_KEY: Bun.env.FMP_KEY ?? process.env.FMP_KEY,
     ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
+    FRED_API_KEY: Bun.env.FRED_API_KEY ?? process.env.FRED_API_KEY,
     ALPACA_KEY: Bun.env.ALPACA_KEY ?? process.env.ALPACA_KEY,
     ALPACA_SECRET: Bun.env.ALPACA_SECRET ?? process.env.ALPACA_SECRET,
     ALPACA_BASE_URL: Bun.env.ALPACA_BASE_URL ?? process.env.ALPACA_BASE_URL,
@@ -444,6 +446,7 @@ export function getEnvVarDocumentation(): Array<{
       required: "no",
       description: "Alpha Vantage API key for macro data",
     },
+    { name: "FRED_API_KEY", required: "no", description: "FRED API key for economic data" },
     { name: "ALPACA_KEY", required: "PAPER/LIVE", description: "Alpaca API key" },
     { name: "ALPACA_SECRET", required: "PAPER/LIVE", description: "Alpaca API secret" },
     { name: "ALPACA_BASE_URL", required: "no", description: "Alpaca API base URL (override)" },

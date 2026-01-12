@@ -125,6 +125,7 @@ ALPACA_BASE_URL=             # Alpaca base URL (auto-set by environment)
 # Market Data (Alpaca is the unified provider via ALPACA_KEY/ALPACA_SECRET above)
 FMP_KEY=                     # FMP fundamentals/transcripts
 ALPHAVANTAGE_KEY=            # Alpha Vantage macro indicators
+FRED_API_KEY=                # FRED economic data (Federal Reserve)
 
 # LLM
 ANTHROPIC_API_KEY=           # Anthropic Claude API key
