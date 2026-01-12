@@ -29,7 +29,13 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
   const { order } = event.data;
   const timestamp = new Date().toISOString();
 
-  // Broadcast order update to orders channel
+  // Determine cache keys to invalidate based on order event
+  const orderInvalidates = ["orders", "orders.recent"];
+  if (event.data.event === "fill" || event.data.event === "partial_fill") {
+    orderInvalidates.push("portfolio.positions", "portfolio.summary", "portfolio.account");
+  }
+
+  // Broadcast order update to orders channel with cache invalidation hints
   const orderUpdateSent = broadcastOrderUpdate({
     type: "order_update",
     data: {
@@ -45,6 +51,7 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
       event: event.data.event,
       timestamp,
     },
+    invalidates: orderInvalidates,
   });
 
   log.debug(
@@ -72,6 +79,14 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
     const avgEntry = order.filled_avg_price ? Number.parseFloat(order.filled_avg_price) : 0;
     const marketValue = qty * (fillPrice ?? avgEntry);
 
+    // Cache keys to invalidate for position changes
+    const positionInvalidates = [
+      "portfolio.positions",
+      "portfolio.summary",
+      "portfolio.account",
+      `portfolio.positions.${order.symbol}`,
+    ];
+
     const positionUpdateSent = broadcastPositionUpdate({
       type: "position_update",
       data: {
@@ -85,6 +100,7 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
         orderId: order.id,
         timestamp,
       },
+      invalidates: positionInvalidates,
     });
 
     log.debug(
@@ -139,6 +155,12 @@ export async function initAlpacaTradeStream(paper = true): Promise<void> {
           break;
         case "reconnecting":
           log.info({ attempt: event.attempt }, "Alpaca trading stream reconnecting");
+          break;
+        case "heartbeat_sent":
+          log.trace("Alpaca trading stream heartbeat sent");
+          break;
+        case "heartbeat_timeout":
+          log.warn("Alpaca trading stream heartbeat timeout - forcing reconnect");
           break;
       }
     });

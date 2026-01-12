@@ -794,6 +794,8 @@ export type PositionUpdateData = z.infer<typeof PositionUpdateDataSchema>;
 export const PositionUpdateMessageSchema = z.object({
   type: z.literal("position_update"),
   data: PositionUpdateDataSchema,
+  /** TanStack Query cache keys to invalidate on the client */
+  invalidates: z.array(z.string()).optional(),
 });
 
 export type PositionUpdateMessage = z.infer<typeof PositionUpdateMessageSchema>;
@@ -858,6 +860,8 @@ export type OrderUpdateData = z.infer<typeof OrderUpdateDataSchema>;
 export const OrderUpdateMessageSchema = z.object({
   type: z.literal("order_update"),
   data: OrderUpdateDataSchema,
+  /** TanStack Query cache keys to invalidate on the client */
+  invalidates: z.array(z.string()).optional(),
 });
 
 export type OrderUpdateMessage = z.infer<typeof OrderUpdateMessageSchema>;
