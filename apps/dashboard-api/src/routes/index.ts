@@ -48,6 +48,7 @@ export { default as alertsRoutes } from "./alerts.js";
 export { default as backtestRoutes } from "./backtest.js";
 export { default as batchStatusRoutes } from "./batch-status.js";
 export { default as batchTriggerRoutes } from "./batch-trigger.js";
+export { default as calendarRoutes } from "./calendar.js";
 export { default as configRoutes } from "./config.js";
 export { default as decisionsRoutes } from "./decisions.js";
 export { default as filingsRoutes } from "./filings.js";

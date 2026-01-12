@@ -31,6 +31,7 @@ import {
   backtestRoutes,
   batchStatusRoutes,
   batchTriggerRoutes,
+  calendarRoutes,
   configRoutes,
   decisionsRoutes,
   filingsRoutes,
@@ -198,6 +199,7 @@ app.use("/api/config/*", liveProtection());
 app.use("/api/backtests/*", liveProtection());
 app.use("/api/theses/*", liveProtection());
 
+app.route("/api/calendar", calendarRoutes);
 app.route("/api/system", systemRoutes);
 app.route("/api/decisions", decisionsRoutes);
 app.route("/api/portfolio", portfolioRoutes);
