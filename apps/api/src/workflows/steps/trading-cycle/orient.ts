@@ -15,6 +15,10 @@ import {
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
 import { getIndicatorsRepo, getRegimeLabelsRepo } from "../../../db.js";
+import {
+  type IndicatorSynthesisInput,
+  indicatorSynthesisWorkflow,
+} from "../../indicator-synthesis/index.js";
 import { getEmbeddingClient, getHelixOrchestrator } from "./helix.js";
 import { log } from "./logger.js";
 import type { IndicatorTriggerResult, MarketSnapshot, MemoryContext, RegimeData } from "./types.js";
@@ -351,4 +355,95 @@ export async function checkIndicatorTrigger(
     );
     return null;
   }
+}
+
+// ============================================
+// Async Workflow Launch
+// ============================================
+
+/**
+ * Spawn the indicator synthesis workflow asynchronously (fire-and-forget).
+ *
+ * This function does NOT block the trading cycle. The synthesis workflow
+ * runs in the background while the hourly OODA loop continues.
+ *
+ * @param triggerResult - Result from checkIndicatorTrigger
+ * @param cycleId - Current trading cycle ID
+ * @returns void (non-blocking)
+ *
+ * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md Phase 3, Step 3.1
+ */
+export function maybeSpawnIndicatorSynthesis(
+  triggerResult: IndicatorTriggerResult | null,
+  cycleId: string
+): void {
+  if (!triggerResult?.shouldTrigger) {
+    return;
+  }
+
+  log.info(
+    {
+      cycleId,
+      triggerReason: triggerResult.triggerReason,
+      currentRegime: triggerResult.conditions.currentRegime,
+      regimeGapDetected: triggerResult.conditions.regimeGapDetected,
+      rollingIC30Day: triggerResult.conditions.rollingIC30Day,
+      icDecayDays: triggerResult.conditions.icDecayDays,
+      activeIndicatorCount: triggerResult.conditions.activeIndicatorCount,
+      recommendation: triggerResult.recommendation,
+    },
+    "Spawning indicator synthesis workflow"
+  );
+
+  const workflowInput: IndicatorSynthesisInput = {
+    triggerReason: triggerResult.triggerReason ?? "Unknown trigger",
+    currentRegime: triggerResult.conditions.currentRegime,
+    regimeGapDetails: triggerResult.conditions.regimeGapDetails,
+    rollingIC30Day: triggerResult.conditions.rollingIC30Day,
+    icDecayDays: triggerResult.conditions.icDecayDays,
+    cycleId,
+  };
+
+  indicatorSynthesisWorkflow
+    .createRun()
+    .then((run) => run.start({ inputData: workflowInput }))
+    .then((workflowResult) => {
+      if (workflowResult.status === "success") {
+        // Access result from successful workflow
+        const output = (workflowResult as { result?: Record<string, unknown> }).result as
+          | {
+              success?: boolean;
+              status?: string;
+              indicatorName?: string;
+            }
+          | undefined;
+
+        log.info(
+          {
+            cycleId,
+            success: output?.success,
+            status: output?.status,
+            indicatorName: output?.indicatorName,
+          },
+          "Indicator synthesis workflow completed"
+        );
+      } else {
+        log.warn(
+          {
+            cycleId,
+            status: workflowResult.status,
+          },
+          "Indicator synthesis workflow ended with non-success status"
+        );
+      }
+    })
+    .catch((error) => {
+      log.error(
+        {
+          cycleId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "Indicator synthesis workflow failed"
+      );
+    });
 }

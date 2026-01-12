@@ -64,6 +64,7 @@ import {
   loadMemoryContext,
   loadRuntimeConfig,
   log,
+  maybeSpawnIndicatorSynthesis,
   processThesisForDecision,
   runBearishResearcherStub,
   runBullishResearcherStub,
@@ -241,7 +242,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     );
   }
 
-  // Check for indicator synthesis triggers
+  // Check for indicator synthesis triggers and spawn workflow if needed
   const indicatorTriggerResult = await checkIndicatorTrigger(regimeLabels, context);
   if (indicatorTriggerResult?.shouldTrigger) {
     log.info(
@@ -253,6 +254,8 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       },
       "Indicator synthesis trigger activated"
     );
+    // Fire-and-forget: spawn synthesis workflow in background
+    maybeSpawnIndicatorSynthesis(indicatorTriggerResult, cycleId);
   }
 
   const agentContext: AgentContext = {

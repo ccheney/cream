@@ -6,4 +6,5 @@
  */
 
 export * from "./api/index.js";
+export * from "./synthesis.js";
 export * from "./websocket.js";
