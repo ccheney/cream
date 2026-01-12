@@ -367,6 +367,20 @@ export function broadcastOrderUpdate(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast synthesis progress to connections subscribed to synthesis channel.
+ */
+export function broadcastSynthesisProgress(message: ServerMessage): number {
+  return broadcast("synthesis", message);
+}
+
+/**
+ * Broadcast synthesis complete to connections subscribed to synthesis channel.
+ */
+export function broadcastSynthesisComplete(message: ServerMessage): number {
+  return broadcast("synthesis", message);
+}
+
+/**
  * Server-initiated ping to all connections.
  */
 export function pingAllConnections(): void {
