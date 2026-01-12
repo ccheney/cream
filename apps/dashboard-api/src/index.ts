@@ -8,6 +8,7 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
+import { type CreamEnvironment, initCalendarService } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
@@ -269,6 +270,23 @@ if (import.meta.main) {
   const port = parseInt(process.env.PORT ?? "3001", 10);
 
   log.info({ port, allowedOrigins }, "Starting Dashboard API server");
+
+  // Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
+  const creamEnv = (process.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
+  initCalendarService({
+    mode: creamEnv,
+    alpacaKey: process.env.ALPACA_KEY,
+    alpacaSecret: process.env.ALPACA_SECRET,
+  })
+    .then(() => {
+      log.info({ mode: creamEnv }, "CalendarService initialized");
+    })
+    .catch((error: unknown) => {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error), mode: creamEnv },
+        "CalendarService initialization failed, using fallback"
+      );
+    });
 
   // Start heartbeat for WebSocket connections
   startHeartbeat();
