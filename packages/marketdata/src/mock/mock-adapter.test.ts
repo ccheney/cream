@@ -310,14 +310,14 @@ describe("Factory Functions", () => {
 });
 
 describe("Fixture Registry", () => {
-  it("should have massive fixtures", () => {
-    expect(mockData.massive).toBeDefined();
-    expect(mockData.massive.candles).toBeDefined();
-    expect(mockData.massive.quotes).toBeDefined();
-    expect(mockData.massive.trades).toBeDefined();
+  it("should have alpaca market data fixtures", () => {
+    expect(mockData.alpacaMarketData).toBeDefined();
+    expect(mockData.alpacaMarketData.candles).toBeDefined();
+    expect(mockData.alpacaMarketData.quotes).toBeDefined();
+    expect(mockData.alpacaMarketData.trades).toBeDefined();
   });
 
-  it("should have alpaca fixtures", () => {
+  it("should have alpaca account fixtures", () => {
     expect(mockData.alpaca).toBeDefined();
     expect(mockData.alpaca.account).toBeDefined();
     expect(mockData.alpaca.positions).toBeDefined();

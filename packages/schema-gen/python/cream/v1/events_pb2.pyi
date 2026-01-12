@@ -36,7 +36,7 @@ class DataSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DATA_SOURCE_UNSPECIFIED: _ClassVar[DataSource]
     DATA_SOURCE_FMP: _ClassVar[DataSource]
     DATA_SOURCE_ALPHA_VANTAGE: _ClassVar[DataSource]
-    DATA_SOURCE_POLYGON: _ClassVar[DataSource]
+    DATA_SOURCE_RESERVED_3: _ClassVar[DataSource]
     DATA_SOURCE_BENZINGA: _ClassVar[DataSource]
     DATA_SOURCE_SEC_EDGAR: _ClassVar[DataSource]
     DATA_SOURCE_SOCIAL: _ClassVar[DataSource]
@@ -68,7 +68,7 @@ EVENT_TYPE_OTHER: EventType
 DATA_SOURCE_UNSPECIFIED: DataSource
 DATA_SOURCE_FMP: DataSource
 DATA_SOURCE_ALPHA_VANTAGE: DataSource
-DATA_SOURCE_POLYGON: DataSource
+DATA_SOURCE_RESERVED_3: DataSource
 DATA_SOURCE_BENZINGA: DataSource
 DATA_SOURCE_SEC_EDGAR: DataSource
 DATA_SOURCE_SOCIAL: DataSource

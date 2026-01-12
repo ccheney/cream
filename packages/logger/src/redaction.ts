@@ -46,7 +46,6 @@ export const DEFAULT_REDACT_PATHS = [
   "*.api_key",
   "*.ALPACA_KEY",
   "*.ALPACA_SECRET",
-  "*.POLYGON_KEY",
   "*.ANTHROPIC_API_KEY",
   "*.GOOGLE_GENERATIVE_AI_API_KEY",
   "*.GOOGLE_API_KEY",

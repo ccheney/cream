@@ -81,7 +81,6 @@ services:
       - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
       - ALLOWED_ORIGINS=https://${DASHBOARD_HOST:-cream.broker}
       - HELIX_URL=${HELIX_URL:-}
-      - POLYGON_KEY=${POLYGON_KEY:-}
       # Python backtest execution
       - PYTHONPATH=/app/packages/research
       - BACKTEST_TEMP_DIR=/tmp/backtest

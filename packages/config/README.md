@@ -59,7 +59,7 @@ validateAtStartup(config);
 import { createEnvSecretsManager } from "@cream/config";
 
 const secrets = createEnvSecretsManager();
-const apiKey = await secrets.get("POLYGON_KEY");
+const apiKey = await secrets.get("");
 ```
 
 ## Configuration Workflow

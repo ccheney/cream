@@ -58,7 +58,6 @@ check_prerequisites() {
   # Check required env vars
   if [[ -z "${ALPACA_KEY:-}" ]]; then missing+=("ALPACA_KEY"); fi
   if [[ -z "${ALPACA_SECRET:-}" ]]; then missing+=("ALPACA_SECRET"); fi
-  if [[ -z "${POLYGON_KEY:-}" ]]; then missing+=("POLYGON_KEY"); fi
   if [[ -z "${FMP_KEY:-}" ]]; then missing+=("FMP_KEY"); fi
   if [[ -z "${ALPHAVANTAGE_KEY:-}" ]]; then missing+=("ALPHAVANTAGE_KEY"); fi
 
@@ -90,7 +89,6 @@ setup_directories() {
   log_info "Setting up fixture directories..."
 
   mkdir -p "$FIXTURE_DIR/alpaca"
-  mkdir -p "$FIXTURE_DIR/massive"
   mkdir -p "$FIXTURE_DIR/fmp"
   mkdir -p "$FIXTURE_DIR/alphavantage"
 
@@ -102,7 +100,7 @@ setup_directories() {
 # ============================================
 
 run_alpaca() {
-  log_info "Running fetch-alpaca.ts (1/4)..."
+  log_info "Running fetch-alpaca.ts (1/3)..."
 
   if bun "$SCRIPT_DIR/fetch-alpaca.ts"; then
     log_success "fetch-alpaca.ts complete"
@@ -113,21 +111,8 @@ run_alpaca() {
   fi
 }
 
-run_massive() {
-  log_info "Running fetch-massive.ts (2/4)..."
-  log_info "Note: 15s delays between requests for rate limits"
-
-  if bun "$SCRIPT_DIR/fetch-massive.ts"; then
-    log_success "fetch-massive.ts complete"
-    return 0
-  else
-    log_error "fetch-massive.ts failed"
-    return 1
-  fi
-}
-
 run_fmp() {
-  log_info "Running fetch-fmp.ts (3/4)..."
+  log_info "Running fetch-fmp.ts (2/3)..."
 
   if bun "$SCRIPT_DIR/fetch-fmp.ts"; then
     log_success "fetch-fmp.ts complete"
@@ -139,7 +124,7 @@ run_fmp() {
 }
 
 run_alphavantage() {
-  log_info "Running fetch-alphavantage.ts (4/4)..."
+  log_info "Running fetch-alphavantage.ts (3/3)..."
   log_info "Note: Limited to 25 req/day, ~1 min total"
 
   if bun "$SCRIPT_DIR/fetch-alphavantage.ts"; then
@@ -162,10 +147,9 @@ main() {
   echo "========================================"
   echo ""
   echo "This script will fetch API fixtures from:"
-  echo "  1. Alpaca (paper trading)"
-  echo "  2. Massive.com (candles, options)"
-  echo "  3. FMP (fundamentals)"
-  echo "  4. Alpha Vantage (macro)"
+  echo "  1. Alpaca (paper trading, candles, quotes)"
+  echo "  2. FMP (fundamentals)"
+  echo "  3. Alpha Vantage (macro)"
   echo ""
   echo "Estimated time: ~2 minutes"
   echo ""
@@ -188,7 +172,6 @@ main() {
   local failed=0
 
   run_alpaca || ((failed++))
-  run_massive || ((failed++))
   run_fmp || ((failed++))
   run_alphavantage || ((failed++))
 

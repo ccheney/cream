@@ -20,7 +20,7 @@ import { Iso8601Schema } from "./time";
 export const DataSource = z.enum([
   "FMP",
   "ALPHA_VANTAGE",
-  "POLYGON",
+  "ALPACA",
   "BENZINGA",
   "SEC_EDGAR",
   "SOCIAL",

@@ -38,11 +38,6 @@ export class KeyRotationRegistry {
    * Supports comma-separated keys for rotation.
    */
   initFromEnv(): void {
-    this.getManager("polygon").addKeysFromEnv(
-      process.env.POLYGON_KEY ?? Bun.env.POLYGON_KEY,
-      "POLYGON_KEY"
-    );
-
     this.getManager("alphavantage").addKeysFromEnv(
       process.env.ALPHAVANTAGE_KEY ?? Bun.env.ALPHAVANTAGE_KEY,
       "ALPHAVANTAGE_KEY"

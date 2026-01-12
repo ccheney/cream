@@ -40,7 +40,7 @@ enum DataSource {
   DATA_SOURCE_UNSPECIFIED = 0;
   DATA_SOURCE_FMP = 1;            // Financial Modeling Prep
   DATA_SOURCE_ALPHA_VANTAGE = 2;  // Alpha Vantage
-  DATA_SOURCE_POLYGON = 3;        // Polygon/Massive
+  DATA_SOURCE_RESERVED_3 = 3;     // Reserved (formerly Polygon)
   DATA_SOURCE_BENZINGA = 4;       // Benzinga
   DATA_SOURCE_SEC_EDGAR = 5;      // SEC EDGAR
   DATA_SOURCE_SOCIAL = 6;         // Social media aggregation

@@ -6,7 +6,7 @@ Market data aggregation and processing for the Cream trading system.
 
 Central data layer providing:
 
-- **Provider Clients** - Alpaca, Polygon, FMP, Alpha Vantage
+- **Provider Clients** - Alpaca, FMP, Alpha Vantage
 - **Environment-Aware Adapters** - Mock (BACKTEST), Real (PAPER/LIVE)
 - **Data Validation** - Staleness, gaps, anomalies
 - **Feature Snapshots** - Candles, indicators, regime
@@ -18,7 +18,6 @@ Central data layer providing:
 | Provider | Data |
 |----------|------|
 | Alpaca | Quotes, candles, options (unified) |
-| Polygon/Massive | Legacy candles, options |
 | FMP | Fundamentals, transcripts |
 | Alpha Vantage | Macro indicators |
 
@@ -71,7 +70,7 @@ const snapshot = await buildSnapshot("AAPL", Date.now(), sources);
 ```typescript
 import { OptionChainScanner } from "@cream/marketdata";
 
-const scanner = new OptionChainScanner(polygonClient);
+const scanner = new OptionChainScanner(alpacaClient);
 const candidates = await scanner.scan("AAPL", {
   minDte: 30,
   maxDte: 60,
@@ -98,7 +97,6 @@ const greeks = calculateGreeks({
 ```bash
 ALPACA_KEY=...       # Alpaca (unified market data + broker)
 ALPACA_SECRET=...    # Alpaca secret
-POLYGON_KEY=...      # Polygon/Massive (legacy)
 FMP_KEY=...          # FMP
 ALPHAVANTAGE_KEY=... # Alpha Vantage
 CREAM_ENV=...        # Controls adapter selection

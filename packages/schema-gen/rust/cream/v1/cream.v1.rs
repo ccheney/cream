@@ -1098,8 +1098,8 @@ pub enum DataSource {
     Fmp = 1,
     /// Alpha Vantage
     AlphaVantage = 2,
-    /// Polygon/Massive
-    Polygon = 3,
+    /// Reserved (formerly Polygon)
+    Reserved3 = 3,
     /// Benzinga
     Benzinga = 4,
     /// SEC EDGAR
@@ -1119,7 +1119,7 @@ impl DataSource {
             Self::Unspecified => "DATA_SOURCE_UNSPECIFIED",
             Self::Fmp => "DATA_SOURCE_FMP",
             Self::AlphaVantage => "DATA_SOURCE_ALPHA_VANTAGE",
-            Self::Polygon => "DATA_SOURCE_POLYGON",
+            Self::Reserved3 => "DATA_SOURCE_RESERVED_3",
             Self::Benzinga => "DATA_SOURCE_BENZINGA",
             Self::SecEdgar => "DATA_SOURCE_SEC_EDGAR",
             Self::Social => "DATA_SOURCE_SOCIAL",
@@ -1132,7 +1132,7 @@ impl DataSource {
             "DATA_SOURCE_UNSPECIFIED" => Some(Self::Unspecified),
             "DATA_SOURCE_FMP" => Some(Self::Fmp),
             "DATA_SOURCE_ALPHA_VANTAGE" => Some(Self::AlphaVantage),
-            "DATA_SOURCE_POLYGON" => Some(Self::Polygon),
+            "DATA_SOURCE_RESERVED_3" => Some(Self::Reserved3),
             "DATA_SOURCE_BENZINGA" => Some(Self::Benzinga),
             "DATA_SOURCE_SEC_EDGAR" => Some(Self::SecEdgar),
             "DATA_SOURCE_SOCIAL" => Some(Self::Social),

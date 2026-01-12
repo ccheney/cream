@@ -24,7 +24,7 @@ describe("KeyRotationManager", () => {
   let manager: KeyRotationManager;
 
   beforeEach(() => {
-    manager = new KeyRotationManager("polygon", {}, silentLogger);
+    manager = new KeyRotationManager("alpaca", {}, silentLogger);
   });
 
   describe("addKey", () => {
@@ -93,11 +93,7 @@ describe("KeyRotationManager", () => {
 
   describe("round-robin strategy", () => {
     it("should rotate through keys", () => {
-      const rrManager = new KeyRotationManager(
-        "polygon",
-        { strategy: "round-robin" },
-        silentLogger
-      );
+      const rrManager = new KeyRotationManager("alpaca", { strategy: "round-robin" }, silentLogger);
       rrManager.addKey("key1", "first");
       rrManager.addKey("key2", "second");
       rrManager.addKey("key3", "third");
@@ -111,7 +107,7 @@ describe("KeyRotationManager", () => {
 
   describe("least-used strategy", () => {
     it("should select least used key", () => {
-      const luManager = new KeyRotationManager("polygon", { strategy: "least-used" }, silentLogger);
+      const luManager = new KeyRotationManager("alpaca", { strategy: "least-used" }, silentLogger);
       luManager.addKey("key1", "first");
       luManager.addKey("key2", "second");
 
@@ -129,7 +125,7 @@ describe("KeyRotationManager", () => {
   describe("healthiest strategy", () => {
     it("should select key with lowest error rate", () => {
       const healthManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { strategy: "healthiest" },
         silentLogger
       );
@@ -150,7 +146,7 @@ describe("KeyRotationManager", () => {
 
     it("should handle keys with zero requests", () => {
       const healthManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { strategy: "healthiest" },
         silentLogger
       );
@@ -165,7 +161,7 @@ describe("KeyRotationManager", () => {
   describe("rate-limit-aware strategy", () => {
     it("should select key with highest rate limit remaining", () => {
       const rlManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { strategy: "rate-limit-aware" },
         silentLogger
       );
@@ -182,7 +178,7 @@ describe("KeyRotationManager", () => {
 
     it("should fall back to least-used when no rate limit info", () => {
       const rlManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { strategy: "rate-limit-aware" },
         silentLogger
       );
@@ -209,7 +205,7 @@ describe("KeyRotationManager", () => {
   describe("reportError", () => {
     it("should mark key unhealthy after max errors", () => {
       const strictManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { maxConsecutiveErrors: 2 },
         silentLogger
       );
@@ -224,7 +220,7 @@ describe("KeyRotationManager", () => {
 
     it("should rotate to next key on failure", () => {
       const strictManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { maxConsecutiveErrors: 2 },
         silentLogger
       );
@@ -249,7 +245,7 @@ describe("KeyRotationManager", () => {
 
     it("should auto-rotate when rate limit low", () => {
       const autoRotateManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { autoRotateOnRateLimit: true, minRateLimitThreshold: 10 },
         silentLogger
       );
@@ -272,7 +268,7 @@ describe("KeyRotationManager", () => {
 
       const stats = manager.getStats();
 
-      expect(stats.service).toBe("polygon");
+      expect(stats.service).toBe("alpaca");
       expect(stats.totalKeys).toBe(2);
       expect(stats.activeKeys).toBe(2);
       expect(stats.totalRequests).toBe(1);
@@ -299,7 +295,7 @@ describe("KeyRotationManager", () => {
   describe("key recovery", () => {
     it("should recover unhealthy keys after timeout", async () => {
       const quickRecoveryManager = new KeyRotationManager(
-        "polygon",
+        "alpaca",
         { maxConsecutiveErrors: 1, unhealthyRetryMs: 50 },
         silentLogger
       );
@@ -334,41 +330,41 @@ describe("KeyRotationRegistry", () => {
 
   describe("getManager", () => {
     it("should create manager on first access", () => {
-      const manager = registry.getManager("polygon");
+      const manager = registry.getManager("alpaca");
       expect(manager).toBeDefined();
     });
 
     it("should return same manager on subsequent access", () => {
-      const manager1 = registry.getManager("polygon");
-      const manager2 = registry.getManager("polygon");
+      const manager1 = registry.getManager("alpaca");
+      const manager2 = registry.getManager("alpaca");
       expect(manager1).toBe(manager2);
     });
 
     it("should create different managers for different services", () => {
-      const polygonManager = registry.getManager("polygon");
+      const alpacaManager = registry.getManager("alpaca");
       const fmpManager = registry.getManager("fmp");
-      expect(polygonManager).not.toBe(fmpManager);
+      expect(alpacaManager).not.toBe(fmpManager);
     });
   });
 
   describe("getKey", () => {
     it("should get key from correct service manager", () => {
-      registry.getManager("polygon").addKey("polygon-key", "pk");
+      registry.getManager("alpaca").addKey("alpaca-key", "pk");
       registry.getManager("fmp").addKey("fmp-key", "fk");
 
-      expect(registry.getKey("polygon")).toBe("polygon-key");
+      expect(registry.getKey("alpaca")).toBe("alpaca-key");
       expect(registry.getKey("fmp")).toBe("fmp-key");
     });
   });
 
   describe("reportSuccess/reportError", () => {
     it("should route to correct manager", () => {
-      registry.getManager("polygon").addKey("test-key", "key1");
+      registry.getManager("alpaca").addKey("test-key", "key1");
 
-      registry.reportSuccess("polygon", "test-key");
-      registry.reportError("polygon", "test-key", "error");
+      registry.reportSuccess("alpaca", "test-key");
+      registry.reportError("alpaca", "test-key", "error");
 
-      const stats = registry.getManager("polygon").getStats();
+      const stats = registry.getManager("alpaca").getStats();
       expect(stats.totalErrors).toBe(1);
     });
   });
@@ -386,13 +382,13 @@ describe("KeyRotationRegistry", () => {
 
   describe("getAllStats", () => {
     it("should return stats for all initialized managers", () => {
-      registry.getManager("polygon").addKey("pk", "polygon-key");
+      registry.getManager("alpaca").addKey("pk", "alpaca-key");
       registry.getManager("fmp").addKey("fk", "fmp-key");
 
       const allStats = registry.getAllStats();
 
       expect(allStats).toHaveLength(2);
-      expect(allStats.some((s) => s.service === "polygon")).toBe(true);
+      expect(allStats.some((s) => s.service === "alpaca")).toBe(true);
       expect(allStats.some((s) => s.service === "fmp")).toBe(true);
     });
   });
@@ -406,33 +402,30 @@ describe("KeyRotationRegistry", () => {
     });
 
     it("should initialize managers from environment variables", () => {
-      process.env.POLYGON_KEY = "test-polygon-key";
+      process.env.ALPACA_KEY = "test-alpaca-key";
       process.env.FMP_KEY = "test-fmp-key";
 
       const envRegistry = new KeyRotationRegistry({}, silentLogger);
       envRegistry.initFromEnv();
 
-      expect(envRegistry.getKey("polygon")).toBe("test-polygon-key");
+      expect(envRegistry.getKey("alpaca")).toBe("test-alpaca-key");
       expect(envRegistry.getKey("fmp")).toBe("test-fmp-key");
     });
 
     it("should handle comma-separated keys from env", () => {
-      process.env.POLYGON_KEY = "key1,key2,key3";
+      process.env.ALPACA_KEY = "key1,key2,key3";
 
       const envRegistry = new KeyRotationRegistry({}, silentLogger);
       envRegistry.initFromEnv();
 
-      expect(envRegistry.getManager("polygon").getActiveKeyCount()).toBe(3);
+      expect(envRegistry.getManager("alpaca").getActiveKeyCount()).toBe(3);
     });
 
     it("should handle missing env variables gracefully", () => {
       // Clear both process.env and Bun.env
-      delete process.env.POLYGON_KEY;
       delete process.env.FMP_KEY;
       delete process.env.ALPHAVANTAGE_KEY;
       delete process.env.ALPACA_KEY;
-      // @ts-expect-error - Bun.env is readonly but we need to clear for test
-      Bun.env.POLYGON_KEY = undefined;
       // @ts-expect-error - Bun.env is readonly but we need to clear for test
       Bun.env.FMP_KEY = undefined;
       // @ts-expect-error - Bun.env is readonly but we need to clear for test
@@ -445,7 +438,7 @@ describe("KeyRotationRegistry", () => {
 
       // Should not throw - managers are created but without keys
       const stats = envRegistry.getAllStats();
-      expect(stats.length).toBe(4); // 4 services initialized but no keys
+      expect(stats.length).toBe(3); // 3 services initialized but no keys
     });
   });
 });
@@ -462,16 +455,16 @@ describe("createKeyRotationRegistry", () => {
   });
 
   it("should create registry initialized from env", () => {
-    process.env.POLYGON_KEY = "factory-test-key";
+    process.env.ALPACA_KEY = "factory-test-key";
 
     const registry = createKeyRotationRegistry({});
 
     expect(registry).toBeInstanceOf(KeyRotationRegistry);
-    expect(registry.getKey("polygon")).toBe("factory-test-key");
+    expect(registry.getKey("alpaca")).toBe("factory-test-key");
   });
 
   it("should accept custom config", () => {
-    process.env.POLYGON_KEY = "config-test-key";
+    process.env.ALPACA_KEY = "config-test-key";
 
     const registry = createKeyRotationRegistry({ maxConsecutiveErrors: 5 });
 

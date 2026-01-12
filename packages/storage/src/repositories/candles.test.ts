@@ -27,7 +27,7 @@ async function setupTables(client: TursoClient): Promise<void> {
       split_adjusted INTEGER NOT NULL DEFAULT 0,
       dividend_adjusted INTEGER NOT NULL DEFAULT 0,
       quality_flags TEXT,
-      provider TEXT NOT NULL DEFAULT 'polygon',
+      provider TEXT NOT NULL DEFAULT 'alpaca',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(symbol, timeframe, timestamp)
     )

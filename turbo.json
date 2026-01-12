@@ -34,7 +34,6 @@
         "ALPACA_KEY",
         "ALPACA_SECRET",
         "ALPACA_BASE_URL",
-        "POLYGON_KEY",
         "FMP_KEY",
         "ALPHAVANTAGE_KEY",
         "ANTHROPIC_API_KEY",

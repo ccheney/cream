@@ -428,7 +428,7 @@ describe("comparePerformanceMetrics", () => {
 describe("validateDataConsistency", () => {
   test("passes for consistent data sources", () => {
     const historical: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "historical",
       adjusted: true,
       startDate: "2025-01-01T00:00:00Z",
@@ -437,7 +437,7 @@ describe("validateDataConsistency", () => {
     };
 
     const realtime: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "realtime",
       adjusted: true,
       startDate: "2026-01-01T00:00:00Z",
@@ -453,7 +453,7 @@ describe("validateDataConsistency", () => {
 
   test("warns about provider mismatch", () => {
     const historical: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "historical",
       adjusted: true,
       startDate: "2025-01-01T00:00:00Z",
@@ -478,7 +478,7 @@ describe("validateDataConsistency", () => {
 
   test("fails on adjustment mismatch", () => {
     const historical: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "historical",
       adjusted: false, // Not adjusted!
       startDate: "2025-01-01T00:00:00Z",
@@ -487,7 +487,7 @@ describe("validateDataConsistency", () => {
     };
 
     const realtime: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "realtime",
       adjusted: true,
       startDate: "2026-01-01T00:00:00Z",
@@ -503,7 +503,7 @@ describe("validateDataConsistency", () => {
 
   test("warns about survivorship bias", () => {
     const historical: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "historical",
       adjusted: true,
       startDate: "2025-01-01T00:00:00Z",
@@ -512,7 +512,7 @@ describe("validateDataConsistency", () => {
     };
 
     const realtime: DataSourceMetadata = {
-      provider: "polygon",
+      provider: "alpaca",
       feedType: "realtime",
       adjusted: true,
       startDate: "2026-01-01T00:00:00Z",

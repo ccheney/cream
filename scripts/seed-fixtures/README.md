@@ -21,10 +21,6 @@ Create `.env.local` in project root with:
 ALPACA_KEY=your_key
 ALPACA_SECRET=your_secret
 
-# Massive.com (formerly Polygon.io) - Free tier: 5 req/min
-# Sign up: https://dashboard.massive.com/signup
-POLYGON_KEY=your_key
-
 # Financial Modeling Prep - Free tier: 250 req/day
 # Sign up: https://site.financialmodelingprep.com/register
 FMP_KEY=your_key
@@ -39,14 +35,12 @@ ALPHAVANTAGE_KEY=your_key
 Run scripts in this order to respect rate limits:
 
 1. **fetch-alpaca.ts** - No rate limits on paper trading
-2. **fetch-massive.ts** - 5 req/min, batch with delays
-3. **fetch-fmp.ts** - 250 req/day, run early in day
-4. **fetch-alphavantage.ts** - 25 req/day, run after FMP
+2. **fetch-fmp.ts** - 250 req/day, run early in day
+3. **fetch-alphavantage.ts** - 25 req/day, run after FMP
 
 ```bash
 # From project root
 bun scripts/seed-fixtures/fetch-alpaca.ts
-bun scripts/seed-fixtures/fetch-massive.ts
 bun scripts/seed-fixtures/fetch-fmp.ts
 bun scripts/seed-fixtures/fetch-alphavantage.ts
 ```
@@ -55,8 +49,7 @@ bun scripts/seed-fixtures/fetch-alphavantage.ts
 
 ```
 packages/marketdata/fixtures/
-├── alpaca/           # Account, positions, orders
-├── massive/          # Candles, option chains, quotes
+├── alpaca/           # Account, positions, orders, candles, quotes
 ├── fmp/              # Fundamentals, transcripts, sentiment
 └── alphavantage/     # Macro indicators (GDP, inflation, etc.)
 ```
@@ -66,7 +59,6 @@ packages/marketdata/fixtures/
 | Provider       | Limit           | Notes                      |
 | -------------- | --------------- | -------------------------- |
 | Alpaca         | Unlimited\*     | Paper trading only         |
-| Massive.com    | 5 req/min       | Add 15s delays between req |
 | FMP            | 250 req/day     | Reset at midnight UTC      |
 | Alpha Vantage  | 25 req/day      | Reset at midnight UTC      |
 

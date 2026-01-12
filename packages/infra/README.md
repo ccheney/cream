@@ -26,7 +26,7 @@ This module provisions:
 | `TURSO_AUTH_TOKEN` | Turso Cloud auth token |
 | `ALPACA_KEY` | Alpaca broker API key |
 | `ALPACA_SECRET` | Alpaca broker API secret |
-| `POLYGON_KEY` | Polygon market data API key |
+| `` | Polygon market data API key |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key |
 
 ### Local Tools

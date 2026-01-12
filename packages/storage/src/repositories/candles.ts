@@ -34,7 +34,7 @@ export const CandleSchema = z.object({
   splitAdjusted: z.boolean().default(false),
   dividendAdjusted: z.boolean().default(false),
   qualityFlags: z.array(z.string()).nullable().optional(),
-  provider: z.string().default("polygon"),
+  provider: z.string().default("alpaca"),
   createdAt: z.string().datetime().optional(),
 });
 

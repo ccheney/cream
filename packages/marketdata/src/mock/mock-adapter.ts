@@ -8,7 +8,7 @@
  * @see docs/plans/17-mock-data-layer.md
  */
 
-// Local types for fixture data (matches legacy Polygon format in fixtures)
+// Local types for fixture data (matches legacy format in fixtures)
 interface FixtureAggregateBar {
   o: number;
   h: number;
@@ -62,17 +62,17 @@ interface FixtureSnapshot {
 
 // Alpaca fixtures
 import alpacaAccount from "../../fixtures/alpaca/account.json";
+// Alpaca fixtures for market data
+import candlesAAPL from "../../fixtures/alpaca/candles-1h-AAPL.json";
 import alpacaOrders from "../../fixtures/alpaca/orders.json";
 import alpacaPositions from "../../fixtures/alpaca/positions.json";
+import quoteAAPL from "../../fixtures/alpaca/quote-AAPL.json";
+import tradesAAPL from "../../fixtures/alpaca/trades-AAPL.json";
 // Alpha Vantage fixtures
 import avFederalFundsRate from "../../fixtures/alphavantage/federal-funds-rate.json";
 import avRealGDP from "../../fixtures/alphavantage/real-gdp.json";
 // FMP fixtures
 import fmpProfileAAPL from "../../fixtures/fmp/profile-AAPL.json";
-// Massive (Polygon) fixtures
-import candlesAAPL from "../../fixtures/massive/candles-1h-AAPL.json";
-import quoteAAPL from "../../fixtures/massive/quote-AAPL.json";
-import tradesAAPL from "../../fixtures/massive/trades-AAPL.json";
 
 // ============================================
 // Fixture Registry
@@ -82,7 +82,7 @@ import tradesAAPL from "../../fixtures/massive/trades-AAPL.json";
  * All mock data fixtures organized by provider.
  */
 export const mockData = {
-  massive: {
+  alpacaMarketData: {
     candles: {
       AAPL: {
         "1h": candlesAAPL,
@@ -315,7 +315,8 @@ export class MockAdapter {
     await this.maybeThrowError();
     await this.simulateLatency();
 
-    const candleData = mockData.massive.candles[symbol as keyof typeof mockData.massive.candles];
+    const candleData =
+      mockData.alpacaMarketData.candles[symbol as keyof typeof mockData.alpacaMarketData.candles];
     if (!candleData) {
       return [];
     }
@@ -374,7 +375,8 @@ export class MockAdapter {
     await this.maybeThrowError();
     await this.simulateLatency();
 
-    const quoteData = mockData.massive.quotes[symbol as keyof typeof mockData.massive.quotes];
+    const quoteData =
+      mockData.alpacaMarketData.quotes[symbol as keyof typeof mockData.alpacaMarketData.quotes];
     if (!quoteData?.results?.[0]) {
       return null;
     }
@@ -415,7 +417,8 @@ export class MockAdapter {
     await this.maybeThrowError();
     await this.simulateLatency();
 
-    const tradeData = mockData.massive.trades[symbol as keyof typeof mockData.massive.trades];
+    const tradeData =
+      mockData.alpacaMarketData.trades[symbol as keyof typeof mockData.alpacaMarketData.trades];
     if (!tradeData?.results) {
       return [];
     }

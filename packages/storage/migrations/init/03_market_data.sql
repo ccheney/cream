@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS candles (
   split_adjusted INTEGER NOT NULL DEFAULT 0,
   dividend_adjusted INTEGER NOT NULL DEFAULT 0,
   quality_flags TEXT,
-  provider TEXT NOT NULL DEFAULT 'polygon',
+  provider TEXT NOT NULL DEFAULT 'alpaca',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS corporate_actions (
   ratio REAL,
   amount REAL,
   details TEXT,
-  provider TEXT NOT NULL DEFAULT 'polygon',
+  provider TEXT NOT NULL DEFAULT 'alpaca',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

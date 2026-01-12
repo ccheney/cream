@@ -28,7 +28,7 @@ export type ComposeMode = z.infer<typeof ComposeMode>;
 /**
  * Data provider
  */
-export const UniverseProvider = z.enum(["fmp", "eodhd", "polygon", "finnhub"]);
+export const UniverseProvider = z.enum(["fmp", "eodhd", "alpaca", "finnhub"]);
 export type UniverseProvider = z.infer<typeof UniverseProvider>;
 
 /**
