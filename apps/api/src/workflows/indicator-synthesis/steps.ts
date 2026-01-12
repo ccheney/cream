@@ -448,6 +448,22 @@ export type ValidationOutput = z.infer<typeof ValidationOutputSchema>;
 /** Maximum allowed AST similarity to existing indicators (80%) */
 const MAX_AST_SIMILARITY = 0.8;
 
+/**
+ * Map hypothesis category to repository-compatible category.
+ * Repository supports: momentum, trend, volatility, volume, custom
+ * Hypothesis adds: liquidity, correlation, microstructure, sentiment, regime
+ */
+function mapToRepositoryCategory(
+  hypothesisCategory: string
+): "momentum" | "trend" | "volatility" | "volume" | "custom" {
+  const directMappings = ["momentum", "trend", "volatility", "volume"] as const;
+  if (directMappings.includes(hypothesisCategory as (typeof directMappings)[number])) {
+    return hypothesisCategory as (typeof directMappings)[number];
+  }
+  // Extended categories (liquidity, correlation, microstructure, sentiment, regime) map to custom
+  return "custom";
+}
+
 // ============================================
 // Step: validateIndicator
 // ============================================
@@ -556,5 +572,139 @@ export const validateIndicatorStep = createStep({
       securityScanPassed,
       validationErrors,
     };
+  },
+});
+
+// ============================================
+// Schemas: initiatePaperTrading
+// ============================================
+
+/**
+ * Input schema for initiatePaperTrading step.
+ * Combines hypothesis with validation results.
+ */
+export const PaperTradingInputSchema = z.object({
+  hypothesis: IndicatorHypothesisSchema,
+  isValid: z.boolean(),
+  indicatorPath: z.string().optional(),
+  testPath: z.string().optional(),
+  validationErrors: z.array(z.string()),
+});
+
+export type PaperTradingInput = z.infer<typeof PaperTradingInputSchema>;
+
+/**
+ * Output schema for initiatePaperTrading step.
+ * Returns indicator ID and status of paper trading initiation.
+ */
+export const PaperTradingOutputSchema = z.object({
+  indicatorId: z.string().optional(),
+  status: z.enum(["paper_trading_started", "validation_failed", "error"]),
+  paperTradingStart: z.string().optional(),
+  message: z.string(),
+});
+
+export type PaperTradingOutput = z.infer<typeof PaperTradingOutputSchema>;
+
+// ============================================
+// Step: initiatePaperTrading
+// ============================================
+
+/**
+ * Initiate Paper Trading Step
+ *
+ * Final step in the indicator synthesis workflow. Creates the indicator
+ * record and starts the paper trading period after validation passes.
+ *
+ * - Returns early with validation_failed if !isValid
+ * - Generates UUID for new indicator
+ * - Creates indicator record in Turso with status 'staging'
+ * - Transitions to 'paper' status with paper_trading_start timestamp
+ * - Optionally creates HelixDB node for graph relationships
+ */
+export const initiatePaperTradingStep = createStep({
+  id: "initiate-paper-trading",
+  description: "Create indicator record and start paper trading period",
+  inputSchema: PaperTradingInputSchema,
+  outputSchema: PaperTradingOutputSchema,
+  execute: async ({ inputData }) => {
+    const { hypothesis, isValid, indicatorPath, validationErrors } = inputData;
+
+    // Early return if validation failed
+    if (!isValid) {
+      log.warn(
+        {
+          hypothesisName: hypothesis.name,
+          errorCount: validationErrors.length,
+          errors: validationErrors,
+        },
+        "Paper trading not initiated - validation failed"
+      );
+
+      return {
+        status: "validation_failed" as const,
+        message: `Validation failed with ${validationErrors.length} error(s): ${validationErrors.join("; ")}`,
+      };
+    }
+
+    log.info(
+      {
+        hypothesisName: hypothesis.name,
+        category: hypothesis.category,
+        indicatorPath,
+      },
+      "Initiating paper trading for validated indicator"
+    );
+
+    try {
+      const indicatorsRepo = await getIndicatorsRepo();
+
+      // Generate UUID for the new indicator
+      const indicatorId = crypto.randomUUID();
+      const paperTradingStart = new Date().toISOString();
+
+      // Create indicator record with 'staging' status
+      await indicatorsRepo.create({
+        id: indicatorId,
+        name: hypothesis.name,
+        category: mapToRepositoryCategory(hypothesis.category),
+        hypothesis: hypothesis.hypothesis,
+        economicRationale: hypothesis.economicRationale,
+        generatedBy: "indicator-synthesis-workflow",
+        codeHash: indicatorPath ?? undefined,
+      });
+
+      // Transition to paper trading status
+      await indicatorsRepo.startPaperTrading(indicatorId, paperTradingStart);
+
+      log.info(
+        {
+          indicatorId,
+          name: hypothesis.name,
+          paperTradingStart,
+        },
+        "Paper trading initiated successfully"
+      );
+
+      return {
+        indicatorId,
+        status: "paper_trading_started" as const,
+        paperTradingStart,
+        message: `Paper trading started for indicator "${hypothesis.name}" (${indicatorId})`,
+      };
+    } catch (error) {
+      log.error(
+        {
+          hypothesisName: hypothesis.name,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "Failed to initiate paper trading"
+      );
+
+      return {
+        status: "error" as const,
+        message: `Failed to initiate paper trading: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   },
 });
