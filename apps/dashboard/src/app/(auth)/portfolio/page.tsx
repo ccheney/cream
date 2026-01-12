@@ -19,6 +19,7 @@
 import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
+import { LiveIndicator } from "@/components/portfolio/LiveIndicator";
 import { PerformanceGrid } from "@/components/portfolio/PerformanceGrid";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
@@ -29,23 +30,11 @@ import {
 } from "@/hooks/queries";
 import { useAccountStreaming } from "@/hooks/useAccountStreaming";
 import type { PortfolioHistoryPeriod } from "@/lib/api/types";
+import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
 // ============================================
 // Placeholder Components
 // ============================================
-
-function LiveIndicator({ isLive }: { isLive: boolean }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className={`h-2 w-2 rounded-full ${isLive ? "bg-green-500 animate-pulse" : "bg-stone-400"}`}
-      />
-      <span className="text-sm font-medium text-stone-600 dark:text-night-300">
-        {isLive ? "LIVE" : "DELAYED"}
-      </span>
-    </div>
-  );
-}
 
 /**
  * Placeholder for StreamingPositionsTable component (cream-kzy8g)
@@ -138,6 +127,7 @@ export default function PortfolioPage() {
   const { data: performanceMetrics, isLoading: isPerformanceLoading } = usePerformanceMetrics();
   const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory(chartPeriod);
   const accountStreaming = useAccountStreaming(account);
+  const { connected } = useWebSocketContext();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -148,7 +138,6 @@ export default function PortfolioPage() {
     }).format(value);
 
   const nav = summary?.nav ?? account?.equity ?? 0;
-  const isLive = accountStreaming.isStreaming;
 
   return (
     <div className="space-y-6">
@@ -171,7 +160,11 @@ export default function PortfolioPage() {
               {formatCurrency(nav)}
             </div>
           </div>
-          <LiveIndicator isLive={isLive} />
+          <LiveIndicator
+            isStreaming={accountStreaming.isStreaming}
+            isConnected={connected}
+            lastUpdated={accountStreaming.lastUpdated}
+          />
         </div>
       </div>
 
