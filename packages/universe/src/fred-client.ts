@@ -796,3 +796,48 @@ export class FREDClient {
     };
   }
 }
+
+// ============================================
+// Factory Functions
+// ============================================
+
+/**
+ * Create a FREDClient instance with the given configuration.
+ *
+ * @param config - Client configuration (apiKey required)
+ * @returns Configured FREDClient instance
+ *
+ * @example
+ * ```ts
+ * const client = createFREDClient({ apiKey: 'your-api-key' });
+ * const releases = await client.getReleaseDates();
+ * ```
+ */
+export function createFREDClient(config: FREDClientConfig): FREDClient {
+  return new FREDClient(config);
+}
+
+/**
+ * Create a FREDClient instance using environment variables.
+ *
+ * Checks both `process.env.FRED_API_KEY` and `Bun.env.FRED_API_KEY`.
+ *
+ * @returns Configured FREDClient instance
+ * @throws Error if FRED_API_KEY environment variable is not set
+ *
+ * @example
+ * ```ts
+ * // Assumes FRED_API_KEY is set in environment
+ * const client = createFREDClientFromEnv();
+ * const observations = await client.getObservations('GDP');
+ * ```
+ */
+export function createFREDClientFromEnv(): FREDClient {
+  const apiKey = process.env.FRED_API_KEY ?? Bun.env.FRED_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("FRED_API_KEY environment variable is required");
+  }
+
+  return new FREDClient({ apiKey });
+}

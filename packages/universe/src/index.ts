@@ -24,6 +24,8 @@ export {
 // FRED Client (Federal Reserve Economic Data)
 export {
   classifyReleaseImpact,
+  createFREDClient,
+  createFREDClientFromEnv,
   FRED_BASE_URL,
   FRED_RATE_LIMITS,
   FRED_RELEASES,

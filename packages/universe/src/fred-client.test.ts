@@ -575,3 +575,54 @@ describe("Zod Schemas", () => {
     }
   });
 });
+
+// ============================================
+// Factory Functions Tests
+// ============================================
+
+import { createFREDClient, createFREDClientFromEnv } from "./fred-client.js";
+
+describe("createFREDClient", () => {
+  it("creates a FREDClient with the given config", () => {
+    const client = createFREDClient({ apiKey: "test-key" });
+    expect(client).toBeInstanceOf(FREDClient);
+  });
+
+  it("passes all config options to client", () => {
+    const client = createFREDClient({
+      apiKey: "test-key",
+      baseUrl: "https://custom.api.com",
+      timeout: 5000,
+      retries: 5,
+      retryDelay: 1000,
+    });
+    expect(client).toBeInstanceOf(FREDClient);
+  });
+});
+
+describe("createFREDClientFromEnv", () => {
+  const originalFredKey = process.env.FRED_API_KEY;
+
+  afterEach(() => {
+    if (originalFredKey !== undefined) {
+      process.env.FRED_API_KEY = originalFredKey;
+    } else {
+      delete process.env.FRED_API_KEY;
+    }
+  });
+
+  it("creates client when FRED_API_KEY is set", () => {
+    process.env.FRED_API_KEY = "test-api-key";
+
+    const client = createFREDClientFromEnv();
+    expect(client).toBeInstanceOf(FREDClient);
+  });
+
+  it("throws when FRED_API_KEY is not set", () => {
+    delete process.env.FRED_API_KEY;
+
+    expect(() => createFREDClientFromEnv()).toThrow(
+      "FRED_API_KEY environment variable is required"
+    );
+  });
+});
