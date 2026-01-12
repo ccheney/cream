@@ -20,6 +20,7 @@ export interface StreamingPosition extends Position {
   liveMarketValue: number;
   liveUnrealizedPnl: number;
   liveUnrealizedPnlPct: number;
+  liveDayPnl: number;
   previousPrice: number;
   isStreaming: boolean;
   lastUpdated: Date | null;
@@ -137,12 +138,18 @@ export function usePortfolioStreaming(
       // Calculate P/L based on side
       const multiplier = position.side === "LONG" ? 1 : -1;
       const liveMarketValue = livePrice * position.qty;
-      const _costBasis = position.avgEntry * position.qty;
       const liveUnrealizedPnl = (livePrice - position.avgEntry) * position.qty * multiplier;
       const liveUnrealizedPnlPct =
         position.avgEntry !== 0
           ? ((livePrice - position.avgEntry) / position.avgEntry) * 100 * multiplier
           : 0;
+
+      // Calculate Day P&L using lastdayPrice from Alpaca
+      // Formula: (currentPrice - lastdayPrice) * qty
+      let liveDayPnl = 0;
+      if (position.lastdayPrice != null && livePrice > 0) {
+        liveDayPnl = (livePrice - position.lastdayPrice) * position.qty * multiplier;
+      }
 
       return {
         ...position,
@@ -150,6 +157,7 @@ export function usePortfolioStreaming(
         liveMarketValue,
         liveUnrealizedPnl,
         liveUnrealizedPnlPct,
+        liveDayPnl,
         previousPrice,
         isStreaming: quote !== undefined,
         lastUpdated: quote?.timestamp ?? null,
@@ -167,9 +175,13 @@ export function usePortfolioStreaming(
     // Calculate NAV: cash + total market value
     const liveNav = cash + totalMarketValue;
 
-    // Day P/L would require open prices - placeholder for now
-    const liveDayPnl = 0;
-    const liveDayPnlPct = 0;
+    // Calculate Day P&L from streaming positions using lastdayPrice
+    const liveDayPnl = streamingPositions.reduce((sum, p) => sum + p.liveDayPnl, 0);
+
+    // Calculate Day P&L percentage based on yesterday's portfolio value
+    // Yesterday's value = current NAV - today's P&L
+    const yesterdayNav = liveNav - liveDayPnl;
+    const liveDayPnlPct = yesterdayNav > 0 ? (liveDayPnl / yesterdayNav) * 100 : 0;
 
     const isStreaming = streamingPositions.some((p) => p.isStreaming);
 

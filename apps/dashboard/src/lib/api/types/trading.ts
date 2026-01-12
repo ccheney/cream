@@ -132,6 +132,7 @@ export interface Position {
   qty: number;
   avgEntry: number;
   currentPrice: number;
+  lastdayPrice: number | null;
   marketValue: number;
   unrealizedPnl: number;
   unrealizedPnlPct: number;

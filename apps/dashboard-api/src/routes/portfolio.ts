@@ -126,10 +126,11 @@ const PositionSchema = z.object({
   side: z.enum(["LONG", "SHORT"]),
   qty: z.number(),
   avgEntry: z.number(),
-  currentPrice: z.number().nullable(),
-  marketValue: z.number().nullable(),
-  unrealizedPnl: z.number().nullable(),
-  unrealizedPnlPct: z.number().nullable(),
+  currentPrice: z.number(),
+  lastdayPrice: z.number().nullable(),
+  marketValue: z.number(),
+  unrealizedPnl: z.number(),
+  unrealizedPnlPct: z.number(),
   thesisId: z.string().nullable(),
   daysHeld: z.number(),
   openedAt: z.string(),
@@ -428,21 +429,52 @@ app.openapi(positionsRoute, async (c) => {
     status: "open",
   });
 
+  // Fetch Alpaca positions for lastdayPrice when available
+  let alpacaPositionMap = new Map<string, { lastdayPrice: number; currentPrice: number }>();
+
+  if (isAlpacaConfigured()) {
+    try {
+      const client = getBrokerClient();
+      const alpacaPositions = await client.getPositions();
+      alpacaPositionMap = new Map(
+        alpacaPositions.map((ap) => [
+          ap.symbol,
+          { lastdayPrice: ap.lastdayPrice, currentPrice: ap.currentPrice },
+        ])
+      );
+      log.debug(
+        { positionCount: alpacaPositions.length },
+        "Fetched Alpaca positions for lastdayPrice"
+      );
+    } catch (error) {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to fetch Alpaca positions, lastdayPrice will be null"
+      );
+    }
+  }
+
   return c.json(
-    result.data.map((p) => ({
-      id: p.id,
-      symbol: p.symbol,
-      side: p.side,
-      qty: p.quantity,
-      avgEntry: p.avgEntryPrice,
-      currentPrice: p.currentPrice,
-      marketValue: p.marketValue,
-      unrealizedPnl: p.unrealizedPnl,
-      unrealizedPnlPct: p.unrealizedPnlPct,
-      thesisId: p.thesisId,
-      daysHeld: calculateDaysHeld(p.openedAt),
-      openedAt: p.openedAt,
-    }))
+    result.data.map((p) => {
+      const alpacaData = alpacaPositionMap.get(p.symbol);
+      const currentPrice = alpacaData?.currentPrice ?? p.currentPrice ?? 0;
+      const marketValue = p.marketValue ?? currentPrice * p.quantity;
+      return {
+        id: p.id,
+        symbol: p.symbol,
+        side: p.side,
+        qty: p.quantity,
+        avgEntry: p.avgEntryPrice,
+        currentPrice,
+        lastdayPrice: alpacaData?.lastdayPrice ?? null,
+        marketValue,
+        unrealizedPnl: p.unrealizedPnl ?? 0,
+        unrealizedPnlPct: p.unrealizedPnlPct ?? 0,
+        thesisId: p.thesisId,
+        daysHeld: calculateDaysHeld(p.openedAt),
+        openedAt: p.openedAt,
+      };
+    })
   );
 });
 
