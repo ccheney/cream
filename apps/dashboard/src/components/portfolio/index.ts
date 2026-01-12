@@ -6,6 +6,8 @@
 
 export type { AggregateGreeksProps } from "./AggregateGreeks";
 export { AggregateGreeks } from "./AggregateGreeks";
+export type { AllocationDonutProps } from "./AllocationDonut";
+export { AllocationDonut } from "./AllocationDonut";
 export type { OptionsPositionRowProps } from "./OptionsPositionRow";
 export { OptionsPositionRow } from "./OptionsPositionRow";
 export type { OptionsPositionsWidgetProps } from "./OptionsPositionsWidget";
@@ -16,3 +18,5 @@ export type { PositionRowProps } from "./PositionRow";
 export { PositionRow } from "./PositionRow";
 export type { PositionsTableProps } from "./PositionsTable";
 export { PositionsTable } from "./PositionsTable";
+export type { StreamingPositionsTableProps } from "./StreamingPositionsTable";
+export { StreamingPositionsTable } from "./StreamingPositionsTable";
