@@ -25,6 +25,8 @@ export {
   ValueIndicatorsPanel,
   type ValueIndicatorsPanelProps,
 } from "./CategoryPanels";
+// Drawer component for slide-out panel
+export { IndicatorDrawer, IndicatorDrawerToggle } from "./IndicatorDrawer";
 // Base components
 export { IndicatorGrid, type IndicatorGridProps } from "./IndicatorGrid";
 export {

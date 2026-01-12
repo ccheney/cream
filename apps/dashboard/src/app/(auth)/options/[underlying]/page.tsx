@@ -12,7 +12,7 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IndicatorSnapshotPanel } from "@/components/indicators";
+import { IndicatorDrawer, IndicatorDrawerToggle } from "@/components/indicators";
 import { ExpirationTabs, OptionsChainTable } from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { LoadingOverlay, Spinner } from "@/components/ui/spinner";
@@ -51,6 +51,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   const previousChainRef = useRef<typeof chainData>(null);
 
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
+  const [indicatorDrawerOpen, setIndicatorDrawerOpen] = useState(false);
   const { data: quote, connected: wsConnected } = useQuote(upperUnderlying);
   const { data: expirationsData, isLoading: expirationsLoading } =
     useOptionsExpirations(upperUnderlying);
@@ -209,6 +210,10 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            <IndicatorDrawerToggle
+              isOpen={indicatorDrawerOpen}
+              onClick={() => setIndicatorDrawerOpen((o) => !o)}
+            />
             <Link
               href={`/charts/${upperUnderlying}`}
               className="px-3 py-1.5 text-sm font-medium text-stone-600 dark:text-night-200 border border-cream-200 dark:border-night-700 rounded-md hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
@@ -270,15 +275,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
         )}
       </div>
 
-      {/* Options & Liquidity Indicators */}
-      <div className="shrink-0 px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
-        <IndicatorSnapshotPanel
-          symbol={upperUnderlying}
-          sections={["options", "liquidity"]}
-          layout="compact"
-        />
-      </div>
-
       {/* Legend */}
       <div className="shrink-0 px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-800">
         <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
@@ -300,6 +296,14 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
           </span>
         </div>
       </div>
+
+      {/* Indicator Drawer */}
+      <IndicatorDrawer
+        symbol={upperUnderlying}
+        isOpen={indicatorDrawerOpen}
+        onClose={() => setIndicatorDrawerOpen(false)}
+        sections={["options", "liquidity"]}
+      />
     </div>
   );
 }
