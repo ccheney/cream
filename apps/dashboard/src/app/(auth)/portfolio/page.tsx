@@ -17,8 +17,9 @@
  */
 
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
+import { PerformanceGrid } from "@/components/portfolio/PerformanceGrid";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
-import { useAccount, usePortfolioSummary } from "@/hooks/queries";
+import { useAccount, usePerformanceMetrics, usePortfolioSummary } from "@/hooks/queries";
 import { useAccountStreaming } from "@/hooks/useAccountStreaming";
 
 // ============================================
@@ -34,46 +35,6 @@ function LiveIndicator({ isLive }: { isLive: boolean }) {
       <span className="text-sm font-medium text-stone-600 dark:text-night-300">
         {isLive ? "LIVE" : "DELAYED"}
       </span>
-    </div>
-  );
-}
-
-/**
- * Placeholder for PerformanceGrid component (cream-sakhh)
- * 6 timeframe tabs: Today, Week, Month, 3M, YTD, All-Time
- */
-function PerformanceGridPlaceholder() {
-  const timeframes = ["Today", "Week", "Month", "3M", "YTD", "All-Time"];
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-        Performance
-      </h2>
-      <div className="flex gap-2 border-b border-cream-200 dark:border-night-700 pb-3 mb-4 overflow-x-auto">
-        {timeframes.map((tf, i) => (
-          <button
-            key={tf}
-            type="button"
-            className={`px-3 py-1.5 text-sm rounded-md whitespace-nowrap ${
-              i === 0
-                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                : "text-stone-500 dark:text-night-400 hover:bg-cream-100 dark:hover:bg-night-700"
-            }`}
-          >
-            {tf}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-8">
-        <div className="space-y-1">
-          <span className="text-xs text-stone-400 dark:text-night-500">P&L</span>
-          <div className="h-8 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-        </div>
-        <div className="space-y-1">
-          <span className="text-xs text-stone-400 dark:text-night-500">Return %</span>
-          <div className="h-8 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-        </div>
-      </div>
     </div>
   );
 }
@@ -197,6 +158,7 @@ function RiskMetricsBarPlaceholder() {
 export default function PortfolioPage() {
   const { data: account, isLoading: isAccountLoading } = useAccount();
   const { data: summary } = usePortfolioSummary();
+  const { data: performanceMetrics, isLoading: isPerformanceLoading } = usePerformanceMetrics();
   const accountStreaming = useAccountStreaming(account);
 
   const formatCurrency = (value: number) =>
@@ -246,7 +208,7 @@ export default function PortfolioPage() {
 
       {/* Performance Grid - 6 timeframe tabs */}
       <QueryErrorBoundary title="Failed to load performance data">
-        <PerformanceGridPlaceholder />
+        <PerformanceGrid metrics={performanceMetrics} isLoading={isPerformanceLoading} />
       </QueryErrorBoundary>
 
       {/* Equity Curve Chart */}
