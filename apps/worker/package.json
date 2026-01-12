@@ -21,6 +21,7 @@
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/logger": "workspace:*",
+    "@cream/mastra-kit": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "1.0.0-beta.14",
     "croner": "9.1.0",
