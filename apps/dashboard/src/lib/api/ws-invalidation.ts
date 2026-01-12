@@ -15,7 +15,9 @@ export type WSMessageType =
   | "cycle_result"
   | "alert"
   | "system_status"
+  | "account_update"
   | "position_update"
+  | "order_update"
   | "portfolio_update"
   | "portfolio";
 
@@ -211,11 +213,28 @@ export function handleWSMessage(message: WSMessage): void {
       break;
     }
 
+    case "account_update": {
+      // Account balance changed - invalidate account query
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.portfolio.account(),
+      });
+      break;
+    }
+
     case "position_update": {
       // Position changed (fill, close)
       queryClient.invalidateQueries({
         queryKey: queryKeys.portfolio.positions(),
       });
+      break;
+    }
+
+    case "order_update": {
+      // Order status changed - invalidate orders and portfolio
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.portfolio.positions(),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.summary() });
       break;
     }
 
