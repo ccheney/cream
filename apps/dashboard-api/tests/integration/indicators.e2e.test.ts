@@ -58,7 +58,7 @@ import batchStatusRoutes from "../../src/routes/batch-status";
 import batchTriggerRoutes from "../../src/routes/batch-trigger";
 // Import routes after mocking
 import indicatorsRoutes from "../../src/routes/indicators";
-import priceIndicatorsRoutes from "../../src/routes/price-indicators";
+import marketIndicatorsRoutes from "../../src/routes/market/indicators";
 
 // ============================================
 // Test Data Seeding
@@ -377,15 +377,15 @@ describe("Indicator Routes E2E", () => {
     });
   });
 
-  describe("Price Indicators Routes (/api/indicators/:symbol/price)", () => {
+  describe("Price Indicators Routes (/api/market/price/:symbol)", () => {
     beforeEach(async () => {
       client.close();
       client = await createInMemoryClient();
       await runMigrations(client, { logger: () => {} });
     });
 
-    it("GET /:symbol/price returns price indicators", async () => {
-      const res = await priceIndicatorsRoutes.request("/AAPL/price");
+    it("GET /price/:symbol returns price indicators", async () => {
+      const res = await marketIndicatorsRoutes.request("/price/AAPL");
       expect(res.status).toBe(200);
 
       const data = await res.json();
@@ -397,25 +397,30 @@ describe("Indicator Routes E2E", () => {
       expect(data.indicators).toHaveProperty("macd_line");
     });
 
-    it("GET /:symbol/price normalizes symbol to uppercase", async () => {
-      const res = await priceIndicatorsRoutes.request("/aapl/price");
+    it("GET /price/:symbol normalizes symbol to uppercase", async () => {
+      const res = await marketIndicatorsRoutes.request("/price/aapl");
       expect(res.status).toBe(200);
 
       const data = await res.json();
       expect(data.symbol).toBe("AAPL");
     });
 
-    it("GET /:symbol/price accepts timeframe parameter", async () => {
-      const res = await priceIndicatorsRoutes.request("/AAPL/price?timeframe=1d");
+    it("GET /price/:symbol accepts timeframe parameter", async () => {
+      const res = await marketIndicatorsRoutes.request("/price/AAPL?timeframe=1d");
       expect(res.status).toBe(200);
 
       const data = await res.json();
       expect(data.timeframe).toBe("1d");
     });
 
-    it("GET /:symbol/price returns 503 for invalid symbol", async () => {
-      const res = await priceIndicatorsRoutes.request("/INVALID/price");
-      expect(res.status).toBe(503);
+    it("GET /price/:symbol returns null indicators for symbol with no data", async () => {
+      const res = await marketIndicatorsRoutes.request("/price/INVALID");
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      expect(data.symbol).toBe("INVALID");
+      // Indicators should be null when no bars data available
+      expect(data.indicators.rsi_14).toBeNull();
     });
   });
 
