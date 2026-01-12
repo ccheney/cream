@@ -39,7 +39,8 @@ const ALPACA_WS_ENDPOINTS = {
     test: "wss://stream.data.alpaca.markets/v2/test", // Test stream (24/5)
   },
   options: {
-    opra: "wss://stream.data.alpaca.markets/v1beta1/options", // OPRA feed (msgpack only)
+    opra: "wss://stream.data.alpaca.markets/v1beta1/opra", // OPRA feed (msgpack only)
+    indicative: "wss://stream.data.alpaca.markets/v1beta1/indicative", // Indicative feed (Basic plan)
   },
   news: {
     default: "wss://stream.data.alpaca.markets/v1beta1/news", // News stream

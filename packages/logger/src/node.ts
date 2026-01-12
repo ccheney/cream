@@ -101,8 +101,12 @@ export function createNodeLogger(options: NodeLoggerOptions): LifecycleLogger {
         target: "pino-pretty",
         options: {
           colorize: true,
-          translateTime: "SYS:standard",
-          ignore: "pid,hostname",
+          translateTime: "SYS:HH:MM:ss",
+          // Remove fields redundant with Turborepo's package prefix
+          ignore: "pid,hostname,service,environment,version",
+          // Color by severity: grey for info, yellow for warn, red for error
+          customColors: "trace:gray,debug:gray,info:gray,warn:yellow,error:red,fatal:red",
+          singleLine: true,
         },
       })
     );

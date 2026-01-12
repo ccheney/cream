@@ -81,3 +81,4 @@ lcov.info
 # Kalshi private key
 .kalshi-key.pem
 .kalshi-key-pkcs8.pem
+apps/execution-engine/.env

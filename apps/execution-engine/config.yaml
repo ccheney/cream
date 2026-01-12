@@ -20,6 +20,20 @@ server:
 # Data Feeds Configuration
 # External market data providers
 feeds:
+  alpaca:
+    # Alpaca API credentials for market data streaming
+    api_key: "${ALPACA_KEY:-}"
+    api_secret: "${ALPACA_SECRET:-}"
+    # Feed type: "sip" for Algo Trader Plus, "iex" for Basic
+    feed: "sip"
+    # Use paper trading environment
+    paper: true
+    # Reconnection settings
+    reconnect_delay_ms: 1000
+    max_reconnect_attempts: 5
+    # Symbols are managed via runtime config (@cream/config)
+    symbols: []
+
   databento:
     # Databento API key (REQUIRED for LIVE/PAPER)
     # Register at: https://databento.com/

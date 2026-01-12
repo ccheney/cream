@@ -53,9 +53,11 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load .env file - searches current directory and parent directories
-    // This is optional - missing .env is fine if env vars are set externally
-    let _ = dotenvy::dotenv();
+    // Load .env file from current directory (symlinked to project root)
+    // Falls back to searching parent directories if symlink doesn't exist
+    if dotenvy::dotenv().is_err() {
+        load_dotenv_from_ancestors();
+    }
 
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
@@ -72,11 +74,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Initialize tracing (console logging only)
+    // Hide target in local dev (Turborepo prefixes with package name)
+    // Show target in production for log aggregation context
+    let is_development = std::env::var("NODE_ENV")
+        .map(|v| v == "development")
+        .unwrap_or(false);
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
+        .with_target(!is_development)
+        .with_ansi(is_development) // Force ANSI colors in dev (Turborepo pipes stdout)
         .init();
 
     tracing::info!("Starting Cream Execution Engine");
@@ -299,6 +309,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Execution engine stopped");
     Ok(())
+}
+
+/// Load .env file from current directory or any ancestor directory.
+/// Searches upward until it finds a .env file or reaches the filesystem root.
+fn load_dotenv_from_ancestors() {
+    // First try current directory (standard dotenvy behavior)
+    if dotenvy::dotenv().is_ok() {
+        return;
+    }
+
+    // Walk up parent directories looking for .env
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir = cwd.as_path();
+        while let Some(parent) = dir.parent() {
+            let env_path = parent.join(".env");
+            if env_path.exists() {
+                let _ = dotenvy::from_path(&env_path);
+                return;
+            }
+            dir = parent;
+        }
+    }
 }
 
 /// Parse config path from command line arguments.

@@ -82,7 +82,8 @@ function extractUnderlying(contract: string): string {
 
 /**
  * Initialize the options data streaming service.
- * Connects to Alpaca Options WebSocket and sets up event handlers.
+ * Sets up configuration but does NOT connect until first subscription.
+ * This avoids idle connections that Alpaca will terminate.
  */
 export async function initOptionsDataStreaming(): Promise<void> {
   if (isInitialized) {
@@ -95,36 +96,43 @@ export async function initOptionsDataStreaming(): Promise<void> {
     return;
   }
 
-  log.info("Initializing options data streaming with Alpaca");
+  // Mark as initialized but don't connect yet - will connect on first subscription
+  isInitialized = true;
+  log.info("Options data streaming initialized (will connect on first subscription)");
+}
+
+/**
+ * Ensure the options WebSocket is connected.
+ * Called lazily when first subscription is requested.
+ */
+async function ensureConnected(): Promise<boolean> {
+  if (!isAlpacaConfigured()) {
+    return false;
+  }
+
+  if (alpacaOptionsClient?.isConnected()) {
+    return true;
+  }
+
+  // Clean up any existing client
+  if (alpacaOptionsClient) {
+    alpacaOptionsClient.disconnect();
+    alpacaOptionsClient = null;
+  }
 
   try {
     alpacaOptionsClient = createAlpacaOptionsClientFromEnv();
-
-    // Set up event handlers
     alpacaOptionsClient.on(handleOptionsEvent);
-
-    // Connect
     await alpacaOptionsClient.connect();
-    isInitialized = true;
     reconnectAttempts = 0;
     log.info("Options data streaming connected to Alpaca");
+    return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    // WebSocket upgrade failure (101 status) typically means missing subscription
-    if (errorMsg.includes("101")) {
-      log.warn(
-        "Alpaca Options WebSocket not available - Alpaca Options Data subscription may be required. " +
-          "Options chain API (via gRPC) is still available."
-      );
-    } else {
-      log.warn(
-        { error: errorMsg },
-        "Options data streaming initialization failed, server will start without streaming"
-      );
-    }
-    // Clean up client to prevent reconnection attempts
+    log.warn({ error: errorMsg }, "Failed to connect to Alpaca Options WebSocket");
     alpacaOptionsClient?.disconnect();
     alpacaOptionsClient = null;
+    return false;
   }
 }
 
@@ -328,6 +336,7 @@ function handleOptionsTradeMessage(msg: AlpacaWsTradeMessage): void {
 /**
  * Subscribe to options data for a contract.
  * Called when a dashboard client subscribes to an options contract.
+ * Lazily connects to WebSocket on first subscription.
  *
  * @param contract OCC format contract symbol (e.g., AAPL250117C00100000)
  */
@@ -344,7 +353,9 @@ export async function subscribeContract(contract: string): Promise<void> {
 
   activeContracts.add(normalizedContract);
 
-  if (alpacaOptionsClient?.isConnected()) {
+  // Connect lazily on first subscription
+  const connected = await ensureConnected();
+  if (connected && alpacaOptionsClient?.isConnected()) {
     // Subscribe to quotes and trades for this contract
     alpacaOptionsClient.subscribe("quotes", [normalizedContract]);
     alpacaOptionsClient.subscribe("trades", [normalizedContract]);
@@ -353,6 +364,7 @@ export async function subscribeContract(contract: string): Promise<void> {
 
 /**
  * Subscribe to multiple contracts at once.
+ * Lazily connects to WebSocket on first subscription.
  */
 export async function subscribeContracts(contracts: string[]): Promise<void> {
   const newContracts = contracts
@@ -373,7 +385,9 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     activeContracts.add(contract);
   }
 
-  if (alpacaOptionsClient?.isConnected()) {
+  // Connect lazily on first subscription
+  const connected = await ensureConnected();
+  if (connected && alpacaOptionsClient?.isConnected()) {
     // Subscribe to both quotes and trades
     alpacaOptionsClient.subscribe("quotes", newContracts);
     alpacaOptionsClient.subscribe("trades", newContracts);

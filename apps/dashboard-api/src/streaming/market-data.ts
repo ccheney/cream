@@ -75,7 +75,8 @@ const quoteCache = new Map<
 
 /**
  * Initialize the market data streaming service.
- * Connects to Alpaca WebSocket and sets up event handlers.
+ * Sets up configuration but does NOT connect until first subscription.
+ * This avoids idle connections that Alpaca will terminate.
  */
 export async function initMarketDataStreaming(): Promise<void> {
   if (isInitialized) {
@@ -88,25 +89,44 @@ export async function initMarketDataStreaming(): Promise<void> {
     return;
   }
 
-  log.info("Initializing market data streaming with Alpaca");
+  // Mark as initialized but don't connect yet - will connect on first subscription
+  isInitialized = true;
+  log.info("Market data streaming initialized (will connect on first subscription)");
+}
+
+/**
+ * Ensure the stocks WebSocket is connected.
+ * Called lazily when first subscription is requested.
+ */
+async function ensureConnected(): Promise<boolean> {
+  if (!isAlpacaConfigured()) {
+    return false;
+  }
+
+  if (alpacaWsClient?.isConnected()) {
+    return true;
+  }
+
+  // Clean up any existing client
+  if (alpacaWsClient) {
+    alpacaWsClient.disconnect();
+    alpacaWsClient = null;
+  }
 
   try {
     // Use SIP feed for Algo Trader Plus full market data
     alpacaWsClient = createAlpacaStocksClientFromEnv("sip");
-
-    // Set up event handlers
     alpacaWsClient.on(handleAlpacaEvent);
-
-    // Connect
     await alpacaWsClient.connect();
-    isInitialized = true;
     reconnectAttempts = 0;
     log.info("Market data streaming connected to Alpaca");
+    return true;
   } catch (error) {
-    log.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Market data streaming initialization failed, server will start without streaming"
-    );
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log.warn({ error: errorMsg }, "Failed to connect to Alpaca WebSocket");
+    alpacaWsClient?.disconnect();
+    alpacaWsClient = null;
+    return false;
   }
 }
 
@@ -350,6 +370,7 @@ function exchangeCodeToId(exchange: string): number {
 /**
  * Subscribe to market data for a symbol.
  * Called when a dashboard client subscribes to quotes for a symbol.
+ * Lazily connects to WebSocket on first subscription.
  * Fetches previous close to enable accurate change percent calculation.
  */
 export async function subscribeSymbol(symbol: string): Promise<void> {
@@ -387,7 +408,9 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
       .catch(() => {});
   }
 
-  if (alpacaWsClient?.isConnected()) {
+  // Connect lazily on first subscription
+  const connected = await ensureConnected();
+  if (connected && alpacaWsClient?.isConnected()) {
     // Subscribe to quotes, trades, and bars for the symbol
     alpacaWsClient.subscribe("quotes", [upperSymbol]);
     alpacaWsClient.subscribe("trades", [upperSymbol]);
@@ -397,6 +420,7 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
 
 /**
  * Subscribe to multiple symbols at once.
+ * Lazily connects to WebSocket on first subscription.
  * Fetches previous close for new symbols to enable accurate change percent calculation.
  */
 export async function subscribeSymbols(symbols: string[]): Promise<void> {
@@ -438,7 +462,9 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
       .catch(() => {});
   }
 
-  if (alpacaWsClient?.isConnected()) {
+  // Connect lazily on first subscription
+  const connected = await ensureConnected();
+  if (connected && alpacaWsClient?.isConnected()) {
     // Subscribe to quotes, trades, and bars for each symbol
     alpacaWsClient.subscribe("quotes", newSymbols);
     alpacaWsClient.subscribe("trades", newSymbols);
