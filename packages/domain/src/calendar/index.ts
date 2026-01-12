@@ -9,6 +9,23 @@
  * ```
  */
 
+// Hardcoded calendar data for BACKTEST mode
+export {
+  EARLY_CLOSE,
+  generateCalendarRange,
+  getCalendarDay,
+  getNextTradingDay,
+  getPreviousTradingDay,
+  isEarlyClose,
+  isHoliday,
+  isTradingDay,
+  NYSE_EARLY_CLOSES,
+  NYSE_HOLIDAYS,
+  REGULAR_CLOSE,
+  REGULAR_OPEN,
+  SESSION_CLOSE,
+  SESSION_OPEN,
+} from "./hardcoded";
 export {
   // Types
   type AlpacaCalendarResponse,
