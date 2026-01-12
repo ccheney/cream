@@ -178,3 +178,28 @@ export interface IndexQuote {
   changePct: number;
   timestamp: string;
 }
+
+export type ImpactLevel = "high" | "medium" | "low";
+
+export interface EconomicEvent {
+  id: string;
+  name: string;
+  date: string;
+  time: string;
+  country: string;
+  impact: ImpactLevel;
+  actual: string | null;
+  previous: string | null;
+  forecast: string | null;
+  unit: string | null;
+}
+
+export interface EconomicCalendarResponse {
+  events: EconomicEvent[];
+  meta: {
+    start: string;
+    end: string;
+    count: number;
+    lastUpdated: string;
+  };
+}

@@ -84,6 +84,14 @@ export const queryKeys = {
     range: (start: string, end: string) => [...queryKeys.calendar.all, start, end] as const,
   },
 
+  // Economic Calendar
+  economicCalendar: {
+    all: ["economic-calendar"] as const,
+    events: (start: string, end: string, impact?: string) =>
+      [...queryKeys.economicCalendar.all, start, end, impact] as const,
+    event: (id: string) => [...queryKeys.economicCalendar.all, id] as const,
+  },
+
   // System
   system: {
     all: ["system"] as const,

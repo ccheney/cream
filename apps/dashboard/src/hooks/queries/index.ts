@@ -72,6 +72,14 @@ export {
   useRecentDecisions,
   useRejectDecision,
 } from "./useDecisions";
+// Economic Calendar
+export {
+  type UseEconomicCalendarOptions,
+  useEconomicCalendar,
+  useEconomicEvent,
+  useThisWeekEvents,
+  useUpcomingHighImpactEvents,
+} from "./useEconomicCalendar";
 // Indicator Lab
 export {
   type Activity as IndicatorActivity,
