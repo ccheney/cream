@@ -1,9 +1,15 @@
 /**
  * Macro Release Parser
  *
- * Parses Alpha Vantage and other macro data sources into normalized format.
+ * Parses Alpha Vantage, FMP, and FRED macro data sources into normalized format.
  */
 
+import {
+  classifyReleaseImpact,
+  type FREDReleaseDate,
+  getReleaseById,
+  type ReleaseImpact,
+} from "@cream/universe";
 import type { ParsedMacroRelease } from "../types.js";
 
 /**
@@ -232,4 +238,157 @@ export function groupByIndicator(
   }
 
   return sortedGroups;
+}
+
+// ============================================
+// FRED Economic Events
+// ============================================
+
+/**
+ * Standard release times in ET for common FRED releases.
+ * Most economic data releases occur at 8:30 AM ET.
+ * FOMC announcements are at 2:00 PM ET.
+ */
+const FRED_RELEASE_TIMES: Record<number, string> = {
+  101: "14:00:00", // FOMC - 2:00 PM ET
+  // All others default to 8:30 AM ET
+};
+
+const DEFAULT_FRED_RELEASE_TIME = "08:30:00";
+
+/**
+ * FRED Economic Event - structured for calendar display.
+ *
+ * Represents an upcoming or historical economic release from FRED.
+ */
+export interface FREDEconomicEvent {
+  /** Unique event ID (e.g., 'fred-10-2025-01-15') */
+  id: string;
+  /** Release name (e.g., 'Consumer Price Index') */
+  name: string;
+  /** Release date in YYYY-MM-DD format */
+  date: string;
+  /** Release time in HH:MM:SS format (ET) - defaults to '08:30:00' */
+  time: string;
+  /** Market impact level based on release importance */
+  impact: ReleaseImpact;
+  /** Forecast value (FRED doesn't provide forecasts, always null) */
+  forecast: string | null;
+  /** Previous release value */
+  previous: string | null;
+  /** Actual released value (null if not yet released) */
+  actual: string | null;
+  /** FRED release ID for reference */
+  releaseId: number;
+}
+
+/**
+ * Latest value data for a FRED release.
+ * Used to populate previous/actual fields in economic events.
+ */
+export interface FREDLatestValues {
+  previous: number | null;
+  actual: number | null;
+}
+
+/**
+ * Parse FRED release dates into structured economic events.
+ *
+ * @param releaseDates - Release dates from FREDClient.getReleaseDates()
+ * @param latestValues - Optional map of release ID to latest values
+ * @returns Array of structured economic events
+ *
+ * @example
+ * ```typescript
+ * const client = createFREDClientFromEnv();
+ * const response = await client.getReleaseDates({ limit: 50 });
+ * const releaseDates = response.release_dates ?? response.release_date ?? [];
+ *
+ * // Optionally fetch latest values for each release
+ * const latestValues = new Map<number, FREDLatestValues>();
+ * for (const rd of releaseDates) {
+ *   const value = await fetchLatestValue(rd.release_id);
+ *   if (value) latestValues.set(rd.release_id, value);
+ * }
+ *
+ * const events = parseFREDReleaseDates(releaseDates, latestValues);
+ * ```
+ */
+export function parseFREDReleaseDates(
+  releaseDates: FREDReleaseDate[],
+  latestValues?: Map<number, FREDLatestValues>
+): FREDEconomicEvent[] {
+  const events: FREDEconomicEvent[] = [];
+
+  for (const rd of releaseDates) {
+    const releaseId = typeof rd.release_id === "string" ? Number(rd.release_id) : rd.release_id;
+
+    // Generate stable ID from release_id + date
+    const id = `fred-${releaseId}-${rd.date}`;
+
+    // Get release name from registry or API response
+    const releaseInfo = getReleaseById(releaseId);
+    const name = releaseInfo?.name ?? rd.release_name ?? `FRED Release ${releaseId}`;
+
+    // Determine release time (FOMC at 2pm, others at 8:30am ET)
+    const time = FRED_RELEASE_TIMES[releaseId] ?? DEFAULT_FRED_RELEASE_TIME;
+
+    // Classify impact level
+    const impact = classifyReleaseImpact(releaseId);
+
+    // Get latest values if provided
+    const values = latestValues?.get(releaseId);
+    const previous = values?.previous != null ? String(values.previous) : null;
+    const actual = values?.actual != null ? String(values.actual) : null;
+
+    events.push({
+      id,
+      name,
+      date: rd.date,
+      time,
+      impact,
+      forecast: null, // FRED doesn't provide forecasts
+      previous,
+      actual,
+      releaseId,
+    });
+  }
+
+  return events;
+}
+
+/**
+ * Filter FRED events to only include high and medium impact releases.
+ *
+ * @param events - Array of FRED economic events
+ * @returns Filtered array with only significant releases
+ */
+export function filterSignificantFREDEvents(events: FREDEconomicEvent[]): FREDEconomicEvent[] {
+  return events.filter((e) => e.impact === "high" || e.impact === "medium");
+}
+
+/**
+ * Sort FRED events by date and impact.
+ * High impact events appear first within the same date.
+ *
+ * @param events - Array of FRED economic events
+ * @returns Sorted array
+ */
+export function sortFREDEventsByDateAndImpact(events: FREDEconomicEvent[]): FREDEconomicEvent[] {
+  const impactOrder: Record<ReleaseImpact, number> = {
+    high: 0,
+    medium: 1,
+    low: 2,
+  };
+
+  return events.toSorted((a, b) => {
+    // Primary sort by date
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) {
+      return dateCompare;
+    }
+
+    // Secondary sort by impact (high first)
+    return impactOrder[a.impact] - impactOrder[b.impact];
+  });
 }
