@@ -723,6 +723,146 @@ export const IndicatorMessageSchema = z.object({
 export type IndicatorMessage = z.infer<typeof IndicatorMessageSchema>;
 
 // ============================================
+// Account Update Message (from Alpaca trade stream)
+// ============================================
+
+/**
+ * Account update data - triggered when account balance changes.
+ */
+export const AccountUpdateDataSchema = z.object({
+  /** Account cash balance */
+  cash: z.number(),
+  /** Account equity */
+  equity: z.number(),
+  /** Buying power */
+  buyingPower: z.number(),
+  /** Timestamp of the update */
+  timestamp: z.string(),
+});
+
+export type AccountUpdateData = z.infer<typeof AccountUpdateDataSchema>;
+
+/**
+ * Account update message - broadcasted when account balance changes.
+ *
+ * @example
+ * { type: "account_update", data: { cash: 50000, equity: 150000, ... } }
+ */
+export const AccountUpdateMessageSchema = z.object({
+  type: z.literal("account_update"),
+  data: AccountUpdateDataSchema,
+});
+
+export type AccountUpdateMessage = z.infer<typeof AccountUpdateMessageSchema>;
+
+// ============================================
+// Position Update Message (from Alpaca trade stream)
+// ============================================
+
+/**
+ * Position update data - triggered when position changes (order fills).
+ */
+export const PositionUpdateDataSchema = z.object({
+  /** Symbol */
+  symbol: z.string(),
+  /** Position side (LONG or SHORT) */
+  side: z.enum(["LONG", "SHORT"]),
+  /** New quantity */
+  qty: z.number(),
+  /** Average entry price */
+  avgEntry: z.number(),
+  /** Current market value */
+  marketValue: z.number(),
+  /** Unrealized P&L */
+  unrealizedPnl: z.number(),
+  /** Event that triggered this update */
+  event: z.enum(["fill", "partial_fill", "close"]),
+  /** Order ID that caused this update */
+  orderId: z.string(),
+  /** Timestamp of the update */
+  timestamp: z.string(),
+});
+
+export type PositionUpdateData = z.infer<typeof PositionUpdateDataSchema>;
+
+/**
+ * Position update message - broadcasted when positions change.
+ *
+ * @example
+ * { type: "position_update", data: { symbol: "AAPL", qty: 100, ... } }
+ */
+export const PositionUpdateMessageSchema = z.object({
+  type: z.literal("position_update"),
+  data: PositionUpdateDataSchema,
+});
+
+export type PositionUpdateMessage = z.infer<typeof PositionUpdateMessageSchema>;
+
+// ============================================
+// Order Update Message (from Alpaca trade stream)
+// ============================================
+
+/**
+ * Order update data - triggered on order status changes.
+ */
+export const OrderUpdateDataSchema = z.object({
+  /** Order ID */
+  orderId: z.string(),
+  /** Client order ID */
+  clientOrderId: z.string(),
+  /** Symbol */
+  symbol: z.string(),
+  /** Order side */
+  side: z.enum(["buy", "sell"]),
+  /** Order type */
+  orderType: z.string(),
+  /** Order status */
+  status: z.string(),
+  /** Quantity ordered */
+  qty: z.string().nullable(),
+  /** Quantity filled */
+  filledQty: z.string(),
+  /** Average fill price */
+  filledAvgPrice: z.string().nullable(),
+  /** Event type that triggered this update */
+  event: z.enum([
+    "new",
+    "fill",
+    "partial_fill",
+    "canceled",
+    "expired",
+    "done_for_day",
+    "replaced",
+    "rejected",
+    "pending_new",
+    "stopped",
+    "pending_cancel",
+    "pending_replace",
+    "calculated",
+    "suspended",
+    "order_replace_rejected",
+    "order_cancel_rejected",
+  ]),
+  /** Timestamp of the event */
+  timestamp: z.string(),
+});
+
+export type OrderUpdateData = z.infer<typeof OrderUpdateDataSchema>;
+
+/**
+ * Order update message - broadcasted on order status changes.
+ *
+ * @example
+ * { type: "order_update", data: { orderId: "...", event: "fill", ... } }
+ */
+export const OrderUpdateMessageSchema = z.object({
+  type: z.literal("order_update"),
+  data: OrderUpdateDataSchema,
+});
+
+export type OrderUpdateMessage = z.infer<typeof OrderUpdateMessageSchema>;
+
+// ============================================
 // Server Message Union
 // ============================================
 
@@ -761,6 +901,9 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   BacktestEquityMessageSchema,
   BacktestCompletedMessageSchema,
   BacktestErrorMessageSchema,
+  AccountUpdateMessageSchema,
+  PositionUpdateMessageSchema,
+  OrderUpdateMessageSchema,
 ]);
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

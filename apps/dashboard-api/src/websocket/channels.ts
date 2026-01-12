@@ -346,6 +346,27 @@ export function broadcastFilingsSyncComplete(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast account update to connections subscribed to portfolio channel.
+ */
+export function broadcastAccountUpdate(message: ServerMessage): number {
+  return broadcast("portfolio", message);
+}
+
+/**
+ * Broadcast position update to connections subscribed to portfolio channel.
+ */
+export function broadcastPositionUpdate(message: ServerMessage): number {
+  return broadcast("portfolio", message);
+}
+
+/**
+ * Broadcast order update to connections subscribed to orders channel.
+ */
+export function broadcastOrderUpdate(message: ServerMessage): number {
+  return broadcast("orders", message);
+}
+
+/**
  * Server-initiated ping to all connections.
  */
 export function pingAllConnections(): void {

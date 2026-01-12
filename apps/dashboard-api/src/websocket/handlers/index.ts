@@ -4,6 +4,11 @@
  * Re-exports all message handlers for convenient imports.
  */
 
+export {
+  initAlpacaTradeStream,
+  isAlpacaTradeStreamInitialized,
+  shutdownAlpacaTradeStream,
+} from "./account.js";
 export { handleAcknowledgeAlert, handleAlertsState } from "./alerts.js";
 export {
   handleSubscribeOptions,
