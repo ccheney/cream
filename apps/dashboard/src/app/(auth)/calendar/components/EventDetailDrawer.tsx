@@ -13,10 +13,11 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, Clock, ExternalLink, TrendingDown, TrendingUp, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Sparkline } from "@/components/ui/sparkline";
 import { useEventHistory } from "@/hooks/queries";
 import type { EconomicEvent, ImpactLevel } from "@/lib/api/types";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 // ============================================
 // Types
@@ -32,7 +33,8 @@ interface EventDetailDrawerProps {
 // Constants
 // ============================================
 
-const DRAWER_WIDTH = 400;
+const DRAWER_WIDTH_MOBILE = "100%";
+const DRAWER_WIDTH_DESKTOP = 400;
 
 const IMPACT_CONFIG: Record<
   ImpactLevel,
@@ -202,8 +204,15 @@ function SurpriseIndicator({
 // ============================================
 
 export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerProps) {
+  const { isMobile } = useMediaQuery();
+
   // Fetch historical data for sparkline
   const { data: history, isLoading: isHistoryLoading } = useEventHistory(event?.id ?? null);
+
+  const drawerWidth = useMemo(
+    () => (isMobile ? DRAWER_WIDTH_MOBILE : DRAWER_WIDTH_DESKTOP),
+    [isMobile]
+  );
 
   // Close on ESC
   useEffect(() => {
@@ -242,7 +251,7 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ width: DRAWER_WIDTH }}
+            style={{ width: drawerWidth }}
             className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
           >
             {/* Header */}
@@ -330,7 +339,7 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
                     <div className="flex flex-col gap-2">
                       <Sparkline
                         data={sparklineData}
-                        width={DRAWER_WIDTH - 64}
+                        width={isMobile ? 280 : DRAWER_WIDTH_DESKTOP - 64}
                         height={48}
                         showFill
                       />

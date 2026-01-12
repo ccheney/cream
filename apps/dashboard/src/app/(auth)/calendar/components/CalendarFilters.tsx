@@ -163,7 +163,7 @@ export function CalendarFilters({ filters, onFilterChange, className }: Calendar
   }, [filters]);
 
   return (
-    <div className={`flex flex-wrap items-center gap-3 ${className ?? ""}`}>
+    <div className={`flex flex-wrap items-center gap-2 sm:gap-3 ${className ?? ""}`}>
       {/* Country Filter */}
       <SelectDropdown
         value={filters.country}
@@ -180,12 +180,12 @@ export function CalendarFilters({ filters, onFilterChange, className }: Calendar
         icon={<Calendar className="w-3.5 h-3.5" />}
       />
 
-      {/* Separator */}
-      <div className="w-px h-5 bg-cream-300 dark:bg-night-600" />
+      {/* Separator - hidden on mobile */}
+      <div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
 
       {/* Impact Filters */}
-      <div className="flex items-center gap-1.5">
-        <Filter className="w-3.5 h-3.5 text-stone-400 dark:text-night-400" />
+      <div className="flex items-center gap-1 sm:gap-1.5">
+        <Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-stone-400 dark:text-night-400" />
         {IMPACT_OPTIONS.map((opt) => (
           <FilterChip
             key={opt.value}
@@ -200,7 +200,7 @@ export function CalendarFilters({ filters, onFilterChange, className }: Calendar
       {/* Clear Filters */}
       {hasActiveFilters && (
         <>
-          <div className="w-px h-5 bg-cream-300 dark:bg-night-600" />
+          <div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
           <button
             type="button"
             onClick={clearFilters}

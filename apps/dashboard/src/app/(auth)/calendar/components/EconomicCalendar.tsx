@@ -9,6 +9,8 @@
 
 "use client";
 
+import "temporal-polyfill/global";
+
 import { createViewMonthAgenda, createViewMonthGrid, createViewWeek } from "@schedule-x/calendar";
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import { ScheduleXCalendar, useNextCalendarApp } from "@schedule-x/react";
@@ -19,6 +21,7 @@ import { EmptyState, ErrorEmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEconomicCalendar } from "@/hooks/queries";
 import type { EconomicEvent } from "@/lib/api/types";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import {
   type CalendarFilterState,
   CalendarFilters,
@@ -34,8 +37,8 @@ import { MonthGridEventCard, TimeGridEventCard } from "./EventCard";
 interface CalendarEvent {
   id: string;
   title: string;
-  start: string;
-  end: string;
+  start: Temporal.ZonedDateTime;
+  end: Temporal.ZonedDateTime;
   calendarId: string;
   description?: string;
   location?: string;
@@ -100,16 +103,14 @@ const customComponents = {
 // Utilities
 // ============================================
 
-function formatEventTime(date: string, time: string): string {
-  return `${date} ${time.slice(0, 5)}`;
-}
+const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function convertToCalendarEvents(events: EconomicEvent[]): CalendarEvent[] {
   return events.map((event) => {
-    const startTime = formatEventTime(event.date, event.time);
-    const endDate = new Date(`${event.date}T${event.time}`);
-    endDate.setMinutes(endDate.getMinutes() + 30);
-    const endTime = `${event.date} ${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+    const timeStr = event.time.slice(0, 5);
+    // biome-ignore lint/correctness/noUndeclaredVariables: Temporal is available via temporal-polyfill/global import
+    const start = Temporal.ZonedDateTime.from(`${event.date}T${timeStr}:00[${DEFAULT_TIMEZONE}]`);
+    const end = start.add({ minutes: 30 });
 
     const parts: string[] = [];
     if (event.actual) {
@@ -125,8 +126,8 @@ function convertToCalendarEvents(events: EconomicEvent[]): CalendarEvent[] {
     return {
       id: event.id,
       title: event.name,
-      start: startTime,
-      end: endTime,
+      start,
+      end,
       calendarId: event.impact,
       description: parts.length > 0 ? parts.join(" | ") : undefined,
       location: `${event.country} | ${event.impact.toUpperCase()} impact`,
@@ -213,7 +214,25 @@ function CalendarEmptyState({
   );
 }
 
-function ImpactLegend() {
+function ImpactLegend({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 text-[10px]">
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-stone-600 dark:text-night-300">High</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-stone-600 dark:text-night-300">Med</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-gray-400" />
+          <span className="text-stone-600 dark:text-night-300">Low</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-4 text-xs">
       <div className="flex items-center gap-1.5">
@@ -239,6 +258,7 @@ function ImpactLegend() {
 export function EconomicCalendar() {
   const [filters, setFilters] = useState<CalendarFilterState>(DEFAULT_FILTERS);
   const [isDark, setIsDark] = useState(false);
+  const { isMobile, isTablet } = useMediaQuery();
 
   const { start, end } = useMemo(
     () => getDateRangeFromFilter(filters.dateRange),
@@ -277,9 +297,33 @@ export function EconomicCalendar() {
     return convertToCalendarEvents(data.events);
   }, [data?.events]);
 
+  // Responsive calendar views:
+  // - Mobile: month-agenda only (vertical list)
+  // - Tablet: month-agenda + month-grid
+  // - Desktop: week + month-grid + month-agenda
+  const views = useMemo(() => {
+    if (isMobile) {
+      return [createViewMonthAgenda()];
+    }
+    if (isTablet) {
+      return [createViewMonthAgenda(), createViewMonthGrid()];
+    }
+    return [createViewWeek(), createViewMonthGrid(), createViewMonthAgenda()];
+  }, [isMobile, isTablet]) as [
+    ReturnType<typeof createViewWeek>,
+    ...ReturnType<typeof createViewWeek>[],
+  ];
+
+  const defaultView = useMemo(() => {
+    if (isMobile || isTablet) {
+      return "month-agenda";
+    }
+    return "week";
+  }, [isMobile, isTablet]);
+
   const calendar = useNextCalendarApp({
-    views: [createViewWeek(), createViewMonthGrid(), createViewMonthAgenda()],
-    defaultView: "week",
+    views,
+    defaultView,
     locale: "en-US",
     firstDayOfWeek: 1,
     isDark,
@@ -288,8 +332,8 @@ export function EconomicCalendar() {
       end: "20:00",
     },
     weekOptions: {
-      gridHeight: 800,
-      nDays: 5,
+      gridHeight: isMobile ? 500 : 800,
+      nDays: isMobile ? 1 : 5,
       eventWidth: 95,
     },
     calendars: IMPACT_CALENDARS,
@@ -326,11 +370,12 @@ export function EconomicCalendar() {
   }, [calendar, isDark]);
 
   // Update events when data changes
+  // Note: eventsService.set is only available after calendar initialization
   useEffect(() => {
-    if (eventsService && calendarEvents.length > 0) {
+    if (calendar && eventsService && "set" in eventsService && calendarEvents.length > 0) {
       eventsService.set(calendarEvents);
     }
-  }, [eventsService, calendarEvents]);
+  }, [calendar, eventsService, calendarEvents]);
 
   if (isLoading) {
     return <CalendarLoadingState />;
@@ -357,10 +402,13 @@ export function EconomicCalendar() {
         <CalendarFilters filters={filters} onFilterChange={handleFilterChange} />
       </div>
       <div className="shrink-0 flex items-center justify-between">
-        <ImpactLegend />
-        <span className="text-xs text-stone-500 dark:text-night-400">
-          {data.events.length} events • Updated{" "}
-          {new Date(data.meta.lastUpdated).toLocaleTimeString()}
+        <ImpactLegend compact={isMobile} />
+        <span className="text-[10px] sm:text-xs text-stone-500 dark:text-night-400">
+          {data.events.length} events
+          <span className="hidden sm:inline">
+            {" "}
+            • Updated {new Date(data.meta.lastUpdated).toLocaleTimeString()}
+          </span>
         </span>
       </div>
       <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">

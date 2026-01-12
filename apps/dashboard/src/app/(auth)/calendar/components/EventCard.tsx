@@ -10,6 +10,8 @@
 
 "use client";
 
+import "temporal-polyfill/global";
+
 import type { ImpactLevel } from "@/lib/api/types";
 
 // ============================================
@@ -19,8 +21,8 @@ import type { ImpactLevel } from "@/lib/api/types";
 export interface CalendarEventData {
   id: string;
   title: string;
-  start: string;
-  end: string;
+  start: Temporal.ZonedDateTime;
+  end: Temporal.ZonedDateTime;
   calendarId: string;
   description?: string;
   location?: string;
@@ -84,17 +86,9 @@ function getImpactFromCalendarId(calendarId: string): ImpactLevel {
   return "low";
 }
 
-function formatTime(dateTimeStr: string): string {
-  const parts = dateTimeStr.split(" ");
-  if (parts.length < 2) {
-    return "";
-  }
-  const timePart = parts[1];
-  if (!timePart) {
-    return "";
-  }
-  const [hours, minutes] = timePart.split(":");
-  const hour = Number.parseInt(hours ?? "0", 10);
+function formatTime(dateTime: Temporal.ZonedDateTime): string {
+  const hour = dateTime.hour;
+  const minutes = String(dateTime.minute).padStart(2, "0");
   const ampm = hour >= 12 ? "PM" : "AM";
   const hour12 = hour % 12 || 12;
   return `${hour12}:${minutes} ${ampm}`;
