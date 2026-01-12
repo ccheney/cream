@@ -1,38 +1,231 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Equity chart bars use time-ordered indices
 "use client";
 
 /**
  * Portfolio Page - Position management and P&L tracking
+ *
+ * Layout structure for portfolio dashboard with placeholder slots for child components.
+ * Child components are built in subsequent beads:
+ * - AccountSummaryCard (cream-h3xmf)
+ * - PerformanceGrid (cream-sakhh)
+ * - EquityCurveChart (cream-lgaxe)
+ * - StreamingPositionsTable (cream-kzy8g)
+ * - AllocationDonut (cream-g6svw)
+ * - RiskMetricsBar (cream-yaq2r)
+ * - OptionsPositionsWidget (cream-9lhy7)
+ *
+ * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
  */
 
-import Link from "next/link";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useEquityCurve, usePortfolioSummary, usePositions } from "@/hooks/queries";
+import { useAccount, usePortfolioSummary } from "@/hooks/queries";
 
-function TableHeaderTooltip({
-  label,
-  tooltip,
-  align = "left",
-}: {
-  label: string;
-  tooltip: string;
-  align?: "left" | "right";
-}) {
+// ============================================
+// Placeholder Components
+// ============================================
+
+function LiveIndicator({ isLive }: { isLive: boolean }) {
   return (
-    <Tooltip>
-      <TooltipTrigger className={`cursor-help ${align === "right" ? "w-full text-right" : ""}`}>
-        <span>{label}</span>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
-    </Tooltip>
+    <div className="flex items-center gap-2">
+      <span
+        className={`h-2 w-2 rounded-full ${isLive ? "bg-green-500 animate-pulse" : "bg-stone-400"}`}
+      />
+      <span className="text-sm font-medium text-stone-600 dark:text-night-300">
+        {isLive ? "LIVE" : "DELAYED"}
+      </span>
+    </div>
   );
 }
 
+/**
+ * Placeholder for AccountSummaryCard component (cream-h3xmf)
+ * 8 metrics in 2x4 grid: Cash, Buying Power, Long Value, Short Value, Margin, PDT Status, Day Trades, Shorting
+ */
+function AccountSummaryCardPlaceholder() {
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+        Account Summary
+      </h2>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          "Cash",
+          "Buying Power",
+          "Long Value",
+          "Short Value",
+          "Margin",
+          "PDT Status",
+          "Day Trades",
+          "Shorting",
+        ].map((label) => (
+          <div key={label} className="space-y-1">
+            <span className="text-xs text-stone-400 dark:text-night-500">{label}</span>
+            <div className="h-6 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for PerformanceGrid component (cream-sakhh)
+ * 6 timeframe tabs: Today, Week, Month, 3M, YTD, All-Time
+ */
+function PerformanceGridPlaceholder() {
+  const timeframes = ["Today", "Week", "Month", "3M", "YTD", "All-Time"];
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+        Performance
+      </h2>
+      <div className="flex gap-2 border-b border-cream-200 dark:border-night-700 pb-3 mb-4 overflow-x-auto">
+        {timeframes.map((tf, i) => (
+          <button
+            key={tf}
+            type="button"
+            className={`px-3 py-1.5 text-sm rounded-md whitespace-nowrap ${
+              i === 0
+                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                : "text-stone-500 dark:text-night-400 hover:bg-cream-100 dark:hover:bg-night-700"
+            }`}
+          >
+            {tf}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-8">
+        <div className="space-y-1">
+          <span className="text-xs text-stone-400 dark:text-night-500">P&L</span>
+          <div className="h-8 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs text-stone-400 dark:text-night-500">Return %</span>
+          <div className="h-8 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for EquityCurveChart component (cream-lgaxe)
+ * TradingView chart with period selector
+ */
+function EquityCurveChartPlaceholder() {
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
+          Equity Curve
+        </h2>
+        <div className="flex gap-1">
+          {["1W", "1M", "3M", "YTD", "1Y", "ALL"].map((period) => (
+            <button
+              key={period}
+              type="button"
+              className="px-2 py-1 text-xs text-stone-400 dark:text-night-500 hover:text-stone-600 dark:hover:text-night-300"
+            >
+              {period}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="h-64 bg-cream-50 dark:bg-night-750 rounded flex items-center justify-center">
+        <span className="text-stone-400 dark:text-night-500 text-sm">
+          TradingView Chart Placeholder
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for StreamingPositionsTable component (cream-kzy8g)
+ * Real-time positions table with streaming prices
+ */
+function StreamingPositionsTablePlaceholder() {
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+      <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
+          Open Positions
+        </h2>
+        <span className="text-xs text-stone-400 dark:text-night-500">0 positions</span>
+      </div>
+      <div className="p-4 space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-12 bg-cream-50 dark:bg-night-750 rounded animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for AllocationDonut component (cream-g6svw)
+ * Donut chart with sector list
+ */
+function AllocationDonutPlaceholder() {
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+        Allocation
+      </h2>
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 flex items-center justify-center">
+          <span className="text-stone-400 dark:text-night-500 text-sm">Chart</span>
+        </div>
+        <div className="w-full space-y-2">
+          {["Technology", "Healthcare", "Financials", "Other"].map((sector) => (
+            <div key={sector} className="flex items-center justify-between text-sm">
+              <span className="text-stone-600 dark:text-night-300">{sector}</span>
+              <div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for RiskMetricsBar component (cream-yaq2r)
+ * 6 key metrics: Sharpe, Sortino, Max DD, Current DD, Win Rate, PF
+ */
+function RiskMetricsBarPlaceholder() {
+  const metrics = [
+    { label: "Sharpe", tooltip: "Risk-adjusted return" },
+    { label: "Sortino", tooltip: "Downside risk-adjusted return" },
+    { label: "Max DD", tooltip: "Maximum drawdown" },
+    { label: "Current DD", tooltip: "Current drawdown from peak" },
+    { label: "Win Rate", tooltip: "Percentage of winning trades" },
+    { label: "Profit Factor", tooltip: "Gross profit / gross loss" },
+  ];
+
+  return (
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+        Risk Metrics
+      </h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {metrics.map(({ label }) => (
+          <div key={label} className="space-y-1 text-center">
+            <span className="text-xs text-stone-400 dark:text-night-500">{label}</span>
+            <div className="h-6 w-16 mx-auto bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Main Page Component
+// ============================================
+
 export default function PortfolioPage() {
-  const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
-  const { data: positions, isLoading: positionsLoading } = usePositions();
-  const { data: equity, isLoading: equityLoading } = useEquityCurve(30);
+  const { data: account } = useAccount();
+  const { data: summary } = usePortfolioSummary();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -42,294 +235,70 @@ export default function PortfolioPage() {
       maximumFractionDigits: 0,
     }).format(value);
 
-  const formatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  const nav = summary?.nav ?? account?.equity ?? 0;
+  const isLive = true; // TODO: Wire to actual streaming state
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Portfolio</h1>
-        {summary && (
-          <span className="text-sm text-stone-500 dark:text-night-300">
-            Last updated: {new Date(summary.lastUpdated).toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-
-      {/* Portfolio Summary */}
-      <QueryErrorBoundary title="Failed to load portfolio summary">
-        <div className="grid grid-cols-4 gap-4">
-          <MetricCard
-            label="Total NAV"
-            tooltip="Net Asset Value: total portfolio value including cash and positions"
-            value={summaryLoading ? "--" : formatCurrency(summary?.nav ?? 0)}
-            isLoading={summaryLoading}
-          />
-          <MetricCard
-            label="Cash"
-            tooltip="Available cash for trading"
-            value={summaryLoading ? "--" : formatCurrency(summary?.cash ?? 0)}
-            isLoading={summaryLoading}
-          />
-          <MetricCard
-            label="Unrealized P&L"
-            tooltip="Profit/loss on open positions (not yet realized through sale)"
-            value={summaryLoading ? "--" : formatCurrency(summary?.totalPnl ?? 0)}
-            change={summaryLoading ? undefined : formatPct(summary?.totalPnlPct ?? 0)}
-            valueColor={(summary?.totalPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
-            isLoading={summaryLoading}
-          />
-          <MetricCard
-            label="Day P&L"
-            tooltip="Today's profit/loss across all positions"
-            value={summaryLoading ? "--" : formatCurrency(summary?.todayPnl ?? 0)}
-            change={summaryLoading ? undefined : formatPct(summary?.todayPnlPct ?? 0)}
-            valueColor={(summary?.todayPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
-            isLoading={summaryLoading}
-          />
-        </div>
-      </QueryErrorBoundary>
-
-      {/* Positions Table */}
-      <QueryErrorBoundary title="Failed to load positions">
-        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-          <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
-              Open Positions
-            </h2>
-            {positions && (
-              <span className="text-sm text-stone-500 dark:text-night-300">
-                {positions.length} positions
-              </span>
-            )}
-          </div>
-
-          {positionsLoading ? (
-            <div className="p-4 space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse"
-                />
-              ))}
-            </div>
-          ) : positions && positions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-cream-50 dark:bg-night-750">
-                  <tr className="text-left text-sm text-stone-500 dark:text-night-300">
-                    <th className="px-4 py-3 font-medium">Symbol</th>
-                    <th className="px-4 py-3 font-medium">
-                      <TableHeaderTooltip
-                        label="Side"
-                        tooltip="Position direction: LONG or SHORT"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="Qty"
-                        tooltip="Number of shares held"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="Avg Entry"
-                        tooltip="Average purchase price per share"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="Current"
-                        tooltip="Current market price"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="Market Value"
-                        tooltip="Current total value (Qty × Current)"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="P&L"
-                        tooltip="Unrealized profit/loss in dollars"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="P&L %"
-                        tooltip="Unrealized profit/loss as percentage"
-                        align="right"
-                      />
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">
-                      <TableHeaderTooltip
-                        label="Days Held"
-                        tooltip="Calendar days since position opened"
-                        align="right"
-                      />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-cream-100 dark:divide-night-700">
-                  {positions.map((position) => (
-                    <tr
-                      key={position.id}
-                      className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
-                        <Link
-                          href={`/portfolio/positions/${position.id}`}
-                          className="hover:text-blue-600"
-                        >
-                          {position.symbol}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-0.5 text-xs font-medium rounded ${
-                            position.side === "LONG"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                          }`}
-                        >
-                          {position.side}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
-                        {position.qty}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
-                        ${position.avgEntry.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
-                        ${position.currentPrice.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
-                        {formatCurrency(position.marketValue)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-mono ${
-                          position.unrealizedPnl >= 0 ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {position.unrealizedPnl >= 0 ? "+" : ""}
-                        {formatCurrency(position.unrealizedPnl)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-mono ${
-                          position.unrealizedPnlPct >= 0 ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {formatPct(position.unrealizedPnlPct)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-stone-500 dark:text-night-300">
-                        {position.daysHeld}d
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center text-stone-400 dark:text-night-400">No positions</div>
+      {/* Header with NAV and Live Indicator */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
+            Portfolio Overview
+          </h1>
+          {summary?.lastUpdated && (
+            <span className="text-sm text-stone-500 dark:text-night-400">
+              Last updated: {new Date(summary.lastUpdated).toLocaleTimeString()}
+            </span>
           )}
         </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <span className="text-sm text-stone-500 dark:text-night-400">NAV</span>
+            <div className="text-2xl font-semibold text-stone-900 dark:text-night-50 font-mono">
+              {formatCurrency(nav)}
+            </div>
+          </div>
+          <LiveIndicator isLive={isLive} />
+        </div>
+      </div>
+
+      {/* Account Summary - 8 metrics in 2x4 grid */}
+      <QueryErrorBoundary title="Failed to load account summary">
+        <AccountSummaryCardPlaceholder />
+      </QueryErrorBoundary>
+
+      {/* Performance Grid - 6 timeframe tabs */}
+      <QueryErrorBoundary title="Failed to load performance data">
+        <PerformanceGridPlaceholder />
       </QueryErrorBoundary>
 
       {/* Equity Curve Chart */}
       <QueryErrorBoundary title="Failed to load equity curve">
-        <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
-            Equity Curve (30 Days)
-          </h2>
-          {equityLoading ? (
-            <div className="h-64 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-          ) : equity && equity.length > 0 ? (
-            <div className="h-64 relative">
-              {/* Simple sparkline visualization */}
-              <div className="absolute inset-0 flex items-end gap-px">
-                {equity.map((point, i) => {
-                  const min = Math.min(...equity.map((p) => p.nav));
-                  const max = Math.max(...equity.map((p) => p.nav));
-                  const range = max - min || 1;
-                  const height = ((point.nav - min) / range) * 100;
-                  return (
-                    <div
-                      key={`equity-${i}`}
-                      className="flex-1 bg-blue-500 dark:bg-blue-400 rounded-t"
-                      style={{ height: `${height}%` }}
-                      title={`${new Date(point.timestamp).toLocaleDateString()}: ${formatCurrency(point.nav)}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-stone-400 dark:text-night-400">
-              No equity data available
-            </div>
-          )}
-        </div>
+        <EquityCurveChartPlaceholder />
       </QueryErrorBoundary>
-    </div>
-  );
-}
 
-function MetricCard({
-  label,
-  value,
-  change,
-  valueColor,
-  tooltip,
-  isLoading,
-}: {
-  label: string;
-  value: string;
-  change?: string;
-  valueColor?: string;
-  tooltip?: string;
-  isLoading: boolean;
-}) {
-  if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <div className="h-4 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
-        <div className="h-8 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-      </div>
-    );
-  }
-
-  const labelElement = <span className="text-sm text-stone-500 dark:text-night-300">{label}</span>;
-
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      {tooltip ? (
-        <Tooltip>
-          <TooltipTrigger className="cursor-help">{labelElement}</TooltipTrigger>
-          <TooltipContent>{tooltip}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <div>{labelElement}</div>
-      )}
-      <div className="flex items-baseline gap-2">
-        <div
-          className={`mt-1 text-2xl font-semibold ${
-            valueColor ?? "text-stone-900 dark:text-night-50"
-          }`}
-        >
-          {value}
+      {/* Main Content Row: Positions Table (2/3) + Allocation (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Streaming Positions Table - 2/3 width on large screens */}
+        <div className="lg:col-span-2">
+          <QueryErrorBoundary title="Failed to load positions">
+            <StreamingPositionsTablePlaceholder />
+          </QueryErrorBoundary>
         </div>
-        {change && (
-          <span className={`text-sm ${valueColor ?? "text-stone-500 dark:text-night-300"}`}>
-            {change}
-          </span>
-        )}
+
+        {/* Allocation Donut - 1/3 width on large screens */}
+        <div className="lg:col-span-1">
+          <QueryErrorBoundary title="Failed to load allocation">
+            <AllocationDonutPlaceholder />
+          </QueryErrorBoundary>
+        </div>
       </div>
+
+      {/* Risk Metrics Bar */}
+      <QueryErrorBoundary title="Failed to load risk metrics">
+        <RiskMetricsBarPlaceholder />
+      </QueryErrorBoundary>
     </div>
   );
 }
