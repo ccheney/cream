@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS decisions (
   entry_price REAL,
   stop_loss REAL,
   take_profit REAL,
+  stop_price REAL,                 -- Repository-compatible stop price
+  target_price REAL,               -- Repository-compatible target price
+  strategy_family TEXT,            -- Strategy metadata
+  time_horizon TEXT,               -- Time horizon metadata
+  bullish_factors TEXT,            -- JSON array of bullish factors
+  bearish_factors TEXT,            -- JSON array of bearish factors
+  confidence_score REAL,           -- Confidence score 0-1
+  risk_score REAL,                 -- Risk score 0-1
+  metadata TEXT,                   -- Additional JSON metadata
   status TEXT NOT NULL DEFAULT 'pending',  -- pending, approved, rejected, executed, cancelled, expired
   rationale TEXT,
   environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
@@ -166,3 +175,78 @@ CREATE INDEX IF NOT EXISTS idx_config_versions_environment ON config_versions(en
 CREATE INDEX IF NOT EXISTS idx_config_versions_active ON config_versions(active);
 CREATE INDEX IF NOT EXISTS idx_config_versions_created_at ON config_versions(created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_config_versions_env_active ON config_versions(environment) WHERE active = 1;
+
+-- cycles: Complete OODA cycle history with results
+CREATE TABLE IF NOT EXISTS cycles (
+  id TEXT PRIMARY KEY,
+  environment TEXT NOT NULL,                     -- BACKTEST, PAPER, LIVE
+  status TEXT NOT NULL DEFAULT 'running',        -- running, completed, failed
+
+  -- Timing
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  duration_ms INTEGER,
+
+  -- Phase tracking
+  current_phase TEXT,                            -- observe, orient, decide, act, complete
+  phase_started_at TEXT,
+
+  -- Progress
+  total_symbols INTEGER DEFAULT 0,
+  completed_symbols INTEGER DEFAULT 0,
+  progress_pct REAL DEFAULT 0,
+
+  -- Results (populated on completion)
+  approved INTEGER,                              -- 1 if consensus approved, 0 if not
+  iterations INTEGER,
+  decisions_count INTEGER DEFAULT 0,
+  orders_count INTEGER DEFAULT 0,
+
+  -- Decision summary (JSON array of {symbol, action, direction, confidence})
+  decisions_json TEXT,
+
+  -- Order summary (JSON array of {orderId, symbol, side, quantity, status})
+  orders_json TEXT,
+
+  -- Error info (if failed)
+  error_message TEXT,
+  error_stack TEXT,
+
+  -- Config tracking
+  config_version TEXT,
+
+  -- Metadata
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_cycles_environment ON cycles(environment);
+CREATE INDEX IF NOT EXISTS idx_cycles_status ON cycles(status);
+CREATE INDEX IF NOT EXISTS idx_cycles_started_at ON cycles(started_at);
+CREATE INDEX IF NOT EXISTS idx_cycles_env_status ON cycles(environment, status);
+CREATE INDEX IF NOT EXISTS idx_cycles_env_started ON cycles(environment, started_at DESC);
+
+-- cycle_events: Detailed event log for each cycle (for debugging/replay)
+CREATE TABLE IF NOT EXISTS cycle_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cycle_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,                      -- phase_change, agent_start, agent_complete, decision, order, error
+  phase TEXT,
+
+  -- Event details
+  agent_type TEXT,
+  symbol TEXT,
+  message TEXT,
+  data_json TEXT,
+
+  -- Timing
+  timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+  duration_ms INTEGER,
+
+  FOREIGN KEY (cycle_id) REFERENCES cycles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cycle_events_cycle_id ON cycle_events(cycle_id);
+CREATE INDEX IF NOT EXISTS idx_cycle_events_type ON cycle_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_cycle_events_timestamp ON cycle_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_cycle_events_agent ON cycle_events(cycle_id, agent_type);

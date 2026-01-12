@@ -49,10 +49,9 @@ CREATE INDEX IF NOT EXISTS idx_trading_config_created_at ON trading_config(creat
 CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_config_env_active ON trading_config(environment) WHERE status = 'active';
 
 CREATE TABLE IF NOT EXISTS agent_configs (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   environment TEXT NOT NULL,       -- BACKTEST, PAPER, LIVE
   agent_type TEXT NOT NULL,        -- technical, news, fundamentals, bullish, bearish, trader, risk, critic
-  model TEXT NOT NULL,
   system_prompt_override TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

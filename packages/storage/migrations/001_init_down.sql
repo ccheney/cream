@@ -3,6 +3,22 @@
 -- ============================================
 -- Tables dropped in reverse dependency order.
 
+-- Filings
+DROP TABLE IF EXISTS filing_sync_runs;
+DROP TABLE IF EXISTS filings;
+
+-- Indicator Engine v2
+DROP TABLE IF EXISTS indicator_sync_runs;
+DROP TABLE IF EXISTS corporate_actions_indicators;
+DROP TABLE IF EXISTS options_indicators_cache;
+DROP TABLE IF EXISTS sentiment_indicators;
+DROP TABLE IF EXISTS short_interest_indicators;
+DROP TABLE IF EXISTS fundamental_indicators;
+
+-- Cycles
+DROP TABLE IF EXISTS cycle_events;
+DROP TABLE IF EXISTS cycles;
+
 -- Audit & User Settings
 DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS user_preferences;
@@ -16,6 +32,7 @@ DROP TABLE IF EXISTS session;
 DROP TABLE IF EXISTS user;
 
 -- Runtime Configuration
+DROP TABLE IF EXISTS constraints_config;
 DROP TABLE IF EXISTS universe_configs;
 DROP TABLE IF EXISTS agent_configs;
 DROP TABLE IF EXISTS trading_config;
