@@ -40,7 +40,6 @@ pub mod error;
 pub mod execution;
 pub mod feed;
 pub mod models;
-pub mod observability;
 pub mod options;
 pub mod pricing;
 pub mod resilience;

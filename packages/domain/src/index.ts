@@ -57,6 +57,21 @@ export {
   TradingSession,
   validateSessionForAction,
 } from "./calendar";
+// Calendar service abstraction (API-based or hardcoded)
+export {
+  type AlpacaCalendarResponse,
+  AlpacaCalendarResponseSchema,
+  type AlpacaClockResponse,
+  AlpacaClockResponseSchema,
+  type CalendarCacheEntry,
+  type CalendarDay,
+  CalendarDaySchema,
+  type CalendarService,
+  type CalendarServiceOptions,
+  type MarketClock,
+  MarketClockSchema,
+  TradingSessionSchema,
+} from "./calendar/index";
 // Clock synchronization and timestamp validation
 export {
   alignToDailyCandle,
