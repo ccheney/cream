@@ -853,6 +853,120 @@ app.openapi(getSynthesisStatusRoute, async (c) => {
   });
 });
 
+// GET /api/indicators/synthesis/history - Get synthesis attempt history
+const SynthesisHistoryEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  status: z.string(),
+  hypothesis: z.string(),
+  generatedAt: z.string(),
+  paperTradingStart: z.string().nullable(),
+  promotedAt: z.string().nullable(),
+  retiredAt: z.string().nullable(),
+  retirementReason: z.string().nullable(),
+  ic: z.number().nullable(),
+  triggerReason: z.string(),
+});
+
+const SynthesisHistoryResponseSchema = z.object({
+  history: z.array(SynthesisHistoryEntrySchema),
+});
+
+const getSynthesisHistoryRoute = createRoute({
+  method: "get",
+  path: "/synthesis/history",
+  request: {
+    query: z.object({
+      limit: z.coerce.number().min(1).max(100).default(20),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: SynthesisHistoryResponseSchema,
+        },
+      },
+      description: "Synthesis attempt history",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+/**
+ * Extract trigger reason from generated_by field or hypothesis.
+ * The generated_by field contains the cycle ID that triggered synthesis.
+ */
+function extractTriggerReason(row: {
+  generated_by: string | null;
+  hypothesis: string | null;
+}): string {
+  const generatedBy = row.generated_by ?? "";
+
+  // Check for synthesis cycle patterns
+  if (generatedBy.startsWith("synthesis-")) {
+    return "synthesis";
+  }
+  if (generatedBy.startsWith("orient-")) {
+    return "ooda_cycle";
+  }
+
+  // Check hypothesis for regime-related keywords
+  const hypothesis = (row.hypothesis ?? "").toLowerCase();
+  if (hypothesis.includes("regime") || hypothesis.includes("market condition")) {
+    return "regime_gap";
+  }
+  if (hypothesis.includes("decay") || hypothesis.includes("underperform")) {
+    return "ic_decay";
+  }
+
+  return "manual";
+}
+
+app.openapi(getSynthesisHistoryRoute, async (c) => {
+  const { limit } = c.req.valid("query");
+  const db = await getDbClient();
+
+  // Query indicators with generated_at set (synthesized indicators)
+  // Join with IC history to get 30-day rolling IC
+  const rows = await db.execute(
+    `
+      SELECT
+        i.id, i.name, i.category, i.status, i.hypothesis,
+        i.generated_at, i.paper_trading_start, i.promoted_at,
+        i.retired_at, i.retirement_reason, i.generated_by,
+        (SELECT AVG(ic_value) FROM indicator_ic_history
+         WHERE indicator_id = i.id AND date >= date('now', '-30 days')) as ic
+      FROM indicators i
+      WHERE i.generated_at IS NOT NULL
+      ORDER BY i.generated_at DESC
+      LIMIT ?
+    `,
+    [limit]
+  );
+
+  const history = rows.map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    category: row.category as string,
+    status: row.status as string,
+    hypothesis: row.hypothesis as string,
+    generatedAt: row.generated_at as string,
+    paperTradingStart: row.paper_trading_start as string | null,
+    promotedAt: row.promoted_at as string | null,
+    retiredAt: row.retired_at as string | null,
+    retirementReason: row.retirement_reason as string | null,
+    ic: row.ic as number | null,
+    triggerReason: extractTriggerReason({
+      generated_by: row.generated_by as string | null,
+      hypothesis: row.hypothesis as string | null,
+    }),
+  }));
+
+  return c.json({ history });
+});
+
 // ============================================
 // Parameterized Routes (after static routes)
 // ============================================
