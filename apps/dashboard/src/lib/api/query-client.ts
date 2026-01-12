@@ -90,6 +90,7 @@ export const queryKeys = {
     events: (start: string, end: string, impact?: string) =>
       [...queryKeys.economicCalendar.all, start, end, impact] as const,
     event: (id: string) => [...queryKeys.economicCalendar.all, id] as const,
+    history: (id: string) => [...queryKeys.economicCalendar.all, id, "history"] as const,
   },
 
   // System

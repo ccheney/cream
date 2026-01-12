@@ -58,6 +58,18 @@ const EventDetailSchema = z.object({
   event: EconomicEventSchema,
 });
 
+const HistoricalObservationSchema = z.object({
+  date: z.string(),
+  value: z.number(),
+});
+
+const EventHistorySchema = z.object({
+  seriesId: z.string(),
+  seriesName: z.string(),
+  unit: z.string(),
+  observations: z.array(HistoricalObservationSchema),
+});
+
 const ErrorSchema = z.object({
   error: z.string(),
   message: z.string(),
@@ -174,6 +186,59 @@ app.openapi(getEventRoute, async (c) => {
     log.error(
       { error: error instanceof Error ? error.message : String(error), id },
       "Failed to fetch economic calendar event"
+    );
+    return c.json(
+      { error: "SERVICE_UNAVAILABLE", message: "Economic calendar service unavailable" },
+      503
+    );
+  }
+});
+
+// GET /api/economic-calendar/:id/history - Get event historical data
+const getEventHistoryRoute = createRoute({
+  method: "get",
+  path: "/:id/history",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: EventHistorySchema } },
+      description: "Historical observations for the event's primary series",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Event or history not found",
+    },
+    503: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Service unavailable",
+    },
+  },
+  tags: ["Economic Calendar"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(getEventHistoryRoute, async (c) => {
+  const { id } = c.req.valid("param");
+
+  try {
+    const service = getEconomicCalendarService();
+    const history = await service.getEventHistory(id);
+
+    if (!history) {
+      return c.json({ error: "NOT_FOUND", message: `History for event ${id} not found` }, 404);
+    }
+
+    log.debug({ id, seriesId: history.seriesId }, "Fetched event history");
+
+    return c.json(history);
+  } catch (error) {
+    log.error(
+      { error: error instanceof Error ? error.message : String(error), id },
+      "Failed to fetch event history"
     );
     return c.json(
       { error: "SERVICE_UNAVAILABLE", message: "Economic calendar service unavailable" },

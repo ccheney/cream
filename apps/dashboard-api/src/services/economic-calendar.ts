@@ -10,6 +10,7 @@
 
 import { createContext, requireEnv } from "@cream/domain";
 import { type EconomicEvent, getFredEconomicCalendar } from "@cream/mastra-kit";
+import { createFREDClientFromEnv, getReleaseById } from "@cream/universe";
 import log from "../logger.js";
 
 // ============================================
@@ -46,6 +47,18 @@ export interface TransformedEvent {
   previous: string | null;
   forecast: string | null;
   unit: string | null;
+}
+
+export interface HistoricalObservation {
+  date: string;
+  value: number;
+}
+
+export interface EventHistoryResult {
+  seriesId: string;
+  seriesName: string;
+  unit: string;
+  observations: HistoricalObservation[];
 }
 
 // ============================================
@@ -254,6 +267,91 @@ export class EconomicCalendarService {
       forecast: event.forecast,
       unit: null, // FRED doesn't provide unit info
     };
+  }
+
+  /**
+   * Get historical observations for an event's primary series.
+   * Returns the last 12 observations for the release's primary series.
+   */
+  async getEventHistory(eventId: string): Promise<EventHistoryResult | null> {
+    // Parse release ID from event ID: "fred-{releaseId}-{date}"
+    const match = eventId.match(/^fred-(\d+)-/);
+    if (!match) {
+      log.warn({ eventId }, "Invalid event ID format for history lookup");
+      return null;
+    }
+
+    const releaseId = Number.parseInt(match[1] ?? "0", 10);
+    const releaseMeta = getReleaseById(releaseId);
+
+    if (!releaseMeta) {
+      log.warn({ releaseId }, "Unknown release ID");
+      return null;
+    }
+
+    // Get the primary series for this release (first in the list)
+    const primarySeriesId = releaseMeta.series[0];
+    if (!primarySeriesId) {
+      log.warn({ releaseId }, "No series defined for release");
+      return null;
+    }
+
+    try {
+      const client = createFREDClientFromEnv();
+      const response = await client.getObservations(primarySeriesId, {
+        sort_order: "desc",
+        limit: 12, // Last 12 observations for sparkline
+      });
+
+      // Filter and transform observations
+      const observations: HistoricalObservation[] = [];
+      for (const obs of response.observations) {
+        if (obs.value !== null) {
+          const value = Number.parseFloat(obs.value);
+          if (!Number.isNaN(value)) {
+            observations.push({
+              date: obs.date,
+              value,
+            });
+          }
+        }
+      }
+
+      // Reverse to get chronological order (oldest first)
+      observations.reverse();
+
+      // Get series metadata for unit info
+      const SERIES_UNITS: Record<string, string> = {
+        CPIAUCSL: "index",
+        CPILFESL: "index",
+        PAYEMS: "thousands",
+        UNRATE: "%",
+        GDPC1: "billions",
+        FEDFUNDS: "%",
+        RSAFS: "millions",
+        INDPRO: "index",
+        PCE: "billions",
+        DGS10: "%",
+        HOUST: "thousands",
+        DGORDER: "millions",
+        PPIACO: "index",
+        JTSJOL: "thousands",
+        UMCSENT: "index",
+      };
+
+      return {
+        seriesId: primarySeriesId,
+        seriesName: releaseMeta.name,
+        unit: SERIES_UNITS[primarySeriesId] ?? "",
+        observations,
+      };
+    } catch (error) {
+      log.error(
+        { error: error instanceof Error ? error.message : String(error), eventId },
+        "Failed to fetch event history"
+      );
+      return null;
+    }
   }
 }
 

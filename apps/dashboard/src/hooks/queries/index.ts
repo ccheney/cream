@@ -77,6 +77,7 @@ export {
   type UseEconomicCalendarOptions,
   useEconomicCalendar,
   useEconomicEvent,
+  useEventHistory,
   useThisWeekEvents,
   useUpcomingHighImpactEvents,
 } from "./useEconomicCalendar";

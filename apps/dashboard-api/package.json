@@ -34,6 +34,7 @@
     "@cream/mastra-kit": "workspace:*",
     "@cream/metrics": "workspace:*",
     "@cream/storage": "workspace:*",
+    "@cream/universe": "workspace:*",
     "@hono/zod-openapi": "^1.2.0",
     "@libsql/client": "0.17.0",
     "@libsql/kysely-libsql": "0.4.1",

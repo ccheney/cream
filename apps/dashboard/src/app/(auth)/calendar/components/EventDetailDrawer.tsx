@@ -14,6 +14,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, Clock, ExternalLink, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useEffect } from "react";
+import { Sparkline } from "@/components/ui/sparkline";
+import { useEventHistory } from "@/hooks/queries";
 import type { EconomicEvent, ImpactLevel } from "@/lib/api/types";
 
 // ============================================
@@ -200,6 +202,9 @@ function SurpriseIndicator({
 // ============================================
 
 export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerProps) {
+  // Fetch historical data for sparkline
+  const { data: history, isLoading: isHistoryLoading } = useEventHistory(event?.id ?? null);
+
   // Close on ESC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -213,6 +218,9 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
   }, [isOpen, onClose]);
 
   const sourceUrl = event ? getSourceUrl(event.name) : null;
+
+  // Extract sparkline data from history
+  const sparklineData = history?.observations.map((obs) => obs.value) ?? [];
 
   return (
     <AnimatePresence>
@@ -308,15 +316,41 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
                 </div>
               </div>
 
-              {/* Historical Releases Placeholder */}
+              {/* Historical Releases */}
               <div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
                 <h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">
                   Historical Releases
                 </h3>
-                <div className="h-20 bg-cream-50 dark:bg-night-900 rounded-lg flex items-center justify-center">
-                  <span className="text-xs text-stone-400 dark:text-night-500">
-                    Sparkline chart coming soon
-                  </span>
+                <div className="bg-cream-50 dark:bg-night-900 rounded-lg p-4">
+                  {isHistoryLoading ? (
+                    <div className="h-12 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : sparklineData.length > 1 ? (
+                    <div className="flex flex-col gap-2">
+                      <Sparkline
+                        data={sparklineData}
+                        width={DRAWER_WIDTH - 64}
+                        height={48}
+                        showFill
+                      />
+                      <div className="flex justify-between text-[10px] text-stone-500 dark:text-night-400">
+                        <span>{history?.observations[0]?.date ?? ""}</span>
+                        <span className="font-medium">
+                          {history?.seriesId} ({history?.unit})
+                        </span>
+                        <span>
+                          {history?.observations[history.observations.length - 1]?.date ?? ""}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-12 flex items-center justify-center">
+                      <span className="text-xs text-stone-400 dark:text-night-500">
+                        No historical data available
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

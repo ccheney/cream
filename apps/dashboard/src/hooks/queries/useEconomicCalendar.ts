@@ -10,7 +10,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { get } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
-import type { EconomicCalendarResponse, EconomicEvent, ImpactLevel } from "@/lib/api/types";
+import type {
+  EconomicCalendarResponse,
+  EconomicEvent,
+  EventHistoryResponse,
+  ImpactLevel,
+} from "@/lib/api/types";
 
 // ============================================
 // Types
@@ -153,5 +158,22 @@ export function useThisWeekEvents() {
   return useEconomicCalendar({
     startDate: getToday(),
     endDate: getDatePlusDays(7),
+  });
+}
+
+/**
+ * Fetch historical observations for an economic event.
+ * Returns the last 12 observations for the event's primary FRED series.
+ */
+export function useEventHistory(eventId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.economicCalendar.history(eventId ?? ""),
+    queryFn: async () => {
+      const { data } = await get<EventHistoryResponse>(`/api/economic-calendar/${eventId}/history`);
+      return data;
+    },
+    enabled: Boolean(eventId),
+    staleTime: STALE_TIMES.HISTORICAL,
+    gcTime: CACHE_TIMES.HISTORICAL,
   });
 }

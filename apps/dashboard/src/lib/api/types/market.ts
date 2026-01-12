@@ -203,3 +203,15 @@ export interface EconomicCalendarResponse {
     lastUpdated: string;
   };
 }
+
+export interface HistoricalObservation {
+  date: string;
+  value: number;
+}
+
+export interface EventHistoryResponse {
+  seriesId: string;
+  seriesName: string;
+  unit: string;
+  observations: HistoricalObservation[];
+}
