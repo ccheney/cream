@@ -43,8 +43,17 @@ export {
   SESSION_CLOSE,
   SESSION_OPEN,
 } from "./hardcoded";
-// Service implementation for BACKTEST mode
-export { createHardcodedCalendarService, HardcodedCalendarService } from "./service";
+// Service implementations
+export {
+  // PAPER/LIVE modes
+  AlpacaCalendarService,
+  type AlpacaCalendarServiceConfig,
+  CalendarServiceError,
+  createAlpacaCalendarService,
+  // BACKTEST mode
+  createHardcodedCalendarService,
+  HardcodedCalendarService,
+} from "./service";
 export {
   // Types
   type AlpacaCalendarResponse,
