@@ -14,7 +14,14 @@
 
 import { predictionMarketsWorkflow, tradingCycleWorkflow } from "@cream/api";
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
-import { createContext, isBacktest, requireEnv, validateEnvironmentOrExit } from "@cream/domain";
+import {
+  type CreamEnvironment,
+  createContext,
+  initCalendarService,
+  isBacktest,
+  requireEnv,
+  validateEnvironmentOrExit,
+} from "@cream/domain";
 import { createFilingsIngestionService } from "@cream/filings";
 import {
   CorporateActionsRepository,
@@ -662,6 +669,22 @@ async function main() {
   // In PAPER/LIVE, this will fail fast if HelixDB is unavailable
   // In BACKTEST, it will warn but continue (unless SKIP_HELIX_PERSISTENCE is set)
   await validateHelixDBOrExit(startupCtx);
+
+  // Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
+  initCalendarService({
+    mode: environment as CreamEnvironment,
+    alpacaKey: process.env.ALPACA_KEY,
+    alpacaSecret: process.env.ALPACA_SECRET,
+  })
+    .then(() => {
+      log.info({ mode: environment }, "CalendarService initialized");
+    })
+    .catch((error: unknown) => {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error), mode: environment },
+        "CalendarService initialization failed, using fallback"
+      );
+    });
 
   // Load configuration from database - REQUIRED
   let config: FullRuntimeConfig;
