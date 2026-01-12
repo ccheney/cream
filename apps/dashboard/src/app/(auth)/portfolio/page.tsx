@@ -21,6 +21,7 @@ import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
 import { LiveIndicator } from "@/components/portfolio/LiveIndicator";
 import { PerformanceGrid } from "@/components/portfolio/PerformanceGrid";
+import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
   useAccount,
@@ -80,37 +81,6 @@ function AllocationDonutPlaceholder() {
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Placeholder for RiskMetricsBar component (cream-yaq2r)
- * 6 key metrics: Sharpe, Sortino, Max DD, Current DD, Win Rate, PF
- */
-function RiskMetricsBarPlaceholder() {
-  const metrics = [
-    { label: "Sharpe", tooltip: "Risk-adjusted return" },
-    { label: "Sortino", tooltip: "Downside risk-adjusted return" },
-    { label: "Max DD", tooltip: "Maximum drawdown" },
-    { label: "Current DD", tooltip: "Current drawdown from peak" },
-    { label: "Win Rate", tooltip: "Percentage of winning trades" },
-    { label: "Profit Factor", tooltip: "Gross profit / gross loss" },
-  ];
-
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-        Risk Metrics
-      </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {metrics.map(({ label }) => (
-          <div key={label} className="space-y-1 text-center">
-            <span className="text-xs text-stone-400 dark:text-night-500">{label}</span>
-            <div className="h-6 w-16 mx-auto bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -211,7 +181,7 @@ export default function PortfolioPage() {
 
       {/* Risk Metrics Bar */}
       <QueryErrorBoundary title="Failed to load risk metrics">
-        <RiskMetricsBarPlaceholder />
+        <RiskMetricsBar metrics={performanceMetrics} isLoading={isPerformanceLoading} />
       </QueryErrorBoundary>
     </div>
   );
