@@ -26,6 +26,17 @@ export {
   createCalendarCache,
   InMemoryCalendarCache,
 } from "./cache";
+// Factory and singleton
+export {
+  CalendarConfigError,
+  type CalendarServiceFactoryOptions,
+  createCalendarService,
+  getCalendarService,
+  initCalendarService,
+  isCalendarServiceAvailable,
+  requireCalendarService,
+  resetCalendarService,
+} from "./factory";
 // Hardcoded calendar data for BACKTEST mode
 export {
   EARLY_CLOSE,
