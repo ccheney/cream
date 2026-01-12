@@ -86,6 +86,7 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
  * Receives trigger information from checkIndicatorTrigger in Orient phase.
  */
 export const TriggerContextInputSchema = z.object({
+  cycleId: z.string(),
   triggerReason: z.string(),
   currentRegime: z.string(),
   regimeGapDetails: z.string().optional(),
@@ -111,6 +112,7 @@ export type PreviousHypothesis = z.infer<typeof PreviousHypothesisSchema>;
  * Provides aggregated context for hypothesis generation.
  */
 export const TriggerContextOutputSchema = z.object({
+  cycleId: z.string(),
   currentRegime: z.string(),
   regimeGapDetails: z.string(),
   rollingIC: z.number(),
@@ -141,17 +143,21 @@ export const gatherTriggerContextStep = createStep({
   inputSchema: TriggerContextInputSchema,
   outputSchema: TriggerContextOutputSchema,
   execute: async ({ inputData }) => {
-    const { triggerReason, currentRegime, regimeGapDetails, rollingIC30Day, icDecayDays } =
+    const { cycleId, triggerReason, currentRegime, regimeGapDetails, rollingIC30Day, icDecayDays } =
       inputData;
+
+    const stepStartTime = Date.now();
 
     log.info(
       {
+        cycleId,
+        phase: "gather_context",
         triggerReason,
         currentRegime,
         rollingIC30Day,
         icDecayDays,
       },
-      "Gathering trigger context for indicator synthesis"
+      "Starting gather trigger context step"
     );
 
     try {
@@ -173,15 +179,21 @@ export const gatherTriggerContextStep = createStep({
         rejectionReason: ind.retirementReason ?? undefined,
       }));
 
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.info(
         {
+          cycleId,
+          phase: "gather_context",
           existingIndicatorCount: existingIndicatorNames.length,
           previousHypothesesCount: previousHypotheses.length,
+          durationMs: stepDurationMs,
         },
-        "Trigger context gathered successfully"
+        "Gather trigger context step completed"
       );
 
       return {
+        cycleId,
         currentRegime,
         regimeGapDetails: regimeGapDetails ?? "",
         rollingIC: rollingIC30Day,
@@ -190,13 +202,21 @@ export const gatherTriggerContextStep = createStep({
         previousHypotheses,
       };
     } catch (error) {
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        "Failed to gather trigger context"
+        {
+          cycleId,
+          phase: "gather_context",
+          error: error instanceof Error ? error.message : String(error),
+          durationMs: stepDurationMs,
+        },
+        "Gather trigger context step failed"
       );
 
       // Return minimal context on error to allow workflow to continue
       return {
+        cycleId,
         currentRegime,
         regimeGapDetails: regimeGapDetails ?? "",
         rollingIC: rollingIC30Day,
@@ -217,6 +237,7 @@ export const gatherTriggerContextStep = createStep({
  * Contains the generated hypothesis with metadata.
  */
 export const HypothesisOutputSchema = z.object({
+  cycleId: z.string(),
   hypothesis: IndicatorHypothesisSchema,
   confidence: z.number().min(0).max(1),
   researchSummary: z.string(),
@@ -248,6 +269,7 @@ export const generateHypothesisStep = createStep({
   outputSchema: HypothesisOutputSchema,
   execute: async ({ inputData }) => {
     const {
+      cycleId,
       currentRegime,
       regimeGapDetails,
       rollingIC,
@@ -256,15 +278,19 @@ export const generateHypothesisStep = createStep({
       previousHypotheses,
     } = inputData;
 
+    const stepStartTime = Date.now();
+
     log.info(
       {
+        cycleId,
+        phase: "generate_hypothesis",
         currentRegime,
         rollingIC,
         icDecayDays,
         existingIndicatorCount: existingIndicators.length,
         previousHypothesesCount: previousHypotheses.length,
       },
-      "Generating indicator hypothesis via Indicator Researcher agent"
+      "Starting generate hypothesis step"
     );
 
     try {
@@ -291,26 +317,39 @@ export const generateHypothesisStep = createStep({
       // Extract academic references from hypothesis
       const academicReferences = hypothesis.relatedAcademicWork ?? [];
 
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.info(
         {
+          cycleId,
+          phase: "generate_hypothesis",
           hypothesisName: hypothesis.name,
           category: hypothesis.category,
           confidence,
           academicReferencesCount: academicReferences.length,
+          durationMs: stepDurationMs,
         },
-        "Hypothesis generated successfully"
+        "Generate hypothesis step completed"
       );
 
       return {
+        cycleId,
         hypothesis,
         confidence,
         researchSummary,
         academicReferences,
       };
     } catch (error) {
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        "Failed to generate hypothesis"
+        {
+          cycleId,
+          phase: "generate_hypothesis",
+          error: error instanceof Error ? error.message : String(error),
+          durationMs: stepDurationMs,
+        },
+        "Generate hypothesis step failed"
       );
       throw error;
     }
@@ -326,6 +365,7 @@ export const generateHypothesisStep = createStep({
  * Matches ImplementIndicatorOutput from claudeCodeIndicator.
  */
 export const ImplementationOutputSchema = z.object({
+  cycleId: z.string(),
   success: z.boolean(),
   indicatorPath: z.string().optional(),
   testPath: z.string().optional(),
@@ -358,15 +398,19 @@ export const implementIndicatorStep = createStep({
   inputSchema: HypothesisOutputSchema,
   outputSchema: ImplementationOutputSchema,
   execute: async ({ inputData }) => {
-    const { hypothesis, confidence } = inputData;
+    const { cycleId, hypothesis, confidence } = inputData;
+
+    const stepStartTime = Date.now();
 
     log.info(
       {
+        cycleId,
+        phase: "implement",
         hypothesisName: hypothesis.name,
         category: hypothesis.category,
         confidence,
       },
-      "Implementing indicator via Claude Code"
+      "Starting implement indicator step"
     );
 
     try {
@@ -380,27 +424,38 @@ export const implementIndicatorStep = createStep({
         },
       });
 
+      const stepDurationMs = Date.now() - stepStartTime;
+
       if (result.success) {
         log.info(
           {
+            cycleId,
+            phase: "implement",
+            hypothesisName: hypothesis.name,
             indicatorPath: result.indicatorPath,
             testPath: result.testPath,
             turnsUsed: result.turnsUsed,
             testsPassed: result.testsPassed,
+            durationMs: stepDurationMs,
           },
-          "Indicator implemented successfully"
+          "Implement indicator step completed successfully"
         );
       } else {
         log.warn(
           {
+            cycleId,
+            phase: "implement",
+            hypothesisName: hypothesis.name,
             error: result.error,
             turnsUsed: result.turnsUsed,
+            durationMs: stepDurationMs,
           },
-          "Indicator implementation failed"
+          "Implement indicator step completed with failure"
         );
       }
 
       return {
+        cycleId,
         success: result.success,
         indicatorPath: result.indicatorPath,
         testPath: result.testPath,
@@ -410,12 +465,21 @@ export const implementIndicatorStep = createStep({
         error: result.error,
       };
     } catch (error) {
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        "Failed to implement indicator"
+        {
+          cycleId,
+          phase: "implement",
+          hypothesisName: hypothesis.name,
+          error: error instanceof Error ? error.message : String(error),
+          durationMs: stepDurationMs,
+        },
+        "Implement indicator step failed with exception"
       );
 
       return {
+        cycleId,
         success: false,
         error: error instanceof Error ? error.message : String(error),
       };
@@ -432,6 +496,7 @@ export const implementIndicatorStep = createStep({
  * Contains validation results and any errors found.
  */
 export const ValidationOutputSchema = z.object({
+  cycleId: z.string(),
   isValid: z.boolean(),
   testsPass: z.boolean(),
   astSimilarity: z.number(),
@@ -483,24 +548,40 @@ export const validateIndicatorStep = createStep({
   inputSchema: ImplementationOutputSchema,
   outputSchema: ValidationOutputSchema,
   execute: async ({ inputData }) => {
-    const { success, indicatorPath, astSimilarity, testsPassed, error } = inputData;
+    const { cycleId, success, indicatorPath, astSimilarity, testsPassed, error } = inputData;
 
+    const stepStartTime = Date.now();
     const validationErrors: string[] = [];
 
     log.info(
       {
+        cycleId,
+        phase: "validate",
         indicatorPath,
         implementationSuccess: success,
         testsPassed,
         astSimilarity,
       },
-      "Validating generated indicator"
+      "Starting validate indicator step"
     );
 
     // Check 1: Implementation must have succeeded
     if (!success) {
+      const stepDurationMs = Date.now() - stepStartTime;
       validationErrors.push(`Implementation failed: ${error ?? "Unknown error"}`);
+
+      log.warn(
+        {
+          cycleId,
+          phase: "validate",
+          errorCount: validationErrors.length,
+          durationMs: stepDurationMs,
+        },
+        "Validate indicator step completed - implementation failure"
+      );
+
       return {
+        cycleId,
         isValid: false,
         testsPass: false,
         astSimilarity: astSimilarity ?? 0,
@@ -536,6 +617,8 @@ export const validateIndicatorStep = createStep({
 
         log.info(
           {
+            cycleId,
+            phase: "validate",
             securityScanPassed,
             issuesFound: scanResult.issues.length,
             fileSize: scanResult.fileSize,
@@ -553,19 +636,26 @@ export const validateIndicatorStep = createStep({
     }
 
     const isValid = validationErrors.length === 0;
+    const stepDurationMs = Date.now() - stepStartTime;
 
     log.info(
       {
+        cycleId,
+        phase: "validate",
         isValid,
         testsPass,
         astSimilarity: actualAstSimilarity,
         securityScanPassed,
         errorCount: validationErrors.length,
+        durationMs: stepDurationMs,
       },
-      isValid ? "Indicator validation passed" : "Indicator validation failed"
+      isValid
+        ? "Validate indicator step completed - passed"
+        : "Validate indicator step completed - failed"
     );
 
     return {
+      cycleId,
       isValid,
       testsPass,
       astSimilarity: actualAstSimilarity,
@@ -584,6 +674,7 @@ export const validateIndicatorStep = createStep({
  * Combines hypothesis with validation results.
  */
 export const PaperTradingInputSchema = z.object({
+  cycleId: z.string(),
   hypothesis: IndicatorHypothesisSchema,
   isValid: z.boolean(),
   indicatorPath: z.string().optional(),
@@ -598,6 +689,7 @@ export type PaperTradingInput = z.infer<typeof PaperTradingInputSchema>;
  * Returns indicator ID and status of paper trading initiation.
  */
 export const PaperTradingOutputSchema = z.object({
+  cycleId: z.string(),
   indicatorId: z.string().optional(),
   status: z.enum(["paper_trading_started", "validation_failed", "error"]),
   paperTradingStart: z.string().optional(),
@@ -628,20 +720,28 @@ export const initiatePaperTradingStep = createStep({
   inputSchema: PaperTradingInputSchema,
   outputSchema: PaperTradingOutputSchema,
   execute: async ({ inputData }) => {
-    const { hypothesis, isValid, indicatorPath, validationErrors } = inputData;
+    const { cycleId, hypothesis, isValid, indicatorPath, validationErrors } = inputData;
+
+    const stepStartTime = Date.now();
 
     // Early return if validation failed
     if (!isValid) {
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.warn(
         {
+          cycleId,
+          phase: "initiate_paper_trading",
           hypothesisName: hypothesis.name,
           errorCount: validationErrors.length,
           errors: validationErrors,
+          durationMs: stepDurationMs,
         },
-        "Paper trading not initiated - validation failed"
+        "Initiate paper trading step completed - validation failed"
       );
 
       return {
+        cycleId,
         status: "validation_failed" as const,
         message: `Validation failed with ${validationErrors.length} error(s): ${validationErrors.join("; ")}`,
       };
@@ -649,11 +749,13 @@ export const initiatePaperTradingStep = createStep({
 
     log.info(
       {
+        cycleId,
+        phase: "initiate_paper_trading",
         hypothesisName: hypothesis.name,
         category: hypothesis.category,
         indicatorPath,
       },
-      "Initiating paper trading for validated indicator"
+      "Starting initiate paper trading step"
     );
 
     try {
@@ -677,31 +779,43 @@ export const initiatePaperTradingStep = createStep({
       // Transition to paper trading status
       await indicatorsRepo.startPaperTrading(indicatorId, paperTradingStart);
 
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.info(
         {
+          cycleId,
+          phase: "initiate_paper_trading",
           indicatorId,
           name: hypothesis.name,
           paperTradingStart,
+          durationMs: stepDurationMs,
         },
-        "Paper trading initiated successfully"
+        "Initiate paper trading step completed - success"
       );
 
       return {
+        cycleId,
         indicatorId,
         status: "paper_trading_started" as const,
         paperTradingStart,
         message: `Paper trading started for indicator "${hypothesis.name}" (${indicatorId})`,
       };
     } catch (error) {
+      const stepDurationMs = Date.now() - stepStartTime;
+
       log.error(
         {
+          cycleId,
+          phase: "initiate_paper_trading",
           hypothesisName: hypothesis.name,
           error: error instanceof Error ? error.message : String(error),
+          durationMs: stepDurationMs,
         },
-        "Failed to initiate paper trading"
+        "Initiate paper trading step failed"
       );
 
       return {
+        cycleId,
         status: "error" as const,
         message: `Failed to initiate paper trading: ${error instanceof Error ? error.message : String(error)}`,
       };

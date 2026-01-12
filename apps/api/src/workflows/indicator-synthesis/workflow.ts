@@ -74,6 +74,7 @@ export type IndicatorSynthesisOutput = z.infer<typeof IndicatorSynthesisOutputSc
  * Preserves hypothesis and intermediate results across steps.
  */
 const WorkflowStateSchema = z.object({
+  cycleId: z.string().optional(),
   hypothesis: IndicatorHypothesisSchema.optional(),
   hypothesisGenerated: z.boolean(),
   implementationResult: z
@@ -103,12 +104,14 @@ const saveHypothesisToStateStep = createStep({
   id: "save-hypothesis-to-state",
   description: "Save generated hypothesis to workflow state",
   inputSchema: z.object({
+    cycleId: z.string(),
     hypothesis: IndicatorHypothesisSchema,
     confidence: z.number(),
     researchSummary: z.string(),
     academicReferences: z.array(z.string()),
   }),
   outputSchema: z.object({
+    cycleId: z.string(),
     hypothesis: IndicatorHypothesisSchema,
     confidence: z.number(),
     researchSummary: z.string(),
@@ -117,6 +120,7 @@ const saveHypothesisToStateStep = createStep({
   stateSchema: WorkflowStateSchema,
   execute: async ({ inputData, setState }) => {
     await setState({
+      cycleId: inputData.cycleId,
       hypothesis: inputData.hypothesis,
       hypothesisGenerated: true,
     });
@@ -131,6 +135,7 @@ const saveImplementationToStateStep = createStep({
   id: "save-implementation-to-state",
   description: "Save implementation result to workflow state",
   inputSchema: z.object({
+    cycleId: z.string(),
     success: z.boolean(),
     indicatorPath: z.string().optional(),
     testPath: z.string().optional(),
@@ -140,6 +145,7 @@ const saveImplementationToStateStep = createStep({
     error: z.string().optional(),
   }),
   outputSchema: z.object({
+    cycleId: z.string(),
     success: z.boolean(),
     indicatorPath: z.string().optional(),
     testPath: z.string().optional(),
@@ -169,6 +175,7 @@ const preparePaperTradingStep = createStep({
   id: "prepare-paper-trading",
   description: "Prepare input for paper trading by combining hypothesis with validation results",
   inputSchema: z.object({
+    cycleId: z.string(),
     isValid: z.boolean(),
     testsPass: z.boolean(),
     astSimilarity: z.number(),
@@ -176,6 +183,7 @@ const preparePaperTradingStep = createStep({
     validationErrors: z.array(z.string()),
   }),
   outputSchema: z.object({
+    cycleId: z.string(),
     hypothesis: IndicatorHypothesisSchema,
     isValid: z.boolean(),
     indicatorPath: z.string().optional(),
@@ -200,6 +208,7 @@ const preparePaperTradingStep = createStep({
     });
 
     return {
+      cycleId: inputData.cycleId,
       hypothesis,
       isValid: inputData.isValid,
       indicatorPath: implementationResult?.indicatorPath,
@@ -216,6 +225,7 @@ const implementationFailedStep = createStep({
   id: "implementation-failed",
   description: "Handle implementation failure",
   inputSchema: z.object({
+    cycleId: z.string(),
     success: z.boolean(),
     indicatorPath: z.string().optional(),
     testPath: z.string().optional(),
@@ -225,6 +235,7 @@ const implementationFailedStep = createStep({
     error: z.string().optional(),
   }),
   outputSchema: z.object({
+    cycleId: z.string(),
     isValid: z.boolean(),
     testsPass: z.boolean(),
     astSimilarity: z.number(),
@@ -232,9 +243,18 @@ const implementationFailedStep = createStep({
     validationErrors: z.array(z.string()),
   }),
   execute: async ({ inputData }) => {
-    log.warn({ error: inputData.error, turnsUsed: inputData.turnsUsed }, "Implementation failed");
+    log.warn(
+      {
+        cycleId: inputData.cycleId,
+        phase: "implementation_failed",
+        error: inputData.error,
+        turnsUsed: inputData.turnsUsed,
+      },
+      "Implementation failed - skipping validation"
+    );
 
     return {
+      cycleId: inputData.cycleId,
       isValid: false,
       testsPass: false,
       astSimilarity: 0,
@@ -251,6 +271,7 @@ const aggregateResultsStep = createStep({
   id: "aggregate-results",
   description: "Aggregate final workflow results",
   inputSchema: z.object({
+    cycleId: z.string(),
     indicatorId: z.string().optional(),
     status: z.enum(["paper_trading_started", "validation_failed", "error"]),
     paperTradingStart: z.string().optional(),
@@ -269,7 +290,7 @@ const aggregateResultsStep = createStep({
       error: "error" as const,
     };
 
-    return {
+    const result = {
       success: inputData.status === "paper_trading_started",
       indicatorId: inputData.indicatorId,
       indicatorName: hypothesis?.name,
@@ -282,6 +303,21 @@ const aggregateResultsStep = createStep({
         paperTradingStarted: inputData.status === "paper_trading_started",
       },
     };
+
+    log.info(
+      {
+        cycleId: inputData.cycleId,
+        phase: "workflow_complete",
+        success: result.success,
+        status: result.status,
+        indicatorId: result.indicatorId,
+        indicatorName: result.indicatorName,
+        phases: result.phases,
+      },
+      "Indicator synthesis workflow completed"
+    );
+
+    return result;
   },
 });
 
