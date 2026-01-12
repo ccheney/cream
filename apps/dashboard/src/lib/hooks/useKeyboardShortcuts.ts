@@ -190,11 +190,11 @@ function isPrefix(sequence: string[], shortcutKeys: string[]): boolean {
  *
  *   useEffect(() => {
  *     register({
- *       id: 'go-dashboard',
- *       name: 'Go to Dashboard',
+ *       id: 'go-console',
+ *       name: 'Go to Console',
  *       keys: ['g', 'd'],
  *       group: 'Navigation',
- *       handler: () => router.push('/dashboard'),
+ *       handler: () => router.push('/console'),
  *     });
  *
  *     register({

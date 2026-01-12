@@ -28,7 +28,7 @@ Comprehensive trading control center providing:
 
 ## Pages
 
-- `/dashboard` - Control panel with OODA status
+- `/console` - Control panel with OODA status
 - `/portfolio` - Positions and P&L
 - `/decisions` - Trading decisions
 - `/charts/[symbol]` - Technical analysis

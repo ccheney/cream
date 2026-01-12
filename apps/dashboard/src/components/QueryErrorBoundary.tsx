@@ -45,7 +45,7 @@ export interface QueryErrorBoundaryProps {
  * <QueryErrorBoundary
  *   title="Failed to load data"
  *   actions={[
- *     { label: "Go to Dashboard", onClick: () => router.push("/dashboard") }
+ *     { label: "Go to Console", onClick: () => router.push("/console") }
  *   ]}
  * >
  *   <DataComponent />

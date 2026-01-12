@@ -36,7 +36,7 @@ export interface MobileNavProps {
 // ============================================
 
 const MOBILE_NAV_ITEMS: MobileNavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: Gauge },
+  { href: "/console", label: "Console", icon: Gauge },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/decisions", label: "Decisions", icon: FileText },
   { href: "/agents", label: "Agents", icon: Bot },

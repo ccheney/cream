@@ -219,12 +219,12 @@ export function KeyboardShortcutsProvider({
     });
 
     register({
-      id: "go-dashboard",
-      name: "Go to Dashboard",
+      id: "go-console",
+      name: "Go to Console",
       keys: ["g", "d"],
       group: "Navigation",
-      description: "Go to Dashboard",
-      handler: () => router.push("/dashboard"),
+      description: "Go to Console",
+      handler: () => router.push("/console"),
     });
 
     register({
@@ -233,7 +233,7 @@ export function KeyboardShortcutsProvider({
       keys: ["g", "p"],
       group: "Navigation",
       description: "Go to Portfolio",
-      handler: () => router.push("/dashboard/portfolio"),
+      handler: () => router.push("/portfolio"),
     });
 
     register({
@@ -242,7 +242,7 @@ export function KeyboardShortcutsProvider({
       keys: ["g", "t"],
       group: "Navigation",
       description: "Go to Decisions",
-      handler: () => router.push("/dashboard/decisions"),
+      handler: () => router.push("/decisions"),
     });
 
     register({
@@ -251,7 +251,7 @@ export function KeyboardShortcutsProvider({
       keys: ["g", "h"],
       group: "Navigation",
       description: "Go to Theses",
-      handler: () => router.push("/dashboard/theses"),
+      handler: () => router.push("/theses"),
     });
 
     register({
@@ -260,7 +260,7 @@ export function KeyboardShortcutsProvider({
       keys: ["g", "s"],
       group: "Navigation",
       description: "Go to Settings",
-      handler: () => router.push("/dashboard/settings"),
+      handler: () => router.push("/config"),
     });
 
     // List navigation uses CustomEvents so list components can handle their own selection state
