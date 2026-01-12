@@ -9,8 +9,13 @@
 import {
   type AlpacaClient,
   type Account as BrokerAccount,
+  type PortfolioHistory as BrokerPortfolioHistory,
   type Position as BrokerPosition,
   createAlpacaClient,
+  getPortfolioHistory,
+  PortfolioHistoryError,
+  type PortfolioHistoryPeriod,
+  type PortfolioHistoryTimeframe,
 } from "@cream/broker";
 import { calculateReturns, calculateSharpe, calculateSortino } from "@cream/metrics";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -30,6 +35,37 @@ import { systemState } from "./system.js";
 // ============================================
 
 let brokerClient: AlpacaClient | null = null;
+
+// ============================================
+// Portfolio History Cache
+// ============================================
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const historyCache = new Map<string, CacheEntry<unknown>>();
+const HISTORY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCached<T>(key: string): T | null {
+  const entry = historyCache.get(key);
+  if (!entry) {
+    return null;
+  }
+  if (Date.now() > entry.expiresAt) {
+    historyCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+  historyCache.set(key, {
+    data,
+    expiresAt: Date.now() + HISTORY_CACHE_TTL_MS,
+  });
+}
 
 function isAlpacaConfigured(): boolean {
   return Boolean(process.env.ALPACA_KEY && process.env.ALPACA_SECRET);
@@ -178,6 +214,8 @@ const AccountSchema = z.object({
   cash: z.number(),
   portfolioValue: z.number(),
   buyingPower: z.number(),
+  regtBuyingPower: z.number(),
+  daytradingBuyingPower: z.number(),
   daytradeCount: z.number(),
   patternDayTrader: z.boolean(),
   tradingBlocked: z.boolean(),
@@ -451,10 +489,10 @@ app.openapi(positionDetailRoute, async (c) => {
   });
 });
 
-// GET /api/portfolio/history
-const historyRoute = createRoute({
+// GET /api/portfolio/equity-curve (internal snapshots)
+const equityCurveRoute = createRoute({
   method: "get",
-  path: "/history",
+  path: "/equity-curve",
   request: {
     query: z.object({
       from: z.string().optional(),
@@ -471,7 +509,7 @@ const historyRoute = createRoute({
   tags: ["Portfolio"],
 });
 
-app.openapi(historyRoute, async (c) => {
+app.openapi(equityCurveRoute, async (c) => {
   const query = c.req.valid("query");
   const repo = await getPortfolioSnapshotsRepo();
 
@@ -870,6 +908,8 @@ app.openapi(accountRoute, async (c) => {
       cash: account.cash,
       portfolioValue: account.portfolioValue,
       buyingPower: account.buyingPower,
+      regtBuyingPower: account.regtBuyingPower,
+      daytradingBuyingPower: account.daytradingBuyingPower,
       daytradeCount: account.daytradeCount,
       patternDayTrader: account.patternDayTrader,
       tradingBlocked: account.tradingBlocked,
@@ -896,10 +936,10 @@ app.openapi(accountRoute, async (c) => {
   }
 });
 
-// GET /api/portfolio/alpaca-history
-const alpacaHistoryRoute = createRoute({
+// GET /api/portfolio/history (Alpaca portfolio history)
+const historyRoute = createRoute({
   method: "get",
-  path: "/alpaca-history",
+  path: "/history",
   request: {
     query: z.object({
       period: PortfolioHistoryPeriodSchema.optional().default("1M"),
@@ -926,7 +966,7 @@ const alpacaHistoryRoute = createRoute({
 });
 
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
-app.openapi(alpacaHistoryRoute, async (c) => {
+app.openapi(historyRoute, async (c) => {
   const { period, timeframe, start, end } = c.req.valid("query");
 
   if (!isAlpacaConfigured()) {
@@ -935,75 +975,49 @@ app.openapi(alpacaHistoryRoute, async (c) => {
     });
   }
 
+  // Check cache first
+  const cacheKey = `history:${systemState.environment}:${period}:${timeframe}:${start ?? ""}:${end ?? ""}`;
+  const cached = getCached<BrokerPortfolioHistory>(cacheKey);
+  if (cached) {
+    log.debug({ period, timeframe, cached: true }, "Returning cached portfolio history");
+    return c.json(cached);
+  }
+
   try {
     // Safe to assert: isAlpacaConfigured() check above guarantees these exist
     const apiKey = process.env.ALPACA_KEY as string;
     const apiSecret = process.env.ALPACA_SECRET as string;
 
-    const baseUrl =
-      systemState.environment === "LIVE"
-        ? "https://api.alpaca.markets"
-        : "https://paper-api.alpaca.markets";
-
-    const params = new URLSearchParams();
-    if (period) {
-      params.set("period", period);
-    }
-    if (timeframe) {
-      params.set("timeframe", timeframe);
-    }
-    if (start) {
-      params.set("start", start);
-    }
-    if (end) {
-      params.set("end", end);
-    }
-
-    const url = `${baseUrl}/v2/account/portfolio/history?${params.toString()}`;
-
-    const response = await fetch(url, {
-      headers: {
-        "APCA-API-KEY-ID": apiKey,
-        "APCA-API-SECRET-KEY": apiSecret,
+    const history = await getPortfolioHistory(
+      {
+        apiKey,
+        apiSecret,
+        environment: systemState.environment,
       },
-    });
+      {
+        period: period as PortfolioHistoryPeriod,
+        timeframe: timeframe as PortfolioHistoryTimeframe,
+        dateStart: start,
+        dateEnd: end,
+      }
+    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log.error(
-        { status: response.status, error: errorText },
-        "Failed to fetch Alpaca portfolio history"
-      );
-      throw new HTTPException(503, {
-        message: `Failed to fetch portfolio history: ${response.status}`,
-      });
-    }
-
-    const data = (await response.json()) as {
-      timestamp: number[];
-      equity: number[];
-      profit_loss: number[];
-      profit_loss_pct: number[];
-      timeframe: string;
-      base_value: number;
-    };
+    // Cache the response
+    setCache(cacheKey, history);
 
     log.debug(
-      { period, timeframe, points: data.timestamp?.length ?? 0 },
+      { period, timeframe, points: history.timestamp?.length ?? 0 },
       "Fetched Alpaca portfolio history"
     );
 
-    return c.json({
-      timestamp: data.timestamp ?? [],
-      equity: data.equity ?? [],
-      profitLoss: data.profit_loss ?? [],
-      profitLossPct: data.profit_loss_pct ?? [],
-      timeframe: timeframe,
-      baseValue: data.base_value ?? 0,
-    });
+    return c.json(history);
   } catch (error) {
     if (error instanceof HTTPException) {
       throw error;
+    }
+    if (error instanceof PortfolioHistoryError) {
+      log.error({ error: error.message, statusCode: error.statusCode }, "Portfolio history error");
+      throw new HTTPException(503, { message: error.message });
     }
     const message = error instanceof Error ? error.message : "Unknown error";
     log.error({ error: message }, "Failed to fetch Alpaca portfolio history");

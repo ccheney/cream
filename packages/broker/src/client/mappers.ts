@@ -19,6 +19,8 @@ export function mapAccount(data: AlpacaAccountResponse): Account {
     cash: parseFloat(data.cash),
     portfolioValue: parseFloat(data.portfolio_value),
     buyingPower: parseFloat(data.buying_power),
+    regtBuyingPower: parseFloat(data.regt_buying_power),
+    daytradingBuyingPower: parseFloat(data.daytrading_buying_power),
     daytradeCount: data.daytrade_count,
     patternDayTrader: data.pattern_day_trader,
     tradingBlocked: data.trading_blocked,

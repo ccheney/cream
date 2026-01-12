@@ -205,6 +205,8 @@ export function createBacktestAdapter(config: BacktestAdapterConfig = {}): Alpac
         cash,
         portfolioValue,
         buyingPower: cash * 4, // 4x margin
+        regtBuyingPower: cash * 2, // 2x Reg T margin
+        daytradingBuyingPower: cash * 4, // 4x day trading buying power
         daytradeCount: 0,
         patternDayTrader: false,
         tradingBlocked: false,

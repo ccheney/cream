@@ -12,6 +12,8 @@ export interface AlpacaAccountResponse {
   cash: string;
   portfolio_value: string;
   buying_power: string;
+  regt_buying_power: string;
+  daytrading_buying_power: string;
   daytrade_count: number;
   pattern_day_trader: boolean;
   trading_blocked: boolean;

@@ -11,6 +11,8 @@ export {
   AccountSchema,
   type AccountStatus,
   AccountStatusSchema,
+  type AccountSummary,
+  AccountSummarySchema,
   type PortfolioHistory,
   type PortfolioHistoryPeriod,
   PortfolioHistoryPeriodSchema,

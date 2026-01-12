@@ -93,6 +93,10 @@ export interface Account {
   cash: number;
   portfolioValue: number;
   buyingPower: number;
+  /** Regulation T buying power */
+  regtBuyingPower: number;
+  /** Day trading buying power */
+  daytradingBuyingPower: number;
   daytradeCount: number;
   patternDayTrader: boolean;
   tradingBlocked: boolean;

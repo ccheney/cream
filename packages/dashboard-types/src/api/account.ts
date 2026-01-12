@@ -33,6 +33,8 @@ export const AccountSchema = z.object({
   cash: z.number(),
   portfolioValue: z.number(),
   buyingPower: z.number(),
+  regtBuyingPower: z.number(),
+  daytradingBuyingPower: z.number(),
   daytradeCount: z.number(),
   patternDayTrader: z.boolean(),
   tradingBlocked: z.boolean(),
@@ -51,6 +53,20 @@ export const AccountSchema = z.object({
 });
 
 export type Account = z.infer<typeof AccountSchema>;
+
+// ============================================
+// Account Summary (for dashboard display)
+// ============================================
+
+export const AccountSummarySchema = z.object({
+  cash: z.number(),
+  equity: z.number(),
+  buyingPower: z.number(),
+  marginUsed: z.number(),
+  dayTradesRemaining: z.number(),
+});
+
+export type AccountSummary = z.infer<typeof AccountSummarySchema>;
 
 // ============================================
 // Portfolio History

@@ -52,6 +52,16 @@ export {
 export { type AlpacaClient, type AlpacaClientConfig, createAlpacaClient } from "./client.js";
 // Factory
 export { type BrokerClientConfig, createBrokerClient } from "./factory.js";
+// Portfolio History
+export {
+  getPortfolioHistory,
+  type PortfolioHistory,
+  type PortfolioHistoryClientConfig,
+  PortfolioHistoryError,
+  type PortfolioHistoryOptions,
+  type PortfolioHistoryPeriod,
+  type PortfolioHistoryTimeframe,
+} from "./portfolio-history.js";
 // Types
 export {
   type Account,
