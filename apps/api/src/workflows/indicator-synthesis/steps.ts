@@ -11,9 +11,11 @@
  * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
  */
 
+import { IndicatorHypothesisSchema } from "@cream/indicators";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
+import { runIndicatorResearcher } from "../../agents/researchers.js";
 import { getIndicatorsRepo } from "../../db.js";
 import { log } from "../../logger.js";
 
@@ -144,6 +146,115 @@ export const gatherTriggerContextStep = createStep({
         existingIndicators: [],
         previousHypotheses: [],
       };
+    }
+  },
+});
+
+// ============================================
+// Schemas: generateHypothesis
+// ============================================
+
+/**
+ * Output schema for generateHypothesis step.
+ * Contains the generated hypothesis with metadata.
+ */
+export const HypothesisOutputSchema = z.object({
+  hypothesis: IndicatorHypothesisSchema,
+  confidence: z.number().min(0).max(1),
+  researchSummary: z.string(),
+  academicReferences: z.array(z.string()),
+});
+
+export type HypothesisOutput = z.infer<typeof HypothesisOutputSchema>;
+
+// ============================================
+// Step: generateHypothesis
+// ============================================
+
+/**
+ * Generate Hypothesis Step
+ *
+ * Second step in the indicator synthesis workflow. Invokes the Indicator
+ * Researcher agent to generate a hypothesis based on the gathered context.
+ *
+ * Uses Chain-of-Thought reasoning to:
+ * - Analyze the regime gap
+ * - Research relevant academic literature
+ * - Formulate a testable hypothesis
+ * - Define falsification criteria
+ */
+export const generateHypothesisStep = createStep({
+  id: "generate-hypothesis",
+  description: "Generate indicator hypothesis using the Indicator Researcher agent",
+  inputSchema: TriggerContextOutputSchema,
+  outputSchema: HypothesisOutputSchema,
+  execute: async ({ inputData }) => {
+    const {
+      currentRegime,
+      regimeGapDetails,
+      rollingIC,
+      icDecayDays,
+      existingIndicators,
+      previousHypotheses,
+    } = inputData;
+
+    log.info(
+      {
+        currentRegime,
+        rollingIC,
+        icDecayDays,
+        existingIndicatorCount: existingIndicators.length,
+        previousHypothesesCount: previousHypotheses.length,
+      },
+      "Generating indicator hypothesis via Indicator Researcher agent"
+    );
+
+    try {
+      const hypothesis = await runIndicatorResearcher({
+        currentRegime,
+        regimeGapDetails,
+        rollingIC,
+        icDecayDays,
+        existingIndicators,
+        previousHypotheses,
+      });
+
+      // Derive confidence from expected properties
+      // expectedICRange is a tuple [min, max]
+      const [icMin, icMax] = hypothesis.expectedProperties.expectedICRange;
+      const avgExpectedIC = (icMin + icMax) / 2;
+      const confidence = Math.min(0.9, Math.max(0.3, avgExpectedIC * 10));
+
+      // Build research summary from hypothesis content
+      const researchSummary =
+        `Generated hypothesis "${hypothesis.name}" targeting ${currentRegime} regime. ` +
+        `Economic rationale: ${hypothesis.economicRationale.slice(0, 200)}...`;
+
+      // Extract academic references from hypothesis
+      const academicReferences = hypothesis.relatedAcademicWork ?? [];
+
+      log.info(
+        {
+          hypothesisName: hypothesis.name,
+          category: hypothesis.category,
+          confidence,
+          academicReferencesCount: academicReferences.length,
+        },
+        "Hypothesis generated successfully"
+      );
+
+      return {
+        hypothesis,
+        confidence,
+        researchSummary,
+        academicReferences,
+      };
+    } catch (error) {
+      log.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to generate hypothesis"
+      );
+      throw error;
     }
   },
 });
