@@ -294,6 +294,104 @@ describe("FREDClient", () => {
     });
   });
 
+  describe("getReleaseSchedule", () => {
+    it("fetches schedule for a specific release", async () => {
+      globalThis.fetch = mock(() =>
+        Promise.resolve(new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }))
+      );
+
+      const result = await client.getReleaseSchedule(10);
+
+      expect(result.count).toBe(2);
+      expect(result.release_dates).toHaveLength(2);
+    });
+
+    it("includes release_id in request", async () => {
+      let capturedUrl: string | null = null;
+
+      globalThis.fetch = mock((url: string) => {
+        capturedUrl = url;
+        return Promise.resolve(
+          new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })
+        );
+      });
+
+      await client.getReleaseSchedule(10, { include_release_dates_with_no_data: true });
+
+      expect(capturedUrl).toContain("release_id=10");
+      expect(capturedUrl).toContain("include_release_dates_with_no_data=true");
+    });
+  });
+
+  describe("getLatestValue", () => {
+    it("returns latest value for a series", async () => {
+      globalThis.fetch = mock(() =>
+        Promise.resolve(new Response(JSON.stringify(mockObservationsResponse), { status: 200 }))
+      );
+
+      const result = await client.getLatestValue("CPIAUCSL");
+
+      expect(result).not.toBeNull();
+      expect(result?.date).toBe("2025-01-01");
+      expect(result?.value).toBe(308.417);
+    });
+
+    it("returns null for empty observations", async () => {
+      const emptyResponse = {
+        ...mockObservationsResponse,
+        count: 0,
+        observations: [],
+      };
+
+      globalThis.fetch = mock(() =>
+        Promise.resolve(new Response(JSON.stringify(emptyResponse), { status: 200 }))
+      );
+
+      const result = await client.getLatestValue("UNKNOWN");
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null for missing value ('.')", async () => {
+      const missingValueResponse = {
+        ...mockObservationsResponse,
+        count: 1,
+        observations: [
+          {
+            realtime_start: "2026-01-01",
+            realtime_end: "2026-01-31",
+            date: "2025-01-01",
+            value: ".",
+          },
+        ],
+      };
+
+      globalThis.fetch = mock(() =>
+        Promise.resolve(new Response(JSON.stringify(missingValueResponse), { status: 200 }))
+      );
+
+      const result = await client.getLatestValue("CPIAUCSL");
+
+      expect(result).toBeNull();
+    });
+
+    it("passes sort_order=desc and limit=1 to API", async () => {
+      let capturedUrl: string | null = null;
+
+      globalThis.fetch = mock((url: string) => {
+        capturedUrl = url;
+        return Promise.resolve(
+          new Response(JSON.stringify(mockObservationsResponse), { status: 200 })
+        );
+      });
+
+      await client.getLatestValue("CPIAUCSL");
+
+      expect(capturedUrl).toContain("sort_order=desc");
+      expect(capturedUrl).toContain("limit=1");
+    });
+  });
+
   describe("error handling", () => {
     it("throws UNAUTHORIZED on 401", async () => {
       globalThis.fetch = mock(() => Promise.resolve(new Response("Unauthorized", { status: 401 })));

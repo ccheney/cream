@@ -730,4 +730,69 @@ export class FREDClient {
       FREDObservationsResponseSchema
     );
   }
+
+  /**
+   * Get release dates for a specific release.
+   *
+   * @param releaseId - FRED release ID
+   * @param params - Query parameters
+   * @returns List of release dates for the specific release
+   *
+   * @see https://fred.stlouisfed.org/docs/api/fred/release_dates.html
+   */
+  async getReleaseSchedule(
+    releaseId: number,
+    params: {
+      realtime_start?: string;
+      realtime_end?: string;
+      limit?: number;
+      offset?: number;
+      sort_order?: "asc" | "desc";
+      include_release_dates_with_no_data?: boolean;
+    } = {}
+  ): Promise<FREDReleaseDatesResponse> {
+    return this.request(
+      "/release/dates",
+      { release_id: releaseId, ...params },
+      FREDReleaseDatesResponseSchema
+    );
+  }
+
+  /**
+   * Get the latest (most recent) value for a series.
+   *
+   * Convenience method that fetches the most recent observation.
+   *
+   * @param seriesId - FRED series ID (e.g., "CPIAUCSL")
+   * @returns Latest value with date, or null if no data or value is missing
+   *
+   * @example
+   * ```typescript
+   * const latest = await client.getLatestValue("CPIAUCSL");
+   * if (latest) {
+   *   console.log(`CPI as of ${latest.date}: ${latest.value}`);
+   * }
+   * ```
+   */
+  async getLatestValue(seriesId: string): Promise<{ date: string; value: number } | null> {
+    const response = await this.getObservations(seriesId, {
+      sort_order: "desc",
+      limit: 1,
+    });
+
+    const [observation] = response.observations;
+    if (!observation || observation.value === null) {
+      return null;
+    }
+
+    const numericValue = Number.parseFloat(observation.value);
+    if (Number.isNaN(numericValue)) {
+      return null;
+    }
+
+    return {
+      date: observation.date,
+      value: numericValue,
+    };
+  }
 }
