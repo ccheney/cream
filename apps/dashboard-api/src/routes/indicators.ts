@@ -586,6 +586,273 @@ app.openapi(getActivityRoute, async (c) => {
   return c.json({ activities });
 });
 
+// GET /api/indicators/synthesis/status - Get synthesis pipeline status
+const SynthesisPhaseSchema = z.enum([
+  "gathering_context",
+  "generating_hypothesis",
+  "implementing",
+  "validating",
+  "initiating_paper_trading",
+]);
+
+const SynthesisTriggerConditionsSchema = z.object({
+  regimeGapDetected: z.boolean(),
+  currentRegime: z.string(),
+  regimeGapDetails: z.string().optional(),
+  closestIndicatorSimilarity: z.number(),
+  rollingIC30Day: z.number(),
+  icDecayDays: z.number(),
+  existingIndicatorsUnderperforming: z.boolean(),
+  daysSinceLastAttempt: z.number(),
+  activeIndicatorCount: z.number(),
+  maxIndicatorCapacity: z.number(),
+  cooldownMet: z.boolean(),
+  capacityAvailable: z.boolean(),
+});
+
+const SynthesisTriggerStatusSchema = z.object({
+  shouldTrigger: z.boolean(),
+  triggerReason: z.string().optional(),
+  conditions: SynthesisTriggerConditionsSchema,
+  summary: z.string(),
+  recommendation: z.string(),
+});
+
+const ActiveSynthesisSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.enum(["running", "completed", "failed"]),
+  currentPhase: SynthesisPhaseSchema,
+  startedAt: z.string(),
+  triggeredByCycleId: z.string(),
+  triggerReason: z.string(),
+});
+
+const SynthesisActivitySchema = z.object({
+  indicatorName: z.string(),
+  status: z.enum(["paper_trading_started", "validation_failed", "implementation_failed", "error"]),
+  generatedAt: z.string(),
+  success: z.boolean(),
+});
+
+const SynthesisStatusResponseSchema = z.object({
+  triggerStatus: SynthesisTriggerStatusSchema.nullable(),
+  activeSynthesis: ActiveSynthesisSchema.nullable(),
+  recentActivity: z.array(SynthesisActivitySchema),
+  lastEvaluatedAt: z.string().nullable(),
+});
+
+const getSynthesisStatusRoute = createRoute({
+  method: "get",
+  path: "/synthesis/status",
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: SynthesisStatusResponseSchema,
+        },
+      },
+      description: "Synthesis pipeline status",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+app.openapi(getSynthesisStatusRoute, async (c) => {
+  const db = await getDbClient();
+
+  // Get active indicator count
+  const activeRows = await db.execute(
+    "SELECT COUNT(*) as count FROM indicators WHERE status IN ('paper', 'production')"
+  );
+  const activeCount = (activeRows[0]?.count as number) ?? 0;
+
+  // Get recent IC values for rolling average
+  const icRows = await db.execute(
+    `
+      SELECT ic_value
+      FROM indicator_ic_history
+      WHERE date >= date('now', '-30 days')
+      ORDER BY date DESC
+    `
+  );
+
+  const icValues = icRows.map((r) => r.ic_value as number);
+  const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
+
+  // Calculate IC decay (consecutive days below threshold)
+  let icDecayDays = 0;
+  for (const ic of icValues) {
+    if (ic < 0.02) {
+      icDecayDays++;
+    } else {
+      break;
+    }
+  }
+
+  // Get last generation attempt
+  const lastAttemptRows = await db.execute(
+    "SELECT MAX(generated_at) as last_attempt FROM indicators"
+  );
+  const lastAttempt = lastAttemptRows[0]?.last_attempt as string | null;
+  const daysSinceLastAttempt = lastAttempt
+    ? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
+    : 999;
+
+  // Get current market regime from regime labels
+  let currentRegime = "Unknown";
+  let regimeGapDetected = false;
+  let regimeGapDetails: string | undefined;
+  try {
+    const regimeRows = await db.execute(
+      `SELECT regime, confidence FROM regime_labels
+       WHERE symbol = '_MARKET' AND timeframe = '1d'
+       ORDER BY timestamp DESC LIMIT 1`
+    );
+    if (regimeRows.length > 0) {
+      currentRegime = regimeRows[0]?.regime as string;
+      const confidence = regimeRows[0]?.confidence as number;
+      regimeGapDetected = confidence < 0.5;
+      if (regimeGapDetected) {
+        regimeGapDetails = `Low confidence (${(confidence * 100).toFixed(1)}%) in regime classification`;
+      }
+    } else {
+      regimeGapDetected = true;
+      regimeGapDetails = "No regime data available";
+    }
+  } catch {
+    regimeGapDetected = true;
+    regimeGapDetails = "Regime classification unavailable";
+  }
+
+  const cooldownMet = daysSinceLastAttempt >= 30;
+  const capacityAvailable = activeCount < 20;
+  const existingIndicatorsUnderperforming = rollingIC < 0.02 || icDecayDays >= 5;
+
+  const conditions = {
+    regimeGapDetected,
+    currentRegime,
+    regimeGapDetails,
+    closestIndicatorSimilarity: 0,
+    rollingIC30Day: rollingIC,
+    icDecayDays,
+    existingIndicatorsUnderperforming,
+    daysSinceLastAttempt,
+    activeIndicatorCount: activeCount,
+    maxIndicatorCapacity: 20,
+    cooldownMet,
+    capacityAvailable,
+  };
+
+  // Determine if generation should trigger
+  const shouldTrigger = cooldownMet && capacityAvailable && existingIndicatorsUnderperforming;
+
+  // Generate recommendation and summary
+  let recommendation = "";
+  let summary = "";
+  let triggerReason: string | undefined;
+
+  if (shouldTrigger) {
+    triggerReason = regimeGapDetected
+      ? "regime_gap"
+      : icDecayDays >= 5
+        ? "ic_decay"
+        : "low_rolling_ic";
+    summary = `Synthesis triggered: ${triggerReason === "regime_gap" ? "Regime gap detected" : `IC decay (${icDecayDays} days)`}`;
+    recommendation = `Indicator generation warranted: Rolling IC ${rollingIC.toFixed(4)}, ${icDecayDays} days of decay.`;
+  } else if (!cooldownMet) {
+    summary = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining`;
+    recommendation = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining.`;
+  } else if (!capacityAvailable) {
+    summary = `Capacity reached: ${activeCount}/${conditions.maxIndicatorCapacity}`;
+    recommendation = `Indicator capacity reached (${activeCount}/${conditions.maxIndicatorCapacity}).`;
+  } else if (!existingIndicatorsUnderperforming) {
+    summary = `Portfolio IC healthy at ${rollingIC.toFixed(4)}`;
+    recommendation = `Portfolio IC healthy at ${rollingIC.toFixed(4)}, no generation needed.`;
+  } else {
+    summary = "No trigger conditions met";
+    recommendation = "No trigger conditions met.";
+  }
+
+  const triggerStatus = {
+    shouldTrigger,
+    triggerReason,
+    conditions,
+    summary,
+    recommendation,
+  };
+
+  // Check for active synthesis (staging indicator generated in last hour)
+  let activeSynthesis = null;
+  const stagingRows = await db.execute(
+    `SELECT id, name, generated_at, generated_by
+     FROM indicators
+     WHERE status = 'staging'
+       AND generated_at >= datetime('now', '-1 hour')
+     ORDER BY generated_at DESC
+     LIMIT 1`
+  );
+
+  if (stagingRows.length > 0) {
+    const row = stagingRows[0];
+    activeSynthesis = {
+      id: row?.id as string,
+      name: row?.name as string,
+      status: "running" as const,
+      currentPhase: "initiating_paper_trading" as const,
+      startedAt: row?.generated_at as string,
+      triggeredByCycleId: (row?.generated_by as string) ?? "unknown",
+      triggerReason: triggerReason ?? "manual",
+    };
+  }
+
+  // Get recent activity (last 5 generated indicators)
+  const recentRows = await db.execute(
+    `SELECT name, status, generated_at
+     FROM indicators
+     ORDER BY generated_at DESC
+     LIMIT 5`
+  );
+
+  const recentActivity = recentRows.map((row) => {
+    const status = row.status as string;
+    let activityStatus:
+      | "paper_trading_started"
+      | "validation_failed"
+      | "implementation_failed"
+      | "error";
+    let success = false;
+
+    if (status === "paper" || status === "production") {
+      activityStatus = "paper_trading_started";
+      success = true;
+    } else if (status === "retired") {
+      activityStatus = "validation_failed";
+      success = false;
+    } else if (status === "staging") {
+      activityStatus = "paper_trading_started";
+      success = true;
+    } else {
+      activityStatus = "error";
+      success = false;
+    }
+
+    return {
+      indicatorName: row.name as string,
+      status: activityStatus,
+      generatedAt: row.generated_at as string,
+      success,
+    };
+  });
+
+  return c.json({
+    triggerStatus,
+    activeSynthesis,
+    recentActivity,
+    lastEvaluatedAt: new Date().toISOString(),
+  });
+});
+
 // ============================================
 // Parameterized Routes (after static routes)
 // ============================================
