@@ -11,7 +11,7 @@
  * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
  */
 
-import { IndicatorHypothesisSchema } from "@cream/indicators";
+import { IndicatorHypothesisSchema, validateIndicatorFileFromPath } from "@cream/indicators";
 import { type ImplementIndicatorOutput, implementIndicator } from "@cream/mastra-kit";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
@@ -420,5 +420,141 @@ export const implementIndicatorStep = createStep({
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  },
+});
+
+// ============================================
+// Schemas: validateIndicator
+// ============================================
+
+/**
+ * Output schema for validateIndicator step.
+ * Contains validation results and any errors found.
+ */
+export const ValidationOutputSchema = z.object({
+  isValid: z.boolean(),
+  testsPass: z.boolean(),
+  astSimilarity: z.number(),
+  securityScanPassed: z.boolean(),
+  validationErrors: z.array(z.string()),
+});
+
+export type ValidationOutput = z.infer<typeof ValidationOutputSchema>;
+
+// ============================================
+// Constants: Validation
+// ============================================
+
+/** Maximum allowed AST similarity to existing indicators (80%) */
+const MAX_AST_SIMILARITY = 0.8;
+
+// ============================================
+// Step: validateIndicator
+// ============================================
+
+/**
+ * Validate Indicator Step
+ *
+ * Fourth step in the indicator synthesis workflow. Validates the
+ * generated indicator through multiple checks:
+ * - Tests must pass
+ * - AST similarity to existing indicators must be <= 80%
+ * - Security scan must pass (no dangerous patterns)
+ */
+export const validateIndicatorStep = createStep({
+  id: "validate-indicator",
+  description: "Validate generated indicator through tests, AST check, and security scan",
+  inputSchema: ImplementationOutputSchema,
+  outputSchema: ValidationOutputSchema,
+  execute: async ({ inputData }) => {
+    const { success, indicatorPath, astSimilarity, testsPassed, error } = inputData;
+
+    const validationErrors: string[] = [];
+
+    log.info(
+      {
+        indicatorPath,
+        implementationSuccess: success,
+        testsPassed,
+        astSimilarity,
+      },
+      "Validating generated indicator"
+    );
+
+    // Check 1: Implementation must have succeeded
+    if (!success) {
+      validationErrors.push(`Implementation failed: ${error ?? "Unknown error"}`);
+      return {
+        isValid: false,
+        testsPass: false,
+        astSimilarity: astSimilarity ?? 0,
+        securityScanPassed: false,
+        validationErrors,
+      };
+    }
+
+    // Check 2: Tests must pass
+    const testsPass = testsPassed === true;
+    if (!testsPass) {
+      validationErrors.push("Tests did not pass");
+    }
+
+    // Check 3: AST similarity must be below threshold
+    const actualAstSimilarity = astSimilarity ?? 0;
+    if (actualAstSimilarity > MAX_AST_SIMILARITY) {
+      validationErrors.push(
+        `AST similarity (${(actualAstSimilarity * 100).toFixed(1)}%) exceeds maximum (${MAX_AST_SIMILARITY * 100}%)`
+      );
+    }
+
+    // Check 4: Security scan must pass
+    let securityScanPassed = false;
+    if (indicatorPath) {
+      try {
+        const scanResult = await validateIndicatorFileFromPath(indicatorPath);
+        securityScanPassed = scanResult.safe;
+
+        if (!scanResult.safe) {
+          validationErrors.push(...scanResult.issues.map((issue) => `Security: ${issue}`));
+        }
+
+        log.info(
+          {
+            securityScanPassed,
+            issuesFound: scanResult.issues.length,
+            fileSize: scanResult.fileSize,
+            lineCount: scanResult.lineCount,
+          },
+          "Security scan completed"
+        );
+      } catch (scanError) {
+        validationErrors.push(
+          `Security scan failed: ${scanError instanceof Error ? scanError.message : String(scanError)}`
+        );
+      }
+    } else {
+      validationErrors.push("No indicator path provided for security scan");
+    }
+
+    const isValid = validationErrors.length === 0;
+
+    log.info(
+      {
+        isValid,
+        testsPass,
+        astSimilarity: actualAstSimilarity,
+        securityScanPassed,
+        errorCount: validationErrors.length,
+      },
+      isValid ? "Indicator validation passed" : "Indicator validation failed"
+    );
+
+    return {
+      isValid,
+      testsPass,
+      astSimilarity: actualAstSimilarity,
+      securityScanPassed,
+      validationErrors,
+    };
   },
 });
