@@ -14,9 +14,16 @@ import { createEventsServicePlugin } from "@schedule-x/events-service";
 import { ScheduleXCalendar, useNextCalendarApp } from "@schedule-x/react";
 import "@schedule-x/theme-default/dist/index.css";
 import { AlertCircle, CalendarDays } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEconomicCalendar } from "@/hooks/queries";
 import type { EconomicEvent } from "@/lib/api/types";
+import {
+  type CalendarFilterState,
+  CalendarFilters,
+  DEFAULT_FILTERS,
+  getDateRangeFromFilter,
+} from "./CalendarFilters";
+import { MonthGridEventCard, TimeGridEventCard } from "./EventCard";
 
 // ============================================
 // Types
@@ -79,20 +86,17 @@ const IMPACT_CALENDARS = {
 } as const;
 
 // ============================================
-// Utilities
+// Custom Components for Schedule-X
 // ============================================
 
-function getDateRange(days: number): { start: string; end: string } {
-  const start = new Date();
-  start.setDate(start.getDate() - 7);
-  const end = new Date();
-  end.setDate(end.getDate() + days);
+const customComponents = {
+  timeGridEvent: TimeGridEventCard,
+  monthGridEvent: MonthGridEventCard,
+};
 
-  return {
-    start: start.toISOString().split("T")[0] ?? "",
-    end: end.toISOString().split("T")[0] ?? "",
-  };
-}
+// ============================================
+// Utilities
+// ============================================
 
 function formatEventTime(date: string, time: string): string {
   return `${date} ${time.slice(0, 5)}`;
@@ -203,13 +207,24 @@ function ImpactLegend() {
 // ============================================
 
 export function EconomicCalendar() {
-  const { start, end } = getDateRange(60);
+  const [filters, setFilters] = useState<CalendarFilterState>(DEFAULT_FILTERS);
   const [isDark, setIsDark] = useState(false);
+
+  const { start, end } = useMemo(
+    () => getDateRangeFromFilter(filters.dateRange),
+    [filters.dateRange]
+  );
 
   const { data, isLoading, error } = useEconomicCalendar({
     startDate: start,
     endDate: end,
+    impact: filters.impact,
+    country: filters.country === "ALL" ? undefined : filters.country,
   });
+
+  const handleFilterChange = useCallback((newFilters: CalendarFilterState) => {
+    setFilters(newFilters);
+  }, []);
 
   const eventsService = useMemo(() => createEventsServicePlugin(), []);
 
@@ -289,6 +304,9 @@ export function EconomicCalendar() {
 
   return (
     <div className="flex flex-col h-full gap-3">
+      <div className="shrink-0">
+        <CalendarFilters filters={filters} onFilterChange={handleFilterChange} />
+      </div>
       <div className="shrink-0 flex items-center justify-between">
         <ImpactLegend />
         <span className="text-xs text-stone-500 dark:text-night-400">
@@ -297,7 +315,7 @@ export function EconomicCalendar() {
         </span>
       </div>
       <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">
-        <ScheduleXCalendar calendarApp={calendar} />
+        <ScheduleXCalendar calendarApp={calendar} customComponents={customComponents} />
       </div>
     </div>
   );
