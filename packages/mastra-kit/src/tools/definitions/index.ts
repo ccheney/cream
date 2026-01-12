@@ -21,6 +21,14 @@ export {
   searchAcademicPapersTool,
   searchExternalPapersTool,
 } from "./academicPaperTools.js";
+// Check Indicator Trigger tool (for Orient phase synthesis triggering)
+export {
+  type CheckIndicatorTriggerInput,
+  CheckIndicatorTriggerInputSchema,
+  type CheckIndicatorTriggerOutput,
+  CheckIndicatorTriggerOutputSchema,
+  createCheckIndicatorTriggerTool,
+} from "./checkIndicatorTrigger.js";
 // Company relationship tools
 export {
   type CompanyRelationshipsInput,
