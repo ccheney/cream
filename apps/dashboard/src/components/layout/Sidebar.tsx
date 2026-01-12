@@ -11,7 +11,6 @@
 "use client";
 
 import {
-  Activity,
   BarChart3,
   Bot,
   Briefcase,
@@ -60,7 +59,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/options", label: "Options", icon: Grid2x2 },
   { href: "/risk", label: "Risk", icon: ShieldAlert },
   { href: "/backtest", label: "Backtest", icon: FlaskConical },
-  { href: "/indicators", label: "Indicators", icon: Activity },
   { href: "/theses", label: "Theses", icon: BarChart3 },
   { href: "/config", label: "Config", icon: Settings },
   { href: "/feed", label: "Feed", icon: Rss },
@@ -145,7 +143,7 @@ export const Sidebar = memo(function Sidebar({
           <button
             type="button"
             onClick={toggleSidebar}
-            className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            className="p-1.5 rounded-md text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronLeft
@@ -201,7 +199,7 @@ export const Sidebar = memo(function Sidebar({
             </div>
           ) : (
             <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
-              <span className="text-xs font-medium text-stone-600 dark:text-night-200 dark:text-night-300">
+              <span className="text-xs font-medium text-stone-600 dark:text-night-300">
                 {userEmail.charAt(0).toUpperCase()}
               </span>
             </div>
