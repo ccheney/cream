@@ -263,18 +263,32 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-function ConnectionBadge({ connected }: { connected: boolean; state: string }) {
-  // Only show connected (green) or disconnected (red) - no intermediate states
-  if (!connected) {
-    return null;
+function ConnectionBadge({ connected, state }: { connected: boolean; state: string }) {
+  const isConnecting = state === "connecting" || state === "reconnecting";
+
+  if (connected) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-green-500" title="Connected" />
+        <span className="text-xs text-stone-500 dark:text-night-300 hidden sm:inline">
+          Connected
+        </span>
+      </div>
+    );
   }
 
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-2 h-2 rounded-full bg-green-500" title="connected" />
-      <span className="text-xs text-stone-500 dark:text-night-300 hidden sm:inline">Connected</span>
-    </div>
-  );
+  if (isConnecting) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Connecting" />
+        <span className="text-xs text-amber-600 dark:text-amber-400 hidden sm:inline">
+          Connecting
+        </span>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function EnvBadge() {

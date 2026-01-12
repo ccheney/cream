@@ -83,7 +83,7 @@ export function DashboardHeader({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Console</h1>
         <Tooltip>
           <TooltipTrigger>
             <StreamingBadge isConnected={connected} isRefreshing={statusFetching} />

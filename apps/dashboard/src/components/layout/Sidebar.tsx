@@ -18,7 +18,6 @@ import {
   ChevronLeft,
   FileText,
   FlaskConical,
-  Gauge,
   Grid2x2,
   LineChart,
   LogOut,
@@ -27,6 +26,7 @@ import {
   Settings,
   ShieldAlert,
   Sun,
+  Terminal,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -52,18 +52,21 @@ export interface SidebarProps {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: Gauge },
-  { href: "/decisions", label: "Decisions", icon: FileText },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/indicators", label: "Indicators", icon: Beaker },
-  { href: "/agents", label: "Agents", icon: Bot },
   { href: "/charts", label: "Charts", icon: LineChart },
   { href: "/options", label: "Options", icon: Grid2x2 },
+  { href: "/console", label: "Console", icon: Terminal },
+  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/decisions", label: "Decisions", icon: FileText },
+  { href: "/feed", label: "Feed", icon: Rss },
+  { href: "/config", label: "Config", icon: Settings },
+];
+
+export const EXPERIMENT_ITEMS: NavItem[] = [
   { href: "/risk", label: "Risk", icon: ShieldAlert },
   { href: "/backtest", label: "Backtest", icon: FlaskConical },
+  { href: "/indicators", label: "Indicators", icon: Beaker },
   { href: "/theses", label: "Theses", icon: BarChart3 },
-  { href: "/config", label: "Config", icon: Settings },
-  { href: "/feed", label: "Feed", icon: Rss },
 ];
 
 const SIDEBAR_WIDTH = 240;
@@ -155,10 +158,27 @@ export const Sidebar = memo(function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 mt-4 px-2 space-y-1 overflow-y-auto" aria-label="Main navigation">
-        {NAV_ITEMS.map((item) => (
-          <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
-        ))}
+      <nav className="flex-1 mt-4 px-2 overflow-y-auto flex flex-col" aria-label="Main navigation">
+        <div className="space-y-1">
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+          ))}
+        </div>
+
+        <div className="mt-auto pt-4">
+          <div className="border-t border-cream-200 dark:border-night-700 pt-4">
+            {showLabel && (
+              <div className="px-3 mb-2 text-xs font-medium text-stone-400 dark:text-night-400 uppercase tracking-wider">
+                Experiments
+              </div>
+            )}
+            <div className="space-y-1">
+              {EXPERIMENT_ITEMS.map((item) => (
+                <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+              ))}
+            </div>
+          </div>
+        </div>
       </nav>
 
       <div className="px-2 mb-2">

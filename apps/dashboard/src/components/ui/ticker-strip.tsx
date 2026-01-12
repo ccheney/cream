@@ -9,7 +9,7 @@
 
 "use client";
 
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMultiTickHistory } from "@/hooks/useTickHistory";
 import { get } from "@/lib/api/client";
@@ -355,14 +355,6 @@ export const TickerStrip = memo(function TickerStrip({
           >
             <Plus className="w-4 h-4" />
           </button>
-        )}
-
-        {/* Connection indicator when disconnected */}
-        {!connected && (
-          <div className="flex items-center gap-2 px-4 py-2 text-yellow-600 dark:text-yellow-400">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span className="text-xs">Connecting...</span>
-          </div>
         )}
       </div>
 
