@@ -4,11 +4,45 @@
  * NYSE holiday schedule, trading sessions, and option expiration dates.
  * Includes session validation for DecisionPlan actions.
  *
+ * This module delegates to CalendarService when initialized, falling back to
+ * hardcoded data for backward compatibility.
+ *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
  * @see docs/plans/07-execution.md - Trading Calendar Feasibility
  */
 
 import { z } from "zod";
+import { getCalendarService } from "./calendar/factory.js";
+import { HardcodedCalendarService } from "./calendar/service.js";
+import type { CalendarService } from "./calendar/types.js";
+
+// Re-export CalendarService types for convenience
+export type { CalendarDay, CalendarService, MarketClock } from "./calendar/types.js";
+
+// ============================================
+// Service Resolution
+// ============================================
+
+/** Lazy fallback service instance */
+let fallbackService: CalendarService | null = null;
+
+/**
+ * Get the calendar service, creating a fallback if not initialized.
+ * This ensures backward compatibility for code that doesn't explicitly
+ * initialize the CalendarService.
+ */
+function resolveCalendarService(): CalendarService {
+  const service = getCalendarService();
+  if (service) {
+    return service;
+  }
+
+  // Create fallback hardcoded service (safe to create synchronously)
+  if (!fallbackService) {
+    fallbackService = new HardcodedCalendarService();
+  }
+  return fallbackService;
+}
 
 // ============================================
 // Types
@@ -169,21 +203,7 @@ export function getHoliday(date: Date | string): Holiday | null {
  * @returns true if market is open (or partially open), false for full closures
  */
 export function isMarketOpen(date: Date | string): boolean {
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-
-  // Check weekend (Saturday = 6, Sunday = 0)
-  const dayOfWeek = dateObj.getUTCDay();
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return false;
-  }
-
-  // Check holidays
-  const holiday = getHoliday(date);
-  if (holiday?.type === "FULL_CLOSE") {
-    return false;
-  }
-
-  return true;
+  return resolveCalendarService().isTradingDaySync(date);
 }
 
 /**
@@ -193,16 +213,7 @@ export function isMarketOpen(date: Date | string): boolean {
  * @returns Close time in HH:MM ET, or null if market is closed all day
  */
 export function getMarketCloseTime(date: Date | string): string | null {
-  if (!isMarketOpen(date)) {
-    return null;
-  }
-
-  const holiday = getHoliday(date);
-  if (holiday?.type === "EARLY_CLOSE") {
-    return holiday.closeTime ?? EARLY_CLOSE_TIME;
-  }
-
-  return DEFAULT_CLOSE_TIME;
+  return resolveCalendarService().getMarketCloseTimeSync(date);
 }
 
 /**
@@ -212,51 +223,7 @@ export function getMarketCloseTime(date: Date | string): string | null {
  * @returns Current trading session
  */
 export function getTradingSession(datetime: Date | string): TradingSession {
-  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
-  const dateStr = formatDateOnly(dateObj);
-
-  // Check if market is open on this date
-  if (!isMarketOpen(dateStr)) {
-    return "CLOSED";
-  }
-
-  // Get time in ET (approximate using UTC-5)
-  const hours = dateObj.getUTCHours() - 5;
-  const minutes = dateObj.getUTCMinutes();
-  const timeMinutes = hours * 60 + minutes;
-
-  // Handle negative hours (next day UTC)
-  const adjustedTimeMinutes = timeMinutes < 0 ? timeMinutes + 24 * 60 : timeMinutes;
-
-  // Check early close
-  const closeTime = getMarketCloseTime(dateStr);
-  const closeMinutes = closeTime
-    ? parseTimeToMinutes(closeTime)
-    : parseTimeToMinutes(DEFAULT_CLOSE_TIME);
-
-  // Determine session based on time
-  const preMarketStart = parseTimeToMinutes(NYSE_SESSIONS.PRE_MARKET.start);
-  const rthStart = parseTimeToMinutes(NYSE_SESSIONS.RTH.start);
-  const afterHoursEnd = parseTimeToMinutes(NYSE_SESSIONS.AFTER_HOURS.end);
-
-  if (adjustedTimeMinutes < preMarketStart || adjustedTimeMinutes >= afterHoursEnd) {
-    return "CLOSED";
-  }
-
-  if (adjustedTimeMinutes < rthStart) {
-    return "PRE_MARKET";
-  }
-
-  if (adjustedTimeMinutes < closeMinutes) {
-    return "RTH";
-  }
-
-  if (closeMinutes < parseTimeToMinutes(DEFAULT_CLOSE_TIME)) {
-    // Early close day - no after hours
-    return "CLOSED";
-  }
-
-  return "AFTER_HOURS";
+  return resolveCalendarService().getTradingSessionSync(datetime);
 }
 
 /**
