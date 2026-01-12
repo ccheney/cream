@@ -57,6 +57,8 @@ export interface UseKeyboardShortcutsReturn {
   clearSequence: () => void;
   /** Current pending sequence */
   pendingSequence: string[];
+  /** All registered shortcuts (reactive) */
+  shortcuts: KeyboardShortcut[];
 }
 
 // ============================================
@@ -216,6 +218,7 @@ export function useKeyboardShortcuts(
   const sequenceRef = useRef<string[]>([]);
   const sequenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pendingSequence, setPendingSequence] = useState<string[]>([]);
+  const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([]);
 
   const clearSequence = useCallback(() => {
     sequenceRef.current = [];
@@ -228,10 +231,12 @@ export function useKeyboardShortcuts(
 
   const register = useCallback((shortcut: KeyboardShortcut) => {
     shortcutsRef.current.set(shortcut.id, shortcut);
+    setShortcuts(Array.from(shortcutsRef.current.values()));
   }, []);
 
   const unregister = useCallback((id: string) => {
     shortcutsRef.current.delete(id);
+    setShortcuts(Array.from(shortcutsRef.current.values()));
   }, []);
 
   const getShortcuts = useCallback(() => {
@@ -346,6 +351,7 @@ export function useKeyboardShortcuts(
     getShortcuts,
     clearSequence,
     pendingSequence,
+    shortcuts,
   };
 }
 

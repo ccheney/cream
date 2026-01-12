@@ -181,7 +181,7 @@ export function KeyboardShortcutsProvider({
   const [scope, setScope] = useState<string | undefined>(initialScope);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  const { register, unregister, getShortcuts, clearSequence } = useKeyboardShortcuts({
+  const { register, unregister, getShortcuts, clearSequence, shortcuts } = useKeyboardShortcuts({
     scope,
     enabled: true,
   });
@@ -322,7 +322,7 @@ export function KeyboardShortcutsProvider({
     return () => {
       unregister("show-help");
       unregister("close-modal");
-      unregister("go-dashboard");
+      unregister("go-console");
       unregister("go-portfolio");
       unregister("go-decisions");
       unregister("go-theses");
@@ -352,11 +352,7 @@ export function KeyboardShortcutsProvider({
   return (
     <KeyboardShortcutsContext.Provider value={value}>
       {children}
-      <ShortcutsHelpDialog
-        open={isHelpOpen}
-        onOpenChange={setIsHelpOpen}
-        shortcuts={getShortcuts()}
-      />
+      <ShortcutsHelpDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} shortcuts={shortcuts} />
     </KeyboardShortcutsContext.Provider>
   );
 }
