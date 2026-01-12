@@ -31,7 +31,7 @@ export function ChartHeader({
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-semibold text-stone-900 dark:text-cream-100">
+          <h1 className="text-xl font-semibold text-stone-900 dark:text-night-50">
             {companyName || symbol}
           </h1>
         </div>
@@ -46,7 +46,7 @@ export function ChartHeader({
                 className={`px-3 py-1 text-sm font-mono rounded transition-colors ${
                   timeframe === tf
                     ? "bg-night-800 text-white dark:bg-cream-100 dark:text-night-900 shadow-md font-semibold"
-                    : "text-cream-600 dark:text-cream-400 hover:text-cream-900 dark:hover:text-cream-100"
+                    : "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
                 }`}
               >
                 {tf}

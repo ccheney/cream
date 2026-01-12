@@ -103,7 +103,7 @@ function LoadingSkeleton() {
 function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <p className="text-cream-500 dark:text-cream-400">Thesis not found</p>
+      <p className="text-stone-500 dark:text-night-300">Thesis not found</p>
       <Link href="/theses" className="mt-4 text-blue-600 dark:text-blue-400 hover:underline">
         ← Back to theses
       </Link>

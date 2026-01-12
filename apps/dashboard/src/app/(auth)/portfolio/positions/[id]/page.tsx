@@ -110,7 +110,7 @@ export default function PositionDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
             aria-label="Go back"
           >
             <svg
@@ -128,7 +128,7 @@ export default function PositionDetailPage() {
             </svg>
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
+            <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
               {position.symbol}
             </h1>
             <span
@@ -154,31 +154,31 @@ export default function PositionDetailPage() {
 
       {/* Position Details Card */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+        <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
           Position Details
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Quantity</span>
-            <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-sm text-stone-500 dark:text-night-300">Quantity</span>
+            <div className="text-lg font-medium text-stone-900 dark:text-night-50">
               {position.qty} shares
             </div>
           </div>
           <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Avg Entry</span>
-            <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-sm text-stone-500 dark:text-night-300">Avg Entry</span>
+            <div className="text-lg font-medium text-stone-900 dark:text-night-50">
               {formatPrice(position.avgEntry)}
             </div>
           </div>
           <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Current Price</span>
-            <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-sm text-stone-500 dark:text-night-300">Current Price</span>
+            <div className="text-lg font-medium text-stone-900 dark:text-night-50">
               {formatPrice(position.currentPrice)}
             </div>
           </div>
           <div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">Market Value</span>
-            <div className="text-lg font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-sm text-stone-500 dark:text-night-300">Market Value</span>
+            <div className="text-lg font-medium text-stone-900 dark:text-night-50">
               {formatPrice(position.marketValue)}
             </div>
           </div>
@@ -186,12 +186,12 @@ export default function PositionDetailPage() {
 
         {/* P&L Section */}
         <div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
-          <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">
+          <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">
             Profit & Loss
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <div>
-              <span className="text-sm text-cream-500 dark:text-cream-400">Unrealized P&L</span>
+              <span className="text-sm text-stone-500 dark:text-night-300">Unrealized P&L</span>
               <div
                 className={`text-xl font-semibold ${
                   position.unrealizedPnl >= 0 ? "text-green-600" : "text-red-600"
@@ -202,7 +202,7 @@ export default function PositionDetailPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm text-cream-500 dark:text-cream-400">P&L %</span>
+              <span className="text-sm text-stone-500 dark:text-night-300">P&L %</span>
               <div
                 className={`text-xl font-semibold ${
                   position.unrealizedPnlPct >= 0 ? "text-green-600" : "text-red-600"
@@ -212,8 +212,8 @@ export default function PositionDetailPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm text-cream-500 dark:text-cream-400">Days Held</span>
-              <div className="text-xl font-semibold text-cream-900 dark:text-cream-100">
+              <span className="text-sm text-stone-500 dark:text-night-300">Days Held</span>
+              <div className="text-xl font-semibold text-stone-900 dark:text-night-50">
                 {position.daysHeld} days
               </div>
             </div>
@@ -222,20 +222,20 @@ export default function PositionDetailPage() {
 
         {/* Risk Levels */}
         <div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
-          <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">
+          <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">
             Risk Levels
           </h3>
           <div className="grid grid-cols-2 gap-6">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-cream-500 dark:text-cream-400">Stop Loss</span>
+                <span className="text-sm text-stone-500 dark:text-night-300">Stop Loss</span>
                 {editingStop ? (
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="number"
                       value={stopValue}
                       onChange={(e) => setStopValue(e.target.value)}
-                      className="w-24 px-2 py-1 text-sm border border-cream-200 dark:border-night-600 rounded bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                      className="w-24 px-2 py-1 text-sm border border-cream-200 dark:border-night-600 rounded bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
                       placeholder="0.00"
                     />
                     <button
@@ -248,7 +248,7 @@ export default function PositionDetailPage() {
                     <button
                       type="button"
                       onClick={() => setEditingStop(false)}
-                      className="px-2 py-1 text-xs bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400 rounded"
+                      className="px-2 py-1 text-xs bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400 rounded"
                     >
                       Cancel
                     </button>
@@ -264,7 +264,7 @@ export default function PositionDetailPage() {
                         setStopValue(position.stop?.toString() || "");
                         setEditingStop(true);
                       }}
-                      className="text-xs text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+                      className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
                     >
                       Edit
                     </button>
@@ -274,14 +274,14 @@ export default function PositionDetailPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-cream-500 dark:text-cream-400">Take Profit</span>
+                <span className="text-sm text-stone-500 dark:text-night-300">Take Profit</span>
                 {editingTarget ? (
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="number"
                       value={targetValue}
                       onChange={(e) => setTargetValue(e.target.value)}
-                      className="w-24 px-2 py-1 text-sm border border-cream-200 dark:border-night-600 rounded bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                      className="w-24 px-2 py-1 text-sm border border-cream-200 dark:border-night-600 rounded bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
                       placeholder="0.00"
                     />
                     <button
@@ -294,7 +294,7 @@ export default function PositionDetailPage() {
                     <button
                       type="button"
                       onClick={() => setEditingTarget(false)}
-                      className="px-2 py-1 text-xs bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400 rounded"
+                      className="px-2 py-1 text-xs bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400 rounded"
                     >
                       Cancel
                     </button>
@@ -310,7 +310,7 @@ export default function PositionDetailPage() {
                         setTargetValue(position.target?.toString() || "");
                         setEditingTarget(true);
                       }}
-                      className="text-xs text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+                      className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
                     >
                       Edit
                     </button>
@@ -324,12 +324,12 @@ export default function PositionDetailPage() {
         {/* Related Thesis */}
         {position.thesis && (
           <div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
-            <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-2">
+            <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2">
               Related Thesis
             </h3>
             <Link
               href={`/theses/${position.thesis.id}`}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-cream-50 dark:bg-night-700 rounded-md text-sm text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-600"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-cream-50 dark:bg-night-700 rounded-md text-sm text-stone-700 dark:text-night-100 hover:bg-cream-100 dark:hover:bg-night-600"
             >
               <span className="font-medium">{position.thesis.symbol}</span>
               <span>&ndash;</span>
@@ -340,7 +340,7 @@ export default function PositionDetailPage() {
 
         {/* Position opened time */}
         <div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
-          <div className="text-sm text-cream-500 dark:text-cream-400">
+          <div className="text-sm text-stone-500 dark:text-night-300">
             Opened {formatDistanceToNow(new Date(position.openedAt), { addSuffix: true })} &bull;{" "}
             {format(new Date(position.openedAt), "MMM d, yyyy HH:mm")}
           </div>
@@ -350,13 +350,13 @@ export default function PositionDetailPage() {
       {/* Trade History */}
       {position.trades && position.trades.length > 0 && (
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
             Trade History ({position.trades.length})
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-cream-50 dark:bg-night-750">
-                <tr className="text-left text-sm text-cream-500 dark:text-cream-400">
+                <tr className="text-left text-sm text-stone-500 dark:text-night-300">
                   <th className="px-4 py-3 font-medium">Time</th>
                   <th className="px-4 py-3 font-medium">Side</th>
                   <th className="px-4 py-3 font-medium text-right">Qty</th>
@@ -377,7 +377,7 @@ export default function PositionDetailPage() {
       {/* Related Decisions */}
       {position.relatedDecisions && position.relatedDecisions.length > 0 && (
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
             Related Decisions ({position.relatedDecisions.length})
           </h2>
           <div className="space-y-2">
@@ -400,7 +400,7 @@ function TradeRow({ trade }: { trade: Trade }) {
 
   return (
     <tr className="text-sm">
-      <td className="px-4 py-3 text-cream-500 dark:text-cream-400">
+      <td className="px-4 py-3 text-stone-500 dark:text-night-300">
         {format(new Date(trade.timestamp), "MMM d, yyyy HH:mm:ss")}
       </td>
       <td className="px-4 py-3">
@@ -414,15 +414,19 @@ function TradeRow({ trade }: { trade: Trade }) {
           {trade.side}
         </span>
       </td>
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         {trade.qty}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         {formatPrice(trade.price)}
       </td>
       <td
         className={`px-4 py-3 text-right font-mono ${
-          trade.pnl === null ? "text-cream-400" : trade.pnl >= 0 ? "text-green-600" : "text-red-600"
+          trade.pnl === null
+            ? "text-stone-400 dark:text-night-400"
+            : trade.pnl >= 0
+              ? "text-green-600"
+              : "text-red-600"
         }`}
       >
         {trade.pnl !== null ? (
@@ -450,7 +454,7 @@ function DecisionLink({ decision }: { decision: DecisionSummary }) {
   const actionColors: Record<string, string> = {
     BUY: "text-green-600",
     SELL: "text-red-600",
-    HOLD: "text-cream-600",
+    HOLD: "text-stone-600 dark:text-night-200",
     CLOSE: "text-amber-600",
   };
 
@@ -460,7 +464,9 @@ function DecisionLink({ decision }: { decision: DecisionSummary }) {
       className="flex items-center justify-between p-3 bg-cream-50 dark:bg-night-700 rounded-lg hover:bg-cream-100 dark:hover:bg-night-600"
     >
       <div className="flex items-center gap-3">
-        <span className={`font-medium ${actionColors[decision.action] || "text-cream-600"}`}>
+        <span
+          className={`font-medium ${actionColors[decision.action] || "text-stone-600 dark:text-night-200"}`}
+        >
           {decision.action}
         </span>
         <span
@@ -469,7 +475,7 @@ function DecisionLink({ decision }: { decision: DecisionSummary }) {
           {decision.status}
         </span>
       </div>
-      <span className="text-sm text-cream-500 dark:text-cream-400">
+      <span className="text-sm text-stone-500 dark:text-night-300">
         {formatDistanceToNow(new Date(decision.createdAt), { addSuffix: true })}
       </span>
     </Link>

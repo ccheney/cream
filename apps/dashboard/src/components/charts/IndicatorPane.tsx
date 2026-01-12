@@ -205,9 +205,9 @@ function IndicatorPaneComponent({
   return (
     <div className={className}>
       {/* Header */}
-      <div className="flex items-center justify-between px-2 py-1 text-xs text-cream-500 dark:text-cream-400 border-b border-cream-100 dark:border-night-700">
+      <div className="flex items-center justify-between px-2 py-1 text-xs text-stone-500 dark:text-night-300 border-b border-cream-100 dark:border-night-700">
         <span className="font-medium uppercase">{type}</span>
-        {timeframe && <span className="text-cream-400">{timeframe}</span>}
+        {timeframe && <span className="text-stone-400 dark:text-night-400">{timeframe}</span>}
       </div>
       {/* Chart container */}
       <div ref={containerRef} style={{ height: chartHeight }} />

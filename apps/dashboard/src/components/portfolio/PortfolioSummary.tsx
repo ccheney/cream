@@ -40,7 +40,7 @@ const MetricCard = memo(function MetricCard({
 
   const valueColor =
     isPositive === undefined
-      ? "text-cream-900 dark:text-cream-100"
+      ? "text-stone-900 dark:text-night-50"
       : isPositive
         ? "text-green-600 dark:text-green-400"
         : "text-red-600 dark:text-red-400";
@@ -48,7 +48,7 @@ const MetricCard = memo(function MetricCard({
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-sm text-cream-500 dark:text-cream-400">{label}</span>
+        <span className="text-sm text-stone-500 dark:text-night-300">{label}</span>
         {isStreaming && (
           // biome-ignore lint/a11y/useSemanticElements: role="status" for live region accessibility
           <span

@@ -61,10 +61,10 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
   if (!report) {
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-2">
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-2">
           Validation Report
         </h3>
-        <p className="text-cream-400">No validation report available</p>
+        <p className="text-stone-400 dark:text-night-400">No validation report available</p>
       </div>
     );
   }
@@ -82,10 +82,8 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-          Validation Report
-        </h3>
-        <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Validation Report</h3>
+        <div className="mt-1 text-sm text-stone-500 dark:text-night-300">
           {report.validatedAt && (
             <span>Validated: {new Date(report.validatedAt).toLocaleDateString()}</span>
           )}
@@ -99,7 +97,7 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
         {/* Gates Table */}
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-cream-500 dark:text-cream-400 border-b border-cream-200 dark:border-night-700">
+            <tr className="text-left text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700">
               <th className="pb-2 font-medium">Metric</th>
               <th className="pb-2 font-medium text-right">Value</th>
               <th className="pb-2 font-medium text-right">Threshold</th>
@@ -109,11 +107,11 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
           <tbody className="divide-y divide-cream-100 dark:divide-night-700">
             {gates.map((gate) => (
               <tr key={gate.name}>
-                <td className="py-2 text-cream-900 dark:text-cream-100">{gate.name}</td>
-                <td className="py-2 text-right font-mono text-cream-900 dark:text-cream-100">
+                <td className="py-2 text-stone-900 dark:text-night-50">{gate.name}</td>
+                <td className="py-2 text-right font-mono text-stone-900 dark:text-night-50">
                   {formatValue(gate.name, gate.value)}
                 </td>
-                <td className="py-2 text-right text-cream-500 dark:text-cream-400">
+                <td className="py-2 text-right text-stone-500 dark:text-night-300">
                   {gate.threshold}
                 </td>
                 <td className="py-2 text-center">
@@ -131,30 +129,30 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
         {/* Paper Trading Results */}
         {report.paperTrading && (
           <div className="mt-6 pt-4 border-t border-cream-200 dark:border-night-700">
-            <div className="text-sm text-cream-500 dark:text-cream-400 mb-3">
+            <div className="text-sm text-stone-500 dark:text-night-300 mb-3">
               Paper Trading: {new Date(report.paperTrading.startDate).toLocaleDateString()} -{" "}
               {new Date(report.paperTrading.endDate).toLocaleDateString()} (
               {report.paperTrading.durationDays} days)
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-                <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">
+                <div className="text-xs text-stone-500 dark:text-night-300 mb-1">
                   Backtested Sharpe
                 </div>
-                <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+                <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
                   {report.paperTrading.backtestedSharpe.toFixed(2)}
                 </div>
               </div>
               <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-                <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">
+                <div className="text-xs text-stone-500 dark:text-night-300 mb-1">
                   Realized Sharpe
                 </div>
-                <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+                <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
                   {report.paperTrading.realizedSharpe.toFixed(2)}
                 </div>
               </div>
               <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-                <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">Ratio</div>
+                <div className="text-xs text-stone-500 dark:text-night-300 mb-1">Ratio</div>
                 <div
                   className={`text-lg font-mono font-semibold ${
                     report.paperTrading.ratio >= 0.8

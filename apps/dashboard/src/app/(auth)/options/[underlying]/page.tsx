@@ -175,7 +175,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold text-stone-900 dark:text-cream-100">
+                <h1 className="text-xl font-semibold text-stone-900 dark:text-night-50">
                   {upperUnderlying}
                 </h1>
                 {companyName && (

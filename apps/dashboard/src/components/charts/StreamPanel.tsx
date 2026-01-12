@@ -111,13 +111,13 @@ export function StreamPanel({
             />
 
             <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
-              <h2 className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+              <h2 className="text-lg font-semibold text-stone-900 dark:text-night-50">
                 {symbol} Event Stream
               </h2>
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 transition-colors"
+                className="p-1 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100 transition-colors"
                 title="Close (Esc)"
               >
                 <svg

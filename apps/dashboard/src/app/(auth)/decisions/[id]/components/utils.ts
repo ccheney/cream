@@ -60,7 +60,7 @@ export function formatAgentName(type: string): string {
 export const actionColors: Record<string, string> = {
   BUY: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   SELL: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  HOLD: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400",
+  HOLD: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400",
   CLOSE: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
 };
 

@@ -125,19 +125,19 @@ export default function BacktestPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Backtest</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Backtest</h1>
       </div>
 
       {/* Backtest Configuration */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">New Backtest</h2>
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">New Backtest</h2>
           {theses && theses.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-cream-500 dark:text-cream-400">From thesis:</span>
+              <span className="text-sm text-stone-500 dark:text-night-300">From thesis:</span>
               <select
                 onChange={(e) => e.target.value && handleThesisSelect(e.target.value)}
-                className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-2 py-1 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+                className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-2 py-1 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
                 defaultValue=""
               >
                 <option value="">Select a thesis...</option>
@@ -154,7 +154,7 @@ export default function BacktestPage() {
           <div>
             <label
               htmlFor="backtest-name"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               Name
             </label>
@@ -164,13 +164,13 @@ export default function BacktestPage() {
               value={newBacktest.name}
               onChange={(e) => setNewBacktest({ ...newBacktest, name: e.target.value })}
               placeholder="Strategy name"
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
             />
           </div>
           <div>
             <label
               htmlFor="backtest-symbol"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               Symbol
             </label>
@@ -180,13 +180,13 @@ export default function BacktestPage() {
               value={newBacktest.symbol}
               onChange={(e) => setNewBacktest({ ...newBacktest, symbol: e.target.value })}
               placeholder="SPY"
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100 uppercase"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50 uppercase"
             />
           </div>
           <div className="col-span-2">
             <label
               htmlFor="backtest-strategy"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               Strategy
             </label>
@@ -199,7 +199,7 @@ export default function BacktestPage() {
                   strategy: e.target.value as typeof newBacktest.strategy,
                 })
               }
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
             >
               {STRATEGIES.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -207,14 +207,14 @@ export default function BacktestPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-cream-400 dark:text-cream-500">
+            <p className="mt-1 text-xs text-stone-400 dark:text-night-400">
               {STRATEGIES.find((s) => s.value === newBacktest.strategy)?.description}
             </p>
           </div>
           <div>
             <label
               htmlFor="backtest-start"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               Start Date
             </label>
@@ -223,13 +223,13 @@ export default function BacktestPage() {
               type="date"
               value={newBacktest.startDate}
               onChange={(e) => setNewBacktest({ ...newBacktest, startDate: e.target.value })}
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
             />
           </div>
           <div>
             <label
               htmlFor="backtest-end"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               End Date
             </label>
@@ -238,13 +238,13 @@ export default function BacktestPage() {
               type="date"
               value={newBacktest.endDate}
               onChange={(e) => setNewBacktest({ ...newBacktest, endDate: e.target.value })}
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
             />
           </div>
           <div>
             <label
               htmlFor="backtest-capital"
-              className="block text-sm text-cream-500 dark:text-cream-400 mb-1"
+              className="block text-sm text-stone-500 dark:text-night-300 mb-1"
             >
               Initial Capital
             </label>
@@ -255,7 +255,7 @@ export default function BacktestPage() {
               onChange={(e) =>
                 setNewBacktest({ ...newBacktest, initialCapital: Number(e.target.value) })
               }
-              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+              className="w-full text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
             />
           </div>
           <div className="flex items-end">
@@ -287,7 +287,7 @@ export default function BacktestPage() {
       {/* Backtest List */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Backtests</h2>
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">Backtests</h2>
         </div>
         {backtestsLoading ? (
           <div className="p-4 space-y-2">
@@ -308,7 +308,7 @@ export default function BacktestPage() {
             ))}
           </div>
         ) : (
-          <div className="p-4 text-cream-400">No backtests yet</div>
+          <div className="p-4 text-stone-400 dark:text-night-400">No backtests yet</div>
         )}
       </div>
 
@@ -337,7 +337,7 @@ export default function BacktestPage() {
 
           {/* Equity Curve */}
           <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-            <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+            <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
               Equity Curve
             </h2>
             {equity && equity.length > 0 ? (
@@ -360,7 +360,7 @@ export default function BacktestPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-cream-400">
+              <div className="h-64 flex items-center justify-center text-stone-400 dark:text-night-400">
                 No equity data
               </div>
             )}
@@ -369,7 +369,7 @@ export default function BacktestPage() {
           {/* Trade Log */}
           <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
             <div className="p-4 border-b border-cream-200 dark:border-night-700">
-              <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+              <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
                 Trade Log ({trades?.length ?? 0} trades)
               </h2>
             </div>
@@ -377,7 +377,7 @@ export default function BacktestPage() {
               <div className="max-h-96 overflow-auto">
                 <table className="w-full">
                   <thead className="bg-cream-50 dark:bg-night-750 sticky top-0">
-                    <tr className="text-left text-sm text-cream-500 dark:text-cream-400">
+                    <tr className="text-left text-sm text-stone-500 dark:text-night-300">
                       <th className="px-4 py-2 font-medium">Time</th>
                       <th className="px-4 py-2 font-medium">Symbol</th>
                       <th className="px-4 py-2 font-medium">Action</th>
@@ -389,10 +389,10 @@ export default function BacktestPage() {
                   <tbody className="divide-y divide-cream-100 dark:divide-night-700">
                     {trades.map((trade) => (
                       <tr key={trade.id}>
-                        <td className="px-4 py-2 text-sm text-cream-500 dark:text-cream-400">
+                        <td className="px-4 py-2 text-sm text-stone-500 dark:text-night-300">
                           {new Date(trade.timestamp).toLocaleString()}
                         </td>
-                        <td className="px-4 py-2 font-medium text-cream-900 dark:text-cream-100">
+                        <td className="px-4 py-2 font-medium text-stone-900 dark:text-night-50">
                           {trade.symbol}
                         </td>
                         <td className="px-4 py-2">
@@ -406,10 +406,10 @@ export default function BacktestPage() {
                             {trade.action}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-cream-900 dark:text-cream-100">
+                        <td className="px-4 py-2 text-right font-mono text-stone-900 dark:text-night-50">
                           {trade.qty}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-cream-900 dark:text-cream-100">
+                        <td className="px-4 py-2 text-right font-mono text-stone-900 dark:text-night-50">
                           ${trade.price.toFixed(2)}
                         </td>
                         <td
@@ -425,7 +425,7 @@ export default function BacktestPage() {
                 </table>
               </div>
             ) : (
-              <div className="p-4 text-cream-400">No trades</div>
+              <div className="p-4 text-stone-400 dark:text-night-400">No trades</div>
             )}
           </div>
         </>
@@ -445,10 +445,10 @@ function MetricCard({
 }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
+      <div className="text-sm text-stone-500 dark:text-night-300">{label}</div>
       <div
         className={`mt-1 text-2xl font-semibold ${
-          valueColor ?? "text-cream-900 dark:text-cream-100"
+          valueColor ?? "text-stone-900 dark:text-night-50"
         }`}
       >
         {value}

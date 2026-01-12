@@ -40,12 +40,12 @@ export default function OptionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-cream-800 dark:text-cream-100">Options Chain</h1>
+      <h1 className="text-2xl font-semibold text-stone-700 dark:text-night-50">Options Chain</h1>
 
       {/* Search */}
       <form onSubmit={handleSearchSubmit}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cream-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 dark:text-night-400" />
           <input
             type="text"
             value={searchValue}
@@ -56,8 +56,8 @@ export default function OptionsPage() {
               bg-white dark:bg-night-800
               border border-cream-200 dark:border-night-600
               rounded-lg
-              text-cream-800 dark:text-cream-100
-              placeholder:text-cream-400
+              text-stone-700 dark:text-night-50
+              placeholder:text-stone-400
               focus:outline-none focus:ring-2 focus:ring-accent-warm
             "
             autoComplete="off"
@@ -81,7 +81,7 @@ export default function OptionsPage() {
       {/* Watchlist Quick Select */}
       {watchlistSymbols.length > 0 && (
         <div>
-          <h2 className="text-sm font-medium text-cream-600 dark:text-cream-400 mb-3">
+          <h2 className="text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-400 mb-3">
             From Watchlist
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ export default function OptionsPage() {
                 disabled={isNavigating}
                 className="
                   px-4 py-2 bg-cream-100 dark:bg-night-700
-                  text-cream-700 dark:text-cream-200
+                  text-stone-700 dark:text-night-100
                   rounded-md font-medium
                   hover:bg-cream-200 dark:hover:bg-night-600
                   disabled:opacity-50
@@ -109,7 +109,9 @@ export default function OptionsPage() {
 
       {/* Popular Symbols */}
       <div>
-        <h2 className="text-sm font-medium text-cream-600 dark:text-cream-400 mb-3">Popular</h2>
+        <h2 className="text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-400 mb-3">
+          Popular
+        </h2>
         <div className="flex flex-wrap gap-2">
           {["SPY", "QQQ", "AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "META", "IWM", "GLD"].map(
             (symbol) => (
@@ -120,7 +122,7 @@ export default function OptionsPage() {
                 disabled={isNavigating}
                 className="
                   px-4 py-2 bg-cream-50 dark:bg-night-800
-                  text-cream-600 dark:text-cream-300
+                  text-stone-600 dark:text-night-200
                   border border-cream-200 dark:border-night-600
                   rounded-md
                   hover:bg-cream-100 dark:hover:bg-night-700

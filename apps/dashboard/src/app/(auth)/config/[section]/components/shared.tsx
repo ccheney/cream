@@ -27,13 +27,13 @@ export function EditorHeader({
 }: EditorHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">{title}</h2>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">{title}</h2>
       {editing ? (
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
+            className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 dark:text-night-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
           >
             Cancel
           </button>
@@ -50,7 +50,7 @@ export function EditorHeader({
         <button
           type="button"
           onClick={onStartEdit}
-          className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
+          className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 dark:text-night-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
         >
           {editLabel}
         </button>
@@ -68,7 +68,7 @@ interface NotFoundMessageProps {
 }
 
 export function NotFoundMessage({ message }: NotFoundMessageProps) {
-  return <div className="text-cream-500">{message}</div>;
+  return <div className="text-stone-500 dark:text-night-300">{message}</div>;
 }
 
 interface ConstraintFieldProps {
@@ -83,17 +83,17 @@ export function ConstraintField({ label, value, editing, suffix, onChange }: Con
   return (
     <div>
       {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-      <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+      <label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
         {label}
         {editing ? (
           <input
             type="number"
             defaultValue={value}
             onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-            className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+            className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
           />
         ) : (
-          <div className="text-cream-900 dark:text-cream-100">
+          <div className="text-stone-900 dark:text-night-50">
             {value.toLocaleString()}
             {suffix}
           </div>
@@ -125,8 +125,8 @@ export function NotificationRow({
   return (
     <div className="flex items-center justify-between py-3 border-b border-cream-100 dark:border-night-700">
       <div>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">{title}</div>
-        <div className="text-xs text-cream-500 dark:text-cream-400">{description}</div>
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">{title}</div>
+        <div className="text-xs text-stone-500 dark:text-night-300">{description}</div>
       </div>
       {editing ? (
         <input
@@ -140,7 +140,7 @@ export function NotificationRow({
           className={`px-2 py-0.5 text-xs font-medium rounded ${
             enabled
               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-              : "bg-cream-100 text-cream-600 dark:bg-night-700 dark:text-cream-400"
+              : "bg-cream-100 text-stone-600 dark:text-night-200 dark:bg-night-700 dark:text-night-400"
           }`}
         >
           {enabled ? enabledLabel : disabledLabel}
@@ -173,7 +173,7 @@ export function StatusBadge({
       className={`px-2 py-0.5 text-xs font-medium rounded ${
         enabled
           ? enabledStyles
-          : "bg-cream-100 text-cream-600 dark:bg-night-700 dark:text-cream-400"
+          : "bg-cream-100 text-stone-600 dark:text-night-200 dark:bg-night-700 dark:text-night-400"
       }`}
     >
       {enabled ? enabledLabel : disabledLabel}

@@ -117,7 +117,7 @@ function LoadingSkeleton() {
 function NoDraftMessage() {
   return (
     <div className="text-center py-12">
-      <p className="text-cream-500 dark:text-cream-400">
+      <p className="text-stone-500 dark:text-night-300">
         No draft configuration found. Please ensure the system is properly initialized.
       </p>
     </div>
@@ -145,16 +145,16 @@ function PageHeader({
         <button
           type="button"
           onClick={onBack}
-          className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+          className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
           aria-label="Go back"
         >
           <BackIcon />
         </button>
         <div>
-          <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
+          <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
             Edit Configuration
           </h1>
-          <p className="text-sm text-cream-500 dark:text-cream-400">
+          <p className="text-sm text-stone-500 dark:text-night-300">
             Changes don't affect the running system until promoted
           </p>
         </div>
@@ -170,7 +170,7 @@ function PageHeader({
           type="button"
           onClick={onValidate}
           disabled={isValidating}
-          className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 disabled:opacity-50"
+          className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 dark:text-night-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 disabled:opacity-50"
         >
           {isValidating ? "Validating..." : "Validate"}
         </button>
@@ -302,7 +302,7 @@ function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+                : "border-transparent text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -321,13 +321,13 @@ interface DiffPanelProps {
 function DiffPanel({ activeConfig, draftConfig }: DiffPanelProps) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-      <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+      <h3 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
         Changes from Active
       </h3>
       {activeConfig ? (
         <ConfigDiff before={activeConfig as unknown as FullRuntimeConfig} after={draftConfig} />
       ) : (
-        <p className="text-cream-500 dark:text-cream-400">
+        <p className="text-stone-500 dark:text-night-300">
           No active configuration to compare against
         </p>
       )}

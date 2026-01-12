@@ -134,7 +134,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
           <div className="mb-4">
             <label
               htmlFor="symbol-input"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
+              className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2"
             >
               Symbol
             </label>
@@ -161,7 +161,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
 
           {availablePopular.length > 0 && (
             <div>
-              <p className="text-sm text-cream-500 dark:text-cream-400 mb-2">Popular symbols:</p>
+              <p className="text-sm text-stone-500 dark:text-night-300 mb-2">Popular symbols:</p>
               <div className="flex flex-wrap gap-2">
                 {availablePopular.map((sym) => (
                   <button
@@ -171,7 +171,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
                     className="
                       px-2.5 py-1 text-xs font-medium rounded-md
                       bg-cream-100 dark:bg-night-700
-                      text-cream-700 dark:text-cream-300
+                      text-stone-700 dark:text-night-100
                       hover:bg-cream-200 dark:hover:bg-night-600
                       transition-colors duration-150
                     "

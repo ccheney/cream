@@ -140,7 +140,7 @@ export function ICChart({ history, isLoading }: ICChartProps) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Performance</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Performance</h3>
         <div className="flex gap-1">
           {([30, 90, 180] as const).map((range) => (
             <button
@@ -150,7 +150,7 @@ export function ICChart({ history, isLoading }: ICChartProps) {
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 timeRange === range
                   ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                  : "text-cream-600 hover:bg-cream-100 dark:text-cream-400 dark:hover:bg-night-700"
+                  : "text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:text-night-400 dark:hover:bg-night-700"
               }`}
             >
               {range}d
@@ -162,7 +162,7 @@ export function ICChart({ history, isLoading }: ICChartProps) {
       <div className="p-4">
         {/* Chart */}
         <div className="mb-4">
-          <div className="text-sm text-cream-500 dark:text-cream-400 mb-2">IC Over Time</div>
+          <div className="text-sm text-stone-500 dark:text-night-300 mb-2">IC Over Time</div>
           {icValues.length > 0 ? (
             <Sparkline
               values={icValues}
@@ -170,14 +170,14 @@ export function ICChart({ history, isLoading }: ICChartProps) {
               height={120}
             />
           ) : (
-            <div className="h-32 flex items-center justify-center text-cream-400">
+            <div className="h-32 flex items-center justify-center text-stone-400 dark:text-night-400">
               No IC data available
             </div>
           )}
         </div>
 
         {/* Threshold legend */}
-        <div className="flex gap-4 text-xs text-cream-500 dark:text-cream-400 mb-4">
+        <div className="flex gap-4 text-xs text-stone-500 dark:text-night-300 mb-4">
           <div className="flex items-center gap-1">
             <span className="w-4 h-0.5 bg-green-400" />
             <span>Healthy (0.02)</span>
@@ -191,26 +191,26 @@ export function ICChart({ history, isLoading }: ICChartProps) {
         {/* Metric cards */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-            <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">IC ({timeRange}d)</div>
-            <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+            <div className="text-xs text-stone-500 dark:text-night-300 mb-1">IC ({timeRange}d)</div>
+            <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
               {latestIC !== null ? latestIC.toFixed(4) : "—"}
             </div>
           </div>
           <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-            <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">Avg IC</div>
-            <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+            <div className="text-xs text-stone-500 dark:text-night-300 mb-1">Avg IC</div>
+            <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
               {avgIC !== null ? avgIC.toFixed(4) : "—"}
             </div>
           </div>
           <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-            <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">ICIR</div>
-            <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+            <div className="text-xs text-stone-500 dark:text-night-300 mb-1">ICIR</div>
+            <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
               {icir !== null ? icir.toFixed(2) : "—"}
             </div>
           </div>
           <div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
-            <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">Decisions</div>
-            <div className="text-lg font-mono font-semibold text-cream-900 dark:text-cream-100">
+            <div className="text-xs text-stone-500 dark:text-night-300 mb-1">Decisions</div>
+            <div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
               {totalDecisions}
             </div>
           </div>

@@ -90,7 +90,7 @@ export const DeltaGauge = memo(function DeltaGauge({
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center justify-between">
         <span
-          className={`${sizes.label} font-medium text-cream-600 dark:text-cream-400 uppercase tracking-wide`}
+          className={`${sizes.label} font-medium text-stone-600 dark:text-night-200 dark:text-night-400 uppercase tracking-wide`}
         >
           Delta Exposure
         </span>
@@ -159,17 +159,17 @@ export const DeltaGauge = memo(function DeltaGauge({
       </div>
 
       <div className="flex items-center justify-between">
-        <span className={`${sizes.label} text-cream-400 dark:text-cream-500 font-mono`}>
+        <span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>
           -${(maxValue / 1000).toFixed(0)}K
         </span>
-        <span className={`${sizes.label} text-cream-400 dark:text-cream-500 font-mono`}>0</span>
-        <span className={`${sizes.label} text-cream-400 dark:text-cream-500 font-mono`}>
+        <span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>0</span>
+        <span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>
           +${(maxValue / 1000).toFixed(0)}K
         </span>
       </div>
 
       <div className="text-center">
-        <span className={`${sizes.label} text-cream-500 dark:text-cream-400`}>
+        <span className={`${sizes.label} text-stone-500 dark:text-night-300`}>
           {formatSPY(deltaSPYEquivalent)}
         </span>
       </div>

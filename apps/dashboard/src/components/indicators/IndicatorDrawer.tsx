@@ -64,7 +64,7 @@ export function IndicatorDrawer({ symbol, isOpen, onClose, sections }: Indicator
             <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700 shrink-0">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-stone-500 dark:text-night-400" />
-                <h2 className="text-lg font-semibold text-stone-900 dark:text-cream-100">
+                <h2 className="text-lg font-semibold text-stone-900 dark:text-night-50">
                   {symbol} Indicators
                 </h2>
               </div>

@@ -145,7 +145,7 @@ function PortfolioLimits({ constraints, editing, formData, onFormChange }: Limit
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-6">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-6">
         Portfolio Limits
       </h2>
       <div className="grid grid-cols-2 gap-4">
@@ -194,7 +194,7 @@ function OptionsGreeksLimits({ constraints, editing, formData, onFormChange }: L
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-6">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-6">
         Options Greeks Limits
       </h2>
       <div className="grid grid-cols-2 gap-4">

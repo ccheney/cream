@@ -30,17 +30,19 @@ export function MetricCard({
   const cardContent = (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 relative cursor-help">
       <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-      <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
+      <div className="text-sm text-stone-500 dark:text-night-300">{label}</div>
       <div className="flex items-baseline gap-2">
         <div
           className={`mt-1 text-2xl font-semibold ${
-            valueColor ?? "text-cream-900 dark:text-cream-100"
+            valueColor ?? "text-stone-900 dark:text-night-50"
           }`}
         >
           {value}
         </div>
         {subValue && (
-          <span className={`text-sm ${valueColor ?? "text-cream-500"}`}>{subValue}</span>
+          <span className={`text-sm ${valueColor ?? "text-stone-500 dark:text-night-300"}`}>
+            {subValue}
+          </span>
         )}
       </div>
     </div>

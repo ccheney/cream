@@ -30,13 +30,13 @@ export function LabelWithTooltip({ htmlFor, label, tooltip }: LabelWithTooltipPr
     <div className="flex items-center gap-1.5 mb-1">
       <label
         htmlFor={htmlFor}
-        className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+        className="block text-sm font-medium text-stone-700 dark:text-night-100"
       >
         {label}
       </label>
       <Tooltip>
         <TooltipTrigger>
-          <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+          <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
         </TooltipTrigger>
         <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>

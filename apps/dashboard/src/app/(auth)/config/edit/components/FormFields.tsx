@@ -36,15 +36,17 @@ export function FormField({
       <div className="flex items-center gap-1.5 mb-1">
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+          className="block text-sm font-medium text-stone-700 dark:text-night-100"
         >
           {label}
-          {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
+          {hint && (
+            <span className="ml-1 text-stone-400 dark:text-night-400 font-normal">({hint})</span>
+          )}
         </label>
         {tooltip && (
           <Tooltip>
             <TooltipTrigger>
-              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+              <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
             </TooltipTrigger>
             <TooltipContent>{tooltip}</TooltipContent>
           </Tooltip>
@@ -59,10 +61,10 @@ export function FormField({
           min={min}
           max={max}
           step={step}
-          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-cream-400">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-stone-400 dark:text-night-400">
             {suffix}
           </span>
         )}
@@ -132,15 +134,17 @@ export function DurationField({
       <div className="flex items-center gap-1.5 mb-1">
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+          className="block text-sm font-medium text-stone-700 dark:text-night-100"
         >
           {label}
-          {hint && <span className="ml-1 text-cream-400 font-normal">({hint})</span>}
+          {hint && (
+            <span className="ml-1 text-stone-400 dark:text-night-400 font-normal">({hint})</span>
+          )}
         </label>
         {tooltip && (
           <Tooltip>
             <TooltipTrigger>
-              <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+              <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
             </TooltipTrigger>
             <TooltipContent>{tooltip}</TooltipContent>
           </Tooltip>
@@ -155,12 +159,12 @@ export function DurationField({
           min={minDisplay}
           max={maxDisplay}
           step={unit === "hours" ? 0.5 : 1}
-          className="flex-1 px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          className="flex-1 px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
         />
         <select
           value={unit}
           onChange={(e) => handleUnitChange(e.target.value as TimeUnit)}
-          className="px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          className="px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
           aria-label="Time unit"
         >
           <option value="seconds">seconds</option>

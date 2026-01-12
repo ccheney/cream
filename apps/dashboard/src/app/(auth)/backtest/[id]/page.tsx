@@ -41,7 +41,7 @@ function LoadingSkeleton(): React.ReactElement {
 function NotFound(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <p className="text-cream-500 dark:text-cream-400">Backtest not found</p>
+      <p className="text-stone-500 dark:text-night-300">Backtest not found</p>
       <Link href="/backtest" className="mt-4 text-blue-600 dark:text-blue-400 hover:underline">
         Back to backtests
       </Link>

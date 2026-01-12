@@ -16,20 +16,20 @@ export function CitationCard({ citation }: CitationCardProps): React.ReactElemen
             href={citation.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-cream-900 dark:text-cream-100 hover:text-cream-600 dark:hover:text-cream-300"
+            className="text-sm font-medium text-stone-900 dark:text-night-50 hover:text-stone-600 dark:text-night-200 dark:hover:text-night-200"
           >
             {citation.title}
           </a>
-          <div className="text-xs text-cream-500 dark:text-cream-400 mt-0.5">
+          <div className="text-xs text-stone-500 dark:text-night-300 mt-0.5">
             {citation.source} &bull; {format(new Date(citation.fetchedAt), "MMM d, yyyy")}
           </div>
         </div>
-        <div className="text-xs text-cream-400 dark:text-cream-500">
+        <div className="text-xs text-stone-400 dark:text-night-400">
           {Math.round(citation.relevanceScore * 100)}% relevant
         </div>
       </div>
       {citation.snippet && (
-        <p className="mt-2 text-xs text-cream-600 dark:text-cream-400 line-clamp-2">
+        <p className="mt-2 text-xs text-stone-600 dark:text-night-200 dark:text-night-400 line-clamp-2">
           &ldquo;{citation.snippet}&rdquo;
         </p>
       )}

@@ -39,7 +39,7 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
 
   return (
     <tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
-      <td className="px-4 py-3 font-medium text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
         <div className="flex items-center gap-2">
           <button type="button" onClick={handleClick} className="hover:text-blue-600 text-left">
             {contractDisplay}
@@ -56,12 +56,12 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
         </div>
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         {position.quantity > 0 ? "+" : ""}
         {position.quantity}
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         ${position.avgCost.toFixed(2)}
       </td>
 
@@ -70,7 +70,7 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
           value={position.livePrice}
           format="currency"
           decimals={2}
-          className="font-mono text-cream-900 dark:text-cream-100"
+          className="font-mono text-stone-900 dark:text-night-50"
           animationThreshold={0.01}
         />
       </td>
@@ -94,16 +94,16 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
         </div>
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         {position.greeks.delta >= 0 ? "+" : ""}
         {position.greeks.delta.toFixed(2)}
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-500 dark:text-cream-400">
+      <td className="px-4 py-3 text-right font-mono text-stone-500 dark:text-night-300">
         ${position.greeks.theta.toFixed(0)}/day
       </td>
 
-      <td className="px-4 py-3 text-right text-cream-500 dark:text-cream-400">{position.dte}d</td>
+      <td className="px-4 py-3 text-right text-stone-500 dark:text-night-300">{position.dte}d</td>
     </tr>
   );
 });

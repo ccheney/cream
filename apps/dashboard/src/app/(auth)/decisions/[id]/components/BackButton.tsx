@@ -9,7 +9,7 @@ export function BackButton({ onClick }: BackButtonProps): React.ReactElement {
     <button
       type="button"
       onClick={onClick}
-      className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+      className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
       aria-label="Go back"
     >
       <svg

@@ -63,7 +63,7 @@ export default function AgentsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Agent Network</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Agent Network</h1>
         <div className="flex items-center gap-4">
           {currentCycleId && (
             <span className="text-xs font-mono text-stone-400 dark:text-stone-500">
@@ -147,18 +147,18 @@ export default function AgentsPage() {
       {/* Historical Outputs Section */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Historical Outputs
           </h2>
           {selectedAgent && (
-            <span className="text-sm text-cream-500 dark:text-cream-400">
+            <span className="text-sm text-stone-500 dark:text-night-300">
               Showing outputs for {AGENT_NAMES[selectedAgent] ?? selectedAgent}
             </span>
           )}
         </div>
         <div className="p-4 max-h-96 overflow-auto">
           {!selectedAgent ? (
-            <p className="text-cream-500 dark:text-cream-400">
+            <p className="text-stone-500 dark:text-night-300">
               Select an agent to view their historical outputs
             </p>
           ) : outputsLoading ? (
@@ -184,16 +184,16 @@ export default function AgentsPage() {
                     >
                       {output.vote}
                     </span>
-                    <span className="text-xs text-cream-500 dark:text-cream-400">
+                    <span className="text-xs text-stone-500 dark:text-night-300">
                       {formatDistanceToNow(new Date(output.createdAt), {
                         addSuffix: true,
                       })}
                     </span>
                   </div>
-                  <p className="text-sm text-cream-700 dark:text-cream-300 whitespace-pre-wrap">
+                  <p className="text-sm text-stone-700 dark:text-night-100 whitespace-pre-wrap">
                     {output.reasoning}
                   </p>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-cream-500 dark:text-cream-400">
+                  <div className="mt-2 flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
                     <span>Confidence: {(output.confidence * 100).toFixed(0)}%</span>
                     <span>Processing: {output.processingTimeMs}ms</span>
                   </div>
@@ -201,7 +201,7 @@ export default function AgentsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-cream-500 dark:text-cream-400">No outputs for this agent yet</p>
+            <p className="text-stone-500 dark:text-night-300">No outputs for this agent yet</p>
           )}
         </div>
       </div>

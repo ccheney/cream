@@ -102,7 +102,7 @@ export default function ConfigPromotePage() {
   if (!draftConfig || !activeConfig) {
     return (
       <div className="text-center py-12">
-        <p className="text-cream-500 dark:text-cream-400">
+        <p className="text-stone-500 dark:text-night-300">
           Configuration not available. Please ensure the system is properly initialized.
         </p>
       </div>
@@ -116,7 +116,7 @@ export default function ConfigPromotePage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
             aria-label="Go back"
           >
             <svg
@@ -134,10 +134,10 @@ export default function ConfigPromotePage() {
             </svg>
           </button>
           <div>
-            <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
+            <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
               Promote Configuration
             </h1>
-            <p className="text-sm text-cream-500 dark:text-cream-400">
+            <p className="text-sm text-stone-500 dark:text-night-300">
               Test draft config in PAPER, then promote to LIVE
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function ConfigPromotePage() {
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium">
             1
           </span>
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Review Draft Changes
           </h2>
         </div>
@@ -167,7 +167,7 @@ export default function ConfigPromotePage() {
             type="button"
             onClick={handleValidate}
             disabled={validateDraft.isPending}
-            className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 dark:text-night-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 disabled:opacity-50"
           >
             {validateDraft.isPending ? "Validating..." : "Validate Config"}
           </button>
@@ -224,17 +224,17 @@ export default function ConfigPromotePage() {
             className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
               canPromoteToPaper
                 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                : "bg-cream-100 dark:bg-night-700 text-cream-400 dark:text-cream-500"
+                : "bg-cream-100 dark:bg-night-700 text-stone-400 dark:text-night-400"
             }`}
           >
             2
           </span>
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Test in PAPER Mode
           </h2>
         </div>
 
-        <p className="text-sm text-cream-500 dark:text-cream-400 mb-4">
+        <p className="text-sm text-stone-500 dark:text-night-300 mb-4">
           Run a trading cycle with draft config to validate behavior before promoting.
         </p>
 
@@ -250,10 +250,12 @@ export default function ConfigPromotePage() {
         {cycleProgress && (
           <div className="mt-4 p-4 border border-cream-200 dark:border-night-700 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
+              <span className="text-sm font-medium text-stone-900 dark:text-night-50">
                 Phase: {cycleProgress.phase}
               </span>
-              <span className="text-sm text-cream-500">{Math.round(cycleProgress.progress)}%</span>
+              <span className="text-sm text-stone-500 dark:text-night-300">
+                {Math.round(cycleProgress.progress)}%
+              </span>
             </div>
             <div className="w-full bg-cream-200 dark:bg-night-600 rounded-full h-2">
               <div
@@ -261,7 +263,9 @@ export default function ConfigPromotePage() {
                 style={{ width: `${Math.min(cycleProgress.progress, 100)}%` }}
               />
             </div>
-            {currentStep && <p className="mt-2 text-xs text-cream-500">{currentStep}</p>}
+            {currentStep && (
+              <p className="mt-2 text-xs text-stone-500 dark:text-night-300">{currentStep}</p>
+            )}
           </div>
         )}
 
@@ -274,12 +278,12 @@ export default function ConfigPromotePage() {
             className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
               canPromoteToLive
                 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                : "bg-cream-100 dark:bg-night-700 text-cream-400 dark:text-cream-500"
+                : "bg-cream-100 dark:bg-night-700 text-stone-400 dark:text-night-400"
             }`}
           >
             3
           </span>
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Promote to Environment
           </h2>
         </div>
@@ -305,13 +309,13 @@ export default function ConfigPromotePage() {
         </div>
 
         {!canPromoteToPaper && (
-          <p className="mt-4 text-sm text-cream-500 dark:text-cream-400">
+          <p className="mt-4 text-sm text-stone-500 dark:text-night-300">
             Validate the configuration first to enable promotion.
           </p>
         )}
 
         {canPromoteToPaper && !canPromoteToLive && (
-          <p className="mt-4 text-sm text-cream-500 dark:text-cream-400">
+          <p className="mt-4 text-sm text-stone-500 dark:text-night-300">
             Run and pass a paper test before promoting to LIVE.
           </p>
         )}
@@ -320,10 +324,10 @@ export default function ConfigPromotePage() {
       {showLiveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-night-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100 mb-2">
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50 mb-2">
               Confirm LIVE Promotion
             </h3>
-            <p className="text-cream-600 dark:text-cream-400 mb-6">
+            <p className="text-stone-600 dark:text-night-200 dark:text-night-400 mb-6">
               This will immediately affect production trading. All active positions and pending
               orders will be managed with the new configuration. Are you sure you want to proceed?
             </p>
@@ -331,7 +335,7 @@ export default function ConfigPromotePage() {
               <button
                 type="button"
                 onClick={() => setShowLiveConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
+                className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 dark:text-night-200 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
               >
                 Cancel
               </button>
@@ -398,8 +402,8 @@ function TestResultDisplay({ result }: { result: CycleResult }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs text-cream-500 dark:text-cream-400">{label}</div>
-      <div className="text-lg font-semibold text-cream-900 dark:text-cream-100">{value}</div>
+      <div className="text-xs text-stone-500 dark:text-night-300">{label}</div>
+      <div className="text-lg font-semibold text-stone-900 dark:text-night-50">{value}</div>
     </div>
   );
 }

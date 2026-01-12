@@ -126,7 +126,7 @@ export const SIDE_CONFIG = {
     bgHighlight: "bg-red-50 dark:bg-red-900/20",
   },
   UNKNOWN: {
-    color: "text-cream-500 dark:text-cream-400",
+    color: "text-stone-500 dark:text-night-300",
     icon: "◐",
     bgHighlight: "bg-cream-50 dark:bg-cream-900/20",
   },

@@ -24,7 +24,7 @@ const ENV_COLORS = {
 const STATUS_COLORS = {
   ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   PAUSED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  STOPPED: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400",
+  STOPPED: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400",
 } as const;
 
 export function SystemStatusBanner({
@@ -69,7 +69,7 @@ export function SystemStatusBanner({
         </Tooltip>
       </div>
       {status?.lastCycleTime && (
-        <span className="text-sm text-cream-500 dark:text-cream-400">
+        <span className="text-sm text-stone-500 dark:text-night-300">
           Last cycle: {formatDistanceToNow(new Date(status.lastCycleTime), { addSuffix: true })}
         </span>
       )}

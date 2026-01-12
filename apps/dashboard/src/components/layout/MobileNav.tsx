@@ -58,10 +58,12 @@ const NavItem = memo(function NavItem({ item, isActive }: NavItemProps) {
     <Link
       href={item.href as never}
       className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-colors ${
-        isActive ? "text-cream-900 dark:text-cream-100" : "text-cream-500 dark:text-cream-400"
+        isActive ? "text-stone-900 dark:text-night-50" : "text-stone-500 dark:text-night-300"
       }`}
     >
-      <Icon className={`w-5 h-5 ${isActive ? "text-cream-700 dark:text-cream-200" : ""}`} />
+      <Icon
+        className={`w-5 h-5 ${isActive ? "text-stone-700 dark:text-night-100 dark:text-night-200" : ""}`}
+      />
       <span className="text-xs font-medium">{item.label}</span>
     </Link>
   );
@@ -103,13 +105,13 @@ export const MobileNav = memo(function MobileNav({ onMoreClick, className = "" }
         type="button"
         onClick={onMoreClick}
         className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-colors ${
-          isMoreActive ? "text-cream-900 dark:text-cream-100" : "text-cream-500 dark:text-cream-400"
+          isMoreActive ? "text-stone-900 dark:text-night-50" : "text-stone-500 dark:text-night-300"
         }`}
         aria-label="More navigation options"
         aria-expanded="false"
       >
         <MoreHorizontal
-          className={`w-5 h-5 ${isMoreActive ? "text-cream-700 dark:text-cream-200" : ""}`}
+          className={`w-5 h-5 ${isMoreActive ? "text-stone-700 dark:text-night-100 dark:text-night-200" : ""}`}
         />
         <span className="text-xs font-medium">More</span>
       </button>

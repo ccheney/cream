@@ -61,7 +61,7 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white dark:bg-night-800 rounded-lg shadow-lg p-8 border border-cream-200 dark:border-night-700">
-          <h1 className="text-2xl font-semibold text-center text-cream-900 dark:text-cream-100 mb-6">
+          <h1 className="text-2xl font-semibold text-center text-stone-900 dark:text-night-50 mb-6">
             Sign In
           </h1>
 

@@ -64,7 +64,7 @@ export default function ConfigHistoryPage() {
     return (
       <div className="text-center py-12">
         <p className="text-red-600 dark:text-red-400">Failed to load configuration history</p>
-        <p className="text-sm text-cream-500 dark:text-cream-400 mt-2">
+        <p className="text-sm text-stone-500 dark:text-night-300 mt-2">
           {error instanceof Error ? error.message : "Unknown error"}
         </p>
       </div>
@@ -76,9 +76,9 @@ export default function ConfigHistoryPage() {
       <div className="space-y-6">
         <PageHeader onBack={() => router.back()} />
         <div className="text-center py-12 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-          <HistoryIcon className="w-12 h-12 text-cream-300 dark:text-cream-600 mx-auto mb-4" />
-          <p className="text-cream-500 dark:text-cream-400">No configuration history available</p>
-          <p className="text-sm text-cream-400 dark:text-cream-500 mt-2">
+          <HistoryIcon className="w-12 h-12 text-cream-300 dark:text-stone-600 dark:text-night-200 mx-auto mb-4" />
+          <p className="text-stone-500 dark:text-night-300">No configuration history available</p>
+          <p className="text-sm text-stone-400 dark:text-night-400 mt-2">
             Configuration changes will appear here after you promote a draft.
           </p>
         </div>
@@ -127,7 +127,7 @@ export default function ConfigHistoryPage() {
                 immediately update the active configuration.
               </DialogDescription>
             </DialogHeader>
-            <div className="px-6 py-4 text-sm text-cream-600 dark:text-cream-400">
+            <div className="px-6 py-4 text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
               <p>
                 <strong>Version:</strong> {rollbackTarget.version}
               </p>
@@ -164,7 +164,7 @@ function PageHeader({ onBack }: { onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+        className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
         aria-label="Go back"
       >
         <svg
@@ -182,10 +182,10 @@ function PageHeader({ onBack }: { onBack: () => void }) {
         </svg>
       </button>
       <div>
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
           Configuration History
         </h1>
-        <p className="text-sm text-cream-500 dark:text-cream-400">
+        <p className="text-sm text-stone-500 dark:text-night-300">
           View past configurations and rollback if needed
         </p>
       </div>
@@ -226,7 +226,7 @@ function ConfigVersionCard({
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+              <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">
                 Version {version.version}
               </h3>
               {version.isActive && (
@@ -235,7 +235,7 @@ function ConfigVersionCard({
                 </span>
               )}
             </div>
-            <p className="text-sm text-cream-500 dark:text-cream-400 mt-1">
+            <p className="text-sm text-stone-500 dark:text-night-300 mt-1">
               {formatDate(version.createdAt)}
               {version.createdBy && ` by ${version.createdBy}`}
             </p>
@@ -246,7 +246,7 @@ function ConfigVersionCard({
               <button
                 type="button"
                 onClick={onCompare}
-                className="px-3 py-1.5 text-sm font-medium text-cream-600 dark:text-cream-300 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
+                className="px-3 py-1.5 text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-300 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
               >
                 Compare
               </button>
@@ -265,7 +265,7 @@ function ConfigVersionCard({
 
         {version.changedFields.length > 0 && (
           <div className="mt-3 pt-3 border-t border-cream-100 dark:border-night-700">
-            <p className="text-sm text-cream-600 dark:text-cream-400">
+            <p className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
               {version.changedFields.length} field{version.changedFields.length !== 1 ? "s" : ""}{" "}
               changed
             </p>
@@ -273,13 +273,13 @@ function ConfigVersionCard({
               {version.changedFields.slice(0, 5).map((field) => (
                 <span
                   key={field}
-                  className="px-2 py-0.5 text-xs bg-cream-100 dark:bg-night-700 text-cream-600 dark:text-cream-400 rounded"
+                  className="px-2 py-0.5 text-xs bg-cream-100 dark:bg-night-700 text-stone-600 dark:text-night-200 dark:text-night-400 rounded"
                 >
                   {field}
                 </span>
               ))}
               {version.changedFields.length > 5 && (
-                <span className="px-2 py-0.5 text-xs text-cream-500 dark:text-cream-500">
+                <span className="px-2 py-0.5 text-xs text-stone-500 dark:text-night-300 dark:text-stone-500 dark:text-night-300">
                   +{version.changedFields.length - 5} more
                 </span>
               )}
@@ -288,7 +288,7 @@ function ConfigVersionCard({
         )}
 
         {version.description && (
-          <p className="mt-2 text-sm text-cream-600 dark:text-cream-400 italic">
+          <p className="mt-2 text-sm text-stone-600 dark:text-night-200 dark:text-night-400 italic">
             {version.description}
           </p>
         )}

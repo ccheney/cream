@@ -41,7 +41,7 @@ export const PositionRow = memo(function PositionRow({
 
   return (
     <tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
-      <td className="px-4 py-3 font-medium text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
         <div className="flex items-center gap-2">
           <Link href={`/portfolio/positions/${position.id}`} className="hover:text-blue-600">
             {position.symbol}
@@ -70,11 +70,11 @@ export const PositionRow = memo(function PositionRow({
         </span>
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         {position.qty}
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         ${position.avgEntry.toFixed(2)}
       </td>
 
@@ -83,12 +83,12 @@ export const PositionRow = memo(function PositionRow({
           value={position.livePrice}
           format="currency"
           decimals={2}
-          className="font-mono text-cream-900 dark:text-cream-100"
+          className="font-mono text-stone-900 dark:text-night-50"
           animationThreshold={0.001}
         />
       </td>
 
-      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
         <AnimatedNumber
           value={position.liveMarketValue}
           format="currency"
@@ -115,7 +115,7 @@ export const PositionRow = memo(function PositionRow({
         {formatPct(position.liveUnrealizedPnlPct)}
       </td>
 
-      <td className="px-4 py-3 text-right text-cream-500 dark:text-cream-400">
+      <td className="px-4 py-3 text-right text-stone-500 dark:text-night-300">
         {position.daysHeld}d
       </td>
     </tr>

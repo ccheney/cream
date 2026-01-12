@@ -312,7 +312,7 @@ export const TickerStrip = memo(function TickerStrip({
           "
           aria-label="Scroll left"
         >
-          <span className="text-cream-400">‹</span>
+          <span className="text-stone-400 dark:text-night-400">‹</span>
         </button>
       )}
 
@@ -347,7 +347,7 @@ export const TickerStrip = memo(function TickerStrip({
             onClick={onSymbolAdd}
             className="
               flex items-center justify-center px-4 py-2 min-w-[60px]
-              text-cream-400 hover:text-cream-600 dark:hover:text-cream-300
+              text-stone-400 dark:text-night-400 hover:text-stone-600 dark:text-night-200 dark:hover:text-cream-300
               hover:bg-cream-50 dark:hover:bg-night-700
               transition-colors duration-150
             "
@@ -379,7 +379,7 @@ export const TickerStrip = memo(function TickerStrip({
           "
           aria-label="Scroll right"
         >
-          <span className="text-cream-400">›</span>
+          <span className="text-stone-400 dark:text-night-400">›</span>
         </button>
       )}
     </div>

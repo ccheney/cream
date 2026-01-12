@@ -115,11 +115,11 @@ function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
     >
       <div className="flex items-center gap-2 mb-2">
         <span className={`w-2 h-2 rounded-full ${getStatusIndicatorClass()}`} />
-        <span className="text-sm font-medium text-cream-900 dark:text-cream-100 truncate">
+        <span className="text-sm font-medium text-stone-900 dark:text-night-50 truncate">
           {agent.displayName}
         </span>
       </div>
-      <div className="text-xs text-cream-500 dark:text-cream-400">
+      <div className="text-xs text-stone-500 dark:text-night-300">
         {agent.outputsToday} outputs today
       </div>
     </button>
@@ -177,7 +177,7 @@ function AgentConfigPanel({
           onFormChange={onFormChange}
         />
       ) : (
-        <p className="text-cream-500 dark:text-cream-400">No configuration found</p>
+        <p className="text-stone-500 dark:text-night-300">No configuration found</p>
       )}
     </div>
   );
@@ -204,7 +204,7 @@ function AgentConfigHeader({
 }: AgentConfigHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+      <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">
         {displayName} Configuration
       </h3>
       {editing ? (
@@ -212,7 +212,7 @@ function AgentConfigHeader({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-300 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
+            className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600"
           >
             Cancel
           </button>
@@ -261,7 +261,7 @@ function AgentConfigForm({ config, editing, formData, onFormChange }: AgentConfi
       <div>
         <label
           htmlFor="agent-enabled-checkbox"
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+          className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-1"
         >
           Enabled
         </label>
@@ -274,10 +274,10 @@ function AgentConfigForm({ config, editing, formData, onFormChange }: AgentConfi
               onChange={(e) => onFormChange({ enabled: e.target.checked })}
               className="w-4 h-4 text-blue-600 bg-white dark:bg-night-700 border-cream-300 dark:border-night-600 rounded focus:ring-blue-500"
             />
-            <span className="text-sm text-cream-700 dark:text-cream-300">Agent is active</span>
+            <span className="text-sm text-stone-700 dark:text-night-100">Agent is active</span>
           </label>
         ) : (
-          <div className="px-3 py-2 text-cream-900 dark:text-cream-100">
+          <div className="px-3 py-2 text-stone-900 dark:text-night-50">
             {config.enabled ? "Yes" : "No"}
           </div>
         )}
@@ -286,7 +286,7 @@ function AgentConfigForm({ config, editing, formData, onFormChange }: AgentConfi
       <div>
         <label
           htmlFor="agent-system-prompt"
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+          className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-1"
         >
           System Prompt
         </label>
@@ -296,10 +296,10 @@ function AgentConfigForm({ config, editing, formData, onFormChange }: AgentConfi
             value={formData.systemPrompt || ""}
             onChange={(e) => onFormChange({ systemPrompt: e.target.value })}
             rows={4}
-            className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100 font-mono text-sm"
+            className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50 font-mono text-sm"
           />
         ) : (
-          <div className="px-3 py-2 text-cream-900 dark:text-cream-100 text-sm bg-cream-50 dark:bg-night-900 rounded-md whitespace-pre-wrap max-h-32 overflow-y-auto">
+          <div className="px-3 py-2 text-stone-900 dark:text-night-50 text-sm bg-cream-50 dark:bg-night-900 rounded-md whitespace-pre-wrap max-h-32 overflow-y-auto">
             {config.systemPrompt}
           </div>
         )}

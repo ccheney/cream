@@ -88,8 +88,8 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
       href={item.href as never}
       className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
         isActive
-          ? "bg-cream-100 dark:bg-night-700 text-cream-900 dark:text-cream-100 font-medium"
-          : "text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700"
+          ? "bg-cream-100 dark:bg-night-700 text-stone-900 dark:text-night-50 font-medium"
+          : "text-stone-700 dark:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700"
       }`}
       title={collapsed && !isHovered ? item.label : undefined}
     >
@@ -145,7 +145,7 @@ export const Sidebar = memo(function Sidebar({
           <button
             type="button"
             onClick={toggleSidebar}
-            className="p-1.5 rounded-md text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronLeft
@@ -165,7 +165,7 @@ export const Sidebar = memo(function Sidebar({
         <button
           type="button"
           onClick={toggleTheme}
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-stone-700 dark:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
           title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
           {resolvedTheme === "dark" ? (
@@ -185,14 +185,14 @@ export const Sidebar = memo(function Sidebar({
         <div className="p-4 border-t border-cream-200 dark:border-night-700">
           {!collapsed || isHovered ? (
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-cream-500 dark:text-cream-400 truncate flex-1">
+              <div className="text-xs text-stone-500 dark:text-night-300 truncate flex-1">
                 {userEmail}
               </div>
               {onSignOut && (
                 <button
                   type="button"
                   onClick={onSignOut}
-                  className="p-1.5 rounded-md text-cream-500 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-cream-700 dark:hover:text-cream-200 transition-colors"
+                  className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -201,7 +201,7 @@ export const Sidebar = memo(function Sidebar({
             </div>
           ) : (
             <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
-              <span className="text-xs font-medium text-cream-600 dark:text-cream-300">
+              <span className="text-xs font-medium text-stone-600 dark:text-night-200 dark:text-night-300">
                 {userEmail.charAt(0).toUpperCase()}
               </span>
             </div>

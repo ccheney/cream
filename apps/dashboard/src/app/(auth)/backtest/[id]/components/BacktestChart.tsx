@@ -40,11 +40,13 @@ function getReturnColorClass(returnPct: number): string {
 export function EquityCurveSection({ data }: EquityCurveSectionProps): React.ReactElement {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">Equity Curve</h2>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">Equity Curve</h2>
       {data.length > 0 ? (
         <EquityCurve data={data} height={300} />
       ) : (
-        <div className="h-64 flex items-center justify-center text-cream-400">No equity data</div>
+        <div className="h-64 flex items-center justify-center text-stone-400 dark:text-night-400">
+          No equity data
+        </div>
       )}
     </div>
   );
@@ -59,7 +61,7 @@ export function MonthlyReturnsHeatmap({
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
         Monthly Returns
       </h2>
       <div className="flex flex-wrap gap-2">
@@ -82,7 +84,7 @@ export function TradeLog({ trades }: TradeLogProps): React.ReactElement {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+        <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
           Trade Log ({trades?.length ?? 0} trades)
         </h2>
       </div>
@@ -90,7 +92,7 @@ export function TradeLog({ trades }: TradeLogProps): React.ReactElement {
         <div className="max-h-96 overflow-auto">
           <table className="w-full">
             <thead className="bg-cream-50 dark:bg-night-750 sticky top-0">
-              <tr className="text-left text-sm text-cream-500 dark:text-cream-400">
+              <tr className="text-left text-sm text-stone-500 dark:text-night-300">
                 <th className="px-4 py-2 font-medium">Time</th>
                 <th className="px-4 py-2 font-medium">Symbol</th>
                 <th className="px-4 py-2 font-medium">Action</th>
@@ -109,7 +111,7 @@ export function TradeLog({ trades }: TradeLogProps): React.ReactElement {
           </table>
         </div>
       ) : (
-        <div className="p-4 text-cream-400">No trades</div>
+        <div className="p-4 text-stone-400 dark:text-night-400">No trades</div>
       )}
     </div>
   );
@@ -135,10 +137,10 @@ function TradeRow({ trade }: TradeRowProps): React.ReactElement {
 
   return (
     <tr className="hover:bg-cream-50 dark:hover:bg-night-750">
-      <td className="px-4 py-2 text-sm text-cream-500 dark:text-cream-400">
+      <td className="px-4 py-2 text-sm text-stone-500 dark:text-night-300">
         {format(new Date(trade.timestamp), "MMM d, HH:mm")}
       </td>
-      <td className="px-4 py-2 font-medium text-cream-900 dark:text-cream-100">{trade.symbol}</td>
+      <td className="px-4 py-2 font-medium text-stone-900 dark:text-night-50">{trade.symbol}</td>
       <td className="px-4 py-2">
         <span className={`px-2 py-0.5 text-xs font-medium rounded ${actionClass}`}>
           {trade.action}
@@ -147,10 +149,10 @@ function TradeRow({ trade }: TradeRowProps): React.ReactElement {
       <td className="px-4 py-2">
         <span className={`px-2 py-0.5 text-xs font-medium rounded ${sideClass}`}>{trade.side}</span>
       </td>
-      <td className="px-4 py-2 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-2 text-right font-mono text-stone-900 dark:text-night-50">
         {trade.qty}
       </td>
-      <td className="px-4 py-2 text-right font-mono text-cream-900 dark:text-cream-100">
+      <td className="px-4 py-2 text-right font-mono text-stone-900 dark:text-night-50">
         ${trade.price.toFixed(2)}
       </td>
       <td className={`px-4 py-2 text-right font-mono ${pnlClass}`}>

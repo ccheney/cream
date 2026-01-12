@@ -84,7 +84,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({
         nextRetryIn !== null &&
         nextRetryIn !== undefined &&
         nextRetryIn > 0 && (
-          <span className={`${styles.text} text-cream-500 dark:text-cream-400`}>
+          <span className={`${styles.text} text-stone-500 dark:text-night-300`}>
             ({nextRetryIn}s)
           </span>
         )}

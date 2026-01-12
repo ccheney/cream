@@ -49,8 +49,8 @@ export function ThesisDetails({ thesis, history }: ThesisDetailsProps) {
 function CoreThesis({ text }: { text: string }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">Core Thesis</h2>
-      <p className="text-cream-700 dark:text-cream-300 leading-relaxed">{text}</p>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">Core Thesis</h2>
+      <p className="text-stone-700 dark:text-night-100 leading-relaxed">{text}</p>
     </div>
   );
 }
@@ -71,7 +71,7 @@ function KeyMetrics({ timeHorizon, confidence, targetPrice, stopPrice }: KeyMetr
         value={timeHorizon}
       />
       <MetricCard
-        icon={<Target className="w-5 h-5 text-cream-500" />}
+        icon={<Target className="w-5 h-5 text-stone-500 dark:text-night-300" />}
         label="Confidence"
         value={`${(confidence * 100).toFixed(0)}%`}
       />
@@ -96,11 +96,9 @@ function MetricCard({ icon, label, value, valueColor }: MetricCardProps) {
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <span className="text-sm text-cream-500 dark:text-cream-400">{label}</span>
+        <span className="text-sm text-stone-500 dark:text-night-300">{label}</span>
       </div>
-      <div
-        className={`text-xl font-semibold ${valueColor ?? "text-cream-900 dark:text-cream-100"}`}
-      >
+      <div className={`text-xl font-semibold ${valueColor ?? "text-stone-900 dark:text-night-50"}`}>
         {value}
       </div>
     </div>
@@ -110,12 +108,12 @@ function MetricCard({ icon, label, value, valueColor }: MetricCardProps) {
 function Catalysts({ items }: { items: string[] }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">Catalysts</h2>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">Catalysts</h2>
       <ul className="space-y-2">
         {items.map((catalyst, i) => (
           <li key={`catalyst-${catalyst.slice(0, 20)}-${i}`} className="flex items-start gap-2">
             <span className="mt-1.5 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-            <span className="text-cream-700 dark:text-cream-300">{catalyst}</span>
+            <span className="text-stone-700 dark:text-night-100">{catalyst}</span>
           </li>
         ))}
       </ul>
@@ -126,14 +124,14 @@ function Catalysts({ items }: { items: string[] }) {
 function InvalidationConditions({ items }: { items: string[] }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">
         Invalidation Conditions
       </h2>
       <ul className="space-y-2">
         {items.map((condition, i) => (
           <li key={`condition-${condition.slice(0, 20)}-${i}`} className="flex items-start gap-2">
             <span className="mt-1.5 w-2 h-2 rounded-full bg-red-500 shrink-0" />
-            <span className="text-cream-700 dark:text-cream-300">{condition}</span>
+            <span className="text-stone-700 dark:text-night-100">{condition}</span>
           </li>
         ))}
       </ul>
@@ -144,7 +142,7 @@ function InvalidationConditions({ items }: { items: string[] }) {
 function SupportingEvidenceSection({ items }: { items: SupportingEvidence[] }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">
         Supporting Evidence
       </h2>
       <div className="space-y-3">
@@ -164,11 +162,11 @@ function EvidenceCard({ evidence }: { evidence: SupportingEvidence }) {
     <div className="p-3 rounded-lg bg-cream-50 dark:bg-night-750 border border-cream-100 dark:border-night-700">
       <div className="flex items-center justify-between mb-1">
         <EvidenceTypeBadge type={evidence.type} />
-        <span className="text-xs text-cream-500">
+        <span className="text-xs text-stone-500 dark:text-night-300">
           Weight: {(evidence.weight * 100).toFixed(0)}%
         </span>
       </div>
-      <p className="text-sm text-cream-700 dark:text-cream-300">{evidence.summary}</p>
+      <p className="text-sm text-stone-700 dark:text-night-100">{evidence.summary}</p>
     </div>
   );
 }
@@ -183,7 +181,7 @@ function EvidenceTypeBadge({ type }: { type: string }) {
   } else if (type === "sentiment") {
     className += "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
   } else {
-    className += "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+    className += "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 
   return <span className={className}>{type}</span>;
@@ -201,7 +199,7 @@ interface HistoryEvent {
 function HistoryTimeline({ history }: { history: HistoryEvent[] }) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">
         History Timeline
       </h2>
       <div className="space-y-3">
@@ -215,18 +213,20 @@ function HistoryTimeline({ history }: { history: HistoryEvent[] }) {
             </div>
             <div className="flex-1 pb-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-cream-900 dark:text-cream-100">
+                <span className="font-medium text-stone-900 dark:text-night-50">
                   {event.field} changed
                 </span>
-                <span className="text-xs text-cream-500">
+                <span className="text-xs text-stone-500 dark:text-night-300">
                   {format(new Date(event.timestamp), "MMM d, HH:mm")}
                 </span>
               </div>
-              <p className="text-sm text-cream-600 dark:text-cream-400 mt-1">
+              <p className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mt-1">
                 {String(event.oldValue)} → {String(event.newValue)}
               </p>
               {event.reason && (
-                <p className="text-xs text-cream-500 mt-1">Reason: {event.reason}</p>
+                <p className="text-xs text-stone-500 dark:text-night-300 mt-1">
+                  Reason: {event.reason}
+                </p>
               )}
             </div>
           </div>
@@ -246,28 +246,28 @@ interface MetadataProps {
 function Metadata({ agentSource, createdAt, updatedAt, expiresAt }: MetadataProps) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">Details</h2>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">Details</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
-          <span className="text-cream-500 dark:text-cream-400">Agent Source</span>
-          <div className="font-medium text-cream-900 dark:text-cream-100">{agentSource}</div>
+          <span className="text-stone-500 dark:text-night-300">Agent Source</span>
+          <div className="font-medium text-stone-900 dark:text-night-50">{agentSource}</div>
         </div>
         <div>
-          <span className="text-cream-500 dark:text-cream-400">Created</span>
-          <div className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Created</span>
+          <div className="font-medium text-stone-900 dark:text-night-50">
             {format(new Date(createdAt), "MMM d, yyyy HH:mm")}
           </div>
         </div>
         <div>
-          <span className="text-cream-500 dark:text-cream-400">Updated</span>
-          <div className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Updated</span>
+          <div className="font-medium text-stone-900 dark:text-night-50">
             {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
           </div>
         </div>
         {expiresAt && (
           <div>
-            <span className="text-cream-500 dark:text-cream-400">Expires</span>
-            <div className="font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-stone-500 dark:text-night-300">Expires</span>
+            <div className="font-medium text-stone-900 dark:text-night-50">
               {format(new Date(expiresAt), "MMM d, yyyy")}
             </div>
           </div>

@@ -79,9 +79,7 @@ export function UniverseConfigForm({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-          Universe Settings
-        </h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Universe Settings</h3>
         <button
           type="button"
           onClick={handleSave}
@@ -161,12 +159,12 @@ function UniverseSourceSelector({ value, onChange }: UniverseSourceSelectorProps
   return (
     <fieldset>
       <div className="flex items-center gap-1.5 mb-2">
-        <legend className="block text-sm font-medium text-cream-700 dark:text-cream-300">
+        <legend className="block text-sm font-medium text-stone-700 dark:text-night-100">
           Universe Source
         </legend>
         <Tooltip>
           <TooltipTrigger>
-            <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
           </TooltipTrigger>
           <TooltipContent>
             How symbols are selected for trading: Static (manual list), Index (ETF constituents), or
@@ -185,7 +183,7 @@ function UniverseSourceSelector({ value, onChange }: UniverseSourceSelectorProps
               onChange={() => onChange(source)}
               className="w-4 h-4 text-blue-600"
             />
-            <span className="text-sm text-cream-700 dark:text-cream-300 capitalize">{source}</span>
+            <span className="text-sm text-stone-700 dark:text-night-100 capitalize">{source}</span>
           </label>
         ))}
       </div>
@@ -214,7 +212,7 @@ function StaticSymbolsInput({ value, onChange, onBlur }: StaticSymbolsInputProps
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder="AAPL, MSFT, GOOGL, ..."
-        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
       />
     </div>
   );
@@ -237,7 +235,7 @@ function IndexSourceSelector({ value, onChange }: IndexSourceSelectorProps) {
         id="index-source"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+        className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
       >
         <option value="SPY">S&P 500 (SPY)</option>
         <option value="QQQ">Nasdaq 100 (QQQ)</option>
@@ -263,13 +261,13 @@ function OptionableCheckbox({ checked, onChange }: OptionableCheckboxProps) {
           onChange={(e) => onChange(e.target.checked)}
           className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
         />
-        <span className="text-sm font-medium text-cream-700 dark:text-cream-300">
+        <span className="text-sm font-medium text-stone-700 dark:text-night-100">
           Optionable Symbols Only
         </span>
       </label>
       <Tooltip>
         <TooltipTrigger>
-          <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+          <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
         </TooltipTrigger>
         <TooltipContent>
           Only include stocks that have listed options contracts available for trading
@@ -311,7 +309,7 @@ function IncludeExcludeLists({
           onChange={(e) => onIncludeChange(e.target.value)}
           onBlur={onIncludeBlur}
           placeholder="AAPL, MSFT, ..."
-          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
         />
       </div>
       <div>
@@ -327,7 +325,7 @@ function IncludeExcludeLists({
           onChange={(e) => onExcludeChange(e.target.value)}
           onBlur={onExcludeBlur}
           placeholder="GME, AMC, ..."
-          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+          className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
         />
       </div>
     </div>

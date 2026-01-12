@@ -75,7 +75,7 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
 export const VALUE_COLORS: Record<EventColor, string> = {
   profit: "text-green-500",
   loss: "text-red-500",
-  neutral: "text-cream-600 dark:text-cream-400",
+  neutral: "text-stone-600 dark:text-night-200 dark:text-night-400",
   accent: "text-purple-500",
 };
 

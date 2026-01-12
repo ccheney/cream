@@ -150,12 +150,12 @@ export default function DecisionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Decisions</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Decisions</h1>
         <div className="flex items-center gap-2">
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value as DecisionAction | "all")}
-            className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+            className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
           >
             <option value="all">All Actions</option>
             <option value="BUY">BUY</option>
@@ -166,7 +166,7 @@ export default function DecisionsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as DecisionStatus | "all")}
-            className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100"
+            className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
           >
             <option value="all">All Status</option>
             <option value="PENDING">Pending</option>
@@ -183,7 +183,7 @@ export default function DecisionsPage() {
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+              <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
                 Decision Timeline
               </h2>
               {cycleGroups.length > 0 && (
@@ -191,7 +191,7 @@ export default function DecisionsPage() {
                   <button
                     type="button"
                     onClick={expandAll}
-                    className="text-xs text-cream-500 dark:text-cream-400 hover:text-cream-700 dark:hover:text-cream-200"
+                    className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
                   >
                     Expand all
                   </button>
@@ -199,7 +199,7 @@ export default function DecisionsPage() {
                   <button
                     type="button"
                     onClick={collapseAll}
-                    className="text-xs text-cream-500 dark:text-cream-400 hover:text-cream-700 dark:hover:text-cream-200"
+                    className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
                   >
                     Collapse all
                   </button>
@@ -207,7 +207,7 @@ export default function DecisionsPage() {
               )}
             </div>
             {decisions && (
-              <span className="text-sm text-cream-500 dark:text-cream-400">
+              <span className="text-sm text-stone-500 dark:text-night-300">
                 {decisions.total} decisions in {cycleGroups.length} cycles
               </span>
             )}
@@ -233,7 +233,9 @@ export default function DecisionsPage() {
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-cream-400">No decisions to display</div>
+          <div className="p-8 text-center text-stone-400 dark:text-night-400">
+            No decisions to display
+          </div>
         )}
       </div>
     </div>
@@ -279,7 +281,7 @@ const CycleGroupCard = forwardRef<
           <div className="flex items-center gap-2">
             <svg
               aria-hidden="true"
-              className={`w-4 h-4 text-cream-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              className={`w-4 h-4 text-stone-400 dark:text-night-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -287,10 +289,10 @@ const CycleGroupCard = forwardRef<
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
             <div>
-              <div className="font-medium text-cream-900 dark:text-cream-100">
+              <div className="font-medium text-stone-900 dark:text-night-50">
                 {format(new Date(group.timestamp), "MMM d, yyyy 'at' h:mm a")}
               </div>
-              <div className="text-sm text-cream-500 dark:text-cream-400">
+              <div className="text-sm text-stone-500 dark:text-night-300">
                 {formatDistanceToNow(new Date(group.timestamp), { addSuffix: true })}
               </div>
             </div>
@@ -311,7 +313,7 @@ const CycleGroupCard = forwardRef<
               </span>
             )}
             {actionCounts.HOLD > 0 && (
-              <span className="px-2 py-0.5 text-xs font-medium rounded bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400">
+              <span className="px-2 py-0.5 text-xs font-medium rounded bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400">
                 {actionCounts.HOLD} HOLD
               </span>
             )}
@@ -323,7 +325,7 @@ const CycleGroupCard = forwardRef<
           </div>
 
           {/* Status summary */}
-          <div className="text-sm text-cream-500 dark:text-cream-400">
+          <div className="text-sm text-stone-500 dark:text-night-300">
             {group.decisions.length} decision{group.decisions.length !== 1 ? "s" : ""}
             {statusCounts.EXECUTED > 0 && (
               <span className="ml-1 text-green-600 dark:text-green-400">
@@ -368,7 +370,7 @@ function DecisionCard({
   const actionColors = {
     BUY: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
     SELL: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-    HOLD: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400",
+    HOLD: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400",
     CLOSE: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   };
 
@@ -401,10 +403,10 @@ function DecisionCard({
             {decision.action}
           </span>
           <div>
-            <span className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+            <span className="text-lg font-semibold text-stone-900 dark:text-night-50">
               {decision.symbol}
             </span>
-            <span className="ml-2 text-sm text-cream-500 dark:text-cream-400">
+            <span className="ml-2 text-sm text-stone-500 dark:text-night-300">
               {decision.direction}
             </span>
           </div>
@@ -415,7 +417,7 @@ function DecisionCard({
           >
             {decision.status}
           </span>
-          <span className="text-sm text-cream-500 dark:text-cream-400">
+          <span className="text-sm text-stone-500 dark:text-night-300">
             {formatDistanceToNow(new Date(decision.createdAt), { addSuffix: true })}
           </span>
         </div>
@@ -423,34 +425,34 @@ function DecisionCard({
 
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
-          <span className="text-cream-500 dark:text-cream-400">Size</span>
-          <div className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Size</span>
+          <div className="font-medium text-stone-900 dark:text-night-50">
             {formatSize(decision.size, decision.sizeUnit)}
           </div>
         </div>
         {decision.entry && (
           <div>
-            <span className="text-cream-500 dark:text-cream-400">Entry</span>
-            <div className="font-medium text-cream-900 dark:text-cream-100">
+            <span className="text-stone-500 dark:text-night-300">Entry</span>
+            <div className="font-medium text-stone-900 dark:text-night-50">
               {formatPrice(decision.entry)}
             </div>
           </div>
         )}
         {decision.stop && (
           <div>
-            <span className="text-cream-500 dark:text-cream-400">Stop</span>
+            <span className="text-stone-500 dark:text-night-300">Stop</span>
             <div className="font-medium text-red-600">{formatPrice(decision.stop)}</div>
           </div>
         )}
         {decision.target && (
           <div>
-            <span className="text-cream-500 dark:text-cream-400">Target</span>
+            <span className="text-stone-500 dark:text-night-300">Target</span>
             <div className="font-medium text-green-600">{formatPrice(decision.target)}</div>
           </div>
         )}
         <div>
-          <span className="text-cream-500 dark:text-cream-400">Consensus</span>
-          <div className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Consensus</span>
+          <div className="font-medium text-stone-900 dark:text-night-50">
             {decision.consensusCount}/8 agents
           </div>
         </div>
@@ -458,7 +460,7 @@ function DecisionCard({
 
       {decision.pnl !== null && (
         <div className="mt-2 text-sm">
-          <span className="text-cream-500 dark:text-cream-400">P&L: </span>
+          <span className="text-stone-500 dark:text-night-300">P&L: </span>
           <span className={`font-medium ${decision.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
             {decision.pnl >= 0 ? "+" : ""}
             {formatPrice(decision.pnl)}

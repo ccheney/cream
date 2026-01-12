@@ -168,7 +168,7 @@ export function ErrorState({
       {!isCompact && (
         <h3
           className={`
-            font-semibold text-cream-900 dark:text-cream-100
+            font-semibold text-stone-900 dark:text-night-50
             ${isFull ? "text-xl" : "text-lg"}
             mb-2
           `}
@@ -180,7 +180,7 @@ export function ErrorState({
       {/* Message */}
       <p
         className={`
-          text-cream-600 dark:text-cream-400
+          text-stone-600 dark:text-night-200
           ${isCompact ? "text-sm" : "text-base"}
           max-w-md
         `}
@@ -190,12 +190,14 @@ export function ErrorState({
 
       {/* Hint */}
       {hint && !isCompact && (
-        <p className="text-sm text-cream-500 dark:text-cream-500 mt-2 max-w-md">{hint}</p>
+        <p className="text-sm text-stone-500 dark:text-night-300 dark:text-stone-500 dark:text-night-300 mt-2 max-w-md">
+          {hint}
+        </p>
       )}
 
       {/* Error Code */}
       {errorCode && (
-        <p className="text-xs text-cream-400 dark:text-cream-600 mt-2 font-mono">
+        <p className="text-xs text-stone-400 dark:text-night-400 dark:text-stone-600 dark:text-night-200 mt-2 font-mono">
           Error: {errorCode}
         </p>
       )}
@@ -214,7 +216,7 @@ export function ErrorState({
                 font-medium rounded-md transition-colors
                 ${
                   action.variant === "secondary"
-                    ? "text-cream-700 dark:text-cream-300 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600 border border-cream-200 dark:border-night-600"
+                    ? "text-stone-700 dark:text-night-100 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600 border border-cream-200 dark:border-night-600"
                     : "text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
                 }
               `}

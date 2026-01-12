@@ -82,7 +82,7 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
       <div
         className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6 ${className}`}
       >
-        <div className="text-center text-cream-500 dark:text-cream-400 py-8">
+        <div className="text-center text-stone-500 dark:text-night-300 py-8">
           No options positions to calculate Greeks
         </div>
       </div>
@@ -99,24 +99,24 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Portfolio Greeks
           </h2>
           {isStreaming && (
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-cream-500 dark:text-cream-400">Streaming</span>
+              <span className="text-xs text-stone-500 dark:text-night-300">Streaming</span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-cream-400 dark:text-cream-500">
+          <span className="text-xs text-stone-400 dark:text-night-400">
             {formatTimestamp(data.lastUpdated)} ({getTimeSinceUpdate(data.lastUpdated)})
           </span>
           <button
             type="button"
             onClick={refresh}
-            className="p-1.5 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
             aria-label="Refresh Greeks"
           >
             <RefreshCw className="w-4 h-4" />
@@ -157,7 +157,7 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
           <GreekCard type="rho" value={data.rhoTotal} isStreaming={isStreaming} />
         </div>
 
-        <div className="text-center text-xs text-cream-400 dark:text-cream-500">
+        <div className="text-center text-xs text-stone-400 dark:text-night-400">
           {data.positionCount} option position{data.positionCount !== 1 ? "s" : ""}
         </div>
       </div>
@@ -191,12 +191,12 @@ const CompactGreeks = memo(function CompactGreeks({
       {isStreaming && (
         <div className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] text-cream-500 dark:text-cream-400">Live</span>
+          <span className="text-[10px] text-stone-500 dark:text-night-300">Live</span>
         </div>
       )}
 
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Δ</span>
+        <span className="text-xs text-stone-500 dark:text-night-300 font-medium">Δ</span>
         <span
           className={`text-sm font-mono ${
             data.deltaNotional >= 0
@@ -209,14 +209,14 @@ const CompactGreeks = memo(function CompactGreeks({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Γ</span>
-        <span className="text-sm font-mono text-cream-700 dark:text-cream-300">
+        <span className="text-xs text-stone-500 dark:text-night-300 font-medium">Γ</span>
+        <span className="text-sm font-mono text-stone-700 dark:text-night-100">
           {formatValue(data.gammaTotal, "number")}
         </span>
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">Θ</span>
+        <span className="text-xs text-stone-500 dark:text-night-300 font-medium">Θ</span>
         <span
           className={`text-sm font-mono ${
             data.thetaDaily <= 0 ? "text-red-500" : "text-green-500"
@@ -227,8 +227,8 @@ const CompactGreeks = memo(function CompactGreeks({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-cream-500 dark:text-cream-400 font-medium">V</span>
-        <span className="text-sm font-mono text-cream-700 dark:text-cream-300">
+        <span className="text-xs text-stone-500 dark:text-night-300 font-medium">V</span>
+        <span className="text-sm font-mono text-stone-700 dark:text-night-100">
           {formatValue(data.vegaTotal, "currency")}
         </span>
       </div>

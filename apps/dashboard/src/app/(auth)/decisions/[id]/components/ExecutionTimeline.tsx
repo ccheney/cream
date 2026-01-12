@@ -10,11 +10,11 @@ export interface ExecutionTimelineProps {
 }
 
 const orderStatusColors: Record<string, string> = {
-  NEW: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-300",
+  NEW: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-300",
   ACCEPTED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   PARTIALLY_FILLED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
   FILLED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  CANCELED: "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-300",
+  CANCELED: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-300",
   REJECTED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
@@ -65,11 +65,11 @@ export function ExecutionTimeline({ execution }: ExecutionTimelineProps): React.
                 )}
               </div>
               <div>
-                <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
+                <span className="text-sm font-medium text-stone-900 dark:text-night-50">
                   {event.label}
                 </span>
                 {event.time && (
-                  <div className="text-xs text-cream-500 dark:text-cream-400">
+                  <div className="text-xs text-stone-500 dark:text-night-300">
                     {format(new Date(event.time), "MMM d, yyyy HH:mm:ss")}
                   </div>
                 )}
@@ -88,7 +88,7 @@ function ExecutionDetailsGrid({ execution }: ExecutionTimelineProps): React.Reac
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-cream-100 dark:border-night-700">
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Order Status</span>
+        <span className="text-xs text-stone-500 dark:text-night-300">Order Status</span>
         <div
           className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded ${orderStatusColors[execution.status]}`}
         >
@@ -96,19 +96,19 @@ function ExecutionDetailsGrid({ execution }: ExecutionTimelineProps): React.Reac
         </div>
       </div>
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Filled Qty</span>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">
+        <span className="text-xs text-stone-500 dark:text-night-300">Filled Qty</span>
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">
           {execution.filledQty}
         </div>
       </div>
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Avg Fill Price</span>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">
+        <span className="text-xs text-stone-500 dark:text-night-300">Avg Fill Price</span>
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">
           {formatPrice(execution.avgFillPrice)}
         </div>
       </div>
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Slippage</span>
+        <span className="text-xs text-stone-500 dark:text-night-300">Slippage</span>
         <div
           className={`text-sm font-medium ${
             execution.slippage > 0 ? "text-red-600" : "text-green-600"
@@ -119,20 +119,20 @@ function ExecutionDetailsGrid({ execution }: ExecutionTimelineProps): React.Reac
         </div>
       </div>
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Commissions</span>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">
+        <span className="text-xs text-stone-500 dark:text-night-300">Commissions</span>
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">
           {formatPrice(execution.commissions)}
         </div>
       </div>
       <div>
-        <span className="text-xs text-cream-500 dark:text-cream-400">Broker</span>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">
+        <span className="text-xs text-stone-500 dark:text-night-300">Broker</span>
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">
           {execution.broker}
         </div>
       </div>
       <div className="col-span-2">
-        <span className="text-xs text-cream-500 dark:text-cream-400">Broker Order ID</span>
-        <div className="text-sm font-mono text-cream-900 dark:text-cream-100 truncate">
+        <span className="text-xs text-stone-500 dark:text-night-300">Broker Order ID</span>
+        <div className="text-sm font-mono text-stone-900 dark:text-night-50 truncate">
           {execution.brokerOrderId}
         </div>
       </div>

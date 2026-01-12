@@ -27,7 +27,7 @@ export default function RiskPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Risk Exposure</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Risk Exposure</h1>
       </div>
 
       {/* Risk Metrics Summary */}
@@ -70,7 +70,7 @@ export default function RiskPage() {
 
       {/* Sector Exposure */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+        <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
           Sector Exposure
         </h2>
         {exposureLoading ? (
@@ -80,8 +80,8 @@ export default function RiskPage() {
             {Object.entries(exposure.sectorExposure).map(([sector, pct]) => (
               <div key={sector}>
                 <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-cream-700 dark:text-cream-300">{sector}</span>
-                  <span className="text-cream-500 dark:text-cream-400">{formatPct(pct)}</span>
+                  <span className="text-stone-700 dark:text-night-100">{sector}</span>
+                  <span className="text-stone-500 dark:text-night-300">{formatPct(pct)}</span>
                 </div>
                 <div className="h-2 bg-cream-100 dark:bg-night-700 rounded-full overflow-hidden">
                   <div
@@ -93,7 +93,7 @@ export default function RiskPage() {
             ))}
           </div>
         ) : (
-          <div className="h-48 flex items-center justify-center text-cream-400">
+          <div className="h-48 flex items-center justify-center text-stone-400 dark:text-night-400">
             No sector data available
           </div>
         )}
@@ -112,7 +112,7 @@ export default function RiskPage() {
       {/* Limit Utilization */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Limit Utilization
           </h2>
         </div>
@@ -127,10 +127,10 @@ export default function RiskPage() {
             {limits.map((limit) => (
               <div key={limit.name} className="p-4 flex items-center justify-between">
                 <div>
-                  <span className="font-medium text-cream-900 dark:text-cream-100">
+                  <span className="font-medium text-stone-900 dark:text-night-50">
                     {limit.name}
                   </span>
-                  <span className="ml-2 text-xs text-cream-500 dark:text-cream-400 uppercase">
+                  <span className="ml-2 text-xs text-stone-500 dark:text-night-300 uppercase">
                     {limit.category.replace("_", " ")}
                   </span>
                 </div>
@@ -165,7 +165,7 @@ export default function RiskPage() {
             ))}
           </div>
         ) : (
-          <div className="p-4 text-cream-400">No limit data</div>
+          <div className="p-4 text-stone-400 dark:text-night-400">No limit data</div>
         )}
       </div>
     </div>
@@ -216,9 +216,11 @@ function RiskMetricCard({
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <div className="text-sm text-cream-500 dark:text-cream-400">{label}</div>
+      <div className="text-sm text-stone-500 dark:text-night-300">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${statusColors[status]}`}>{value}</div>
-      {limit && <div className="mt-1 text-xs text-cream-400">Limit: {limit}</div>}
+      {limit && (
+        <div className="mt-1 text-xs text-stone-400 dark:text-night-400">Limit: {limit}</div>
+      )}
     </div>
   );
 }

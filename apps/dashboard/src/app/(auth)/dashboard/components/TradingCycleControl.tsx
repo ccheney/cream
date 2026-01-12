@@ -17,14 +17,14 @@ export function TradingCycleControl({
     <div className="mt-6 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Trading Cycle</h2>
-          <p className="text-sm text-cream-500 dark:text-cream-400">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">Trading Cycle</h2>
+          <p className="text-sm text-stone-500 dark:text-night-300">
             Manually trigger an OODA trading cycle
           </p>
         </div>
         <div className="flex items-center gap-4">
           {status?.environment === "PAPER" && (
-            <label className="flex items-center gap-2 text-sm text-cream-600 dark:text-cream-400">
+            <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
               <input
                 type="checkbox"
                 checked={useDraftConfig}

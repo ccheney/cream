@@ -32,7 +32,7 @@ function SystemControls({
           type="button"
           onClick={onPause}
           disabled={isPausing}
-          className="px-3 py-1.5 text-sm font-medium text-cream-700 bg-cream-100 hover:bg-cream-200 dark:text-cream-200 dark:bg-night-700 dark:hover:bg-night-600 rounded-md disabled:opacity-50"
+          className="px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-night-100 bg-cream-100 hover:bg-cream-200 dark:text-night-200 dark:bg-night-700 dark:hover:bg-night-600 rounded-md disabled:opacity-50"
         >
           Pause
         </button>
@@ -83,7 +83,7 @@ export function DashboardHeader({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Dashboard</h1>
         <Tooltip>
           <TooltipTrigger>
             <StreamingBadge isConnected={connected} isRefreshing={statusFetching} />
@@ -98,7 +98,7 @@ export function DashboardHeader({
       <div className="flex items-center gap-4">
         <Tooltip>
           <TooltipTrigger>
-            <span className="text-sm text-cream-600 dark:text-cream-400 cursor-help">
+            <span className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400 cursor-help">
               Next cycle in: {nextCycleDisplay}
             </span>
           </TooltipTrigger>

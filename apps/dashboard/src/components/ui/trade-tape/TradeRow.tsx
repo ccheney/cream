@@ -32,18 +32,18 @@ export const TradeRow = memo(function TradeRow({
       data-trade-id={trade.id}
     >
       {/* Timestamp */}
-      <span className="w-24 text-cream-500 dark:text-cream-400 tabular-nums">
+      <span className="w-24 text-stone-500 dark:text-night-300 tabular-nums">
         {formatTimestamp(trade.timestamp)}
       </span>
 
       {/* Price */}
-      <span className="w-20 text-cream-900 dark:text-cream-100 tabular-nums">
+      <span className="w-20 text-stone-900 dark:text-night-50 tabular-nums">
         {formatPrice(trade.price)}
       </span>
 
       {/* Size */}
       <span
-        className={`w-16 text-right tabular-nums ${isHighlighted ? "font-bold text-cream-900 dark:text-cream-100" : "text-cream-700 dark:text-cream-300"}`}
+        className={`w-16 text-right tabular-nums ${isHighlighted ? "font-bold text-stone-900 dark:text-night-50" : "text-stone-700 dark:text-night-100"}`}
       >
         {formatSize(trade.size)}
       </span>
@@ -55,7 +55,7 @@ export const TradeRow = memo(function TradeRow({
       </span>
 
       {/* Exchange */}
-      <span className="flex-1 text-cream-500 dark:text-cream-400 text-xs truncate">
+      <span className="flex-1 text-stone-500 dark:text-night-300 text-xs truncate">
         {getExchangeName(trade.exchange)}
       </span>
 

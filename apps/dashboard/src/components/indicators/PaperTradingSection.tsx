@@ -92,9 +92,9 @@ export function PaperTradingSection({ indicators, isLoading }: PaperTradingSecti
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Paper Trading</h3>
+          <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Paper Trading</h3>
         </div>
-        <div className="p-8 text-center text-cream-400 dark:text-cream-500">
+        <div className="p-8 text-center text-stone-400 dark:text-night-400">
           No indicators in paper trading
         </div>
       </div>
@@ -104,7 +104,7 @@ export function PaperTradingSection({ indicators, isLoading }: PaperTradingSecti
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Paper Trading</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Paper Trading</h3>
       </div>
 
       <div className="divide-y divide-cream-100 dark:divide-night-700">
@@ -117,15 +117,15 @@ export function PaperTradingSection({ indicators, isLoading }: PaperTradingSecti
               <div className="flex items-center justify-between mb-2">
                 <Link
                   href={`/indicators/${indicator.id}`}
-                  className="text-cream-900 dark:text-cream-100 font-medium hover:text-blue-600 dark:hover:text-blue-400"
+                  className="text-stone-900 dark:text-night-50 font-medium hover:text-blue-600 dark:hover:text-blue-400"
                 >
                   {indicator.name}
                 </Link>
                 <div className="flex items-center gap-4 text-sm">
-                  <span className="text-cream-500 dark:text-cream-400">
+                  <span className="text-stone-500 dark:text-night-300">
                     Day {indicator.daysTrading}/30
                   </span>
-                  <span className="text-cream-500 dark:text-cream-400">
+                  <span className="text-stone-500 dark:text-night-300">
                     IC: {indicator.currentIC !== null ? indicator.currentIC.toFixed(3) : "—"}
                   </span>
                 </div>
@@ -135,7 +135,7 @@ export function PaperTradingSection({ indicators, isLoading }: PaperTradingSecti
                 <ProgressBar progress={indicator.progress} status={status} />
                 <div className="flex items-center justify-between text-sm">
                   <span className={statusMessage.className}>{statusMessage.label}</span>
-                  <span className="text-cream-400 dark:text-cream-500">
+                  <span className="text-stone-400 dark:text-night-400">
                     {indicator.signalsRecorded} signals recorded
                   </span>
                 </div>

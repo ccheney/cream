@@ -104,7 +104,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="p-2 -ml-2 rounded-md text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700"
+              className="p-2 -ml-2 rounded-md text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700"
               aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
@@ -168,7 +168,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="p-2 -ml-2 rounded-md text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700"
+              className="p-2 -ml-2 rounded-md text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700"
               aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
@@ -272,7 +272,7 @@ function ConnectionBadge({ connected }: { connected: boolean; state: string }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-2 h-2 rounded-full bg-green-500" title="connected" />
-      <span className="text-xs text-cream-500 dark:text-cream-400 hidden sm:inline">Connected</span>
+      <span className="text-xs text-stone-500 dark:text-night-300 hidden sm:inline">Connected</span>
     </div>
   );
 }
@@ -282,7 +282,7 @@ function EnvBadge() {
   // Default to BACKTEST for local development
   const displayEnv = env && ["BACKTEST", "PAPER", "LIVE"].includes(env) ? env : "BACKTEST";
   return (
-    <span className="text-xs font-medium text-cream-600 dark:text-cream-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
+    <span className="text-xs font-medium text-stone-600 dark:text-night-200 dark:text-night-400 uppercase px-2 py-1 bg-cream-100 dark:bg-night-700 rounded">
       {displayEnv}
     </span>
   );

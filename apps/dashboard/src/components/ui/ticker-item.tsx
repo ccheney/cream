@@ -168,12 +168,14 @@ export const TickerItem = memo(function TickerItem({
 
       {/* Row 1: Symbol + Price + Change */}
       <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="text-xs font-semibold text-cream-700 dark:text-cream-200">{symbol}</span>
+        <span className="text-xs font-semibold text-stone-700 dark:text-night-100 dark:text-night-200">
+          {symbol}
+        </span>
         <AnimatedNumber
           value={price}
           format="currency"
           decimals={2}
-          className="text-sm font-bold font-mono text-cream-900 dark:text-cream-50"
+          className="text-sm font-bold font-mono text-stone-900 dark:text-night-50"
           animationThreshold={0.001}
         />
         <span
@@ -189,7 +191,7 @@ export const TickerItem = memo(function TickerItem({
 
       {/* Row 2: Bid × Ask */}
       {quote?.bid !== undefined && quote?.ask !== undefined && (
-        <div className="text-xs text-cream-500 dark:text-cream-400 font-mono whitespace-nowrap">
+        <div className="text-xs text-stone-500 dark:text-night-300 font-mono whitespace-nowrap">
           {quote.bid.toFixed(2)} × {quote.ask.toFixed(2)}
         </div>
       )}

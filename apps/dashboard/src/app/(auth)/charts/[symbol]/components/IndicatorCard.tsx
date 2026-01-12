@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<IndicatorStatus, string> = {
   oversold: "text-green-500",
   bullish: "text-green-500",
   bearish: "text-red-500",
-  neutral: "text-cream-900 dark:text-cream-100",
+  neutral: "text-stone-900 dark:text-night-50",
 };
 
 export function IndicatorCard({ name, value, status, tooltip, isLoading }: IndicatorCardProps) {
@@ -27,7 +27,7 @@ export function IndicatorCard({ name, value, status, tooltip, isLoading }: Indic
     );
   }
 
-  const nameElement = <span className="text-sm text-cream-500 dark:text-cream-400">{name}</span>;
+  const nameElement = <span className="text-sm text-stone-500 dark:text-night-300">{name}</span>;
 
   return (
     <div className="p-3 rounded-md bg-cream-50 dark:bg-night-700/50">

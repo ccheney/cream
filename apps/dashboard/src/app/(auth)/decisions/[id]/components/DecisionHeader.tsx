@@ -20,10 +20,10 @@ export function DecisionHeader({ decision, onBack }: DecisionHeaderProps): React
           >
             {decision.action}
           </span>
-          <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
+          <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
             {decision.symbol}
           </h1>
-          <span className="text-lg text-cream-500 dark:text-cream-400">{decision.direction}</span>
+          <span className="text-lg text-stone-500 dark:text-night-300">{decision.direction}</span>
         </div>
       </div>
       <span className={`px-3 py-1.5 text-sm font-medium rounded ${statusColors[decision.status]}`}>

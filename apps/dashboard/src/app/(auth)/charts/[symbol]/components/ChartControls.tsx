@@ -13,7 +13,7 @@ import { MA_OPTIONS } from "./types";
 export function ChartControls({ enabledMAs, onToggleMA }: ChartControlsProps) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <span className="text-xs text-cream-500 dark:text-cream-400 mr-1">Overlays:</span>
+      <span className="text-xs text-stone-500 dark:text-night-300 mr-1">Overlays:</span>
       {MA_OPTIONS.map((maId) => {
         const config = DEFAULT_MA_CONFIGS[maId];
         const isEnabled = enabledMAs.includes(maId);
@@ -27,7 +27,7 @@ export function ChartControls({ enabledMAs, onToggleMA }: ChartControlsProps) {
               ${
                 isEnabled
                   ? "text-white shadow-sm"
-                  : "bg-cream-100 dark:bg-night-700 text-cream-500 dark:text-cream-400 hover:text-cream-700 dark:hover:text-cream-200"
+                  : "bg-cream-100 dark:bg-night-700 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
               }
             `}
             style={isEnabled ? { backgroundColor: config?.color } : undefined}

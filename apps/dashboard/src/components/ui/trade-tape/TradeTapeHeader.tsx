@@ -17,10 +17,10 @@ export const TradeTapeHeader = memo(function TradeTapeHeader({
 }: TradeTapeHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between px-3 py-2 bg-cream-50 dark:bg-night-700 border-b border-cream-200 dark:border-night-600">
-      <span className="text-sm font-medium text-cream-700 dark:text-cream-300">
+      <span className="text-sm font-medium text-stone-700 dark:text-night-100">
         TRADE TAPE: {symbol}
       </span>
-      <div className="flex items-center gap-3 text-xs text-cream-500 dark:text-cream-400 font-mono">
+      <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-night-300 font-mono">
         <span>Time</span>
         <span>Price</span>
         <span>Size</span>

@@ -11,7 +11,7 @@ const OODA_DESCRIPTIONS: Record<string, string> = {
 };
 
 const STATUS_COLORS = {
-  idle: "text-cream-500 dark:text-cream-400",
+  idle: "text-stone-500 dark:text-night-300",
   active: "text-blue-600 dark:text-blue-400",
   complete: "text-green-600 dark:text-green-400",
 } as const;
@@ -60,7 +60,7 @@ export function OODAPhaseCard({
           {status === "complete" && (
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500" />
           )}
-          <div className="text-sm text-cream-500 dark:text-cream-400">{phase}</div>
+          <div className="text-sm text-stone-500 dark:text-night-300">{phase}</div>
           <div
             className={`mt-1 text-lg font-medium flex items-center gap-2 ${STATUS_COLORS[status]}`}
           >

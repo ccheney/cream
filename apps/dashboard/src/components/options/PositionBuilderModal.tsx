@@ -192,10 +192,10 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
         <DialogBody>
           <div className="mb-4 p-3 bg-cream-50 dark:bg-night-700 rounded-md">
-            <div className="text-sm font-medium text-cream-800 dark:text-cream-100">
+            <div className="text-sm font-medium text-stone-700 dark:text-night-50">
               {contractDescription}
             </div>
-            <div className="mt-1 flex items-center gap-4 text-xs text-cream-500 dark:text-cream-400">
+            <div className="mt-1 flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
               {contract.bid !== null && <span>Bid: ${contract.bid.toFixed(2)}</span>}
               {contract.ask !== null && <span>Ask: ${contract.ask.toFixed(2)}</span>}
               {contract.last !== null && <span>Last: ${contract.last.toFixed(2)}</span>}
@@ -204,7 +204,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for button group */}
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
+            <label className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2">
               Side
             </label>
             <div className="flex gap-2">
@@ -216,7 +216,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
                   ${
                     side === "buy"
                       ? "bg-green-600 text-white"
-                      : "bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 hover:bg-cream-200 dark:hover:bg-night-600"
+                      : "bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 hover:bg-cream-200 dark:hover:bg-night-600"
                   }
                 `}
                 data-testid="side-buy"
@@ -231,7 +231,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
                   ${
                     side === "sell"
                       ? "bg-red-600 text-white"
-                      : "bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 hover:bg-cream-200 dark:hover:bg-night-600"
+                      : "bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 hover:bg-cream-200 dark:hover:bg-night-600"
                   }
                 `}
                 data-testid="side-sell"
@@ -244,7 +244,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
           <div className="mb-4">
             <label
               htmlFor="quantity"
-              className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
+              className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2"
             >
               Quantity (Contracts)
             </label>
@@ -261,7 +261,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
+            <label className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2">
               Order Type
             </label>
             <Select
@@ -276,7 +276,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             <div className="mb-4">
               <label
                 htmlFor="limit-price"
-                className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
+                className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2"
               >
                 Limit Price
               </label>
@@ -296,7 +296,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
             <div className="mb-4">
               <label
                 htmlFor="stop-price"
-                className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2"
+                className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2"
               >
                 Stop Price
               </label>
@@ -314,7 +314,7 @@ export const PositionBuilderModal = memo(function PositionBuilderModal({
 
           <div className="mb-4">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label for custom Select */}
-            <label className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-2">
+            <label className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-2">
               Time in Force
             </label>
             <Select

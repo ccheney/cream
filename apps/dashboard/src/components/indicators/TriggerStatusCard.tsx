@@ -29,8 +29,8 @@ export function TriggerStatusCard({ status, isLoading, onTriggerCheck }: Trigger
   if (!status) {
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Trigger Status</h3>
-        <p className="text-cream-500 dark:text-cream-400 mt-2">Unable to load trigger status</p>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Trigger Status</h3>
+        <p className="text-stone-500 dark:text-night-300 mt-2">Unable to load trigger status</p>
       </div>
     );
   }
@@ -41,8 +41,8 @@ export function TriggerStatusCard({ status, isLoading, onTriggerCheck }: Trigger
   const getStatusIndicator = (healthy: boolean, label: string, value: string) => (
     <div className="flex items-center gap-2">
       <span className={`w-2 h-2 rounded-full ${healthy ? "bg-green-500" : "bg-amber-500"}`} />
-      <span className="text-cream-600 dark:text-cream-400">{label}:</span>
-      <span className="text-cream-900 dark:text-cream-100 font-medium">{value}</span>
+      <span className="text-stone-600 dark:text-night-200 dark:text-night-400">{label}:</span>
+      <span className="text-stone-900 dark:text-night-50 font-medium">{value}</span>
     </div>
   );
 
@@ -53,12 +53,12 @@ export function TriggerStatusCard({ status, isLoading, onTriggerCheck }: Trigger
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Trigger Status</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Trigger Status</h3>
         {onTriggerCheck && (
           <button
             type="button"
             onClick={onTriggerCheck}
-            className="px-3 py-1.5 text-sm font-medium bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
           >
             Check Now
           </button>
@@ -66,7 +66,7 @@ export function TriggerStatusCard({ status, isLoading, onTriggerCheck }: Trigger
       </div>
 
       <div className="p-4 space-y-3">
-        <div className="text-sm text-cream-500 dark:text-cream-400">
+        <div className="text-sm text-stone-500 dark:text-night-300">
           Last check: {new Date(lastCheck).toLocaleString()}
         </div>
 

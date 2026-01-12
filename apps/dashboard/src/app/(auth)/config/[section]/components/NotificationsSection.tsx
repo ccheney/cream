@@ -107,8 +107,8 @@ function CriticalOnlyRow({ settings, editing, formData, onFormChange }: Critical
   return (
     <div className="flex items-center justify-between py-3 border-b border-cream-100 dark:border-night-700">
       <div>
-        <div className="text-sm font-medium text-cream-900 dark:text-cream-100">Critical Only</div>
-        <div className="text-xs text-cream-500 dark:text-cream-400">
+        <div className="text-sm font-medium text-stone-900 dark:text-night-50">Critical Only</div>
+        <div className="text-xs text-stone-500 dark:text-night-300">
           Only send notifications for critical-level alerts
         </div>
       </div>
@@ -138,10 +138,10 @@ interface EmailAddressDisplayProps {
 function EmailAddressDisplay({ email }: EmailAddressDisplayProps) {
   return (
     <div className="py-3">
-      <div className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-1">
+      <div className="text-sm font-medium text-stone-900 dark:text-night-50 mb-1">
         Email Address
       </div>
-      <div className="text-sm text-cream-600 dark:text-cream-400">{email}</div>
+      <div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">{email}</div>
     </div>
   );
 }

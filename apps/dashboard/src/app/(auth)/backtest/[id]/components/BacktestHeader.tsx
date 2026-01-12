@@ -21,7 +21,7 @@ function getStatusClasses(status: BacktestStatus): string {
     case "failed":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
     default:
-      return "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+      return "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 }
 
@@ -41,13 +41,13 @@ export function BacktestHeader({
       <div className="flex items-center gap-4">
         <Link
           href="/backtest"
-          className="p-2 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+          className="p-2 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">{name}</h1>
-          <p className="text-sm text-cream-500 dark:text-cream-400">
+          <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">{name}</h1>
+          <p className="text-sm text-stone-500 dark:text-night-300">
             {startDate} to {endDate}
           </p>
         </div>
@@ -81,7 +81,7 @@ export function BacktestProgressSection({
 }: BacktestProgressSectionProps): React.ReactElement {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">
         Backtest Progress
       </h2>
       <BacktestProgressBar
@@ -92,7 +92,7 @@ export function BacktestProgressSection({
         size="lg"
       />
       {barsProcessed !== undefined && totalBars !== undefined && (
-        <p className="mt-2 text-sm text-cream-500 dark:text-cream-400">
+        <p className="mt-2 text-sm text-stone-500 dark:text-night-300">
           Processing bar {barsProcessed} of {totalBars}
         </p>
       )}
@@ -109,29 +109,29 @@ export function BacktestParameters({
 }: BacktestParametersProps): React.ReactElement {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-3">Parameters</h2>
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">Parameters</h2>
       <div className="grid grid-cols-4 gap-4">
         <div>
-          <div className="text-sm text-cream-500 dark:text-cream-400">Initial Capital</div>
-          <div className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+          <div className="text-sm text-stone-500 dark:text-night-300">Initial Capital</div>
+          <div className="text-lg font-semibold text-stone-900 dark:text-night-50">
             {formatCurrency(initialCapital)}
           </div>
         </div>
         <div>
-          <div className="text-sm text-cream-500 dark:text-cream-400">Period</div>
-          <div className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+          <div className="text-sm text-stone-500 dark:text-night-300">Period</div>
+          <div className="text-lg font-semibold text-stone-900 dark:text-night-50">
             {startDate} - {endDate}
           </div>
         </div>
         <div>
-          <div className="text-sm text-cream-500 dark:text-cream-400">Final NAV</div>
-          <div className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+          <div className="text-sm text-stone-500 dark:text-night-300">Final NAV</div>
+          <div className="text-lg font-semibold text-stone-900 dark:text-night-50">
             {finalNav !== null ? formatCurrency(finalNav) : "--"}
           </div>
         </div>
         <div>
-          <div className="text-sm text-cream-500 dark:text-cream-400">Total Trades</div>
-          <div className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+          <div className="text-sm text-stone-500 dark:text-night-300">Total Trades</div>
+          <div className="text-lg font-semibold text-stone-900 dark:text-night-50">
             {totalTrades ?? "--"}
           </div>
         </div>

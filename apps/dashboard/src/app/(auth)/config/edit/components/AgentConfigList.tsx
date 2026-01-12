@@ -54,9 +54,7 @@ export function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentCon
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-        Agent Configuration
-      </h3>
+      <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Agent Configuration</h3>
 
       <div className="space-y-2">
         {agentTypes.map((agentType) => {
@@ -118,7 +116,7 @@ function AgentConfigItem({
           <span
             className={`w-2 h-2 rounded-full ${agent.enabled ? "bg-emerald-500" : "bg-cream-300"}`}
           />
-          <span className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="font-medium text-stone-900 dark:text-night-50">
             {AGENT_DISPLAY_NAMES[agentType]}
           </span>
           {hasChanges && (
@@ -127,7 +125,7 @@ function AgentConfigItem({
         </div>
         <div className="flex items-center gap-2">
           <svg
-            className={`w-5 h-5 text-cream-400 transition-transform ${
+            className={`w-5 h-5 text-stone-400 dark:text-night-400 transition-transform ${
               isExpanded ? "rotate-180" : ""
             }`}
             fill="none"
@@ -150,13 +148,13 @@ function AgentConfigItem({
                 onChange={(e) => onChange("enabled", e.target.checked)}
                 className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-cream-700 dark:text-cream-300">
+              <span className="text-sm font-medium text-stone-700 dark:text-night-100">
                 Enabled
               </span>
             </label>
             <Tooltip>
               <TooltipTrigger>
-                <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+                <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
               </TooltipTrigger>
               <TooltipContent>
                 Whether this agent participates in trading consensus decisions
@@ -176,7 +174,7 @@ function AgentConfigItem({
               value={(formData?.systemPromptOverride as string) ?? agent.systemPromptOverride ?? ""}
               onChange={(e) => onChange("systemPromptOverride", e.target.value || null)}
               placeholder="Leave empty to use default prompt"
-              className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+              className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
             />
           </div>
 

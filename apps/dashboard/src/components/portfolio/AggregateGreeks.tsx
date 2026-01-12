@@ -89,12 +89,12 @@ export const AggregateGreeks = memo(function AggregateGreeks({
             role="status"
             aria-label="Live streaming"
           />
-          <span className={`${labelSize} text-cream-500 dark:text-cream-400`}>Live</span>
+          <span className={`${labelSize} text-stone-500 dark:text-night-300`}>Live</span>
         </div>
       )}
 
       <div className="flex items-center gap-1.5">
-        <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Δ</span>
+        <span className={`${labelSize} text-stone-500 dark:text-night-300 font-medium`}>Δ</span>
         <span className={`${textSize} font-mono ${deltaColor}`}>
           <AnimatedNumber
             value={greeks.deltaNotional}
@@ -107,22 +107,22 @@ export const AggregateGreeks = memo(function AggregateGreeks({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Γ</span>
-        <span className={`${textSize} font-mono text-cream-700 dark:text-cream-300`}>
+        <span className={`${labelSize} text-stone-500 dark:text-night-300 font-medium`}>Γ</span>
+        <span className={`${textSize} font-mono text-stone-700 dark:text-night-100`}>
           {formatGamma(greeks.totalGamma)}
         </span>
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>Θ</span>
+        <span className={`${labelSize} text-stone-500 dark:text-night-300 font-medium`}>Θ</span>
         <span className={`${textSize} font-mono ${thetaColor}`}>
           {formatTheta(greeks.totalTheta)}
         </span>
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className={`${labelSize} text-cream-500 dark:text-cream-400 font-medium`}>V</span>
-        <span className={`${textSize} font-mono text-cream-700 dark:text-cream-300`}>
+        <span className={`${labelSize} text-stone-500 dark:text-night-300 font-medium`}>V</span>
+        <span className={`${textSize} font-mono text-stone-700 dark:text-night-100`}>
           {formatVega(greeks.totalVega)}
         </span>
       </div>

@@ -47,9 +47,9 @@ export default function PortfolioPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Portfolio</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Portfolio</h1>
         {summary && (
-          <span className="text-sm text-cream-500 dark:text-cream-400">
+          <span className="text-sm text-stone-500 dark:text-night-300">
             Last updated: {new Date(summary.lastUpdated).toLocaleTimeString()}
           </span>
         )}
@@ -93,11 +93,11 @@ export default function PortfolioPage() {
       <QueryErrorBoundary title="Failed to load positions">
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
           <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+            <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
               Open Positions
             </h2>
             {positions && (
-              <span className="text-sm text-cream-500 dark:text-cream-400">
+              <span className="text-sm text-stone-500 dark:text-night-300">
                 {positions.length} positions
               </span>
             )}
@@ -116,7 +116,7 @@ export default function PortfolioPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-cream-50 dark:bg-night-750">
-                  <tr className="text-left text-sm text-cream-500 dark:text-cream-400">
+                  <tr className="text-left text-sm text-stone-500 dark:text-night-300">
                     <th className="px-4 py-3 font-medium">Symbol</th>
                     <th className="px-4 py-3 font-medium">
                       <TableHeaderTooltip
@@ -181,7 +181,7 @@ export default function PortfolioPage() {
                       key={position.id}
                       className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer"
                     >
-                      <td className="px-4 py-3 font-medium text-cream-900 dark:text-cream-100">
+                      <td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
                         <Link
                           href={`/portfolio/positions/${position.id}`}
                           className="hover:text-blue-600"
@@ -200,16 +200,16 @@ export default function PortfolioPage() {
                           {position.side}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
                         {position.qty}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
                         ${position.avgEntry.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
                         ${position.currentPrice.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-cream-900 dark:text-cream-100">
+                      <td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
                         {formatCurrency(position.marketValue)}
                       </td>
                       <td
@@ -227,7 +227,7 @@ export default function PortfolioPage() {
                       >
                         {formatPct(position.unrealizedPnlPct)}
                       </td>
-                      <td className="px-4 py-3 text-right text-cream-500 dark:text-cream-400">
+                      <td className="px-4 py-3 text-right text-stone-500 dark:text-night-300">
                         {position.daysHeld}d
                       </td>
                     </tr>
@@ -236,7 +236,7 @@ export default function PortfolioPage() {
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center text-cream-400">No positions</div>
+            <div className="p-8 text-center text-stone-400 dark:text-night-400">No positions</div>
           )}
         </div>
       </QueryErrorBoundary>
@@ -244,7 +244,7 @@ export default function PortfolioPage() {
       {/* Equity Curve Chart */}
       <QueryErrorBoundary title="Failed to load equity curve">
         <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
             Equity Curve (30 Days)
           </h2>
           {equityLoading ? (
@@ -270,7 +270,7 @@ export default function PortfolioPage() {
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-cream-400">
+            <div className="h-64 flex items-center justify-center text-stone-400 dark:text-night-400">
               No equity data available
             </div>
           )}
@@ -304,7 +304,7 @@ function MetricCard({
     );
   }
 
-  const labelElement = <span className="text-sm text-cream-500 dark:text-cream-400">{label}</span>;
+  const labelElement = <span className="text-sm text-stone-500 dark:text-night-300">{label}</span>;
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
@@ -319,12 +319,16 @@ function MetricCard({
       <div className="flex items-baseline gap-2">
         <div
           className={`mt-1 text-2xl font-semibold ${
-            valueColor ?? "text-cream-900 dark:text-cream-100"
+            valueColor ?? "text-stone-900 dark:text-night-50"
           }`}
         >
           {value}
         </div>
-        {change && <span className={`text-sm ${valueColor ?? "text-cream-500"}`}>{change}</span>}
+        {change && (
+          <span className={`text-sm ${valueColor ?? "text-stone-500 dark:text-night-300"}`}>
+            {change}
+          </span>
+        )}
       </div>
     </div>
   );

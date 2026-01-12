@@ -19,7 +19,7 @@ function formatGreek(value: number | null, decimals = 4): string {
 
 function getGreekColor(greek: string, value: number | null): string {
   if (value === null) {
-    return "text-cream-400";
+    return "text-stone-400 dark:text-night-400";
   }
 
   switch (greek) {
@@ -32,7 +32,7 @@ function getGreekColor(greek: string, value: number | null): string {
     case "vega":
       return "text-blue-600 dark:text-blue-400";
     default:
-      return "text-cream-700 dark:text-cream-300";
+      return "text-stone-700 dark:text-night-100";
   }
 }
 
@@ -65,32 +65,32 @@ export const GreeksTooltip = memo(function GreeksTooltip({
       style={style}
       role="tooltip"
     >
-      <div className="text-xs font-semibold text-cream-500 dark:text-cream-400 mb-2">Greeks</div>
+      <div className="text-xs font-semibold text-stone-500 dark:text-night-300 mb-2">Greeks</div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-cream-500 dark:text-cream-400">δ Delta</span>
+          <span className="text-xs text-stone-500 dark:text-night-300">δ Delta</span>
           <span className={`text-xs font-mono ${getGreekColor("delta", greeks.delta)}`}>
             {formatGreek(greeks.delta, 3)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-cream-500 dark:text-cream-400">γ Gamma</span>
+          <span className="text-xs text-stone-500 dark:text-night-300">γ Gamma</span>
           <span className={`text-xs font-mono ${getGreekColor("gamma", greeks.gamma)}`}>
             {formatGreek(greeks.gamma, 4)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-cream-500 dark:text-cream-400">θ Theta</span>
+          <span className="text-xs text-stone-500 dark:text-night-300">θ Theta</span>
           <span className={`text-xs font-mono ${getGreekColor("theta", greeks.theta)}`}>
             {formatGreek(greeks.theta, 4)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-cream-500 dark:text-cream-400">ν Vega</span>
+          <span className="text-xs text-stone-500 dark:text-night-300">ν Vega</span>
           <span className={`text-xs font-mono ${getGreekColor("vega", greeks.vega)}`}>
             {formatGreek(greeks.vega, 4)}
           </span>

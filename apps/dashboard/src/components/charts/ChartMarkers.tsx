@@ -117,7 +117,7 @@ function TradePopover({ trade, position, onClose }: TradePopoverProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono font-semibold text-cream-900 dark:text-cream-100">
+          <span className="font-mono font-semibold text-stone-900 dark:text-night-50">
             {trade.symbol}
           </span>
           <span
@@ -133,7 +133,7 @@ function TradePopover({ trade, position, onClose }: TradePopoverProps) {
         <button
           type="button"
           onClick={onClose}
-          className="p-1 text-cream-400 hover:text-cream-600 dark:hover:text-cream-300"
+          className="p-1 text-stone-400 dark:text-night-400 hover:text-stone-600 dark:text-night-200 dark:hover:text-night-200"
           aria-label="Close trade details"
         >
           <svg
@@ -156,24 +156,24 @@ function TradePopover({ trade, position, onClose }: TradePopoverProps) {
       {/* Trade details */}
       <div className="space-y-1.5 text-sm">
         <div className="flex justify-between">
-          <span className="text-cream-500 dark:text-cream-400">Quantity</span>
-          <span className="font-mono text-cream-900 dark:text-cream-100">{trade.qty}</span>
+          <span className="text-stone-500 dark:text-night-300">Quantity</span>
+          <span className="font-mono text-stone-900 dark:text-night-50">{trade.qty}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-cream-500 dark:text-cream-400">Price</span>
-          <span className="font-mono text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Price</span>
+          <span className="font-mono text-stone-900 dark:text-night-50">
             ${trade.price.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-cream-500 dark:text-cream-400">Value</span>
-          <span className="font-mono text-cream-900 dark:text-cream-100">
+          <span className="text-stone-500 dark:text-night-300">Value</span>
+          <span className="font-mono text-stone-900 dark:text-night-50">
             ${(trade.price * trade.qty).toFixed(2)}
           </span>
         </div>
         {trade.pnl !== null && (
           <div className="flex justify-between">
-            <span className="text-cream-500 dark:text-cream-400">P&L</span>
+            <span className="text-stone-500 dark:text-night-300">P&L</span>
             <span
               className={`font-mono font-medium ${
                 trade.pnl >= 0 ? "text-green-600" : "text-red-600"
@@ -186,7 +186,7 @@ function TradePopover({ trade, position, onClose }: TradePopoverProps) {
       </div>
 
       {/* Timestamp */}
-      <div className="mt-2 pt-2 border-t border-cream-100 dark:border-night-700 text-xs text-cream-400">
+      <div className="mt-2 pt-2 border-t border-cream-100 dark:border-night-700 text-xs text-stone-400 dark:text-night-400">
         {formatDistanceToNow(new Date(trade.timestamp), { addSuffix: true })}
       </div>
 
@@ -336,7 +336,7 @@ function ChartMarkersComponent({
                   borderStyle: "dashed",
                 }}
               />
-              <span className="text-cream-500 dark:text-cream-400">
+              <span className="text-stone-500 dark:text-night-300">
                 Stop ${stopLoss.toFixed(2)}
               </span>
             </div>
@@ -350,7 +350,7 @@ function ChartMarkersComponent({
                   borderStyle: "dashed",
                 }}
               />
-              <span className="text-cream-500 dark:text-cream-400">
+              <span className="text-stone-500 dark:text-night-300">
                 Target ${takeProfit.toFixed(2)}
               </span>
             </div>

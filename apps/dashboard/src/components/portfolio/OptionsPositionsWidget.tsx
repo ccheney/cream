@@ -26,7 +26,7 @@ const LoadingSkeleton = () => (
 );
 
 const EmptyState = () => (
-  <div className="text-center py-8 text-cream-500 dark:text-cream-400">
+  <div className="text-center py-8 text-stone-500 dark:text-night-300">
     <p>No options positions</p>
     <p className="text-sm mt-1">Options positions will appear here when opened</p>
   </div>
@@ -118,7 +118,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
       <div
         className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 ${className}`}
       >
-        <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100 mb-4">
+        <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50 mb-4">
           Options Positions
         </h3>
         <LoadingSkeleton />
@@ -131,7 +131,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
       <div
         className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 ${className}`}
       >
-        <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100 mb-4">
+        <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50 mb-4">
           Options Positions
         </h3>
         <div className="text-center py-4 text-red-500">Failed to load options positions</div>
@@ -144,7 +144,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
       <div
         className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4 ${className}`}
       >
-        <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100 mb-4">
+        <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50 mb-4">
           Options Positions
         </h3>
         <EmptyState />
@@ -159,7 +159,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
       <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50">
               Options Positions
             </h3>
             {isStreaming && (
@@ -172,7 +172,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
               />
             )}
           </div>
-          <span className="text-sm text-cream-500 dark:text-cream-400">
+          <span className="text-sm text-stone-500 dark:text-night-300">
             {positions.length} position{positions.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -181,7 +181,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-cream-200 dark:border-night-700 text-sm text-cream-500 dark:text-cream-400">
+            <tr className="border-b border-cream-200 dark:border-night-700 text-sm text-stone-500 dark:text-night-300">
               <th className="px-4 py-2 text-left font-medium">Contract</th>
               <th className="px-4 py-2 text-right font-medium">Qty</th>
               <th className="px-4 py-2 text-right font-medium">Cost</th>

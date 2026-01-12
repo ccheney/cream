@@ -22,12 +22,12 @@ export function ThesisHeader({ thesis, onRealize, onInvalidate }: ThesisHeaderPr
         <div className="flex items-center gap-4">
           <Link
             href="/theses"
-            className="p-2 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            className="p-2 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-mono font-semibold text-cream-900 dark:text-cream-100">
+            <span className="text-2xl font-mono font-semibold text-stone-900 dark:text-night-50">
               {thesis.symbol}
             </span>
             <DirectionIcon className={`w-6 h-6 ${directionColor}`} />
@@ -62,7 +62,7 @@ function DirectionBadge({ direction }: { direction: string }) {
   } else if (direction === "BEARISH") {
     className += "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
   } else {
-    className += "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+    className += "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 
   return <span className={className}>{direction}</span>;
@@ -78,7 +78,7 @@ function StatusBadge({ status }: { status: string }) {
   } else if (status === "INVALIDATED") {
     className += "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
   } else {
-    className += "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+    className += "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 
   return <span className={className}>{status}</span>;
@@ -99,12 +99,12 @@ function PnlSummary({ thesis }: PnlSummaryProps) {
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm text-cream-500 dark:text-cream-400">Current P&L</div>
+          <div className="text-sm text-stone-500 dark:text-night-300">Current P&L</div>
           <div className={`text-3xl font-semibold ${pnlColor}`}>{formatPct(thesis.pnlPct)}</div>
         </div>
         <div className="text-right">
-          <div className="text-sm text-cream-500 dark:text-cream-400">Entry → Current</div>
-          <div className="text-lg font-mono text-cream-900 dark:text-cream-100">
+          <div className="text-sm text-stone-500 dark:text-night-300">Entry → Current</div>
+          <div className="text-lg font-mono text-stone-900 dark:text-night-50">
             {formatPrice(thesis.entryPrice)} → {formatPrice(thesis.currentPrice)}
           </div>
         </div>

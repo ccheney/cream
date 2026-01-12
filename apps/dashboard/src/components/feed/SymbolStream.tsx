@@ -139,11 +139,11 @@ export function SymbolStream({
         <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold text-cream-900 dark:text-cream-100">
+              <span className="text-lg font-semibold text-stone-900 dark:text-night-50">
                 {symbol}
               </span>
               {latestQuote && (
-                <span className="text-lg font-mono text-cream-900 dark:text-cream-100">
+                <span className="text-lg font-mono text-stone-900 dark:text-night-50">
                   ${latestQuote.last?.toFixed(2) || "--"}
                 </span>
               )}
@@ -159,11 +159,11 @@ export function SymbolStream({
               )}
             </div>
             {latestQuote && (
-              <div className="text-sm text-cream-500 dark:text-cream-400">
+              <div className="text-sm text-stone-500 dark:text-night-300">
                 <span className="font-mono">
                   ${latestQuote.bid.toFixed(2)} × ${latestQuote.ask.toFixed(2)}
                 </span>
-                <span className="ml-2 text-cream-400 dark:text-cream-500">
+                <span className="ml-2 text-stone-400 dark:text-night-400">
                   Spread: ${(latestQuote.ask - latestQuote.bid).toFixed(2)}
                 </span>
               </div>
@@ -174,14 +174,14 @@ export function SymbolStream({
 
       {/* Event Title */}
       <div className="px-4 py-2 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <span className="text-sm font-medium text-cream-700 dark:text-cream-300">Event Stream</span>
+        <span className="text-sm font-medium text-stone-700 dark:text-night-100">Event Stream</span>
         <div className="flex items-center gap-1">
           <div
             className={`w-2 h-2 rounded-full ${
               connected ? "bg-green-500 animate-pulse" : "bg-red-500"
             }`}
           />
-          <span className="text-xs text-cream-500 dark:text-cream-400">
+          <span className="text-xs text-stone-500 dark:text-night-300">
             {connected ? "Live" : "Offline"}
           </span>
         </div>
@@ -220,7 +220,7 @@ export function SymbolStream({
             })}
           </div>
         ) : (
-          <div className="flex items-center justify-center h-32 text-sm text-cream-400">
+          <div className="flex items-center justify-center h-32 text-sm text-stone-400 dark:text-night-400">
             {connected ? `Waiting for ${symbol} events...` : "Not connected"}
           </div>
         )}
@@ -229,18 +229,18 @@ export function SymbolStream({
       {/* Statistics Footer */}
       {showStatistics && (
         <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750">
-          <div className="flex items-center gap-4 text-xs text-cream-500 dark:text-cream-400">
+          <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
             <span>
-              Trades: <strong className="text-cream-700 dark:text-cream-300">{stats.trades}</strong>
+              Trades: <strong className="text-stone-700 dark:text-night-100">{stats.trades}</strong>
             </span>
             <span>
               Quotes:{" "}
-              <strong className="text-cream-700 dark:text-cream-300">
+              <strong className="text-stone-700 dark:text-night-100">
                 {stats.quotes > 1000 ? `${(stats.quotes / 1000).toFixed(1)}K` : stats.quotes}
               </strong>
             </span>
             <span>
-              Orders: <strong className="text-cream-700 dark:text-cream-300">{stats.orders}</strong>
+              Orders: <strong className="text-stone-700 dark:text-night-100">{stats.orders}</strong>
             </span>
           </div>
         </div>
@@ -264,7 +264,9 @@ function SymbolEventRow({ event }: { event: NormalizedEvent }) {
   return (
     <div className="flex items-center gap-2 px-4 h-10 border-b border-cream-100 dark:border-night-700 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
       {/* Timestamp */}
-      <span className="text-xs font-mono text-cream-400 w-16 flex-shrink-0">{timeStr}</span>
+      <span className="text-xs font-mono text-stone-400 dark:text-night-400 w-16 flex-shrink-0">
+        {timeStr}
+      </span>
 
       {/* Icon & Type */}
       <span className={`text-sm w-4 flex-shrink-0 ${EVENT_TYPE_COLORS[event.type]}`}>

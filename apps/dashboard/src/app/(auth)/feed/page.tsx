@@ -196,8 +196,8 @@ export default function FeedPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-full">
+      <div className="shrink-0 flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Real-Time Feed</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
@@ -224,7 +224,7 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center gap-1 mr-2">
           <button
             type="button"
@@ -260,7 +260,7 @@ export default function FeedPage() {
         />
       </div>
 
-      <div className="flex-1 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 flex flex-col overflow-hidden">
         <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-shrink-0">
           <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Event Stream
@@ -279,7 +279,7 @@ export default function FeedPage() {
           </button>
         </div>
 
-        <div ref={parentRef} className="flex-1 overflow-auto">
+        <div ref={parentRef} className="flex-1 min-h-0 overflow-auto">
           {filteredEvents.length > 0 ? (
             <div
               style={{

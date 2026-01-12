@@ -123,7 +123,7 @@ const ChartLegend = memo(function ChartLegend({
       {showAtExpiration && (
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-0.5" style={{ backgroundColor: CHART_COLORS.profit }} />
-          <span className="text-cream-500 dark:text-cream-400">At Expiration</span>
+          <span className="text-stone-500 dark:text-night-300">At Expiration</span>
         </div>
       )}
       {showToday && (
@@ -132,21 +132,21 @@ const ChartLegend = memo(function ChartLegend({
             className="w-4 h-0.5"
             style={{ backgroundColor: CHART_COLORS.primary, borderStyle: "dashed" }}
           />
-          <span className="text-cream-500 dark:text-cream-400">Today (+{dte}d)</span>
+          <span className="text-stone-500 dark:text-night-300">Today (+{dte}d)</span>
         </div>
       )}
       <div className="flex items-center gap-1.5">
-        <span className="text-cream-500 dark:text-cream-400">Max Profit:</span>
+        <span className="text-stone-500 dark:text-night-300">Max Profit:</span>
         <span className="text-green-500 font-mono">{formatPnl(analysis.maxProfit)}</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-cream-500 dark:text-cream-400">Max Loss:</span>
+        <span className="text-stone-500 dark:text-night-300">Max Loss:</span>
         <span className="text-red-500 font-mono">{formatPnl(analysis.maxLoss)}</span>
       </div>
       {analysis.breakevens.length > 0 && (
         <div className="flex items-center gap-1.5">
-          <span className="text-cream-500 dark:text-cream-400">Break-even:</span>
-          <span className="text-cream-700 dark:text-cream-300 font-mono">
+          <span className="text-stone-500 dark:text-night-300">Break-even:</span>
+          <span className="text-stone-700 dark:text-night-100 font-mono">
             ${analysis.breakevens.map((b) => b.toFixed(2)).join(", $")}
           </span>
         </div>
@@ -203,7 +203,7 @@ function PLChartComponent({
   if (legs.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center text-cream-500 dark:text-cream-400 ${className}`}
+        className={`flex items-center justify-center text-stone-500 dark:text-night-300 ${className}`}
         style={{ height: `${height}px` }}
       >
         Add positions to see P/L chart

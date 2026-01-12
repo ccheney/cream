@@ -67,10 +67,10 @@ export function RetireButton({
 
           {/* Modal */}
           <div className="relative bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-cream-900 dark:text-cream-100 mb-2">
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-night-50 mb-2">
               Retire Indicator
             </h3>
-            <p className="text-cream-600 dark:text-cream-400 mb-4">
+            <p className="text-stone-600 dark:text-night-200 dark:text-night-400 mb-4">
               Are you sure you want to retire <strong>{indicatorName}</strong>? This action will
               remove it from production use.
             </p>
@@ -78,7 +78,7 @@ export function RetireButton({
             <div className="mb-4">
               <label
                 htmlFor="retire-reason"
-                className="block text-sm font-medium text-cream-700 dark:text-cream-300 mb-1"
+                className="block text-sm font-medium text-stone-700 dark:text-night-100 mb-1"
               >
                 Reason (optional)
               </label>
@@ -88,7 +88,7 @@ export function RetireButton({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g., IC decay below threshold, regime change..."
                 rows={3}
-                className="w-full px-3 py-2 text-sm border border-cream-300 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100 placeholder:text-cream-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 text-sm border border-cream-300 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50 placeholder:text-stone-400 dark:text-night-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
 
@@ -99,7 +99,7 @@ export function RetireButton({
                   setIsOpen(false);
                   setReason("");
                 }}
-                className="px-4 py-2 text-sm font-medium text-cream-700 dark:text-cream-300 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-stone-700 dark:text-night-100 bg-cream-100 dark:bg-night-700 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
               >
                 Cancel
               </button>

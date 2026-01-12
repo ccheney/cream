@@ -39,8 +39,8 @@ const GREEK_CONFIG: Record<GreekType, GreekConfig> = {
     name: "Gamma",
     unit: "per $1 move",
     format: (v) => `${v >= 0 ? "+" : ""}${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
-    colorPositive: "text-cream-700 dark:text-cream-200",
-    colorNegative: "text-cream-700 dark:text-cream-200",
+    colorPositive: "text-stone-700 dark:text-night-100 dark:text-night-200",
+    colorNegative: "text-stone-700 dark:text-night-100 dark:text-night-200",
   },
   theta: {
     letter: "Θ",
@@ -55,16 +55,16 @@ const GREEK_CONFIG: Record<GreekType, GreekConfig> = {
     name: "Vega",
     unit: "per 1% IV",
     format: (v) => `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
-    colorPositive: "text-cream-700 dark:text-cream-200",
-    colorNegative: "text-cream-700 dark:text-cream-200",
+    colorPositive: "text-stone-700 dark:text-night-100 dark:text-night-200",
+    colorNegative: "text-stone-700 dark:text-night-100 dark:text-night-200",
   },
   rho: {
     letter: "ρ",
     name: "Rho",
     unit: "per 1% rate",
     format: (v) => `$${Math.abs(v).toFixed(0)}`,
-    colorPositive: "text-cream-700 dark:text-cream-200",
-    colorNegative: "text-cream-700 dark:text-cream-200",
+    colorPositive: "text-stone-700 dark:text-night-100 dark:text-night-200",
+    colorNegative: "text-stone-700 dark:text-night-100 dark:text-night-200",
   },
 };
 
@@ -115,11 +115,13 @@ export const GreekCard = memo(function GreekCard({
         <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
       )}
 
-      <div className={`${sizes.letter} font-serif text-cream-300 dark:text-cream-600`}>
+      <div
+        className={`${sizes.letter} font-serif text-cream-300 dark:text-stone-600 dark:text-night-200`}
+      >
         {config.letter}
       </div>
 
-      <div className={`${sizes.label} text-cream-500 dark:text-cream-400 mt-1`}>{config.name}</div>
+      <div className={`${sizes.label} text-stone-500 dark:text-night-300 mt-1`}>{config.name}</div>
 
       <div className={`mt-2 ${sizes.value} font-mono font-semibold ${valueColor}`}>
         {type === "delta" || type === "vega" ? (
@@ -149,10 +151,10 @@ export const GreekCard = memo(function GreekCard({
         )}
       </div>
 
-      <div className={`${sizes.label} text-cream-400 dark:text-cream-500 mt-1`}>{config.unit}</div>
+      <div className={`${sizes.label} text-stone-400 dark:text-night-400 mt-1`}>{config.unit}</div>
 
       {limit !== undefined && (
-        <div className={`${sizes.label} text-cream-400 mt-2`}>
+        <div className={`${sizes.label} text-stone-400 dark:text-night-400 mt-2`}>
           Limit: {config.format(limit)}
           {limitUtilization && (
             <span

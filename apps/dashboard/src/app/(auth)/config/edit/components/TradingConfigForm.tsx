@@ -39,7 +39,7 @@ export function TradingConfigForm({ config, onSave, onChange, isSaving }: Tradin
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Trading Settings</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Trading Settings</h3>
         <button
           type="button"
           onClick={handleSave}
@@ -176,14 +176,16 @@ function GlobalModelSelector({ value, onChange }: GlobalModelSelectorProps) {
       <div className="flex items-center gap-1.5 mb-2">
         <label
           htmlFor="global-model"
-          className="block text-sm font-medium text-cream-700 dark:text-cream-300"
+          className="block text-sm font-medium text-stone-700 dark:text-night-100"
         >
           Global LLM Model
-          <span className="ml-2 text-cream-400 font-normal">(used by all agents)</span>
+          <span className="ml-2 text-stone-400 dark:text-night-400 font-normal">
+            (used by all agents)
+          </span>
         </label>
         <Tooltip>
           <TooltipTrigger>
-            <InfoIcon className="w-3.5 h-3.5 text-cream-400 dark:text-cream-500 cursor-help" />
+            <InfoIcon className="w-3.5 h-3.5 text-stone-400 dark:text-night-400 cursor-help" />
           </TooltipTrigger>
           <TooltipContent>
             The AI model powering all trading agents' reasoning and decision-making
@@ -194,12 +196,12 @@ function GlobalModelSelector({ value, onChange }: GlobalModelSelectorProps) {
         id="global-model"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full max-w-md px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+        className="w-full max-w-md px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
       >
         <option value="gemini-3-flash-preview">Gemini 3 Flash (faster)</option>
         <option value="gemini-3-pro-preview">Gemini 3 Pro (more capable)</option>
       </select>
-      <p className="mt-2 text-xs text-cream-500 dark:text-cream-400">
+      <p className="mt-2 text-xs text-stone-500 dark:text-night-300">
         All 8 trading agents will use this model. Claude Code indicators use a separate fixed model.
       </p>
     </div>

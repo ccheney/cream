@@ -66,11 +66,11 @@ interface SectionProps {
 function SourceSection({ universe, editing, formData, onFormChange }: SectionProps) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">Source</h3>
+      <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Source</h3>
       <div className="grid grid-cols-2 gap-4">
         <div>
           {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-          <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+          <label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
             Source Type
             {editing ? (
               <select
@@ -80,33 +80,33 @@ function SourceSection({ universe, editing, formData, onFormChange }: SectionPro
                     source: e.target.value as RuntimeUniverseConfig["source"],
                   })
                 }
-                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
               >
                 <option value="static">Static</option>
                 <option value="index">Index</option>
                 <option value="screener">Screener</option>
               </select>
             ) : (
-              <div className="text-cream-900 dark:text-cream-100 capitalize">{universe.source}</div>
+              <div className="text-stone-900 dark:text-night-50 capitalize">{universe.source}</div>
             )}
           </label>
         </div>
         {universe.source === "static" && (
           <div>
-            <div className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+            <div className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
               Static Symbols
             </div>
-            <div className="text-cream-900 dark:text-cream-100">
+            <div className="text-stone-900 dark:text-night-50">
               {universe.staticSymbols?.join(", ") || "None"}
             </div>
           </div>
         )}
         {universe.source === "index" && (
           <div>
-            <div className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+            <div className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
               Index Source
             </div>
-            <div className="text-cream-900 dark:text-cream-100">
+            <div className="text-stone-900 dark:text-night-50">
               {universe.indexSource || "None"}
             </div>
           </div>
@@ -119,11 +119,11 @@ function SourceSection({ universe, editing, formData, onFormChange }: SectionPro
 function FiltersSection({ universe, editing, formData, onFormChange }: SectionProps) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-3">Filters</h3>
+      <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Filters</h3>
       <div className="grid grid-cols-2 gap-4">
         <div>
           {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-          <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+          <label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
             Optionable Only
             {editing ? (
               <select
@@ -133,13 +133,13 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
                     optionableOnly: e.target.value === "true",
                   })
                 }
-                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
               >
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             ) : (
-              <div className="text-cream-900 dark:text-cream-100">
+              <div className="text-stone-900 dark:text-night-50">
                 {universe.optionableOnly ? "Yes" : "No"}
               </div>
             )}
@@ -147,7 +147,7 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
         </div>
         <div>
           {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-          <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+          <label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
             Min Volume
             {editing ? (
               <input
@@ -158,10 +158,10 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
                     minVolume: parseInt(e.target.value, 10) || null,
                   })
                 }
-                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
               />
             ) : (
-              <div className="text-cream-900 dark:text-cream-100">
+              <div className="text-stone-900 dark:text-night-50">
                 {universe.minVolume?.toLocaleString() ?? "Not set"}
               </div>
             )}
@@ -169,7 +169,7 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
         </div>
         <div>
           {/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-          <label className="block text-sm text-cream-600 dark:text-cream-400 mb-1">
+          <label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
             Min Market Cap
             {editing ? (
               <input
@@ -180,10 +180,10 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
                     minMarketCap: parseInt(e.target.value, 10) || null,
                   })
                 }
-                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-cream-900 dark:text-cream-100"
+                className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
               />
             ) : (
-              <div className="text-cream-900 dark:text-cream-100">
+              <div className="text-stone-900 dark:text-night-50">
                 {universe.minMarketCap
                   ? `$${(universe.minMarketCap / 1e9).toFixed(1)}B`
                   : "Not set"}
@@ -204,18 +204,18 @@ function IncludeExcludeLists({ universe }: IncludeExcludeListsProps) {
   return (
     <div className="grid grid-cols-2 gap-6">
       <div>
-        <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-2">
+        <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2">
           Always Include
         </h3>
-        <div className="text-sm text-cream-600 dark:text-cream-400">
+        <div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
           {universe.includeList.length > 0 ? universe.includeList.join(", ") : "None"}
         </div>
       </div>
       <div>
-        <h3 className="text-sm font-medium text-cream-900 dark:text-cream-100 mb-2">
+        <h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2">
           Always Exclude
         </h3>
-        <div className="text-sm text-cream-600 dark:text-cream-400">
+        <div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
           {universe.excludeList.length > 0 ? universe.excludeList.join(", ") : "None"}
         </div>
       </div>

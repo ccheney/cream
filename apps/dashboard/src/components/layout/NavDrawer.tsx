@@ -128,7 +128,7 @@ export const NavDrawer = memo(function NavDrawer({
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="p-2 rounded-md text-cream-500 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+            className="p-2 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
             aria-label="Close navigation menu"
           >
             <X className="w-5 h-5" />
@@ -148,8 +148,8 @@ export const NavDrawer = memo(function NavDrawer({
                 onClick={handleNavClick}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
                   active
-                    ? "bg-cream-100 dark:bg-night-700 text-cream-900 dark:text-cream-100 font-medium"
-                    : "text-cream-700 dark:text-cream-300 hover:bg-cream-100 dark:hover:bg-night-700"
+                    ? "bg-cream-100 dark:bg-night-700 text-stone-900 dark:text-night-50 font-medium"
+                    : "text-stone-700 dark:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700"
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -163,14 +163,14 @@ export const NavDrawer = memo(function NavDrawer({
         {userEmail && (
           <div className="p-4 border-t border-cream-200 dark:border-night-700">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-cream-500 dark:text-cream-400 truncate flex-1">
+              <div className="text-xs text-stone-500 dark:text-night-300 truncate flex-1">
                 {userEmail}
               </div>
               {onSignOut && (
                 <button
                   type="button"
                   onClick={onSignOut}
-                  className="p-1.5 rounded-md text-cream-500 dark:text-cream-400 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-cream-700 dark:hover:text-cream-200 transition-colors"
+                  className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />

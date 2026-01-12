@@ -48,12 +48,12 @@ function PageHeader({ section, onBack }: PageHeaderProps) {
       <button
         type="button"
         onClick={onBack}
-        className="p-2 text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+        className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
         aria-label="Go back"
       >
         <BackArrowIcon />
       </button>
-      <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100 capitalize">
+      <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50 capitalize">
         {section} Configuration
       </h1>
     </div>

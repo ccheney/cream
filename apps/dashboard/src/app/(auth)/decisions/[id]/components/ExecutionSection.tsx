@@ -14,7 +14,7 @@ export function ExecutionSection({ execution }: ExecutionSectionProps): React.Re
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
         Execution Timeline
       </h2>
       <ExecutionTimeline execution={execution} />

@@ -145,7 +145,7 @@ const JobRow = memo(function JobRow({ run }: JobRowProps) {
     <tr className="border-b border-cream-200 dark:border-night-700 hover:bg-cream-50 dark:hover:bg-night-800/50 transition-colors">
       {/* Job Type */}
       <td className="px-4 py-3">
-        <span className="text-sm font-medium text-cream-900 dark:text-cream-100">
+        <span className="text-sm font-medium text-stone-900 dark:text-night-50">
           {RUN_TYPE_LABELS[run.run_type]}
         </span>
       </td>
@@ -168,14 +168,14 @@ const JobRow = memo(function JobRow({ run }: JobRowProps) {
 
       {/* Started */}
       <td className="px-4 py-3">
-        <span className="text-sm font-mono text-cream-600 dark:text-cream-400">
+        <span className="text-sm font-mono text-stone-600 dark:text-night-200 dark:text-night-400">
           {formatTimestamp(run.started_at)}
         </span>
       </td>
 
       {/* Duration */}
       <td className="px-4 py-3">
-        <span className="text-sm font-mono text-cream-600 dark:text-cream-400">
+        <span className="text-sm font-mono text-stone-600 dark:text-night-200 dark:text-night-400">
           {formatDuration(run.started_at, run.completed_at)}
         </span>
       </td>
@@ -186,9 +186,9 @@ const JobRow = memo(function JobRow({ run }: JobRowProps) {
           <span className="text-green-600 dark:text-green-400 font-mono">
             {run.symbols_processed}
           </span>
-          <span className="text-cream-400">/</span>
+          <span className="text-stone-400 dark:text-night-400">/</span>
           <span
-            className={`font-mono ${run.symbols_failed > 0 ? "text-red-600 dark:text-red-400" : "text-cream-400"}`}
+            className={`font-mono ${run.symbols_failed > 0 ? "text-red-600 dark:text-red-400" : "text-stone-400 dark:text-night-400"}`}
           >
             {run.symbols_failed}
           </span>
@@ -205,7 +205,7 @@ const JobRow = memo(function JobRow({ run }: JobRowProps) {
             </span>
           </div>
         ) : (
-          <span className="text-sm text-cream-400">—</span>
+          <span className="text-sm text-stone-400 dark:text-night-400">—</span>
         )}
       </td>
     </tr>
@@ -226,14 +226,14 @@ const SummaryCards = memo(function SummaryCards({ summary }: SummaryCardsProps) 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
       <div className="bg-cream-50 dark:bg-night-800 rounded-lg p-3">
-        <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">Total Runs</div>
-        <div className="text-xl font-semibold text-cream-900 dark:text-cream-100 font-mono">
+        <div className="text-xs text-stone-500 dark:text-night-300 mb-1">Total Runs</div>
+        <div className="text-xl font-semibold text-stone-900 dark:text-night-50 font-mono">
           {summary.total_runs}
         </div>
       </div>
 
       <div className="bg-cream-50 dark:bg-night-800 rounded-lg p-3">
-        <div className="flex items-center gap-1.5 text-xs text-cream-500 dark:text-cream-400 mb-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-night-300 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
           Running
         </div>
@@ -243,7 +243,7 @@ const SummaryCards = memo(function SummaryCards({ summary }: SummaryCardsProps) 
       </div>
 
       <div className="bg-cream-50 dark:bg-night-800 rounded-lg p-3">
-        <div className="flex items-center gap-1.5 text-xs text-cream-500 dark:text-cream-400 mb-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-night-300 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
           Completed
         </div>
@@ -253,7 +253,7 @@ const SummaryCards = memo(function SummaryCards({ summary }: SummaryCardsProps) 
       </div>
 
       <div className="bg-cream-50 dark:bg-night-800 rounded-lg p-3">
-        <div className="flex items-center gap-1.5 text-xs text-cream-500 dark:text-cream-400 mb-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-night-300 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
           Failed
         </div>
@@ -274,15 +274,15 @@ const LastCompletedSection = memo(function LastCompletedSection({
 }: LastCompletedProps) {
   return (
     <div className="border-t border-cream-200 dark:border-night-700 pt-4 mt-4">
-      <h4 className="text-sm font-medium text-cream-700 dark:text-cream-300 mb-3 flex items-center gap-2">
+      <h4 className="text-sm font-medium text-stone-700 dark:text-night-100 mb-3 flex items-center gap-2">
         <Clock className="w-4 h-4" aria-hidden="true" />
         Last Completed by Type
       </h4>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(Object.entries(RUN_TYPE_LABELS) as [SyncRunType, string][]).map(([type, label]) => (
           <div key={type} className="text-sm">
-            <div className="text-cream-500 dark:text-cream-400 text-xs mb-0.5">{label}</div>
-            <div className="font-mono text-cream-700 dark:text-cream-300">
+            <div className="text-stone-500 dark:text-night-300 text-xs mb-0.5">{label}</div>
+            <div className="font-mono text-stone-700 dark:text-night-100">
               {formatRelativeTime(lastCompleted[type])}
             </div>
           </div>
@@ -365,7 +365,7 @@ function BatchJobStatusComponent({
           <AlertCircle className="w-5 h-5" aria-hidden="true" />
           <div>
             <h3 className="font-medium">Failed to load batch status</h3>
-            <p className="text-sm text-cream-600 dark:text-cream-400 mt-1">
+            <p className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mt-1">
               {error instanceof Error ? error.message : "An error occurred"}
             </p>
           </div>
@@ -373,7 +373,7 @@ function BatchJobStatusComponent({
         <button
           type="button"
           onClick={handleRefresh}
-          className="mt-3 px-3 py-1.5 text-sm font-medium bg-cream-100 dark:bg-night-700 text-cream-700 dark:text-cream-300 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
+          className="mt-3 px-3 py-1.5 text-sm font-medium bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 rounded-md hover:bg-cream-200 dark:hover:bg-night-600 transition-colors"
         >
           Retry
         </button>
@@ -388,14 +388,17 @@ function BatchJobStatusComponent({
         className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 ${className}`}
       >
         <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-          <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Batch Job Status
           </h3>
         </div>
         <div className="p-8 text-center">
-          <Clock className="w-12 h-12 mx-auto text-cream-400 mb-3" aria-hidden="true" />
-          <h4 className="text-cream-700 dark:text-cream-300 font-medium mb-1">No batch jobs yet</h4>
-          <p className="text-sm text-cream-500 dark:text-cream-400">
+          <Clock
+            className="w-12 h-12 mx-auto text-stone-400 dark:text-night-400 mb-3"
+            aria-hidden="true"
+          />
+          <h4 className="text-stone-700 dark:text-night-100 font-medium mb-1">No batch jobs yet</h4>
+          <p className="text-sm text-stone-500 dark:text-night-300">
             Batch jobs will appear here once the system starts syncing data.
           </p>
         </div>
@@ -409,7 +412,7 @@ function BatchJobStatusComponent({
     >
       {/* Header */}
       <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Batch Job Status</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Batch Job Status</h3>
         <div className="flex items-center gap-2">
           {showTriggerButton && (
             <div className="flex items-center gap-1">
@@ -437,7 +440,7 @@ function BatchJobStatusComponent({
             type="button"
             onClick={handleRefresh}
             disabled={isFetching}
-            className="p-1.5 text-cream-500 dark:text-cream-400 hover:text-cream-700 dark:hover:text-cream-200 transition-colors disabled:opacity-50"
+            className="p-1.5 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100 transition-colors disabled:opacity-50"
             aria-label="Refresh batch status"
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -455,22 +458,22 @@ function BatchJobStatusComponent({
           <table className="w-full">
             <thead>
               <tr className="border-b border-cream-200 dark:border-night-700">
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Job Type
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Started
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Duration
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Processed/Failed
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-cream-500 dark:text-cream-400 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
                   Error
                 </th>
               </tr>

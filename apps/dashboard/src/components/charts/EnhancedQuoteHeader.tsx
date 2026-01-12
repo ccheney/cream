@@ -133,7 +133,7 @@ const DayRange = memo(function DayRange({ current, low, high }: DayRangeProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-cream-500 dark:text-cream-400 font-mono">
+      <span className="text-xs text-stone-500 dark:text-night-300 font-mono">
         {formatPrice(low)}
       </span>
 
@@ -156,7 +156,7 @@ const DayRange = memo(function DayRange({ current, low, high }: DayRangeProps) {
         />
       </div>
 
-      <span className="text-xs text-cream-500 dark:text-cream-400 font-mono">
+      <span className="text-xs text-stone-500 dark:text-night-300 font-mono">
         {formatPrice(high)}
       </span>
     </div>
@@ -216,7 +216,7 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
   // Regime badge color
   const regimeColor = useMemo(() => {
     if (!regime) {
-      return "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+      return "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
     }
     if (regime.includes("BULL")) {
       return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
@@ -227,7 +227,7 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
     if (regime.includes("HIGH_VOL")) {
       return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
     }
-    return "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+    return "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }, [regime]);
 
   return (
@@ -239,7 +239,7 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-baseline gap-4">
           {/* Symbol */}
-          <span className="text-2xl font-bold text-cream-900 dark:text-cream-100">{symbol}</span>
+          <span className="text-2xl font-bold text-stone-900 dark:text-night-50">{symbol}</span>
 
           {/* Price with Animation */}
           {quote.last != null && (
@@ -285,29 +285,29 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
             {/* Bid */}
             <div className="flex items-baseline gap-1.5">
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">Bid</span>
-              <span className="font-mono text-sm text-cream-900 dark:text-cream-100">
+              <span className="font-mono text-sm text-stone-900 dark:text-night-50">
                 {formatPrice(quote.bid)}
               </span>
               {(quote.bidSize ?? 0) > 0 && (
-                <span className="text-xs text-cream-500 dark:text-cream-400">
+                <span className="text-xs text-stone-500 dark:text-night-300">
                   ×{quote.bidSize?.toLocaleString()}
                 </span>
               )}
             </div>
 
             {/* Spread */}
-            <div className="text-xs text-cream-400 dark:text-cream-500 font-mono">
+            <div className="text-xs text-stone-400 dark:text-night-400 font-mono">
               {((quote.ask - quote.bid) * 100).toFixed(0)}¢ spread
             </div>
 
             {/* Ask */}
             <div className="flex items-baseline gap-1.5">
               <span className="text-xs text-red-600 dark:text-red-400 font-medium">Ask</span>
-              <span className="font-mono text-sm text-cream-900 dark:text-cream-100">
+              <span className="font-mono text-sm text-stone-900 dark:text-night-50">
                 {formatPrice(quote.ask)}
               </span>
               {(quote.askSize ?? 0) > 0 && (
-                <span className="text-xs text-cream-500 dark:text-cream-400">
+                <span className="text-xs text-stone-500 dark:text-night-300">
                   ×{quote.askSize?.toLocaleString()}
                 </span>
               )}
@@ -328,18 +328,18 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
         {/* Day Range */}
         {quote.high != null && quote.low != null && quote.last != null && (
           <div className="flex-1">
-            <div className="text-xs text-cream-500 dark:text-cream-400 mb-1">Day Range</div>
+            <div className="text-xs text-stone-500 dark:text-night-300 mb-1">Day Range</div>
             <DayRange current={quote.last} low={quote.low} high={quote.high} />
           </div>
         )}
 
         {/* Volume */}
         <div className="text-right">
-          <div className="text-xs text-cream-500 dark:text-cream-400">Volume</div>
-          <div className="font-mono text-cream-900 dark:text-cream-100">
+          <div className="text-xs text-stone-500 dark:text-night-300">Volume</div>
+          <div className="font-mono text-stone-900 dark:text-night-50">
             {formatVolume(quote.volume)}
             {quote.avgVolume && (
-              <span className="text-cream-500 dark:text-cream-400 text-sm ml-1">
+              <span className="text-stone-500 dark:text-night-300 text-sm ml-1">
                 (avg: {formatVolume(quote.avgVolume)})
               </span>
             )}
@@ -349,7 +349,7 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
               className={`text-xs ${
                 volumePercent >= 100
                   ? "text-green-600 dark:text-green-400"
-                  : "text-cream-500 dark:text-cream-400"
+                  : "text-stone-500 dark:text-night-300"
               }`}
             >
               {volumePercent.toFixed(0)}% of avg

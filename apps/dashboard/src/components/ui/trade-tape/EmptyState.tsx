@@ -16,7 +16,7 @@ export const EmptyState = memo(function EmptyState({
   symbol,
 }: EmptyStateProps): React.ReactElement {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-cream-500 dark:text-cream-400">
+    <div className="flex flex-col items-center justify-center h-full text-stone-500 dark:text-night-300">
       <span className="text-2xl mb-2" aria-hidden="true">
         📊
       </span>

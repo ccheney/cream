@@ -57,7 +57,7 @@ export function ConfigDiff<T extends ConfigType>({
 
   if (!hasChanges) {
     return (
-      <div className="p-4 text-center text-cream-500 dark:text-cream-400">
+      <div className="p-4 text-center text-stone-500 dark:text-night-300">
         No configuration changes
       </div>
     );
@@ -89,8 +89,8 @@ export function ConfigDiff<T extends ConfigType>({
             onClick={() => setMode("diff")}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               mode === "diff"
-                ? "bg-white dark:bg-night-600 text-cream-900 dark:text-cream-100 shadow-sm"
-                : "text-cream-600 dark:text-cream-400 hover:text-cream-900 dark:hover:text-cream-100"
+                ? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
+                : "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
             }`}
           >
             Diff
@@ -100,8 +100,8 @@ export function ConfigDiff<T extends ConfigType>({
             onClick={() => setMode("tree")}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               mode === "tree"
-                ? "bg-white dark:bg-night-600 text-cream-900 dark:text-cream-100 shadow-sm"
-                : "text-cream-600 dark:text-cream-400 hover:text-cream-900 dark:hover:text-cream-100"
+                ? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
+                : "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
             }`}
           >
             Tree
@@ -197,14 +197,15 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
     added: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
     removed: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
     changed: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-    unchanged: "bg-cream-100 text-cream-600 dark:bg-night-700 dark:text-cream-400",
+    unchanged:
+      "bg-cream-100 text-stone-600 dark:text-night-200 dark:bg-night-700 dark:text-night-400",
   };
 
   if (hasChildren) {
     return (
       <AccordionItem value={entry.key} className={typeStyles[entry.type]}>
         <AccordionTrigger className="px-4 py-2">
-          <span className="font-medium text-cream-900 dark:text-cream-100">
+          <span className="font-medium text-stone-900 dark:text-night-50">
             {formatKey(entry.key)}
           </span>
         </AccordionTrigger>
@@ -232,7 +233,7 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
       style={{ paddingLeft: `${1 + depth * 0.75}rem` }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-sm text-cream-700 dark:text-cream-300">{formatKey(entry.key)}</span>
+        <span className="text-sm text-stone-700 dark:text-night-100">{formatKey(entry.key)}</span>
       </div>
 
       <div className="flex items-center gap-3">
@@ -241,7 +242,7 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
             <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 line-through">
               {formatValue(entry.oldValue)}
             </span>
-            <span className="text-cream-400">&rarr;</span>
+            <span className="text-stone-400 dark:text-night-400">&rarr;</span>
             <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
               {formatValue(entry.newValue)}
             </span>

@@ -28,7 +28,7 @@ export default function ConfigPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">Configuration</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Configuration</h1>
         <div className="flex items-center gap-2">
           {config && (
             <>
@@ -39,7 +39,7 @@ export default function ConfigPage() {
               >
                 {config.trading.environment}
               </span>
-              <span className="text-sm text-cream-500 dark:text-cream-400">
+              <span className="text-sm text-stone-500 dark:text-night-300">
                 v{config.trading.version}
               </span>
             </>
@@ -126,7 +126,7 @@ export default function ConfigPage() {
       {/* Config History */}
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Configuration History
           </h2>
         </div>
@@ -141,7 +141,7 @@ export default function ConfigPage() {
             {history.map((entry, index) => (
               <div key={entry.id ?? index} className="p-4 flex items-center justify-between">
                 <div>
-                  <span className="font-medium text-cream-900 dark:text-cream-100">
+                  <span className="font-medium text-stone-900 dark:text-night-50">
                     v{entry.version}
                   </span>
                   {entry.isActive && (
@@ -151,10 +151,10 @@ export default function ConfigPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-cream-500 dark:text-cream-400">
+                  <span className="text-sm text-stone-500 dark:text-night-300">
                     {entry.changedFields?.join(", ") ?? "Configuration updated"}
                   </span>
-                  <span className="text-xs text-cream-400">
+                  <span className="text-xs text-stone-400 dark:text-night-400">
                     {entry.createdAt
                       ? formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })
                       : "Unknown"}
@@ -164,7 +164,7 @@ export default function ConfigPage() {
             ))}
           </div>
         ) : (
-          <div className="p-4 text-cream-400">No configuration changes</div>
+          <div className="p-4 text-stone-400 dark:text-night-400">No configuration changes</div>
         )}
       </div>
     </div>
@@ -183,9 +183,9 @@ function ConfigSection({
   const content = (
     <>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">{title}</h2>
+        <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">{title}</h2>
         {href && (
-          <span className="text-xs text-cream-400 dark:text-cream-500 group-hover:text-blue-500">
+          <span className="text-xs text-stone-400 dark:text-night-400 group-hover:text-blue-500">
             Edit &rarr;
           </span>
         )}
@@ -215,8 +215,10 @@ function ConfigSection({
 function ConfigField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-cream-600 dark:text-cream-400">{label}</span>
-      <span className="text-sm font-mono text-cream-900 dark:text-cream-100">{value}</span>
+      <span className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
+        {label}
+      </span>
+      <span className="text-sm font-mono text-stone-900 dark:text-night-50">{value}</span>
     </div>
   );
 }

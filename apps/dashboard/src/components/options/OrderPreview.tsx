@@ -54,27 +54,29 @@ export const OrderPreview = memo(function OrderPreview({
       className={`p-4 bg-cream-50 dark:bg-night-700 rounded-md border border-cream-200 dark:border-night-600 ${className}`}
       data-testid={testId}
     >
-      <h4 className="text-sm font-semibold text-cream-700 dark:text-cream-300 mb-3">
+      <h4 className="text-sm font-semibold text-stone-700 dark:text-night-100 mb-3">
         Order Preview
       </h4>
 
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-cream-500 dark:text-cream-400">Per Contract</span>
-          <span className="font-mono text-cream-700 dark:text-cream-200">
+          <span className="text-stone-500 dark:text-night-300">Per Contract</span>
+          <span className="font-mono text-stone-700 dark:text-night-100 dark:text-night-200">
             {formatCurrency(perContract)}
           </span>
         </div>
 
         <div className="flex justify-between text-sm">
-          <span className="text-cream-500 dark:text-cream-400">Contracts</span>
-          <span className="font-mono text-cream-700 dark:text-cream-200">x {quantity}</span>
+          <span className="text-stone-500 dark:text-night-300">Contracts</span>
+          <span className="font-mono text-stone-700 dark:text-night-100 dark:text-night-200">
+            x {quantity}
+          </span>
         </div>
 
         <div className="border-t border-cream-200 dark:border-night-600 my-2" />
 
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-cream-600 dark:text-cream-300">
+          <span className="text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-300">
             {isCredit ? "Total Credit" : "Total Cost"}
           </span>
           <span
@@ -88,7 +90,7 @@ export const OrderPreview = memo(function OrderPreview({
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-cream-400 dark:text-cream-500">
+      <p className="mt-3 text-xs text-stone-400 dark:text-night-400">
         Actual fill price may vary. Commission and fees not included.
       </p>
     </div>

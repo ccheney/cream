@@ -68,23 +68,23 @@ export function BacktestListItem({
         <button type="button" onClick={() => onSelect?.(bt.id)} className="flex-1 text-left">
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium text-cream-900 dark:text-cream-100">{bt.name}</span>
+              <span className="font-medium text-stone-900 dark:text-night-50">{bt.name}</span>
               <StatusBadge status={displayStatus} />
             </div>
-            <span className="text-sm text-cream-500 dark:text-cream-400">
+            <span className="text-sm text-stone-500 dark:text-night-300">
               {formatDistanceToNow(
                 new Date(bt.createdAt.endsWith("Z") ? bt.createdAt : `${bt.createdAt}Z`),
                 { addSuffix: true }
               )}
             </span>
           </div>
-          <div className="mt-1 text-sm text-cream-500 dark:text-cream-400">
+          <div className="mt-1 text-sm text-stone-500 dark:text-night-300">
             {bt.startDate} to {bt.endDate} | {formatCurrency(bt.initialCapital)}
           </div>
         </button>
         <Link
           href={`/backtest/${bt.id}`}
-          className="ml-4 p-2 rounded-md text-cream-400 hover:text-cream-600 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+          className="ml-4 p-2 rounded-md text-stone-400 dark:text-night-400 hover:text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
           title="View details"
         >
           <ChevronRight className="w-5 h-5" />
@@ -119,7 +119,7 @@ function StatusBadge({ status }: { status: string }) {
         ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
         : status === "failed" || status === "error"
           ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-          : "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+          : "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
 
   return (
     <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded ${colorClasses}`}>{status}</span>

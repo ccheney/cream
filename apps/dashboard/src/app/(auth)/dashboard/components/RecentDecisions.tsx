@@ -13,7 +13,7 @@ function getActionColor(action: DecisionAction): string {
     case "CLOSE":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
     default:
-      return "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+      return "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 }
 
@@ -28,7 +28,7 @@ function getStatusColor(status: DecisionStatus): string {
     case "FAILED":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
     default:
-      return "bg-cream-100 text-cream-800 dark:bg-night-700 dark:text-cream-400";
+      return "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400";
   }
 }
 
@@ -40,11 +40,11 @@ export function RecentDecisions({
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">Recent Decisions</h2>
+        <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">Recent Decisions</h2>
         <LiveDataIndicator
           isRefreshing={isFetching}
           lastUpdated={decisions?.[0]?.createdAt}
-          className="text-cream-500 dark:text-cream-400"
+          className="text-stone-500 dark:text-night-300"
         />
       </div>
       {isLoading ? (
@@ -67,10 +67,10 @@ export function RecentDecisions({
                 >
                   {decision.action}
                 </span>
-                <span className="font-medium text-cream-900 dark:text-cream-100">
+                <span className="font-medium text-stone-900 dark:text-night-50">
                   {decision.symbol}
                 </span>
-                <span className="text-sm text-cream-500 dark:text-cream-400">
+                <span className="text-sm text-stone-500 dark:text-night-300">
                   {decision.size} {decision.sizeUnit.toLowerCase()}
                 </span>
               </div>
@@ -80,7 +80,7 @@ export function RecentDecisions({
                 >
                   {decision.status}
                 </span>
-                <span className="text-sm text-cream-500 dark:text-cream-400">
+                <span className="text-sm text-stone-500 dark:text-night-300">
                   {formatDistanceToNow(new Date(decision.createdAt), {
                     addSuffix: true,
                   })}
@@ -90,7 +90,7 @@ export function RecentDecisions({
           ))}
         </div>
       ) : (
-        <p className="text-cream-500 dark:text-cream-400">No decisions yet</p>
+        <p className="text-stone-500 dark:text-night-300">No decisions yet</p>
       )}
     </div>
   );

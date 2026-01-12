@@ -26,12 +26,12 @@ function MADisplayItem({ label, tooltipText, value, color }: MADisplayItemProps)
       )}
       <div>
         <Tooltip>
-          <TooltipTrigger className="cursor-help text-cream-500 dark:text-cream-400">
+          <TooltipTrigger className="cursor-help text-stone-500 dark:text-night-300">
             {label}
           </TooltipTrigger>
           <TooltipContent>{tooltipText}</TooltipContent>
         </Tooltip>
-        <div className="font-mono text-cream-900 dark:text-cream-100">{formatPrice(value)}</div>
+        <div className="font-mono text-stone-900 dark:text-night-50">{formatPrice(value)}</div>
       </div>
     </div>
   );
@@ -40,7 +40,7 @@ function MADisplayItem({ label, tooltipText, value, color }: MADisplayItemProps)
 export function MovingAveragesPanel({ indicators }: MovingAveragesPanelProps) {
   return (
     <div className="border-t border-cream-200 dark:border-night-700 pt-4">
-      <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100 mb-4">
+      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">
         Moving Averages
       </h2>
       <div className="grid grid-cols-6 gap-4 text-sm">
@@ -76,12 +76,12 @@ export function MovingAveragesPanel({ indicators }: MovingAveragesPanelProps) {
         />
         <div>
           <Tooltip>
-            <TooltipTrigger className="cursor-help text-cream-500 dark:text-cream-400">
+            <TooltipTrigger className="cursor-help text-stone-500 dark:text-night-300">
               MACD
             </TooltipTrigger>
             <TooltipContent>MACD Line: difference between EMA 12 and EMA 26</TooltipContent>
           </Tooltip>
-          <div className="font-mono text-cream-900 dark:text-cream-100">
+          <div className="font-mono text-stone-900 dark:text-night-50">
             {indicators.macdLine?.toFixed(2) ?? "--"}
           </div>
         </div>

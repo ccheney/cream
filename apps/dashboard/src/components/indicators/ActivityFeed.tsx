@@ -39,7 +39,7 @@ function getActivityStyle(type: IndicatorActivity["type"]) {
         icon: "📦",
         label: "Retired",
         bgColor: "bg-cream-100 dark:bg-night-700",
-        textColor: "text-cream-700 dark:text-cream-300",
+        textColor: "text-stone-700 dark:text-night-100",
         dotColor: "bg-cream-400",
       };
     case "paper_start":
@@ -55,7 +55,7 @@ function getActivityStyle(type: IndicatorActivity["type"]) {
         icon: "•",
         label: "Activity",
         bgColor: "bg-cream-100 dark:bg-night-700",
-        textColor: "text-cream-700 dark:text-cream-300",
+        textColor: "text-stone-700 dark:text-night-100",
         dotColor: "bg-cream-400",
       };
   }
@@ -81,11 +81,9 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
     return (
       <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
         <div className="p-4 border-b border-cream-200 dark:border-night-700">
-          <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">
-            Recent Activity
-          </h3>
+          <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Recent Activity</h3>
         </div>
-        <div className="p-8 text-center text-cream-400 dark:text-cream-500">No recent activity</div>
+        <div className="p-8 text-center text-stone-400 dark:text-night-400">No recent activity</div>
       </div>
     );
   }
@@ -93,7 +91,7 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
       <div className="p-4 border-b border-cream-200 dark:border-night-700">
-        <h3 className="text-lg font-medium text-cream-900 dark:text-cream-100">Recent Activity</h3>
+        <h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Recent Activity</h3>
       </div>
 
       <div className="p-4">
@@ -128,16 +126,16 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
                       </span>
                       <Link
                         href={`/indicators/${activity.indicatorId}`}
-                        className="text-cream-900 dark:text-cream-100 font-medium hover:text-blue-600 dark:hover:text-blue-400"
+                        className="text-stone-900 dark:text-night-50 font-medium hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         {activity.name}
                       </Link>
-                      <span className="text-sm text-cream-400 dark:text-cream-500">
+                      <span className="text-sm text-stone-400 dark:text-night-400">
                         {formatDistanceToNow(date, { addSuffix: true })}
                       </span>
                     </div>
                     {activity.details && (
-                      <p className="mt-1 text-sm text-cream-600 dark:text-cream-400 truncate">
+                      <p className="mt-1 text-sm text-stone-600 dark:text-night-200 dark:text-night-400 truncate">
                         {activity.details}
                       </p>
                     )}

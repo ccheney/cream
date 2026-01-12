@@ -124,10 +124,10 @@ export function ChartContent({ symbol }: ChartContentProps) {
         <div className="flex-1 flex items-center justify-center bg-white dark:bg-night-800">
           <div className="text-center">
             <div className="text-4xl mb-4">?</div>
-            <h2 className="text-xl font-semibold text-cream-700 dark:text-cream-300 mb-2">
+            <h2 className="text-xl font-semibold text-stone-700 dark:text-night-100 mb-2">
               Unknown Symbol
             </h2>
-            <p className="text-cream-500 dark:text-cream-400">
+            <p className="text-stone-500 dark:text-night-300">
               Could not find market data for{" "}
               <span className="font-mono font-medium">{upperSymbol}</span>
             </p>
@@ -187,7 +187,7 @@ export function ChartContent({ symbol }: ChartContentProps) {
               />
             </LoadingOverlay>
           ) : (
-            <div className="h-96 flex items-center justify-center text-cream-400">
+            <div className="h-96 flex items-center justify-center text-stone-400 dark:text-night-400">
               No chart data available
             </div>
           )}
