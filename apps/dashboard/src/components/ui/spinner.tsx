@@ -382,6 +382,68 @@ export function SpinnerOverlay({
 }
 
 // ============================================
+// Loading Overlay (Pulsing)
+// ============================================
+
+const pulseOverlayKeyframes = `
+  @keyframes pulseOverlay {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+`;
+
+/**
+ * Pulsing overlay for loading states.
+ *
+ * Shows a semi-transparent pulsing overlay on top of existing content,
+ * keeping the content visible but indicating loading state.
+ *
+ * @example
+ * ```tsx
+ * <LoadingOverlay isLoading={isRefetching}>
+ *   <OptionsChainTable ... />
+ * </LoadingOverlay>
+ * ```
+ */
+export function LoadingOverlay({
+  isLoading,
+  children,
+  label = "Loading",
+}: {
+  isLoading: boolean;
+  children: React.ReactNode;
+  label?: string;
+}) {
+  return (
+    <div style={{ position: "relative", height: "100%" }} aria-busy={isLoading}>
+      {children}
+
+      {isLoading && (
+        <>
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
+          <style dangerouslySetInnerHTML={{ __html: pulseOverlayKeyframes }} />
+          <div
+            role="status"
+            aria-label={label}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "var(--loading-overlay-bg, rgba(255, 255, 255, 0.4))",
+              animation: "pulseOverlay 1.5s ease-in-out infinite",
+              pointerEvents: "none",
+            }}
+            className="dark:!bg-night-900/50"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // Exports
 // ============================================
 

@@ -49,6 +49,8 @@
   --night-900: #141211;  /* Card background */
   --night-800: #1F1C1A;  /* Elevated surfaces */
   --night-700: #2D2926;  /* Borders, dividers */
+  --night-600: #46413D;  /* Hover surfaces */
+  --night-500: #5F5954;  /* Active surfaces */
 
   /* Warm Light Scale */
   --night-400: #78716C;  /* Muted text */

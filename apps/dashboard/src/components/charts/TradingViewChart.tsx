@@ -212,7 +212,11 @@ function TradingViewChartComponent({
     }));
     volumeSeriesRef.current.setData(volumeData);
 
+    // Fit both time and price scales to new data
     chartRef.current?.timeScale().fitContent();
+
+    // Force price scale to auto-fit by temporarily enabling autoScale
+    seriesRef.current.priceScale().applyOptions({ autoScale: true });
   }, [data]);
 
   useEffect(() => {

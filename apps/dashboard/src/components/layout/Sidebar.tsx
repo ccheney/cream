@@ -11,6 +11,7 @@
 "use client";
 
 import {
+  Activity,
   BarChart3,
   Bot,
   Briefcase,
@@ -59,6 +60,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/options", label: "Options", icon: Grid2x2 },
   { href: "/risk", label: "Risk", icon: ShieldAlert },
   { href: "/backtest", label: "Backtest", icon: FlaskConical },
+  { href: "/indicators", label: "Indicators", icon: Activity },
   { href: "/theses", label: "Theses", icon: BarChart3 },
   { href: "/config", label: "Config", icon: Settings },
   { href: "/feed", label: "Feed", icon: Rss },
