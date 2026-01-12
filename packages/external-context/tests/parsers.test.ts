@@ -7,16 +7,22 @@ import type { FMPNewsArticle, FMPTranscript } from "../src/index.js";
 import {
   calculateMacroSurprise,
   extractTranscriptSections,
+  type FREDEconomicEvent,
+  type FREDLatestValues,
   filterNewsBySymbols,
   filterRecentMacroReleases,
   filterRecentNews,
+  filterSignificantFREDEvents,
   getExecutiveComments,
   groupByIndicator,
   isMacroReleaseSignificant,
   parseAlphaVantageIndicator,
   parseFMPEconomicEvents,
+  parseFREDObservations,
+  parseFREDReleaseDates,
   parseNewsArticles,
   parseTranscript,
+  sortFREDEventsByDateAndImpact,
 } from "../src/index.js";
 
 describe("News Parser", () => {
@@ -623,5 +629,346 @@ describe("Macro Parser", () => {
 
     const filtered = filterRecentMacroReleases(releases, 7);
     expect(filtered).toHaveLength(0);
+  });
+});
+
+describe("FRED Parser", () => {
+  describe("parseFREDReleaseDates", () => {
+    it("should parse valid release dates", () => {
+      const releaseDates = [
+        { release_id: 10, release_name: "Consumer Price Index", date: "2025-01-15" },
+      ];
+
+      const events = parseFREDReleaseDates(releaseDates);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.id).toBe("fred-10-2025-01-15");
+        expect(event.name).toBe("Consumer Price Index");
+        expect(event.date).toBe("2025-01-15");
+        expect(event.impact).toBe("high"); // CPI is high impact
+        expect(event.releaseId).toBe(10);
+        expect(event.time).toBe("08:30:00"); // Default release time
+        expect(event.forecast).toBeNull();
+      }
+    });
+
+    it("should parse release dates with string release_id", () => {
+      const releaseDates = [{ release_id: "50" as unknown as number, date: "2025-01-10" }];
+
+      const events = parseFREDReleaseDates(releaseDates);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.id).toBe("fred-50-2025-01-10");
+        expect(event.impact).toBe("high"); // Employment is high impact
+      }
+    });
+
+    it("should populate previous and actual from latestValues", () => {
+      const releaseDates = [{ release_id: 10, date: "2025-01-15" }];
+      const latestValues = new Map<number, FREDLatestValues>([
+        [10, { previous: 315.5, actual: 316.2 }],
+      ]);
+
+      const events = parseFREDReleaseDates(releaseDates, latestValues);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.previous).toBe("315.5");
+        expect(event.actual).toBe("316.2");
+      }
+    });
+
+    it("should handle null values in latestValues", () => {
+      const releaseDates = [{ release_id: 10, date: "2025-01-15" }];
+      const latestValues = new Map<number, FREDLatestValues>([
+        [10, { previous: null, actual: null }],
+      ]);
+
+      const events = parseFREDReleaseDates(releaseDates, latestValues);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.previous).toBeNull();
+        expect(event.actual).toBeNull();
+      }
+    });
+
+    it("should return empty array for empty input", () => {
+      const events = parseFREDReleaseDates([]);
+      expect(events).toHaveLength(0);
+    });
+
+    it("should use special release time for FOMC", () => {
+      const releaseDates = [
+        { release_id: 101, release_name: "FOMC Press Release", date: "2025-01-29" },
+      ];
+
+      const events = parseFREDReleaseDates(releaseDates);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.time).toBe("14:00:00"); // FOMC at 2pm ET
+        expect(event.impact).toBe("high");
+      }
+    });
+
+    it("should fallback to release name when not in registry", () => {
+      const releaseDates = [
+        { release_id: 99999, release_name: "Unknown Release", date: "2025-01-15" },
+      ];
+
+      const events = parseFREDReleaseDates(releaseDates);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.name).toBe("Unknown Release");
+        expect(event.impact).toBe("low"); // Not in high/medium list
+      }
+    });
+
+    it("should generate fallback name when no release_name", () => {
+      const releaseDates = [{ release_id: 99999, date: "2025-01-15" }];
+
+      const events = parseFREDReleaseDates(releaseDates);
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      if (event) {
+        expect(event.name).toBe("FRED Release 99999");
+      }
+    });
+  });
+
+  describe("parseFREDObservations", () => {
+    it("should parse valid observations", () => {
+      const observations = [
+        { date: "2024-12-01", value: "315.605" },
+        { date: "2024-11-01", value: "314.123" },
+      ];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(2);
+      const first = releases[0];
+      if (first) {
+        expect(first.indicator).toBe("CPI All Urban Consumers");
+        expect(first.value).toBe(315.605);
+        expect(first.previousValue).toBe(314.123);
+        expect(first.source).toBe("FRED:CPIAUCSL");
+        expect(first.unit).toBe("index");
+      }
+    });
+
+    it("should use custom metadata when provided", () => {
+      const observations = [{ date: "2024-12-01", value: "100.5" }];
+
+      const releases = parseFREDObservations("CUSTOM", observations, {
+        name: "Custom Indicator",
+        unit: "custom_unit",
+      });
+
+      expect(releases).toHaveLength(1);
+      const first = releases[0];
+      if (first) {
+        expect(first.indicator).toBe("Custom Indicator");
+        expect(first.unit).toBe("custom_unit");
+      }
+    });
+
+    it("should skip missing values marked with '.'", () => {
+      const observations = [
+        { date: "2024-12-01", value: "." },
+        { date: "2024-11-01", value: "314.123" },
+      ];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(1);
+      const first = releases[0];
+      if (first) {
+        expect(first.value).toBe(314.123);
+      }
+    });
+
+    it("should skip empty string values", () => {
+      const observations = [
+        { date: "2024-12-01", value: "" },
+        { date: "2024-11-01", value: "314.123" },
+      ];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(1);
+    });
+
+    it("should skip NaN values", () => {
+      const observations = [
+        { date: "2024-12-01", value: "not-a-number" },
+        { date: "2024-11-01", value: "314.123" },
+      ];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(1);
+      expect(releases[0]?.value).toBe(314.123);
+    });
+
+    it("should return empty array for empty observations", () => {
+      const releases = parseFREDObservations("CPIAUCSL", []);
+      expect(releases).toHaveLength(0);
+    });
+
+    it("should handle single observation without previousValue", () => {
+      const observations = [{ date: "2024-12-01", value: "315.605" }];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(1);
+      const first = releases[0];
+      if (first) {
+        expect(first.value).toBe(315.605);
+        expect(first.previousValue).toBeUndefined();
+      }
+    });
+
+    it("should skip to next valid observation for previousValue", () => {
+      const observations = [
+        { date: "2024-12-01", value: "316.0" },
+        { date: "2024-11-01", value: "." }, // Skip this
+        { date: "2024-10-01", value: "314.0" },
+      ];
+
+      const releases = parseFREDObservations("CPIAUCSL", observations);
+
+      expect(releases).toHaveLength(2);
+      const first = releases[0];
+      if (first) {
+        expect(first.value).toBe(316.0);
+        expect(first.previousValue).toBe(314.0); // Should skip '.' and use 314.0
+      }
+    });
+
+    it("should use seriesId when no metadata found", () => {
+      const observations = [{ date: "2024-12-01", value: "100" }];
+
+      const releases = parseFREDObservations("UNKNOWN_SERIES", observations);
+
+      expect(releases).toHaveLength(1);
+      const first = releases[0];
+      if (first) {
+        expect(first.indicator).toBe("UNKNOWN_SERIES");
+        expect(first.unit).toBeUndefined();
+      }
+    });
+  });
+
+  describe("filterSignificantFREDEvents", () => {
+    it("should filter to only high and medium impact events", () => {
+      const events: FREDEconomicEvent[] = [
+        {
+          id: "fred-10-2025-01-15",
+          name: "CPI",
+          date: "2025-01-15",
+          time: "08:30:00",
+          impact: "high",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 10,
+        },
+        {
+          id: "fred-13-2025-01-16",
+          name: "Industrial Production",
+          date: "2025-01-16",
+          time: "08:30:00",
+          impact: "medium",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 13,
+        },
+        {
+          id: "fred-999-2025-01-17",
+          name: "Minor Release",
+          date: "2025-01-17",
+          time: "08:30:00",
+          impact: "low",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 999,
+        },
+      ];
+
+      const filtered = filterSignificantFREDEvents(events);
+
+      expect(filtered).toHaveLength(2);
+      expect(filtered.some((e) => e.impact === "high")).toBe(true);
+      expect(filtered.some((e) => e.impact === "medium")).toBe(true);
+      expect(filtered.some((e) => e.impact === "low")).toBe(false);
+    });
+  });
+
+  describe("sortFREDEventsByDateAndImpact", () => {
+    it("should sort by date first, then by impact", () => {
+      const events: FREDEconomicEvent[] = [
+        {
+          id: "3",
+          name: "Event C",
+          date: "2025-01-17",
+          time: "08:30:00",
+          impact: "high",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 3,
+        },
+        {
+          id: "1",
+          name: "Event A",
+          date: "2025-01-15",
+          time: "08:30:00",
+          impact: "low",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 1,
+        },
+        {
+          id: "2",
+          name: "Event B",
+          date: "2025-01-15",
+          time: "08:30:00",
+          impact: "high",
+          forecast: null,
+          previous: null,
+          actual: null,
+          releaseId: 2,
+        },
+      ];
+
+      const sorted = sortFREDEventsByDateAndImpact(events);
+
+      expect(sorted).toHaveLength(3);
+      // First: 2025-01-15, high impact
+      expect(sorted[0]?.id).toBe("2");
+      // Second: 2025-01-15, low impact
+      expect(sorted[1]?.id).toBe("1");
+      // Third: 2025-01-17, high impact
+      expect(sorted[2]?.id).toBe("3");
+    });
+
+    it("should handle empty array", () => {
+      const sorted = sortFREDEventsByDateAndImpact([]);
+      expect(sorted).toHaveLength(0);
+    });
   });
 });
