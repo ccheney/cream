@@ -106,19 +106,7 @@ export function IndicatorSection({
 
       {isOpen && (
         <div className="border-t border-cream-200 dark:border-night-700 px-4 py-3">
-          {isLoading ? (
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton items never reorder
-                <div key={i} className="space-y-1.5">
-                  <div className="h-3 w-12 rounded bg-cream-200 dark:bg-night-700 animate-pulse" />
-                  <div className="h-5 w-16 rounded bg-cream-200 dark:bg-night-700 animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            children
-          )}
+          {children}
           {lastUpdated && (
             <p className="mt-3 text-xs text-stone-400 dark:text-night-500">
               Last updated: {lastUpdated}
