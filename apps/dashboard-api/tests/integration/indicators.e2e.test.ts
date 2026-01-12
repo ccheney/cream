@@ -52,6 +52,13 @@ mock.module("@cream/marketdata", () => ({
     getSnapshots: () => Promise.resolve(new Map()),
   }),
   isAlpacaConfigured: () => true,
+  createRealtimeOptionsProvider: async () => ({
+    getImpliedVolatility: async () => null,
+    getIVSkew: async () => null,
+    getPutCallRatio: async () => null,
+    disconnect: () => {},
+    isConnected: () => false,
+  }),
 }));
 
 import batchStatusRoutes from "../../src/routes/batch-status";
@@ -59,6 +66,7 @@ import batchTriggerRoutes from "../../src/routes/batch-trigger";
 // Import routes after mocking
 import indicatorsRoutes from "../../src/routes/indicators";
 import marketIndicatorsRoutes from "../../src/routes/market/indicators";
+import { resetIndicatorService } from "../../src/services/indicators";
 
 // ============================================
 // Test Data Seeding
@@ -379,6 +387,7 @@ describe("Indicator Routes E2E", () => {
 
   describe("Price Indicators Routes (/api/market/price/:symbol)", () => {
     beforeEach(async () => {
+      resetIndicatorService();
       client.close();
       client = await createInMemoryClient();
       await runMigrations(client, { logger: () => {} });
