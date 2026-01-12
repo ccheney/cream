@@ -20,6 +20,7 @@ import {
   DecisionsRepository,
   ExternalEventsRepository,
   FactorZooRepository,
+  IndicatorsRepository,
   OrdersRepository,
   PositionsRepository,
   PredictionMarketsRepository,
@@ -203,6 +204,14 @@ export async function getDecisionsRepo(): Promise<DecisionsRepository> {
 export async function getFactorZooRepo(): Promise<FactorZooRepository> {
   const client = await getDbClient();
   return new FactorZooRepository(client);
+}
+
+/**
+ * Get indicators repository
+ */
+export async function getIndicatorsRepo(): Promise<IndicatorsRepository> {
+  const client = await getDbClient();
+  return new IndicatorsRepository(client);
 }
 
 // ============================================

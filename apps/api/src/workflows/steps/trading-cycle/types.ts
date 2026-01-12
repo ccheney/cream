@@ -271,6 +271,29 @@ export interface ResearchTriggerResult {
   };
 }
 
+/**
+ * Indicator trigger result from checkIndicatorTrigger
+ * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
+ */
+export interface IndicatorTriggerResult {
+  shouldTrigger: boolean;
+  triggerReason: string | null;
+  conditions: {
+    regimeGapDetected: boolean;
+    currentRegime: string;
+    regimeGapDetails?: string;
+    closestIndicatorSimilarity: number;
+    rollingIC30Day: number;
+    icDecayDays: number;
+    existingIndicatorsUnderperforming: boolean;
+    daysSinceLastAttempt: number;
+    activeIndicatorCount: number;
+    maxIndicatorCapacity: number;
+  };
+  summary: string;
+  recommendation: string;
+}
+
 // ============================================
 // Workflow Result
 // ============================================
@@ -287,6 +310,8 @@ export interface WorkflowResult {
   thesisUpdates?: ThesisUpdate[];
   /** Research trigger detection result */
   researchTrigger?: ResearchTriggerResult;
+  /** Indicator synthesis trigger detection result */
+  indicatorTrigger?: IndicatorTriggerResult;
   /** Thesis memory ingestion result */
   thesisMemoryIngestion?: { ingested: number; errors: string[] };
 }

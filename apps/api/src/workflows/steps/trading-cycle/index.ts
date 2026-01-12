@@ -33,7 +33,7 @@ export { log } from "./logger.js";
 // Observe Phase
 export { fetchFixtureSnapshot, fetchMarketSnapshot } from "./observe.js";
 // Orient Phase
-export { computeAndStoreRegimes, loadMemoryContext } from "./orient.js";
+export { checkIndicatorTrigger, computeAndStoreRegimes, loadMemoryContext } from "./orient.js";
 // Thesis Lifecycle
 export {
   checkResearchTriggersAndSpawnIdea,
@@ -49,6 +49,7 @@ export type {
   Decision,
   ExternalContext,
   FundamentalsAnalysis,
+  IndicatorTriggerResult,
   MarketSnapshot,
   MemoryContext,
   PredictionMarketSignals,

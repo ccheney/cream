@@ -51,6 +51,7 @@ import {
   type AgentStatusEvent,
   buildAgentConfigs,
   checkConstraints,
+  checkIndicatorTrigger,
   checkResearchTriggersAndSpawnIdea,
   computeAndStoreRegimes,
   DEFAULT_AGENT_TIMEOUT_MS,
@@ -85,6 +86,7 @@ export type {
   Decision,
   ExternalContext,
   FundamentalsAnalysis,
+  IndicatorTriggerResult,
   MarketSnapshot,
   MemoryContext,
   PredictionMarketSignals,
@@ -236,6 +238,20 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
         severity: researchTriggerResult.trigger?.severity,
       },
       "Research trigger activated - hypothesis generation may be pending"
+    );
+  }
+
+  // Check for indicator synthesis triggers
+  const indicatorTriggerResult = await checkIndicatorTrigger(regimeLabels, context);
+  if (indicatorTriggerResult?.shouldTrigger) {
+    log.info(
+      {
+        cycleId,
+        triggerReason: indicatorTriggerResult.triggerReason,
+        currentRegime: indicatorTriggerResult.conditions.currentRegime,
+        recommendation: indicatorTriggerResult.recommendation,
+      },
+      "Indicator synthesis trigger activated"
     );
   }
 
@@ -860,6 +876,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
       errors: orderSubmission.errors,
       thesisUpdatesCount: thesisUpdates.length,
       researchTriggered: researchTriggerResult.triggered,
+      indicatorTriggerActivated: indicatorTriggerResult?.shouldTrigger ?? false,
       thesisMemoryIngested: thesisMemoryIngestion?.ingested ?? 0,
     },
     "Trading cycle complete"
@@ -874,6 +891,7 @@ async function executeTradingCycleLLM(input: WorkflowInput): Promise<WorkflowRes
     configVersion,
     thesisUpdates: thesisUpdates.length > 0 ? thesisUpdates : undefined,
     researchTrigger: researchTriggerResult.triggered ? researchTriggerResult : undefined,
+    indicatorTrigger: indicatorTriggerResult ?? undefined,
     thesisMemoryIngestion,
   };
 }
