@@ -198,9 +198,7 @@ export default function FeedPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-cream-900 dark:text-cream-100">
-          Real-Time Feed
-        </h1>
+        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Real-Time Feed</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <div
@@ -208,7 +206,7 @@ export default function FeedPage() {
                 connected ? "bg-green-500 animate-pulse" : "bg-red-500"
               }`}
             />
-            <span className="text-sm text-cream-500 dark:text-cream-400">
+            <span className="text-sm text-stone-500 dark:text-night-300">
               {connected ? "Live" : "Disconnected"}
             </span>
           </div>
@@ -218,7 +216,7 @@ export default function FeedPage() {
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               isPaused
                 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                : "bg-cream-100 text-cream-700 dark:bg-night-700 dark:text-cream-300"
+                : "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-200"
             }`}
           >
             {isPaused ? "Resume" : "Pause"}
@@ -231,15 +229,15 @@ export default function FeedPage() {
           <button
             type="button"
             onClick={() => toggleAllFilters(true)}
-            className="text-xs text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            className="text-xs text-stone-500 hover:text-stone-700 dark:text-night-300 dark:hover:text-night-100"
           >
             All
           </button>
-          <span className="text-cream-300 dark:text-cream-600">|</span>
+          <span className="text-stone-400 dark:text-night-500">|</span>
           <button
             type="button"
             onClick={() => toggleAllFilters(false)}
-            className="text-xs text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            className="text-xs text-stone-500 hover:text-stone-700 dark:text-night-300 dark:hover:text-night-100"
           >
             None
           </button>
@@ -258,16 +256,16 @@ export default function FeedPage() {
           placeholder="Filter by symbol..."
           value={symbolFilter}
           onChange={(e) => setSymbolFilter(e.target.value)}
-          className="px-3 py-1 text-sm rounded-md border border-cream-200 dark:border-night-600 bg-white dark:bg-night-800 text-cream-900 dark:text-cream-100 placeholder-cream-400 dark:placeholder-cream-500 w-40"
+          className="px-3 py-1 text-sm rounded-md border border-cream-200 dark:border-night-600 bg-white dark:bg-night-800 text-stone-900 dark:text-night-100 placeholder-stone-400 dark:placeholder-night-400 w-40"
         />
       </div>
 
       <div className="flex-1 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 flex flex-col overflow-hidden">
         <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-lg font-medium text-cream-900 dark:text-cream-100">
+          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
             Event Stream
             {filteredEvents.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-cream-500 dark:text-cream-400">
+              <span className="ml-2 text-sm font-normal text-stone-500 dark:text-night-300">
                 ({filteredEvents.length} events)
               </span>
             )}
@@ -275,7 +273,7 @@ export default function FeedPage() {
           <button
             type="button"
             onClick={clearEvents}
-            className="text-sm text-cream-500 hover:text-cream-700 dark:text-cream-400 dark:hover:text-cream-200"
+            className="text-sm text-stone-500 hover:text-stone-700 dark:text-night-300 dark:hover:text-night-100"
           >
             Clear
           </button>
@@ -314,28 +312,28 @@ export default function FeedPage() {
               })}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-cream-400">
+            <div className="flex items-center justify-center h-full text-stone-400 dark:text-night-400">
               {connected ? "Waiting for events..." : "Connect to receive events"}
             </div>
           )}
         </div>
 
-        <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750 flex-shrink-0">
-          <div className="flex items-center gap-6 text-xs text-cream-500 dark:text-cream-400">
+        <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-800 flex-shrink-0">
+          <div className="flex items-center gap-6 text-xs text-stone-500 dark:text-night-300">
             <span>
-              <strong className="text-cream-700 dark:text-cream-300">{stats.quotesPerMin}</strong>{" "}
+              <strong className="text-stone-700 dark:text-night-100">{stats.quotesPerMin}</strong>{" "}
               quotes/min
             </span>
             <span>
-              <strong className="text-cream-700 dark:text-cream-300">{stats.tradesPerMin}</strong>{" "}
+              <strong className="text-stone-700 dark:text-night-100">{stats.tradesPerMin}</strong>{" "}
               trades/min
             </span>
             <span>
-              <strong className="text-cream-700 dark:text-cream-300">{stats.optionsPerMin}</strong>{" "}
+              <strong className="text-stone-700 dark:text-night-100">{stats.optionsPerMin}</strong>{" "}
               options/min
             </span>
             <span>
-              <strong className="text-cream-700 dark:text-cream-300">{stats.totalPerMin}</strong>{" "}
+              <strong className="text-stone-700 dark:text-night-100">{stats.totalPerMin}</strong>{" "}
               total/min
             </span>
           </div>
@@ -380,7 +378,9 @@ function FeedEventRow({ event }: { event: NormalizedEvent }) {
   return (
     <div className="flex items-center gap-3 px-4 h-12 border-b border-cream-100 dark:border-night-700 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
       {/* Timestamp */}
-      <span className="text-xs font-mono text-cream-400 w-20 flex-shrink-0">{timeStr}</span>
+      <span className="text-xs font-mono text-stone-400 dark:text-night-400 w-20 flex-shrink-0">
+        {timeStr}
+      </span>
 
       {/* Icon & Type */}
       <span className={`text-sm w-4 flex-shrink-0 ${EVENT_TYPE_COLORS[event.type]}`}>
@@ -394,7 +394,7 @@ function FeedEventRow({ event }: { event: NormalizedEvent }) {
 
       {/* Symbol */}
       {event.symbol && (
-        <span className="text-sm font-mono font-medium text-cream-900 dark:text-cream-100 w-14 flex-shrink-0 truncate">
+        <span className="text-sm font-mono font-medium text-stone-900 dark:text-night-100 w-14 flex-shrink-0 truncate">
           {event.symbol}
         </span>
       )}
@@ -405,7 +405,7 @@ function FeedEventRow({ event }: { event: NormalizedEvent }) {
       </span>
 
       {/* Details */}
-      <span className="text-sm text-cream-500 dark:text-cream-400 flex-1 truncate">
+      <span className="text-sm text-stone-500 dark:text-night-300 flex-1 truncate">
         {event.details}
       </span>
     </div>
