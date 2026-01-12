@@ -166,20 +166,16 @@ flowchart LR
         GRPC["`**:50053**
         gRPC/Tonic
         ExecutionService`"]
-        Flight["`**:50055**
-        Arrow Flight
-        Market Data`"]
     end
 
     Client([Client]) -->|/health, /v1/*| HTTP
     Worker([Worker]) -->|CheckConstraints, SubmitOrder| GRPC
-    Dashboard([Dashboard]) -->|High-perf streaming| Flight
 
     classDef port fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
     classDef client fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
 
-    class HTTP,GRPC,Flight port
-    class Client,Worker,Dashboard client
+    class HTTP,GRPC port
+    class Client,Worker client
 ```
 
 ---

@@ -283,7 +283,7 @@ Hono REST + WebSocket API for the dashboard.
 
 Rust gRPC server for deterministic order validation and routing.
 
-**Ports**: 50051 (HTTP), 50052 (Arrow Flight), 50053 (gRPC)
+**Ports**: 50051 (HTTP), 50053 (gRPC)
 
 **Capabilities**:
 - DecisionPlan validation against risk constraints
