@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { EconomicCalendarWidget } from "@/components/market";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
   AlertsBanner,
@@ -34,6 +35,7 @@ export default function DashboardPage(): React.JSX.Element {
         nextCycleDisplay={nextCycleDisplay}
         systemControls={{
           status: status.data,
+          isLoading: status.isLoading,
           onStart: () => startSystem.mutate({}),
           onStop: () => stopSystem.mutate({}),
           onPause: () => pauseSystem.mutate(),
@@ -71,6 +73,10 @@ export default function DashboardPage(): React.JSX.Element {
       {status.data?.alerts && status.data.alerts.length > 0 && (
         <AlertsBanner alerts={status.data.alerts} />
       )}
+
+      <QueryErrorBoundary title="Failed to load economic calendar">
+        <EconomicCalendarWidget days={3} impact="high" maxEvents={3} compact />
+      </QueryErrorBoundary>
 
       <QueryErrorBoundary title="Failed to load decisions">
         <RecentDecisions

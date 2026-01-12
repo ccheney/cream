@@ -85,6 +85,7 @@ export interface EventFeedSectionProps {
 
 export interface SystemControlsProps {
   status: SystemStatusData | undefined;
+  isLoading: boolean;
   onStart: () => void;
   onStop: () => void;
   onPause: () => void;
