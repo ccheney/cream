@@ -97,6 +97,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@cream/api": "workspace:*",
+        "@cream/broker": "workspace:*",
         "@cream/config": "workspace:*",
         "@cream/dashboard-types": "workspace:*",
         "@cream/domain": "workspace:*",

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@cream/api": "workspace:*",
+    "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/logger": "workspace:*",
     "@cream/dashboard-types": "workspace:*",

@@ -6,8 +6,10 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
+import { type AlpacaClient, createAlpacaClient } from "@cream/broker";
 import { calculateReturns, calculateSharpe, calculateSortino } from "@cream/metrics";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 import {
   getDecisionsRepo,
   getOrdersRepo,
@@ -17,6 +19,46 @@ import {
 import log from "../logger.js";
 import { portfolioService } from "../services/portfolio.js";
 import { systemState } from "./system.js";
+
+// ============================================
+// Alpaca Trading Client (singleton)
+// ============================================
+
+let brokerClient: AlpacaClient | null = null;
+
+function isAlpacaConfigured(): boolean {
+  return Boolean(process.env.ALPACA_KEY && process.env.ALPACA_SECRET);
+}
+
+function getBrokerClient(): AlpacaClient {
+  if (brokerClient) {
+    return brokerClient;
+  }
+
+  if (!isAlpacaConfigured()) {
+    throw new HTTPException(503, {
+      message: "Trading service unavailable: ALPACA_KEY/ALPACA_SECRET not configured",
+    });
+  }
+
+  try {
+    // Safe to assert: isAlpacaConfigured() check above guarantees these exist
+    const apiKey = process.env.ALPACA_KEY as string;
+    const apiSecret = process.env.ALPACA_SECRET as string;
+
+    brokerClient = createAlpacaClient({
+      apiKey,
+      apiSecret,
+      environment: systemState.environment,
+    });
+    return brokerClient;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new HTTPException(503, {
+      message: `Trading service unavailable: ${message}`,
+    });
+  }
+}
 
 // ============================================
 // Schemas
@@ -111,6 +153,53 @@ const PerformanceMetricsSchema = z.object({
 const ClosePositionRequestSchema = z.object({
   marketOrder: z.boolean().optional().default(true),
   limitPrice: z.number().optional(),
+});
+
+const AccountStatusSchema = z.enum([
+  "ACTIVE",
+  "SUBMITTED",
+  "APPROVAL_PENDING",
+  "APPROVED",
+  "REJECTED",
+  "CLOSED",
+  "DISABLED",
+]);
+
+const AccountSchema = z.object({
+  id: z.string(),
+  status: AccountStatusSchema,
+  currency: z.string(),
+  cash: z.number(),
+  portfolioValue: z.number(),
+  buyingPower: z.number(),
+  daytradeCount: z.number(),
+  patternDayTrader: z.boolean(),
+  tradingBlocked: z.boolean(),
+  transfersBlocked: z.boolean(),
+  accountBlocked: z.boolean(),
+  shortingEnabled: z.boolean(),
+  longMarketValue: z.number(),
+  shortMarketValue: z.number(),
+  equity: z.number(),
+  lastEquity: z.number(),
+  multiplier: z.number(),
+  initialMargin: z.number(),
+  maintenanceMargin: z.number(),
+  sma: z.number(),
+  createdAt: z.string(),
+});
+
+const PortfolioHistoryTimeframeSchema = z.enum(["1Min", "5Min", "15Min", "1H", "1D"]);
+
+const PortfolioHistoryPeriodSchema = z.enum(["1D", "1W", "1M", "3M", "1A", "all"]);
+
+const AlpacaPortfolioHistorySchema = z.object({
+  timestamp: z.array(z.number()),
+  equity: z.array(z.number()),
+  profitLoss: z.array(z.number()),
+  profitLossPct: z.array(z.number()),
+  timeframe: PortfolioHistoryTimeframeSchema,
+  baseValue: z.number(),
 });
 
 // ============================================
@@ -682,6 +771,186 @@ app.openapi(closePositionRoute, async (c) => {
       "Failed to create close order"
     );
     throw error;
+  }
+});
+
+// GET /api/portfolio/account
+const accountRoute = createRoute({
+  method: "get",
+  path: "/account",
+  responses: {
+    200: {
+      content: { "application/json": { schema: AccountSchema } },
+      description: "Alpaca trading account information",
+    },
+    503: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+      description: "Trading service unavailable",
+    },
+  },
+  tags: ["Portfolio"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(accountRoute, async (c) => {
+  try {
+    const client = getBrokerClient();
+    const account = await client.getAccount();
+
+    log.debug(
+      { accountId: account.id, status: account.status, equity: account.equity },
+      "Fetched Alpaca account"
+    );
+
+    return c.json({
+      id: account.id,
+      status: account.status.toUpperCase(),
+      currency: account.currency,
+      cash: account.cash,
+      portfolioValue: account.portfolioValue,
+      buyingPower: account.buyingPower,
+      daytradeCount: account.daytradeCount,
+      patternDayTrader: account.patternDayTrader,
+      tradingBlocked: account.tradingBlocked,
+      transfersBlocked: account.transfersBlocked,
+      accountBlocked: account.accountBlocked,
+      shortingEnabled: account.shortingEnabled,
+      longMarketValue: account.longMarketValue,
+      shortMarketValue: account.shortMarketValue,
+      equity: account.equity,
+      lastEquity: account.lastEquity,
+      multiplier: account.multiplier,
+      initialMargin: account.initialMargin,
+      maintenanceMargin: account.maintenanceMargin,
+      sma: account.sma,
+      createdAt: account.createdAt,
+    });
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    log.error({ error: message }, "Failed to fetch Alpaca account");
+    throw new HTTPException(503, { message: `Failed to fetch account: ${message}` });
+  }
+});
+
+// GET /api/portfolio/alpaca-history
+const alpacaHistoryRoute = createRoute({
+  method: "get",
+  path: "/alpaca-history",
+  request: {
+    query: z.object({
+      period: PortfolioHistoryPeriodSchema.optional().default("1M"),
+      timeframe: PortfolioHistoryTimeframeSchema.optional().default("1D"),
+      start: z.string().optional(),
+      end: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: AlpacaPortfolioHistorySchema } },
+      description: "Portfolio history from Alpaca",
+    },
+    503: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+      description: "Trading service unavailable",
+    },
+  },
+  tags: ["Portfolio"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(alpacaHistoryRoute, async (c) => {
+  const { period, timeframe, start, end } = c.req.valid("query");
+
+  if (!isAlpacaConfigured()) {
+    throw new HTTPException(503, {
+      message: "Trading service unavailable: ALPACA_KEY/ALPACA_SECRET not configured",
+    });
+  }
+
+  try {
+    // Safe to assert: isAlpacaConfigured() check above guarantees these exist
+    const apiKey = process.env.ALPACA_KEY as string;
+    const apiSecret = process.env.ALPACA_SECRET as string;
+
+    const baseUrl =
+      systemState.environment === "LIVE"
+        ? "https://api.alpaca.markets"
+        : "https://paper-api.alpaca.markets";
+
+    const params = new URLSearchParams();
+    if (period) {
+      params.set("period", period);
+    }
+    if (timeframe) {
+      params.set("timeframe", timeframe);
+    }
+    if (start) {
+      params.set("start", start);
+    }
+    if (end) {
+      params.set("end", end);
+    }
+
+    const url = `${baseUrl}/v2/account/portfolio/history?${params.toString()}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "APCA-API-KEY-ID": apiKey,
+        "APCA-API-SECRET-KEY": apiSecret,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      log.error(
+        { status: response.status, error: errorText },
+        "Failed to fetch Alpaca portfolio history"
+      );
+      throw new HTTPException(503, {
+        message: `Failed to fetch portfolio history: ${response.status}`,
+      });
+    }
+
+    const data = (await response.json()) as {
+      timestamp: number[];
+      equity: number[];
+      profit_loss: number[];
+      profit_loss_pct: number[];
+      timeframe: string;
+      base_value: number;
+    };
+
+    log.debug(
+      { period, timeframe, points: data.timestamp?.length ?? 0 },
+      "Fetched Alpaca portfolio history"
+    );
+
+    return c.json({
+      timestamp: data.timestamp ?? [],
+      equity: data.equity ?? [],
+      profitLoss: data.profit_loss ?? [],
+      profitLossPct: data.profit_loss_pct ?? [],
+      timeframe: timeframe,
+      baseValue: data.base_value ?? 0,
+    });
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    log.error({ error: message }, "Failed to fetch Alpaca portfolio history");
+    throw new HTTPException(503, { message: `Failed to fetch portfolio history: ${message}` });
   }
 });
 

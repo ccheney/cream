@@ -5,6 +5,21 @@
  * Import from here to ensure type consistency across both apps.
  */
 
+// Account types
+export {
+  type Account,
+  AccountSchema,
+  type AccountStatus,
+  AccountStatusSchema,
+  type PortfolioHistory,
+  type PortfolioHistoryPeriod,
+  PortfolioHistoryPeriodSchema,
+  type PortfolioHistoryPoint,
+  PortfolioHistoryPointSchema,
+  PortfolioHistorySchema,
+  type PortfolioHistoryTimeframe,
+  PortfolioHistoryTimeframeSchema,
+} from "./account.js";
 // Agent types
 export {
   type AgentConfig,
