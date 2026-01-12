@@ -165,6 +165,12 @@ export interface AlpacaTradingStreamConfig {
   maxReconnectAttempts?: number;
   /** Initial reconnection delay in ms (default: 1000) */
   reconnectDelayMs?: number;
+  /** Max reconnection delay in ms (default: 30000) */
+  maxReconnectDelayMs?: number;
+  /** Heartbeat interval in ms (default: 30000) */
+  heartbeatIntervalMs?: number;
+  /** Heartbeat timeout in ms (default: 10000) */
+  heartbeatTimeoutMs?: number;
 }
 
 export enum TradingStreamState {
@@ -183,7 +189,9 @@ export type TradingStreamEvent =
   | { type: "trade_update"; data: AlpacaTradeUpdateMessage["data"] }
   | { type: "error"; message: string }
   | { type: "disconnected"; reason: string }
-  | { type: "reconnecting"; attempt: number };
+  | { type: "reconnecting"; attempt: number }
+  | { type: "heartbeat_sent" }
+  | { type: "heartbeat_timeout" };
 
 export type TradingStreamEventHandler = (event: TradingStreamEvent) => void | Promise<void>;
 
@@ -222,8 +230,9 @@ export class AlpacaTradingStreamService {
   private eventHandlers: TradingStreamEventHandler[] = [];
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastActivityTime = 0;
-  private activityMonitorTimer: ReturnType<typeof setInterval> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private awaitingHeartbeatResponse = false;
 
   constructor(config: AlpacaTradingStreamConfig) {
     this.config = {
@@ -233,6 +242,9 @@ export class AlpacaTradingStreamService {
       autoReconnect: config.autoReconnect ?? true,
       maxReconnectAttempts: config.maxReconnectAttempts ?? 10,
       reconnectDelayMs: config.reconnectDelayMs ?? 1000,
+      maxReconnectDelayMs: config.maxReconnectDelayMs ?? 30000,
+      heartbeatIntervalMs: config.heartbeatIntervalMs ?? 30000,
+      heartbeatTimeoutMs: config.heartbeatTimeoutMs ?? 10000,
     };
   }
 
@@ -321,8 +333,6 @@ export class AlpacaTradingStreamService {
       this.ws.addEventListener("close", (event: CloseEvent) => {
         this.handleClose(event.code, event.reason);
       });
-
-      this.lastActivityTime = Date.now();
     } catch (error) {
       this.state = TradingStreamState.ERROR;
       reject(error as Error);
@@ -395,7 +405,8 @@ export class AlpacaTradingStreamService {
    * Handle incoming WebSocket messages.
    */
   private handleMessage(data: string | ArrayBuffer, connectResolve?: () => void): void {
-    this.lastActivityTime = Date.now();
+    // Track activity for heartbeat mechanism
+    this.onActivity();
 
     try {
       const text = typeof data === "string" ? data : new TextDecoder().decode(data);
@@ -408,7 +419,7 @@ export class AlpacaTradingStreamService {
         if (authData.status === "authorized") {
           this.state = TradingStreamState.AUTHENTICATED;
           this.emit({ type: "authenticated" });
-          this.startActivityMonitor();
+          this.startHeartbeat();
           this.reconnectAttempts = 0;
 
           // Auto-subscribe to trade_updates
@@ -477,8 +488,11 @@ export class AlpacaTradingStreamService {
    */
   private scheduleReconnect(): void {
     this.reconnectAttempts++;
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, 64s (max)
-    const delay = Math.min(this.config.reconnectDelayMs * 2 ** (this.reconnectAttempts - 1), 64000);
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, up to maxReconnectDelayMs (default 30s)
+    const delay = Math.min(
+      this.config.reconnectDelayMs * 2 ** (this.reconnectAttempts - 1),
+      this.config.maxReconnectDelayMs
+    );
 
     this.emit({ type: "reconnecting", attempt: this.reconnectAttempts });
 
@@ -499,21 +513,74 @@ export class AlpacaTradingStreamService {
   }
 
   /**
-   * Start activity monitor to detect stale connections.
+   * Start heartbeat mechanism to detect stale connections.
+   *
+   * Sends a ping every heartbeatIntervalMs (default 30s) and expects
+   * activity within heartbeatTimeoutMs (default 10s). If no activity
+   * is received, forces a reconnect.
    */
-  private startActivityMonitor(): void {
-    this.lastActivityTime = Date.now();
+  private startHeartbeat(): void {
+    this.awaitingHeartbeatResponse = false;
 
-    // Check every 30 seconds for activity
-    this.activityMonitorTimer = setInterval(() => {
+    // Send heartbeat ping every heartbeatIntervalMs
+    this.heartbeatTimer = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const timeSinceActivity = Date.now() - this.lastActivityTime;
-        // Close connection if no activity for 2 minutes
-        if (timeSinceActivity > 120000) {
-          this.ws.close();
-        }
+        this.sendHeartbeatPing();
       }
-    }, 30000);
+    }, this.config.heartbeatIntervalMs);
+  }
+
+  /**
+   * Send a heartbeat ping and start timeout timer.
+   */
+  private sendHeartbeatPing(): void {
+    if (this.awaitingHeartbeatResponse) {
+      // Already waiting for a response, don't send another ping
+      return;
+    }
+
+    this.awaitingHeartbeatResponse = true;
+    this.emit({ type: "heartbeat_sent" });
+
+    // Start timeout timer - if no activity within timeout, force reconnect
+    this.heartbeatTimeoutTimer = setTimeout(() => {
+      this.handleHeartbeatTimeout();
+    }, this.config.heartbeatTimeoutMs);
+  }
+
+  /**
+   * Handle heartbeat timeout - force reconnect.
+   */
+  private handleHeartbeatTimeout(): void {
+    this.emit({ type: "heartbeat_timeout" });
+    this.clearHeartbeatTimeoutTimer();
+    this.awaitingHeartbeatResponse = false;
+
+    // Force close and reconnect
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
+
+  /**
+   * Reset heartbeat state on activity.
+   * Called when any message is received from the server.
+   */
+  private onActivity(): void {
+    if (this.awaitingHeartbeatResponse) {
+      this.awaitingHeartbeatResponse = false;
+      this.clearHeartbeatTimeoutTimer();
+    }
+  }
+
+  /**
+   * Clear heartbeat timeout timer.
+   */
+  private clearHeartbeatTimeoutTimer(): void {
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer);
+      this.heartbeatTimeoutTimer = null;
+    }
   }
 
   /**
@@ -525,10 +592,13 @@ export class AlpacaTradingStreamService {
       this.reconnectTimer = null;
     }
 
-    if (this.activityMonitorTimer) {
-      clearInterval(this.activityMonitorTimer);
-      this.activityMonitorTimer = null;
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
+
+    this.clearHeartbeatTimeoutTimer();
+    this.awaitingHeartbeatResponse = false;
   }
 }
 
