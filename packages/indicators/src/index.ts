@@ -18,4 +18,5 @@ export * from "./batch";
 export * from "./calculators";
 export * from "./repositories";
 export * from "./service";
+export * from "./synthesis";
 export * from "./types";
