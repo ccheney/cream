@@ -92,5 +92,12 @@ export interface AlpacaOrderResponse {
 }
 
 export interface AlpacaClockResponse {
+  /** Whether the market is currently open */
   is_open: boolean;
+  /** Current timestamp (ISO 8601) */
+  timestamp: string;
+  /** Next market open time (ISO 8601) */
+  next_open: string;
+  /** Next market close time (ISO 8601) */
+  next_close: string;
 }
