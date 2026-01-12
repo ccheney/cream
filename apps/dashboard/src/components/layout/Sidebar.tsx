@@ -12,6 +12,7 @@
 
 import {
   BarChart3,
+  Beaker,
   Bot,
   Briefcase,
   ChevronLeft,
@@ -54,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
   { href: "/decisions", label: "Decisions", icon: FileText },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/indicators", label: "Indicators", icon: Beaker },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/charts", label: "Charts", icon: LineChart },
   { href: "/options", label: "Options", icon: Grid2x2 },

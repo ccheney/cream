@@ -6,6 +6,8 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
+// Indicator Lab components
+export { ActiveIndicatorsTable } from "./ActiveIndicatorsTable";
 // Category panels
 export {
   CorporatePanel,
@@ -41,6 +43,7 @@ export {
   type IndicatorSnapshotPanelProps,
 } from "./IndicatorSnapshotPanel";
 export { IndicatorValue, type IndicatorValueProps } from "./IndicatorValue";
+export { PaperTradingSection } from "./PaperTradingSection";
 // Synthesis components
 export { SynthesisHistoryTable } from "./SynthesisHistoryTable";
 export { SynthesisStatusCard } from "./SynthesisStatusCard";
