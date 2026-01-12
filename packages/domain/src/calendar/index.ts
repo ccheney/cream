@@ -18,6 +18,14 @@ export {
   type CalendarErrorCode,
   createAlpacaCalendarClient,
 } from "./alpaca-client";
+
+// Cache for PAPER/LIVE modes
+export {
+  type CalendarCache,
+  type CalendarCacheConfig,
+  createCalendarCache,
+  InMemoryCalendarCache,
+} from "./cache";
 // Hardcoded calendar data for BACKTEST mode
 export {
   EARLY_CLOSE,
