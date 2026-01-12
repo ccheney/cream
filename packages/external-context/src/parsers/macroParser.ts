@@ -6,7 +6,9 @@
 
 import {
   classifyReleaseImpact,
+  FRED_SERIES,
   type FREDReleaseDate,
+  type FREDSeriesId,
   getReleaseById,
   type ReleaseImpact,
 } from "@cream/universe";
@@ -144,6 +146,123 @@ export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroR
       date,
       unit: event.unit,
       source: `FMP:${event.country}`,
+    });
+  }
+
+  return results;
+}
+
+// ============================================
+// FRED Observations Parser
+// ============================================
+
+/**
+ * Metadata for FRED observations parsing.
+ */
+export interface FREDObservationMetadata {
+  /** Display name for the indicator */
+  name: string;
+  /** Unit of measurement */
+  unit: string;
+}
+
+/**
+ * FRED observation entry (from FREDClient.getObservations).
+ */
+export interface FREDObservationEntry {
+  /** Date in YYYY-MM-DD format */
+  date: string;
+  /** Value as string (can be '.' for missing data) */
+  value: string;
+}
+
+/**
+ * Parse FRED observations into normalized macro releases.
+ *
+ * Converts raw FRED API observations into ParsedMacroRelease format
+ * compatible with the macro release analysis pipeline.
+ *
+ * @param seriesId - FRED series ID (e.g., "CPIAUCSL", "UNRATE")
+ * @param observations - Array of date/value pairs from FRED API
+ * @param metadata - Optional name/unit override (defaults to FRED_SERIES lookup)
+ * @returns Array of parsed macro releases
+ *
+ * @example
+ * ```typescript
+ * const client = createFREDClientFromEnv();
+ * const response = await client.getObservations("CPIAUCSL", {
+ *   observation_start: "2024-01-01",
+ *   sort_order: "desc",
+ *   limit: 12,
+ * });
+ *
+ * const releases = parseFREDObservations("CPIAUCSL", response.observations);
+ * // => [
+ * //   { indicator: "CPI All Urban Consumers", value: 315.605, ... },
+ * //   { indicator: "CPI All Urban Consumers", value: 314.123, ... },
+ * // ]
+ * ```
+ */
+export function parseFREDObservations(
+  seriesId: string,
+  observations: FREDObservationEntry[],
+  metadata?: FREDObservationMetadata
+): ParsedMacroRelease[] {
+  const results: ParsedMacroRelease[] = [];
+
+  if (!observations || observations.length === 0) {
+    return results;
+  }
+
+  // Look up series metadata from registry if not provided
+  const registryMeta = FRED_SERIES[seriesId as FREDSeriesId] as
+    | { name: string; unit: string }
+    | undefined;
+  const name = metadata?.name ?? registryMeta?.name ?? seriesId;
+  const unit = metadata?.unit ?? registryMeta?.unit ?? undefined;
+
+  for (let i = 0; i < observations.length; i++) {
+    const item = observations[i];
+    if (!item || !item.date) {
+      continue;
+    }
+
+    // Skip missing data (FRED uses '.' for unavailable values)
+    if (item.value === "." || item.value === "" || item.value == null) {
+      continue;
+    }
+
+    const value = Number.parseFloat(item.value);
+    if (Number.isNaN(value)) {
+      continue;
+    }
+
+    const date = parseDate(item.date);
+    if (!date) {
+      continue;
+    }
+
+    // Get previous value from next item (observations typically newest-first)
+    // Scan for next valid observation
+    let previousValue: number | undefined;
+    for (let j = i + 1; j < observations.length; j++) {
+      const nextItem = observations[j];
+      if (nextItem && nextItem.value !== "." && nextItem.value !== "" && nextItem.value != null) {
+        const parsed = Number.parseFloat(nextItem.value);
+        if (!Number.isNaN(parsed)) {
+          previousValue = parsed;
+          break;
+        }
+      }
+    }
+
+    results.push({
+      indicator: name,
+      value,
+      previousValue,
+      date,
+      unit,
+      source: `FRED:${seriesId}`,
     });
   }
 

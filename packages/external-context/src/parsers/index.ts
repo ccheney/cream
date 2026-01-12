@@ -10,6 +10,8 @@ export {
   type FMPEconomicEvent,
   type FREDEconomicEvent,
   type FREDLatestValues,
+  type FREDObservationEntry,
+  type FREDObservationMetadata,
   filterRecentMacroReleases,
   filterSignificantFREDEvents,
   groupByIndicator,
@@ -18,6 +20,7 @@ export {
   type MacroIndicatorType,
   parseAlphaVantageIndicator,
   parseFMPEconomicEvents,
+  parseFREDObservations,
   parseFREDReleaseDates,
   sortFREDEventsByDateAndImpact,
 } from "./macroParser.js";
