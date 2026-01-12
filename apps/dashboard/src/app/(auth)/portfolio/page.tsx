@@ -16,11 +16,19 @@
  * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
  */
 
+import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
+import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
 import { PerformanceGrid } from "@/components/portfolio/PerformanceGrid";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
-import { useAccount, usePerformanceMetrics, usePortfolioSummary } from "@/hooks/queries";
+import {
+  useAccount,
+  usePerformanceMetrics,
+  usePortfolioHistory,
+  usePortfolioSummary,
+} from "@/hooks/queries";
 import { useAccountStreaming } from "@/hooks/useAccountStreaming";
+import type { PortfolioHistoryPeriod } from "@/lib/api/types";
 
 // ============================================
 // Placeholder Components
@@ -35,38 +43,6 @@ function LiveIndicator({ isLive }: { isLive: boolean }) {
       <span className="text-sm font-medium text-stone-600 dark:text-night-300">
         {isLive ? "LIVE" : "DELAYED"}
       </span>
-    </div>
-  );
-}
-
-/**
- * Placeholder for EquityCurveChart component (cream-lgaxe)
- * TradingView chart with period selector
- */
-function EquityCurveChartPlaceholder() {
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
-          Equity Curve
-        </h2>
-        <div className="flex gap-1">
-          {["1W", "1M", "3M", "YTD", "1Y", "ALL"].map((period) => (
-            <button
-              key={period}
-              type="button"
-              className="px-2 py-1 text-xs text-stone-400 dark:text-night-500 hover:text-stone-600 dark:hover:text-night-300"
-            >
-              {period}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="h-64 bg-cream-50 dark:bg-night-750 rounded flex items-center justify-center">
-        <span className="text-stone-400 dark:text-night-500 text-sm">
-          TradingView Chart Placeholder
-        </span>
-      </div>
     </div>
   );
 }
@@ -156,9 +132,11 @@ function RiskMetricsBarPlaceholder() {
 // ============================================
 
 export default function PortfolioPage() {
+  const [chartPeriod, setChartPeriod] = useState<PortfolioHistoryPeriod>("1M");
   const { data: account, isLoading: isAccountLoading } = useAccount();
   const { data: summary } = usePortfolioSummary();
   const { data: performanceMetrics, isLoading: isPerformanceLoading } = usePerformanceMetrics();
+  const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory(chartPeriod);
   const accountStreaming = useAccountStreaming(account);
 
   const formatCurrency = (value: number) =>
@@ -213,7 +191,12 @@ export default function PortfolioPage() {
 
       {/* Equity Curve Chart */}
       <QueryErrorBoundary title="Failed to load equity curve">
-        <EquityCurveChartPlaceholder />
+        <EquityCurveChart
+          data={portfolioHistory}
+          period={chartPeriod}
+          onPeriodChange={setChartPeriod}
+          isLoading={isHistoryLoading}
+        />
       </QueryErrorBoundary>
 
       {/* Main Content Row: Positions Table (2/3) + Allocation (1/3) */}
