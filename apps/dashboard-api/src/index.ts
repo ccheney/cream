@@ -34,6 +34,7 @@ import {
   calendarRoutes,
   configRoutes,
   decisionsRoutes,
+  economicCalendarRoutes,
   filingsRoutes,
   indicatorsRoutes,
   marketRoutes,
@@ -191,6 +192,7 @@ app.use("/api/research/*", requireAuth());
 app.use("/api/options/*", requireAuth());
 app.use("/api/filings/*", requireAuth());
 app.use("/api/snapshots/*", requireAuth());
+app.use("/api/economic-calendar/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -218,6 +220,7 @@ app.route("/api/indicators", batchTriggerRoutes);
 app.route("/api/research", researchRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
+app.route("/api/economic-calendar", economicCalendarRoutes);
 
 // ============================================
 // OpenAPI Documentation

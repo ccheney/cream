@@ -92,6 +92,8 @@ export {
   EarningsEventSchema,
   type EarningsTranscript,
   EarningsTranscriptSchema,
+  type EconomicCalendarEvent,
+  EconomicCalendarEventSchema,
   FMP_RATE_LIMITS,
   FmpClient,
   type FmpClientConfig,

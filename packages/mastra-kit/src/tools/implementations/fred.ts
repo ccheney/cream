@@ -144,3 +144,128 @@ export async function getEconomicCalendar(
     return [];
   }
 }
+
+// ============================================
+// Macro Indicators Tool
+// ============================================
+
+/**
+ * Default series to fetch for macro indicators.
+ * Key economic indicators covering inflation, employment, growth, and rates.
+ */
+const DEFAULT_MACRO_SERIES = [
+  "CPIAUCSL", // CPI - Consumer Price Index
+  "UNRATE", // Unemployment Rate
+  "FEDFUNDS", // Federal Funds Rate
+  "DGS10", // 10-Year Treasury
+  "DGS2", // 2-Year Treasury
+  "T10Y2Y", // 10Y-2Y Spread (yield curve)
+  "GDPC1", // Real GDP
+  "PCE", // Personal Consumption Expenditures
+  "UMCSENT", // Consumer Sentiment
+  "INDPRO", // Industrial Production
+];
+
+/**
+ * Macro indicator value with date and optional change.
+ */
+export interface MacroIndicatorValue {
+  value: number;
+  date: string;
+  change?: number;
+}
+
+/**
+ * Get latest macro economic indicators from FRED.
+ *
+ * Fetches the most recent values for key economic indicators.
+ * Returns empty object in backtest mode or if FRED API is unavailable.
+ *
+ * @param ctx - ExecutionContext
+ * @param seriesIds - Optional list of FRED series IDs (defaults to key indicators)
+ * @returns Record of series ID to latest value with date and change
+ */
+export async function getMacroIndicators(
+  ctx: ExecutionContext,
+  seriesIds?: string[]
+): Promise<Record<string, MacroIndicatorValue>> {
+  // In backtest mode, return empty object for consistent/fast execution
+  if (isBacktest(ctx)) {
+    return {};
+  }
+
+  const client = getFREDClient();
+  if (!client) {
+    // FRED_API_KEY not set - return empty object
+    return {};
+  }
+
+  const series = seriesIds ?? DEFAULT_MACRO_SERIES;
+  const results: Record<string, MacroIndicatorValue> = {};
+
+  // Fetch series in parallel with limited concurrency
+  // FRED rate limit: 120 req/min, so we can safely do parallel requests
+  const fetchPromises = series.map(async (seriesId) => {
+    try {
+      const response = await client.getObservations(seriesId, {
+        limit: 2,
+        sort_order: "desc",
+      });
+
+      const observations = response.observations;
+      if (observations.length === 0) {
+        return null;
+      }
+
+      const latest = observations[0];
+      if (!latest || latest.value === null) {
+        return null;
+      }
+
+      const latestValue = Number.parseFloat(latest.value);
+      if (Number.isNaN(latestValue)) {
+        return null;
+      }
+
+      // Calculate percent change if we have previous value
+      let change: number | undefined;
+      if (observations.length > 1) {
+        const previous = observations[1];
+        if (previous && previous.value !== null) {
+          const prevValue = Number.parseFloat(previous.value);
+          if (!Number.isNaN(prevValue) && prevValue !== 0) {
+            change = ((latestValue - prevValue) / Math.abs(prevValue)) * 100;
+          }
+        }
+      }
+
+      return {
+        seriesId,
+        value: latestValue,
+        date: latest.date,
+        change,
+      };
+    } catch (error) {
+      log.warn(
+        { seriesId, error: error instanceof Error ? error.message : String(error) },
+        "Failed to fetch FRED series"
+      );
+      return null;
+    }
+  });
+
+  const fetchResults = await Promise.all(fetchPromises);
+
+  // Collect successful results
+  for (const result of fetchResults) {
+    if (result) {
+      results[result.seriesId] = {
+        value: result.value,
+        date: result.date,
+        change: result.change,
+      };
+    }
+  }
+
+  return results;
+}

@@ -51,6 +51,7 @@ export { default as batchTriggerRoutes } from "./batch-trigger.js";
 export { default as calendarRoutes } from "./calendar.js";
 export { default as configRoutes } from "./config.js";
 export { default as decisionsRoutes } from "./decisions.js";
+export { default as economicCalendarRoutes } from "./economic-calendar.js";
 export { default as filingsRoutes } from "./filings.js";
 export { default as indicatorsRoutes } from "./indicators.js";
 export { default as marketRoutes } from "./market.js";
