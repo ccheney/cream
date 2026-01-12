@@ -967,6 +967,142 @@ app.openapi(getSynthesisHistoryRoute, async (c) => {
   return c.json({ history });
 });
 
+// POST /api/indicators/synthesis/trigger - Manually trigger indicator synthesis
+const SynthesisTriggerRequestSchema = z.object({
+  reason: z.string().optional().default("Manual trigger"),
+  regime: z.string().optional().default("UNKNOWN"),
+});
+
+const SynthesisTriggerResponseSchema = z.object({
+  success: z.boolean(),
+  indicatorId: z.string().optional(),
+  indicatorName: z.string().optional(),
+  status: z.enum([
+    "paper_trading_started",
+    "validation_failed",
+    "implementation_failed",
+    "hypothesis_failed",
+    "error",
+  ]),
+  message: z.string(),
+  phases: z.object({
+    hypothesisGenerated: z.boolean(),
+    implementationSucceeded: z.boolean(),
+    validationPassed: z.boolean(),
+    paperTradingStarted: z.boolean(),
+  }),
+});
+
+const triggerSynthesisRoute = createRoute({
+  method: "post",
+  path: "/synthesis/trigger",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: SynthesisTriggerRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: SynthesisTriggerResponseSchema,
+        },
+      },
+      description: "Synthesis workflow result",
+    },
+    500: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+          }),
+        },
+      },
+      description: "Synthesis workflow failed",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(triggerSynthesisRoute, async (c) => {
+  const { reason, regime } = c.req.valid("json");
+
+  // Import workflow dynamically to avoid circular dependencies
+  const { indicatorSynthesisWorkflow } = await import("@cream/api");
+
+  const cycleId = `manual-${Date.now()}`;
+
+  try {
+    const run = await indicatorSynthesisWorkflow.createRun();
+    const workflowResult = await run.start({
+      inputData: {
+        triggerReason: reason,
+        currentRegime: regime,
+        rollingIC30Day: 0,
+        icDecayDays: 0,
+        cycleId,
+      },
+    });
+
+    if (workflowResult.status !== "success") {
+      throw new HTTPException(500, { message: "Workflow execution failed" });
+    }
+
+    // Extract result from successful workflow
+    const output = (workflowResult as { result?: Record<string, unknown> }).result as
+      | {
+          success?: boolean;
+          indicatorId?: string;
+          indicatorName?: string;
+          status?: string;
+          message?: string;
+          phases?: {
+            hypothesisGenerated: boolean;
+            implementationSucceeded: boolean;
+            validationPassed: boolean;
+            paperTradingStarted: boolean;
+          };
+        }
+      | undefined;
+
+    if (!output) {
+      throw new HTTPException(500, { message: "Workflow returned no output" });
+    }
+
+    return c.json({
+      success: output.success ?? false,
+      indicatorId: output.indicatorId,
+      indicatorName: output.indicatorName,
+      status:
+        (output.status as
+          | "paper_trading_started"
+          | "validation_failed"
+          | "implementation_failed"
+          | "hypothesis_failed"
+          | "error") ?? "error",
+      message: output.message ?? "Unknown result",
+      phases: output.phases ?? {
+        hypothesisGenerated: false,
+        implementationSucceeded: false,
+        validationPassed: false,
+        paperTradingStarted: false,
+      },
+    });
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error;
+    }
+    throw new HTTPException(500, {
+      message: error instanceof Error ? error.message : "Workflow execution failed",
+    });
+  }
+});
+
 // ============================================
 // Parameterized Routes (after static routes)
 // ============================================
