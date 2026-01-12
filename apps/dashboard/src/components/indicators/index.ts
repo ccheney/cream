@@ -41,3 +41,6 @@ export {
   type IndicatorSnapshotPanelProps,
 } from "./IndicatorSnapshotPanel";
 export { IndicatorValue, type IndicatorValueProps } from "./IndicatorValue";
+// Synthesis components
+export { SynthesisHistoryTable } from "./SynthesisHistoryTable";
+export { SynthesisStatusCard } from "./SynthesisStatusCard";
