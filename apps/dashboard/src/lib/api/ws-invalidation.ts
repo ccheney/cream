@@ -1,9 +1,143 @@
 /**
+ * WebSocket Cache Invalidation
+ *
+ * Handles TanStack Query cache invalidation triggered by WebSocket messages.
+ * Uses debouncing to avoid excessive refetches from rapid message bursts.
+ *
  * @see docs/plans/ui/07-state-management.md lines 47-66
+ * @see docs/plans/ui/40-streaming-data-integration.md Part 4.2
  */
 
 import { type CyclePhase, useCycleStore } from "@/stores/cycle-store";
 import { getQueryClient, queryKeys } from "./query-client";
+
+// ============================================
+// Debounced Invalidation
+// ============================================
+
+/** Pending invalidation keys, grouped by category for efficient debouncing */
+const pendingInvalidations = new Set<string>();
+
+/** Debounce timer reference */
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounce delay in milliseconds */
+const DEBOUNCE_MS = 100;
+
+/**
+ * Map server invalidation hints to TanStack Query keys.
+ * The server sends dot-notation strings like "portfolio.positions".
+ */
+function mapInvalidationHintToQueryKey(hint: string): readonly unknown[] | null {
+  const parts = hint.split(".");
+
+  switch (parts[0]) {
+    case "portfolio":
+      if (parts[1] === "positions") {
+        return parts[2] ? queryKeys.portfolio.position(parts[2]) : queryKeys.portfolio.positions();
+      }
+      if (parts[1] === "summary") {
+        return queryKeys.portfolio.summary();
+      }
+      if (parts[1] === "account") {
+        return queryKeys.portfolio.account();
+      }
+      return queryKeys.portfolio.all;
+
+    case "orders":
+      // Orders are not in queryKeys, invalidate decisions as fallback
+      return queryKeys.decisions.all;
+
+    case "decisions":
+      if (parts[1]) {
+        return queryKeys.decisions.detail(parts[1]);
+      }
+      return queryKeys.decisions.all;
+
+    case "market":
+      if (parts[1]) {
+        if (parts[2] === "quote") {
+          return queryKeys.market.quote(parts[1]);
+        }
+        return queryKeys.market.symbol(parts[1]);
+      }
+      return queryKeys.market.all;
+
+    case "system":
+      if (parts[1] === "status") {
+        return queryKeys.system.status();
+      }
+      return queryKeys.system.all;
+
+    case "alerts":
+      return queryKeys.alerts.all;
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Queue an invalidation hint for debounced processing.
+ */
+function queueInvalidation(hint: string): void {
+  pendingInvalidations.add(hint);
+  scheduleFlush();
+}
+
+/**
+ * Queue multiple invalidation hints.
+ */
+function queueInvalidations(hints: string[]): void {
+  for (const hint of hints) {
+    pendingInvalidations.add(hint);
+  }
+  scheduleFlush();
+}
+
+/**
+ * Schedule a debounced flush of pending invalidations.
+ */
+function scheduleFlush(): void {
+  if (debounceTimer !== null) {
+    return; // Already scheduled
+  }
+
+  debounceTimer = setTimeout(() => {
+    flushPendingInvalidations();
+    debounceTimer = null;
+  }, DEBOUNCE_MS);
+}
+
+/**
+ * Flush all pending invalidations immediately.
+ */
+function flushPendingInvalidations(): void {
+  if (pendingInvalidations.size === 0) {
+    return;
+  }
+
+  const queryClient = getQueryClient();
+  const processedKeys = new Set<string>();
+
+  for (const hint of pendingInvalidations) {
+    const queryKey = mapInvalidationHintToQueryKey(hint);
+    if (queryKey) {
+      const keyString = JSON.stringify(queryKey);
+      // Avoid invalidating the same key multiple times
+      if (!processedKeys.has(keyString)) {
+        processedKeys.add(keyString);
+        queryClient.invalidateQueries({ queryKey });
+      }
+    }
+  }
+
+  pendingInvalidations.clear();
+}
+
+// ============================================
+// Message Types
+// ============================================
 
 export type WSMessageType =
   | "quote"
@@ -24,7 +158,9 @@ export type WSMessageType =
 export interface WSMessage<T = unknown> {
   type: WSMessageType;
   data: T;
-  timestamp: string;
+  timestamp?: string;
+  /** Server-provided cache invalidation hints */
+  invalidates?: string[];
 }
 
 export interface QuoteData {
@@ -120,16 +256,14 @@ export function handleWSMessage(message: WSMessage): void {
     }
 
     case "order": {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.positions(),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.summary() });
+      // Use debounced invalidation for order bursts
+      queueInvalidations(["portfolio.positions", "portfolio.summary"]);
       break;
     }
 
     case "decision": {
-      // New or updated decision
-      queryClient.invalidateQueries({ queryKey: queryKeys.decisions.all });
+      // Use debounced invalidation for decision updates
+      queueInvalidation("decisions");
       break;
     }
 
@@ -200,41 +334,47 @@ export function handleWSMessage(message: WSMessage): void {
         store.reset();
       }
 
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: queryKeys.system.status() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.decisions.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+      // Use debounced invalidation for multiple query types
+      queueInvalidations(["system.status", "decisions", "portfolio"]);
       break;
     }
 
     case "alert": {
-      // New alert, refresh alerts list
-      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+      // Use debounced invalidation for alert bursts
+      queueInvalidation("alerts");
       break;
     }
 
     case "account_update": {
-      // Account balance changed - invalidate account query
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.account(),
-      });
+      // Use server-provided invalidation hints if available
+      if (message.invalidates?.length) {
+        queueInvalidations(message.invalidates);
+      } else {
+        // Fallback to default invalidation
+        queueInvalidation("portfolio.account");
+      }
       break;
     }
 
     case "position_update": {
-      // Position changed (fill, close)
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.positions(),
-      });
+      // Use server-provided invalidation hints if available
+      if (message.invalidates?.length) {
+        queueInvalidations(message.invalidates);
+      } else {
+        // Fallback to default invalidation
+        queueInvalidation("portfolio.positions");
+      }
       break;
     }
 
     case "order_update": {
-      // Order status changed - invalidate orders and portfolio
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.portfolio.positions(),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.summary() });
+      // Use server-provided invalidation hints if available
+      if (message.invalidates?.length) {
+        queueInvalidations(message.invalidates);
+      } else {
+        // Fallback to default invalidation
+        queueInvalidations(["portfolio.positions", "portfolio.summary"]);
+      }
       break;
     }
 
@@ -264,16 +404,23 @@ export function createWSMessageHandler() {
 }
 
 /**
- * Batch multiple invalidations for performance.
+ * Immediately flush all pending debounced invalidations.
  *
- * Call this after processing a batch of WebSocket messages
- * to ensure a single refetch instead of multiple.
+ * Call this when you need to force an immediate cache refresh,
+ * such as before navigation or when the user explicitly requests it.
  */
 export function flushInvalidations(): void {
-  // TanStack Query batches invalidations automatically,
-  // but this provides an explicit flush point if needed
-  const queryClient = getQueryClient();
-  queryClient.invalidateQueries();
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  flushPendingInvalidations();
 }
+
+/**
+ * Queue invalidation hints for debounced processing.
+ * Exported for direct use when handling custom messages.
+ */
+export { queueInvalidation, queueInvalidations };
 
 export default handleWSMessage;
