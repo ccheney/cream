@@ -44,6 +44,7 @@ import {
   startMarketDataSubscription,
   stopMarketDataSubscription,
 } from "./marketdata";
+import { type IndicatorSynthesisScheduler, startIndicatorSynthesisScheduler } from "./schedulers";
 
 // ============================================
 // Worker State
@@ -80,6 +81,8 @@ interface WorkerState {
   };
   /** Indicator batch scheduler (v2 engine) */
   indicatorScheduler: IndicatorBatchScheduler | null;
+  /** Indicator synthesis scheduler (daily trigger check) */
+  synthesisScheduler: IndicatorSynthesisScheduler | null;
 }
 
 // State is initialized in main() after config is loaded
@@ -594,6 +597,19 @@ function startHealthServer(): void {
                 ])
               )
             : null,
+          synthesis_scheduler: state.synthesisScheduler
+            ? (() => {
+                const synthState = state.synthesisScheduler.getState();
+                return {
+                  enabled: true,
+                  last_run: synthState.lastRun?.toISOString() ?? null,
+                  next_run: synthState.nextRun?.toISOString() ?? null,
+                  run_count: synthState.runCount,
+                  last_trigger_result: synthState.lastTriggerResult,
+                  last_error: synthState.lastError,
+                };
+              })()
+            : { enabled: false },
           started_at: state.startedAt.toISOString(),
         };
 
@@ -682,6 +698,7 @@ async function main() {
       filingsSync: false,
     },
     indicatorScheduler: null,
+    synthesisScheduler: null,
   };
 
   const intervals = getIntervals();
@@ -725,6 +742,14 @@ async function main() {
 
     // Initialize indicator batch scheduler (v2 engine)
     await initIndicatorBatchScheduler();
+
+    // Initialize synthesis scheduler (daily trigger check)
+    // Only run in non-backtest modes
+    if (!isBacktest(startupCtx)) {
+      const db = await getDbClient();
+      state.synthesisScheduler = startIndicatorSynthesisScheduler(db);
+      log.info({}, "Indicator synthesis scheduler started");
+    }
   }
 
   // Handle config reload on SIGHUP
@@ -741,6 +766,7 @@ async function main() {
   process.on("SIGINT", () => {
     stopScheduler();
     state.indicatorScheduler?.stop();
+    state.synthesisScheduler?.stop();
     stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });
@@ -748,6 +774,7 @@ async function main() {
   process.on("SIGTERM", () => {
     stopScheduler();
     state.indicatorScheduler?.stop();
+    state.synthesisScheduler?.stop();
     stopMarketDataSubscription().catch(() => {});
     process.exit(0);
   });
