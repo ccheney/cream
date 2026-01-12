@@ -40,7 +40,7 @@ export default function OptionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-stone-700 dark:text-night-50">Options Chain</h1>
+      <h1 className="text-2xl font-semibold text-stone-700 dark:text-night-50">Options</h1>
 
       {/* Search */}
       <form onSubmit={handleSearchSubmit}>
