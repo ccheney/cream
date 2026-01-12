@@ -76,6 +76,14 @@ export const STALE_TIMES = {
  * ```
  */
 export const queryKeys = {
+  // Calendar
+  calendar: {
+    all: ["calendar"] as const,
+    clock: () => [...queryKeys.calendar.all, "clock"] as const,
+    status: () => [...queryKeys.calendar.all, "status"] as const,
+    range: (start: string, end: string) => [...queryKeys.calendar.all, start, end] as const,
+  },
+
   // System
   system: {
     all: ["system"] as const,
