@@ -3,9 +3,27 @@
  *
  * Client-side utilities for checking if US options market is open.
  * Options trade during regular market hours only (9:30 AM - 4:00 PM ET).
+ *
+ * Provides both:
+ * - Synchronous functions (using hardcoded data as fallback)
+ * - React hooks (using API data via useCalendar)
+ *
+ * @see apps/dashboard/src/hooks/useCalendar.ts for API-based hooks
  */
 
-// US market holidays for 2024-2026
+"use client";
+
+import { useMemo } from "react";
+import { useMarketStatus } from "@/hooks/useCalendar";
+
+// ============================================
+// Hardcoded Fallback Data
+// ============================================
+
+/**
+ * US market holidays for 2024-2027.
+ * Used as fallback when API is unavailable.
+ */
 const US_MARKET_HOLIDAYS = new Set([
   // 2024
   "2024-01-01",
@@ -40,9 +58,22 @@ const US_MARKET_HOLIDAYS = new Set([
   "2026-09-07",
   "2026-11-26",
   "2026-12-25",
+  // 2027
+  "2027-01-01",
+  "2027-01-18",
+  "2027-02-15",
+  "2027-03-26",
+  "2027-05-31",
+  "2027-06-18",
+  "2027-07-05",
+  "2027-09-06",
+  "2027-11-25",
+  "2027-12-24",
 ]);
 
-// Early close dates (1pm ET close)
+/**
+ * Early close dates (1pm ET close).
+ */
 const US_EARLY_CLOSES = new Set([
   "2024-07-03",
   "2024-11-29",
@@ -52,11 +83,19 @@ const US_EARLY_CLOSES = new Set([
   "2025-12-24",
   "2026-11-27",
   "2026-12-24",
+  "2027-11-26",
+  "2027-12-23",
 ]);
+
+// ============================================
+// Synchronous Functions (Fallback)
+// ============================================
 
 /**
  * Check if options market is currently open.
  * Options trade during regular hours only: 9:30 AM - 4:00 PM ET.
+ *
+ * Uses hardcoded holiday data. For API-based data, use `useMarketHours` hook.
  */
 export function isOptionsMarketOpen(date: Date = new Date()): boolean {
   // Get time in ET
@@ -107,6 +146,8 @@ export function isOptionsMarketOpen(date: Date = new Date()): boolean {
 
 /**
  * Get market status message.
+ *
+ * Uses hardcoded holiday data. For API-based data, use `useMarketHours` hook.
  */
 export function getMarketStatus(date: Date = new Date()): {
   isOpen: boolean;
@@ -145,4 +186,143 @@ export function getMarketStatus(date: Date = new Date()): {
   }
 
   return { isOpen: false, message: "Market Closed" };
+}
+
+// ============================================
+// React Hooks (API-based)
+// ============================================
+
+/**
+ * Market hours state from API.
+ */
+export interface MarketHoursState {
+  /** Whether options market is open for trading */
+  isOpen: boolean;
+  /** Human-readable status message */
+  message: string;
+  /** Current trading session */
+  session: "PRE_MARKET" | "RTH" | "AFTER_HOURS" | "CLOSED";
+  /** Whether data is loading */
+  isLoading: boolean;
+  /** Whether using fallback data (API unavailable) */
+  isFallback: boolean;
+  /** Error if any */
+  error: Error | null;
+}
+
+/**
+ * Hook for market hours with API data.
+ *
+ * Uses the Calendar API for real-time market status.
+ * Falls back to hardcoded data if API is unavailable.
+ *
+ * @example
+ * ```typescript
+ * function MarketIndicator() {
+ *   const { isOpen, message, isLoading } = useMarketHours();
+ *
+ *   if (isLoading) return <Skeleton />;
+ *
+ *   return (
+ *     <Badge variant={isOpen ? "success" : "secondary"}>
+ *       {message}
+ *     </Badge>
+ *   );
+ * }
+ * ```
+ */
+export function useMarketHours(): MarketHoursState {
+  const { data, isLoading, error } = useMarketStatus();
+
+  // Memoize fallback status
+  const fallback = useMemo(() => {
+    const status = getMarketStatus();
+    return {
+      isOpen: status.isOpen,
+      message: status.message,
+      session: mapMessageToSession(status.message),
+    };
+  }, []);
+
+  return useMemo(() => {
+    // Use API data if available
+    if (data) {
+      return {
+        isOpen: data.isOpen,
+        message: data.message,
+        session: data.session,
+        isLoading: false,
+        isFallback: false,
+        error: null,
+      };
+    }
+
+    // Loading state
+    if (isLoading) {
+      return {
+        ...fallback,
+        isLoading: true,
+        isFallback: true,
+        error: null,
+      };
+    }
+
+    // Error state - use fallback
+    return {
+      ...fallback,
+      isLoading: false,
+      isFallback: true,
+      error: error instanceof Error ? error : null,
+    };
+  }, [data, isLoading, error, fallback]);
+}
+
+/**
+ * Hook for checking if market is open (simple boolean).
+ *
+ * Convenience wrapper for components that just need the open/closed state.
+ *
+ * @example
+ * ```typescript
+ * function OptionsPanel() {
+ *   const { isOpen, isLoading } = useIsOptionsMarketOpen();
+ *
+ *   if (!isOpen) {
+ *     return <div>Options trading closed</div>;
+ *   }
+ *
+ *   return <OptionsChain />;
+ * }
+ * ```
+ */
+export function useIsOptionsMarketOpen(): {
+  isOpen: boolean;
+  isLoading: boolean;
+} {
+  const { isOpen, isLoading, session } = useMarketHours();
+
+  // Options only trade during RTH
+  const isOptionsOpen = isOpen && session === "RTH";
+
+  return { isOpen: isOptionsOpen, isLoading };
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+/**
+ * Map status message to session type.
+ */
+function mapMessageToSession(message: string): "PRE_MARKET" | "RTH" | "AFTER_HOURS" | "CLOSED" {
+  switch (message) {
+    case "Pre-Market":
+      return "PRE_MARKET";
+    case "Market Open":
+      return "RTH";
+    case "After Hours":
+      return "AFTER_HOURS";
+    default:
+      return "CLOSED";
+  }
 }
