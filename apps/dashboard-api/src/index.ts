@@ -38,7 +38,6 @@ import {
   optionsRoutes,
   portfolioRoutes,
   preferencesRoutes,
-  priceIndicatorsRoutes,
   researchRoutes,
   riskRoutes,
   snapshotsRoutes,
@@ -211,7 +210,6 @@ app.route("/api/backtests", backtestRoutes);
 app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
 app.route("/api/indicators", indicatorsRoutes);
-app.route("/api/indicators", priceIndicatorsRoutes);
 app.route("/api/indicators", batchStatusRoutes);
 app.route("/api/indicators", batchTriggerRoutes);
 app.route("/api/research", researchRoutes);

@@ -41,10 +41,16 @@ export type {
 // Market data types
 export type {
   Candle,
+  CorporateIndicators,
+  DataQuality,
+  EarningsQuality,
   ExpirationInfo,
   ExpirationsResponse,
   IndexQuote,
+  IndicatorSnapshot,
   Indicators,
+  LiquidityIndicators,
+  MarketContext,
   NewsItem,
   OptionChain,
   OptionQuote,
@@ -52,10 +58,18 @@ export type {
   OptionsChainRow,
   OptionsContract,
   OptionsGreeks,
+  OptionsIndicators,
   OptionsQuoteDetail,
+  PriceIndicators,
+  QualityIndicators,
   Quote,
   RegimeLabel,
   RegimeStatus,
+  SentimentClassification,
+  SentimentIndicators,
+  ShortInterestIndicators,
+  SnapshotMetadata,
+  ValueIndicators,
 } from "./market";
 // Portfolio types
 export type {

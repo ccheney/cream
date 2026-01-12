@@ -13,6 +13,7 @@ import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
   Candle,
   IndexQuote,
+  IndicatorSnapshot,
   Indicators,
   NewsItem,
   Quote,
@@ -222,6 +223,33 @@ export function useIndicators(
       const { data } = await get<Indicators>(
         `/api/market/indicators/${symbol}?timeframe=${timeframe}`
       );
+      return data;
+    },
+    staleTime: STALE_TIMES.CHART,
+    gcTime: CACHE_TIMES.CHART,
+    enabled: Boolean(symbol),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Get full indicator snapshot for a symbol.
+ *
+ * Returns comprehensive indicator data across 8 categories:
+ * - price: RSI, ATR, SMAs, EMAs, MACD, Bollinger, Stochastic, Momentum, Volatility
+ * - liquidity: Bid-Ask Spread, Amihud, VWAP, Turnover
+ * - options: IV, Skew, P/C Ratio, VRP, Greeks (when available)
+ * - value: P/E, P/B, EV/EBITDA, Dividend Yield
+ * - quality: Gross Profitability, ROE, ROA, Accruals, M-Score
+ * - short_interest: Short %, Days to Cover
+ * - sentiment: Score, Classification, News Volume
+ * - corporate: Dividend Yield, Ex-Div Days, Splits
+ */
+export function useIndicatorSnapshot(symbol: string) {
+  return useQuery({
+    queryKey: queryKeys.market.snapshot(symbol),
+    queryFn: async () => {
+      const { data } = await get<IndicatorSnapshot>(`/api/market/snapshot/${symbol}`);
       return data;
     },
     staleTime: STALE_TIMES.CHART,

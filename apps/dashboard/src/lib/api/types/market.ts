@@ -2,6 +2,24 @@
  * Market data types (quotes, candles, indicators, options).
  */
 
+// Re-export IndicatorSnapshot types from @cream/dashboard-types
+export type {
+  CorporateIndicators,
+  DataQuality,
+  EarningsQuality,
+  IndicatorSnapshot,
+  LiquidityIndicators,
+  MarketContext,
+  OptionsIndicators,
+  PriceIndicators,
+  QualityIndicators,
+  SentimentClassification,
+  SentimentIndicators,
+  ShortInterestIndicators,
+  SnapshotMetadata,
+  ValueIndicators,
+} from "@cream/dashboard-types";
+
 export interface Quote {
   symbol: string;
   bid: number;

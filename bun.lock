@@ -179,6 +179,7 @@
       "name": "@cream/dashboard-types",
       "version": "0.0.1",
       "dependencies": {
+        "@cream/indicators": "workspace:*",
         "zod": "^4.3.5",
       },
       "devDependencies": {

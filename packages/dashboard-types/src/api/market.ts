@@ -6,6 +6,25 @@
 
 import { z } from "zod";
 
+// Re-export indicator types from @cream/indicators/types (pure types, no runtime deps)
+export {
+  type CorporateIndicators,
+  type DataQuality,
+  type EarningsQuality,
+  type IndicatorSnapshot,
+  IndicatorSnapshotSchema,
+  type LiquidityIndicators,
+  type MarketContext,
+  type OptionsIndicators,
+  type PriceIndicators,
+  type QualityIndicators,
+  type SentimentClassification,
+  type SentimentIndicators,
+  type ShortInterestIndicators,
+  type SnapshotMetadata,
+  type ValueIndicators,
+} from "@cream/indicators/types";
+
 // ============================================
 // Quotes
 // ============================================

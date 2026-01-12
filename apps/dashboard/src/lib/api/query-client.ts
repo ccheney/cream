@@ -115,6 +115,7 @@ export const queryKeys = {
     quote: (symbol: string) => [...queryKeys.market.all, symbol, "quote"] as const,
     candles: (symbol: string, timeframe: string) =>
       [...queryKeys.market.all, symbol, "candles", timeframe] as const,
+    snapshot: (symbol: string) => [...queryKeys.market.all, symbol, "snapshot"] as const,
   },
 
   // Options

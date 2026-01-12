@@ -219,3 +219,20 @@ CREATE TABLE IF NOT EXISTS indicator_sync_runs (
 CREATE INDEX IF NOT EXISTS idx_indicator_sync_runs_type ON indicator_sync_runs(run_type);
 CREATE INDEX IF NOT EXISTS idx_indicator_sync_runs_status ON indicator_sync_runs(status);
 CREATE INDEX IF NOT EXISTS idx_indicator_sync_runs_started ON indicator_sync_runs(started_at);
+
+-- Paper Trading Signal Recording
+CREATE TABLE IF NOT EXISTS indicator_paper_signals (
+  id TEXT PRIMARY KEY,
+  indicator_id TEXT NOT NULL REFERENCES indicators(id) ON DELETE CASCADE,
+  symbol TEXT NOT NULL,
+  signal_date TEXT NOT NULL,
+  signal REAL NOT NULL,              -- Signal value (-1 to 1)
+  outcome REAL,                      -- Actual outcome (filled after period)
+  outcome_date TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(indicator_id, symbol, signal_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_paper_signals_indicator ON indicator_paper_signals(indicator_id);
+CREATE INDEX IF NOT EXISTS idx_paper_signals_symbol ON indicator_paper_signals(symbol);
+CREATE INDEX IF NOT EXISTS idx_paper_signals_date ON indicator_paper_signals(signal_date);

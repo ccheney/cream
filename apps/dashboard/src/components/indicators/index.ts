@@ -1,49 +1,41 @@
 /**
- * Indicator Lab Components
+ * Indicators Components
  *
- * Components for the Indicator Lab dashboard view.
+ * Components for displaying the comprehensive indicator snapshot.
+ *
+ * @see docs/plans/33-indicator-engine-v2.md
  */
 
-export { ActiveIndicatorsTable } from "./ActiveIndicatorsTable";
-export { ActivityFeed } from "./ActivityFeed";
-export { BatchJobStatus, type BatchJobStatusProps } from "./BatchJobStatus";
+// Category panels
 export {
-  FundamentalsIndicators as FundamentalsIndicatorsWidget,
-  type FundamentalsIndicatorsProps,
-} from "./FundamentalsIndicators";
-export { ICChart } from "./ICChart";
+  CorporatePanel,
+  type CorporatePanelProps,
+  LiquidityIndicatorsPanel,
+  type LiquidityIndicatorsPanelProps,
+  OptionsIndicatorsPanel,
+  type OptionsIndicatorsPanelProps,
+  PriceIndicatorsPanel,
+  type PriceIndicatorsPanelProps,
+  QualityIndicatorsPanel,
+  type QualityIndicatorsPanelProps,
+  SentimentPanel,
+  type SentimentPanelProps,
+  ShortInterestPanel,
+  type ShortInterestPanelProps,
+  ValueIndicatorsPanel,
+  type ValueIndicatorsPanelProps,
+} from "./CategoryPanels";
+// Base components
+export { IndicatorGrid, type IndicatorGridProps } from "./IndicatorGrid";
 export {
-  type CorporateIndicators,
-  IndicatorSnapshot,
-  type IndicatorSnapshotData,
-  type IndicatorSnapshotProps,
-  type LiquidityIndicators,
-  type MarketContext,
-  type OptionsIndicators,
-  type PriceIndicators,
-  type QualityIndicators,
-  type SentimentIndicators,
-  type ShortInterestIndicators,
-  type SnapshotMetadata,
-  type ValueIndicators,
-} from "./IndicatorSnapshot";
+  type Freshness,
+  IndicatorSection,
+  type IndicatorSectionProps,
+} from "./IndicatorSection";
+// Main orchestrator
 export {
-  OptionsIndicators as OptionsIndicatorsWidget,
-  type OptionsIndicatorsProps,
-} from "./OptionsIndicators";
-export { PaperTradingSection } from "./PaperTradingSection";
-export {
-  PriceIndicators as PriceIndicatorsWidget,
-  type PriceIndicatorsProps,
-} from "./PriceIndicators";
-export { RetireButton } from "./RetireButton";
-export {
-  SentimentIndicators as SentimentWidget,
-  type SentimentIndicatorsProps,
-} from "./SentimentIndicators";
-export {
-  ShortInterestIndicators as ShortInterestWidget,
-  type ShortInterestIndicatorsProps,
-} from "./ShortInterestIndicators";
-export { TriggerStatusCard } from "./TriggerStatusCard";
-export { ValidationReport } from "./ValidationReport";
+  type IndicatorCategory,
+  IndicatorSnapshotPanel,
+  type IndicatorSnapshotPanelProps,
+} from "./IndicatorSnapshotPanel";
+export { IndicatorValue, type IndicatorValueProps } from "./IndicatorValue";

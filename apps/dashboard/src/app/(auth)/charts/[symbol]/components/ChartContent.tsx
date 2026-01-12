@@ -10,15 +10,14 @@
 import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { StreamPanel } from "@/components/charts/StreamPanel";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
+import { IndicatorSnapshotPanel } from "@/components/indicators";
 import { LoadingOverlay } from "@/components/ui/spinner";
 import { getTickerName } from "@/lib/ticker-names";
 import { useChartPreferences } from "@/stores/ui-store";
 import { ChartControls } from "./ChartControls";
 import { ChartHeader } from "./ChartHeader";
-import { formatPrice, useChartData, useMAToggle, useStreamToggle } from "./hooks";
-import { IndicatorCard } from "./IndicatorCard";
-import { MovingAveragesPanel } from "./MovingAveragesPanel";
-import type { ChartContentProps, IndicatorStatus } from "./types";
+import { useChartData, useMAToggle, useStreamToggle } from "./hooks";
+import type { ChartContentProps } from "./types";
 
 function QuoteHeaderSkeleton() {
   return (
@@ -89,26 +88,6 @@ function ChartSkeleton() {
   );
 }
 
-function getRSIStatus(rsi: number | undefined | null): IndicatorStatus {
-  if (rsi == null) {
-    return "neutral";
-  }
-  if (rsi > 70) {
-    return "overbought";
-  }
-  if (rsi < 30) {
-    return "oversold";
-  }
-  return "neutral";
-}
-
-function getMACDStatus(macdHist: number | undefined | null): IndicatorStatus {
-  if (macdHist == null) {
-    return "neutral";
-  }
-  return macdHist > 0 ? "bullish" : "bearish";
-}
-
 export function ChartContent({ symbol }: ChartContentProps) {
   const upperSymbol = symbol.toUpperCase();
   const companyName = getTickerName(upperSymbol);
@@ -121,12 +100,10 @@ export function ChartContent({ symbol }: ChartContentProps) {
     chartData,
     maOverlays,
     sessionBoundaries,
-    indicators,
     quote,
     regime,
     dayHighLow,
     candlesLoading,
-    indicatorsLoading,
     quoteLoading,
     isRefetching,
     isSymbolError,
@@ -216,59 +193,7 @@ export function ChartContent({ symbol }: ChartContentProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
-          <IndicatorCard
-            name="RSI(14)"
-            tooltip="Relative Strength Index: measures overbought (>70) or oversold (<30) conditions"
-            value={indicatorsLoading ? "--" : (indicators?.rsi14?.toFixed(1) ?? "--")}
-            status={getRSIStatus(indicators?.rsi14)}
-            isLoading={indicatorsLoading}
-          />
-          <IndicatorCard
-            name="ATR(14)"
-            tooltip="Average True Range: measures price volatility over 14 periods"
-            value={
-              indicatorsLoading
-                ? "--"
-                : indicators?.atr14 != null
-                  ? `$${indicators.atr14.toFixed(2)}`
-                  : "--"
-            }
-            isLoading={indicatorsLoading}
-          />
-          <IndicatorCard
-            name="SMA(20)"
-            tooltip="Simple Moving Average: 20-period average price for trend identification"
-            value={
-              indicatorsLoading
-                ? "--"
-                : indicators?.sma20 != null
-                  ? formatPrice(indicators.sma20)
-                  : "--"
-            }
-            isLoading={indicatorsLoading}
-          />
-          <IndicatorCard
-            name="MACD"
-            tooltip="Moving Average Convergence Divergence: momentum and trend-following indicator"
-            value={indicatorsLoading ? "--" : (indicators?.macdHist?.toFixed(2) ?? "--")}
-            status={getMACDStatus(indicators?.macdHist)}
-            isLoading={indicatorsLoading}
-          />
-        </div>
-
-        {!indicatorsLoading && indicators && (
-          <MovingAveragesPanel
-            indicators={{
-              sma20: indicators.sma20,
-              sma50: indicators.sma50,
-              sma200: indicators.sma200,
-              ema12: indicators.ema12,
-              ema26: indicators.ema26,
-              macdLine: indicators.macdLine,
-            }}
-          />
-        )}
+        <IndicatorSnapshotPanel symbol={upperSymbol} layout="full" />
       </div>
     </div>
   );

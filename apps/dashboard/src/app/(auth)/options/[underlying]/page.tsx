@@ -12,6 +12,7 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IndicatorSnapshotPanel } from "@/components/indicators";
 import { ExpirationTabs, OptionsChainTable } from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { LoadingOverlay, Spinner } from "@/components/ui/spinner";
@@ -232,6 +233,15 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Options & Liquidity Indicators */}
+      <div className="shrink-0 px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
+        <IndicatorSnapshotPanel
+          symbol={upperUnderlying}
+          sections={["options", "liquidity"]}
+          layout="compact"
+        />
       </div>
 
       {/* Expiration Tabs */}

@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@cream/indicators": "workspace:*",
     "zod": "^4.3.5"
   },
   "devDependencies": {
