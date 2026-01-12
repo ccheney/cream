@@ -12,12 +12,70 @@
  */
 
 import { IndicatorHypothesisSchema } from "@cream/indicators";
+import { type ImplementIndicatorOutput, implementIndicator } from "@cream/mastra-kit";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { runIndicatorResearcher } from "../../agents/researchers.js";
 import { getIndicatorsRepo } from "../../db.js";
 import { log } from "../../logger.js";
+
+// Example indicator code for pattern reference
+const EXAMPLE_INDICATOR_PATTERN = `/**
+ * RSI (Relative Strength Index) Calculator
+ *
+ * RSI is a momentum oscillator that measures the speed and magnitude of
+ * recent price changes to evaluate overbought or oversold conditions.
+ */
+
+import type { OHLCVBar } from "../../types";
+
+export interface RSIResult {
+  rsi: number;
+  avgGain: number;
+  avgLoss: number;
+  timestamp: number;
+}
+
+export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
+  if (bars.length < period + 1) {
+    return null;
+  }
+
+  // Calculate gains and losses
+  const changes: number[] = [];
+  for (let i = 1; i < bars.length; i++) {
+    changes.push(bars[i].close - bars[i - 1].close);
+  }
+
+  // Initial average
+  const initialGains = changes.slice(0, period).filter((c) => c > 0);
+  const initialLosses = changes.slice(0, period).filter((c) => c < 0).map(Math.abs);
+
+  let avgGain = initialGains.reduce((a, b) => a + b, 0) / period;
+  let avgLoss = initialLosses.reduce((a, b) => a + b, 0) / period;
+
+  // Wilder smoothing for remaining bars
+  for (let i = period; i < changes.length; i++) {
+    const change = changes[i];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? Math.abs(change) : 0;
+
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+  }
+
+  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+  const rsi = 100 - 100 / (1 + rs);
+
+  return {
+    rsi,
+    avgGain,
+    avgLoss,
+    timestamp: bars[bars.length - 1].timestamp,
+  };
+}
+`;
 
 // ============================================
 // Schemas
@@ -255,6 +313,112 @@ export const generateHypothesisStep = createStep({
         "Failed to generate hypothesis"
       );
       throw error;
+    }
+  },
+});
+
+// ============================================
+// Schemas: implementIndicator
+// ============================================
+
+/**
+ * Output schema for implementIndicator step.
+ * Matches ImplementIndicatorOutput from claudeCodeIndicator.
+ */
+export const ImplementationOutputSchema = z.object({
+  success: z.boolean(),
+  indicatorPath: z.string().optional(),
+  testPath: z.string().optional(),
+  astSimilarity: z.number().min(0).max(1).optional(),
+  turnsUsed: z.number().optional(),
+  testsPassed: z.boolean().optional(),
+  error: z.string().optional(),
+});
+
+export type ImplementationOutput = z.infer<typeof ImplementationOutputSchema>;
+
+// ============================================
+// Step: implementIndicator
+// ============================================
+
+/**
+ * Implement Indicator Step
+ *
+ * Third step in the indicator synthesis workflow. Uses Claude Code
+ * to implement the indicator from the generated hypothesis.
+ *
+ * Uses Claude Agent SDK V2 as subprocess with:
+ * - Restricted paths: packages/indicators/src/custom/
+ * - Allowed tools: Read, Write, Edit, Grep, Glob, Bash (test/ls only)
+ * - Security sandboxing for file operations
+ */
+export const implementIndicatorStep = createStep({
+  id: "implement-indicator",
+  description: "Implement indicator using Claude Code from hypothesis",
+  inputSchema: HypothesisOutputSchema,
+  outputSchema: ImplementationOutputSchema,
+  execute: async ({ inputData }) => {
+    const { hypothesis, confidence } = inputData;
+
+    log.info(
+      {
+        hypothesisName: hypothesis.name,
+        category: hypothesis.category,
+        confidence,
+      },
+      "Implementing indicator via Claude Code"
+    );
+
+    try {
+      const result: ImplementIndicatorOutput = await implementIndicator({
+        hypothesis,
+        existingPatterns: EXAMPLE_INDICATOR_PATTERN,
+        config: {
+          model: "claude-opus-4-5-20251101",
+          maxTurns: 20,
+          timeout: 5 * 60 * 1000, // 5 minutes
+        },
+      });
+
+      if (result.success) {
+        log.info(
+          {
+            indicatorPath: result.indicatorPath,
+            testPath: result.testPath,
+            turnsUsed: result.turnsUsed,
+            testsPassed: result.testsPassed,
+          },
+          "Indicator implemented successfully"
+        );
+      } else {
+        log.warn(
+          {
+            error: result.error,
+            turnsUsed: result.turnsUsed,
+          },
+          "Indicator implementation failed"
+        );
+      }
+
+      return {
+        success: result.success,
+        indicatorPath: result.indicatorPath,
+        testPath: result.testPath,
+        astSimilarity: result.astSimilarity,
+        turnsUsed: result.turnsUsed,
+        testsPassed: result.testsPassed,
+        error: result.error,
+      };
+    } catch (error) {
+      log.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to implement indicator"
+      );
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 });
