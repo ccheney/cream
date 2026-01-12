@@ -246,41 +246,37 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
         </div>
       )}
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 min-h-0 overflow-auto">
-        {/* Chain Table */}
-        <div className="min-h-[400px] bg-white dark:bg-night-900">
-          {isInitialLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Spinner size="lg" />
-            </div>
-          ) : displayChainData?.chain && displayChainData.chain.length > 0 ? (
-            <LoadingOverlay isLoading={isRefetching} label="Loading options chain">
-              <OptionsChainTable
-                chain={displayChainData.chain}
-                atmStrike={displayChainData.atmStrike}
-                underlyingPrice={displayChainData.underlyingPrice}
-                onVisibleRowsChange={handleVisibleRowsChange}
-              />
-            </LoadingOverlay>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-stone-500 dark:text-night-300">
-              <p>No options data available for {upperUnderlying}</p>
-              {selectedExpiration && (
-                <p className="text-sm mt-1">Expiration: {selectedExpiration}</p>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Chain Table - needs fixed height for virtualization */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-night-900">
+        {isInitialLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </div>
+        ) : displayChainData?.chain && displayChainData.chain.length > 0 ? (
+          <LoadingOverlay isLoading={isRefetching} label="Loading options chain">
+            <OptionsChainTable
+              chain={displayChainData.chain}
+              atmStrike={displayChainData.atmStrike}
+              underlyingPrice={displayChainData.underlyingPrice}
+              onVisibleRowsChange={handleVisibleRowsChange}
+              className="h-full"
+            />
+          </LoadingOverlay>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 text-stone-500 dark:text-night-300">
+            <p>No options data available for {upperUnderlying}</p>
+            {selectedExpiration && <p className="text-sm mt-1">Expiration: {selectedExpiration}</p>}
+          </div>
+        )}
+      </div>
 
-        {/* Options & Liquidity Indicators */}
-        <div className="px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
-          <IndicatorSnapshotPanel
-            symbol={upperUnderlying}
-            sections={["options", "liquidity"]}
-            layout="compact"
-          />
-        </div>
+      {/* Options & Liquidity Indicators */}
+      <div className="shrink-0 px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
+        <IndicatorSnapshotPanel
+          symbol={upperUnderlying}
+          sections={["options", "liquidity"]}
+          layout="compact"
+        />
       </div>
 
       {/* Legend */}
