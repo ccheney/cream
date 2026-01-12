@@ -15,8 +15,9 @@ import { createViewMonthAgenda, createViewMonthGrid, createViewWeek } from "@sch
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import { ScheduleXCalendar, useNextCalendarApp } from "@schedule-x/react";
 import "@schedule-x/theme-default/dist/index.css";
+import "@/styles/schedule-x-theme.css";
 import { CalendarDays } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, ErrorEmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEconomicCalendar } from "@/hooks/queries";
@@ -29,6 +30,7 @@ import {
   getDateRangeFromFilter,
 } from "./CalendarFilters";
 import { MonthGridEventCard, TimeGridEventCard } from "./EventCard";
+import { EventDetailDrawer } from "./EventDetailDrawer";
 
 // ============================================
 // Types
@@ -52,40 +54,40 @@ const IMPACT_CALENDARS = {
   high: {
     colorName: "high-impact",
     lightColors: {
-      main: "#DC2626",
-      container: "#FEE2E2",
-      onContainer: "#7F1D1D",
+      main: "#F97316",
+      container: "#FFF7ED",
+      onContainer: "#9A3412",
     },
     darkColors: {
-      main: "#FCA5A5",
-      container: "#7F1D1D",
-      onContainer: "#FEE2E2",
+      main: "#FB923C",
+      container: "#7C2D12",
+      onContainer: "#FFEDD5",
     },
   },
   medium: {
     colorName: "medium-impact",
     lightColors: {
-      main: "#D97706",
-      container: "#FEF3C7",
-      onContainer: "#78350F",
+      main: "#14B8A6",
+      container: "#CCFBF1",
+      onContainer: "#115E59",
     },
     darkColors: {
-      main: "#FCD34D",
-      container: "#78350F",
-      onContainer: "#FEF3C7",
+      main: "#5EEAD4",
+      container: "#115E59",
+      onContainer: "#CCFBF1",
     },
   },
   low: {
     colorName: "low-impact",
     lightColors: {
-      main: "#6B7280",
-      container: "#F3F4F6",
-      onContainer: "#374151",
+      main: "#78716C",
+      container: "#F5F5F4",
+      onContainer: "#44403C",
     },
     darkColors: {
-      main: "#9CA3AF",
-      container: "#374151",
-      onContainer: "#F3F4F6",
+      main: "#A8A29E",
+      container: "#44403C",
+      onContainer: "#E7E5E4",
     },
   },
 } as const;
@@ -219,15 +221,15 @@ function ImpactLegend({ compact = false }: { compact?: boolean }) {
     return (
       <div className="flex items-center gap-2 text-[10px]">
         <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="w-2 h-2 rounded-full bg-orange-500" />
           <span className="text-stone-600 dark:text-night-300">High</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="w-2 h-2 rounded-full bg-teal-500" />
           <span className="text-stone-600 dark:text-night-300">Med</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-gray-400" />
+          <span className="w-2 h-2 rounded-full bg-stone-400" />
           <span className="text-stone-600 dark:text-night-300">Low</span>
         </div>
       </div>
@@ -236,15 +238,15 @@ function ImpactLegend({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-4 text-xs">
       <div className="flex items-center gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+        <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
         <span className="text-stone-600 dark:text-night-300">High Impact</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+        <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
         <span className="text-stone-600 dark:text-night-300">Medium Impact</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
+        <span className="w-2.5 h-2.5 rounded-full bg-stone-400" />
         <span className="text-stone-600 dark:text-night-300">Low Impact</span>
       </div>
     </div>
@@ -258,7 +260,12 @@ function ImpactLegend({ compact = false }: { compact?: boolean }) {
 export function EconomicCalendar() {
   const [filters, setFilters] = useState<CalendarFilterState>(DEFAULT_FILTERS);
   const [isDark, setIsDark] = useState(false);
-  const { isMobile, isTablet } = useMediaQuery();
+  const [selectedEvent, setSelectedEvent] = useState<EconomicEvent | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { isMobile } = useMediaQuery();
+
+  // Ref to store latest events for the calendar callback (avoids stale closure)
+  const eventsRef = useRef<EconomicEvent[]>([]);
 
   const { start, end } = useMemo(
     () => getDateRangeFromFilter(filters.dateRange),
@@ -272,12 +279,29 @@ export function EconomicCalendar() {
     country: filters.country === "ALL" ? undefined : filters.country,
   });
 
+  // Keep ref in sync with latest data
+  useEffect(() => {
+    eventsRef.current = data?.events ?? [];
+  }, [data?.events]);
+
   const handleFilterChange = useCallback((newFilters: CalendarFilterState) => {
     setFilters(newFilters);
   }, []);
 
   const handleClearFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
+  }, []);
+
+  const handleEventClick = useCallback((eventId: string) => {
+    const event = eventsRef.current.find((e) => e.id === eventId);
+    if (event) {
+      setSelectedEvent(event);
+      setIsDrawerOpen(true);
+    }
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
   }, []);
 
   const hasActiveFilters = useMemo(() => {
@@ -297,29 +321,16 @@ export function EconomicCalendar() {
     return convertToCalendarEvents(data.events);
   }, [data?.events]);
 
-  // Responsive calendar views:
-  // - Mobile: month-agenda only (vertical list)
-  // - Tablet: month-agenda + month-grid
-  // - Desktop: week + month-grid + month-agenda
+  // All screen sizes use month-agenda as default (cleaner list view)
+  // Additional views available on larger screens for users who want them
   const views = useMemo(() => {
     if (isMobile) {
       return [createViewMonthAgenda()];
     }
-    if (isTablet) {
-      return [createViewMonthAgenda(), createViewMonthGrid()];
-    }
-    return [createViewWeek(), createViewMonthGrid(), createViewMonthAgenda()];
-  }, [isMobile, isTablet]) as [
-    ReturnType<typeof createViewWeek>,
-    ...ReturnType<typeof createViewWeek>[],
-  ];
+    return [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek()];
+  }, [isMobile]) as [ReturnType<typeof createViewWeek>, ...ReturnType<typeof createViewWeek>[]];
 
-  const defaultView = useMemo(() => {
-    if (isMobile || isTablet) {
-      return "month-agenda";
-    }
-    return "week";
-  }, [isMobile, isTablet]);
+  const defaultView = "month-agenda";
 
   const calendar = useNextCalendarApp({
     views,
@@ -340,21 +351,30 @@ export function EconomicCalendar() {
     events: calendarEvents,
     plugins: [eventsService],
     callbacks: {
-      onEventClick(_event) {
-        // Event click handler - can be extended for event details modal
+      onEventClick(event) {
+        handleEventClick(String(event.id));
       },
     },
   });
 
   // Detect dark mode changes
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    if (!root) {
+      return;
+    }
+
     const checkDarkMode = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
+      setIsDark(root.classList.contains("dark"));
     };
     checkDarkMode();
 
     const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
+    observer.observe(root, {
       attributes: true,
       attributeFilter: ["class"],
     });
@@ -372,7 +392,12 @@ export function EconomicCalendar() {
   // Update events when data changes
   // Note: eventsService.set is only available after calendar initialization
   useEffect(() => {
-    if (calendar && eventsService && "set" in eventsService && calendarEvents.length > 0) {
+    if (
+      calendar &&
+      eventsService &&
+      typeof eventsService.set === "function" &&
+      calendarEvents.length > 0
+    ) {
       eventsService.set(calendarEvents);
     }
   }, [calendar, eventsService, calendarEvents]);
@@ -397,24 +422,27 @@ export function EconomicCalendar() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-3">
-      <div className="shrink-0">
-        <CalendarFilters filters={filters} onFilterChange={handleFilterChange} />
-      </div>
-      <div className="shrink-0 flex items-center justify-between">
-        <ImpactLegend compact={isMobile} />
-        <span className="text-[10px] sm:text-xs text-stone-500 dark:text-night-400">
-          {data.events.length} events
-          <span className="hidden sm:inline">
-            {" "}
-            • Updated {new Date(data.meta.lastUpdated).toLocaleTimeString()}
+    <>
+      <div className="flex flex-col h-full gap-3">
+        <div className="shrink-0">
+          <CalendarFilters filters={filters} onFilterChange={handleFilterChange} />
+        </div>
+        <div className="shrink-0 flex items-center justify-between">
+          <ImpactLegend compact={isMobile} />
+          <span className="text-[10px] sm:text-xs text-stone-500 dark:text-night-400">
+            {data.events.length} events
+            <span className="hidden sm:inline">
+              {" "}
+              • Updated {new Date(data.meta.lastUpdated).toLocaleTimeString()}
+            </span>
           </span>
-        </span>
+        </div>
+        <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">
+          <ScheduleXCalendar calendarApp={calendar} customComponents={customComponents} />
+        </div>
       </div>
-      <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">
-        <ScheduleXCalendar calendarApp={calendar} customComponents={customComponents} />
-      </div>
-    </div>
+      <EventDetailDrawer event={selectedEvent} isOpen={isDrawerOpen} onClose={handleDrawerClose} />
+    </>
   );
 }
 
