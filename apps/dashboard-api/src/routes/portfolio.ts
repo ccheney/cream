@@ -6,7 +6,12 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-import { type AlpacaClient, createAlpacaClient } from "@cream/broker";
+import {
+  type AlpacaClient,
+  type Account as BrokerAccount,
+  type Position as BrokerPosition,
+  createAlpacaClient,
+} from "@cream/broker";
 import { calculateReturns, calculateSharpe, calculateSortino } from "@cream/metrics";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
@@ -241,21 +246,61 @@ app.openapi(summaryRoute, async (c) => {
   const summary = await positionsRepo.getPortfolioSummary(systemState.environment);
   const latestSnapshot = await snapshotsRepo.getLatest(systemState.environment);
 
-  // Calculate today's P&L from snapshots
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const yesterdayEnd = new Date(todayStart);
-  yesterdayEnd.setSeconds(-1);
+  // Calculate today's P&L
+  // When Alpaca is configured, use real-time positions with lastdayPrice for accurate intraday P&L
+  // Otherwise, fall back to NAV-based snapshot comparison
+  let todayPnl = 0;
+  let todayPnlPct = 0;
+  let alpacaAccount: BrokerAccount | null = null;
+  let alpacaPositions: BrokerPosition[] = [];
 
-  const yesterdaySnapshot = await snapshotsRepo.findByDate(
-    systemState.environment,
-    yesterdayEnd.toISOString().split("T")[0] ?? ""
-  );
+  if (isAlpacaConfigured()) {
+    try {
+      const client = getBrokerClient();
+      [alpacaAccount, alpacaPositions] = await Promise.all([
+        client.getAccount(),
+        client.getPositions(),
+      ]);
 
-  const todayPnl =
-    latestSnapshot && yesterdaySnapshot ? latestSnapshot.nav - yesterdaySnapshot.nav : 0;
+      // Calculate Day P&L using lastdayPrice from Alpaca positions
+      // Formula: sum of (currentPrice - lastdayPrice) * qty for each position
+      todayPnl = alpacaPositions.reduce((sum, pos) => {
+        const dayChange = (pos.currentPrice - pos.lastdayPrice) * pos.qty;
+        return sum + dayChange;
+      }, 0);
 
-  const todayPnlPct = yesterdaySnapshot?.nav ? (todayPnl / yesterdaySnapshot.nav) * 100 : 0;
+      // Calculate Day P&L percentage based on yesterday's portfolio value
+      const yesterdayValue = alpacaAccount.lastEquity;
+      todayPnlPct = yesterdayValue > 0 ? (todayPnl / yesterdayValue) * 100 : 0;
+
+      log.debug(
+        { todayPnl, todayPnlPct, positionCount: alpacaPositions.length },
+        "Calculated Day P&L from Alpaca positions"
+      );
+    } catch (error) {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to fetch Alpaca positions for Day P&L, falling back to snapshots"
+      );
+      // Fall back to snapshot-based calculation below
+    }
+  }
+
+  // Fall back to NAV-based calculation if Alpaca data not available
+  if (todayPnl === 0 && latestSnapshot) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const yesterdayEnd = new Date(todayStart);
+    yesterdayEnd.setSeconds(-1);
+
+    const yesterdaySnapshot = await snapshotsRepo.findByDate(
+      systemState.environment,
+      yesterdayEnd.toISOString().split("T")[0] ?? ""
+    );
+
+    todayPnl = yesterdaySnapshot ? latestSnapshot.nav - yesterdaySnapshot.nav : 0;
+    todayPnlPct = yesterdaySnapshot?.nav ? (todayPnl / yesterdaySnapshot.nav) * 100 : 0;
+  }
 
   // Get first snapshot for total P&L calculation
   const firstSnapshot = await snapshotsRepo.getFirst(systemState.environment);
@@ -276,14 +321,21 @@ app.openapi(summaryRoute, async (c) => {
     .reduce((sum, p) => sum + Math.abs(p.marketValue ?? 0), 0);
   const netExposure = longValue - shortValue;
 
+  // Use Alpaca account data when available for more accurate values
+  const nav = alpacaAccount?.portfolioValue ?? latestSnapshot?.nav ?? 100000;
+  const cash = alpacaAccount?.cash ?? latestSnapshot?.cash ?? 100000;
+  const buyingPower = alpacaAccount?.buyingPower ?? (latestSnapshot?.cash ?? 100000) * 4;
+  const positionCount =
+    alpacaPositions.length > 0 ? alpacaPositions.length : summary.totalPositions;
+
   return c.json({
-    nav: latestSnapshot?.nav ?? 100000,
-    cash: latestSnapshot?.cash ?? 100000,
-    equity: summary.totalMarketValue,
-    buyingPower: (latestSnapshot?.cash ?? 100000) * 4, // Assuming 4x margin
+    nav,
+    cash,
+    equity: alpacaAccount?.equity ?? summary.totalMarketValue,
+    buyingPower,
     grossExposure: summary.totalMarketValue,
     netExposure,
-    positionCount: summary.totalPositions,
+    positionCount,
     todayPnl,
     todayPnlPct,
     totalPnl,
