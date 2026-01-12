@@ -235,15 +235,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
         </div>
       </div>
 
-      {/* Options & Liquidity Indicators */}
-      <div className="shrink-0 px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
-        <IndicatorSnapshotPanel
-          symbol={upperUnderlying}
-          sections={["options", "liquidity"]}
-          layout="compact"
-        />
-      </div>
-
       {/* Expiration Tabs */}
       {expirationsData?.expirations && expirationsData.expirations.length > 0 && (
         <div className="shrink-0 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800">
@@ -277,6 +268,15 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
             {selectedExpiration && <p className="text-sm mt-1">Expiration: {selectedExpiration}</p>}
           </div>
         )}
+      </div>
+
+      {/* Options & Liquidity Indicators */}
+      <div className="shrink-0 px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900">
+        <IndicatorSnapshotPanel
+          symbol={upperUnderlying}
+          sections={["options", "liquidity"]}
+          layout="compact"
+        />
       </div>
 
       {/* Legend */}
