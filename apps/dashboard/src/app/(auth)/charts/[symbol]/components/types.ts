@@ -33,6 +33,8 @@ export interface ChartHeaderProps {
   onTimeframeChange: (tf: ChartTimeframe) => void;
   isStreamOpen: boolean;
   onStreamToggle: () => void;
+  isIndicatorDrawerOpen: boolean;
+  onIndicatorDrawerToggle: () => void;
 }
 
 export interface ChartControlsProps {

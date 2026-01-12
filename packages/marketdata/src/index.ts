@@ -132,21 +132,37 @@ export {
   type ScoringWeights,
 } from "./optionChain";
 // Options Greeks calculation and portfolio exposure
+// Options IV solver and realtime provider
 export {
+  buildOptionSymbol,
   calculateGreeks,
   calculateMoneyness,
   calculateOptionsExposure,
   createEmptyExposure,
+  createRealtimeOptionsProvider,
   daysToYears,
   formatExposure,
   getMoneyStatus,
+  type IVSolverInput,
+  type IVSolverResult,
   normalCDF,
   normalPDF,
+  type OpraQuoteMessage,
+  OpraQuoteMessageSchema,
+  type OpraTradeMessage,
+  OpraTradeMessageSchema,
   type OptionGreeks as BlackScholesGreeks,
   type OptionPosition,
+  type OptionsDataProvider,
   type OptionsExposure,
   type OptionType as OptionsModuleOptionType,
+  parseOptionSymbol,
+  RealtimeOptionsProvider,
+  type RealtimeOptionsProviderConfig,
   type SymbolExposure,
+  solveIV,
+  solveIVFromQuote,
+  timeToExpiry,
 } from "./options";
 // Provider clients
 export * from "./providers";

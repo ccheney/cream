@@ -9,6 +9,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { StreamToggleButton } from "@/components/charts/StreamPanel";
+import { IndicatorDrawerToggle } from "@/components/indicators";
 import type { ChartHeaderProps } from "./types";
 import { TIMEFRAME_OPTIONS } from "./types";
 
@@ -19,6 +20,8 @@ export function ChartHeader({
   onTimeframeChange,
   isStreamOpen,
   onStreamToggle,
+  isIndicatorDrawerOpen,
+  onIndicatorDrawerToggle,
 }: ChartHeaderProps) {
   return (
     <div className="shrink-0 px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800">
@@ -59,6 +62,7 @@ export function ChartHeader({
           >
             Options →
           </Link>
+          <IndicatorDrawerToggle isOpen={isIndicatorDrawerOpen} onClick={onIndicatorDrawerToggle} />
           <StreamToggleButton isOpen={isStreamOpen} onClick={onStreamToggle} />
         </div>
       </div>

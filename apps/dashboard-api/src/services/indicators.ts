@@ -22,7 +22,11 @@ import {
   type TursoSentimentRepository,
   type TursoShortInterestRepository,
 } from "@cream/indicators";
-import type { AlpacaMarketDataClient } from "@cream/marketdata";
+import {
+  type AlpacaMarketDataClient,
+  createRealtimeOptionsProvider,
+  type RealtimeOptionsProvider,
+} from "@cream/marketdata";
 import type { TursoClient } from "@cream/storage";
 import { getDbClient } from "../db.js";
 import { getAlpacaClient } from "../routes/market/types.js";
@@ -287,6 +291,7 @@ function createCorporateActionsRepo(client: TursoClient): TursoCorporateActionsR
 // ============================================
 
 let indicatorService: IndicatorService | null = null;
+let optionsProvider: RealtimeOptionsProvider | null = null;
 let initPromise: Promise<IndicatorService> | null = null;
 
 /**
@@ -328,6 +333,13 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
   const tursoRepos = createTursoRepositories(tursoClient);
   const batchRepos = createBatchRepositoryAdapters(tursoRepos);
 
+  // Create realtime options data provider
+  optionsProvider = await createRealtimeOptionsProvider(alpacaClient, {
+    riskFreeRate: 0.05,
+    maxDte: 60,
+    minDte: 1,
+  });
+
   // Create service with all dependencies
   const service = new IndicatorService(
     {
@@ -335,6 +347,7 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
       priceCalculator,
       liquidityCalculator,
       cache,
+      optionsData: optionsProvider,
       fundamentalRepo: batchRepos.fundamentalRepo,
       shortInterestRepo: batchRepos.shortInterestRepo,
       sentimentRepo: batchRepos.sentimentRepo,
@@ -343,7 +356,7 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
     {
       barsLookback: 200,
       includeBatchIndicators: true,
-      includeOptionsIndicators: false, // Options data provider not yet wired
+      includeOptionsIndicators: true,
       enableCache: true,
       bypassCache: false,
       batchConcurrency: 5,
@@ -357,6 +370,10 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
  * Reset the service singleton (for testing).
  */
 export function resetIndicatorService(): void {
+  if (optionsProvider) {
+    optionsProvider.disconnect();
+    optionsProvider = null;
+  }
   indicatorService = null;
   initPromise = null;
 }

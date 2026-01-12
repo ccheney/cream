@@ -7,10 +7,11 @@
  * Main chart content including quote header, candlestick chart, and indicators.
  */
 
+import { useState } from "react";
 import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { StreamPanel } from "@/components/charts/StreamPanel";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
-import { IndicatorSnapshotPanel } from "@/components/indicators";
+import { IndicatorDrawer } from "@/components/indicators";
 import { LoadingOverlay } from "@/components/ui/spinner";
 import { getTickerName } from "@/lib/ticker-names";
 import { useChartPreferences } from "@/stores/ui-store";
@@ -94,6 +95,7 @@ export function ChartContent({ symbol }: ChartContentProps) {
   const { timeframe, setTimeframe } = useChartPreferences();
   const { isStreamOpen, toggleStream, closeStream } = useStreamToggle();
   const { enabledMAs, toggleMA } = useMAToggle();
+  const [indicatorDrawerOpen, setIndicatorDrawerOpen] = useState(false);
 
   const {
     candles,
@@ -120,6 +122,8 @@ export function ChartContent({ symbol }: ChartContentProps) {
           onTimeframeChange={setTimeframe}
           isStreamOpen={false}
           onStreamToggle={toggleStream}
+          isIndicatorDrawerOpen={indicatorDrawerOpen}
+          onIndicatorDrawerToggle={() => setIndicatorDrawerOpen((o) => !o)}
         />
         <div className="flex-1 flex items-center justify-center bg-white dark:bg-night-800">
           <div className="text-center">
@@ -146,6 +150,8 @@ export function ChartContent({ symbol }: ChartContentProps) {
         onTimeframeChange={setTimeframe}
         isStreamOpen={isStreamOpen}
         onStreamToggle={toggleStream}
+        isIndicatorDrawerOpen={indicatorDrawerOpen}
+        onIndicatorDrawerToggle={() => setIndicatorDrawerOpen((o) => !o)}
       />
 
       <StreamPanel symbol={upperSymbol} isOpen={isStreamOpen} onClose={closeStream} />
@@ -192,9 +198,14 @@ export function ChartContent({ symbol }: ChartContentProps) {
             </div>
           )}
         </div>
-
-        <IndicatorSnapshotPanel symbol={upperSymbol} layout="full" />
       </div>
+
+      <IndicatorDrawer
+        symbol={upperSymbol}
+        isOpen={indicatorDrawerOpen}
+        onClose={() => setIndicatorDrawerOpen(false)}
+        sections={["price", "liquidity", "options"]}
+      />
     </div>
   );
 }
