@@ -115,11 +115,11 @@ export function getFMPClient(): FMPClient | null {
 // ============================================
 
 let fredClient: FREDClient | null = null;
-let fredClientOverride: FREDClient | null = null;
+let fredClientOverride: FREDClient | null | undefined;
 
 export function getFREDClient(): FREDClient | null {
-  // Return test override if set
-  if (fredClientOverride) {
+  // Return test override if explicitly set (including null)
+  if (fredClientOverride !== undefined) {
     return fredClientOverride;
   }
 
@@ -139,7 +139,8 @@ export function getFREDClient(): FREDClient | null {
 
 /**
  * Set a mock FRED client for testing.
- * Pass null to clear the override.
+ * Pass null to force getFREDClient to return null.
+ * Pass undefined or call resetFREDClient to clear override.
  */
 export function setFREDClientForTesting(client: FREDClient | null): void {
   fredClientOverride = client;
@@ -150,5 +151,5 @@ export function setFREDClientForTesting(client: FREDClient | null): void {
  */
 export function resetFREDClient(): void {
   fredClient = null;
-  fredClientOverride = null;
+  fredClientOverride = undefined;
 }

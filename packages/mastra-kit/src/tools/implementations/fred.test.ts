@@ -79,9 +79,8 @@ describe("getEconomicCalendar", () => {
 
   describe("no API key", () => {
     test("returns empty array when FRED client is null", async () => {
-      // Ensure no client is set
+      // Force getFREDClient to return null (simulates no API key)
       setFREDClientForTesting(null);
-      resetFREDClient();
 
       const ctx = createTestContext("PAPER");
       const events = await getEconomicCalendar(ctx, "2025-01-01", "2025-01-31");
@@ -211,8 +210,8 @@ describe("getMacroIndicators", () => {
 
   describe("no API key", () => {
     test("returns empty object when FRED client is null", async () => {
+      // Force getFREDClient to return null (simulates no API key)
       setFREDClientForTesting(null);
-      resetFREDClient();
 
       const ctx = createTestContext("PAPER");
       const indicators = await getMacroIndicators(ctx);

@@ -9,6 +9,11 @@ import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
+  getEconomicCalendar as getFredEconomicCalendar,
+  getMacroIndicators,
+  type MacroIndicatorValue,
+} from "../implementations/fred.js";
+import {
   type EconomicEvent,
   getEconomicCalendar,
   type HelixQueryResult,
@@ -133,6 +138,117 @@ Requires FMP_KEY environment variable.`,
 });
 
 // ============================================
+// FRED Economic Calendar Tool
+// ============================================
+
+const FREDCalendarInputSchema = z.object({
+  startDate: z.string().describe("Start date in YYYY-MM-DD format"),
+  endDate: z.string().describe("End date in YYYY-MM-DD format"),
+});
+
+const FREDEventSchema = z.object({
+  id: z.string().describe("Unique event identifier (fred-{release_id}-{date})"),
+  name: z.string().describe("Event name (e.g., 'Consumer Price Index', 'Employment Situation')"),
+  date: z.string().describe("Event date in YYYY-MM-DD format"),
+  time: z.string().describe("Event time (08:30:00 for most, 14:00:00 for FOMC)"),
+  impact: z
+    .enum(["high", "medium", "low"])
+    .describe("Market impact level based on historical volatility"),
+  forecast: z.string().nullable().describe("Consensus forecast (always null for FRED releases)"),
+  previous: z
+    .string()
+    .nullable()
+    .describe("Previous release value (always null for FRED releases)"),
+  actual: z.string().nullable().describe("Actual value (always null for upcoming releases)"),
+});
+
+const FREDCalendarOutputSchema = z.object({
+  events: z.array(FREDEventSchema).describe("FRED economic calendar events in the date range"),
+});
+
+export const fredEconomicCalendarTool = createTool({
+  id: "fred_economic_calendar",
+  description: `Get economic calendar events from FRED (Federal Reserve Economic Data).
+
+Use this tool to find upcoming Federal Reserve data releases including:
+- CPI (Consumer Price Index) - HIGH impact, inflation data
+- Employment Situation (NFP, unemployment) - HIGH impact
+- GDP releases - HIGH impact
+- FOMC rate decisions - HIGH impact
+- Retail Sales - HIGH impact
+- PPI (Producer Price Index) - MEDIUM impact
+- Industrial Production - MEDIUM impact
+- Housing Starts - MEDIUM impact
+- Personal Income & Outlays - MEDIUM impact
+- Durable Goods Orders - MEDIUM impact
+- JOLTS (Job Openings) - MEDIUM impact
+
+Events are filtered to tracked releases only (no minor data).
+Impact levels reflect historical market reaction magnitude.
+
+Requires FRED_API_KEY environment variable (free at fred.stlouisfed.org).`,
+  inputSchema: FREDCalendarInputSchema,
+  outputSchema: FREDCalendarOutputSchema,
+  execute: async (inputData): Promise<{ events: EconomicEvent[] }> => {
+    const ctx = createToolContext();
+    const events = await getFredEconomicCalendar(ctx, inputData.startDate, inputData.endDate);
+    return { events };
+  },
+});
+
+// ============================================
+// FRED Macro Indicators Tool
+// ============================================
+
+const MacroIndicatorsInputSchema = z.object({
+  seriesIds: z
+    .array(z.string())
+    .optional()
+    .describe("FRED series IDs to fetch. Defaults to key indicators if not specified."),
+});
+
+const MacroIndicatorValueSchema = z.object({
+  value: z.number().describe("Latest value for the series"),
+  date: z.string().describe("Date of the latest observation"),
+  change: z.number().optional().describe("Percent change from previous observation"),
+});
+
+const MacroIndicatorsOutputSchema = z.object({
+  indicators: z
+    .record(z.string(), MacroIndicatorValueSchema)
+    .describe("Map of series ID to latest value and change"),
+});
+
+export const fredMacroIndicatorsTool = createTool({
+  id: "fred_macro_indicators",
+  description: `Get latest macro economic indicators from FRED.
+
+Use this tool to fetch the most recent values for key economic series:
+- CPIAUCSL: Consumer Price Index (inflation)
+- UNRATE: Unemployment Rate
+- FEDFUNDS: Federal Funds Rate
+- DGS10: 10-Year Treasury Yield
+- DGS2: 2-Year Treasury Yield
+- T10Y2Y: 10Y-2Y Spread (yield curve)
+- GDPC1: Real GDP
+- PCE: Personal Consumption Expenditures
+- UMCSENT: Consumer Sentiment
+- INDPRO: Industrial Production
+
+Returns the latest value, date, and percent change from previous.
+Use to assess current macro environment and regime.
+
+Requires FRED_API_KEY environment variable (free at fred.stlouisfed.org).`,
+  inputSchema: MacroIndicatorsInputSchema,
+  outputSchema: MacroIndicatorsOutputSchema,
+  execute: async (inputData): Promise<{ indicators: Record<string, MacroIndicatorValue> }> => {
+    const ctx = createToolContext();
+    const indicators = await getMacroIndicators(ctx, inputData.seriesIds);
+    return { indicators };
+  },
+});
+
+// ============================================
 // News Search Tool
 // ============================================
 
@@ -221,8 +337,12 @@ HelixDB stores the system's learned memory including:
 export {
   EconomicCalendarInputSchema,
   EconomicCalendarOutputSchema,
+  FREDCalendarInputSchema,
+  FREDCalendarOutputSchema,
   HelixQueryInputSchema,
   HelixQueryOutputSchema,
+  MacroIndicatorsInputSchema,
+  MacroIndicatorsOutputSchema,
   NewsSearchInputSchema,
   NewsSearchOutputSchema,
   RecalcIndicatorInputSchema,
