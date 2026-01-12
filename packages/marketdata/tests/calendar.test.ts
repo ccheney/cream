@@ -53,12 +53,6 @@ describe("isHoliday", () => {
     const regularDay = new Date("2025-01-06");
     expect(isHoliday(regularDay)).toBe(false);
   });
-
-  test("uses custom holiday set", () => {
-    const customHolidays = new Set(["2025-01-15"]);
-    expect(isHoliday(new Date("2025-01-15"), customHolidays)).toBe(true);
-    expect(isHoliday(new Date("2025-01-16"), customHolidays)).toBe(false);
-  });
 });
 
 describe("isEarlyClose", () => {
@@ -75,12 +69,6 @@ describe("isEarlyClose", () => {
   test("Regular day is not early close", () => {
     const regularDay = new Date("2025-01-06");
     expect(isEarlyClose(regularDay)).toBe(false);
-  });
-
-  test("uses custom early close set", () => {
-    const customEarlyCloses = new Set(["2025-03-15"]);
-    expect(isEarlyClose(new Date("2025-03-15"), customEarlyCloses)).toBe(true);
-    expect(isEarlyClose(new Date("2025-03-16"), customEarlyCloses)).toBe(false);
   });
 });
 

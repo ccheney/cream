@@ -4,8 +4,16 @@
  * Calendar-aware validation for US equity markets.
  * Handles weekends, holidays, and market hours.
  *
+ * Delegates to CalendarService from @cream/domain for trading day checks,
+ * while providing time-aware market hours validation for data processing.
+ *
  * @see docs/plans/02-data-layer.md
  */
+
+import {
+  getMarketCloseTime as getDomainMarketCloseTime,
+  isMarketOpen as isDomainTradingDay,
+} from "@cream/domain";
 
 // ============================================
 // Types
@@ -22,10 +30,6 @@ export interface MarketCalendarConfig {
   regularHours: MarketHours;
   /** Extended/pre-market hours (optional) */
   extendedHours?: MarketHours;
-  /** US market holidays (month-day or full date) */
-  holidays: Set<string>;
-  /** Early close dates (month-day or full date) */
-  earlyCloses: Set<string>;
 }
 
 // ============================================
@@ -51,75 +55,11 @@ export const US_EXTENDED_HOURS: MarketHours = {
 };
 
 /**
- * US market holidays for 2024-2026.
- *
- * Format: YYYY-MM-DD
- */
-export const US_MARKET_HOLIDAYS_2024_2026 = new Set([
-  // 2024
-  "2024-01-01", // New Year's Day
-  "2024-01-15", // MLK Day
-  "2024-02-19", // Presidents' Day
-  "2024-03-29", // Good Friday
-  "2024-05-27", // Memorial Day
-  "2024-06-19", // Juneteenth
-  "2024-07-04", // Independence Day
-  "2024-09-02", // Labor Day
-  "2024-11-28", // Thanksgiving
-  "2024-12-25", // Christmas
-
-  // 2025
-  "2025-01-01", // New Year's Day
-  "2025-01-20", // MLK Day
-  "2025-02-17", // Presidents' Day
-  "2025-04-18", // Good Friday
-  "2025-05-26", // Memorial Day
-  "2025-06-19", // Juneteenth
-  "2025-07-04", // Independence Day
-  "2025-09-01", // Labor Day
-  "2025-11-27", // Thanksgiving
-  "2025-12-25", // Christmas
-
-  // 2026
-  "2026-01-01", // New Year's Day
-  "2026-01-19", // MLK Day
-  "2026-02-16", // Presidents' Day
-  "2026-04-03", // Good Friday
-  "2026-05-25", // Memorial Day
-  "2026-06-19", // Juneteenth
-  "2026-07-03", // Independence Day (observed)
-  "2026-09-07", // Labor Day
-  "2026-11-26", // Thanksgiving
-  "2026-12-25", // Christmas
-]);
-
-/**
- * US market early close dates (1pm ET close).
- */
-export const US_EARLY_CLOSES_2024_2026 = new Set([
-  // 2024
-  "2024-07-03", // Day before Independence Day
-  "2024-11-29", // Day after Thanksgiving
-  "2024-12-24", // Christmas Eve
-
-  // 2025
-  "2025-07-03", // Day before Independence Day
-  "2025-11-28", // Day after Thanksgiving
-  "2025-12-24", // Christmas Eve
-
-  // 2026
-  "2026-11-27", // Day after Thanksgiving
-  "2026-12-24", // Christmas Eve
-]);
-
-/**
  * Default US market calendar configuration.
  */
 export const DEFAULT_US_CALENDAR: MarketCalendarConfig = {
   regularHours: US_MARKET_HOURS,
   extendedHours: US_EXTENDED_HOURS,
-  holidays: US_MARKET_HOLIDAYS_2024_2026,
-  earlyCloses: US_EARLY_CLOSES_2024_2026,
 };
 
 // ============================================
@@ -136,25 +76,40 @@ export function isWeekend(date: Date): boolean {
 
 /**
  * Check if a date is a US market holiday.
+ * Delegates to CalendarService from @cream/domain.
  */
-export function isHoliday(date: Date, holidays = US_MARKET_HOLIDAYS_2024_2026): boolean {
-  const dateStr = date.toISOString().split("T")[0] ?? "";
-  return holidays.has(dateStr);
+export function isHoliday(date: Date): boolean {
+  // Use domain's isMarketOpen which checks weekends AND holidays
+  // We need to isolate just the holiday check
+  const isWeekendDay = isWeekend(date);
+  if (isWeekendDay) {
+    return false; // Weekends aren't holidays for this function's semantics
+  }
+
+  // If it's a weekday but not a trading day, it's a holiday
+  return !isDomainTradingDay(date);
 }
 
 /**
  * Check if a date is an early close day.
+ * Delegates to CalendarService from @cream/domain.
  */
-export function isEarlyClose(date: Date, earlyCloses = US_EARLY_CLOSES_2024_2026): boolean {
-  const dateStr = date.toISOString().split("T")[0] ?? "";
-  return earlyCloses.has(dateStr);
+export function isEarlyClose(date: Date): boolean {
+  const closeTime = getDomainMarketCloseTime(date);
+  // Early close if close time is before 16:00
+  if (!closeTime) {
+    return false;
+  }
+  const [hours] = closeTime.split(":").map(Number);
+  return hours !== undefined && hours < 16;
 }
 
 /**
  * Check if a date is a trading day (not weekend or holiday).
+ * Delegates to CalendarService from @cream/domain.
  */
-export function isTradingDay(date: Date, config = DEFAULT_US_CALENDAR): boolean {
-  return !isWeekend(date) && !isHoliday(date, config.holidays);
+export function isTradingDay(date: Date): boolean {
+  return isDomainTradingDay(date);
 }
 
 /**
@@ -172,8 +127,8 @@ export function isMarketOpen(
 ): boolean {
   const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
 
-  // Check if trading day
-  if (!isTradingDay(date, config)) {
+  // Check if trading day (delegates to domain)
+  if (!isTradingDay(date)) {
     return false;
   }
 
@@ -191,7 +146,7 @@ export function isMarketOpen(
   let closeMinutes = hours.close.hour * 60 + hours.close.minute;
 
   // Handle early close
-  if (isEarlyClose(date, config.earlyCloses)) {
+  if (isEarlyClose(date)) {
     closeMinutes = 13 * 60; // 1pm ET
   }
 
@@ -202,16 +157,15 @@ export function isMarketOpen(
  * Get the next trading day after a given date.
  *
  * @param date - Starting date
- * @param config - Calendar configuration
  * @returns Next trading day
  */
-export function getNextTradingDay(date: Date, config = DEFAULT_US_CALENDAR): Date {
+export function getNextTradingDay(date: Date): Date {
   const nextDay = new Date(date);
   nextDay.setDate(nextDay.getDate() + 1);
   nextDay.setHours(0, 0, 0, 0);
 
   // Skip weekends and holidays
-  while (!isTradingDay(nextDay, config)) {
+  while (!isTradingDay(nextDay)) {
     nextDay.setDate(nextDay.getDate() + 1);
   }
 
@@ -222,16 +176,15 @@ export function getNextTradingDay(date: Date, config = DEFAULT_US_CALENDAR): Dat
  * Get the previous trading day before a given date.
  *
  * @param date - Starting date
- * @param config - Calendar configuration
  * @returns Previous trading day
  */
-export function getPreviousTradingDay(date: Date, config = DEFAULT_US_CALENDAR): Date {
+export function getPreviousTradingDay(date: Date): Date {
   const prevDay = new Date(date);
   prevDay.setDate(prevDay.getDate() - 1);
   prevDay.setHours(0, 0, 0, 0);
 
   // Skip weekends and holidays
-  while (!isTradingDay(prevDay, config)) {
+  while (!isTradingDay(prevDay)) {
     prevDay.setDate(prevDay.getDate() - 1);
   }
 
@@ -241,17 +194,13 @@ export function getPreviousTradingDay(date: Date, config = DEFAULT_US_CALENDAR):
 /**
  * Calculate trading days between two dates (exclusive of start, inclusive of end).
  */
-export function getTradingDaysBetween(
-  start: Date,
-  end: Date,
-  config = DEFAULT_US_CALENDAR
-): number {
+export function getTradingDaysBetween(start: Date, end: Date): number {
   let count = 0;
   const current = new Date(start);
   current.setDate(current.getDate() + 1);
 
   while (current <= end) {
-    if (isTradingDay(current, config)) {
+    if (isTradingDay(current)) {
       count++;
     }
     current.setDate(current.getDate() + 1);
@@ -280,7 +229,7 @@ export function isExpectedGap(
   const day2 = date2.toISOString().split("T")[0] ?? "";
 
   if (day1 !== day2) {
-    const nextTrading = getNextTradingDay(date1, config);
+    const nextTrading = getNextTradingDay(date1);
     const nextTradingStr = nextTrading.toISOString().split("T")[0] ?? "";
 
     // If next trading day is the same as day2, gap is expected (overnight)
@@ -323,6 +272,4 @@ export default {
   DEFAULT_US_CALENDAR,
   US_MARKET_HOURS,
   US_EXTENDED_HOURS,
-  US_MARKET_HOLIDAYS_2024_2026,
-  US_EARLY_CLOSES_2024_2026,
 };
