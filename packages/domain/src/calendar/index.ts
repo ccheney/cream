@@ -9,6 +9,15 @@
  * ```
  */
 
+// API client for PAPER/LIVE modes
+export {
+  AlpacaCalendarClient,
+  type AlpacaCalendarClientConfig,
+  type AlpacaEnvironment,
+  CalendarClientError,
+  type CalendarErrorCode,
+  createAlpacaCalendarClient,
+} from "./alpaca-client";
 // Hardcoded calendar data for BACKTEST mode
 export {
   EARLY_CLOSE,
