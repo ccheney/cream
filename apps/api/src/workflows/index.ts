@@ -1,6 +1,7 @@
 /**
  * Workflow exports
  */
+export * from "./indicator-synthesis/index.js";
 export * from "./prediction-markets.js";
 // Export inline workflow (production)
 export * from "./trading-cycle.js";
