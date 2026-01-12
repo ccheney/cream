@@ -26,8 +26,8 @@ dependencies = [
     "vectorbt>=0.28",  # Vectorized backtesting
     "nautilus_trader>=1.222",  # Event-driven backtesting (Rust/Cython core)
 
-    # Arrow Flight support
-    "pyarrow>=22.0",  # PyCapsule Interface for zero-copy IPC
+    # Data interchange
+    "pyarrow>=22.0",  # Zero-copy IPC with polars/pandas
 
     # Machine Learning
     "torch>=2.9",  # PyTorch for evaluator model training
@@ -92,7 +92,6 @@ omit = [
     "*/__pycache__/*",
     "**/__init__.py",
     "**/conftest.py",
-    "**/flight_client.py",  # Requires optional deps (polars, pyarrow)
 ]
 
 # ============================================
@@ -197,7 +196,6 @@ module = [
     "scipy.optimize.*",
     "polars.*",
     "pyarrow.*",
-    "pyarrow.flight.*",
 ]
 ignore_missing_imports = true
 
@@ -216,7 +214,6 @@ module = [
     "research.paper_validation.*",
     "research.promotion.*",
     "research.greeks.*",
-    "research.flight_client",
     "research.backtest.*",
     "research.__init__",
 ]

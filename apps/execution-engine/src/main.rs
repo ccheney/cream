@@ -42,7 +42,7 @@ use execution_engine::{
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
     feed::AlpacaController,
     safety::ConnectionMonitor,
-    server::{build_flight_server, build_grpc_services_with_feed, create_router},
+    server::{build_grpc_services_with_feed, create_router},
 };
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -94,7 +94,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         environment = %config.environment.mode,
         http_port = config.server.http_port,
         grpc_port = config.server.grpc_port,
-        flight_port = config.server.flight_port,
         "Configuration loaded"
     );
 
@@ -263,35 +262,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Start Arrow Flight server for high-performance data transport
-    let flight_addr: SocketAddr = format!(
-        "{}:{}",
-        config.server.bind_address, config.server.flight_port
-    )
-    .parse()?;
-    let flight_service = build_flight_server();
-
-    tracing::info!(%flight_addr, "Arrow Flight server starting");
-    tracing::info!("Flight endpoints:");
-    tracing::info!("  DoGet market_data - Get market data snapshots");
-    tracing::info!("  DoPut market_data - Ingest market data");
-    tracing::info!("  DoAction clear_cache/health_check/get_cache_stats");
-
-    let flight_shutdown_tx = shutdown_tx.clone();
-    let flight_handle = tokio::spawn(async move {
-        let mut shutdown_rx = flight_shutdown_tx.subscribe();
-        let server = tonic::transport::Server::builder()
-            .add_service(flight_service)
-            .serve_with_shutdown(flight_addr, async move {
-                let _ = shutdown_rx.recv().await;
-                tracing::info!("Arrow Flight server shutting down");
-            });
-
-        if let Err(e) = server.await {
-            tracing::error!("Arrow Flight server error: {e}");
-        }
-    });
-
     tracing::info!("Execution engine ready");
 
     // Wait for all servers to complete
@@ -301,9 +271,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         _ = grpc_handle => {
             tracing::info!("gRPC server stopped");
-        }
-        _ = flight_handle => {
-            tracing::info!("Arrow Flight server stopped");
         }
     }
 

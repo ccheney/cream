@@ -1,10 +1,9 @@
 //! Server implementation.
 //!
-//! This module provides HTTP/JSON, gRPC, and Arrow Flight API servers for the execution engine.
+//! This module provides HTTP/JSON and gRPC API servers for the execution engine.
 //!
 //! - **HTTP/JSON**: REST API for basic operations (port 50051)
-//! - **gRPC**: `ExecutionService` and `MarketDataService` (port 50051)
-//! - **Arrow Flight**: High-performance data transport (port 50052)
+//! - **gRPC**: `ExecutionService` and `MarketDataService` (port 50053)
 //!
 //! # TLS Support
 //!
@@ -16,12 +15,10 @@
 //!
 //! See the `tls` module for more details.
 
-mod arrow_flight;
 mod grpc;
 mod http;
 pub mod tls;
 
-pub use arrow_flight::{CreamFlightService, build_flight_server};
 pub use grpc::{
     ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services,
     build_grpc_services_with_feed, run_grpc_server, run_grpc_server_with_tls,

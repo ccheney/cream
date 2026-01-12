@@ -35,11 +35,6 @@
       "types": "./dist/cream/v1/market_snapshot_pb.d.ts",
       "import": "./dist/cream/v1/market_snapshot_pb.js",
       "default": "./dist/cream/v1/market_snapshot_pb.js"
-    },
-    "./arrow/flight/protocol": {
-      "types": "./dist/arrow/flight/protocol/flight_pb.d.ts",
-      "import": "./dist/arrow/flight/protocol/flight_pb.js",
-      "default": "./dist/arrow/flight/protocol/flight_pb.js"
     }
   },
   "dependencies": {

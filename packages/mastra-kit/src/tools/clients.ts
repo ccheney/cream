@@ -21,7 +21,6 @@ import { createFMPClient, type FMPClient } from "@cream/universe";
 
 // gRPC services (MarketDataService, ExecutionService) run on port 50053
 // HTTP REST endpoints run on port 50051
-// Arrow Flight runs on port 50052
 const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50053";
 const DEFAULT_EXECUTION_URL = process.env.EXECUTION_SERVICE_URL ?? "http://localhost:50053";
 

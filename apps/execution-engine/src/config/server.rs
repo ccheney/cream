@@ -1,4 +1,4 @@
-//! Server configuration for HTTP, gRPC, and Arrow Flight endpoints.
+//! Server configuration for HTTP and gRPC endpoints.
 
 use serde::{Deserialize, Serialize};
 
@@ -11,9 +11,6 @@ pub struct ServerConfig {
     /// gRPC server port for MarketDataService and ExecutionService.
     #[serde(default = "default_grpc_port")]
     pub grpc_port: u16,
-    /// Arrow Flight server port.
-    #[serde(default = "default_flight_port")]
-    pub flight_port: u16,
     /// Bind address.
     #[serde(default = "default_bind_address")]
     pub bind_address: String,
@@ -24,7 +21,6 @@ impl Default for ServerConfig {
         Self {
             http_port: default_http_port(),
             grpc_port: default_grpc_port(),
-            flight_port: default_flight_port(),
             bind_address: default_bind_address(),
         }
     }
@@ -36,10 +32,6 @@ pub(crate) const fn default_http_port() -> u16 {
 
 pub(crate) const fn default_grpc_port() -> u16 {
     50053
-}
-
-pub(crate) const fn default_flight_port() -> u16 {
-    50052
 }
 
 pub(crate) fn default_bind_address() -> String {

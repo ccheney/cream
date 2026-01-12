@@ -214,14 +214,13 @@ fn interpolate_env_vars(input: &str) -> String {
 
 /// Validate configuration values.
 fn validate_config(config: &Config) -> Result<(), ConfigError> {
-    // Validate server ports (all three must be different)
+    // Validate server ports (must be different)
     let http = config.server.http_port;
     let grpc = config.server.grpc_port;
-    let flight = config.server.flight_port;
 
-    if http == grpc || http == flight || grpc == flight {
+    if http == grpc {
         return Err(ConfigError::ValidationError(
-            "http_port, grpc_port, and flight_port must all be different".to_string(),
+            "http_port and grpc_port must be different".to_string(),
         ));
     }
 
@@ -300,7 +299,6 @@ mod tests {
 
         assert_eq!(config.server.http_port, 50051);
         assert_eq!(config.server.grpc_port, 50053);
-        assert_eq!(config.server.flight_port, 50052);
         assert!((config.pricing.risk_free_rate - 0.05).abs() < f64::EPSILON);
         assert_eq!(config.environment.mode, "PAPER");
         assert!(config.persistence.enabled);
@@ -314,7 +312,6 @@ mod tests {
 server:
   http_port: 50051
   grpc_port: 50053
-  flight_port: 50052
 ";
 
         let config = match load_config_from_string(yaml) {
@@ -365,14 +362,13 @@ server:
 server:
   http_port: 50051
   grpc_port: 50051
-  flight_port: 50052
 ";
 
         let result = load_config_from_string(yaml);
         let Err(err) = result else {
             panic!("expected error for duplicate ports");
         };
-        assert!(err.to_string().contains("must all be different"));
+        assert!(err.to_string().contains("must be different"));
     }
 
     #[test]
@@ -381,7 +377,6 @@ server:
 server:
   http_port: 50051
   grpc_port: 50053
-  flight_port: 50052
 pricing:
   risk_free_rate: 1.5
 ";
@@ -399,7 +394,6 @@ pricing:
 server:
   http_port: 50051
   grpc_port: 50053
-  flight_port: 50052
 environment:
   mode: INVALID
 ";
@@ -417,7 +411,6 @@ environment:
 server:
   http_port: 50051
   grpc_port: 50053
-  flight_port: 50052
   bind_address: "127.0.0.1"
 
 feeds:

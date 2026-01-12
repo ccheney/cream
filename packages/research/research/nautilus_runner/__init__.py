@@ -8,7 +8,6 @@ Features:
 - Single and multi-asset backtesting
 - Equity and options support
 - Walk-forward optimization
-- Arrow Flight data integration
 
 See: docs/plans/10-research.md - High-Fidelity Validation
 See: docs/plans/12-backtest.md - Backtest Configuration

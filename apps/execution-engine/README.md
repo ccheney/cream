@@ -8,7 +8,6 @@ The execution engine runs as a standalone service with multiple API surfaces:
 
 - **HTTP/REST** (port 50051): Health checks and JSON endpoints for basic operations
 - **gRPC** (port 50053): Structured execution and market data services
-- **Arrow Flight** (port 50052): High-performance data transport for bulk operations
 
 It operates in three environments:
 
@@ -79,7 +78,6 @@ It operates in three environments:
 - **`server/`** - API servers
   - `http.rs` - REST/JSON endpoints
   - `grpc.rs` - gRPC service implementations
-  - `arrow_flight.rs` - Arrow Flight data transport
   - `tls.rs` - TLS/mTLS support
 
 ### Configuration
@@ -90,7 +88,6 @@ The engine loads configuration from `config.yaml` with environment variable inte
 server:
   http_port: 50051
   grpc_port: 50053
-  flight_port: 50052
 
 brokers:
   alpaca:
@@ -233,13 +230,6 @@ Content-Type: application/json
 - `GetOptionChain` - Option chain for underlying
 - `SubscribeMarketData` - Stream market data updates
 
-### Arrow Flight (port 50052)
-
-High-performance bulk data operations for:
-- Market data ingestion/retrieval
-- Backtest result export
-- Portfolio snapshots
-
 ## Environment Variables
 
 ### Required
@@ -377,10 +367,9 @@ Key external dependencies:
 - `tokio` - Async runtime
 - `tonic` - gRPC server
 - `axum` - HTTP server
-- `arrow` - Arrow/Parquet for Flight
 - `rust_decimal` - Precise decimal arithmetic
 - `turso` - SQLite client for persistence
-- `databento` - Market data feed
+- `alpaca-websocket` - Market data feed
 - `reqwest` - HTTP client
 - `tracing` - Observability
 
@@ -393,7 +382,7 @@ See `Cargo.toml` for complete dependency list and versions.
 1. Add domain models in `models/` if needed
 2. Implement constraint/validation logic in `risk/`
 3. Add execution logic in `execution/` with adapter implementations
-4. Expose via `server/` endpoints (HTTP, gRPC, or Flight)
+4. Expose via `server/` endpoints (HTTP or gRPC)
 5. Write tests with mocks for external dependencies
 6. Update `config.rs` if configuration is needed
 
@@ -420,7 +409,6 @@ See `Cargo.toml` for complete dependency list and versions.
 - **Architecture Plans**: `docs/plans/09-rust-core.md` (order routing, risk)
 - **Testing Plans**: `docs/plans/14-testing.md` (coverage, strategies)
 - **Tactics Implementation**: `TACTICS_IMPLEMENTATION.md` (execution algorithms)
-- **Arrow Flight Details**: `ARROW_FLIGHT_README.md` (data transport)
 
 ## License
 

@@ -42,11 +42,11 @@ uv pip install -e ".[dev]"
 | vectorbt | Vectorized backtesting | 0.28+ |
 | nautilus_trader | Event-driven backtesting | 1.200+ |
 
-### Data Transport
+### Data Interchange
 
 | Package | Purpose | Min Version |
 |---------|---------|-------------|
-| pyarrow | Arrow Flight IPC | 15.0+ |
+| pyarrow | Data interchange with polars/pandas | 15.0+ |
 
 ### Machine Learning
 
@@ -158,9 +158,8 @@ pytest -m "not slow"
 
 This package integrates with the Cream trading system via:
 
-1. **Arrow Flight**: Receives historical data from the Rust execution engine
-2. **Shared schemas**: Uses `@cream/schema-gen` Protobuf definitions
-3. **Turbo tasks**: Build and test commands in monorepo `turbo.json`
+1. **Shared schemas**: Uses `@cream/schema-gen` Protobuf definitions
+2. **Turbo tasks**: Build and test commands in monorepo `turbo.json`
 
 ## License
 

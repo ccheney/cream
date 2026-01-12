@@ -6,14 +6,12 @@
 # Optional variables have default values shown below.
 
 # Server Configuration
-# Ports for HTTP, gRPC, and Arrow Flight services
+# Ports for HTTP and gRPC services
 server:
   # HTTP server port for REST endpoints (/health, /v1/*)
   http_port: 50051
   # gRPC server port for MarketDataService and ExecutionService
   grpc_port: 50053
-  # Arrow Flight server port for high-performance data streaming
-  flight_port: 50052
   # Bind address (0.0.0.0 for all interfaces, 127.0.0.1 for localhost only)
   bind_address: "0.0.0.0"
 

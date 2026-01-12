@@ -33,13 +33,7 @@ prost = "0.14.1"
 prost-types = "0.14.1"
 tokio-stream = "0.1.18"
 
-# Arrow Flight (high-performance data transport)
-# Updated to 57.1.0 for tonic 0.14 compatibility
-arrow = { version = "57.1.0", features = ["ipc", "json"] }
-arrow-flight = { version = "57.1.0", features = ["flight-sql-experimental", "tls-native-roots"] }
-arrow-schema = "57.1.0"
-arrow-array = "57.1.0"
-arrow-ipc = "57.1.0"
+# Async utilities
 futures = "0.3"
 futures-util = "0.3"
 

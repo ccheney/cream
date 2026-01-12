@@ -9,7 +9,7 @@ Foundational package providing:
 - **Type-safe schemas** - Zod schemas mirroring Protobuf contracts
 - **Environment configuration** - Explicit ExecutionContext
 - **Trading domain types** - Decisions, actions, instruments
-- **Infrastructure clients** - gRPC, WebSocket, Arrow Flight
+- **Infrastructure clients** - gRPC, WebSocket
 - **Trading utilities** - Market calendar, position sizing, risk
 
 ## Key Components
