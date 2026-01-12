@@ -10,6 +10,7 @@
 import { EnhancedQuoteHeader } from "@/components/charts/EnhancedQuoteHeader";
 import { StreamPanel } from "@/components/charts/StreamPanel";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
+import { LoadingOverlay } from "@/components/ui/spinner";
 import { getTickerName } from "@/lib/ticker-names";
 import { useChartPreferences } from "@/stores/ui-store";
 import { ChartControls } from "./ChartControls";
@@ -127,7 +128,37 @@ export function ChartContent({ symbol }: ChartContentProps) {
     candlesLoading,
     indicatorsLoading,
     quoteLoading,
+    isRefetching,
+    isSymbolError,
   } = useChartData(upperSymbol, timeframe, enabledMAs);
+
+  // Show error state for invalid symbols
+  if (isSymbolError) {
+    return (
+      <div className="flex flex-col h-full">
+        <ChartHeader
+          symbol={upperSymbol}
+          companyName={companyName}
+          timeframe={timeframe}
+          onTimeframeChange={setTimeframe}
+          isStreamOpen={false}
+          onStreamToggle={toggleStream}
+        />
+        <div className="flex-1 flex items-center justify-center bg-white dark:bg-night-800">
+          <div className="text-center">
+            <div className="text-4xl mb-4">?</div>
+            <h2 className="text-xl font-semibold text-cream-700 dark:text-cream-300 mb-2">
+              Unknown Symbol
+            </h2>
+            <p className="text-cream-500 dark:text-cream-400">
+              Could not find market data for{" "}
+              <span className="font-mono font-medium">{upperSymbol}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -170,12 +201,14 @@ export function ChartContent({ symbol }: ChartContentProps) {
           {!candles && candlesLoading ? (
             <ChartSkeleton />
           ) : chartData.length > 0 ? (
-            <TradingViewChart
-              data={chartData}
-              maOverlays={maOverlays}
-              sessionBoundaries={sessionBoundaries}
-              height={384}
-            />
+            <LoadingOverlay isLoading={isRefetching} label="Loading chart data">
+              <TradingViewChart
+                data={chartData}
+                maOverlays={maOverlays}
+                sessionBoundaries={sessionBoundaries}
+                height={384}
+              />
+            </LoadingOverlay>
           ) : (
             <div className="h-96 flex items-center justify-center text-cream-400">
               No chart data available

@@ -183,9 +183,12 @@ const queryClientConfig: QueryClientConfig = {
       gcTime: CACHE_TIMES.DEFAULT,
       refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error instanceof Error && error.message.includes("4")) {
-          return false;
+        // Don't retry on 4xx or 503 errors (503 often means invalid symbol from market data provider)
+        if (error && typeof error === "object" && "status" in error) {
+          const status = (error as { status: number }).status;
+          if ((status >= 400 && status < 500) || status === 503) {
+            return false;
+          }
         }
         return failureCount < 3;
       },

@@ -10,6 +10,16 @@ import { calculateMAOverlays } from "@/lib/chart-indicators";
 import type { ChartTimeframe } from "@/stores/ui-store";
 import { CANDLE_LIMITS } from "./types";
 
+// Module-level cache for chart data - persists across component unmounts
+// Cache is keyed by symbol to prevent showing stale data for different symbols
+interface CachedChartData {
+  symbol: string;
+  candles: ReturnType<typeof useCandles>["data"];
+  indicators: ReturnType<typeof useIndicators>["data"];
+  quote: ReturnType<typeof useQuote>["data"];
+}
+let chartDataCache: CachedChartData | null = null;
+
 /**
  * Convert UTC timestamp to local time for chart display.
  * Lightweight-charts displays timestamps as UTC, so we need to
@@ -102,19 +112,56 @@ export function findSessionBoundaries(candles: { timestamp: string }[]): Session
 
 /**
  * Custom hook for chart data including candles, indicators, quote, and regime.
+ *
+ * Uses module-level cache to show previous data while loading new symbol's data.
+ * This prevents UI flicker during navigation.
  */
 export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledMAs: string[]) {
   const limit = CANDLE_LIMITS[timeframe] ?? 300;
-  const { data: candles, isLoading: candlesLoading } = useCandles(symbol, timeframe, limit);
-  const { data: indicators, isLoading: indicatorsLoading } = useIndicators(symbol, timeframe);
-  const { data: quote, isLoading: quoteLoading } = useQuote(symbol);
+  const {
+    data: candles,
+    isLoading: candlesLoading,
+    isFetching: candlesFetching,
+    isError: candlesError,
+  } = useCandles(symbol, timeframe, limit);
+  const {
+    data: indicators,
+    isLoading: indicatorsLoading,
+    isFetching: indicatorsFetching,
+    isError: indicatorsError,
+  } = useIndicators(symbol, timeframe);
+  const { data: quote, isLoading: quoteLoading, isError: quoteError } = useQuote(symbol);
   const { data: regime } = useRegime();
 
+  // Detect if symbol is invalid (all APIs return errors)
+  const isSymbolError = candlesError && indicatorsError && quoteError;
+
+  // Update cache when we have valid data for this symbol
+  const hasCurrentData = Boolean(candles && candles.length > 0);
+  if (hasCurrentData) {
+    chartDataCache = { symbol, candles, indicators, quote };
+  }
+
+  // Only use cached data if it's for the same symbol (prevents showing stale data for non-existent symbols)
+  const cacheMatchesSymbol = chartDataCache?.symbol === symbol;
+  const displayCandles = hasCurrentData
+    ? candles
+    : cacheMatchesSymbol
+      ? chartDataCache?.candles
+      : undefined;
+  const displayIndicators = hasCurrentData
+    ? indicators
+    : cacheMatchesSymbol
+      ? chartDataCache?.indicators
+      : undefined;
+  const displayQuote = quote ?? (cacheMatchesSymbol ? chartDataCache?.quote : undefined);
+  const isWaitingForData = !hasCurrentData && cacheMatchesSymbol && chartDataCache !== null;
+
   const chartData = useMemo(() => {
-    if (!candles || candles.length === 0) {
+    if (!displayCandles || displayCandles.length === 0) {
       return [];
     }
-    return candles.map((c) => ({
+    return displayCandles.map((c) => ({
       time: timeToLocal(new Date(c.timestamp).getTime() / 1000),
       open: c.open,
       high: c.high,
@@ -122,7 +169,7 @@ export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledM
       close: c.close,
       volume: c.volume,
     }));
-  }, [candles]);
+  }, [displayCandles]);
 
   const maOverlays = useMemo(() => {
     if (chartData.length === 0) {
@@ -132,34 +179,41 @@ export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledM
   }, [chartData, enabledMAs]);
 
   const sessionBoundaries = useMemo(() => {
-    if (!candles || candles.length === 0) {
+    if (!displayCandles || displayCandles.length === 0) {
       return undefined;
     }
-    return findSessionBoundaries(candles);
-  }, [candles]);
+    return findSessionBoundaries(displayCandles);
+  }, [displayCandles]);
 
   const dayHighLow = useMemo(() => {
-    if (!candles || candles.length === 0) {
+    if (!displayCandles || displayCandles.length === 0) {
       return { high: undefined, low: undefined };
     }
     return {
-      high: Math.max(...candles.map((c) => c.high)),
-      low: Math.min(...candles.map((c) => c.low)),
+      high: Math.max(...displayCandles.map((c) => c.high)),
+      low: Math.min(...displayCandles.map((c) => c.low)),
     };
-  }, [candles]);
+  }, [displayCandles]);
+
+  // Show overlay when refetching data or waiting for new symbol's data
+  const hasDisplayData = Boolean(displayCandles && displayCandles.length > 0);
+  const isRefetching =
+    ((candlesFetching || indicatorsFetching) && hasDisplayData) || isWaitingForData;
 
   return {
-    candles,
+    candles: displayCandles,
     chartData,
     maOverlays,
     sessionBoundaries,
-    indicators,
-    quote,
+    indicators: displayIndicators,
+    quote: displayQuote,
     regime,
     dayHighLow,
-    candlesLoading,
-    indicatorsLoading,
+    candlesLoading: candlesLoading && !isWaitingForData,
+    indicatorsLoading: indicatorsLoading && !isWaitingForData,
     quoteLoading,
+    isRefetching,
+    isSymbolError,
   };
 }
 
