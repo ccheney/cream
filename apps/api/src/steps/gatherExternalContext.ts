@@ -20,6 +20,7 @@ import {
   type ExtractedEvent,
   type FMPNewsArticle,
 } from "@cream/external-context";
+import { type EconomicEvent, getFredEconomicCalendar } from "@cream/mastra-kit";
 
 /**
  * Create ExecutionContext for step invocation.
@@ -93,6 +94,31 @@ function toFMPNewsArticle(article: FMPStockNews): FMPNewsArticle {
     site: article.site,
     text: article.text,
     url: article.url,
+  };
+}
+
+/**
+ * Convert FRED EconomicEvent to FMP format for pipeline processing
+ */
+function fredToFMPFormat(event: EconomicEvent): {
+  date: string;
+  country: string;
+  event: string;
+  actual?: number | null;
+  previous?: number | null;
+  estimate?: number | null;
+  unit?: string;
+  impact?: "Low" | "Medium" | "High";
+} {
+  return {
+    date: event.date,
+    country: "US", // FRED data is US-centric
+    event: event.name,
+    actual: event.actual ? parseFloat(event.actual.replace(/[%,]/g, "")) : null,
+    previous: event.previous ? parseFloat(event.previous.replace(/[%,]/g, "")) : null,
+    estimate: event.forecast ? parseFloat(event.forecast.replace(/[%,]/g, "")) : null,
+    unit: event.actual?.includes("%") ? "%" : undefined,
+    impact: event.impact === "high" ? "High" : event.impact === "medium" ? "Medium" : "Low",
   };
 }
 
@@ -228,22 +254,23 @@ export const gatherExternalContextStep = createStep({
     }
 
     try {
-      // Fetch news and economic calendar in parallel
+      // Fetch news (FMP) and economic calendar (FRED) in parallel
       const today = new Date();
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fromDate = weekAgo.toISOString().split("T")[0];
-      const toDate = today.toISOString().split("T")[0];
+      const fromDate = weekAgo.toISOString().split("T")[0] ?? "";
+      const toDate = today.toISOString().split("T")[0] ?? "";
 
-      const [newsArticles, economicEvents] = await Promise.all([
+      const [newsArticles, fredEvents] = await Promise.all([
         client.getGeneralNews(50).catch(() => [] as FMPStockNews[]),
-        client.getEconomicCalendar(fromDate, toDate).catch(() => []),
+        // Use FRED for economic calendar (FMP returns 403 - Premium feature)
+        getFredEconomicCalendar(ctx, fromDate, toDate).catch(() => [] as EconomicEvent[]),
       ]);
 
       // Process news through pipeline
       const newsResults = await pipeline.processNews(newsArticles.map(toFMPNewsArticle));
 
-      // Process macro releases through pipeline
-      const macroResults = await pipeline.processMacroReleases(economicEvents);
+      // Process FRED macro releases through pipeline (converted to FMP format)
+      const macroResults = await pipeline.processMacroReleases(fredEvents.map(fredToFMPFormat));
 
       log.info(
         {
