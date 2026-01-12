@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OptionsPosition } from "@/hooks/queries/useOptionsPositions";
+import { isOptionsMarketOpen } from "@/lib/market-hours";
 
 export interface PositionGreeks {
   /** Delta: change in option price per $1 change in underlying */
@@ -84,6 +85,8 @@ const DEFAULT_IV = 0.3;
 const DEFAULT_RISK_FREE_RATE = 0.05;
 const DAYS_PER_YEAR = 365;
 const MULTIPLIER = 100;
+/** Greeks recalculation interval in milliseconds */
+const GREEKS_RECALC_INTERVAL_MS = 5000;
 
 function normalCDF(x: number): number {
   const p = 0.2316419;
@@ -194,12 +197,18 @@ function calculateGreeks(
 export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositionGreeksReturn {
   const { positions, underlyingPrices, defaultIV = DEFAULT_IV } = options;
 
-  // State for live prices
+  // State for contract prices
   const [contractPrices, setContractPrices] = useState<Record<string, number>>({});
-  const [livePrices, setLivePrices] = useState<Record<string, number>>(() => ({
-    ...underlyingPrices,
-  }));
   const [isStreaming, setIsStreaming] = useState(false);
+
+  // Throttled underlying prices for Greeks calculation (updated every 5 seconds during market hours)
+  const [throttledUnderlyingPrices, setThrottledUnderlyingPrices] = useState<
+    Record<string, number>
+  >(() => ({ ...underlyingPrices }));
+
+  // Pending price updates buffer
+  const pendingUnderlyingUpdatesRef = useRef<Record<string, number>>({});
+  const recalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Track previous prices for flash
   const previousPricesRef = useRef<Record<string, number>>({});
@@ -223,8 +232,43 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
       return;
     }
     prevUnderlyingPricesRef.current = serialized;
-    setLivePrices((prev) => ({ ...prev, ...underlyingPrices }));
+    setThrottledUnderlyingPrices((prev) => ({ ...prev, ...underlyingPrices }));
   }, [underlyingPrices]);
+
+  // Schedule throttled Greeks recalculation
+  const scheduleGreeksRecalc = useCallback(() => {
+    if (recalcTimerRef.current !== null) {
+      return; // Already scheduled
+    }
+
+    recalcTimerRef.current = setTimeout(() => {
+      // Check market hours before recalculating
+      if (!isOptionsMarketOpen()) {
+        recalcTimerRef.current = null;
+        return;
+      }
+
+      // Flush pending updates
+      if (Object.keys(pendingUnderlyingUpdatesRef.current).length > 0) {
+        setThrottledUnderlyingPrices((prev) => ({
+          ...prev,
+          ...pendingUnderlyingUpdatesRef.current,
+        }));
+        pendingUnderlyingUpdatesRef.current = {};
+      }
+
+      recalcTimerRef.current = null;
+    }, GREEKS_RECALC_INTERVAL_MS);
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recalcTimerRef.current !== null) {
+        clearTimeout(recalcTimerRef.current);
+      }
+    };
+  }, []);
 
   // Update contract price
   const updateContractPrice = useCallback((symbol: string, price: number) => {
@@ -235,18 +279,28 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
     setIsStreaming(true);
   }, []);
 
-  // Update underlying price
-  const updateUnderlyingPrice = useCallback((symbol: string, price: number) => {
-    setLivePrices((prev) => ({ ...prev, [symbol]: price }));
-    setIsStreaming(true);
-  }, []);
+  // Update underlying price with throttling for Greeks recalculation
+  const updateUnderlyingPrice = useCallback(
+    (symbol: string, price: number) => {
+      setIsStreaming(true);
+
+      // Buffer for throttled Greeks recalculation (only during market hours)
+      if (isOptionsMarketOpen()) {
+        pendingUnderlyingUpdatesRef.current[symbol] = price;
+        scheduleGreeksRecalc();
+      }
+    },
+    [scheduleGreeksRecalc]
+  );
 
   // Calculate streaming positions with greeks
+  // Uses throttledUnderlyingPrices for Greeks (recalculated every 5s during market hours)
   const streamingPositions = useMemo<StreamingOptionsPosition[]>(() => {
     return positions.map((pos) => {
       const livePrice = contractPrices[pos.contractSymbol] ?? pos.currentPrice;
       const previousPrice = previousPricesRef.current[pos.contractSymbol] ?? pos.currentPrice;
-      const underlyingPrice = livePrices[pos.underlying] ?? 0;
+      // Use throttled price for Greeks calculation (updates every 5s during market hours)
+      const underlyingPrice = throttledUnderlyingPrices[pos.underlying] ?? 0;
 
       // Calculate time to expiration
       const expDate = new Date(pos.expiration);
@@ -281,9 +335,9 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
         lastUpdated: isStreaming ? new Date() : null,
       };
     });
-  }, [positions, contractPrices, livePrices, defaultIV, isStreaming]);
+  }, [positions, contractPrices, throttledUnderlyingPrices, defaultIV, isStreaming]);
 
-  // Calculate aggregate greeks
+  // Calculate aggregate greeks (uses throttled prices for consistency)
   const aggregateGreeks = useMemo<AggregateGreeks>(() => {
     let deltaNotional = 0;
     let totalGamma = 0;
@@ -292,7 +346,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
     let totalRho = 0;
 
     for (const pos of streamingPositions) {
-      const underlyingPrice = livePrices[pos.underlying] ?? 0;
+      const underlyingPrice = throttledUnderlyingPrices[pos.underlying] ?? 0;
       const positionMultiplier = pos.quantity * MULTIPLIER;
 
       deltaNotional += positionMultiplier * pos.greeks.delta * underlyingPrice;
@@ -303,7 +357,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
     }
 
     return { deltaNotional, totalGamma, totalTheta, totalVega, totalRho };
-  }, [streamingPositions, livePrices]);
+  }, [streamingPositions, throttledUnderlyingPrices]);
 
   return {
     streamingPositions,
