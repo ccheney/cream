@@ -1,14 +1,15 @@
 /**
  * Economic Calendar Service
  *
- * Service for fetching economic calendar events from FMP API.
+ * Service for fetching economic calendar events from FRED API.
  * Provides filtering by country, impact level, and category.
  * Includes in-memory caching to reduce API calls.
  *
  * @see docs/plans/41-economic-calendar-page.md
  */
 
-import { createFmpClientFromEnv, type EconomicCalendarEvent } from "@cream/marketdata";
+import { createContext, requireEnv } from "@cream/domain";
+import { type EconomicEvent, getFredEconomicCalendar } from "@cream/mastra-kit";
 import log from "../logger.js";
 
 // ============================================
@@ -96,15 +97,14 @@ export class EconomicCalendarService {
     }
 
     try {
-      const client = createFmpClientFromEnv();
-      const events = await client.getEconomicCalendar({
-        from: start,
-        to: end,
-        country,
-      });
+      // Create execution context for FRED API call
+      const ctx = createContext(requireEnv(), "scheduled");
+
+      // Fetch from FRED (US economic data only)
+      const events = await getFredEconomicCalendar(ctx, start, end);
 
       // Transform events
-      const transformed = events.map(this.transformEvent);
+      const transformed = events.map((e) => this.transformEvent(e, country));
 
       // Store in cache (before filtering by impact)
       this.setInCache(cacheKey, transformed, country);
@@ -238,35 +238,21 @@ export class EconomicCalendarService {
   }
 
   /**
-   * Transform FMP event to our format.
+   * Transform FRED event to our format.
    */
-  private transformEvent(event: EconomicCalendarEvent): TransformedEvent {
-    // Extract time from date if present (format: "YYYY-MM-DD HH:MM:SS")
-    const [datePart, timePart] = event.date.includes(" ")
-      ? event.date.split(" ")
-      : [event.date, "00:00:00"];
-
-    // Generate stable ID from date and event name
-    const id = `${datePart}-${event.event.toLowerCase().replace(/\s+/g, "-")}`;
-
-    // Map FMP impact to our format
-    const impactMap: Record<string, ImpactLevel> = {
-      High: "high",
-      Medium: "medium",
-      Low: "low",
-    };
-
+  private transformEvent(event: EconomicEvent, country: string): TransformedEvent {
+    // FRED events already have the correct format
     return {
-      id,
-      name: event.event,
-      date: datePart ?? event.date,
-      time: timePart ?? "00:00:00",
-      country: event.country,
-      impact: impactMap[event.impact ?? "Medium"] ?? "medium",
-      actual: event.actual != null ? String(event.actual) : null,
-      previous: event.previous != null ? String(event.previous) : null,
-      forecast: event.estimate != null ? String(event.estimate) : null,
-      unit: event.unit ?? null,
+      id: event.id,
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      country, // FRED is US-only, but allow override for consistency
+      impact: event.impact,
+      actual: event.actual,
+      previous: event.previous,
+      forecast: event.forecast,
+      unit: null, // FRED doesn't provide unit info
     };
   }
 }

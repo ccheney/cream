@@ -111,6 +111,7 @@
         "@cream/indicators": "workspace:*",
         "@cream/logger": "workspace:*",
         "@cream/marketdata": "workspace:*",
+        "@cream/mastra-kit": "workspace:*",
         "@cream/metrics": "workspace:*",
         "@cream/storage": "workspace:*",
         "@hono/zod-openapi": "^1.2.0",
