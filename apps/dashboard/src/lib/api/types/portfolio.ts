@@ -109,13 +109,21 @@ export interface PerformanceMetrics {
     today: PeriodMetrics;
     week: PeriodMetrics;
     month: PeriodMetrics;
+    threeMonth: PeriodMetrics;
     ytd: PeriodMetrics;
+    oneYear: PeriodMetrics;
     total: PeriodMetrics;
+  };
+  volatility: {
+    daily: number;
+    annualized: number;
   };
   sharpeRatio: number;
   sortinoRatio: number;
   maxDrawdown: number;
   maxDrawdownPct: number;
+  currentDrawdown: number;
+  currentDrawdownPct: number;
   winRate: number;
   profitFactor: number;
   avgWin: number;

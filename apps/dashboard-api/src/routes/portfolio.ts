@@ -179,12 +179,19 @@ const PerformanceMetricsSchema = z.object({
     month: PeriodMetricsSchema,
     threeMonth: PeriodMetricsSchema,
     ytd: PeriodMetricsSchema,
+    oneYear: PeriodMetricsSchema,
     total: PeriodMetricsSchema,
+  }),
+  volatility: z.object({
+    daily: z.number(),
+    annualized: z.number(),
   }),
   sharpeRatio: z.number(),
   sortinoRatio: z.number(),
   maxDrawdown: z.number(),
   maxDrawdownPct: z.number(),
+  currentDrawdown: z.number(),
+  currentDrawdownPct: z.number(),
   winRate: z.number(),
   profitFactor: z.number(),
   avgWin: z.number(),
@@ -647,6 +654,9 @@ app.openapi(performanceRoute, async (c) => {
 
   const ytdStart = new Date(now.getFullYear(), 0, 1);
 
+  const oneYearStart = new Date(now);
+  oneYearStart.setFullYear(oneYearStart.getFullYear() - 1);
+
   // Calculate P&L from filled orders (BUY is entry, SELL is exit)
   // Group orders by symbol to calculate realized P&L per trade
   interface TradePnL {
@@ -722,17 +732,20 @@ app.openapi(performanceRoute, async (c) => {
     return { return: periodReturn, returnPct, trades, winRate };
   };
 
-  // Calculate max drawdown
+  // Calculate max drawdown and current drawdown
   let peak = 0;
   let maxDrawdown = 0;
+  let currentDrawdown = 0;
 
   for (const s of snapshots.data) {
     peak = Math.max(peak, s.nav);
     const drawdown = peak - s.nav;
     maxDrawdown = Math.max(maxDrawdown, drawdown);
+    currentDrawdown = drawdown; // Last value is current
   }
 
   const maxDrawdownPct = peak > 0 ? (maxDrawdown / peak) * 100 : 0;
+  const currentDrawdownPct = peak > 0 ? (currentDrawdown / peak) * 100 : 0;
 
   // Calculate overall win/loss statistics from trade P&Ls
   const wins = tradePnLs.filter((t) => t.pnl > 0);
@@ -763,6 +776,16 @@ app.openapi(performanceRoute, async (c) => {
   const sortinoRatio =
     dailyReturns.length >= 2 ? (calculateSortino(dailyReturns, dailyConfig) ?? 0) : 0;
 
+  // Calculate volatility (standard deviation of daily returns)
+  let dailyVolatility = 0;
+  if (dailyReturns.length >= 2) {
+    const mean = dailyReturns.reduce((sum, r) => sum + r, 0) / dailyReturns.length;
+    const squaredDiffs = dailyReturns.map((r) => (r - mean) ** 2);
+    const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) / (dailyReturns.length - 1);
+    dailyVolatility = Math.sqrt(variance);
+  }
+  const annualizedVolatility = dailyVolatility * Math.sqrt(252);
+
   return c.json({
     periods: {
       today: calcPeriodMetrics(todayStart),
@@ -770,12 +793,19 @@ app.openapi(performanceRoute, async (c) => {
       month: calcPeriodMetrics(monthStart),
       threeMonth: calcPeriodMetrics(threeMonthStart),
       ytd: calcPeriodMetrics(ytdStart),
+      oneYear: calcPeriodMetrics(oneYearStart),
       total: calcPeriodMetrics(new Date(0)),
+    },
+    volatility: {
+      daily: dailyVolatility,
+      annualized: annualizedVolatility,
     },
     sharpeRatio,
     sortinoRatio,
     maxDrawdown,
     maxDrawdownPct,
+    currentDrawdown,
+    currentDrawdownPct,
     winRate,
     profitFactor,
     avgWin,
