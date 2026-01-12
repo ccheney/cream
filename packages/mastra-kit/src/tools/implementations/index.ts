@@ -25,6 +25,11 @@ export {
 } from "./externalContext.js";
 export { getEconomicCalendar, searchNews } from "./fmp.js";
 export {
+  getEconomicCalendar as getFredEconomicCalendar,
+  getMacroIndicators,
+  type MacroIndicatorValue,
+} from "./fred.js";
+export {
   type GraphRAGQueryParams,
   type GraphRAGQueryResult,
   graphragQuery,

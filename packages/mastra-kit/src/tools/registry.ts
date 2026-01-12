@@ -11,7 +11,9 @@ import {
   extractNewsContext,
   extractTranscript,
   getEconomicCalendar,
+  getFredEconomicCalendar,
   getGreeks,
+  getMacroIndicators,
   getOptionChain,
   getPortfolioState,
   getQuotes,
@@ -45,6 +47,9 @@ export const TOOL_REGISTRY = {
   extract_news_context: extractNewsContext,
   extract_transcript: extractTranscript,
   analyze_content: analyzeContent,
+  // FRED Economic Data tools
+  fred_economic_calendar: getFredEconomicCalendar,
+  fred_macro_indicators: getMacroIndicators,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;
