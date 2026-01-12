@@ -33,6 +33,12 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
     position.right
   );
 
+  // Color coding for calls vs puts
+  const contractTypeColor =
+    position.right === "CALL"
+      ? "text-green-600 dark:text-green-400"
+      : "text-red-600 dark:text-red-400";
+
   const handleClick = () => {
     onPositionClick?.(position);
   };
@@ -41,7 +47,11 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
     <tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
       <td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={handleClick} className="hover:text-blue-600 text-left">
+          <button
+            type="button"
+            onClick={handleClick}
+            className={`hover:underline text-left ${contractTypeColor}`}
+          >
             {contractDisplay}
           </button>
           {position.isStreaming && (
