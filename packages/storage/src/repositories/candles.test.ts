@@ -552,11 +552,11 @@ describe("CandlesRepository", () => {
       adjusted: false,
       splitAdjusted: false,
       dividendAdjusted: false,
-      provider: "databento",
+      provider: "alpaca",
     });
 
     const candle = await repo.getLastCandle("PROV", "1h");
     expect(candle).not.toBeNull();
-    expect(candle!.provider).toBe("databento");
+    expect(candle!.provider).toBe("alpaca");
   });
 });

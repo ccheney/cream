@@ -740,7 +740,6 @@ async function main() {
   log.info({ port: HEALTH_PORT }, "Health endpoint listening");
 
   // Start market data subscription to execution engine
-  // This triggers the Rust side to start the Databento feed
   const instruments = getInstruments();
   log.info({ symbolCount: instruments.length }, "Starting market data subscription");
   await startMarketDataSubscription(instruments).catch((error) => {

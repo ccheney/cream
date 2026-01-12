@@ -61,17 +61,11 @@ check_prerequisites() {
   if [[ -z "${POLYGON_KEY:-}" ]]; then missing+=("POLYGON_KEY"); fi
   if [[ -z "${FMP_KEY:-}" ]]; then missing+=("FMP_KEY"); fi
   if [[ -z "${ALPHAVANTAGE_KEY:-}" ]]; then missing+=("ALPHAVANTAGE_KEY"); fi
-  if [[ -z "${DATABENTO_KEY:-}" ]]; then missing+=("DATABENTO_KEY (optional, skip Databento if not set)"); fi
 
   # Check for bun
   if ! command -v bun &> /dev/null; then
     log_error "bun is required but not installed"
     exit 1
-  fi
-
-  # Check for uv (Python)
-  if ! command -v uv &> /dev/null; then
-    log_warn "uv not installed - Databento script will be skipped"
   fi
 
   if [[ ${#missing[@]} -gt 0 ]]; then
@@ -99,7 +93,6 @@ setup_directories() {
   mkdir -p "$FIXTURE_DIR/massive"
   mkdir -p "$FIXTURE_DIR/fmp"
   mkdir -p "$FIXTURE_DIR/alphavantage"
-  mkdir -p "$FIXTURE_DIR/databento"
 
   log_success "Fixture directories created"
 }
@@ -109,7 +102,7 @@ setup_directories() {
 # ============================================
 
 run_alpaca() {
-  log_info "Running fetch-alpaca.ts (1/5)..."
+  log_info "Running fetch-alpaca.ts (1/4)..."
 
   if bun "$SCRIPT_DIR/fetch-alpaca.ts"; then
     log_success "fetch-alpaca.ts complete"
@@ -121,7 +114,7 @@ run_alpaca() {
 }
 
 run_massive() {
-  log_info "Running fetch-massive.ts (2/5)..."
+  log_info "Running fetch-massive.ts (2/4)..."
   log_info "Note: 15s delays between requests for rate limits"
 
   if bun "$SCRIPT_DIR/fetch-massive.ts"; then
@@ -134,7 +127,7 @@ run_massive() {
 }
 
 run_fmp() {
-  log_info "Running fetch-fmp.ts (3/5)..."
+  log_info "Running fetch-fmp.ts (3/4)..."
 
   if bun "$SCRIPT_DIR/fetch-fmp.ts"; then
     log_success "fetch-fmp.ts complete"
@@ -146,7 +139,7 @@ run_fmp() {
 }
 
 run_alphavantage() {
-  log_info "Running fetch-alphavantage.ts (4/5)..."
+  log_info "Running fetch-alphavantage.ts (4/4)..."
   log_info "Note: Limited to 25 req/day, ~1 min total"
 
   if bun "$SCRIPT_DIR/fetch-alphavantage.ts"; then
@@ -154,50 +147,6 @@ run_alphavantage() {
     return 0
   else
     log_error "fetch-alphavantage.ts failed"
-    return 1
-  fi
-}
-
-run_databento() {
-  log_info "Running fetch-databento.py (5/5)..."
-
-  # Check if uv is available
-  if ! command -v uv &> /dev/null; then
-    log_warn "uv not installed - skipping Databento"
-    return 0
-  fi
-
-  # Check if DATABENTO_KEY is set
-  if [[ -z "${DATABENTO_KEY:-}" ]]; then
-    log_warn "DATABENTO_KEY not set - skipping Databento"
-    return 0
-  fi
-
-  # Prompt for confirmation (uses free credits)
-  echo ""
-  echo -e "${YELLOW}┌─────────────────────────────────────────────────────────┐${NC}"
-  echo -e "${YELLOW}│  DATABENTO COST WARNING                                 │${NC}"
-  echo -e "${YELLOW}├─────────────────────────────────────────────────────────┤${NC}"
-  echo -e "${YELLOW}│  This script uses Databento credits (~\$3 estimated).   │${NC}"
-  echo -e "${YELLOW}│  Free signup credits: \$10                              │${NC}"
-  echo -e "${YELLOW}│                                                         │${NC}"
-  echo -e "${YELLOW}│  Check your balance: https://databento.com/portal       │${NC}"
-  echo -e "${YELLOW}└─────────────────────────────────────────────────────────┘${NC}"
-  echo ""
-
-  read -p "Run Databento script? (y/n): " -n 1 -r
-  echo ""
-
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Skipping Databento script"
-    return 0
-  fi
-
-  if uv run "$SCRIPT_DIR/fetch-databento.py"; then
-    log_success "fetch-databento.py complete"
-    return 0
-  else
-    log_error "fetch-databento.py failed"
     return 1
   fi
 }
@@ -217,7 +166,6 @@ main() {
   echo "  2. Massive.com (candles, options)"
   echo "  3. FMP (fundamentals)"
   echo "  4. Alpha Vantage (macro)"
-  echo "  5. Databento (execution-grade, optional)"
   echo ""
   echo "Estimated time: ~2 minutes"
   echo ""
@@ -243,7 +191,6 @@ main() {
   run_massive || ((failed++))
   run_fmp || ((failed++))
   run_alphavantage || ((failed++))
-  run_databento || ((failed++))
 
   echo ""
   echo "========================================"

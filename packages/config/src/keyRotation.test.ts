@@ -430,7 +430,6 @@ describe("KeyRotationRegistry", () => {
       delete process.env.POLYGON_KEY;
       delete process.env.FMP_KEY;
       delete process.env.ALPHAVANTAGE_KEY;
-      delete process.env.DATABENTO_KEY;
       delete process.env.ALPACA_KEY;
       // @ts-expect-error - Bun.env is readonly but we need to clear for test
       Bun.env.POLYGON_KEY = undefined;
@@ -439,8 +438,6 @@ describe("KeyRotationRegistry", () => {
       // @ts-expect-error - Bun.env is readonly but we need to clear for test
       Bun.env.ALPHAVANTAGE_KEY = undefined;
       // @ts-expect-error - Bun.env is readonly but we need to clear for test
-      Bun.env.DATABENTO_KEY = undefined;
-      // @ts-expect-error - Bun.env is readonly but we need to clear for test
       Bun.env.ALPACA_KEY = undefined;
 
       const envRegistry = new KeyRotationRegistry({}, silentLogger);
@@ -448,7 +445,7 @@ describe("KeyRotationRegistry", () => {
 
       // Should not throw - managers are created but without keys
       const stats = envRegistry.getAllStats();
-      expect(stats.length).toBe(5); // 5 services initialized but no keys
+      expect(stats.length).toBe(4); // 4 services initialized but no keys
     });
   });
 });

@@ -6,7 +6,7 @@ Market data aggregation and processing for the Cream trading system.
 
 Central data layer providing:
 
-- **Provider Clients** - Polygon, Databento, FMP, Alpha Vantage
+- **Provider Clients** - Alpaca, Polygon, FMP, Alpha Vantage
 - **Environment-Aware Adapters** - Mock (BACKTEST), Real (PAPER/LIVE)
 - **Data Validation** - Staleness, gaps, anomalies
 - **Feature Snapshots** - Candles, indicators, regime
@@ -17,8 +17,8 @@ Central data layer providing:
 
 | Provider | Data |
 |----------|------|
-| Polygon/Massive | Candles, options |
-| Databento | Execution-grade real-time |
+| Alpaca | Quotes, candles, options (unified) |
+| Polygon/Massive | Legacy candles, options |
 | FMP | Fundamentals, transcripts |
 | Alpha Vantage | Macro indicators |
 
@@ -96,8 +96,9 @@ const greeks = calculateGreeks({
 ## Configuration
 
 ```bash
-POLYGON_KEY=...      # Polygon/Massive
-DATABENTO_KEY=...    # Databento
+ALPACA_KEY=...       # Alpaca (unified market data + broker)
+ALPACA_SECRET=...    # Alpaca secret
+POLYGON_KEY=...      # Polygon/Massive (legacy)
 FMP_KEY=...          # FMP
 ALPHAVANTAGE_KEY=... # Alpha Vantage
 CREAM_ENV=...        # Controls adapter selection

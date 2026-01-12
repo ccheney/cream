@@ -32,10 +32,6 @@ FMP_KEY=your_key
 # Alpha Vantage - Free tier: 25 req/day
 # Sign up: https://www.alphavantage.co/support/#api-key
 ALPHAVANTAGE_KEY=your_key
-
-# Databento - Free credits on signup
-# Sign up: https://databento.com/signup
-DATABENTO_KEY=your_key
 ```
 
 ## Execution Order
@@ -46,7 +42,6 @@ Run scripts in this order to respect rate limits:
 2. **fetch-massive.ts** - 5 req/min, batch with delays
 3. **fetch-fmp.ts** - 250 req/day, run early in day
 4. **fetch-alphavantage.ts** - 25 req/day, run after FMP
-5. **fetch-databento.py** - Python script, uses free credits
 
 ```bash
 # From project root
@@ -54,7 +49,6 @@ bun scripts/seed-fixtures/fetch-alpaca.ts
 bun scripts/seed-fixtures/fetch-massive.ts
 bun scripts/seed-fixtures/fetch-fmp.ts
 bun scripts/seed-fixtures/fetch-alphavantage.ts
-uv run scripts/seed-fixtures/fetch-databento.py
 ```
 
 ## Fixtures Output
@@ -64,8 +58,7 @@ packages/marketdata/fixtures/
 ├── alpaca/           # Account, positions, orders
 ├── massive/          # Candles, option chains, quotes
 ├── fmp/              # Fundamentals, transcripts, sentiment
-├── alphavantage/     # Macro indicators (GDP, inflation, etc.)
-└── databento/        # L1 quotes, trades (execution-grade)
+└── alphavantage/     # Macro indicators (GDP, inflation, etc.)
 ```
 
 ## Rate Limit Reference
@@ -76,7 +69,6 @@ packages/marketdata/fixtures/
 | Massive.com    | 5 req/min       | Add 15s delays between req |
 | FMP            | 250 req/day     | Reset at midnight UTC      |
 | Alpha Vantage  | 25 req/day      | Reset at midnight UTC      |
-| Databento      | Per-credit      | Check dashboard for usage  |
 
 ## Cleanup
 

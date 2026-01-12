@@ -6,15 +6,12 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import {
   alignToDailyCandle,
   alignToHourlyCandle,
-  calculateDatabentoLatency,
   checkClockSkew,
-  type DatabentoTimestamps,
   DEFAULT_CLOCK_THRESHOLDS,
   getClockMonitorState,
   isHourlyAligned,
   periodicClockCheck,
   resetClockMonitorState,
-  selectDatabentoTimestamp,
   validateCandleSequence,
   validateTimestamp,
   validateTimestampConsistency,
@@ -253,47 +250,6 @@ describe("validateCandleSequence", () => {
     const result = validateCandleSequence(["2026-01-04T14:00:00.000Z"]);
 
     expect(result.valid).toBe(true);
-  });
-});
-
-// ============================================
-// Databento Timestamp Tests
-// ============================================
-
-describe("selectDatabentoTimestamp", () => {
-  const timestamps: DatabentoTimestamps = {
-    ts_event: "2026-01-04T15:00:00.000Z",
-    ts_recv: "2026-01-04T15:00:00.005Z",
-    ts_in_delta: 5000000, // 5ms in nanoseconds
-    ts_out: "2026-01-04T15:00:00.010Z",
-  };
-
-  it("selects ts_event for analysis", () => {
-    expect(selectDatabentoTimestamp(timestamps, "analysis")).toBe(timestamps.ts_event);
-  });
-
-  it("selects ts_recv for latency", () => {
-    expect(selectDatabentoTimestamp(timestamps, "latency")).toBe(timestamps.ts_recv);
-  });
-
-  it("selects ts_out for processing", () => {
-    expect(selectDatabentoTimestamp(timestamps, "processing")).toBe(timestamps.ts_out);
-  });
-});
-
-describe("calculateDatabentoLatency", () => {
-  it("calculates latency components", () => {
-    const timestamps: DatabentoTimestamps = {
-      ts_event: "2026-01-04T15:00:00.000Z",
-      ts_recv: "2026-01-04T15:00:00.005Z",
-      ts_out: "2026-01-04T15:00:00.010Z",
-    };
-
-    const latency = calculateDatabentoLatency(timestamps);
-
-    expect(latency.exchangeToRecvMs).toBe(5);
-    expect(latency.recvToProcessMs).toBe(5);
-    expect(latency.totalMs).toBe(10);
   });
 });
 

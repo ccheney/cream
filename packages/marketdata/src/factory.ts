@@ -85,7 +85,7 @@ export interface MarketDataAdapter {
   /**
    * Get the adapter type for logging.
    */
-  getType(): "mock" | "alpaca" | "polygon" | "databento";
+  getType(): "mock" | "alpaca" | "polygon";
 }
 
 // ============================================

@@ -28,7 +28,7 @@ Runs three critical workflows:
 ### Market Data (`src/marketdata.ts`)
 
 - gRPC subscription to execution engine
-- Databento market data streaming
+- Real-time market data streaming
 
 ### Monitors (`src/monitors/`)
 

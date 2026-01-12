@@ -209,7 +209,7 @@ cream/
 │   ├── helix/                      # HelixDB client (vector search, GraphRAG)
 │   ├── helix-schema/               # HelixDB schema, CBR, memory management
 │   ├── broker/                     # Alpaca Markets integration
-│   ├── marketdata/                 # Polygon/Databento/FMP adapters
+│   ├── marketdata/                 # Alpaca/Polygon/FMP adapters
 │   ├── universe/                   # Trading universe resolution
 │   ├── indicators/                 # Technical indicators (RSI, ATR, SMA)
 │   ├── regime/                     # Market regime classification
@@ -316,7 +316,7 @@ Rust gRPC server for deterministic order validation and routing.
 | `@cream/storage` | Turso client, 25+ repositories, migrations |
 | `@cream/helix` | HelixDB client (vector search ~2ms, graph <1ms) |
 | `@cream/helix-schema` | 10 node types, 11 edge types, CBR, forgetting |
-| `@cream/marketdata` | Polygon, Databento, FMP, Alpha Vantage adapters |
+| `@cream/marketdata` | Alpaca, Polygon, FMP, Alpha Vantage adapters |
 
 ### Trading Logic
 
@@ -428,8 +428,7 @@ HELIX_URL=http://localhost:6969    # HelixDB endpoint
 ### Market Data
 
 ```bash
-POLYGON_KEY=                        # Candles and options
-DATABENTO_KEY=                      # Execution-grade data
+POLYGON_KEY=                        # Candles and options (legacy)
 FMP_KEY=                            # Fundamentals
 ALPHAVANTAGE_KEY=                   # Macro indicators
 ```

@@ -49,10 +49,8 @@ flowchart TB
     end
 
     subgraph External["External Services"]
-        Databento(["`**Databento**
-        Market Data`"])
         Alpaca(["`**Alpaca**
-        Broker`"])
+        Broker + Market Data`"])
     end
 
     Dashboard -->|HTTP/WS| DashAPI
@@ -62,7 +60,6 @@ flowchart TB
     Worker --> Turso
     Worker --> Helix
     Worker -->|gRPC| Engine
-    Engine --> Databento
     Engine --> Alpaca
     Services --> Redis
 
@@ -72,7 +69,7 @@ flowchart TB
 
     class Dashboard,DashAPI,Worker,Engine service
     class Turso,Helix,Redis database
-    class Databento,Alpaca external
+    class Alpaca external
 ```
 
 ---
@@ -116,17 +113,16 @@ sequenceDiagram
     participant T as Turso<br/>:8080
     participant H as HelixDB<br/>:6969
     participant E as Execution Engine<br/>:50053
-    participant B as Alpaca<br/>Broker
-    participant M as Databento<br/>Market Data
+    participant B as Alpaca<br/>Broker + Data
 
     W->>T: Load config
     T-->>W: Trading config
 
     rect rgba(99, 102, 241, 0.08)
-        Note over W,M: OBSERVE
+        Note over W,B: OBSERVE
         W->>E: gRPC GetSnapshot
-        E->>M: Subscribe market data
-        M-->>E: OHLCV + quotes
+        E->>B: Subscribe market data
+        B-->>E: OHLCV + quotes
         E-->>W: Market snapshot
     end
 
@@ -402,7 +398,7 @@ flowchart TB
         end
 
         subgraph Feed["feed/"]
-            Databento["DatabentoFeed"]
+            AlpacaFeed["AlpacaFeed"]
         end
 
         subgraph Safety["safety/"]
@@ -422,7 +418,7 @@ flowchart TB
     classDef module fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
 
     class Main,Config core
-    class HTTP,GRPC,Gateway,OrderState,Constraints,AlpacaAdapter,Databento,Monitor module
+    class HTTP,GRPC,Gateway,OrderState,Constraints,AlpacaAdapter,AlpacaFeed,Monitor module
 ```
 
 ### Environment-Based Behavior
@@ -438,13 +434,13 @@ flowchart LR
 
     subgraph PAPER
         P1[Alpaca Paper]
-        P2[Databento]
+        P2[Alpaca Data]
         P3[Safety Optional]
     end
 
     subgraph LIVE
         L1[Alpaca Live]
-        L2[Databento]
+        L2[Alpaca Data]
         L3[Safety Required]
     end
 

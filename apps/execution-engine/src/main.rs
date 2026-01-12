@@ -15,7 +15,6 @@
 //! - `CREAM_ENV`: BACKTEST | PAPER | LIVE (default: PAPER)
 //! - `ALPACA_KEY`: Broker API key (required for PAPER/LIVE)
 //! - `ALPACA_SECRET`: Broker API secret (required for PAPER/LIVE)
-//! - `DATABENTO_KEY`: Market data API key
 //! - `RUST_LOG`: Log level (default: info)
 //!
 //! # Endpoints
@@ -186,7 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // Create Databento feed controller (feed starts when SubscribeMarketData is called)
+    // Create market data feed controller (feed starts when SubscribeMarketData is called)
     let feed_controller = create_feed_controller(&config, cream_env);
 
     // Create HTTP router

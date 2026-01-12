@@ -462,7 +462,7 @@ describe("validateDataConsistency", () => {
     };
 
     const realtime: DataSourceMetadata = {
-      provider: "databento",
+      provider: "alpaca",
       feedType: "realtime",
       adjusted: true,
       startDate: "2026-01-01T00:00:00Z",

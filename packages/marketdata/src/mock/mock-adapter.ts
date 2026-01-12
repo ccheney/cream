@@ -67,9 +67,6 @@ import alpacaPositions from "../../fixtures/alpaca/positions.json";
 // Alpha Vantage fixtures
 import avFederalFundsRate from "../../fixtures/alphavantage/federal-funds-rate.json";
 import avRealGDP from "../../fixtures/alphavantage/real-gdp.json";
-// Databento fixtures
-import databentoQuotesAAPL from "../../fixtures/databento/quotes-AAPL.json";
-import databentoTradesAAPL from "../../fixtures/databento/trades-AAPL.json";
 // FMP fixtures
 import fmpProfileAAPL from "../../fixtures/fmp/profile-AAPL.json";
 // Massive (Polygon) fixtures
@@ -111,14 +108,6 @@ export const mockData = {
   alphavantage: {
     realGDP: avRealGDP,
     federalFundsRate: avFederalFundsRate,
-  },
-  databento: {
-    trades: {
-      AAPL: databentoTradesAAPL,
-    },
-    quotes: {
-      AAPL: databentoQuotesAAPL,
-    },
   },
 } as const;
 
@@ -597,63 +586,6 @@ export class MockAdapter {
     }
 
     return parseFloat(data.data[0].value);
-  }
-
-  // ============================================
-  // Tick Data (Databento)
-  // ============================================
-
-  /**
-   * Get L1 trades from Databento fixtures.
-   */
-  async getL1Trades(symbol: string): Promise<MockTrade[]> {
-    await this.maybeThrowError();
-    await this.simulateLatency();
-
-    const tradeData = mockData.databento.trades[symbol as keyof typeof mockData.databento.trades];
-    if (!tradeData) {
-      return [];
-    }
-
-    return tradeData.map(
-      (t: { ts_event: string; price: number; size: number; symbol: string }) => ({
-        symbol: t.symbol,
-        timestamp: Number(BigInt(t.ts_event) / BigInt(1000000)), // ns to ms
-        price: t.price,
-        size: t.size,
-      })
-    );
-  }
-
-  /**
-   * Get L1 quotes from Databento fixtures.
-   */
-  async getL1Quotes(symbol: string): Promise<MockQuote[]> {
-    await this.maybeThrowError();
-    await this.simulateLatency();
-
-    const quoteData = mockData.databento.quotes[symbol as keyof typeof mockData.databento.quotes];
-    if (!quoteData) {
-      return [];
-    }
-
-    return quoteData.map(
-      (q: {
-        ts_event: string;
-        bid_px: number;
-        ask_px: number;
-        bid_sz: number;
-        ask_sz: number;
-        symbol: string;
-      }) => ({
-        symbol: q.symbol,
-        timestamp: Number(BigInt(q.ts_event) / BigInt(1000000)), // ns to ms
-        bid: q.bid_px,
-        ask: q.ask_px,
-        bidSize: q.bid_sz,
-        askSize: q.ask_sz,
-      })
-    );
   }
 
   // ============================================

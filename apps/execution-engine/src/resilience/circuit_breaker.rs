@@ -1,6 +1,6 @@
 //! Circuit breaker implementation for external service resilience.
 //!
-//! Prevents cascading failures when external services (Alpaca, Databento)
+//! Prevents cascading failures when external services (Alpaca)
 //! become unavailable or unresponsive.
 //!
 //! # State Machine

@@ -1,7 +1,0 @@
-[
-  { "ts_event": "1735722000000000000", "price": 185.52, "size": 100, "symbol": "AAPL" },
-  { "ts_event": "1735722000100000000", "price": 185.53, "size": 50, "symbol": "AAPL" },
-  { "ts_event": "1735722000200000000", "price": 185.51, "size": 200, "symbol": "AAPL" },
-  { "ts_event": "1735722000300000000", "price": 185.54, "size": 75, "symbol": "AAPL" },
-  { "ts_event": "1735722000400000000", "price": 185.55, "size": 150, "symbol": "AAPL" }
-]

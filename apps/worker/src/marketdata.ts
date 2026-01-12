@@ -2,7 +2,6 @@
  * Market Data Subscription
  *
  * Subscribes to real-time market data from the execution engine's gRPC service.
- * This triggers the Rust side to start the Databento feed with the configured symbols.
  */
 
 import {
@@ -69,8 +68,7 @@ const subscriptionState: SubscriptionState = {
 /**
  * Start market data subscription for the given symbols.
  *
- * This initiates a streaming gRPC call to the execution engine, which triggers
- * the Rust side to start the Databento feed with these symbols.
+ * This initiates a streaming gRPC call to the execution engine.
  *
  * @param symbols - Symbols to subscribe to (from runtime config)
  * @param onUpdate - Optional callback for quote updates

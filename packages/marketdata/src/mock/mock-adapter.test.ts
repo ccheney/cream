@@ -177,25 +177,6 @@ describe("MockAdapter", () => {
     });
   });
 
-  describe("Tick Data (Databento)", () => {
-    it("should return L1 trades", async () => {
-      const trades = await adapter.getL1Trades("AAPL");
-      expect(trades.length).toBeGreaterThan(0);
-      expect(trades[0]).toHaveProperty("symbol");
-      expect(trades[0]).toHaveProperty("price");
-      expect(trades[0]).toHaveProperty("size");
-    });
-
-    it("should return L1 quotes", async () => {
-      const quotes = await adapter.getL1Quotes("AAPL");
-      expect(quotes.length).toBeGreaterThan(0);
-      expect(quotes[0]).toHaveProperty("bid");
-      expect(quotes[0]).toHaveProperty("ask");
-      expect(quotes[0]).toHaveProperty("bidSize");
-      expect(quotes[0]).toHaveProperty("askSize");
-    });
-  });
-
   describe("Snapshot Builder", () => {
     it("should build a market snapshot", async () => {
       const snapshot = await adapter.buildSnapshot("AAPL");
@@ -352,11 +333,5 @@ describe("Fixture Registry", () => {
     expect(mockData.alphavantage).toBeDefined();
     expect(mockData.alphavantage.realGDP).toBeDefined();
     expect(mockData.alphavantage.federalFundsRate).toBeDefined();
-  });
-
-  it("should have databento fixtures", () => {
-    expect(mockData.databento).toBeDefined();
-    expect(mockData.databento.trades).toBeDefined();
-    expect(mockData.databento.quotes).toBeDefined();
   });
 });

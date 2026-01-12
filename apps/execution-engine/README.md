@@ -62,7 +62,7 @@ It operates in three environments:
   - Greeks aggregation
 
 - **`feed/`** - Market data ingestion
-  - Databento integration for live market data
+  - Alpaca integration for live market data
   - Feed health monitoring
   - Microstructure analysis
 
@@ -244,7 +244,6 @@ Content-Type: application/json
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABENTO_KEY` | Empty | Market data API key (needed for live data) |
 | `RUST_LOG` | info | Logging level (trace, debug, info, warn, error) |
 | `GRPC_TLS_ENABLED` | false | Enable TLS for gRPC |
 | `GRPC_TLS_CERT_PATH` | - | Server certificate path |
@@ -358,7 +357,7 @@ cargo run --bin execution-engine
 
 **Logs**: "Data gap detected for symbol XYZ"
 
-**Fix**: Check Databento connectivity. Verify network connectivity to data feed. Check `feed.databento` config.
+**Fix**: Check Alpaca connectivity. Verify network connectivity to data feed. Check `feeds.alpaca` config.
 
 ## Dependencies
 

@@ -1,7 +1,7 @@
 /**
  * External Data Input Validation
  *
- * Validates raw data from external APIs (Polygon, Alpha Vantage, FMP, Databento)
+ * Validates raw data from external APIs (Alpaca, Polygon, Alpha Vantage, FMP)
  * to prevent malformed or malicious data from entering the system.
  *
  * Key validations:

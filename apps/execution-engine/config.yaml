@@ -32,21 +32,6 @@ feeds:
     # Symbols are managed via runtime config (@cream/config)
     symbols: []
 
-  databento:
-    # Databento API key (REQUIRED for LIVE/PAPER)
-    # Register at: https://databento.com/
-    api_key: "${DATABENTO_KEY:-}"
-    # Dataset for market data
-    # XNAS.ITCH = Nasdaq TotalView-ITCH (full depth order book)
-    # XNYS.ITCH = NYSE TotalView (coming soon)
-    dataset: "XNAS.ITCH"
-    # Reconnection settings
-    reconnect_delay_ms: 1000
-    max_reconnect_attempts: 5
-    # Symbols are managed via runtime config (@cream/config)
-    # TypeScript sends symbols via gRPC SubscribeMarketData
-    symbols: []
-
 # Broker Configuration
 # Trading broker connections
 brokers:
@@ -153,11 +138,6 @@ circuit_breaker:
     failure_rate_threshold: 0.3
     wait_duration_secs: 60
     minimum_calls: 10
-
-  databento:
-    failure_rate_threshold: 0.4
-    wait_duration_secs: 30
-    minimum_calls: 5
 
 # Persistence Configuration
 # State persistence for crash recovery

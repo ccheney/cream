@@ -50,11 +50,6 @@ export class KeyRotationRegistry {
 
     this.getManager("fmp").addKeysFromEnv(process.env.FMP_KEY ?? Bun.env.FMP_KEY, "FMP_KEY");
 
-    this.getManager("databento").addKeysFromEnv(
-      process.env.DATABENTO_KEY ?? Bun.env.DATABENTO_KEY,
-      "DATABENTO_KEY"
-    );
-
     this.getManager("alpaca").addKeysFromEnv(
       process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY,
       "ALPACA_KEY"
