@@ -40,9 +40,9 @@ const COUNTRY_OPTIONS = [
 ] as const;
 
 const IMPACT_OPTIONS: { value: ImpactLevel; label: string; color: string }[] = [
-  { value: "high", label: "High", color: "bg-red-500" },
-  { value: "medium", label: "Medium", color: "bg-amber-500" },
-  { value: "low", label: "Low", color: "bg-gray-400" },
+  { value: "high", label: "High", color: "bg-orange-500" },
+  { value: "medium", label: "Medium", color: "bg-teal-500" },
+  { value: "low", label: "Low", color: "bg-stone-400" },
 ];
 
 const DATE_RANGE_OPTIONS = [

@@ -47,18 +47,18 @@ const IMPACT_STYLES: Record<
   }
 > = {
   high: {
-    container: "bg-red-50 dark:bg-red-900/20",
-    border: "border-l-2 border-red-500",
-    text: "text-red-900 dark:text-red-100",
-    badge: "bg-red-100 dark:bg-red-800/50",
-    badgeText: "text-red-700 dark:text-red-300",
+    container: "bg-orange-50 dark:bg-orange-900/20",
+    border: "border-l-2 border-orange-500",
+    text: "text-orange-900 dark:text-orange-100",
+    badge: "bg-orange-100 dark:bg-orange-800/50",
+    badgeText: "text-orange-700 dark:text-orange-300",
   },
   medium: {
-    container: "bg-amber-50 dark:bg-amber-900/20",
-    border: "border-l-2 border-amber-500",
-    text: "text-amber-900 dark:text-amber-100",
-    badge: "bg-amber-100 dark:bg-amber-800/50",
-    badgeText: "text-amber-700 dark:text-amber-300",
+    container: "bg-teal-50 dark:bg-teal-900/20",
+    border: "border-l-2 border-teal-500",
+    text: "text-teal-900 dark:text-teal-100",
+    badge: "bg-teal-100 dark:bg-teal-800/50",
+    badgeText: "text-teal-700 dark:text-teal-300",
   },
   low: {
     container: "bg-stone-50 dark:bg-stone-800/50",

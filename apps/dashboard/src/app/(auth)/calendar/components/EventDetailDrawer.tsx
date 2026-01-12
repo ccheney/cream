@@ -47,21 +47,21 @@ const IMPACT_CONFIG: Record<
 > = {
   high: {
     label: "High Impact",
-    bg: "bg-red-100 dark:bg-red-900/30",
-    text: "text-red-700 dark:text-red-400",
-    border: "border-red-200 dark:border-red-800",
+    bg: "bg-orange-100 dark:bg-orange-900/30",
+    text: "text-orange-700 dark:text-orange-400",
+    border: "border-orange-200 dark:border-orange-800",
   },
   medium: {
     label: "Medium Impact",
-    bg: "bg-amber-100 dark:bg-amber-900/30",
-    text: "text-amber-700 dark:text-amber-400",
-    border: "border-amber-200 dark:border-amber-800",
+    bg: "bg-teal-100 dark:bg-teal-900/30",
+    text: "text-teal-700 dark:text-teal-400",
+    border: "border-teal-200 dark:border-teal-800",
   },
   low: {
     label: "Low Impact",
-    bg: "bg-gray-100 dark:bg-gray-900/30",
-    text: "text-gray-600 dark:text-gray-400",
-    border: "border-gray-200 dark:border-gray-700",
+    bg: "bg-stone-100 dark:bg-stone-900/30",
+    text: "text-stone-600 dark:text-stone-400",
+    border: "border-stone-200 dark:border-stone-700",
   },
 };
 

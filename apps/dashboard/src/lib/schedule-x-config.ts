@@ -18,22 +18,23 @@ export const CALENDAR_CONFIG = {
 
 /**
  * Event color mapping by impact level.
+ * Uses warm palette from design system (docs/plans/ui/21-color-system.md)
  */
 export const EVENT_COLORS = {
   high: {
-    main: "#dc2626", // red-600
-    container: "#fef2f2", // red-50
-    onContainer: "#991b1b", // red-800
+    main: "#F97316", // orange-500 (--agent-risk)
+    container: "#FFF7ED", // orange-50
+    onContainer: "#9A3412", // orange-800
   },
   medium: {
-    main: "#d97706", // amber-600
-    container: "#fffbeb", // amber-50
-    onContainer: "#92400e", // amber-800
+    main: "#14B8A6", // teal-500 (--agent-fundamentals)
+    container: "#CCFBF1", // teal-100
+    onContainer: "#115E59", // teal-800
   },
   low: {
-    main: "#2563eb", // blue-600
-    container: "#eff6ff", // blue-50
-    onContainer: "#1e40af", // blue-800
+    main: "#78716C", // stone-500
+    container: "#F5F5F4", // stone-100
+    onContainer: "#44403C", // stone-700
   },
 } as const;
 
