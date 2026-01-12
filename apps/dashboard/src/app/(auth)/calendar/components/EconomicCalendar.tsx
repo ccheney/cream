@@ -13,8 +13,10 @@ import { createViewMonthAgenda, createViewMonthGrid, createViewWeek } from "@sch
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import { ScheduleXCalendar, useNextCalendarApp } from "@schedule-x/react";
 import "@schedule-x/theme-default/dist/index.css";
-import { AlertCircle, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { EmptyState, ErrorEmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEconomicCalendar } from "@/hooks/queries";
 import type { EconomicEvent } from "@/lib/api/types";
 import {
@@ -136,49 +138,77 @@ function convertToCalendarEvents(events: EconomicEvent[]): CalendarEvent[] {
 // Sub-components
 // ============================================
 
-function LoadingState() {
+function CalendarLoadingState() {
   return (
-    <div className="flex items-center justify-center h-full bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-stone-500 dark:text-night-400">Loading events...</span>
+    <div className="flex flex-col h-full gap-3">
+      {/* Filters skeleton */}
+      <div className="shrink-0 flex items-center gap-3">
+        <Skeleton width={140} height={32} radius={6} />
+        <Skeleton width={140} height={32} radius={6} />
+        <div className="w-px h-5 bg-cream-300 dark:bg-night-600" />
+        <div className="flex items-center gap-1.5">
+          <Skeleton width={60} height={26} radius={13} />
+          <Skeleton width={70} height={26} radius={13} />
+          <Skeleton width={50} height={26} radius={13} />
+        </div>
       </div>
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message?: string }) {
-  return (
-    <div className="flex items-center justify-center h-full bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-      <div className="flex flex-col items-center gap-3 text-center p-6">
-        <AlertCircle className="h-10 w-10 text-red-500" />
-        <div>
-          <p className="text-sm font-medium text-stone-700 dark:text-night-200">
-            Failed to load calendar
-          </p>
-          <p className="text-xs text-stone-500 dark:text-night-400 mt-1">
-            {message ?? "Please try again later"}
-          </p>
+      {/* Legend skeleton */}
+      <div className="shrink-0 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Skeleton width={80} height={12} />
+          <Skeleton width={100} height={12} />
+          <Skeleton width={70} height={12} />
+        </div>
+        <Skeleton width={120} height={12} />
+      </div>
+      {/* Calendar skeleton */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden">
+        <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-stone-500 dark:text-night-400">Loading events...</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function EmptyState() {
+function CalendarErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   return (
     <div className="flex items-center justify-center h-full bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-      <div className="flex flex-col items-center gap-3 text-center p-6">
-        <CalendarDays className="h-10 w-10 text-stone-300 dark:text-night-600" />
-        <div>
-          <p className="text-sm font-medium text-stone-700 dark:text-night-200">
-            No events scheduled
-          </p>
-          <p className="text-xs text-stone-500 dark:text-night-400 mt-1">
-            Check back for upcoming economic releases
-          </p>
-        </div>
-      </div>
+      <ErrorEmptyState
+        title="Failed to Load Calendar"
+        description={message ?? "We couldn't load the economic calendar. Please try again."}
+        action={onRetry ? { label: "Retry", onClick: onRetry } : undefined}
+      />
+    </div>
+  );
+}
+
+function CalendarEmptyState({
+  onClearFilters,
+  hasActiveFilters,
+}: {
+  onClearFilters?: () => void;
+  hasActiveFilters?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-center h-full bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+      <EmptyState
+        icon={<CalendarDays className="h-10 w-10" />}
+        title="No Economic Events"
+        description={
+          hasActiveFilters
+            ? "No events found for the selected filters. Try adjusting your filters."
+            : "No upcoming economic events scheduled for this period."
+        }
+        action={
+          hasActiveFilters && onClearFilters
+            ? { label: "Clear Filters", onClick: onClearFilters }
+            : undefined
+        }
+      />
     </div>
   );
 }
@@ -215,7 +245,7 @@ export function EconomicCalendar() {
     [filters.dateRange]
   );
 
-  const { data, isLoading, error } = useEconomicCalendar({
+  const { data, isLoading, error, refetch } = useEconomicCalendar({
     startDate: start,
     endDate: end,
     impact: filters.impact,
@@ -225,6 +255,18 @@ export function EconomicCalendar() {
   const handleFilterChange = useCallback((newFilters: CalendarFilterState) => {
     setFilters(newFilters);
   }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+  }, []);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.country !== DEFAULT_FILTERS.country ||
+      filters.impact.length !== DEFAULT_FILTERS.impact.length ||
+      filters.dateRange !== DEFAULT_FILTERS.dateRange
+    );
+  }, [filters]);
 
   const eventsService = useMemo(() => createEventsServicePlugin(), []);
 
@@ -291,15 +333,22 @@ export function EconomicCalendar() {
   }, [eventsService, calendarEvents]);
 
   if (isLoading) {
-    return <LoadingState />;
+    return <CalendarLoadingState />;
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : undefined} />;
+    return (
+      <CalendarErrorState
+        message={error instanceof Error ? error.message : undefined}
+        onRetry={() => refetch()}
+      />
+    );
   }
 
   if (!data?.events || data.events.length === 0) {
-    return <EmptyState />;
+    return (
+      <CalendarEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={handleClearFilters} />
+    );
   }
 
   return (
