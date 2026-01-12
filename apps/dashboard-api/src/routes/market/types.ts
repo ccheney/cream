@@ -6,6 +6,7 @@
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import { isMarketOpen as isTradingDay } from "@cream/domain";
 import {
   type AlpacaMarketDataClient,
   createAlpacaClientFromEnv,
@@ -166,25 +167,26 @@ export const getPolygonClient = getAlpacaClient;
 
 /**
  * Check if a timestamp falls within extended market hours (ET).
- * Returns true for 7:00 AM - 5:00 PM ET on weekdays.
+ * Returns true for 7:00 AM - 5:00 PM ET on weekdays that are trading days.
+ * Now holiday-aware via CalendarService.
  */
 export function isMarketHours(timestamp: Date): boolean {
+  // Check if it's a trading day (not weekend, not holiday)
+  if (!isTradingDay(timestamp)) {
+    return false;
+  }
+
+  // Check time of day in ET
   const etFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
-    weekday: "short",
     hour: "numeric",
     minute: "numeric",
     hour12: false,
   });
 
   const parts = etFormatter.formatToParts(timestamp);
-  const weekday = parts.find((p) => p.type === "weekday")?.value;
   const hour = Number.parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
   const minute = Number.parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-
-  if (weekday === "Sat" || weekday === "Sun") {
-    return false;
-  }
 
   const timeInMinutes = hour * 60 + minute;
   const openInMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
