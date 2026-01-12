@@ -13,7 +13,12 @@ import {
   type MarketDataServiceClient,
 } from "@cream/domain/grpc";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
-import { createFMPClient, type FMPClient } from "@cream/universe";
+import {
+  createFMPClient,
+  createFREDClient,
+  type FMPClient,
+  type FREDClient,
+} from "@cream/universe";
 
 // ============================================
 // gRPC Client Singletons
@@ -103,4 +108,25 @@ export function getFMPClient(): FMPClient | null {
 
   fmpClient = createFMPClient({ apiKey });
   return fmpClient;
+}
+
+// ============================================
+// FRED Client Singleton
+// ============================================
+
+let fredClient: FREDClient | null = null;
+
+export function getFREDClient(): FREDClient | null {
+  if (fredClient) {
+    return fredClient;
+  }
+
+  // Only initialize if API key is available
+  const apiKey = process.env.FRED_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  fredClient = createFREDClient({ apiKey });
+  return fredClient;
 }

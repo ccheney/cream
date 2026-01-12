@@ -91,7 +91,21 @@ export {
   type SizeUnit,
   SizeUnitSchema,
 } from "./decisions.js";
-
+// Economic calendar types
+export {
+  type EconomicCalendarEvent,
+  EconomicCalendarEventSchema,
+  type EconomicCalendarResponse,
+  EconomicCalendarResponseSchema,
+  type EconomicEventCategory,
+  EconomicEventCategorySchema,
+  type EconomicEventImpact,
+  EconomicEventImpactSchema,
+  type FOMCMeeting,
+  FOMCMeetingSchema,
+  type UpcomingEventsResponse,
+  UpcomingEventsResponseSchema,
+} from "./economic-calendar.js";
 // Market data types
 export {
   type Candle,
@@ -156,7 +170,6 @@ export {
   type VaRMetrics,
   VaRMetricsSchema,
 } from "./risk.js";
-
 // Thesis types
 export {
   type Thesis,
