@@ -132,6 +132,15 @@ export {
   useLimits,
   useVaR,
 } from "./useRisk";
+// Synthesis
+export {
+  synthesisKeys,
+  type TriggerSynthesisInput,
+  type TriggerSynthesisResult,
+  useSynthesisHistory,
+  useSynthesisStatus,
+  useTriggerSynthesis,
+} from "./useSynthesis";
 // System
 export {
   useChangeEnvironment,
