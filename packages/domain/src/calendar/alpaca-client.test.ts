@@ -17,6 +17,8 @@ describe("AlpacaCalendarClient", () => {
     apiKey: "test-key",
     apiSecret: "test-secret",
     environment: "PAPER" as const,
+    // Fast retries for tests (1ms instead of 1000ms)
+    initialBackoffMs: 1,
   };
 
   let client: AlpacaCalendarClient;

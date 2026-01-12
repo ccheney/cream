@@ -255,11 +255,13 @@ describe("validateEnvironment", () => {
 
     it("returns errors for missing additional requirements", () => {
       const ctx = createTestContext("BACKTEST");
-      // Use KALSHI keys which are very unlikely to be set in test environment
-      const result = validateEnvironment(ctx, "test-service", ["KALSHI_API_KEY_ID"]);
+      // Use a key that definitely won't be set in any environment
+      const result = validateEnvironment(ctx, "test-service", [
+        "NONEXISTENT_TEST_KEY_12345_ABCDEF",
+      ]);
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain("KALSHI_API_KEY_ID");
+      expect(result.errors[0]).toContain("NONEXISTENT_TEST_KEY_12345_ABCDEF");
     });
   });
 

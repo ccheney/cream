@@ -28,6 +28,10 @@ export interface AlpacaCalendarClientConfig {
   apiKey: string;
   apiSecret: string;
   environment: AlpacaEnvironment;
+  /** Maximum retry attempts (default: 3) */
+  maxRetries?: number;
+  /** Initial backoff in ms before exponential increase (default: 1000) */
+  initialBackoffMs?: number;
 }
 
 export type CalendarErrorCode =
@@ -152,6 +156,8 @@ function mapClockResponse(response: AlpacaClockResponse): MarketClock {
 export class AlpacaCalendarClient {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
+  private readonly maxRetries: number;
+  private readonly initialBackoffMs: number;
 
   constructor(config: AlpacaCalendarClientConfig) {
     this.baseUrl = ENDPOINTS[config.environment];
@@ -160,6 +166,8 @@ export class AlpacaCalendarClient {
       "APCA-API-SECRET-KEY": config.apiSecret,
       "Content-Type": "application/json",
     };
+    this.maxRetries = config.maxRetries ?? MAX_RETRIES;
+    this.initialBackoffMs = config.initialBackoffMs ?? INITIAL_BACKOFF_MS;
   }
 
   /**
@@ -211,8 +219,9 @@ export class AlpacaCalendarClient {
   /**
    * Make an authenticated request with retry logic.
    */
-  private async request<T>(path: string, retries = MAX_RETRIES): Promise<T> {
+  private async request<T>(path: string): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    const retries = this.maxRetries;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -226,7 +235,7 @@ export class AlpacaCalendarClient {
 
           // Retry on rate limiting
           if (response.status === 429 && attempt < retries) {
-            const backoffMs = INITIAL_BACKOFF_MS * 2 ** attempt;
+            const backoffMs = this.initialBackoffMs * 2 ** attempt;
             await sleep(backoffMs);
             continue;
           }
@@ -253,7 +262,7 @@ export class AlpacaCalendarClient {
 
         // Retry on network errors
         if (attempt < retries) {
-          const backoffMs = INITIAL_BACKOFF_MS * 2 ** attempt;
+          const backoffMs = this.initialBackoffMs * 2 ** attempt;
           await sleep(backoffMs);
           continue;
         }
