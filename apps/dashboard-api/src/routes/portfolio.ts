@@ -141,6 +141,7 @@ const PerformanceMetricsSchema = z.object({
     today: PeriodMetricsSchema,
     week: PeriodMetricsSchema,
     month: PeriodMetricsSchema,
+    threeMonth: PeriodMetricsSchema,
     ytd: PeriodMetricsSchema,
     total: PeriodMetricsSchema,
   }),
@@ -603,6 +604,9 @@ app.openapi(performanceRoute, async (c) => {
   const monthStart = new Date(now);
   monthStart.setMonth(monthStart.getMonth() - 1);
 
+  const threeMonthStart = new Date(now);
+  threeMonthStart.setMonth(threeMonthStart.getMonth() - 3);
+
   const ytdStart = new Date(now.getFullYear(), 0, 1);
 
   // Calculate P&L from filled orders (BUY is entry, SELL is exit)
@@ -726,6 +730,7 @@ app.openapi(performanceRoute, async (c) => {
       today: calcPeriodMetrics(todayStart),
       week: calcPeriodMetrics(weekStart),
       month: calcPeriodMetrics(monthStart),
+      threeMonth: calcPeriodMetrics(threeMonthStart),
       ytd: calcPeriodMetrics(ytdStart),
       total: calcPeriodMetrics(new Date(0)),
     },

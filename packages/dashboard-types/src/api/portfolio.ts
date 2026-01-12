@@ -82,6 +82,7 @@ export const PerformanceMetricsSchema = z.object({
     today: PeriodMetricsSchema,
     week: PeriodMetricsSchema,
     month: PeriodMetricsSchema,
+    threeMonth: PeriodMetricsSchema,
     ytd: PeriodMetricsSchema,
     total: PeriodMetricsSchema,
   }),
