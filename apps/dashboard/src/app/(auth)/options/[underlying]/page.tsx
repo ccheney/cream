@@ -11,10 +11,10 @@
 
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExpirationTabs, OptionsChainTable } from "@/components/options";
 import { AnimatedNumber } from "@/components/ui/animated-number";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingOverlay, Spinner } from "@/components/ui/spinner";
 import { useQuote } from "@/hooks/queries/useMarket";
 import { useOptionsChain, useOptionsExpirations } from "@/hooks/queries/useOptions";
 import { getTickerName } from "@/lib/ticker-names";
@@ -26,21 +26,10 @@ interface OptionsChainPageProps {
 }
 
 export default function OptionsChainPage({ params }: OptionsChainPageProps) {
-  const [resolvedParams, setResolvedParams] = useState<{ underlying: string } | null>(null);
+  // Use React 19's `use` hook to unwrap the params promise synchronously
+  const { underlying } = use(params);
 
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
-
-  if (!resolvedParams) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  return <OptionsChainContent underlying={resolvedParams.underlying} />;
+  return <OptionsChainContent underlying={underlying} />;
 }
 
 function OptionsChainContent({ underlying }: { underlying: string }) {
@@ -58,6 +47,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
   } = useWebSocketContext();
 
   const subscribedContractsRef = useRef<Set<string>>(new Set());
+  const previousChainRef = useRef<typeof chainData>(null);
 
   const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
   const { data: quote, connected: wsConnected } = useQuote(upperUnderlying);
@@ -79,6 +69,16 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     strikeRange: 25,
     enabled: Boolean(selectedExpiration),
   });
+
+  useEffect(() => {
+    if (chainData) {
+      previousChainRef.current = chainData;
+    }
+  }, [chainData]);
+
+  const displayChainData = chainData ?? previousChainRef.current;
+  const isRefetching = chainLoading && displayChainData !== null;
+  const isInitialLoading = expirationsLoading || (chainLoading && !displayChainData);
 
   const handleExpirationSelect = useCallback((date: string) => {
     setSelectedExpiration(date);
@@ -155,8 +155,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
     const changePct = (change / quote.prevClose) * 100;
     return { change, changePct };
   }, [quote]);
-
-  const isLoading = expirationsLoading || (chainLoading && !chainData);
 
   return (
     <div className="flex flex-col h-full">
@@ -249,18 +247,20 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 
       {/* Chain Table */}
       <div className="flex-1 min-h-0 bg-white dark:bg-night-900">
-        {isLoading ? (
+        {isInitialLoading ? (
           <div className="flex items-center justify-center h-64">
             <Spinner size="lg" />
           </div>
-        ) : chainData?.chain && chainData.chain.length > 0 ? (
-          <OptionsChainTable
-            chain={chainData.chain}
-            atmStrike={chainData.atmStrike}
-            underlyingPrice={chainData.underlyingPrice}
-            onVisibleRowsChange={handleVisibleRowsChange}
-            className="h-full"
-          />
+        ) : displayChainData?.chain && displayChainData.chain.length > 0 ? (
+          <LoadingOverlay isLoading={isRefetching} label="Loading options chain">
+            <OptionsChainTable
+              chain={displayChainData.chain}
+              atmStrike={displayChainData.atmStrike}
+              underlyingPrice={displayChainData.underlyingPrice}
+              onVisibleRowsChange={handleVisibleRowsChange}
+              className="h-full"
+            />
+          </LoadingOverlay>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-stone-500 dark:text-night-300">
             <p>No options data available for {upperUnderlying}</p>

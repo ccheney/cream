@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OptionsOrderRequest } from "@/components/options/PositionBuilderModal";
 import { get, post } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
@@ -48,6 +48,7 @@ export function useOptionsChain(underlying: string, options: UseOptionsChainOpti
     gcTime: CACHE_TIMES.CHART,
     enabled: enabled && Boolean(underlying),
     refetchInterval: 30000,
+    placeholderData: keepPreviousData,
   });
 }
 

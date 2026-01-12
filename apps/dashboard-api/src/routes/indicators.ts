@@ -302,6 +302,122 @@ app.openapi(getTriggerStatusRoute, async (c) => {
   });
 });
 
+// POST /api/indicators/trigger-check - Force a trigger check
+const forceTriggerCheckRoute = createRoute({
+  method: "post",
+  path: "/trigger-check",
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: TriggerStatusSchema,
+        },
+      },
+      description: "Trigger check result",
+    },
+  },
+  tags: ["Indicators"],
+});
+
+app.openapi(forceTriggerCheckRoute, async (c) => {
+  const db = await getDbClient();
+
+  // Get active indicator count
+  const activeRows = await db.execute(
+    "SELECT COUNT(*) as count FROM indicators WHERE status IN ('paper', 'production')"
+  );
+  const activeCount = (activeRows[0]?.count as number) ?? 0;
+
+  // Get recent IC values for rolling average
+  const icRows = await db.execute(
+    `
+      SELECT ic_value
+      FROM indicator_ic_history
+      WHERE date >= date('now', '-30 days')
+      ORDER BY date DESC
+    `
+  );
+
+  const icValues = icRows.map((r) => r.ic_value as number);
+  const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
+
+  // Calculate IC decay (consecutive days below threshold)
+  let icDecayDays = 0;
+  for (const ic of icValues) {
+    if (ic < 0.02) {
+      icDecayDays++;
+    } else {
+      break;
+    }
+  }
+
+  // Get last generation attempt
+  const lastAttemptRows = await db.execute(
+    "SELECT MAX(generated_at) as last_attempt FROM indicators"
+  );
+  const lastAttempt = lastAttemptRows[0]?.last_attempt as string | null;
+  const daysSinceLastAttempt = lastAttempt
+    ? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
+    : 999;
+
+  // Get current market regime from regime labels
+  let currentRegime: string | null = null;
+  let regimeGapDetected = false;
+  try {
+    const regimeRows = await db.execute(
+      `SELECT regime, confidence FROM regime_labels
+       WHERE symbol = '_MARKET' AND timeframe = '1d'
+       ORDER BY timestamp DESC LIMIT 1`
+    );
+    if (regimeRows.length > 0) {
+      currentRegime = regimeRows[0]?.regime as string;
+      const confidence = regimeRows[0]?.confidence as number;
+      regimeGapDetected = confidence < 0.5;
+    } else {
+      regimeGapDetected = true;
+    }
+  } catch {
+    regimeGapDetected = true;
+  }
+
+  const conditions = {
+    rollingIC30Day: rollingIC,
+    icDecayDays,
+    daysSinceLastAttempt,
+    activeIndicatorCount: activeCount,
+    maxIndicatorCapacity: 20,
+    regimeGapDetected,
+    currentRegime,
+  };
+
+  // Determine if generation should trigger
+  const shouldTrigger =
+    daysSinceLastAttempt >= 30 &&
+    activeCount < conditions.maxIndicatorCapacity &&
+    (rollingIC < 0.02 || icDecayDays >= 5);
+
+  // Generate recommendation
+  let recommendation = "";
+  if (shouldTrigger) {
+    recommendation = `Indicator generation warranted: Rolling IC ${rollingIC.toFixed(4)}, ${icDecayDays} days of decay.`;
+  } else if (daysSinceLastAttempt < 30) {
+    recommendation = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining.`;
+  } else if (rollingIC >= 0.02) {
+    recommendation = `Portfolio IC healthy at ${rollingIC.toFixed(4)}, no generation needed.`;
+  } else if (activeCount >= conditions.maxIndicatorCapacity) {
+    recommendation = `Indicator capacity reached (${activeCount}/${conditions.maxIndicatorCapacity}).`;
+  } else {
+    recommendation = "No trigger conditions met.";
+  }
+
+  return c.json({
+    shouldTrigger,
+    conditions,
+    lastCheck: new Date().toISOString(),
+    recommendation,
+  });
+});
+
 // GET /api/indicators/paper-trading - Get paper trading indicators
 const getPaperTradingRoute = createRoute({
   method: "get",
