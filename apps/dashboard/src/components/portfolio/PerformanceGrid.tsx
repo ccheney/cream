@@ -3,13 +3,13 @@
 /**
  * PerformanceGrid Component
  *
- * Displays multi-timeframe returns with tab navigation.
+ * Displays multi-timeframe returns as compact display cards.
  * 6 periods: Today, Week, Month, 3M, YTD, All-Time
  *
  * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
  */
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import type { PerformanceMetrics } from "@/lib/api/types";
 
 // ============================================
@@ -21,7 +21,6 @@ export type PerformancePeriod = "today" | "week" | "month" | "threeMonth" | "ytd
 export interface PerformanceGridProps {
   metrics?: PerformanceMetrics;
   isLoading?: boolean;
-  onPeriodSelect?: (period: PerformancePeriod) => void;
 }
 
 interface PeriodConfig {
@@ -39,7 +38,7 @@ const PERIODS: PeriodConfig[] = [
   { key: "month", label: "Month" },
   { key: "threeMonth", label: "3M" },
   { key: "ytd", label: "YTD" },
-  { key: "total", label: "All-Time" },
+  { key: "total", label: "All" },
 ];
 
 // ============================================
@@ -61,71 +60,54 @@ function formatCurrency(value: number): string {
 
 function formatPercent(value: number): string {
   const prefix = value >= 0 ? "+" : "";
-  return `${prefix}${value.toFixed(2)}%`;
+  return `${prefix}${value.toFixed(1)}%`;
 }
 
 // ============================================
-// Period Tab Component
+// Period Card Component
 // ============================================
 
-interface PeriodTabProps {
+interface PeriodCardProps {
   period: PeriodConfig;
   returnValue: number;
   returnPct: number;
-  isSelected: boolean;
   isLoading: boolean;
-  onClick: () => void;
 }
 
-const PeriodTab = memo(function PeriodTab({
+const PeriodCard = memo(function PeriodCard({
   period,
   returnValue,
   returnPct,
-  isSelected,
   isLoading,
-  onClick,
-}: PeriodTabProps) {
-  const isPositive = returnValue >= 0;
-  const valueColor = isPositive
-    ? "text-green-600 dark:text-green-400"
-    : "text-red-600 dark:text-red-400";
+}: PeriodCardProps) {
+  const isZero = returnValue === 0;
+  const isPositive = returnValue > 0;
+  const valueColor = isZero
+    ? "text-stone-400 dark:text-night-400"
+    : isPositive
+      ? "text-green-600 dark:text-green-400"
+      : "text-red-600 dark:text-red-400";
 
   if (isLoading) {
     return (
-      <button
-        type="button"
-        className="flex-shrink-0 flex flex-col items-center px-4 py-3 rounded-lg border border-cream-200 dark:border-night-700 bg-white dark:bg-night-800"
-        disabled
-      >
-        <div className="h-3 w-10 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
-        <div className="h-5 w-14 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-1" />
-        <div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-      </button>
+      <div className="flex flex-col items-center px-2 py-1.5 rounded border border-cream-200 dark:border-night-600 bg-cream-50 dark:bg-night-700">
+        <div className="h-2.5 w-8 bg-cream-100 dark:bg-night-600 rounded animate-pulse mb-1" />
+        <div className="h-3.5 w-10 bg-cream-100 dark:bg-night-600 rounded animate-pulse mb-0.5" />
+        <div className="h-3 w-8 bg-cream-100 dark:bg-night-600 rounded animate-pulse" />
+      </div>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-shrink-0 flex flex-col items-center px-4 py-3 rounded-lg border transition-colors ${
-        isSelected
-          ? "border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/20"
-          : "border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 hover:border-cream-300 dark:hover:border-night-600"
-      }`}
-    >
-      <span
-        className={`text-xs font-medium mb-1 ${
-          isSelected ? "text-amber-700 dark:text-amber-400" : "text-stone-500 dark:text-night-400"
-        }`}
-      >
+    <div className="flex flex-col items-center px-2 py-1.5 rounded border border-cream-200 dark:border-night-600 bg-cream-50 dark:bg-night-700">
+      <span className="text-[10px] font-medium text-stone-400 dark:text-night-400 mb-0.5">
         {period.label}
       </span>
-      <span className={`text-lg font-semibold font-mono ${valueColor}`}>
+      <span className={`text-xs font-semibold font-mono ${valueColor}`}>
         {formatCurrency(returnValue)}
       </span>
-      <span className={`text-sm font-mono ${valueColor}`}>{formatPercent(returnPct)}</span>
-    </button>
+      <span className={`text-[10px] font-mono ${valueColor}`}>{formatPercent(returnPct)}</span>
+    </div>
   );
 });
 
@@ -136,38 +118,21 @@ const PeriodTab = memo(function PeriodTab({
 export const PerformanceGrid = memo(function PerformanceGrid({
   metrics,
   isLoading = false,
-  onPeriodSelect,
 }: PerformanceGridProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState<PerformancePeriod>("today");
-
-  const handlePeriodClick = (period: PerformancePeriod) => {
-    setSelectedPeriod(period);
-    onPeriodSelect?.(period);
-  };
-
   return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-        Performance
-      </h2>
-
-      {/* Horizontal scrollable container for mobile */}
-      <div className="flex gap-3 overflow-x-auto pb-2 -mb-2 scrollbar-thin scrollbar-thumb-cream-200 dark:scrollbar-thumb-night-700">
-        {PERIODS.map((period) => {
-          const periodData = metrics?.periods?.[period.key];
-          return (
-            <PeriodTab
-              key={period.key}
-              period={period}
-              returnValue={periodData?.return ?? 0}
-              returnPct={periodData?.returnPct ?? 0}
-              isSelected={selectedPeriod === period.key}
-              isLoading={isLoading}
-              onClick={() => handlePeriodClick(period.key)}
-            />
-          );
-        })}
-      </div>
+    <div className="flex gap-1.5 flex-wrap">
+      {PERIODS.map((period) => {
+        const periodData = metrics?.periods?.[period.key];
+        return (
+          <PeriodCard
+            key={period.key}
+            period={period}
+            returnValue={periodData?.return ?? 0}
+            returnPct={periodData?.returnPct ?? 0}
+            isLoading={isLoading}
+          />
+        );
+      })}
     </div>
   );
 });

@@ -36,11 +36,30 @@ export interface DisplayPreferences {
   compactMode: boolean;
 }
 
+export type FeedEventType =
+  | "quote"
+  | "trade"
+  | "options_quote"
+  | "options_trade"
+  | "decision"
+  | "order"
+  | "fill"
+  | "reject"
+  | "alert"
+  | "agent"
+  | "cycle"
+  | "backtest"
+  | "system";
+
 export interface FeedPreferences {
   autoScroll: boolean;
   maxEvents: number;
   showTimestamps: boolean;
   groupSimilar: boolean;
+  /** Which event types are visible in the feed */
+  enabledEventTypes: Record<FeedEventType, boolean>;
+  /** Symbol filter text */
+  symbolFilter: string;
 }
 
 export interface PreferencesState {
@@ -84,7 +103,7 @@ const defaultNotificationPreferences: NotificationPreferences = {
 };
 
 const defaultDisplayPreferences: DisplayPreferences = {
-  theme: "system",
+  theme: "light",
   animationsEnabled: true,
   dateFormat: "relative",
   numberFormat: "short",
@@ -97,6 +116,22 @@ const defaultFeedPreferences: FeedPreferences = {
   maxEvents: 1000,
   showTimestamps: true,
   groupSimilar: true,
+  enabledEventTypes: {
+    quote: true,
+    trade: true,
+    options_quote: true,
+    options_trade: true,
+    decision: true,
+    order: true,
+    fill: true,
+    reject: true,
+    alert: true,
+    agent: true,
+    cycle: true,
+    backtest: true,
+    system: false, // Hidden by default
+  },
+  symbolFilter: "",
 };
 
 const initialState: PreferencesState = {
@@ -205,12 +240,18 @@ export const usePreferencesStore = create<PreferencesStore>()(
         }),
         {
           name: "cream-preferences",
-          version: 1,
+          version: 2,
           migrate: (persisted, version) => {
-            if (version === 0) {
+            const state = persisted as Partial<PreferencesState>;
+            if (version < 2) {
+              // Add new feed filter preferences
               return {
                 ...initialState,
-                ...(persisted as Partial<PreferencesState>),
+                ...state,
+                feed: {
+                  ...defaultFeedPreferences,
+                  ...state.feed,
+                },
               };
             }
             return persisted as PreferencesState;
@@ -235,6 +276,9 @@ export const selectShowValues = (state: PreferencesStore) => state.display.showV
 export const selectAutoScroll = (state: PreferencesStore) => state.feed.autoScroll;
 export const selectDateFormat = (state: PreferencesStore) => state.display.dateFormat;
 export const selectNumberFormat = (state: PreferencesStore) => state.display.numberFormat;
+export const selectFeedEnabledEventTypes = (state: PreferencesStore) =>
+  state.feed.enabledEventTypes;
+export const selectFeedSymbolFilter = (state: PreferencesStore) => state.feed.symbolFilter;
 
 // ============================================
 // Theme Management

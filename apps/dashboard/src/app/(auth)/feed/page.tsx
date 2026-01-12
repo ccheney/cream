@@ -13,6 +13,12 @@ import {
 } from "@/lib/feed/event-normalizer";
 import { useWebSocketContext as useWebSocket } from "@/providers/WebSocketProvider";
 import { type EventType as StoreEventType, useEventFeedStore } from "@/stores/event-feed-store";
+import {
+  type FeedEventType,
+  selectFeedEnabledEventTypes,
+  selectFeedSymbolFilter,
+  usePreferencesStore,
+} from "@/stores/preferences-store";
 
 const MAX_EVENTS = 500;
 const ROW_HEIGHT = 48;
@@ -69,17 +75,14 @@ export default function FeedPage() {
   const { stats, recordEvent } = useFeedStats();
   const addEventToStore = useEventFeedStore((s) => s.addEvent);
   const resetNewEventCount = useEventFeedStore((s) => s.resetNewEventCount);
+
+  // Persisted filter preferences
+  const filters = usePreferencesStore(selectFeedEnabledEventTypes);
+  const symbolFilter = usePreferencesStore(selectFeedSymbolFilter);
+  const updateFeed = usePreferencesStore((s) => s.updateFeed);
+
   const [events, setEvents] = useState<NormalizedEvent[]>([]);
-  const [filters, setFilters] = useState<Record<EventType, boolean>>(() => {
-    const initial: Record<EventType, boolean> = {} as Record<EventType, boolean>;
-    for (const type of EVENT_TYPES) {
-      // Default: show most events, hide system
-      initial[type] = type !== "system";
-    }
-    return initial;
-  });
   const [isPaused, setIsPaused] = useState(false);
-  const [symbolFilter, setSymbolFilter] = useState("");
   const [subscribedSymbol, setSubscribedSymbol] = useState<string | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -179,21 +182,32 @@ export default function FeedPage() {
     overscan: 10,
   });
 
-  const toggleFilter = useCallback((type: EventType) => {
-    setFilters((prev) => ({ ...prev, [type]: !prev[type] }));
-  }, []);
+  const toggleFilter = useCallback(
+    (type: FeedEventType) => {
+      updateFeed({ enabledEventTypes: { ...filters, [type]: !filters[type] } });
+    },
+    [filters, updateFeed]
+  );
 
   const clearEvents = useCallback(() => setEvents([]), []);
 
-  const toggleAllFilters = useCallback((enabled: boolean) => {
-    setFilters((prev) => {
-      const next = { ...prev };
+  const toggleAllFilters = useCallback(
+    (enabled: boolean) => {
+      const next = { ...filters };
       for (const type of EVENT_TYPES) {
         next[type] = enabled;
       }
-      return next;
-    });
-  }, []);
+      updateFeed({ enabledEventTypes: next });
+    },
+    [filters, updateFeed]
+  );
+
+  const setSymbolFilter = useCallback(
+    (value: string) => {
+      updateFeed({ symbolFilter: value });
+    },
+    [updateFeed]
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -225,7 +239,7 @@ export default function FeedPage() {
       </div>
 
       <div className="shrink-0 flex flex-wrap items-center gap-2 mb-4">
-        <div className="flex items-center gap-1 mr-2">
+        <div className="flex items-center gap-1 mr-1">
           <button
             type="button"
             onClick={() => toggleAllFilters(true)}
@@ -242,14 +256,92 @@ export default function FeedPage() {
             None
           </button>
         </div>
-        {EVENT_TYPES.map((type) => (
-          <FilterChip
-            key={type}
-            label={EVENT_TYPE_LABELS[type]}
-            active={filters[type]}
-            onClick={() => toggleFilter(type)}
-          />
-        ))}
+
+        <FilterSeparator />
+
+        {/* Stocks */}
+        <FilterChip
+          label={EVENT_TYPE_LABELS.quote}
+          active={filters.quote}
+          onClick={() => toggleFilter("quote")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.trade}
+          active={filters.trade}
+          onClick={() => toggleFilter("trade")}
+        />
+
+        <FilterSeparator />
+
+        {/* Options */}
+        <FilterChip
+          label={EVENT_TYPE_LABELS.options_quote}
+          active={filters.options_quote}
+          onClick={() => toggleFilter("options_quote")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.options_trade}
+          active={filters.options_trade}
+          onClick={() => toggleFilter("options_trade")}
+        />
+
+        <FilterSeparator />
+
+        {/* Orders */}
+        <FilterChip
+          label={EVENT_TYPE_LABELS.order}
+          active={filters.order}
+          onClick={() => toggleFilter("order")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.fill}
+          active={filters.fill}
+          onClick={() => toggleFilter("fill")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.reject}
+          active={filters.reject}
+          onClick={() => toggleFilter("reject")}
+        />
+
+        <FilterSeparator />
+
+        {/* Agent */}
+        <FilterChip
+          label={EVENT_TYPE_LABELS.decision}
+          active={filters.decision}
+          onClick={() => toggleFilter("decision")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.agent}
+          active={filters.agent}
+          onClick={() => toggleFilter("agent")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.cycle}
+          active={filters.cycle}
+          onClick={() => toggleFilter("cycle")}
+        />
+
+        <FilterSeparator />
+
+        {/* System */}
+        <FilterChip
+          label={EVENT_TYPE_LABELS.alert}
+          active={filters.alert}
+          onClick={() => toggleFilter("alert")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.backtest}
+          active={filters.backtest}
+          onClick={() => toggleFilter("backtest")}
+        />
+        <FilterChip
+          label={EVENT_TYPE_LABELS.system}
+          active={filters.system}
+          onClick={() => toggleFilter("system")}
+        />
+
         <div className="flex-1" />
         <input
           type="text"
@@ -341,6 +433,10 @@ export default function FeedPage() {
       </div>
     </div>
   );
+}
+
+function FilterSeparator() {
+  return <div className="w-px h-4 bg-cream-300 dark:bg-night-600 mx-1" />;
 }
 
 function FilterChip({

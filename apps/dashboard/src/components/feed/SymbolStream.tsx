@@ -136,7 +136,7 @@ export function SymbolStream({
     <div className={`flex flex-col h-full bg-white dark:bg-night-800 ${className}`}>
       {/* Quote Header */}
       {showQuoteHeader && (
-        <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750">
+        <div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold text-stone-900 dark:text-night-50">
@@ -228,7 +228,7 @@ export function SymbolStream({
 
       {/* Statistics Footer */}
       {showStatistics && (
-        <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-750">
+        <div className="px-4 py-2 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-800">
           <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
             <span>
               Trades: <strong className="text-stone-700 dark:text-night-100">{stats.trades}</strong>

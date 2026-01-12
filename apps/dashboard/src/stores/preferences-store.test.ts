@@ -9,6 +9,8 @@ import {
   selectAutoScroll,
   selectCompactMode,
   selectDateFormat,
+  selectFeedEnabledEventTypes,
+  selectFeedSymbolFilter,
   selectNotificationsEnabled,
   selectNumberFormat,
   selectShowValues,
@@ -39,7 +41,7 @@ function resetStore() {
       priceAlerts: true,
     },
     display: {
-      theme: "system",
+      theme: "light",
       animationsEnabled: true,
       dateFormat: "relative",
       numberFormat: "short",
@@ -51,6 +53,22 @@ function resetStore() {
       maxEvents: 1000,
       showTimestamps: true,
       groupSimilar: true,
+      enabledEventTypes: {
+        quote: true,
+        trade: true,
+        options_quote: true,
+        options_trade: true,
+        decision: true,
+        order: true,
+        fill: true,
+        reject: true,
+        alert: true,
+        agent: true,
+        cycle: true,
+        backtest: true,
+        system: false,
+      },
+      symbolFilter: "",
     },
     lastUpdated: Date.now(),
   });
@@ -100,8 +118,8 @@ describe("default values", () => {
     expect(usePreferencesStore.getState().notifications.enabled).toBe(false);
   });
 
-  it("theme is system by default", () => {
-    expect(usePreferencesStore.getState().display.theme).toBe("system");
+  it("theme is light by default", () => {
+    expect(usePreferencesStore.getState().display.theme).toBe("light");
   });
 
   it("animations are enabled by default", () => {
@@ -248,6 +266,18 @@ describe("updateFeed", () => {
     usePreferencesStore.getState().updateFeed({ groupSimilar: false });
     expect(usePreferencesStore.getState().feed.groupSimilar).toBe(false);
   });
+
+  it("updates enabledEventTypes", () => {
+    const newTypes = { ...usePreferencesStore.getState().feed.enabledEventTypes, quote: false };
+    usePreferencesStore.getState().updateFeed({ enabledEventTypes: newTypes });
+    expect(usePreferencesStore.getState().feed.enabledEventTypes.quote).toBe(false);
+    expect(usePreferencesStore.getState().feed.enabledEventTypes.trade).toBe(true);
+  });
+
+  it("updates symbolFilter", () => {
+    usePreferencesStore.getState().updateFeed({ symbolFilter: "AAPL" });
+    expect(usePreferencesStore.getState().feed.symbolFilter).toBe("AAPL");
+  });
 });
 
 // ============================================
@@ -269,7 +299,7 @@ describe("resetToDefaults", () => {
     usePreferencesStore.getState().updateDisplay({ theme: "dark", compactMode: true });
     usePreferencesStore.getState().resetToDefaults();
 
-    expect(usePreferencesStore.getState().display.theme).toBe("system");
+    expect(usePreferencesStore.getState().display.theme).toBe("light");
     expect(usePreferencesStore.getState().display.compactMode).toBe(false);
   });
 
@@ -369,7 +399,7 @@ describe("selectors", () => {
   });
 
   it("selectTheme returns theme", () => {
-    expect(selectTheme(usePreferencesStore.getState())).toBe("system");
+    expect(selectTheme(usePreferencesStore.getState())).toBe("light");
     usePreferencesStore.getState().updateDisplay({ theme: "dark" });
     expect(selectTheme(usePreferencesStore.getState())).toBe("dark");
   });
@@ -402,6 +432,18 @@ describe("selectors", () => {
     expect(selectNumberFormat(usePreferencesStore.getState())).toBe("short");
     usePreferencesStore.getState().updateDisplay({ numberFormat: "compact" });
     expect(selectNumberFormat(usePreferencesStore.getState())).toBe("compact");
+  });
+
+  it("selectFeedEnabledEventTypes returns enabled event types", () => {
+    const types = selectFeedEnabledEventTypes(usePreferencesStore.getState());
+    expect(types.quote).toBe(true);
+    expect(types.system).toBe(false);
+  });
+
+  it("selectFeedSymbolFilter returns symbol filter", () => {
+    expect(selectFeedSymbolFilter(usePreferencesStore.getState())).toBe("");
+    usePreferencesStore.getState().updateFeed({ symbolFilter: "TSLA" });
+    expect(selectFeedSymbolFilter(usePreferencesStore.getState())).toBe("TSLA");
   });
 });
 
@@ -436,5 +478,7 @@ describe("module exports", () => {
     expect(typeof module.selectAutoScroll).toBe("function");
     expect(typeof module.selectDateFormat).toBe("function");
     expect(typeof module.selectNumberFormat).toBe("function");
+    expect(typeof module.selectFeedEnabledEventTypes).toBe("function");
+    expect(typeof module.selectFeedSymbolFilter).toBe("function");
   });
 });

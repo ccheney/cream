@@ -19,45 +19,23 @@
 import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
-import { LiveIndicator } from "@/components/portfolio/LiveIndicator";
-import { PerformanceGrid } from "@/components/portfolio/PerformanceGrid";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
+import { StreamingPositionsTable } from "@/components/portfolio/StreamingPositionsTable";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
   useAccount,
   usePerformanceMetrics,
   usePortfolioHistory,
   usePortfolioSummary,
+  usePositions,
 } from "@/hooks/queries";
 import { useAccountStreaming } from "@/hooks/useAccountStreaming";
+import { usePortfolioStreaming } from "@/hooks/usePortfolioStreaming";
 import type { PortfolioHistoryPeriod } from "@/lib/api/types";
-import { useWebSocketContext } from "@/providers/WebSocketProvider";
 
 // ============================================
 // Placeholder Components
 // ============================================
-
-/**
- * Placeholder for StreamingPositionsTable component (cream-kzy8g)
- * Real-time positions table with streaming prices
- */
-function StreamingPositionsTablePlaceholder() {
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-      <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
-          Open Positions
-        </h2>
-        <span className="text-xs text-stone-400 dark:text-night-500">0 positions</span>
-      </div>
-      <div className="p-4 space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-cream-50 dark:bg-night-750 rounded animate-pulse" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * Placeholder for AllocationDonut component (cream-g6svw)
@@ -96,8 +74,13 @@ export default function PortfolioPage() {
   const { data: summary } = usePortfolioSummary();
   const { data: performanceMetrics, isLoading: isPerformanceLoading } = usePerformanceMetrics();
   const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory(chartPeriod);
+  const { data: positions, isLoading: isPositionsLoading } = usePositions();
   const accountStreaming = useAccountStreaming(account);
-  const { connected } = useWebSocketContext();
+  const { streamingPositions, state: portfolioState } = usePortfolioStreaming({
+    positions: positions ?? [],
+    cash: summary?.cash,
+    enabled: true,
+  });
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -111,7 +94,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with NAV and Live Indicator */}
+      {/* Header with NAV */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
@@ -123,51 +106,50 @@ export default function PortfolioPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <span className="text-sm text-stone-500 dark:text-night-400">NAV</span>
-            <div className="text-2xl font-semibold text-stone-900 dark:text-night-50 font-mono">
-              {formatCurrency(nav)}
-            </div>
+        <div className="text-right">
+          <span className="text-sm text-stone-500 dark:text-night-400">NAV</span>
+          <div className="text-2xl font-semibold text-stone-900 dark:text-night-50 font-mono">
+            {formatCurrency(nav)}
           </div>
-          <LiveIndicator
-            isStreaming={accountStreaming.isStreaming}
-            isConnected={connected}
-            lastUpdated={accountStreaming.lastUpdated}
-          />
         </div>
       </div>
 
-      {/* Account Summary - 8 metrics in 2x4 grid */}
-      <QueryErrorBoundary title="Failed to load account summary">
-        <AccountSummaryCard
-          account={account}
-          isLoading={isAccountLoading}
-          isStreaming={accountStreaming.isStreaming}
-        />
-      </QueryErrorBoundary>
+      {/* Account Summary + Equity Curve - 2-up row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <QueryErrorBoundary title="Failed to load account summary">
+          <AccountSummaryCard
+            account={account}
+            isLoading={isAccountLoading}
+            isStreaming={accountStreaming.isStreaming}
+            performanceMetrics={performanceMetrics}
+            isPerformanceLoading={isPerformanceLoading}
+          />
+        </QueryErrorBoundary>
 
-      {/* Performance Grid - 6 timeframe tabs */}
-      <QueryErrorBoundary title="Failed to load performance data">
-        <PerformanceGrid metrics={performanceMetrics} isLoading={isPerformanceLoading} />
-      </QueryErrorBoundary>
+        <QueryErrorBoundary title="Failed to load equity curve">
+          <EquityCurveChart
+            data={portfolioHistory}
+            period={chartPeriod}
+            onPeriodChange={setChartPeriod}
+            isLoading={isHistoryLoading}
+          />
+        </QueryErrorBoundary>
+      </div>
 
-      {/* Equity Curve Chart */}
-      <QueryErrorBoundary title="Failed to load equity curve">
-        <EquityCurveChart
-          data={portfolioHistory}
-          period={chartPeriod}
-          onPeriodChange={setChartPeriod}
-          isLoading={isHistoryLoading}
-        />
-      </QueryErrorBoundary>
-
-      {/* Main Content Row: Positions Table (2/3) + Allocation (1/3) */}
+      {/* Main Content Row: Positions + Risk (2/3) + Allocation (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Streaming Positions Table - 2/3 width on large screens */}
-        <div className="lg:col-span-2">
+        {/* Streaming Positions Table + Risk Metrics - 2/3 width on large screens */}
+        <div className="lg:col-span-2 space-y-6">
           <QueryErrorBoundary title="Failed to load positions">
-            <StreamingPositionsTablePlaceholder />
+            <StreamingPositionsTable
+              positions={streamingPositions}
+              isStreaming={portfolioState.isStreaming}
+              isLoading={isPositionsLoading}
+            />
+          </QueryErrorBoundary>
+
+          <QueryErrorBoundary title="Failed to load risk metrics">
+            <RiskMetricsBar metrics={performanceMetrics} isLoading={isPerformanceLoading} />
           </QueryErrorBoundary>
         </div>
 
@@ -178,11 +160,6 @@ export default function PortfolioPage() {
           </QueryErrorBoundary>
         </div>
       </div>
-
-      {/* Risk Metrics Bar */}
-      <QueryErrorBoundary title="Failed to load risk metrics">
-        <RiskMetricsBar metrics={performanceMetrics} isLoading={isPerformanceLoading} />
-      </QueryErrorBoundary>
     </div>
   );
 }

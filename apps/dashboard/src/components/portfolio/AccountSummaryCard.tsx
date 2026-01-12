@@ -11,7 +11,8 @@
 
 import { memo } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Account } from "@/lib/api/types";
+import type { Account, PerformanceMetrics } from "@/lib/api/types";
+import { PerformanceGrid } from "./PerformanceGrid";
 
 // ============================================
 // Types
@@ -21,6 +22,8 @@ export interface AccountSummaryCardProps {
   account?: Account;
   isLoading?: boolean;
   isStreaming?: boolean;
+  performanceMetrics?: PerformanceMetrics;
+  isPerformanceLoading?: boolean;
 }
 
 interface MetricItemProps {
@@ -104,6 +107,8 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
   account,
   isLoading = false,
   isStreaming = false,
+  performanceMetrics,
+  isPerformanceLoading = false,
 }: AccountSummaryCardProps) {
   // Calculate margin used percentage
   const marginUsed =
@@ -114,7 +119,7 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
     marginUsed >= 80 ? "negative" : marginUsed >= 50 ? "warning" : "default";
 
   return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
           Account Summary
@@ -187,6 +192,16 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
           variant={account?.shortingEnabled ? "positive" : "default"}
           isLoading={isLoading}
         />
+      </div>
+
+      {/* Performance Returns - aligned to bottom right */}
+      <div className="mt-auto pt-4 border-t border-cream-200 dark:border-night-700">
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs text-stone-400 dark:text-night-500 uppercase tracking-wide">
+            Returns
+          </span>
+          <PerformanceGrid metrics={performanceMetrics} isLoading={isPerformanceLoading} />
+        </div>
       </div>
     </div>
   );

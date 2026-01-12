@@ -30,7 +30,7 @@ export function TradingCycleControl({
                 checked={useDraftConfig}
                 onChange={(e) => onUseDraftConfigChange(e.target.checked)}
                 disabled={cycleInProgress}
-                className="rounded border-cream-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-cream-300 text-amber-600 focus:ring-amber-500"
               />
               Use draft config
             </label>
@@ -41,7 +41,7 @@ export function TradingCycleControl({
                 type="button"
                 onClick={onTriggerCycle}
                 disabled={cycleInProgress || status?.environment === "LIVE"}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cycleInProgress
                   ? activeCycleId

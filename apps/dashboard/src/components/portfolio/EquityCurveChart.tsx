@@ -61,6 +61,7 @@ const getChartOptions = (isDark: boolean) => ({
     textColor: isDark ? "#A8A29E" : "#78716C",
     fontSize: 11,
     fontFamily: "Geist Mono, ui-monospace, monospace",
+    attributionLogo: false,
   },
   grid: {
     vertLines: { color: isDark ? "rgba(168, 162, 158, 0.1)" : "rgba(120, 113, 108, 0.1)" },
@@ -79,15 +80,8 @@ const getChartOptions = (isDark: boolean) => ({
     timeVisible: true,
     secondsVisible: false,
   },
-  handleScroll: {
-    mouseWheel: true,
-    pressedMouseMove: true,
-  },
-  handleScale: {
-    axisPressedMouseMove: true,
-    mouseWheel: true,
-    pinch: true,
-  },
+  handleScroll: false,
+  handleScale: false,
 });
 
 const getSeriesOptions = (isDark: boolean) => ({
@@ -247,21 +241,14 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 
       {/* Chart Container */}
       <div className="relative h-64">
-        {isLoading ? (
-          <div className="absolute inset-0 bg-cream-50 dark:bg-night-750 rounded flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs text-stone-400 dark:text-night-500">Loading chart...</span>
-            </div>
-          </div>
-        ) : !data ? (
+        {!isLoading && !data && (
           <div className="absolute inset-0 bg-cream-50 dark:bg-night-750 rounded flex items-center justify-center">
             <span className="text-sm text-stone-400 dark:text-night-500">No data available</span>
           </div>
-        ) : null}
+        )}
         <div
           ref={containerRef}
-          className={`w-full h-full ${isLoading || !data ? "invisible" : ""}`}
+          className={`w-full h-full ${!isLoading && !data ? "invisible" : ""}`}
         />
       </div>
     </div>

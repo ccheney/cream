@@ -59,9 +59,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/console", label: "Console", icon: Terminal },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/decisions", label: "Decisions", icon: FileText },
-  { href: "/config", label: "Config", icon: Settings },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/feed", label: "Feed", icon: Rss },
+  { href: "/config", label: "Config", icon: Settings },
 ];
 
 export const EXPERIMENT_ITEMS: NavItem[] = [
