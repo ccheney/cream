@@ -265,7 +265,12 @@ export function useKeyboardShortcuts(
       let keyString = key;
       if (sequenceRef.current.length === 0 && modifiers.length > 0) {
         // For single-key shortcuts with modifiers, include modifiers
-        keyString = [...modifiers.sort(), key].join("+");
+        // But exclude shift for printable characters (shift+/ produces ?, shift+1 produces !, etc.)
+        const isPrintableWithShift =
+          modifiers.length === 1 && modifiers[0] === "shift" && key.length === 1;
+        if (!isPrintableWithShift) {
+          keyString = [...modifiers.sort(), key].join("+");
+        }
       }
 
       // Add to sequence
