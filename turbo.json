@@ -26,7 +26,6 @@
       "persistent": true,
       "passThroughEnv": [
         "CREAM_ENV",
-        "CREAM_BROKER",
         "TURSO_DATABASE_URL",
         "TURSO_AUTH_TOKEN",
         "HELIX_URL",

@@ -4,7 +4,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { createTavilyClientFromEnv, TavilyClient, TavilyResponseSchema } from "./tavily.js";

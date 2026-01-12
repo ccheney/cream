@@ -6,7 +6,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "../turso.js";

@@ -208,7 +208,6 @@ export {
 } from "./enforcement/index.js";
 // Environment configuration
 export {
-  CreamBroker,
   CreamEnvironment,
   type EnvConfig,
   type EnvValidationResult,

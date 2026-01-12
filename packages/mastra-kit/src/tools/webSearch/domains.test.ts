@@ -3,7 +3,6 @@
  */
 
 process.env.CREAM_ENV = "PAPER";
-process.env.CREAM_BROKER = "ALPACA";
 process.env.TAVILY_API_KEY = "test-api-key";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";

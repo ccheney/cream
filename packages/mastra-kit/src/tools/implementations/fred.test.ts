@@ -6,7 +6,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ExecutionContext } from "@cream/domain";

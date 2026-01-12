@@ -6,7 +6,6 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  CreamBroker,
   CreamEnvironment,
   envSchema,
   getAlpacaBaseUrl,
@@ -36,24 +35,12 @@ describe("CreamEnvironment", () => {
   });
 });
 
-describe("CreamBroker", () => {
-  it("accepts valid broker values", () => {
-    expect(CreamBroker.parse("ALPACA")).toBe("ALPACA");
-  });
-
-  it("rejects invalid broker values", () => {
-    expect(() => CreamBroker.parse("IBKR")).toThrow();
-    expect(() => CreamBroker.parse("")).toThrow();
-  });
-});
-
 describe("envSchema", () => {
   describe("minimal configuration", () => {
     it("succeeds with no env vars (all optional)", () => {
       const result = envSchema.safeParse({});
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.CREAM_BROKER).toBe("ALPACA"); // default
         expect(result.data.TURSO_DATABASE_URL).toBe("http://localhost:8080"); // default
         expect(result.data.HELIX_URL).toBe("http://localhost:6969"); // default
       }
@@ -91,11 +78,6 @@ describe("envSchema", () => {
   });
 
   describe("defaults", () => {
-    it("applies CREAM_BROKER default", () => {
-      const result = envSchema.parse({});
-      expect(result.CREAM_BROKER).toBe("ALPACA");
-    });
-
     it("applies TURSO_DATABASE_URL default", () => {
       const result = envSchema.parse({});
       expect(result.TURSO_DATABASE_URL).toBe("http://localhost:8080");

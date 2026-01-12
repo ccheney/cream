@@ -6,7 +6,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "PAPER";
-process.env.CREAM_BROKER = "ALPACA";
 
 import { describe, expect, test } from "bun:test";
 import { buildImplementationPrompt } from "../../claudeCodeIndicator.js";

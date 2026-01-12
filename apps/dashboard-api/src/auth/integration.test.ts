@@ -10,7 +10,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";
 process.env.BETTER_AUTH_URL = "http://localhost:3001";
 process.env.GOOGLE_CLIENT_ID = "test-client-id";
 process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";

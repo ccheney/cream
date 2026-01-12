@@ -5,4 +5,3 @@
  */
 
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";

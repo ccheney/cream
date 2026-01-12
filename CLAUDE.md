@@ -109,7 +109,6 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 ```bash
 # Core (required)
 CREAM_ENV=BACKTEST           # BACKTEST | PAPER | LIVE
-CREAM_BROKER=ALPACA          # Broker (default: ALPACA)
 
 # Database
 TURSO_DATABASE_URL=          # Turso URL (default: http://localhost:8080)

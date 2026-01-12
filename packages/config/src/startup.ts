@@ -89,7 +89,6 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 
   // Include all known env fields for consistent output
   const allFields = [
-    "CREAM_BROKER",
     "TURSO_DATABASE_URL",
     "TURSO_AUTH_TOKEN",
     "HELIX_URL",

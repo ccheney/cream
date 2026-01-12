@@ -63,12 +63,6 @@ export function requireEnv(): CreamEnvironment {
 }
 
 /**
- * Broker type - currently only Alpaca supported
- */
-export const CreamBroker = z.enum(["ALPACA"]);
-export type CreamBroker = z.infer<typeof CreamBroker>;
-
-/**
  * URL validation helper function
  */
 function isValidUrl(val: string): boolean {
@@ -103,9 +97,6 @@ function optionalUrlWithDefault(defaultValue: string) {
  * by ExecutionContext, not by environment variables.
  */
 const envSchema = z.object({
-  // Core Configuration
-  CREAM_BROKER: CreamBroker.default("ALPACA").describe("Broker to use for trading"),
-
   // Database URLs
   TURSO_DATABASE_URL:
     optionalUrlWithDefault("http://localhost:8080").describe("Turso database URL"),
@@ -165,7 +156,6 @@ export type EnvConfig = z.infer<typeof envSchema>;
 function parseEnv(): EnvConfig {
   // Access environment variables using Bun.env or process.env
   const rawEnv = {
-    CREAM_BROKER: Bun.env.CREAM_BROKER ?? process.env.CREAM_BROKER,
     TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL ?? process.env.TURSO_DATABASE_URL,
     TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
     HELIX_URL: Bun.env.HELIX_URL ?? process.env.HELIX_URL,
@@ -434,7 +424,6 @@ export function getEnvVarDocumentation(): Array<{
   description: string;
 }> {
   return [
-    { name: "CREAM_BROKER", required: "no", description: "Broker to use (default: ALPACA)" },
     { name: "TURSO_DATABASE_URL", required: "no", description: "Turso database URL" },
     { name: "TURSO_AUTH_TOKEN", required: "no", description: "Turso Cloud authentication token" },
     { name: "HELIX_URL", required: "no", description: "HelixDB server URL" },

@@ -9,7 +9,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.CREAM_BROKER = "ALPACA";
 process.env.NODE_ENV = "test";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";

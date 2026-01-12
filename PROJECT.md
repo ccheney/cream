@@ -416,7 +416,6 @@ bun run db:seed                     # Seed config
 
 ```bash
 CREAM_ENV=BACKTEST                  # BACKTEST | PAPER | LIVE
-CREAM_BROKER=ALPACA                 # Broker selection
 ```
 
 ### Databases

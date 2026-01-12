@@ -190,7 +190,6 @@ export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
         environment: ctx.environment,
         source: ctx.source,
         configId: ctx.configId,
-        broker: env.CREAM_BROKER,
         liveConfirmed: liveConfirmationGranted,
       },
       ctx

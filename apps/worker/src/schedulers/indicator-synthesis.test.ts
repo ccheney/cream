@@ -4,7 +4,6 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "PAPER";
-process.env.CREAM_BROKER = "ALPACA";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { RegimeLabel, TursoClient } from "@cream/storage";

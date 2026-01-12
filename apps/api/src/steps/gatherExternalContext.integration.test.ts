@@ -16,7 +16,6 @@ const skipIfNoKey = !process.env.FRED_API_KEY;
 
 beforeAll(() => {
   process.env.CREAM_ENV = "PAPER";
-  process.env.CREAM_BROKER = "ALPACA";
 });
 
 describe.skipIf(skipIfNoKey)("FRED Integration", () => {

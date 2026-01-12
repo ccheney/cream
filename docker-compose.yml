@@ -150,7 +150,6 @@ services:
       - PORT=3001
       - NODE_ENV=production
       - CREAM_ENV=${CREAM_ENV:-PAPER}
-      - CREAM_BROKER=ALPACA
       - TURSO_DATABASE_URL=http://turso:8080
       - HELIX_URL=http://helix:6969
       - RUST_GRPC_URL=execution-engine:50053
