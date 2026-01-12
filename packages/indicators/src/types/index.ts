@@ -900,7 +900,8 @@ export function createTriggerConditions(input: TriggerConditionsInput): TriggerC
   const existingIndicatorsUnderperforming = rollingIC30Day < 0.02 && icDecayDays >= 5;
 
   // Calculate days since last attempt
-  let daysSinceLastAttempt = Infinity;
+  // Use large finite number (365000 = ~1000 years) when never attempted, since Infinity isn't JSON-serializable
+  let daysSinceLastAttempt = 365000;
   if (lastAttemptAt) {
     const lastAttemptDate = new Date(lastAttemptAt);
     const now = new Date();
