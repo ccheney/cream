@@ -73,6 +73,8 @@ export type {
 } from "./market";
 // Portfolio types
 export type {
+  Account,
+  AccountStatus,
   BacktestDetail,
   CorrelationMatrix,
   EquityPoint,
@@ -82,6 +84,9 @@ export type {
   LimitStatusType,
   PerformanceMetrics,
   PeriodMetrics,
+  PortfolioHistory,
+  PortfolioHistoryPeriod,
+  PortfolioHistoryTimeframe,
   PortfolioSummary,
   PositionDetail,
   PositionGreeks,

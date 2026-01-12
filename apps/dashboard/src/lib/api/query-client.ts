@@ -97,6 +97,8 @@ export const queryKeys = {
   portfolio: {
     all: ["portfolio"] as const,
     summary: () => [...queryKeys.portfolio.all, "summary"] as const,
+    account: () => [...queryKeys.portfolio.all, "account"] as const,
+    history: (period: string) => [...queryKeys.portfolio.all, "history", period] as const,
     positions: () => [...queryKeys.portfolio.all, "positions"] as const,
     position: (id: string) => [...queryKeys.portfolio.all, "positions", id] as const,
   },

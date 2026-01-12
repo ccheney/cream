@@ -113,11 +113,13 @@ export {
 } from "./useOptions";
 // Portfolio
 export {
+  useAccount,
   useClosePosition,
   useEquityCurve,
   useModifyStop,
   useModifyTarget,
   usePerformanceMetrics,
+  usePortfolioHistory,
   usePortfolioSummary,
   usePositionDetail,
   usePositions,

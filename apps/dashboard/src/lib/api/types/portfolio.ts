@@ -26,6 +26,54 @@ export interface PortfolioSummary {
   lastUpdated: string;
 }
 
+export type AccountStatus =
+  | "ACTIVE"
+  | "SUBMITTED"
+  | "APPROVAL_PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CLOSED"
+  | "DISABLED";
+
+export interface Account {
+  id: string;
+  status: AccountStatus;
+  currency: string;
+  cash: number;
+  portfolioValue: number;
+  buyingPower: number;
+  regtBuyingPower: number;
+  daytradingBuyingPower: number;
+  daytradeCount: number;
+  patternDayTrader: boolean;
+  tradingBlocked: boolean;
+  transfersBlocked: boolean;
+  accountBlocked: boolean;
+  shortingEnabled: boolean;
+  longMarketValue: number;
+  shortMarketValue: number;
+  equity: number;
+  lastEquity: number;
+  multiplier: number;
+  initialMargin: number;
+  maintenanceMargin: number;
+  sma: number;
+  createdAt: string;
+}
+
+export type PortfolioHistoryPeriod = "1D" | "1W" | "1M" | "3M" | "1A" | "all";
+
+export type PortfolioHistoryTimeframe = "1Min" | "5Min" | "15Min" | "1H" | "1D";
+
+export interface PortfolioHistory {
+  timestamp: number[];
+  equity: number[];
+  profitLoss: number[];
+  profitLossPct: number[];
+  timeframe: PortfolioHistoryTimeframe;
+  baseValue: number;
+}
+
 export interface Trade {
   id: string;
   timestamp: string;

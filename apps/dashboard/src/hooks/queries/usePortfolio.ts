@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { del, get, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
+  Account,
   EquityPoint,
   PerformanceMetrics,
+  PortfolioHistory,
+  PortfolioHistoryPeriod,
   PortfolioSummary,
   Position,
   PositionDetail,
@@ -18,6 +21,30 @@ export function usePortfolioSummary() {
     },
     staleTime: STALE_TIMES.PORTFOLIO,
     gcTime: CACHE_TIMES.PORTFOLIO,
+  });
+}
+
+export function useAccount() {
+  return useQuery({
+    queryKey: queryKeys.portfolio.account(),
+    queryFn: async () => {
+      const { data } = await get<Account>("/api/portfolio/account");
+      return data;
+    },
+    staleTime: STALE_TIMES.PORTFOLIO,
+    gcTime: CACHE_TIMES.PORTFOLIO,
+  });
+}
+
+export function usePortfolioHistory(period: PortfolioHistoryPeriod = "1M") {
+  return useQuery({
+    queryKey: queryKeys.portfolio.history(period),
+    queryFn: async () => {
+      const { data } = await get<PortfolioHistory>(`/api/portfolio/history?period=${period}`);
+      return data;
+    },
+    staleTime: STALE_TIMES.CHART,
+    gcTime: CACHE_TIMES.CHART,
   });
 }
 
