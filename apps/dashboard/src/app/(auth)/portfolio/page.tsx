@@ -16,8 +16,10 @@
  * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
  */
 
+import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import { useAccount, usePortfolioSummary } from "@/hooks/queries";
+import { useAccountStreaming } from "@/hooks/useAccountStreaming";
 
 // ============================================
 // Placeholder Components
@@ -32,37 +34,6 @@ function LiveIndicator({ isLive }: { isLive: boolean }) {
       <span className="text-sm font-medium text-stone-600 dark:text-night-300">
         {isLive ? "LIVE" : "DELAYED"}
       </span>
-    </div>
-  );
-}
-
-/**
- * Placeholder for AccountSummaryCard component (cream-h3xmf)
- * 8 metrics in 2x4 grid: Cash, Buying Power, Long Value, Short Value, Margin, PDT Status, Day Trades, Shorting
- */
-function AccountSummaryCardPlaceholder() {
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-      <h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-        Account Summary
-      </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          "Cash",
-          "Buying Power",
-          "Long Value",
-          "Short Value",
-          "Margin",
-          "PDT Status",
-          "Day Trades",
-          "Shorting",
-        ].map((label) => (
-          <div key={label} className="space-y-1">
-            <span className="text-xs text-stone-400 dark:text-night-500">{label}</span>
-            <div className="h-6 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -224,8 +195,9 @@ function RiskMetricsBarPlaceholder() {
 // ============================================
 
 export default function PortfolioPage() {
-  const { data: account } = useAccount();
+  const { data: account, isLoading: isAccountLoading } = useAccount();
   const { data: summary } = usePortfolioSummary();
+  const accountStreaming = useAccountStreaming(account);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -236,7 +208,7 @@ export default function PortfolioPage() {
     }).format(value);
 
   const nav = summary?.nav ?? account?.equity ?? 0;
-  const isLive = true; // TODO: Wire to actual streaming state
+  const isLive = accountStreaming.isStreaming;
 
   return (
     <div className="space-y-6">
@@ -265,7 +237,11 @@ export default function PortfolioPage() {
 
       {/* Account Summary - 8 metrics in 2x4 grid */}
       <QueryErrorBoundary title="Failed to load account summary">
-        <AccountSummaryCardPlaceholder />
+        <AccountSummaryCard
+          account={account}
+          isLoading={isAccountLoading}
+          isStreaming={accountStreaming.isStreaming}
+        />
       </QueryErrorBoundary>
 
       {/* Performance Grid - 6 timeframe tabs */}
