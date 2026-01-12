@@ -15,6 +15,7 @@ import {
   Beaker,
   Bot,
   Briefcase,
+  CalendarDays,
   ChevronLeft,
   FileText,
   FlaskConical,
@@ -58,8 +59,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/console", label: "Console", icon: Terminal },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/decisions", label: "Decisions", icon: FileText },
-  { href: "/feed", label: "Feed", icon: Rss },
   { href: "/config", label: "Config", icon: Settings },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/feed", label: "Feed", icon: Rss },
 ];
 
 export const EXPERIMENT_ITEMS: NavItem[] = [
@@ -181,33 +183,29 @@ export const Sidebar = memo(function Sidebar({
         </div>
       </nav>
 
-      <div className="px-2 mb-2">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full text-stone-700 dark:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
-          title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {resolvedTheme === "dark" ? (
-            <Sun className="w-5 h-5 flex-shrink-0" />
-          ) : (
-            <Moon className="w-5 h-5 flex-shrink-0" />
-          )}
-          {showLabel && (
-            <span className="truncate">
-              {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {userEmail && (
-        <div className="p-4 border-t border-cream-200 dark:border-night-700">
-          {!collapsed || isHovered ? (
-            <div className="flex items-center justify-between gap-2">
+      <div className="p-4 border-t border-cream-200 dark:border-night-700">
+        {!collapsed || isHovered ? (
+          <div className="flex items-center justify-between gap-2">
+            {userEmail ? (
               <div className="text-xs text-stone-500 dark:text-night-300 truncate flex-1">
                 {userEmail}
               </div>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
+                title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="w-4 h-4" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+              </button>
               {onSignOut && (
                 <button
                   type="button"
@@ -219,15 +217,31 @@ export const Sidebar = memo(function Sidebar({
                 </button>
               )}
             </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
-              <span className="text-xs font-medium text-stone-600 dark:text-night-300">
-                {userEmail.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            {userEmail && (
+              <div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
+                <span className="text-xs font-medium text-stone-600 dark:text-night-300">
+                  {userEmail.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
+              title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        )}
+      </div>
     </aside>
   );
 });
