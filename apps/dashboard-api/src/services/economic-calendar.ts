@@ -3,6 +3,7 @@
  *
  * Service for fetching economic calendar events from FMP API.
  * Provides filtering by country, impact level, and category.
+ * Includes in-memory caching to reduce API calls.
  *
  * @see docs/plans/41-economic-calendar-page.md
  */
@@ -47,11 +48,30 @@ export interface TransformedEvent {
 }
 
 // ============================================
+// Cache Configuration
+// ============================================
+
+/** Cache TTL: 24 hours (economic events don't change frequently) */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Maximum cache entries to prevent unbounded memory growth */
+const MAX_CACHE_ENTRIES = 100;
+
+interface CacheEntry {
+  data: TransformedEvent[];
+  timestamp: number;
+  country: string;
+}
+
+// ============================================
 // Service
 // ============================================
 
 export class EconomicCalendarService {
   private static instance: EconomicCalendarService;
+
+  /** In-memory cache: key = "country:start:end" */
+  private cache = new Map<string, CacheEntry>();
 
   static getInstance(): EconomicCalendarService {
     if (!EconomicCalendarService.instance) {
@@ -62,45 +82,36 @@ export class EconomicCalendarService {
 
   /**
    * Fetch economic calendar events with filters.
+   * Uses in-memory cache with 24-hour TTL to reduce API calls.
    */
   async getEvents(filters: EconomicCalendarFilters): Promise<EconomicCalendarResult> {
-    const { start, end, country, impact } = filters;
+    const { start, end, country = "US", impact } = filters;
+    const cacheKey = this.getCacheKey(country, start, end);
+
+    // Check cache first
+    const cached = this.getFromCache(cacheKey);
+    if (cached) {
+      log.debug({ cacheKey, count: cached.length }, "Economic calendar cache hit");
+      return this.buildResult(cached, start, end, impact);
+    }
 
     try {
       const client = createFmpClientFromEnv();
       const events = await client.getEconomicCalendar({
         from: start,
         to: end,
-        country: country ?? "US",
+        country,
       });
 
-      // Transform and filter events
-      let transformed = events.map(this.transformEvent);
+      // Transform events
+      const transformed = events.map(this.transformEvent);
 
-      // Filter by impact if specified
-      if (impact && impact.length > 0) {
-        const impactSet = new Set(impact);
-        transformed = transformed.filter((e) => impactSet.has(e.impact));
-      }
+      // Store in cache (before filtering by impact)
+      this.setInCache(cacheKey, transformed, country);
 
-      // Sort by date/time
-      transformed.sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
-        if (dateCompare !== 0) {
-          return dateCompare;
-        }
-        return a.time.localeCompare(b.time);
-      });
+      log.debug({ cacheKey, count: transformed.length }, "Economic calendar cached");
 
-      return {
-        events: transformed,
-        meta: {
-          start,
-          end,
-          count: transformed.length,
-          lastUpdated: new Date().toISOString(),
-        },
-      };
+      return this.buildResult(transformed, start, end, impact);
     } catch (error) {
       log.error(
         { error: error instanceof Error ? error.message : String(error) },
@@ -111,16 +122,116 @@ export class EconomicCalendarService {
   }
 
   /**
+   * Build the result with filtering and sorting applied.
+   */
+  private buildResult(
+    events: TransformedEvent[],
+    start: string,
+    end: string,
+    impact?: ImpactLevel[]
+  ): EconomicCalendarResult {
+    let filtered = events;
+
+    // Filter by impact if specified
+    if (impact && impact.length > 0) {
+      const impactSet = new Set(impact);
+      filtered = events.filter((e) => impactSet.has(e.impact));
+    }
+
+    // Sort by date/time
+    const sorted = filtered.toSorted((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+      return a.time.localeCompare(b.time);
+    });
+
+    return {
+      events: sorted,
+      meta: {
+        start,
+        end,
+        count: sorted.length,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+  }
+
+  /**
+   * Generate cache key from country and date range.
+   */
+  private getCacheKey(country: string, start: string, end: string): string {
+    return `${country}:${start}:${end}`;
+  }
+
+  /**
+   * Get data from cache if not expired.
+   */
+  private getFromCache(key: string): TransformedEvent[] | null {
+    const entry = this.cache.get(key);
+    if (!entry) {
+      return null;
+    }
+
+    // Check if expired
+    if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  /**
+   * Store data in cache with LRU eviction.
+   */
+  private setInCache(key: string, data: TransformedEvent[], country: string): void {
+    // Evict oldest entries if at capacity
+    if (this.cache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
+    }
+
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      country,
+    });
+  }
+
+  /**
+   * Clear the cache (for testing or manual refresh).
+   */
+  clearCache(): void {
+    this.cache.clear();
+    log.info("Economic calendar cache cleared");
+  }
+
+  /**
+   * Get cache statistics (for monitoring).
+   */
+  getCacheStats(): { size: number; maxSize: number; ttlMs: number } {
+    return {
+      size: this.cache.size,
+      maxSize: MAX_CACHE_ENTRIES,
+      ttlMs: CACHE_TTL_MS,
+    };
+  }
+
+  /**
    * Get a single event by ID.
    */
   async getEvent(id: string): Promise<TransformedEvent | null> {
     // Parse ID to extract date info: format is "YYYY-MM-DD-event-name"
     const dateMatch = id.match(/^(\d{4}-\d{2}-\d{2})-/);
-    if (!dateMatch) {
+    const date = dateMatch?.[1];
+    if (!date) {
       return null;
     }
 
-    const date = dateMatch[1]!;
     const events = await this.getEvents({ start: date, end: date });
 
     return events.events.find((e) => e.id === id) ?? null;
