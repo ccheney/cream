@@ -27,6 +27,7 @@ import log from "./logger.js";
 import { AUTH_CONFIG, rateLimit, SESSION_CONFIG } from "./middleware/index.js";
 import {
   agentsRoutes,
+  aiRoutes,
   alertsRoutes,
   backtestRoutes,
   batchStatusRoutes,
@@ -226,6 +227,9 @@ app.route("/api/research", researchRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
 app.route("/api/economic-calendar", economicCalendarRoutes);
+
+// AI routes (no auth required for status summaries - they're read-only and rate-limited)
+app.route("/api/ai", aiRoutes);
 
 // ============================================
 // OpenAPI Documentation
