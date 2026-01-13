@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { config } from "@/lib/config";
 
 // ============================================
 // Constants
@@ -21,7 +22,7 @@ const REFRESH_INTERVAL = 2500;
 const MIN_REASONING_LENGTH = 50;
 
 /** API endpoint for summarization */
-const SUMMARIZE_ENDPOINT = "/api/ai/summarize-reasoning";
+const SUMMARIZE_ENDPOINT = `${config.api.baseUrl}/api/ai/summarize-reasoning`;
 
 // ============================================
 // Types
