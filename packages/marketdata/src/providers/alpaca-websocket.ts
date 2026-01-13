@@ -23,7 +23,7 @@
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { decode as msgpackDecode } from "@msgpack/msgpack";
+import { decode as msgpackDecode, encode as msgpackEncode } from "@msgpack/msgpack";
 import { z } from "zod";
 
 // Use Bun's native WebSocket (browser-compatible API)
@@ -408,6 +408,8 @@ export class AlpacaWebSocketClient {
     const { promise, resolve, reject } = Promise.withResolvers<void>();
     try {
       this.ws = new WebSocket(endpoint);
+      // Ensure binary data comes as ArrayBuffer (not Buffer) for consistent handling
+      this.ws.binaryType = "arraybuffer";
 
       this.ws.addEventListener("open", () => {
         this.state = AlpacaConnectionState.CONNECTED;
@@ -535,32 +537,80 @@ export class AlpacaWebSocketClient {
       throw new Error("WebSocket not ready");
     }
 
-    // Always send JSON for auth/subscribe messages
-    // msgpack is only used for receiving data on options stream
-    this.ws.send(JSON.stringify(message));
+    if (this.usesMsgpack()) {
+      // Options stream: send messages as msgpack binary
+      const encoded = msgpackEncode(message);
+      this.ws.send(encoded);
+    } else {
+      // Other streams: send as JSON
+      this.ws.send(JSON.stringify(message));
+    }
   }
 
   /**
    * Parse incoming message data.
-   * Options stream uses msgpack, others use JSON.
+   * Options stream uses msgpack for ALL messages (including control messages).
+   * Other streams use JSON.
    * Bun native WebSocket provides string for text or ArrayBuffer for binary.
    */
-  private parseMessage(data: string | ArrayBuffer): unknown[] {
-    if (this.usesMsgpack()) {
-      // Decode msgpack binary data (comes as ArrayBuffer from Bun)
-      try {
-        const buffer =
-          data instanceof ArrayBuffer ? new Uint8Array(data) : new TextEncoder().encode(data);
-        const decoded = msgpackDecode(buffer);
-        return Array.isArray(decoded) ? decoded : [decoded];
-      } catch {
-        return [];
-      }
+  private parseMessage(data: string | ArrayBuffer | Buffer): unknown[] {
+    // Convert data to Uint8Array for consistent handling
+    let bytes: Uint8Array | null = null;
+
+    if (data instanceof ArrayBuffer) {
+      bytes = new Uint8Array(data);
+    } else if (Buffer.isBuffer(data)) {
+      // Handle Node.js Buffer (Bun may provide this in some cases)
+      bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     }
 
-    // Parse JSON (comes as string from Bun)
+    if (this.usesMsgpack()) {
+      // Options stream: ALL messages are msgpack-encoded (including control messages)
+      if (bytes) {
+        try {
+          const decoded = msgpackDecode(bytes);
+          return Array.isArray(decoded) ? decoded : [decoded];
+        } catch {
+          // Binary data that isn't valid msgpack - try JSON as fallback
+          // Alpaca may send control messages as JSON even on options stream
+          try {
+            const text = new TextDecoder().decode(bytes);
+            const parsed = JSON.parse(text);
+            return Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            return [];
+          }
+        }
+      }
+      // String data on options stream - try JSON first (control messages), then msgpack
+      if (typeof data === "string") {
+        try {
+          const parsed = JSON.parse(data);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          // Try msgpack on string data as fallback
+          try {
+            const buffer = new TextEncoder().encode(data);
+            const decoded = msgpackDecode(buffer);
+            return Array.isArray(decoded) ? decoded : [decoded];
+          } catch {
+            return [];
+          }
+        }
+      }
+      return [];
+    }
+
+    // Non-msgpack streams (stocks, news, crypto) use JSON
     try {
-      const text = typeof data === "string" ? data : new TextDecoder().decode(data);
+      let text: string;
+      if (typeof data === "string") {
+        text = data;
+      } else if (bytes) {
+        text = new TextDecoder().decode(bytes);
+      } else {
+        return [];
+      }
       const parsed = JSON.parse(text);
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch {
@@ -571,9 +621,10 @@ export class AlpacaWebSocketClient {
   /**
    * Handle incoming WebSocket messages.
    * Bun native WebSocket provides string for text or ArrayBuffer for binary.
+   * Node.js/Bun may also provide Buffer in some cases.
    */
   private handleMessage(
-    data: string | ArrayBuffer,
+    data: string | ArrayBuffer | Buffer,
     connectResolve?: (value: undefined) => void
   ): void {
     // Update lastPongTime on any message activity (replaces explicit pong handling)
