@@ -51,10 +51,7 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       // Application layer importing from domain layer (allowed)
-      const violation = validator.validateImport(
-        "packages/mastra-kit/src/agents.ts",
-        "@cream/domain"
-      );
+      const violation = validator.validateImport("packages/agents/src/agents.ts", "@cream/domain");
 
       expect(violation).toBeNull();
     });
@@ -75,7 +72,7 @@ describe("LayerValidator", () => {
       const validator = new LayerValidator();
 
       // Application layer importing from presentation (not allowed)
-      const violation = validator.validateImport("packages/mastra-kit/src/workflow.ts", "apps/api");
+      const violation = validator.validateImport("packages/agents/src/workflow.ts", "apps/api");
 
       expect(violation).not.toBeNull();
       expect(violation?.severity).toBe("ERROR");
@@ -138,7 +135,7 @@ describe("LayerValidator", () => {
     it("should return empty array for valid file", () => {
       const validator = new LayerValidator();
 
-      const violations = validator.validateFile("packages/mastra-kit/src/agents.ts", [
+      const violations = validator.validateFile("packages/agents/src/agents.ts", [
         { path: "@cream/domain", line: 1 },
         { path: "./types", line: 2 },
       ]);
@@ -157,7 +154,7 @@ describe("LayerValidator", () => {
           imports: [{ path: "@cream/storage", line: 1 }],
         },
         {
-          path: "packages/mastra-kit/src/agents.ts",
+          path: "packages/agents/src/agents.ts",
           imports: [{ path: "@cream/domain", line: 1 }],
         },
       ]);
@@ -173,7 +170,7 @@ describe("LayerValidator", () => {
 
       const result = validator.validateFiles([
         {
-          path: "packages/mastra-kit/src/agents.ts",
+          path: "packages/agents/src/agents.ts",
           imports: [{ path: "@cream/domain", line: 1 }],
         },
         {
@@ -230,7 +227,7 @@ describe("LayerValidator", () => {
 
       expect(validator.findLayerForImport("@cream/domain")?.name).toBe("domain");
       expect(validator.findLayerForImport("@cream/storage")?.name).toBe("infrastructure");
-      expect(validator.findLayerForImport("@cream/mastra-kit")?.name).toBe("application");
+      expect(validator.findLayerForImport("@cream/agents")?.name).toBe("application");
     });
 
     it("should handle package subpaths", () => {
@@ -486,7 +483,7 @@ describe("Integration", () => {
       },
       // Application depends on domain
       {
-        path: "packages/mastra-kit/src/agents.ts",
+        path: "packages/agents/src/agents.ts",
         imports: [
           { path: "@cream/domain", line: 1 },
           { path: "./types", line: 2 },
@@ -497,7 +494,7 @@ describe("Integration", () => {
         path: "packages/storage/src/client.ts",
         imports: [
           { path: "@cream/domain", line: 1 },
-          { path: "@cream/mastra-kit", line: 2 },
+          { path: "@cream/agents", line: 2 },
         ],
       },
       // Presentation can depend on all
@@ -505,7 +502,7 @@ describe("Integration", () => {
         path: "apps/api/src/routes.ts",
         imports: [
           { path: "@cream/domain", line: 1 },
-          { path: "@cream/mastra-kit", line: 2 },
+          { path: "@cream/agents", line: 2 },
           { path: "@cream/storage", line: 3 },
         ],
       },
@@ -527,7 +524,7 @@ describe("Integration", () => {
       },
       // Application importing from presentation - BAD!
       {
-        path: "packages/mastra-kit/src/workflow.ts",
+        path: "packages/agents/src/workflow.ts",
         imports: [{ path: "apps/api", line: 10 }],
       },
     ]);

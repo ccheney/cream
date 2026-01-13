@@ -133,7 +133,7 @@ export const DEFAULT_LAYERS: ArchitecturalLayer[] = [
   {
     name: "application",
     description: "Use cases and application logic",
-    packages: ["@cream/mastra-kit", "packages/mastra-kit"],
+    packages: ["@cream/agents", "packages/agents"],
     allowedDependencies: ["domain"],
     forbiddenDependencies: ["infrastructure", "presentation"],
   },

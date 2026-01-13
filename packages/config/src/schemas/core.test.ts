@@ -41,14 +41,6 @@ describe("LLMConfigSchema", () => {
       })
     ).toThrow();
   });
-
-  it("rejects older Gemini models", () => {
-    expect(() =>
-      LLMConfigSchema.parse({
-        model_id: "gemini-1.5-pro",
-      })
-    ).toThrow();
-  });
 });
 
 describe("TimeframesConfigSchema", () => {

@@ -67,7 +67,7 @@ describe("DependencyValidator", () => {
       const packages = [
         createPackage("@cream/domain"),
         createPackage("@cream/config", ["@cream/domain"]),
-        createPackage("@cream/mastra-kit", ["@cream/domain", "@cream/config"]),
+        createPackage("@cream/agents", ["@cream/domain", "@cream/config"]),
       ];
 
       validator.addPackages(packages);
@@ -513,7 +513,7 @@ describe("Integration", () => {
       createPackage("@cream/storage", ["@cream/domain"]),
       createPackage("@cream/marketdata", ["@cream/domain"]),
       createPackage("@cream/broker", ["@cream/domain"]),
-      createPackage("@cream/mastra-kit", ["@cream/domain", "@cream/config"]),
+      createPackage("@cream/agents", ["@cream/domain", "@cream/config"]),
       createPackage("@cream/indicators", ["@cream/domain"]),
       createPackage("@cream/regime", ["@cream/domain", "@cream/indicators"]),
     ];
