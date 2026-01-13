@@ -6,7 +6,7 @@
  */
 
 import type { ExecutionContext } from "@cream/domain";
-import { isBacktest } from "@cream/domain";
+import { createCalendarService, isBacktest } from "@cream/domain";
 import {
   createLiquidityCalculator,
   createPriceCalculator,
@@ -15,6 +15,7 @@ import {
   type MarketDataProvider,
   type OHLCVBar,
   type Quote,
+  type TradingSession,
 } from "@cream/indicators";
 import {
   type AdapterCandle,
@@ -154,8 +155,8 @@ export async function fetchMarketSnapshot(
     }
   }
 
-  // Fetch indicators via IndicatorService
-  const indicators = await fetchIndicators(instruments, adapter);
+  // Fetch indicators via IndicatorService (with trading session context)
+  const indicators = await fetchIndicators(instruments, adapter, ctx);
 
   return {
     instruments,
@@ -171,14 +172,18 @@ export async function fetchMarketSnapshot(
  *
  * Creates an IndicatorService with the marketdata adapter wrapped as a
  * MarketDataProvider, then fetches snapshots for all symbols in parallel.
+ * Also enriches each snapshot with the current trading session for
+ * session-aware risk validation.
  *
  * @param instruments - Array of ticker symbols
  * @param adapter - Market data adapter to use
+ * @param ctx - Execution context for calendar service
  * @returns Record of symbol to IndicatorSnapshot
  */
 async function fetchIndicators(
   instruments: string[],
-  adapter: MarketDataAdapter
+  adapter: MarketDataAdapter,
+  ctx?: ExecutionContext
 ): Promise<Record<string, IndicatorSnapshot>> {
   const startTime = Date.now();
 
@@ -201,19 +206,36 @@ async function fetchIndicators(
     }
   );
 
+  // Get current trading session for session-aware spread checks
+  let tradingSession: TradingSession = "RTH";
+  try {
+    const calendar = await createCalendarService({ mode: ctx?.environment });
+    tradingSession = await calendar.getTradingSession(new Date());
+  } catch (error) {
+    log.warn({ error }, "Failed to get trading session, defaulting to RTH");
+  }
+
   try {
     const snapshots = await indicatorService.getSnapshots(instruments);
 
-    // Convert Map to Record
+    // Convert Map to Record and enrich with trading session
     const result: Record<string, IndicatorSnapshot> = {};
     for (const [symbol, snapshot] of snapshots) {
-      result[symbol] = snapshot;
+      // Enrich snapshot with trading session
+      result[symbol] = {
+        ...snapshot,
+        metadata: {
+          ...snapshot.metadata,
+          trading_session: tradingSession,
+        },
+      };
     }
 
     log.debug(
       {
         count: instruments.length,
         duration: Date.now() - startTime,
+        tradingSession,
       },
       "Fetched indicator snapshots"
     );
