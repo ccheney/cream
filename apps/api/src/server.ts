@@ -7,9 +7,9 @@
  * Usage: bun run src/server.ts
  */
 
+import { type HonoBindings, type HonoVariables, MastraServer } from "@mastra/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { HonoBindings, HonoVariables, MastraServer } from "@mastra/hono";
 
 import { mastra } from "./mastra/index.js";
 
@@ -21,7 +21,7 @@ app.use(
   cors({
     origin: ["http://localhost:3000", "http://localhost:3001"],
     credentials: true,
-  }),
+  })
 );
 
 // Health check
@@ -38,7 +38,7 @@ app.get("/", (c) =>
       agents: "/api/agents",
       workflows: "/api/workflows",
     },
-  }),
+  })
 );
 
 // Initialize Mastra server with OpenAPI enabled
@@ -46,14 +46,11 @@ const server = new MastraServer({
   app,
   mastra,
   openapiPath: "/openapi.json",
-  swaggerUIPath: "/swagger-ui",
 });
 
 await server.init();
 
 const port = Number(process.env.PORT) || 4111;
-
-console.log(`Mastra server running on http://localhost:${port}`);
 
 export default {
   port,
