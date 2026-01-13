@@ -129,17 +129,17 @@ def test_alignment_result_passed_threshold() -> None:
 def test_evaluator_initialization() -> None:
     """Test HypothesisAlignmentEvaluator initialization."""
     evaluator = HypothesisAlignmentEvaluator()
-    assert evaluator.model == "gemini-2.0-flash"
+    assert evaluator.model == "gemini-3-flash-preview"
     assert evaluator.threshold == 0.7
 
 
 def test_evaluator_custom_config() -> None:
     """Test evaluator with custom configuration."""
     evaluator = HypothesisAlignmentEvaluator(
-        model="gemini-1.5-pro",
+        model="gemini-3-pro-preview",
         threshold=0.8,
     )
-    assert evaluator.model == "gemini-1.5-pro"
+    assert evaluator.model == "gemini-3-pro-preview"
     assert evaluator.threshold == 0.8
 
 

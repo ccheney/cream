@@ -127,7 +127,7 @@ class HypothesisAlignmentEvaluator:
     """
 
     DEFAULT_THRESHOLD = 0.7
-    DEFAULT_MODEL = "gemini-2.0-flash"
+    DEFAULT_MODEL = "gemini-3-flash-preview"
 
     def __init__(
         self,
@@ -138,7 +138,7 @@ class HypothesisAlignmentEvaluator:
         Initialize the evaluator.
 
         Args:
-            model: Gemini model to use (default: gemini-2.0-flash)
+            model: Gemini model to use (default: gemini-3-flash-preview)
             threshold: Alignment threshold (default: 0.7)
         """
         self.model = model or self.DEFAULT_MODEL
