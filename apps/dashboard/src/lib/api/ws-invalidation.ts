@@ -298,10 +298,14 @@ export interface OptionsTradeData {
  */
 function parseOccSymbol(symbol: string): { underlying: string; expiration: string } | null {
   const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
   const [, underlying, expStr] = match;
-  if (!underlying || !expStr) return null;
+  if (!underlying || !expStr) {
+    return null;
+  }
 
   const year = 2000 + Number.parseInt(expStr.slice(0, 2), 10);
   const month = expStr.slice(2, 4);
@@ -334,10 +338,14 @@ export function handleWSMessage(message: WSMessage): void {
       });
 
       for (const [queryKey, oldData] of queries) {
-        if (!oldData || oldData.length === 0) continue;
+        if (!oldData || oldData.length === 0) {
+          continue;
+        }
 
         const lastCandle = oldData[oldData.length - 1];
-        if (!lastCandle) continue;
+        if (!lastCandle) {
+          continue;
+        }
 
         const updateTime = new Date(agg.timestamp).getTime();
         const lastCandleTime = new Date(lastCandle.timestamp).getTime();
@@ -382,20 +390,15 @@ export function handleWSMessage(message: WSMessage): void {
 
     case "options_quote": {
       const optQuote = message.data as OptionsQuoteData;
-      console.log("[WS] options_quote received:", optQuote.contract);
 
       const parsed = parseOccSymbol(optQuote.contract);
       if (!parsed) {
-        console.log("[WS] Failed to parse OCC symbol:", optQuote.contract);
         break;
       }
-      console.log("[WS] Parsed:", parsed);
 
       // Find and update the options chain cache
       const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);
-      console.log("[WS] Query key:", chainQueryKey);
       const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
-      console.log("[WS] Chain data found:", !!chainData, chainData?.chain?.length ?? 0, "rows");
 
       if (chainData?.chain) {
         // Find the contract in the chain and update it
@@ -427,10 +430,7 @@ export function handleWSMessage(message: WSMessage): void {
           }
           return row;
         });
-
-        console.log("[WS] Contract found in chain:", foundContract, optQuote.contract);
         if (foundContract) {
-          console.log("[WS] Updating cache with new values - bid:", optQuote.bid, "ask:", optQuote.ask);
         }
 
         queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
@@ -444,7 +444,9 @@ export function handleWSMessage(message: WSMessage): void {
     case "options_trade": {
       const optTrade = message.data as OptionsTradeData;
       const parsed = parseOccSymbol(optTrade.contract);
-      if (!parsed) break;
+      if (!parsed) {
+        break;
+      }
 
       // Find and update the options chain cache with last trade price
       const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);

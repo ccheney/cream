@@ -44,7 +44,7 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
+  const date = new Date(`${dateStr}T00:00:00`);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);

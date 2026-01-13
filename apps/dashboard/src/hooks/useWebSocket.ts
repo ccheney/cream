@@ -192,6 +192,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       reconnection?.initialDelay,
       reconnection?.maxDelay,
       reconnection?.backoffMultiplier,
+      reconnection,
     ]
   );
 
@@ -200,7 +201,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       ...DEFAULT_HEARTBEAT,
       ...heartbeat,
     }),
-    [heartbeat?.pingInterval, heartbeat?.pongTimeout]
+    [heartbeat?.pingInterval, heartbeat?.pongTimeout, heartbeat]
   );
 
   // State

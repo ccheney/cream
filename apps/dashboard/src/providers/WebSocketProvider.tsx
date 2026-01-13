@@ -91,7 +91,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     const message = data as WSMessage;
     // Debug: Log options-related messages
     if (message.type?.startsWith("options")) {
-      console.log("[WSProvider] Received options message:", message.type, message.data);
     }
     // Track last message for consumers
     setLastMessage(message);

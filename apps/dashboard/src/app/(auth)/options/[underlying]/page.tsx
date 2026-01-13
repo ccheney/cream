@@ -126,7 +126,6 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
       }
 
       if (toSubscribe.length > 0) {
-        console.log("[OptionsPage] Subscribing to contracts:", toSubscribe);
         subscribeOptions(toSubscribe);
         for (const symbol of toSubscribe) {
           subscribedContractsRef.current.add(symbol);
