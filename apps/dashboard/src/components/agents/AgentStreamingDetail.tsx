@@ -770,7 +770,12 @@ function ThoughtSectionComponent({
   // Status indicator
   const statusIcon =
     section.status === "complete" ? (
-      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg
+        className="w-4 h-4 text-emerald-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
     ) : section.status === "active" ? (
@@ -796,7 +801,9 @@ function ThoughtSectionComponent({
         <div className="flex-shrink-0 mt-0.5">{statusIcon}</div>
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="font-medium text-stone-800 dark:text-stone-200 truncate">
-            {section.title || <span className="text-stone-500 dark:text-stone-400 italic">Thinking...</span>}
+            {section.title || (
+              <span className="text-stone-500 dark:text-stone-400 italic">Thinking...</span>
+            )}
           </span>
           {styles.label && (
             <span
@@ -848,7 +855,7 @@ function MarkdownContent({ content }: { content: string }) {
   // Parse content into segments
   const segments = useMemo(() => {
     const result: React.ReactNode[] = [];
-    let remaining = content;
+    const remaining = content;
     let keyIndex = 0;
 
     // Process line by line for better structure
@@ -891,7 +898,7 @@ function MarkdownContent({ content }: { content: string }) {
  */
 function parseInlineMarkdown(text: string, baseKey: number): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  let remaining = text;
+  const remaining = text;
   let partIndex = 0;
 
   // Pattern for **bold** and *italic*
@@ -910,7 +917,10 @@ function parseInlineMarkdown(text: string, baseKey: number): React.ReactNode {
     if (match[2]) {
       // Bold
       parts.push(
-        <strong key={`bold-${baseKey}-${partIndex++}`} className="font-semibold text-stone-700 dark:text-stone-300">
+        <strong
+          key={`bold-${baseKey}-${partIndex++}`}
+          className="font-semibold text-stone-700 dark:text-stone-300"
+        >
           {match[2]}
         </strong>
       );
