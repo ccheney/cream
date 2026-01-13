@@ -11,7 +11,6 @@ import {
   type AgentType,
   analyzeContentTool,
   extractNewsContextTool,
-  extractTranscriptTool,
   fredEconomicCalendarTool,
   getGreeksTool,
   getMarketSnapshotsTool,
@@ -53,7 +52,6 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
   graphrag_query: graphragQueryTool,
   helix_query: helixQueryTool,
   extract_news_context: extractNewsContextTool,
-  extract_transcript: extractTranscriptTool,
   analyze_content: analyzeContentTool,
   get_prediction_signals: getPredictionSignalsTool,
   get_market_snapshots: getMarketSnapshotsTool,
@@ -94,6 +92,9 @@ export function createAgent(agentType: AgentType): Agent {
       }
     }
   }
+
+  const toolNames = Object.keys(tools);
+  log.info({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
 
   const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
     const runtimeModel = requestContext?.get("model") as string | undefined;
@@ -146,6 +147,7 @@ export interface GenerateOptions {
   requestContext: RequestContext;
   instructions?: string;
   abortSignal?: AbortSignal;
+  maxSteps?: number;
 }
 
 /**
@@ -155,6 +157,9 @@ export interface GenerateOptions {
  *
  * Note: providerOptions is included at runtime for Gemini thinking configuration
  * but omitted from return type to satisfy Mastra's complex type constraints.
+ *
+ * maxSteps: Controls how many LLM calls can happen for tool use. Default is 1 (no tool execution).
+ * We set to 5 to allow tools to be called and results processed.
  */
 export function buildGenerateOptions(
   settings: AgentRuntimeSettings,
@@ -166,6 +171,7 @@ export function buildGenerateOptions(
     structuredOutput,
     requestContext: createRequestContext(settings.model),
     instructions: settings.systemPromptOverride,
+    maxSteps: 5, // Enable tool execution (default 1 means tools never run)
     providerOptions: {
       google: {
         thinkingConfig: {

@@ -75,11 +75,8 @@ export {
   ExtractedEventSchema,
   ExtractNewsContextInputSchema,
   ExtractNewsContextOutputSchema,
-  ExtractTranscriptInputSchema,
-  ExtractTranscriptOutputSchema,
   economicCalendarTool,
   extractNewsContextTool,
-  extractTranscriptTool,
   // Filing search tool
   FilingChunkSummarySchema,
   // FRED tools
@@ -152,10 +149,7 @@ export {
   analyzeContent,
   type ExtractNewsContextParams,
   type ExtractNewsContextResult,
-  type ExtractTranscriptParams,
-  type ExtractTranscriptResult,
   extractNewsContext,
-  extractTranscript,
   type GraphRAGQueryParams,
   type GraphRAGQueryResult,
   getEconomicCalendar,

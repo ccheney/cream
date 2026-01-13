@@ -36,23 +36,6 @@ export interface ExtractNewsContextResult {
   errors: PipelineResult["errors"];
 }
 
-export interface ExtractTranscriptParams {
-  /** Stock symbol (e.g., "AAPL") */
-  symbol: string;
-  /** Fiscal year */
-  year: number;
-  /** Fiscal quarter (1-4) */
-  quarter: number;
-  /** Enable dry run (skip LLM calls) */
-  dryRun?: boolean;
-}
-
-export interface ExtractTranscriptResult {
-  event: ExtractedEvent | null;
-  stats: PipelineResult["stats"];
-  error?: string;
-}
-
 export interface AnalyzeContentParams {
   /** Raw content to analyze */
   content: string;
@@ -150,97 +133,6 @@ export async function extractNewsContext(
       errors: [
         { content: "pipeline", error: error instanceof Error ? error.message : "Unknown error" },
       ],
-    };
-  }
-}
-
-/**
- * Extract and analyze earnings transcript
- *
- * @deprecated Use `graphrag_query` tool instead for unified semantic search
- * across filings, transcripts, news, and events. This tool requires FMP Ultimate
- * tier subscription ($149/month) and is narrowly scoped to single company/quarter.
- *
- * See docs/plans/34-graphrag-query-tool.md for migration details.
- *
- * Fetches earnings call transcript and runs deep extraction:
- * 1. Fetches transcript from FMP API
- * 2. Parses speaker segments and executive comments
- * 3. Extracts guidance, metrics, and key insights
- * 4. Computes sentiment and importance scores
- *
- * @param ctx - ExecutionContext
- * @param params - Transcript parameters
- * @returns Extracted transcript event with analysis
- */
-export async function extractTranscript(
-  ctx: ExecutionContext,
-  params: ExtractTranscriptParams
-): Promise<ExtractTranscriptResult> {
-  const { symbol, year, quarter, dryRun = false } = params;
-
-  // In backtest mode, return empty result
-  if (isBacktest(ctx)) {
-    return {
-      event: null,
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-    };
-  }
-
-  const client = getFMPClient();
-  if (!client) {
-    return {
-      event: null,
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-      error: "FMP_KEY not configured",
-    };
-  }
-
-  try {
-    // Fetch transcript from FMP
-    const transcripts = await client.getEarningsTranscript(symbol, year, quarter);
-
-    if (transcripts.length === 0) {
-      return {
-        event: null,
-        stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-        error: `No transcript found for ${symbol} Q${quarter} ${year}`,
-      };
-    }
-
-    // Transform to FMPTranscript format
-    const transcript = transcripts[0];
-    const fmpTranscripts = [
-      {
-        symbol: transcript?.symbol ?? symbol,
-        quarter,
-        year,
-        date: transcript?.date ?? new Date().toISOString(),
-        content: transcript?.content ?? "",
-      },
-    ];
-
-    // Create extraction client and pipeline
-    const extractionClient = createExtractionClient();
-    const pipeline = createExtractionPipeline({
-      extractionClient,
-      targetSymbols: [symbol],
-      dryRun,
-    });
-
-    // Process transcript
-    const result = await pipeline.processTranscripts(fmpTranscripts);
-
-    return {
-      event: result.events[0] ?? null,
-      stats: result.stats,
-      error: result.errors[0]?.error,
-    };
-  } catch (error) {
-    return {
-      event: null,
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

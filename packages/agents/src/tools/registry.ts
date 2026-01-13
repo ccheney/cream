@@ -9,7 +9,6 @@ import { implementIndicator } from "./claudeCodeIndicator.js";
 import {
   analyzeContent,
   extractNewsContext,
-  extractTranscript,
   getEconomicCalendar,
   getFredEconomicCalendar,
   getGreeks,
@@ -43,7 +42,6 @@ export const TOOL_REGISTRY = {
   implement_indicator: implementIndicator,
   // External context extraction tools
   extract_news_context: extractNewsContext,
-  extract_transcript: extractTranscript,
   analyze_content: analyzeContent,
   // FRED Economic Data tools
   fred_economic_calendar: getFredEconomicCalendar,

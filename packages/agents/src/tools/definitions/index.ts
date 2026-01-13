@@ -76,10 +76,7 @@ export {
   ExtractedEventSchema,
   ExtractNewsContextInputSchema,
   ExtractNewsContextOutputSchema,
-  ExtractTranscriptInputSchema,
-  ExtractTranscriptOutputSchema,
   extractNewsContextTool,
-  extractTranscriptTool,
 } from "./externalContextTools.js";
 // Factor Zoo tools (require FactorZooRepository dependency injection)
 export {

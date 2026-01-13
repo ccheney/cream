@@ -587,122 +587,351 @@ function ToolCallItem({ toolCall }: { toolCall: ToolCall }) {
 }
 
 // ============================================
-// Semantic Block Types
+// Semantic Section Types
 // ============================================
 
-type ThoughtBlockType = "normal" | "reflection" | "conclusion";
+type SectionType = "normal" | "reflection" | "conclusion";
+type SectionStatus = "complete" | "active" | "pending";
 
-interface ThoughtBlock {
-  type: ThoughtBlockType;
+interface ThoughtSection {
+  title: string | null;
   content: string;
+  type: SectionType;
+  status: SectionStatus;
   key: string;
 }
 
 // ============================================
-// Semantic Block Parsing
+// Semantic Section Parsing
 // ============================================
 
 /**
- * Parse reasoning text into semantic thought blocks.
- * Identifies reflection patterns and conclusion blocks.
+ * Parse reasoning text into semantic sections.
+ * Detects **Header** style markdown headers and groups content accordingly.
  */
-function parseThoughtBlocks(text: string): ThoughtBlock[] {
+function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSection[] {
   if (!text) {
     return [];
   }
 
-  // Split on double newlines to get paragraphs
-  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim());
+  // Split by markdown bold headers like **Header Text**
+  // This regex captures the header and the content after it
+  const headerPattern = /\*\*([^*]+)\*\*/g;
+  const sections: ThoughtSection[] = [];
+  let match: RegExpExecArray | null;
+  let sectionIndex = 0;
 
-  // If no paragraphs, treat as single block
-  if (paragraphs.length === 0) {
-    return [{ type: "normal", content: text, key: "0" }];
+  // Find all headers and split content
+  const matches: { header: string; start: number; end: number }[] = [];
+  // biome-ignore lint/suspicious/noAssignInExpressions: regex exec loop pattern
+  while ((match = headerPattern.exec(text)) !== null) {
+    const headerText = match[1];
+    if (headerText) {
+      matches.push({
+        header: headerText.trim(),
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
   }
 
-  // Patterns that indicate self-reflection or reconsideration
+  // If no headers found, treat as single section
+  if (matches.length === 0) {
+    return [
+      {
+        title: null,
+        content: text.trim(),
+        type: detectSectionType(text),
+        status: isStreaming ? "active" : "complete",
+        key: "section-0",
+      },
+    ];
+  }
+
+  // Build sections from headers
+  for (const [i, currentMatch] of matches.entries()) {
+    const nextMatch = matches[i + 1];
+
+    // Content before the first header (if any)
+    if (i === 0 && currentMatch.start > 0) {
+      const preContent = text.slice(0, currentMatch.start).trim();
+      if (preContent) {
+        sections.push({
+          title: null,
+          content: preContent,
+          type: detectSectionType(preContent),
+          status: "complete",
+          key: `section-${sectionIndex++}`,
+        });
+      }
+    }
+
+    // Content after this header until next header or end
+    const contentStart = currentMatch.end;
+    const contentEnd = nextMatch ? nextMatch.start : text.length;
+    const content = text.slice(contentStart, contentEnd).trim();
+
+    const isLastSection = i === matches.length - 1;
+    const status: SectionStatus = isLastSection && isStreaming ? "active" : "complete";
+
+    sections.push({
+      title: currentMatch.header,
+      content,
+      type: detectSectionType(content, currentMatch.header),
+      status,
+      key: `section-${sectionIndex++}`,
+    });
+  }
+
+  return sections;
+}
+
+/**
+ * Detect the type of a section based on content and title.
+ */
+function detectSectionType(content: string, title?: string): SectionType {
+  const text = (title || "") + " " + content;
+  const lowerText = text.toLowerCase();
+
+  // Reflection patterns
   const reflectionPatterns = [
-    /^(?:wait|actually|hmm|let me reconsider|on second thought|but wait)/i,
-    /^(?:i should also consider|i need to reconsider|thinking about it more)/i,
-    /^(?:however|although|that said|on the other hand)/i,
+    /wait|actually|hmm|reconsider|second thought|but wait/,
+    /should also consider|need to reconsider|thinking about it/,
+    /however|although|that said|other hand|caveat|concern/,
+    /risk|warning|caution|careful/,
   ];
 
-  // Patterns that indicate conclusion/synthesis
+  for (const pattern of reflectionPatterns) {
+    if (pattern.test(lowerText)) {
+      return "reflection";
+    }
+  }
+
+  // Conclusion patterns
   const conclusionPatterns = [
-    /^(?:therefore|thus|in conclusion|to summarize|overall|finally)/i,
-    /^(?:my (?:assessment|recommendation|conclusion|verdict))/i,
-    /^(?:based on (?:this|the|my) analysis)/i,
-    /^(?:given (?:all|these) (?:factors|considerations))/i,
+    /therefore|thus|conclusion|summarize|overall|finally/,
+    /assessment|recommendation|verdict|decision/,
+    /based on.*analysis|given.*factors|considering.*above/,
+    /synthesis|final.*thought|bottom.*line/,
   ];
 
-  return paragraphs.map((paragraph, index) => {
-    const trimmed = paragraph.trim();
-
-    // Check for reflection
-    for (const pattern of reflectionPatterns) {
-      if (pattern.test(trimmed)) {
-        return {
-          type: "reflection" as const,
-          content: trimmed,
-          key: `block-${index}`,
-        };
-      }
+  for (const pattern of conclusionPatterns) {
+    if (pattern.test(lowerText)) {
+      return "conclusion";
     }
+  }
 
-    // Check for conclusion
-    for (const pattern of conclusionPatterns) {
-      if (pattern.test(trimmed)) {
-        return {
-          type: "conclusion" as const,
-          content: trimmed,
-          key: `block-${index}`,
-        };
-      }
-    }
-
-    return {
-      type: "normal" as const,
-      content: trimmed,
-      key: `block-${index}`,
-    };
-  });
+  return "normal";
 }
 
 // ============================================
-// Thought Block Component
+// Thought Section Component
 // ============================================
 
-function ThoughtBlockComponent({ block }: { block: ThoughtBlock }) {
-  if (block.type === "reflection") {
-    return (
-      <div className="relative my-3 p-3 bg-amber-50 dark:bg-amber-900/20 border-l-3 border-amber-500 rounded-r-lg">
-        <span className="absolute -top-2 left-2 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-night-750 px-1">
-          Reconsidering
-        </span>
-        <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-wrap mt-1">
-          {block.content}
-        </p>
-      </div>
-    );
-  }
+function ThoughtSectionComponent({
+  section,
+  reducedMotion,
+}: {
+  section: ThoughtSection;
+  reducedMotion: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  if (block.type === "conclusion") {
-    return (
-      <div className="relative my-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-3 border-emerald-500 rounded-r-lg">
-        <span className="absolute -top-2 left-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-night-750 px-1">
-          Synthesis
-        </span>
-        <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-wrap mt-1">
-          {block.content}
-        </p>
-      </div>
+  // Style configurations based on type
+  const typeStyles = {
+    normal: {
+      bg: "bg-white dark:bg-night-800",
+      border: "border-stone-200 dark:border-night-700",
+      accent: "border-l-stone-300 dark:border-l-night-600",
+      label: null,
+      labelBg: "",
+      labelText: "",
+    },
+    reflection: {
+      bg: "bg-amber-50/50 dark:bg-amber-900/10",
+      border: "border-amber-200 dark:border-amber-800/30",
+      accent: "border-l-amber-500",
+      label: "Reconsidering",
+      labelBg: "bg-amber-100 dark:bg-amber-900/30",
+      labelText: "text-amber-700 dark:text-amber-400",
+    },
+    conclusion: {
+      bg: "bg-emerald-50/50 dark:bg-emerald-900/10",
+      border: "border-emerald-200 dark:border-emerald-800/30",
+      accent: "border-l-emerald-500",
+      label: "Synthesis",
+      labelBg: "bg-emerald-100 dark:bg-emerald-900/30",
+      labelText: "text-emerald-700 dark:text-emerald-400",
+    },
+  };
+
+  const styles = typeStyles[section.type];
+
+  // Status indicator
+  const statusIcon =
+    section.status === "complete" ? (
+      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    ) : section.status === "active" ? (
+      <motion.div
+        className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent"
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+      />
+    ) : (
+      <div className="w-4 h-4 rounded-full border-2 border-stone-300 dark:border-night-600" />
     );
-  }
 
   return (
-    <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-wrap my-2">
-      {block.content}
-    </p>
+    <div
+      className={`mb-3 rounded-lg border ${styles.border} ${styles.bg} border-l-4 ${styles.accent} overflow-hidden`}
+    >
+      {/* Section Header */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-start gap-3 p-3 text-left hover:bg-stone-50/50 dark:hover:bg-night-750/50 transition-colors"
+      >
+        <div className="flex-shrink-0 mt-0.5">{statusIcon}</div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="font-medium text-stone-800 dark:text-stone-200 truncate">
+            {section.title || <span className="text-stone-500 dark:text-stone-400 italic">Thinking...</span>}
+          </span>
+          {styles.label && (
+            <span
+              className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.labelBg} ${styles.labelText}`}
+            >
+              {styles.label}
+            </span>
+          )}
+        </div>
+        <motion.svg
+          className="w-4 h-4 text-stone-400 flex-shrink-0 mt-0.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.2 }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </motion.svg>
+      </button>
+
+      {/* Section Content */}
+      <AnimatePresence initial={false}>
+        {isExpanded && section.content && (
+          <motion.div
+            initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 pt-0">
+              <div className="pl-7 text-sm text-stone-600 dark:text-stone-400 leading-relaxed prose prose-sm dark:prose-invert prose-stone max-w-none">
+                <MarkdownContent content={section.content} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
+}
+
+/**
+ * Simple markdown content renderer.
+ * Handles basic markdown: bold, italic, lists, links.
+ */
+function MarkdownContent({ content }: { content: string }) {
+  // Parse content into segments
+  const segments = useMemo(() => {
+    const result: React.ReactNode[] = [];
+    let remaining = content;
+    let keyIndex = 0;
+
+    // Process line by line for better structure
+    const lines = remaining.split("\n");
+
+    for (const line of lines) {
+      if (!line.trim()) {
+        result.push(<br key={`br-${keyIndex++}`} />);
+        continue;
+      }
+
+      // Check for bullet points
+      const bulletMatch = line.match(/^[\s]*[-•*]\s+(.+)$/);
+      if (bulletMatch?.[1]) {
+        result.push(
+          <div key={`bullet-${keyIndex++}`} className="flex items-start gap-2 my-1">
+            <span className="text-stone-400 mt-0.5">•</span>
+            <span>{parseInlineMarkdown(bulletMatch[1], keyIndex)}</span>
+          </div>
+        );
+        continue;
+      }
+
+      // Regular paragraph
+      result.push(
+        <p key={`p-${keyIndex++}`} className="my-1">
+          {parseInlineMarkdown(line, keyIndex)}
+        </p>
+      );
+    }
+
+    return result;
+  }, [content]);
+
+  return <>{segments}</>;
+}
+
+/**
+ * Parse inline markdown (bold, italic) in a line of text.
+ */
+function parseInlineMarkdown(text: string, baseKey: number): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let partIndex = 0;
+
+  // Pattern for **bold** and *italic*
+  const pattern = /(\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  // biome-ignore lint/suspicious/noAssignInExpressions: regex exec loop pattern
+  while ((match = pattern.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    // Add formatted text
+    if (match[2]) {
+      // Bold
+      parts.push(
+        <strong key={`bold-${baseKey}-${partIndex++}`} className="font-semibold text-stone-700 dark:text-stone-300">
+          {match[2]}
+        </strong>
+      );
+    } else if (match[3]) {
+      // Italic
+      parts.push(
+        <em key={`italic-${baseKey}-${partIndex++}`} className="italic">
+          {match[3]}
+        </em>
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
 }
 
 // ============================================
@@ -712,22 +941,16 @@ function ThoughtBlockComponent({ block }: { block: ThoughtBlock }) {
 function StreamingReasoning({
   text,
   isStreaming = false,
-  toolCalls = [],
+  reducedMotion = false,
 }: {
   text: string;
   isStreaming?: boolean;
-  toolCalls?: ToolCall[];
+  reducedMotion?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Parse text into semantic blocks
-  const blocks = useMemo(() => parseThoughtBlocks(text), [text]);
-
-  // Get pending tool calls to show inline
-  const pendingTools = useMemo(
-    () => toolCalls.filter((tc) => tc.status === "pending"),
-    [toolCalls]
-  );
+  // Parse text into semantic sections
+  const sections = useMemo(() => parseThoughtSections(text, isStreaming), [text, isStreaming]);
 
   // Auto-scroll to bottom as new text streams in
   // biome-ignore lint/correctness/useExhaustiveDependencies: text changes trigger scroll
@@ -740,37 +963,19 @@ function StreamingReasoning({
   return (
     <div
       ref={containerRef}
-      className="max-h-80 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-750 p-4"
+      className="max-h-96 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-750 p-3"
       aria-live="polite"
       aria-atomic="false"
       aria-relevant="additions"
     >
-      {blocks.length > 0 ? (
-        <>
-          {blocks.map((block) => (
-            <ThoughtBlockComponent key={block.key} block={block} />
-          ))}
-
-          {/* Show pending tool calls inline at the end */}
-          {pendingTools.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {pendingTools.map((tool) => (
-                <span
-                  key={tool.toolCallId}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-mono"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  {tool.toolName}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Streaming cursor */}
-          {isStreaming && (
-            <span className="inline-block w-0.5 h-4 bg-amber-500 ml-0.5 animate-blink align-text-bottom" />
-          )}
-        </>
+      {sections.length > 0 ? (
+        sections.map((section) => (
+          <ThoughtSectionComponent
+            key={section.key}
+            section={section}
+            reducedMotion={reducedMotion}
+          />
+        ))
       ) : (
         <span className="text-stone-400 italic">No reasoning output yet...</span>
       )}
@@ -1000,7 +1205,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
           <StreamingReasoning
             text={state.reasoningText}
             isStreaming={isStreaming}
-            toolCalls={state.toolCalls}
+            reducedMotion={reducedMotion}
           />
         </CollapsibleSection>
 

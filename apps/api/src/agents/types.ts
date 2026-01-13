@@ -130,8 +130,9 @@ export interface AgentStreamChunk {
 
 /**
  * Callback type for streaming chunk emission.
+ * Supports both sync and async callbacks.
  */
-export type OnStreamChunk = (chunk: AgentStreamChunk) => void;
+export type OnStreamChunk = (chunk: AgentStreamChunk) => void | Promise<void>;
 
 /**
  * Context for Idea Agent

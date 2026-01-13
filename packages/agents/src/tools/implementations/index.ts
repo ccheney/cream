@@ -18,10 +18,7 @@ export {
   analyzeContent,
   type ExtractNewsContextParams,
   type ExtractNewsContextResult,
-  type ExtractTranscriptParams,
-  type ExtractTranscriptResult,
   extractNewsContext,
-  extractTranscript,
 } from "./externalContext.js";
 export { getEconomicCalendar, searchNews } from "./fmp.js";
 export {

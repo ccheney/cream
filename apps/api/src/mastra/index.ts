@@ -62,8 +62,9 @@ export const mastra = new Mastra({
     ],
     // Externalize packages resolved at runtime (exact names, no globs)
     externals: [
-      // Protobuf packages - proto has no JS, schema-gen is pre-compiled
+      // Protobuf packages - proto has no JS, schema/schema-gen are pre-compiled
       "@cream/proto",
+      "@cream/schema",
       "@cream/schema-gen",
       "@bufbuild/protobuf",
       "@connectrpc/connect",

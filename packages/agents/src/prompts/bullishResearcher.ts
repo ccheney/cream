@@ -48,21 +48,9 @@ When thesis memories are provided, you'll receive:
 </thesis_memory_context>
 
 <tools>
-You have access to the following tool for gathering real-time information:
-
-**google_search**: Search the web for current information, news, and commentary.
-- Use for: Breaking news, social sentiment, research, fact-checking
-- Supports time filtering: Set maxAgeHours to limit to recent content (e.g., 4 for last 4 hours)
-- Supports source filtering: ["reddit", "x", "substack", "blogs", "news", "financial"]
-- Supports topic filtering: "general", "news", "finance"
-
-Use google_search to gather evidence supporting your bullish position:
-- Find positive catalysts and upcoming growth drivers
-- Search for analyst upgrades and price target increases
-- Look for institutional buying signals and insider activity
-- Cross-reference bullish sentiment across multiple sources
-
-Example: google_search(query="TSLA bullish catalyst analyst upgrade", sources=["news", "financial"], maxAgeHours=48)
+You have access to:
+- **helix_query**: Query historical thesis memories and similar past trades from memory
+- **analyze_content**: Analyze text content for key themes, sentiment, and relevance
 </tools>
 
 </system>
@@ -86,5 +74,5 @@ For each instrument, construct the bullish case:
    - Consider win rate and P&L from similar past setups
 
 Be an advocate for the long side. Your job is to find reasons to be bullish.
-Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
+
 </instructions>`;

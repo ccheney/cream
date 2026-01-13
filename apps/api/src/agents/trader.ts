@@ -96,45 +96,16 @@ FACTOR ZOO SIGNALS:
 
 /**
  * Process stream chunks and emit via callback.
- * Handles Gemini grounding sources as google_search tool calls for UI visibility.
+ * Handles standard Mastra agent stream chunk types.
  */
-function processStreamChunk(
-  chunk: { type: string; payload?: Record<string, unknown>; [key: string]: unknown },
+async function processStreamChunk(
+  chunk: { type: string; payload?: Record<string, unknown> },
   agentType: AgentType,
   onChunk: OnStreamChunk
-): void {
+): Promise<void> {
   const timestamp = new Date().toISOString();
-
-  // Handle Gemini grounding source chunks as google_search tool calls
-  if (chunk.type === "source" && chunk.sourceType === "url") {
-    const sourceId = (chunk.id as string) ?? `source-${Date.now()}`;
-
-    onChunk({
-      type: "tool-call",
-      agentType,
-      payload: {
-        toolName: "google_search",
-        toolCallId: sourceId,
-        toolArgs: { query: chunk.title as string },
-      },
-      timestamp,
-    });
-
-    onChunk({
-      type: "tool-result",
-      agentType,
-      payload: {
-        toolCallId: sourceId,
-        toolName: "google_search",
-        result: { title: chunk.title, url: chunk.url, sourceType: chunk.sourceType },
-        success: true,
-      },
-      timestamp,
-    });
-    return;
-  }
-
   const payload = chunk.payload ?? {};
+
   const streamChunk: AgentStreamChunk = {
     type: chunk.type as AgentStreamChunk["type"],
     agentType,
@@ -145,28 +116,29 @@ function processStreamChunk(
   switch (chunk.type) {
     case "text-delta":
       streamChunk.payload.text = payload.text as string;
-      onChunk(streamChunk);
+      await onChunk(streamChunk);
       break;
     case "tool-call":
       streamChunk.payload.toolName = payload.toolName as string;
       streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
       streamChunk.payload.toolCallId = payload.toolCallId as string;
-      onChunk(streamChunk);
+      await onChunk(streamChunk);
       break;
     case "tool-result":
       streamChunk.payload.toolCallId = payload.toolCallId as string;
+      streamChunk.payload.toolName = payload.toolName as string;
       streamChunk.payload.result = payload.result;
       streamChunk.payload.success = true;
-      onChunk(streamChunk);
+      await onChunk(streamChunk);
       break;
     case "reasoning-delta":
       streamChunk.payload.text = payload.text as string;
-      onChunk(streamChunk);
+      await onChunk(streamChunk);
       break;
     case "error":
       streamChunk.payload.error =
         payload.error instanceof Error ? payload.error.message : String(payload.error);
-      onChunk(streamChunk);
+      await onChunk(streamChunk);
       break;
   }
 }
@@ -218,7 +190,7 @@ FACTOR ZOO SIGNALS:
   const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
 
   for await (const chunk of stream.fullStream) {
-    processStreamChunk(
+    await processStreamChunk(
       chunk as { type: string; payload: Record<string, unknown> },
       "trader",
       onChunk

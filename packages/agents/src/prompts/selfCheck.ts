@@ -73,6 +73,4 @@ If errors found:
 - List all errors with paths
 - Attempt to provide corrected_json if errors are fixable
 - If unfixable, set valid=false with clear error list
-
-Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;

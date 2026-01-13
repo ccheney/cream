@@ -14,5 +14,13 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
     "Aware of sentiment duration dynamics",
     "Cross-references multiple sources",
   ],
-  tools: ["news_search", "extract_news_context", "analyze_content", "helix_query", "google_search"],
+  tools: [
+    "news_search",
+    "extract_news_context",
+    "analyze_content",
+    "helix_query",
+    "google_search",
+    "get_prediction_signals",
+    "get_market_snapshots",
+  ],
 };

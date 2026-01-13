@@ -94,9 +94,6 @@ const result = await agent.callTool("graphrag_query", {
 - `companies` - Discovered companies via graph traversal
 - `executionTimeMs` - Query execution time
 
-**Note:** This tool replaces the deprecated `extract_transcript` tool. See
-`docs/plans/34-graphrag-query-tool.md` for migration details.
-
 ## Quality Scoring
 
 ### Pre-Execution

@@ -10,7 +10,7 @@ import { createContext, requireEnv } from "@cream/domain";
 import { EventTypeSchema, ExtractionResultSchema } from "@cream/external-context";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { analyzeContent, extractNewsContext, extractTranscript } from "../implementations/index.js";
+import { analyzeContent, extractNewsContext } from "../implementations/index.js";
 
 /**
  * Create ExecutionContext for tool invocation.
@@ -123,86 +123,6 @@ Requires FMP_KEY for news fetching.`,
 });
 
 // ============================================
-// Extract Transcript Tool
-// ============================================
-
-const ExtractTranscriptInputSchema = z.object({
-  symbol: z.string().describe("Stock symbol (e.g., 'AAPL')"),
-  year: z.number().min(2000).max(2030).describe("Fiscal year"),
-  quarter: z.number().min(1).max(4).describe("Fiscal quarter (1-4)"),
-  dryRun: z.boolean().optional().describe("Skip LLM calls for testing (default: false)"),
-});
-
-const ExtractTranscriptOutputSchema = z.object({
-  event: ExtractedEventSchema.nullable(),
-  stats: StatsSchema,
-});
-
-type ExtractTranscriptOutput = z.infer<typeof ExtractTranscriptOutputSchema>;
-
-export const extractTranscriptTool = createTool({
-  id: "extract_transcript",
-  description: `[DEPRECATED - Use graphrag_query instead]
-
-This tool requires FMP Ultimate tier subscription ($149/month) and is narrowly
-scoped to single company/quarter queries. Use graphrag_query for unified semantic
-search across filings, transcripts, news, and events with graph traversal.
-
-See docs/plans/34-graphrag-query-tool.md for migration details.
-
----
-
-Deep extraction and analysis of earnings call transcripts.
-
-Use this tool when you need to analyze earnings calls for:
-- Executive sentiment and tone analysis
-- Guidance changes and forward-looking statements
-- Key metrics mentioned (revenue, margins, growth rates)
-- Event classification (earnings beat/miss, guidance change, etc.)
-- Important insights from Q&A sections
-
-Extracts and scores the full transcript:
-- Parses speaker segments (CEO, CFO, analysts)
-- Identifies key financial metrics and guidance
-- Scores sentiment, importance, and surprise vs expectations
-- Links mentioned entities to ticker symbols
-
-Requires FMP_KEY for transcript fetching.`,
-  inputSchema: ExtractTranscriptInputSchema,
-  outputSchema: ExtractTranscriptOutputSchema,
-  execute: async (inputData): Promise<ExtractTranscriptOutput> => {
-    const ctx = createToolContext();
-    const result = await extractTranscript(ctx, {
-      symbol: inputData.symbol,
-      year: inputData.year,
-      quarter: inputData.quarter,
-      dryRun: inputData.dryRun,
-    });
-    // Throw on error so mastra can handle it
-    if (result.error) {
-      throw new Error(result.error);
-    }
-    // Convert Date objects to ISO strings for JSON serialization
-    return {
-      event: result.event
-        ? {
-            eventId: result.event.eventId,
-            sourceType: result.event.sourceType,
-            eventType: result.event.eventType,
-            eventTime: result.event.eventTime.toISOString(),
-            extraction: result.event.extraction,
-            scores: result.event.scores,
-            relatedInstrumentIds: result.event.relatedInstrumentIds,
-            originalContent: result.event.originalContent,
-            processedAt: result.event.processedAt.toISOString(),
-          }
-        : null,
-      stats: result.stats,
-    };
-  },
-});
-
-// ============================================
 // Analyze Content Tool
 // ============================================
 
@@ -275,6 +195,4 @@ export {
   ExtractedEventSchema,
   ExtractNewsContextInputSchema,
   ExtractNewsContextOutputSchema,
-  ExtractTranscriptInputSchema,
-  ExtractTranscriptOutputSchema,
 };

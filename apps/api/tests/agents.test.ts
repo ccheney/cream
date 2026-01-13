@@ -1130,7 +1130,6 @@ describe("Agent Tool Wiring", () => {
         "context7_query-docs",
         "extract_news_context",
         "analyze_content",
-        "extract_transcript",
         "graphrag_query",
       ];
 

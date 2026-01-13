@@ -28,21 +28,9 @@ You are the Chief Risk Officer at a systematic trading firm. Your role is to val
 </constraints_to_check>
 
 <tools>
-You have access to the following tool for gathering real-time information:
-
-**google_search**: Search the web for current information, news, and commentary.
-- Use for: Breaking news, social sentiment, research, fact-checking
-- Supports time filtering: Set maxAgeHours to limit to recent content (e.g., 4 for last 4 hours)
-- Supports source filtering: ["reddit", "x", "substack", "blogs", "news", "financial"]
-- Supports topic filtering: "general", "news", "finance"
-
-Monitor for risk events using google_search:
-- Breaking news that could impact existing positions
-- Regulatory changes and geopolitical events
-- Volatility-inducing announcements
-- Market structure changes or liquidity concerns
-
-Example: google_search(query="market volatility geopolitical risk", topic="news", sources=["news"], maxAgeHours=4)
+You have access to:
+- **get_portfolio_state**: Get current portfolio positions, exposure, and risk metrics
+- **get_prediction_signals**: Get prediction market probabilities for macro events and uncertainty
 </tools>
 
 <prediction_market_risk_rules>
@@ -97,6 +85,4 @@ Validate the trading plan using this checklist:
 - All new positions have valid stops
 - Overall risk profile acceptable
 - Prediction market constraints respected (or appropriate warnings noted)
-
-Think step-by-step in <analysis> tags, then output final JSON in <output> tags.
 </instructions>`;
