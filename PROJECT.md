@@ -214,7 +214,7 @@ cream/
 │   ├── indicators/                 # Technical indicators (RSI, ATR, SMA)
 │   ├── regime/                     # Market regime classification
 │   ├── metrics/                    # Risk-adjusted performance metrics
-│   ├── mastra-kit/                 # 8 agents, 30+ tools, consensus gate
+│   ├── agents/                 # 8 agents, 30+ tools, consensus gate
 │   ├── external-context/           # News/sentiment extraction pipeline
 │   ├── filings/                    # SEC EDGAR filing ingestion
 │   ├── prediction-markets/         # Kalshi/Polymarket integration
@@ -332,7 +332,7 @@ Rust gRPC server for deterministic order validation and routing.
 
 | Package | Purpose |
 |---------|---------|
-| `@cream/mastra-kit` | 9 agents, 30+ tools, dual-approval consensus |
+| `@cream/agents` | 9 agents, 30+ tools, dual-approval consensus |
 | `@cream/external-context` | Claude extraction pipeline for news/sentiment |
 | `@cream/filings` | SEC EDGAR ingestion (10-K, 10-Q, 8-K) |
 | `@cream/prediction-markets` | Kalshi/Polymarket clients, arbitrage detection |
@@ -522,7 +522,7 @@ flowchart LR
 | Critical | execution-engine, broker, domain | 90% |
 | Core | indicators, helix, schema | 80% |
 | Standard | api, research | 70% |
-| Agent | mastra-kit | 60% |
+| Agent | agents | 60% |
 
 ---
 

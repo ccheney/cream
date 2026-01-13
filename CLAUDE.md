@@ -41,7 +41,7 @@ packages/
   indicators/           # Technical indicators (RSI, ATR, SMA)
   regime/               # Market regime classification
   metrics/              # Risk-adjusted performance metrics
-  mastra-kit/           # Agent prompts, tools, evaluations
+  agents/           # Agent prompts, tools, evaluations
   external-context/     # News, sentiment, fundamentals extraction
   filings/              # SEC EDGAR filing ingestion (10-K, 10-Q, 8-K)
   prediction-markets/   # Kalshi integration
