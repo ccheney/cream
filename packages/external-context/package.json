@@ -15,7 +15,6 @@
     "format": "biome format --write src/ tests/"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/helix": "workspace:*",

@@ -1,47 +1,43 @@
 /**
  * Extraction Client
  *
- * Uses LLM with tool use to extract structured data from unstructured text content.
+ * Uses LLM function calling to extract structured data from
+ * unstructured text content (news, transcripts, etc.).
  *
- * TODO: Migrate from Anthropic SDK to Gemini SDK to use global model.
- * Currently uses Claude for extraction due to tool use API compatibility.
- * When migrating, update to use @google/generative-ai with function calling.
+ * Uses the global model configuration from @cream/domain.
  *
- * @see trading_config.global_model for target model selection
+ * Implements IExtractionClient from @cream/external-context for
+ * dependency injection into the extraction pipeline.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import type { Tool, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages.js";
-import { DEFAULT_GLOBAL_MODEL } from "@cream/domain";
-import { type ContentSourceType, type ExtractionResult, ExtractionResultSchema } from "../types.js";
+import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
+import {
+  type ContentSourceType,
+  type ExtractionResult,
+  ExtractionResultSchema,
+  type IExtractionClient,
+} from "@cream/external-context";
+import {
+  FunctionCallingConfigMode,
+  type FunctionDeclaration,
+  GoogleGenAI,
+  Type,
+} from "@google/genai";
 
 /**
- * Extraction client configuration
+ * Gemini extraction client configuration
  */
 export interface ExtractionClientConfig {
-  /** Anthropic API key */
+  /** Google API key (defaults to GOOGLE_API_KEY env var) */
   apiKey?: string;
-  /**
-   * Model to use
-   * TODO: Currently ignored - uses Claude. Migrate to Gemini to use global model.
-   */
-  model?: string;
-  /** Maximum tokens for response (default: 2048) */
-  maxTokens?: number;
-  /** Temperature for extraction (default: 0.1 for consistency) */
-  temperature?: number;
+  /** Model to use (defaults to global model) */
+  model?: GlobalModel;
   /** Request timeout in ms (default: 60000) */
   timeout?: number;
 }
 
-/**
- * TODO: Migrate to Gemini. Currently uses Claude for tool use compatibility.
- */
-const DEFAULT_CONFIG: Required<ExtractionClientConfig> = {
-  apiKey: "",
-  model: DEFAULT_GLOBAL_MODEL, // Target model (not yet used - still on Claude)
-  maxTokens: 2048,
-  temperature: 0.1,
+const DEFAULT_CONFIG: Required<Omit<ExtractionClientConfig, "apiKey">> = {
+  model: DEFAULT_GLOBAL_MODEL,
   timeout: 60000,
 };
 
@@ -58,7 +54,7 @@ Extract structured information focusing on:
 - How urgent/important this news is for trading decisions
 
 Be precise with numbers and entity names. If information is unclear, mark confidence lower.
-You MUST use the submit_extraction tool to provide your analysis.`,
+You MUST use the submit_extraction function to provide your analysis.`,
 
   press_release: `You are analyzing a corporate press release.
 Extract structured information focusing on:
@@ -69,7 +65,7 @@ Extract structured information focusing on:
 - Strategic importance to investors
 
 Press releases are official sources - extract exact figures when provided.
-You MUST use the submit_extraction tool to provide your analysis.`,
+You MUST use the submit_extraction function to provide your analysis.`,
 
   transcript: `You are analyzing an earnings call transcript.
 Extract structured information focusing on:
@@ -80,7 +76,7 @@ Extract structured information focusing on:
 - Confidence level and any cautionary language
 
 Pay attention to forward-looking statements and guidance changes.
-You MUST use the submit_extraction tool to provide your analysis.`,
+You MUST use the submit_extraction function to provide your analysis.`,
 
   macro: `You are analyzing macroeconomic data or central bank communications.
 Extract structured information focusing on:
@@ -91,62 +87,63 @@ Extract structured information focusing on:
 - Market impact significance
 
 Focus on data-driven insights and policy implications.
-You MUST use the submit_extraction tool to provide your analysis.`,
+You MUST use the submit_extraction function to provide your analysis.`,
 };
 
 /**
- * Tool definition for extraction
+ * Function declaration for extraction tool
  */
-const EXTRACTION_TOOL: Tool = {
+const EXTRACTION_FUNCTION: FunctionDeclaration = {
   name: "submit_extraction",
   description: "Submit the structured extraction results from the analyzed content",
-  input_schema: {
-    type: "object" as const,
+  parameters: {
+    type: Type.OBJECT,
     properties: {
       sentiment: {
-        type: "string",
+        type: Type.STRING,
         enum: ["bullish", "bearish", "neutral"],
         description: "Overall sentiment of the content",
       },
       confidence: {
-        type: "number",
-        minimum: 0,
-        maximum: 1,
+        type: Type.NUMBER,
         description: "Confidence in sentiment classification (0-1)",
       },
       entities: {
-        type: "array",
+        type: Type.ARRAY,
         items: {
-          type: "object",
+          type: Type.OBJECT,
           properties: {
-            name: { type: "string", description: "The entity name as it appears in the text" },
+            name: { type: Type.STRING, description: "The entity name as it appears in the text" },
             type: {
-              type: "string",
+              type: Type.STRING,
               enum: ["company", "person", "product", "event", "location"],
               description: "The category of entity",
             },
-            ticker: { type: "string", description: "Stock ticker if applicable" },
+            ticker: { type: Type.STRING, description: "Stock ticker if applicable" },
           },
           required: ["name", "type"],
         },
         description: "Entities mentioned in the content",
       },
       dataPoints: {
-        type: "array",
+        type: Type.ARRAY,
         items: {
-          type: "object",
+          type: Type.OBJECT,
           properties: {
-            metric: { type: "string", description: "The metric name (e.g., revenue, growth rate)" },
-            value: { type: "number", description: "The numeric value" },
-            unit: { type: "string", description: "The unit of measurement" },
-            period: { type: "string", description: "Time period if applicable (e.g., Q1 2026)" },
+            metric: {
+              type: Type.STRING,
+              description: "The metric name (e.g., revenue, growth rate)",
+            },
+            value: { type: Type.NUMBER, description: "The numeric value" },
+            unit: { type: Type.STRING, description: "The unit of measurement" },
+            period: { type: Type.STRING, description: "Time period if applicable (e.g., Q1 2026)" },
           },
           required: ["metric", "value", "unit"],
         },
         description: "Numeric data points extracted",
       },
       eventType: {
-        type: "string",
+        type: Type.STRING,
         enum: [
           "earnings",
           "guidance",
@@ -166,18 +163,16 @@ const EXTRACTION_TOOL: Tool = {
         description: "Primary event type classification",
       },
       importance: {
-        type: "number",
-        minimum: 1,
-        maximum: 5,
+        type: Type.NUMBER,
         description: "Importance/urgency on 1-5 scale",
       },
       summary: {
-        type: "string",
+        type: Type.STRING,
         description: "Brief summary of the content (1-2 sentences)",
       },
       keyInsights: {
-        type: "array",
-        items: { type: "string" },
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
         description: "Key actionable insights (max 3)",
       },
     },
@@ -195,24 +190,24 @@ const EXTRACTION_TOOL: Tool = {
 };
 
 /**
- * Client for extracting structured data using Claude
+ * Gemini-based extraction client implementing IExtractionClient
  */
-export class ExtractionClient {
-  private client: Anthropic;
-  private config: Required<ExtractionClientConfig>;
+export class ExtractionClient implements IExtractionClient {
+  private client: GoogleGenAI;
+  private model: GlobalModel;
 
   constructor(config: ExtractionClientConfig = {}) {
-    const apiKey = config.apiKey || process.env.ANTHROPIC_API_KEY || "";
-    this.config = { ...DEFAULT_CONFIG, ...config, apiKey };
+    const apiKey = config.apiKey ?? process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      throw new Error("GOOGLE_API_KEY environment variable not set");
+    }
 
-    this.client = new Anthropic({
-      apiKey: this.config.apiKey,
-      timeout: this.config.timeout,
-    });
+    this.client = new GoogleGenAI({ apiKey });
+    this.model = config.model ?? DEFAULT_CONFIG.model;
   }
 
   /**
-   * Extract structured data from content using Claude
+   * Extract structured data from content using Gemini function calling
    */
   async extract(
     content: string,
@@ -234,34 +229,39 @@ export class ExtractionClient {
 
     userMessage += `Content:\n${content}\n\n`;
     userMessage +=
-      "Analyze this content and use the submit_extraction tool to provide your structured analysis.";
+      "Analyze this content and use the submit_extraction function to provide your structured analysis.";
 
-    // Call Claude with tool use
-    const response = await this.client.messages.create({
-      model: this.config.model,
-      max_tokens: this.config.maxTokens,
-      temperature: this.config.temperature,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
-      tools: [EXTRACTION_TOOL],
-      tool_choice: { type: "tool", name: "submit_extraction" },
+    // Call Gemini with function calling
+    const response = await this.client.models.generateContent({
+      model: this.model,
+      contents: userMessage,
+      config: {
+        systemInstruction: systemPrompt,
+        tools: [{ functionDeclarations: [EXTRACTION_FUNCTION] }],
+        toolConfig: {
+          functionCallingConfig: {
+            mode: FunctionCallingConfigMode.ANY,
+            allowedFunctionNames: ["submit_extraction"],
+          },
+        },
+      },
     });
 
-    // Find the tool use block
-    for (const block of response.content) {
-      if (block.type === "tool_use" && block.name === "submit_extraction") {
-        const toolBlock = block as ToolUseBlock;
+    // Extract function call result
+    if (response.functionCalls && response.functionCalls.length > 0) {
+      const functionCall = response.functionCalls[0];
+      if (functionCall?.name === "submit_extraction" && functionCall.args) {
         // Validate with Zod schema
-        const parsed = ExtractionResultSchema.safeParse(toolBlock.input);
+        const parsed = ExtractionResultSchema.safeParse(functionCall.args);
         if (parsed.success) {
           return parsed.data;
         }
         // If validation fails, try to use the raw input with defaults
-        return this.sanitizeExtraction(toolBlock.input as Record<string, unknown>);
+        return this.sanitizeExtraction(functionCall.args as Record<string, unknown>);
       }
     }
 
-    // Fallback: return a minimal extraction if tool wasn't called
+    // Fallback: return a minimal extraction if function wasn't called
     return this.createFallbackExtraction(content);
   }
 
@@ -282,33 +282,7 @@ export class ExtractionClient {
   }
 
   /**
-   * Extract from multiple content items (batched)
-   */
-  async extractBatch(
-    items: Array<{
-      content: string;
-      sourceType: ContentSourceType;
-      metadata?: Record<string, unknown>;
-    }>,
-    concurrency = 3
-  ): Promise<Array<ExtractionResult | Error>> {
-    const results: Array<ExtractionResult | Error> = [];
-
-    // Process in batches to respect rate limits
-    for (let i = 0; i < items.length; i += concurrency) {
-      const batch = items.slice(i, i + concurrency);
-      const batchPromises = batch.map((item) =>
-        this.extract(item.content, item.sourceType, item.metadata).catch((err) => err as Error)
-      );
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults);
-    }
-
-    return results;
-  }
-
-  /**
-   * Create a fallback extraction when Claude doesn't use the tool
+   * Create a fallback extraction when Gemini doesn't call the function
    */
   private createFallbackExtraction(content: string): ExtractionResult {
     return {
@@ -324,16 +298,18 @@ export class ExtractionClient {
   }
 
   /**
-   * Test connection to Claude API
+   * Test connection to Gemini API
    */
   async testConnection(): Promise<boolean> {
     try {
-      const response = await this.client.messages.create({
-        model: this.config.model,
-        max_tokens: 10,
-        messages: [{ role: "user", content: "Hello" }],
+      const response = await this.client.models.generateContent({
+        model: this.model,
+        contents: "Hello",
+        config: {
+          maxOutputTokens: 10,
+        },
       });
-      return response.content.length > 0;
+      return (response.text?.length ?? 0) > 0;
     } catch {
       return false;
     }
@@ -341,7 +317,7 @@ export class ExtractionClient {
 }
 
 /**
- * Create extraction client with environment configuration
+ * Create Gemini extraction client with environment configuration
  */
 export function createExtractionClient(config?: ExtractionClientConfig): ExtractionClient {
   return new ExtractionClient(config);

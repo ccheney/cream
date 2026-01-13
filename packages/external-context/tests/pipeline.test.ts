@@ -3,12 +3,36 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { FMPNewsArticle } from "../src/index.js";
+import type { FMPNewsArticle, IExtractionClient } from "../src/index.js";
 import { createExtractionPipeline, ExtractionPipeline } from "../src/index.js";
+
+/**
+ * Mock extraction client for testing
+ */
+const mockExtractionClient: IExtractionClient = {
+  async extract() {
+    return {
+      sentiment: "neutral" as const,
+      confidence: 0.5,
+      entities: [],
+      dataPoints: [],
+      eventType: "other" as const,
+      importance: 3,
+      summary: "Test summary",
+      keyInsights: [],
+    };
+  },
+  async testConnection() {
+    return true;
+  },
+};
 
 describe("ExtractionPipeline", () => {
   describe("Dry Run Mode", () => {
-    const pipeline = createExtractionPipeline({ dryRun: true });
+    const pipeline = createExtractionPipeline({
+      extractionClient: mockExtractionClient,
+      dryRun: true,
+    });
 
     it("should process content in dry run mode", async () => {
       const event = await pipeline.processContent(
@@ -72,6 +96,7 @@ describe("ExtractionPipeline", () => {
   describe("Pipeline Configuration", () => {
     it("should create pipeline with target symbols", () => {
       const pipeline = createExtractionPipeline({
+        extractionClient: mockExtractionClient,
         targetSymbols: ["AAPL", "MSFT", "GOOGL"],
         dryRun: true,
       });
@@ -81,6 +106,7 @@ describe("ExtractionPipeline", () => {
 
     it("should create pipeline with expectations", () => {
       const pipeline = createExtractionPipeline({
+        extractionClient: mockExtractionClient,
         expectations: [
           { metric: "revenue", expectedValue: 100 },
           { metric: "eps", expectedValue: 2.5 },
@@ -92,20 +118,29 @@ describe("ExtractionPipeline", () => {
     });
 
     it("should expose extraction client", () => {
-      const pipeline = createExtractionPipeline({ dryRun: true });
+      const pipeline = createExtractionPipeline({
+        extractionClient: mockExtractionClient,
+        dryRun: true,
+      });
       const client = pipeline.getExtractionClient();
       expect(client).toBeDefined();
     });
 
     it("should expose entity linker", () => {
-      const pipeline = createExtractionPipeline({ dryRun: true });
+      const pipeline = createExtractionPipeline({
+        extractionClient: mockExtractionClient,
+        dryRun: true,
+      });
       const linker = pipeline.getEntityLinker();
       expect(linker).toBeDefined();
     });
   });
 
   describe("Pipeline Results", () => {
-    const pipeline = createExtractionPipeline({ dryRun: true });
+    const pipeline = createExtractionPipeline({
+      extractionClient: mockExtractionClient,
+      dryRun: true,
+    });
 
     it("should track processing stats", async () => {
       const articles: FMPNewsArticle[] = [
@@ -141,7 +176,10 @@ describe("ExtractionPipeline", () => {
   });
 
   describe("Source Type Handling", () => {
-    const pipeline = createExtractionPipeline({ dryRun: true });
+    const pipeline = createExtractionPipeline({
+      extractionClient: mockExtractionClient,
+      dryRun: true,
+    });
 
     it("should handle news source type", async () => {
       const event = await pipeline.processContent("Breaking news about tech stocks.", "news");

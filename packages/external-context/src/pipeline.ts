@@ -3,10 +3,13 @@
  *
  * Orchestrates the multi-stage extraction pipeline:
  * Raw Feed → Parse → Extract → Score → Link → Store
+ *
+ * Uses dependency injection for the extraction client - pass an
+ * IExtractionClient implementation (e.g., GeminiExtractionClient
+ * from @cream/agents) via the config.
  */
 
 import { randomUUID } from "node:crypto";
-import { ExtractionClient, type ExtractionClientConfig } from "./extraction/index.js";
 import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
 import {
   parseAlphaVantageIndicator,
@@ -28,6 +31,7 @@ import type {
   ExtractionResult,
   FMPNewsArticle,
   FMPTranscript,
+  IExtractionClient,
   ParsedMacroRelease,
   ParsedTranscript,
 } from "./types.js";
@@ -36,8 +40,8 @@ import type {
  * Pipeline configuration
  */
 export interface PipelineConfig {
-  /** Extraction client config */
-  extraction?: ExtractionClientConfig;
+  /** Extraction client (required - uses dependency injection) */
+  extractionClient: IExtractionClient;
   /** Entity linker config */
   linking?: EntityLinkerConfig;
   /** Target symbols for relevance scoring */
@@ -67,13 +71,13 @@ export interface PipelineResult {
  * External context extraction pipeline
  */
 export class ExtractionPipeline {
-  private extractionClient: ExtractionClient;
+  private extractionClient: IExtractionClient;
   private entityLinker: EntityLinker;
   private config: PipelineConfig;
 
-  constructor(config: PipelineConfig = {}) {
+  constructor(config: PipelineConfig) {
     this.config = config;
-    this.extractionClient = new ExtractionClient(config.extraction);
+    this.extractionClient = config.extractionClient;
     this.entityLinker = new EntityLinker(config.linking);
   }
 
@@ -154,7 +158,7 @@ export class ExtractionPipeline {
     symbols?: string[]
   ): Promise<ExtractedEvent | null> {
     try {
-      // Stage 1: Extract using Claude
+      // Stage 1: Extract using LLM
       const extraction = this.config.dryRun
         ? this.createDryRunExtraction(content)
         : await this.extractionClient.extract(content, sourceType);
@@ -286,7 +290,7 @@ export class ExtractionPipeline {
   /**
    * Get extraction client for direct use
    */
-  getExtractionClient(): ExtractionClient {
+  getExtractionClient(): IExtractionClient {
     return this.extractionClient;
   }
 
@@ -299,8 +303,8 @@ export class ExtractionPipeline {
 }
 
 /**
- * Create extraction pipeline with environment configuration
+ * Create extraction pipeline with required extraction client
  */
-export function createExtractionPipeline(config?: PipelineConfig): ExtractionPipeline {
+export function createExtractionPipeline(config: PipelineConfig): ExtractionPipeline {
   return new ExtractionPipeline(config);
 }

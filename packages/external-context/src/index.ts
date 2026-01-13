@@ -5,16 +5,19 @@
  *
  * Pipeline stages:
  * 1. Parse: Raw feeds → normalized format
- * 2. Extract: Claude Structured Outputs → structured data
+ * 2. Extract: LLM structured outputs → structured data (via injected IExtractionClient)
  * 3. Score: Sentiment, importance, surprise scores
  * 4. Link: Entity names → ticker symbols
  * 5. Store: Events ready for HelixDB storage
  *
  * @example
  * ```typescript
+ * import { createExtractionClient } from "@cream/agents";
  * import { createExtractionPipeline } from "@cream/external-context";
  *
+ * const extractionClient = createExtractionClient();
  * const pipeline = createExtractionPipeline({
+ *   extractionClient,
  *   targetSymbols: ["AAPL", "MSFT", "GOOGL"],
  * });
  *
@@ -31,12 +34,6 @@ export {
   type SemanticScholarPaper,
   type SemanticScholarSearchResponse,
 } from "./academic/index.js";
-// Extraction
-export {
-  createExtractionClient,
-  ExtractionClient,
-  type ExtractionClientConfig,
-} from "./extraction/index.js";
 // HelixDB Integration
 export {
   type EventIngestionResult,
@@ -129,6 +126,8 @@ export type {
   // FMP types
   FMPNewsArticle,
   FMPTranscript,
+  // Extraction client interface (for DI)
+  IExtractionClient,
   ParsedMacroRelease,
   // Parser types
   ParsedNews,

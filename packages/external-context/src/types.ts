@@ -66,7 +66,7 @@ export interface ParsedMacroRelease {
 }
 
 // ============================================
-// Extraction Output Types (Claude Structured Outputs)
+// Extraction Output Types (LLM Structured Outputs)
 // ============================================
 
 /**
@@ -251,4 +251,30 @@ export interface FMPCompanySearch {
   currency: string;
   stockExchange: string;
   exchangeShortName: string;
+}
+
+// ============================================
+// Extraction Client Interface
+// ============================================
+
+/**
+ * Extraction client interface for dependency injection.
+ *
+ * Allows the pipeline to work with different LLM providers
+ * (Gemini, Claude, etc.) without hard-coding the implementation.
+ */
+export interface IExtractionClient {
+  /**
+   * Extract structured data from content
+   */
+  extract(
+    content: string,
+    sourceType: ContentSourceType,
+    metadata?: Record<string, unknown>
+  ): Promise<ExtractionResult>;
+
+  /**
+   * Test connection to the LLM provider
+   */
+  testConnection(): Promise<boolean>;
 }

@@ -2,7 +2,7 @@
  * External Context Tools
  *
  * Deep extraction pipeline for news, transcripts, and macro data
- * using structured outputs via @cream/external-context.
+ * using structured outputs via @cream/external-context with Gemini.
  */
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
@@ -14,6 +14,7 @@ import {
   type ExtractionResult,
   type PipelineResult,
 } from "@cream/external-context";
+import { createExtractionClient } from "../../extraction/index.js";
 import { getFMPClient } from "../clients.js";
 
 // ============================================
@@ -126,8 +127,10 @@ export async function extractNewsContext(
       url: item.url,
     }));
 
-    // Create pipeline with target symbols for relevance scoring
+    // Create extraction client and pipeline
+    const extractionClient = createExtractionClient();
     const pipeline = createExtractionPipeline({
+      extractionClient,
       targetSymbols: symbols,
       dryRun,
     });
@@ -217,8 +220,10 @@ export async function extractTranscript(
       },
     ];
 
-    // Create pipeline with target symbol
+    // Create extraction client and pipeline
+    const extractionClient = createExtractionClient();
     const pipeline = createExtractionPipeline({
+      extractionClient,
       targetSymbols: [symbol],
       dryRun,
     });
@@ -270,8 +275,10 @@ export async function analyzeContent(
   }
 
   try {
-    // Create pipeline
+    // Create extraction client and pipeline
+    const extractionClient = createExtractionClient();
     const pipeline = createExtractionPipeline({
+      extractionClient,
       targetSymbols: symbols,
       dryRun,
     });
