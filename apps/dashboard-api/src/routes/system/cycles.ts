@@ -8,7 +8,15 @@ import { tradingCycleWorkflow } from "@cream/api";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
-import { broadcastCycleProgress, broadcastCycleResult } from "../../websocket/handler.js";
+import {
+  broadcastAgentOutput,
+  broadcastAgentReasoning,
+  broadcastAgentTextDelta,
+  broadcastAgentToolCall,
+  broadcastAgentToolResult,
+  broadcastCycleProgress,
+  broadcastCycleResult,
+} from "../../websocket/handler.js";
 import {
   getLastTriggerTime,
   getRunningCycles,
@@ -204,12 +212,9 @@ app.openapi(triggerCycleRoute, async (c) => {
     try {
       emitProgress("observe", 10, "market_data", "Fetching market data...");
 
-      // Execute workflow with progress tracking
-      // Note: Workflow steps emit agent events via writer.write(), but dashboard-api
-      // currently uses synchronous execution. Full streaming can be enabled when
-      // Mastra 1.0 beta streaming API is finalized.
+      // Execute workflow with streaming - forward agent events to WebSocket
       const run = await tradingCycleWorkflow.createRun();
-      const runResult = await run.start({
+      const stream = await run.stream({
         inputData: {
           cycleId,
           instruments: symbols,
@@ -217,30 +222,197 @@ app.openapi(triggerCycleRoute, async (c) => {
         },
       });
 
-      if (runResult.status !== "success") {
+      // Map workflow agent types to WebSocket agent types
+      const agentTypeMap: Record<
+        string,
+        "news" | "fundamentals" | "bullish" | "bearish" | "trader" | "risk" | "critic"
+      > = {
+        news_analyst: "news",
+        fundamentals_analyst: "fundamentals",
+        bullish_researcher: "bullish",
+        bearish_researcher: "bearish",
+        trader: "trader",
+        risk_manager: "risk",
+        critic: "critic",
+      };
+
+      // Track workflow result
+      let workflowResult: {
+        cycleId: string;
+        approved: boolean;
+        iterations: number;
+        orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
+        mode: "STUB" | "LLM";
+        configVersion: string | null;
+      } | null = null;
+
+      // Process stream events
+      for await (const event of stream.fullStream) {
+        // Cast to access properties - Mastra runtime emits more event types than TS types declare
+        const evt = event as unknown as Record<string, unknown>;
+
+        // Handle custom agent events from writer.write()
+        if (
+          evt.type === "agent-start" ||
+          evt.type === "agent-chunk" ||
+          evt.type === "agent-complete" ||
+          evt.type === "agent-error"
+        ) {
+          const agentEvent = evt as {
+            type: string;
+            agent: string;
+            cycleId: string;
+            data?: { chunkType?: string; text?: string; output?: unknown };
+            error?: string;
+            timestamp: string;
+          };
+          const agentType = agentTypeMap[agentEvent.agent];
+          if (!agentType) {
+            continue;
+          }
+
+          const ts = agentEvent.timestamp ?? new Date().toISOString();
+
+          switch (agentEvent.type) {
+            case "agent-start":
+              broadcastAgentOutput({
+                type: "agent_output",
+                data: {
+                  cycleId,
+                  agentType,
+                  status: "running",
+                  output: `${agentType} agent started`,
+                  timestamp: ts,
+                },
+              });
+              break;
+
+            case "agent-chunk":
+              if (agentEvent.data?.chunkType === "text-delta" && agentEvent.data.text) {
+                broadcastAgentTextDelta({
+                  type: "agent_text_delta",
+                  data: {
+                    cycleId,
+                    agentType,
+                    text: agentEvent.data.text,
+                    timestamp: ts,
+                  },
+                });
+              } else if (agentEvent.data?.chunkType === "reasoning" && agentEvent.data.text) {
+                broadcastAgentReasoning({
+                  type: "agent_reasoning",
+                  data: {
+                    cycleId,
+                    agentType,
+                    text: agentEvent.data.text,
+                    timestamp: ts,
+                  },
+                });
+              } else if (agentEvent.data?.chunkType === "tool-call") {
+                broadcastAgentToolCall({
+                  type: "agent_tool_call",
+                  data: {
+                    cycleId,
+                    agentType,
+                    toolName: String(agentEvent.data.text ?? "unknown"),
+                    toolArgs: "{}",
+                    toolCallId: `tc_${Date.now()}`,
+                    timestamp: ts,
+                  },
+                });
+              } else if (agentEvent.data?.chunkType === "tool-result") {
+                broadcastAgentToolResult({
+                  type: "agent_tool_result",
+                  data: {
+                    cycleId,
+                    agentType,
+                    toolName: String(agentEvent.data.text ?? "unknown"),
+                    toolCallId: `tc_${Date.now()}`,
+                    resultSummary: JSON.stringify(agentEvent.data.output ?? {}).slice(0, 200),
+                    success: true,
+                    timestamp: ts,
+                  },
+                });
+              }
+              break;
+
+            case "agent-complete":
+              broadcastAgentOutput({
+                type: "agent_output",
+                data: {
+                  cycleId,
+                  agentType,
+                  status: "complete",
+                  output: JSON.stringify(agentEvent.data?.output ?? {}).slice(0, 500),
+                  timestamp: ts,
+                },
+              });
+              break;
+
+            case "agent-error":
+              broadcastAgentOutput({
+                type: "agent_output",
+                data: {
+                  cycleId,
+                  agentType,
+                  status: "error",
+                  output: agentEvent.error ?? "Unknown error",
+                  error: agentEvent.error,
+                  timestamp: ts,
+                },
+              });
+              break;
+          }
+        }
+
+        // Handle step completion events for progress updates
+        if (evt.type === "workflow-step-finish") {
+          const stepId = String((evt.payload as Record<string, unknown>)?.stepName ?? "");
+          const stepProgress: Record<string, { phase: CyclePhase; progress: number }> = {
+            observe: { phase: "observe", progress: 20 },
+            orient: { phase: "orient", progress: 30 },
+            analysts: { phase: "decide", progress: 45 },
+            debate: { phase: "decide", progress: 60 },
+            trader: { phase: "decide", progress: 75 },
+            consensus: { phase: "decide", progress: 90 },
+            act: { phase: "act", progress: 100 },
+          };
+          const stepInfo = stepProgress[stepId];
+          if (stepInfo) {
+            emitProgress(stepInfo.phase, stepInfo.progress, stepId, `Completed ${stepId} step`);
+          }
+        }
+
+        // Capture final result
+        if (evt.type === "workflow-finish") {
+          const payload = evt.payload as Record<string, unknown> | undefined;
+          if (payload?.result) {
+            workflowResult = payload.result as unknown as NonNullable<typeof workflowResult>;
+          }
+        }
+      }
+
+      // Check stream status for success
+      if (stream.status !== "success") {
         throw new Error("Workflow execution failed");
       }
 
-      // Extract result from successful workflow
-      const workflowResult = (
-        runResult as {
-          result?: {
-            cycleId: string;
-            approved: boolean;
-            iterations: number;
-            orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
-            mode: "STUB" | "LLM";
-            configVersion: string | null;
-          };
-        }
-      ).result ?? {
-        cycleId,
-        approved: false,
-        iterations: 0,
-        orderSubmission: { submitted: false, orderIds: [], errors: ["No result returned"] },
-        mode: "STUB" as const,
-        configVersion: null,
-      };
+      // Use stream.result if we didn't capture from events
+      if (!workflowResult && stream.result) {
+        workflowResult = (await stream.result) as unknown as NonNullable<typeof workflowResult>;
+      }
+
+      // Fallback if no result
+      if (!workflowResult) {
+        workflowResult = {
+          cycleId,
+          approved: false,
+          iterations: 0,
+          orderSubmission: { submitted: false, orderIds: [], errors: ["No result returned"] },
+          mode: "STUB" as const,
+          configVersion: null,
+        };
+      }
 
       cycleState.status = "completed";
       cycleState.completedAt = new Date().toISOString();
