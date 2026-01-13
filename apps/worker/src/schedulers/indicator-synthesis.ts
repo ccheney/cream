@@ -10,9 +10,9 @@
  * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
  */
 
+import { createResearchTriggerService } from "@cream/agents";
 import { type IndicatorSynthesisInput, indicatorSynthesisWorkflow } from "@cream/api";
 import type { TriggerDetectionState } from "@cream/domain";
-import { createResearchTriggerService } from "@cream/mastra-kit";
 import {
   FactorZooRepository,
   RegimeLabelsRepository,

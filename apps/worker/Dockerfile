@@ -31,7 +31,7 @@ COPY packages/regime/package.json ./packages/regime/
 COPY packages/universe/package.json ./packages/universe/
 COPY packages/external-context/package.json ./packages/external-context/
 COPY packages/prediction-markets/package.json ./packages/prediction-markets/
-COPY packages/mastra-kit/package.json ./packages/mastra-kit/
+COPY packages/agents/package.json ./packages/agents/
 COPY packages/recovery/package.json ./packages/recovery/
 COPY packages/mocks/package.json ./packages/mocks/
 COPY packages/test-fixtures/package.json ./packages/test-fixtures/
@@ -98,7 +98,7 @@ RUN bun run build
 WORKDIR /app/packages/prediction-markets
 RUN bun run build
 
-WORKDIR /app/packages/mastra-kit
+WORKDIR /app/packages/agents
 RUN bun run build
 
 # Build the api (dependency of worker)
