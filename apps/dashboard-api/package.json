@@ -31,7 +31,7 @@
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/marketdata": "workspace:*",
-    "@cream/mastra-kit": "workspace:*",
+    "@cream/agents": "workspace:*",
     "@cream/metrics": "workspace:*",
     "@cream/storage": "workspace:*",
     "@cream/universe": "workspace:*",
