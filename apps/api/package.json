@@ -15,7 +15,7 @@
     }
   },
   "scripts": {
-    "dev": "mastra dev",
+    "dev": "mastra dev --dir src/mastra --env ../../.env",
     "build": "bun build src/index.ts --outdir dist --target bun --external @libsql/client --external libsql --external better-sqlite3 --external @tursodatabase/* --external @cream/schema-gen/*",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit",
