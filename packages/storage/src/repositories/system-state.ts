@@ -101,10 +101,9 @@ export class SystemStateRepository {
    * Find system state by environment
    */
   async findByEnvironment(environment: string): Promise<SystemState | null> {
-    const row = await this.client.get<Row>(
-      `SELECT * FROM ${this.table} WHERE environment = ?`,
-      [environment]
-    );
+    const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE environment = ?`, [
+      environment,
+    ]);
 
     return row ? mapSystemStateRow(row) : null;
   }

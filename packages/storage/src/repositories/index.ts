@@ -281,14 +281,6 @@ export {
   SentimentRepository,
   type UpdateSentimentInput,
 } from "./sentiment.js";
-// System state (migration 002) - system status per environment
-export {
-  type SystemCyclePhase,
-  type SystemState,
-  SystemStateRepository,
-  type SystemStatus,
-  type UpdateSystemStateInput,
-} from "./system-state.js";
 // Short interest indicators (migration 008) - FINRA short interest data
 export {
   type CreateShortInterestInput,
@@ -297,6 +289,14 @@ export {
   ShortInterestRepository,
   type UpdateShortInterestInput,
 } from "./short-interest.js";
+// System state (migration 002) - system status per environment
+export {
+  type SystemCyclePhase,
+  type SystemState,
+  SystemStateRepository,
+  type SystemStatus,
+  type UpdateSystemStateInput,
+} from "./system-state.js";
 // Thesis state management (migration 004)
 export {
   type CloseReason,
