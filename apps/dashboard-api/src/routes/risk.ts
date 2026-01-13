@@ -29,7 +29,7 @@ import {
   getVaRMetrics,
   type PositionForExposure,
 } from "../services/risk/index.js";
-import { systemState } from "./system.js";
+import { getCurrentEnvironment } from "./system.js";
 
 // ============================================
 // App Setup
@@ -134,7 +134,7 @@ const exposureRoute = createRoute({
 app.openapi(exposureRoute, async (c) => {
   const positionsRepo = await getPositionsRepo();
   const snapshotsRepo = await getPortfolioSnapshotsRepo();
-  const env = systemState.environment;
+  const env = getCurrentEnvironment();
 
   // 1. Get Positions
   const positions = await positionsRepo.findOpen(env);
@@ -255,7 +255,7 @@ const correlationRoute = createRoute({
 app.openapi(correlationRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
-  const env = systemState.environment;
+  const env = getCurrentEnvironment();
   const positions = await positionsRepo.findOpen(env);
 
   // Extract unique symbols
@@ -307,7 +307,7 @@ app.openapi(varRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
   const snapshotsRepo = await getPortfolioSnapshotsRepo();
-  const env = systemState.environment;
+  const env = getCurrentEnvironment();
   const positions = await positionsRepo.findOpen(env);
 
   // Get NAV from latest snapshot (or calculate from positions)
@@ -357,7 +357,7 @@ app.openapi(limitsRoute, async (c) => {
   // Get positions from database
   const positionsRepo = await getPositionsRepo();
   const snapshotsRepo = await getPortfolioSnapshotsRepo();
-  const env = systemState.environment;
+  const env = getCurrentEnvironment();
   const positions = await positionsRepo.findOpen(env);
 
   // Get NAV from latest snapshot (or calculate from positions)

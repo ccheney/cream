@@ -11,6 +11,7 @@ import {
   createBatchRepositoryAdapters,
   createIndicatorCache,
   createLiquidityCalculator,
+  createOptionsCalculator,
   createPriceCalculator,
   IndicatorService,
   type MarketDataProvider,
@@ -22,11 +23,8 @@ import {
   type TursoSentimentRepository,
   type TursoShortInterestRepository,
 } from "@cream/indicators";
-import {
-  type AlpacaMarketDataClient,
-  createRealtimeOptionsProvider,
-  type RealtimeOptionsProvider,
-} from "@cream/marketdata";
+import type { AlpacaMarketDataClient } from "@cream/marketdata";
+import { getSharedOptionsDataProvider } from "./shared-options-provider.js";
 import type { TursoClient } from "@cream/storage";
 import { getDbClient } from "../db.js";
 import { getAlpacaClient } from "../routes/market/types.js";
@@ -291,7 +289,6 @@ function createCorporateActionsRepo(client: TursoClient): TursoCorporateActionsR
 // ============================================
 
 let indicatorService: IndicatorService | null = null;
-let optionsProvider: RealtimeOptionsProvider | null = null;
 let initPromise: Promise<IndicatorService> | null = null;
 
 /**
@@ -327,18 +324,15 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
   const marketData = new AlpacaMarketDataAdapter(alpacaClient);
   const priceCalculator = createPriceCalculator();
   const liquidityCalculator = createLiquidityCalculator();
+  const optionsCalculator = createOptionsCalculator();
   const cache = createIndicatorCache();
 
   // Create Turso repository adapters
   const tursoRepos = createTursoRepositories(tursoClient);
   const batchRepos = createBatchRepositoryAdapters(tursoRepos);
 
-  // Create realtime options data provider
-  optionsProvider = await createRealtimeOptionsProvider(alpacaClient, {
-    riskFreeRate: 0.05,
-    maxDte: 60,
-    minDte: 1,
-  });
+  // Get the shared options data provider (uses the shared WebSocket connection)
+  const optionsData = getSharedOptionsDataProvider();
 
   // Create service with all dependencies
   const service = new IndicatorService(
@@ -346,8 +340,9 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
       marketData,
       priceCalculator,
       liquidityCalculator,
+      optionsCalculator,
       cache,
-      optionsData: optionsProvider,
+      optionsData,
       fundamentalRepo: batchRepos.fundamentalRepo,
       shortInterestRepo: batchRepos.shortInterestRepo,
       sentimentRepo: batchRepos.sentimentRepo,
@@ -370,10 +365,6 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
  * Reset the service singleton (for testing).
  */
 export function resetIndicatorService(): void {
-  if (optionsProvider) {
-    optionsProvider.disconnect();
-    optionsProvider = null;
-  }
   indicatorService = null;
   initPromise = null;
 }

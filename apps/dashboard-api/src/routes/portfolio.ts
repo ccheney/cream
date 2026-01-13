@@ -28,7 +28,7 @@ import {
 } from "../db.js";
 import log from "../logger.js";
 import { portfolioService } from "../services/portfolio.js";
-import { systemState } from "./system.js";
+import { getCurrentEnvironment } from "./system.js";
 
 // ============================================
 // Alpaca Trading Client (singleton)
@@ -90,7 +90,7 @@ function getBrokerClient(): AlpacaClient {
     brokerClient = createAlpacaClient({
       apiKey,
       apiSecret,
-      environment: systemState.environment,
+      environment: getCurrentEnvironment(),
     });
     return brokerClient;
   } catch (error) {
@@ -290,8 +290,8 @@ app.openapi(summaryRoute, async (c) => {
     getPortfolioSnapshotsRepo(),
   ]);
 
-  const summary = await positionsRepo.getPortfolioSummary(systemState.environment);
-  const latestSnapshot = await snapshotsRepo.getLatest(systemState.environment);
+  const summary = await positionsRepo.getPortfolioSummary(getCurrentEnvironment());
+  const latestSnapshot = await snapshotsRepo.getLatest(getCurrentEnvironment());
 
   // Calculate today's P&L
   // When Alpaca is configured, use real-time positions with lastdayPrice for accurate intraday P&L
@@ -341,7 +341,7 @@ app.openapi(summaryRoute, async (c) => {
     yesterdayEnd.setSeconds(-1);
 
     const yesterdaySnapshot = await snapshotsRepo.findByDate(
-      systemState.environment,
+      getCurrentEnvironment(),
       yesterdayEnd.toISOString().split("T")[0] ?? ""
     );
 
@@ -350,14 +350,14 @@ app.openapi(summaryRoute, async (c) => {
   }
 
   // Get first snapshot for total P&L calculation
-  const firstSnapshot = await snapshotsRepo.getFirst(systemState.environment);
+  const firstSnapshot = await snapshotsRepo.getFirst(getCurrentEnvironment());
   const totalPnl = latestSnapshot && firstSnapshot ? latestSnapshot.nav - firstSnapshot.nav : 0;
 
   const totalPnlPct = firstSnapshot?.nav ? (totalPnl / firstSnapshot.nav) * 100 : 0;
 
   // Calculate net exposure from positions (long value - short value)
   const positions = await positionsRepo.findMany({
-    environment: systemState.environment,
+    environment: getCurrentEnvironment(),
     status: "open",
   });
   const longValue = positions.data
@@ -425,7 +425,7 @@ const positionsRoute = createRoute({
 app.openapi(positionsRoute, async (c) => {
   const repo = await getPositionsRepo();
   const result = await repo.findMany({
-    environment: systemState.environment,
+    environment: getCurrentEnvironment(),
     status: "open",
   });
 
@@ -554,7 +554,7 @@ app.openapi(equityCurveRoute, async (c) => {
 
   const snapshots = await repo.findMany(
     {
-      environment: systemState.environment,
+      environment: getCurrentEnvironment(),
       fromDate: query.from,
       toDate: query.to,
     },
@@ -607,7 +607,7 @@ app.openapi(equityRoute, async (c) => {
 
   const snapshots = await repo.findMany(
     {
-      environment: systemState.environment,
+      environment: getCurrentEnvironment(),
       fromDate: fromDate.toISOString().split("T")[0],
     },
     { page: 1, pageSize: days + 1 }
@@ -654,7 +654,7 @@ app.openapi(performanceRoute, async (c) => {
 
   // Get all snapshots for calculations
   const snapshots = await snapshotsRepo.findMany(
-    { environment: systemState.environment },
+    { environment: getCurrentEnvironment() },
     { page: 1, pageSize: 1000 }
   );
 
@@ -666,7 +666,7 @@ app.openapi(performanceRoute, async (c) => {
 
   // Get filled orders for P&L calculations
   const orders = await ordersRepo.findMany(
-    { status: "filled", environment: systemState.environment },
+    { status: "filled", environment: getCurrentEnvironment() },
     { page: 1, pageSize: 1000 }
   );
 
@@ -1038,7 +1038,7 @@ app.openapi(historyRoute, async (c) => {
   }
 
   // Check cache first
-  const cacheKey = `history:${systemState.environment}:${period}:${timeframe}:${start ?? ""}:${end ?? ""}`;
+  const cacheKey = `history:${getCurrentEnvironment()}:${period}:${timeframe}:${start ?? ""}:${end ?? ""}`;
   const cached = getCached<BrokerPortfolioHistory>(cacheKey);
   if (cached) {
     log.debug({ period, timeframe, cached: true }, "Returning cached portfolio history");
@@ -1054,7 +1054,7 @@ app.openapi(historyRoute, async (c) => {
       {
         apiKey,
         apiSecret,
-        environment: systemState.environment,
+        environment: getCurrentEnvironment(),
       },
       {
         period: period as PortfolioHistoryPeriod,

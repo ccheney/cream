@@ -14,7 +14,7 @@ import {
 } from "@cream/marketdata";
 import { getPositionsRepo } from "../db.js";
 import log from "../logger.js";
-import { systemState } from "../routes/system.js";
+import { getCurrentEnvironment } from "../routes/system.js";
 
 // ============================================
 // Types
@@ -77,7 +77,7 @@ export class PortfolioService {
     const positionsRepo = await getPositionsRepo();
 
     // 1. Get all open positions
-    const positions = await positionsRepo.findOpen(systemState.environment);
+    const positions = await positionsRepo.findOpen(getCurrentEnvironment());
 
     // 2. Filter for options using OCC format check
     const optionPositions = positions.filter((p) => parseOptionTicker(p.symbol) !== undefined);

@@ -153,8 +153,20 @@ export function broadcastOptionsQuote(contract: string, message: ServerMessage):
   const deadConnections: string[] = [];
   const upperContract = contract.toUpperCase();
 
+  // Debug: Log first quote for a contract to verify flow
+  let loggedDebug = false;
+
   for (const [connectionId, ws] of connections) {
-    if (ws.data.channels.has("options") && ws.data.contracts.has(upperContract)) {
+    const hasOptionsChannel = ws.data.channels.has("options");
+    const hasContract = ws.data.contracts.has(upperContract);
+
+    // Log debug info for first contract check
+    if (!loggedDebug && connections.size > 0) {
+      console.log(`[Options Broadcast] Contract: ${upperContract}, Connections: ${connections.size}, HasOptions: ${hasOptionsChannel}, HasContract: ${hasContract}, ClientContracts: ${ws.data.contracts.size}`);
+      loggedDebug = true;
+    }
+
+    if (hasOptionsChannel && hasContract) {
       if (sendMessage(ws, message)) {
         sent++;
       } else {

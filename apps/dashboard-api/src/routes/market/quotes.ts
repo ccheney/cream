@@ -52,7 +52,8 @@ async function fetchQuote(symbol: string): Promise<Quote | QuoteError> {
     const ask = latestQuote?.askPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
     const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
     const volume = dailyBar?.volume ?? 0;
-    const prevClose = prevBar?.close ?? dailyBar?.close ?? lastPrice;
+    // Use previous day's close for accurate % change - don't fall back to today's bar
+    const prevClose = prevBar?.close ?? lastPrice;
 
     // Calculate change percent
     const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
@@ -123,7 +124,8 @@ async function fetchQuotesBatch(symbols: string[]): Promise<Map<string, Quote | 
       const ask = latestQuote?.askPrice ?? latestTrade?.price ?? dailyBar?.close ?? 0;
       const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
       const volume = dailyBar?.volume ?? 0;
-      const prevClose = prevBar?.close ?? dailyBar?.close ?? lastPrice;
+      // Use previous day's close for accurate % change - don't fall back to today's bar
+      const prevClose = prevBar?.close ?? lastPrice;
       const changePercent = prevClose > 0 ? ((lastPrice - prevClose) / prevClose) * 100 : 0;
       const timestamp =
         latestTrade?.timestamp ??

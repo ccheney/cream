@@ -24,6 +24,7 @@ import {
   type Timeframe,
   TimeframeSchema,
 } from "./types.js";
+import { isMarketOpen, getPreviousTradingDay } from "@cream/domain";
 
 const app = new OpenAPIHono();
 
@@ -82,22 +83,35 @@ app.openapi(candlesRoute, async (c) => {
 
   const client = getAlpacaClient();
   const alpacaTimeframe = ALPACA_TIMEFRAME_MAP[timeframe as Timeframe];
-  const todayNY = getTodayNY();
   const isIntraday = timeframe !== "1d";
 
   let fromStr: string;
   if (isIntraday) {
-    fromStr = getDaysAgo(7);
+    // For intraday: fetch current trading day only (or previous if market closed)
+    const todayNY = getTodayNY();
+    if (isMarketOpen(todayNY)) {
+      fromStr = todayNY;
+    } else {
+      // Market closed today - use previous trading day
+      const prevDay = getPreviousTradingDay(todayNY);
+      fromStr = prevDay.toISOString().slice(0, 10);
+    }
   } else {
+    // For daily bars: fetch 1 year of history
     fromStr = getDaysAgo(365);
   }
 
-  // Scale fetchLimit based on timeframe to ensure enough market-hours bars survive filtering
-  const safetyFactor = timeframe === "1m" ? 1.5 : timeframe === "5m" ? 3 : 5;
-  const fetchLimit = Math.min(Math.ceil(limit * safetyFactor) + 100, 10000);
+  // For end date, use tomorrow to ensure we get all of today's data
+  // Alpaca interprets date-only strings as midnight UTC, which excludes today's ET data
+  const toStr = getDaysAgo(-1);
+
+  // Scale fetchLimit based on timeframe for single day of data
+  // 1-minute bars: ~960 bars/day with extended hours
+  // 5-minute bars: ~192 bars/day
+  const fetchLimit = Math.min(limit + 500, 10000);
 
   try {
-    const bars = await client.getBars(upperSymbol, alpacaTimeframe, fromStr, todayNY, fetchLimit);
+    const bars = await client.getBars(upperSymbol, alpacaTimeframe, fromStr, toStr, fetchLimit);
 
     log.debug(
       {
@@ -105,7 +119,7 @@ app.openapi(candlesRoute, async (c) => {
         timeframe,
         count: bars.length,
         from: fromStr,
-        to: todayNY,
+        to: toStr,
       },
       "Fetched candles from Alpaca"
     );

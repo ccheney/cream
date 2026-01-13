@@ -111,6 +111,9 @@ export function handleSubscribeOptions(
 
   metadata.channels.add("options");
 
+  // Debug: log subscription
+  console.log(`[Options Subscribe] New contracts: ${newContracts.length}, Total: ${metadata.contracts.size}, Channels: ${Array.from(metadata.channels).join(",")}`);
+
   if (newContracts.length > 0) {
     subscribeToOptionsStreaming(newContracts).catch(() => {
       // Streaming is an optional enhancement; failures are non-critical

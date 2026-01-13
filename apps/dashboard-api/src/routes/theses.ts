@@ -12,7 +12,7 @@ import type { Thesis, ThesisState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { getThesesRepo } from "../db.js";
-import { systemState } from "./system.js";
+import { getCurrentEnvironment } from "./system.js";
 
 // ============================================
 // App Setup
@@ -188,7 +188,7 @@ app.openapi(listRoute, async (c) => {
   const result = await repo.findMany({
     instrumentId: symbol,
     states,
-    environment: systemState.environment,
+    environment: getCurrentEnvironment(),
   });
 
   const theses = result.data.map(mapThesisToResponse);
@@ -236,7 +236,7 @@ app.openapi(createThesisRoute, async (c) => {
     conviction: body.confidence,
     currentStop: body.stopPrice ?? undefined,
     currentTarget: body.targetPrice ?? undefined,
-    environment: systemState.environment,
+    environment: getCurrentEnvironment(),
     notes: {
       direction: body.direction,
       catalysts: body.catalysts,

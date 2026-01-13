@@ -209,10 +209,20 @@ export function getTodayNY(): string {
 }
 
 /**
- * Get a date N days ago formatted as YYYY-MM-DD.
+ * Get a date N days ago in NY timezone formatted as YYYY-MM-DD.
  */
 export function getDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
+  // Get current time and subtract days in milliseconds
+  // This avoids timezone issues from mixing local date arithmetic with NY formatting
+  const target = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  // Format in NY timezone
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(target);
 }
