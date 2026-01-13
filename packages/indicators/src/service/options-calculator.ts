@@ -16,8 +16,37 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
+import { log } from "../logger";
 import { createEmptyOptionsIndicators, type OptionsIndicators } from "../types";
 import type { OptionsCalculator, OptionsDataProvider } from "./indicator-service";
+
+/** Timeout for options data fetching (5 seconds) */
+const OPTIONS_FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * Wrap a promise with a timeout. Returns null if timeout expires.
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T | null> {
+  const { promise: timeoutPromise, resolve } = Promise.withResolvers<T | null>();
+  const timer = setTimeout(() => {
+    log.warn({ label, timeoutMs }, "Options data fetch timed out");
+    resolve(null);
+  }, timeoutMs);
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timer);
+    return result;
+  } catch (error) {
+    clearTimeout(timer);
+    log.warn({ label, error }, "Options data fetch failed");
+    return null;
+  }
+}
 
 /**
  * Default implementation of OptionsCalculator.
@@ -45,11 +74,11 @@ export class OptionsCalculatorAdapter implements OptionsCalculator {
    * ```
    */
   async calculate(symbol: string, provider: OptionsDataProvider): Promise<OptionsIndicators> {
-    // Fetch available indicators from provider in parallel
+    // Fetch available indicators from provider in parallel with timeout
     const [atmIV, ivSkew, putCallRatio] = await Promise.all([
-      provider.getImpliedVolatility(symbol),
-      provider.getIVSkew(symbol),
-      provider.getPutCallRatio(symbol),
+      withTimeout(provider.getImpliedVolatility(symbol), OPTIONS_FETCH_TIMEOUT_MS, "atmIV"),
+      withTimeout(provider.getIVSkew(symbol), OPTIONS_FETCH_TIMEOUT_MS, "ivSkew"),
+      withTimeout(provider.getPutCallRatio(symbol), OPTIONS_FETCH_TIMEOUT_MS, "putCallRatio"),
     ]);
 
     // Start with empty indicators
