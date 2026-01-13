@@ -109,6 +109,13 @@ export const AUTH_CONFIG: RateLimitConfig = {
   message: "Too many authentication attempts, please try again later",
 };
 
+/** Relaxed limits for session checks: 60 requests per minute */
+export const SESSION_CONFIG: RateLimitConfig = {
+  maxRequests: 60,
+  windowMs: 60_000, // 1 minute
+  message: "Too many session requests, please try again later",
+};
+
 /** Very strict limits for password reset: 3 requests per 15 minutes */
 export const PASSWORD_RESET_CONFIG: RateLimitConfig = {
   maxRequests: 3,

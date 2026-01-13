@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "dev": "helix push dev",
+    "push": "helix push dev",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/"

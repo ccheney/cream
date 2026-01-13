@@ -11,5 +11,6 @@ export {
   PASSWORD_RESET_CONFIG,
   type RateLimitConfig,
   rateLimit,
+  SESSION_CONFIG,
   stopCleanup,
 } from "./rate-limit.js";

@@ -24,7 +24,7 @@ import {
 import { closeDb } from "./db.js";
 import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
 import log from "./logger.js";
-import { AUTH_CONFIG, rateLimit } from "./middleware/index.js";
+import { AUTH_CONFIG, rateLimit, SESSION_CONFIG } from "./middleware/index.js";
 import {
   agentsRoutes,
   alertsRoutes,
@@ -120,7 +120,10 @@ if (process.env.NODE_ENV !== "production") {
 // Global rate limiting (100 req/min per endpoint)
 app.use("/api/*", rateLimit());
 
-// Stricter rate limiting for auth endpoints (10 req/min)
+// Relaxed rate limiting for session checks (60 req/min)
+app.use("/api/auth/get-session", rateLimit(SESSION_CONFIG));
+
+// Stricter rate limiting for other auth endpoints (10 req/min)
 app.use("/api/auth/*", rateLimit(AUTH_CONFIG));
 
 // Session middleware (extracts session from better-auth cookies)
