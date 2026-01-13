@@ -4,7 +4,7 @@
  * Thesis state transitions, research triggers, and memory ingestion.
  */
 
-import { createResearchTriggerService } from "@cream/mastra-kit";
+import { createResearchTriggerService } from "@cream/agents";
 import type { CloseReason, ThesisStateRepository } from "@cream/storage";
 import {
   ingestClosedThesis,

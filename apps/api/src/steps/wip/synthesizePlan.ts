@@ -14,9 +14,9 @@
  * - PAPER/LIVE: Uses real Mastra agents with LLM
  */
 
+import type { PortfolioStateResponse } from "@cream/agents";
+import { getPortfolioState, withAgentTimeout } from "@cream/agents";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
-import type { PortfolioStateResponse } from "@cream/mastra-kit";
-import { getPortfolioState, withAgentTimeout } from "@cream/mastra-kit";
 import type { ThesisStateRepository } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";

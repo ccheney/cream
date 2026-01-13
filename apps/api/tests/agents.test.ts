@@ -32,7 +32,7 @@ import {
   type FundamentalsAnalysisOutput,
   type RiskManagerOutput,
   type SentimentAnalysisOutput,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
 import { z } from "zod";
 
 import {

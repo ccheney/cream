@@ -4,10 +4,10 @@
  * Synthesizes bullish and bearish research into concrete DecisionPlans.
  */
 
-import type { AgentType } from "@cream/mastra-kit";
+import type { AgentType } from "@cream/agents";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
+import { buildDatetimeContext, buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
 import type {
   AgentConfigEntry,
@@ -53,7 +53,7 @@ export async function runTrader(
   const factorZooContext = buildFactorZooContext(context.factorZoo);
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `Synthesize the debate into a concrete trading plan:
+  const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
@@ -65,7 +65,6 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
-Timestamp: ${new Date().toISOString()}
 
 POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
@@ -153,7 +152,7 @@ export async function runTraderStreaming(
   const factorZooContext = buildFactorZooContext(context.factorZoo);
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `Synthesize the debate into a concrete trading plan:
+  const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
@@ -165,7 +164,6 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
-Timestamp: ${new Date().toISOString()}
 
 POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
@@ -219,7 +217,7 @@ export async function revisePlan(
   agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
   abortSignal?: AbortSignal
 ): Promise<DecisionPlan> {
-  const prompt = `Revise the following trading plan based on the rejection feedback:
+  const prompt = `${buildDatetimeContext()}Revise the following trading plan based on the rejection feedback:
 
 Original Plan:
 ${JSON.stringify(originalPlan, null, 2)}

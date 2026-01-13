@@ -4,12 +4,12 @@
  * Contains Risk Manager and Critic agents for plan validation.
  */
 
+import type { AgentType } from "@cream/agents";
 import type { IndicatorSnapshot } from "@cream/indicators";
-import type { AgentType } from "@cream/mastra-kit";
 
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildIndicatorSummary } from "./prompts.js";
+import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";
 import { CriticOutputSchema, RiskManagerOutputSchema } from "./schemas.js";
 import type { DebateOutputs } from "./trader.js";
 import type {
@@ -138,7 +138,7 @@ NOTE: Decaying factors indicate reduced signal reliability. Consider this when v
 
   const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
-  const prompt = `Validate this trading plan against risk constraints:
+  const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -178,7 +178,7 @@ export async function runCritic(
 ): Promise<CriticOutput> {
   const indicatorSummary = buildIndicatorSummary(indicators);
 
-  const prompt = `Validate the logical consistency of this trading plan:
+  const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -305,7 +305,7 @@ NOTE: Decaying factors indicate reduced signal reliability. Consider this when v
 
   const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
-  const prompt = `Validate this trading plan against risk constraints:
+  const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -364,7 +364,7 @@ export async function runCriticStreaming(
 ): Promise<CriticOutput> {
   const indicatorSummary = buildIndicatorSummary(indicators);
 
-  const prompt = `Validate the logical consistency of this trading plan:
+  const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}

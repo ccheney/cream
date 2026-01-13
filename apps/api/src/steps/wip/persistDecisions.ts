@@ -10,8 +10,8 @@
  * - Agent learning (via HelixDB ingestion in later step)
  */
 
+import type { DecisionPlan } from "@cream/agents";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
-import type { DecisionPlan } from "@cream/mastra-kit";
 import type { CreateDecisionInput } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";

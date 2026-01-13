@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import {
+  buildDatetimeContext,
   buildIndicatorContext,
   buildIndicatorSummary,
   buildPredictionMarketContext,
@@ -57,7 +58,7 @@ export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAn
   const indicatorContext = buildIndicatorContext(context.indicators);
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Analyze news and sentiment for the following instruments:
+  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
 
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
@@ -108,7 +109,7 @@ export async function runFundamentalsAnalyst(
   // Build indicator context with value and quality factors
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `Analyze fundamentals and macro context for the following instruments:
+  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
@@ -241,7 +242,7 @@ export async function runNewsAnalystStreaming(
   const indicatorContext = buildIndicatorContext(context.indicators);
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Analyze news and sentiment for the following instruments:
+  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
 
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
@@ -301,7 +302,7 @@ export async function runFundamentalsAnalystStreaming(
   // Build indicator context with value and quality factors
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `Analyze fundamentals and macro context for the following instruments:
+  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
 
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}

@@ -14,12 +14,12 @@
  * @see docs/plans/20-research-to-production-pipeline.md - Phase 0: Trigger Detection
  */
 
-import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import {
   createIdeaAgent,
   createResearchTriggerService,
   type IdeaGenerationResult,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
+import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { FactorZooRepository } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";

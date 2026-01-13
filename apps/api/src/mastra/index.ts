@@ -54,7 +54,7 @@ export const mastra = new Mastra({
       "@cream/helix-schema",
       "@cream/indicators",
       "@cream/marketdata",
-      "@cream/mastra-kit",
+      "@cream/agents",
       "@cream/prediction-markets",
       "@cream/regime",
       "@cream/storage",

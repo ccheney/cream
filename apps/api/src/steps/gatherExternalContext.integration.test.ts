@@ -8,8 +8,8 @@
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
+import { getFredEconomicCalendar, getMacroIndicators } from "@cream/agents";
 import { createContext, requireEnv } from "@cream/domain";
-import { getFredEconomicCalendar, getMacroIndicators } from "@cream/mastra-kit";
 
 // Skip all tests if FRED_API_KEY is not set
 const skipIfNoKey = !process.env.FRED_API_KEY;

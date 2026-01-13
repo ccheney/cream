@@ -11,14 +11,14 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { CriticOutput, DecisionPlan, RiskManagerOutput } from "@cream/mastra-kit";
+import type { CriticOutput, DecisionPlan, RiskManagerOutput } from "@cream/agents";
 import {
   ConsensusGate,
   type ConsensusResult,
   createApprovedCriticOutput,
   createApprovedRiskOutput,
   runConsensusLoop,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
 
 // ============================================
 // Test Fixtures - Realistic Trading Plans

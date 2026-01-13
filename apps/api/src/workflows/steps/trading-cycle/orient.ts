@@ -4,14 +4,14 @@
  * Memory context loading and regime classification for the trading cycle workflow.
  */
 
-import type { ExecutionContext } from "@cream/domain";
-import { isBacktest } from "@cream/domain";
-import { generateSituationBrief, type MarketSnapshot as HelixMarketSnapshot } from "@cream/helix";
 import {
   type CheckIndicatorTriggerInput,
   type CheckIndicatorTriggerOutput,
   checkIndicatorTrigger as evaluateIndicatorTrigger,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
+import type { ExecutionContext } from "@cream/domain";
+import { isBacktest } from "@cream/domain";
+import { generateSituationBrief, type MarketSnapshot as HelixMarketSnapshot } from "@cream/helix";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
 import { getIndicatorsRepo, getRegimeLabelsRepo } from "../../../db.js";

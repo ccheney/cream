@@ -4,10 +4,10 @@
  * Contains all interfaces and type definitions used across agent modules.
  */
 
+import type { AgentType } from "@cream/agents";
 import type { IndicatorSnapshot } from "@cream/indicators";
-import type { AgentType } from "@cream/mastra-kit";
 
-// Re-export types from @cream/mastra-kit for convenience
+// Re-export types from @cream/agents for convenience
 export type {
   BearishResearchOutput,
   BullishResearchOutput,
@@ -16,7 +16,7 @@ export type {
   FundamentalsAnalysisOutput,
   RiskManagerOutput,
   SentimentAnalysisOutput,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
 
 /**
  * Agent configuration from runtime config

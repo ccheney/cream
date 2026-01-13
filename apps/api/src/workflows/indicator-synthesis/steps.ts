@@ -11,8 +11,8 @@
  * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
  */
 
+import { type ImplementIndicatorOutput, implementIndicator } from "@cream/agents";
 import { IndicatorHypothesisSchema, validateIndicatorFileFromPath } from "@cream/indicators";
-import { type ImplementIndicatorOutput, implementIndicator } from "@cream/mastra-kit";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

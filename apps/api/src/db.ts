@@ -5,6 +5,7 @@
  * Also includes HelixDB client management for CBR memory storage.
  */
 
+import { setPredictionMarketsRepoProvider } from "@cream/agents";
 import {
   createRuntimeConfigService,
   type RuntimeConfigService,
@@ -12,7 +13,6 @@ import {
 } from "@cream/config";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
-import { setPredictionMarketsRepoProvider } from "@cream/mastra-kit";
 import {
   AgentConfigsRepository,
   createInMemoryClient,

@@ -5,11 +5,6 @@
  */
 
 import {
-  DEFAULT_GLOBAL_MODEL,
-  type GlobalModel,
-  getModelId as getGlobalModelId,
-} from "@cream/domain";
-import {
   AGENT_CONFIGS,
   AGENT_PROMPTS,
   type AgentType,
@@ -28,7 +23,12 @@ import {
   newsSearchTool,
   recalcIndicatorTool,
   webSearchTool,
-} from "@cream/mastra-kit";
+} from "@cream/agents";
+import {
+  DEFAULT_GLOBAL_MODEL,
+  type GlobalModel,
+  getModelId as getGlobalModelId,
+} from "@cream/domain";
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
@@ -140,7 +140,8 @@ export function getAgentRuntimeSettings(
 
 /**
  * Options returned by buildGenerateOptions.
- * Includes optional abortSignal for cancellation support.
+ * Note: providerOptions is omitted from the type but included at runtime.
+ * Mastra's ProviderOptions type is complex; runtime value is type-safe through AI SDK.
  */
 export interface GenerateOptions {
   structuredOutput: { schema: z.ZodType };
@@ -153,22 +154,31 @@ export interface GenerateOptions {
 /**
  * Build generation options with model settings, runtime context, and optional instruction override.
  * Uses fixed temperature (0.3) and model's natural max tokens.
+ * Enables Gemini 3 thinking/reasoning output at medium level.
+ *
+ * Note: providerOptions is included at runtime for Gemini thinking configuration
+ * but omitted from return type to satisfy Mastra's complex type constraints.
  */
 export function buildGenerateOptions(
   settings: AgentRuntimeSettings,
   structuredOutput: { schema: z.ZodType }
 ): GenerateOptions {
-  const options: GenerateOptions = {
+  // Return type is GenerateOptions but object includes providerOptions for Gemini thinking
+  // TypeScript allows extra properties when passed to functions
+  return {
     structuredOutput,
     modelSettings: {
       temperature: DEFAULT_TEMPERATURE,
     },
     requestContext: createRequestContext(settings.model),
-  };
-
-  if (settings.systemPromptOverride) {
-    options.instructions = settings.systemPromptOverride;
-  }
-
-  return options;
+    instructions: settings.systemPromptOverride,
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          includeThoughts: true,
+          thinkingLevel: "medium",
+        },
+      },
+    },
+  } as GenerateOptions;
 }

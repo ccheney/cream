@@ -14,8 +14,8 @@
  * - PAPER/LIVE: Uses real Mastra agents with LLM
  */
 
+import { ConsensusGate, runConsensusLoop } from "@cream/agents";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
-import { ConsensusGate, runConsensusLoop } from "@cream/mastra-kit";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

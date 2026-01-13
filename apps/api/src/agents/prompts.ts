@@ -9,6 +9,38 @@ import type { IndicatorSnapshot } from "@cream/indicators";
 import type { AgentContext } from "./types.js";
 
 // ============================================
+// Datetime Context (prepended to ALL prompts)
+// ============================================
+
+/**
+ * Build datetime context for LLM prompts.
+ * Includes current date/time in both UTC (ISO 8601) and US Eastern timezone.
+ *
+ * This should be prepended to ALL agent prompts to ensure the LLM
+ * has accurate temporal awareness for time-sensitive trading decisions.
+ */
+export function buildDatetimeContext(): string {
+  const now = new Date();
+  const utc = now.toISOString();
+
+  // Format in US Eastern timezone
+  const eastern = now.toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  return `Current Date/Time (UTC): ${utc}
+Current Date/Time (US Eastern): ${eastern}
+`;
+}
+
+// ============================================
 // Signal Interpretation Helpers
 // ============================================
 

@@ -14,13 +14,13 @@
  * Events are stored to the external_events table for retrieval.
  */
 
+import { type EconomicEvent, getFredEconomicCalendar } from "@cream/agents";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import {
   createExtractionPipeline,
   type ExtractedEvent,
   type FMPNewsArticle,
 } from "@cream/external-context";
-import { type EconomicEvent, getFredEconomicCalendar } from "@cream/mastra-kit";
 
 /**
  * Create ExecutionContext for step invocation.

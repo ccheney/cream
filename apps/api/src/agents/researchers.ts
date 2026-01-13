@@ -4,12 +4,12 @@
  * Contains Bullish and Bearish researcher agents for the debate phase.
  */
 
-import type { AgentType } from "@cream/mastra-kit";
+import type { AgentType } from "@cream/agents";
 import { z } from "zod";
 
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildIndicatorSummary } from "./prompts.js";
+import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";
 import { BearishResearchSchema, BullishResearchSchema } from "./schemas.js";
 import type {
   AgentConfigEntry,
@@ -47,7 +47,7 @@ export async function runBullishResearcher(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
+  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -92,7 +92,7 @@ export async function runBearishResearcher(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
+  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -207,7 +207,7 @@ export async function runBullishResearcherStreaming(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Construct the bullish case for the following instruments based on analyst outputs:
+  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -258,7 +258,7 @@ export async function runBearishResearcherStreaming(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `Construct the bearish case for the following instruments based on analyst outputs:
+  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
 
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -322,10 +322,11 @@ export async function runDebateParallelStreaming(
 // Idea Agent
 // ============================================
 
+import type { IdeaContext, ResearcherInput } from "@cream/agents";
+import { buildIdeaAgentUserPrompt, buildResearcherPrompt } from "@cream/agents";
+import type { ResearchTrigger } from "@cream/domain";
 import type { IndicatorHypothesis } from "@cream/indicators";
 import { IndicatorHypothesisSchema } from "@cream/indicators";
-import type { ResearcherInput } from "@cream/mastra-kit";
-import { buildResearcherPrompt } from "@cream/mastra-kit";
 
 import { type IdeaAgentOutput, IdeaAgentOutputSchema } from "./schemas.js";
 import type { IdeaAgentContext } from "./types.js";
@@ -338,67 +339,30 @@ export const indicatorResearcherAgent = createAgent("indicator_researcher");
 
 /**
  * Run Idea Agent to generate alpha factor hypotheses.
+ * Uses the shared buildIdeaAgentUserPrompt from @cream/agents for consistency.
  */
 export async function runIdeaAgent(context: IdeaAgentContext): Promise<IdeaAgentOutput> {
-  const decayingInfo =
-    context.decayingFactors.length > 0
-      ? context.decayingFactors
-          .map((f) => `${f.id} (decay rate: ${f.decayRate.toFixed(4)}/day)`)
-          .join(", ")
-      : "None currently decaying";
+  // Convert IdeaAgentContext to IdeaContext for the shared prompt builder
+  // IdeaAgentContext uses loose string types; cast to ResearchTrigger for type safety
+  const trigger: ResearchTrigger = {
+    type: context.trigger.type as ResearchTrigger["type"],
+    severity: context.trigger.severity as ResearchTrigger["severity"],
+    affectedFactors: context.trigger.affectedFactors,
+    suggestedFocus: context.trigger.suggestedFocus,
+    detectedAt: context.trigger.detectedAt,
+    metadata: {},
+  };
 
-  const memoryInfo =
-    context.memoryResults && context.memoryResults.length > 0
-      ? JSON.stringify(
-          context.memoryResults.map((h) => ({
-            id: h.hypothesisId,
-            title: h.title,
-            status: h.status,
-            regime: h.targetRegime,
-            ic: h.ic,
-            lessons: h.lessonsLearned,
-          })),
-          null,
-          2
-        )
-      : "No similar past hypotheses found";
+  const ideaContext: IdeaContext = {
+    regime: context.regime,
+    gaps: context.gaps,
+    decayingFactors: context.decayingFactors,
+    factorZooSummary: context.factorZooSummary,
+    trigger,
+    memoryResults: context.memoryResults ?? [],
+  };
 
-  const prompt = `<context>
-<trigger>
-Type: ${context.trigger.type}
-Severity: ${context.trigger.severity}
-Suggested Focus: ${context.trigger.suggestedFocus}
-Affected Factors: ${context.trigger.affectedFactors.join(", ") || "None specifically"}
-Detected At: ${context.trigger.detectedAt}
-</trigger>
-
-<market_state>
-Current Regime: ${context.regime}
-Uncovered Regimes: ${context.gaps.length > 0 ? context.gaps.join(", ") : "All regimes covered"}
-Decaying Factors: ${decayingInfo}
-</market_state>
-
-<factor_zoo>
-${context.factorZooSummary}
-</factor_zoo>
-
-<memory_context>
-Similar Past Hypotheses:
-${memoryInfo}
-</memory_context>
-</context>
-
-<task>
-Generate a novel alpha factor hypothesis that addresses the research trigger.
-
-Requirements:
-1. Target the ${context.trigger.type === "REGIME_GAP" ? `uncovered ${context.regime} regime` : "current market conditions"}
-2. ${context.trigger.type === "ALPHA_DECAY" ? `Consider replacing or improving on: ${context.trigger.affectedFactors.join(", ")}` : "Focus on novel alpha sources"}
-3. Use web search to find supporting academic research
-4. Ensure the hypothesis is sufficiently different from existing factors
-
-Output a complete hypothesis.
-</task>`;
+  const prompt = buildIdeaAgentUserPrompt(ideaContext);
 
   const settings = getAgentRuntimeSettings("idea_agent", context.agentConfigs);
   const options = buildGenerateOptions(settings, { schema: IdeaAgentOutputSchema });

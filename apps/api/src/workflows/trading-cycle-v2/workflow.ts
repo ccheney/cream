@@ -13,6 +13,7 @@
  * @see docs/plans/21-mastra-workflow-refactor.md
  */
 
+import type { ToolStream } from "@mastra/core/tools";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
@@ -43,13 +44,12 @@ interface AgentEvent {
 
 /**
  * Emit an agent event via the workflow writer.
+ * Uses writer.custom() for custom events to ensure proper stream visibility.
  */
-async function emitAgentEvent(
-  writer: { write: (data: unknown) => Promise<void> } | undefined,
-  event: AgentEvent
-): Promise<void> {
+async function emitAgentEvent(writer: ToolStream | undefined, event: AgentEvent): Promise<void> {
   if (writer) {
-    await writer.write(event);
+    // Use custom() for custom events - these appear with different structure in stream
+    await writer.custom(event);
   }
 }
 
@@ -428,14 +428,30 @@ const consensusStep = createStep({
       timestamp: new Date().toISOString(),
     });
 
-    const approved = riskManager.verdict === "APPROVE" && critic.verdict === "APPROVE";
+    // Handle case where agents may return undefined (LLM structured output failure)
+    const riskVerdict = riskManager?.verdict ?? "REJECT";
+    const criticVerdict = critic?.verdict ?? "REJECT";
+    const approved = riskVerdict === "APPROVE" && criticVerdict === "APPROVE";
+
+    if (!riskManager || !critic) {
+      console.warn(
+        "[consensus] Agent returned undefined - riskManager:",
+        !!riskManager,
+        "critic:",
+        !!critic
+      );
+    }
+
     await setState({ ...state, approved, iterations });
     return {
       ...inputData,
       approved,
       iterations,
-      riskApproval: riskManager,
-      criticApproval: critic,
+      riskApproval: riskManager ?? {
+        verdict: "REJECT",
+        reasoning: "Agent failed to return output",
+      },
+      criticApproval: critic ?? { verdict: "REJECT", reasoning: "Agent failed to return output" },
     };
   },
 });

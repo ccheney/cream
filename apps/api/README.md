@@ -104,7 +104,7 @@ export * from "./workflows/index.js";
 ## Dependencies
 
 **Workspace:**
-- `@cream/mastra-kit` - Agent prompts, tools, consensus logic
+- `@cream/agents` - Agent prompts, tools, consensus logic
 - `@cream/helix` - HelixDB GraphRAG client
 - `@cream/storage` - Turso repositories
 - `@cream/marketdata` - Market data adapters
