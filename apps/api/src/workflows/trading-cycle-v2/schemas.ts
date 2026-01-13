@@ -1,0 +1,307 @@
+/**
+ * Trading Cycle Workflow Schemas
+ *
+ * Zod schemas for the Mastra trading cycle workflow.
+ * Defines input, output, and state schemas for type-safe workflow execution.
+ */
+
+import { z } from "zod";
+
+// ============================================
+// Prediction Markets
+// ============================================
+
+export const PredictionMarketSignalsSchema = z.object({
+  fedCutProbability: z.number().optional(),
+  fedHikeProbability: z.number().optional(),
+  recessionProbability12m: z.number().optional(),
+  macroUncertaintyIndex: z.number().optional(),
+  policyEventRisk: z.number().optional(),
+  marketConfidence: z.number().optional(),
+  cpiSurpriseDirection: z.number().optional(),
+  gdpSurpriseDirection: z.number().optional(),
+  timestamp: z.string().optional(),
+  platforms: z.array(z.string()).optional(),
+});
+
+// ============================================
+// External Context
+// ============================================
+
+export const NewsEventSchema = z.object({
+  eventId: z.string(),
+  type: z.string(),
+  summary: z.string(),
+  sentiment: z.string(),
+  symbols: z.array(z.string()),
+  importance: z.number(),
+  eventTime: z.string(),
+});
+
+export const ExternalContextSchema = z.object({
+  news: z.array(NewsEventSchema),
+  sentiment: z.record(z.string(), z.number()),
+  macroIndicators: z.record(z.string(), z.number()),
+  predictionMarketSignals: PredictionMarketSignalsSchema.optional(),
+});
+
+// ============================================
+// Market Data
+// ============================================
+
+export const CandleDataSchema = z.object({
+  timestamp: z.number(),
+  open: z.number(),
+  high: z.number(),
+  low: z.number(),
+  close: z.number(),
+  volume: z.number(),
+});
+
+export const QuoteDataSchema = z.object({
+  bid: z.number(),
+  ask: z.number(),
+  bidSize: z.number(),
+  askSize: z.number(),
+  timestamp: z.number(),
+});
+
+export const MarketSnapshotSchema = z.object({
+  instruments: z.array(z.string()),
+  candles: z.record(z.string(), z.array(CandleDataSchema)),
+  quotes: z.record(z.string(), QuoteDataSchema),
+  indicators: z.record(z.string(), z.any()).optional(),
+  timestamp: z.number(),
+});
+
+// ============================================
+// Regime and Memory
+// ============================================
+
+export const RegimeDataSchema = z.object({
+  regime: z.string(),
+  confidence: z.number(),
+  reasoning: z.string().optional(),
+});
+
+export const MemoryContextSchema = z.object({
+  relevantCases: z.array(z.any()),
+  regimeLabels: z.record(z.string(), RegimeDataSchema),
+});
+
+// ============================================
+// Analysis Outputs
+// ============================================
+
+export const SentimentAnalysisSchema = z.object({
+  instrument_id: z.string(),
+  event_impacts: z.array(z.any()),
+  overall_sentiment: z.string(),
+  sentiment_strength: z.number(),
+  duration_expectation: z.string(),
+  linked_event_ids: z.array(z.string()),
+});
+
+export const FundamentalsAnalysisSchema = z.object({
+  instrument_id: z.string(),
+  fundamental_drivers: z.array(z.string()),
+  fundamental_headwinds: z.array(z.string()),
+  valuation_context: z.string(),
+  macro_context: z.string(),
+  event_risk: z.array(z.any()),
+  fundamental_thesis: z.string(),
+  linked_event_ids: z.array(z.string()),
+});
+
+export const ResearchSchema = z.object({
+  instrument_id: z.string(),
+  thesis: z.string(),
+  supporting_factors: z.array(
+    z.object({
+      factor: z.string(),
+      source: z.string(),
+      strength: z.string(),
+    })
+  ),
+  conviction_level: z.number(),
+  memory_case_ids: z.array(z.string()),
+  strongest_counterargument: z.string(),
+});
+
+// ============================================
+// Decision Types
+// ============================================
+
+export const DecisionSchema = z.object({
+  decisionId: z.string(),
+  instrumentId: z.string(),
+  action: z.enum(["BUY", "SELL", "HOLD", "CLOSE"]),
+  direction: z.enum(["LONG", "SHORT", "FLAT"]),
+  size: z.object({
+    value: z.number(),
+    unit: z.string(),
+  }),
+  strategyFamily: z.string(),
+  timeHorizon: z.string(),
+  rationale: z.object({
+    summary: z.string(),
+    bullishFactors: z.array(z.string()),
+    bearishFactors: z.array(z.string()),
+    decisionLogic: z.string(),
+    memoryReferences: z.array(z.string()),
+  }),
+  thesisState: z.string(),
+});
+
+export const DecisionPlanSchema = z.object({
+  cycleId: z.string(),
+  timestamp: z.string(),
+  decisions: z.array(DecisionSchema),
+  portfolioNotes: z.string(),
+});
+
+export const ApprovalSchema = z.object({
+  verdict: z.enum(["APPROVE", "REJECT"]),
+  violations: z.array(z.any()).optional(),
+  required_changes: z.array(z.any()).optional(),
+  notes: z.string().optional(),
+});
+
+// ============================================
+// Workflow Input Schema
+// ============================================
+
+export const WorkflowInputSchema = z.object({
+  cycleId: z.string(),
+  instruments: z.array(z.string()).default(["AAPL", "MSFT", "GOOGL"]),
+  forceStub: z.boolean().optional(),
+  useDraftConfig: z.boolean().optional(),
+  externalContext: ExternalContextSchema.optional(),
+});
+
+export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
+
+// ============================================
+// Workflow State Schema
+// ============================================
+
+export const WorkflowStateSchema = z.object({
+  cycleId: z.string(),
+  timestamp: z.string(),
+  configVersion: z.string().nullable().default(null),
+  mode: z.enum(["STUB", "LLM"]).default("STUB"),
+
+  // OBSERVE phase
+  marketSnapshot: MarketSnapshotSchema.optional(),
+
+  // ORIENT phase
+  memoryContext: MemoryContextSchema.optional(),
+  regimeLabels: z.record(z.string(), RegimeDataSchema).optional(),
+
+  // DECIDE - Analysis phase
+  newsAnalysis: z.array(SentimentAnalysisSchema).optional(),
+  fundamentalsAnalysis: z.array(FundamentalsAnalysisSchema).optional(),
+
+  // DECIDE - Debate phase
+  bullishResearch: z.array(ResearchSchema).optional(),
+  bearishResearch: z.array(ResearchSchema).optional(),
+
+  // DECIDE - Trader phase
+  decisionPlan: DecisionPlanSchema.optional(),
+
+  // DECIDE - Consensus phase
+  riskApproval: ApprovalSchema.optional(),
+  criticApproval: ApprovalSchema.optional(),
+  iterations: z.number().default(0),
+  approved: z.boolean().default(false),
+
+  // ACT phase
+  constraintCheck: z
+    .object({
+      passed: z.boolean(),
+      violations: z.array(z.string()),
+    })
+    .optional(),
+  orderSubmission: z
+    .object({
+      submitted: z.boolean(),
+      orderIds: z.array(z.string()),
+      errors: z.array(z.string()),
+    })
+    .optional(),
+});
+
+export type WorkflowState = z.infer<typeof WorkflowStateSchema>;
+
+// ============================================
+// Workflow Output Schema
+// ============================================
+
+export const ThesisUpdateSchema = z.object({
+  thesisId: z.string(),
+  instrumentId: z.string(),
+  fromState: z.string().nullable(),
+  toState: z.string(),
+  action: z.string(),
+  reason: z.string().optional(),
+});
+
+export const ResearchTriggerResultSchema = z.object({
+  triggered: z.boolean(),
+  trigger: z
+    .object({
+      type: z.string(),
+      severity: z.string(),
+      reason: z.string(),
+    })
+    .optional(),
+  hypothesis: z
+    .object({
+      hypothesisId: z.string(),
+      title: z.string(),
+    })
+    .optional(),
+});
+
+export const IndicatorTriggerResultSchema = z.object({
+  shouldTrigger: z.boolean(),
+  triggerReason: z.string().nullable(),
+  conditions: z.object({
+    regimeGapDetected: z.boolean(),
+    currentRegime: z.string(),
+    regimeGapDetails: z.string().optional(),
+    closestIndicatorSimilarity: z.number(),
+    rollingIC30Day: z.number(),
+    icDecayDays: z.number(),
+    existingIndicatorsUnderperforming: z.boolean(),
+    daysSinceLastAttempt: z.number(),
+    activeIndicatorCount: z.number(),
+    maxIndicatorCapacity: z.number(),
+  }),
+  summary: z.string(),
+  recommendation: z.string(),
+});
+
+export const WorkflowResultSchema = z.object({
+  cycleId: z.string(),
+  approved: z.boolean(),
+  iterations: z.number(),
+  orderSubmission: z.object({
+    submitted: z.boolean(),
+    orderIds: z.array(z.string()),
+    errors: z.array(z.string()),
+  }),
+  mode: z.enum(["STUB", "LLM"]),
+  configVersion: z.string().nullable(),
+  thesisUpdates: z.array(ThesisUpdateSchema).optional(),
+  researchTrigger: ResearchTriggerResultSchema.optional(),
+  indicatorTrigger: IndicatorTriggerResultSchema.optional(),
+  thesisMemoryIngestion: z
+    .object({
+      ingested: z.number(),
+      errors: z.array(z.string()),
+    })
+    .optional(),
+});
+
+export type WorkflowResult = z.infer<typeof WorkflowResultSchema>;
