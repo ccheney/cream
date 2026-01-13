@@ -36,4 +36,4 @@ export type {
 // Workflow and schemas
 export type { WorkflowInput, WorkflowResult } from "./schemas.js";
 export { WorkflowInputSchema, WorkflowResultSchema } from "./schemas.js";
-export { tradingCycleWorkflowV2 as tradingCycleWorkflow } from "./workflow.js";
+export { tradingCycleWorkflow } from "./workflow.js";

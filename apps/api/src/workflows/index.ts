@@ -3,4 +3,4 @@
  */
 export * from "./indicator-synthesis/index.js";
 export * from "./prediction-markets.js";
-export * from "./trading-cycle-v2/index.js";
+export * from "./trading-cycle/index.js";

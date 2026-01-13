@@ -15,7 +15,7 @@ import { mastraAgents } from "../agents/mastra-agents.js";
 import { agents } from "../agents/stub-agents.js";
 import { indicatorSynthesisWorkflow } from "../workflows/indicator-synthesis/index.js";
 import { predictionMarketsWorkflow } from "../workflows/prediction-markets.js";
-import { tradingCycleWorkflow } from "../workflows/trading-cycle-v2/index.js";
+import { tradingCycleWorkflow } from "../workflows/trading-cycle/index.js";
 
 /**
  * Mastra instance for the trading system.

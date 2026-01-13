@@ -1,5 +1,5 @@
 /**
- * Trading Cycle Workflow (Mastra v2)
+ * Trading Cycle Workflow
  *
  * Implements the hourly OODA loop using native Mastra workflow patterns:
  * - OBSERVE: Fetch market snapshot
@@ -493,8 +493,8 @@ const actStep = createStep({
 // Workflow Definition
 // ============================================
 
-export const tradingCycleWorkflowV2 = createWorkflow({
-  id: "trading-cycle-v2",
+export const tradingCycleWorkflow = createWorkflow({
+  id: "trading-cycle",
   description: "Hourly OODA trading cycle with 8-agent consensus",
   inputSchema: z.object({
     cycleId: z.string(),
@@ -506,7 +506,7 @@ export const tradingCycleWorkflowV2 = createWorkflow({
 });
 
 // Wire steps sequentially (simplified from original plan)
-tradingCycleWorkflowV2
+tradingCycleWorkflow
   .then(observeStep)
   .then(orientStep)
   .then(analystsStep)
