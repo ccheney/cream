@@ -204,8 +204,10 @@ app.openapi(triggerCycleRoute, async (c) => {
     try {
       emitProgress("observe", 10, "market_data", "Fetching market data...");
 
-      // v2 workflow determines mode from CREAM_ENV
-      // Streaming callbacks not yet supported in v2 - will be added in future iteration
+      // Execute workflow with progress tracking
+      // Note: Workflow steps emit agent events via writer.write(), but dashboard-api
+      // currently uses synchronous execution. Full streaming can be enabled when
+      // Mastra 1.0 beta streaming API is finalized.
       const run = await tradingCycleWorkflow.createRun();
       const runResult = await run.start({
         inputData: {

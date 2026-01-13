@@ -7,8 +7,8 @@
  * - DECIDE: Run agents (analysts → debate → trader → consensus)
  * - ACT: Submit orders via Rust execution engine
  *
- * Note: This is a simplified initial version. Schema types can be
- * tightened incrementally once the workflow structure is validated.
+ * Streaming: Each step emits agent events via the writer parameter.
+ * Use run.stream() to receive real-time updates.
  *
  * @see docs/plans/21-mastra-workflow-refactor.md
  */
@@ -16,7 +16,42 @@
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
+import type { AgentStreamChunk } from "../../agents/types.js";
 import { WorkflowResultSchema } from "./schemas.js";
+
+// ============================================
+// Stream Event Types
+// ============================================
+
+type AgentType =
+  | "news_analyst"
+  | "fundamentals_analyst"
+  | "bullish_researcher"
+  | "bearish_researcher"
+  | "trader"
+  | "risk_manager"
+  | "critic";
+
+interface AgentEvent {
+  type: "agent-start" | "agent-chunk" | "agent-complete" | "agent-error";
+  agent: AgentType;
+  cycleId: string;
+  data?: AgentStreamChunk | Record<string, unknown>;
+  error?: string;
+  timestamp: string;
+}
+
+/**
+ * Emit an agent event via the workflow writer.
+ */
+async function emitAgentEvent(
+  writer: { write: (data: unknown) => Promise<void> } | undefined,
+  event: AgentEvent
+): Promise<void> {
+  if (writer) {
+    await writer.write(event);
+  }
+}
 
 // ============================================
 // Simplified Step Schemas
@@ -77,9 +112,10 @@ const analystsStep = createStep({
   inputSchema: AnyInputSchema,
   outputSchema: AnyOutputSchema,
   stateSchema: MinimalStateSchema,
-  execute: async ({ inputData, state }) => {
+  execute: async ({ inputData, state, writer }) => {
     const mode = state.mode ?? "STUB";
     const symbols = inputData.instruments ?? [];
+    const cycleId = inputData.cycleId;
 
     if (mode === "STUB") {
       const { runNewsAnalystStub, runFundamentalsAnalystStub } = await import(
@@ -92,17 +128,60 @@ const analystsStep = createStep({
       return { ...inputData, newsAnalysis, fundamentalsAnalysis };
     }
 
-    // LLM mode - use real agents
-    const { runAnalystsParallel } = await import("../../agents/analysts.js");
+    // LLM mode - use streaming agents
+    const { runAnalystsParallelStreaming } = await import("../../agents/analysts.js");
     const context = {
-      cycleId: inputData.cycleId,
+      cycleId,
       symbols,
       snapshots: inputData.snapshot ?? {},
       indicators: inputData.snapshot?.indicators ?? {},
       externalContext: inputData.externalContext,
       recentEvents: [],
     };
-    const { news, fundamentals } = await runAnalystsParallel(context);
+
+    // Emit start events
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "news_analyst",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "fundamentals_analyst",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run with streaming - forward chunks to writer
+    const onChunk = async (chunk: AgentStreamChunk) => {
+      await emitAgentEvent(writer, {
+        type: "agent-chunk",
+        agent: chunk.agentType as AgentType,
+        cycleId,
+        data: chunk,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const { news, fundamentals } = await runAnalystsParallelStreaming(context, onChunk);
+
+    // Emit complete events
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "news_analyst",
+      cycleId,
+      data: { output: news },
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "fundamentals_analyst",
+      cycleId,
+      data: { output: fundamentals },
+      timestamp: new Date().toISOString(),
+    });
+
     return { ...inputData, newsAnalysis: news, fundamentalsAnalysis: fundamentals };
   },
 });
@@ -113,9 +192,10 @@ const debateStep = createStep({
   inputSchema: AnyInputSchema,
   outputSchema: AnyOutputSchema,
   stateSchema: MinimalStateSchema,
-  execute: async ({ inputData, state }) => {
+  execute: async ({ inputData, state, writer }) => {
     const mode = state.mode ?? "STUB";
     const symbols = inputData.instruments ?? [];
+    const cycleId = inputData.cycleId;
 
     if (mode === "STUB") {
       const { runBullishResearcherStub, runBearishResearcherStub } = await import(
@@ -128,10 +208,10 @@ const debateStep = createStep({
       return { ...inputData, bullishResearch, bearishResearch };
     }
 
-    // LLM mode - use real agents
-    const { runDebateParallel } = await import("../../agents/researchers.js");
+    // LLM mode - use streaming agents
+    const { runDebateParallelStreaming } = await import("../../agents/researchers.js");
     const context = {
-      cycleId: inputData.cycleId,
+      cycleId,
       symbols,
       snapshots: inputData.snapshot ?? {},
       indicators: inputData.snapshot?.indicators ?? {},
@@ -142,7 +222,50 @@ const debateStep = createStep({
       news: inputData.newsAnalysis ?? [],
       fundamentals: inputData.fundamentalsAnalysis ?? [],
     };
-    const { bullish, bearish } = await runDebateParallel(context, analystOutputs);
+
+    // Emit start events
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "bullish_researcher",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "bearish_researcher",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run with streaming
+    const onChunk = async (chunk: AgentStreamChunk) => {
+      await emitAgentEvent(writer, {
+        type: "agent-chunk",
+        agent: chunk.agentType as AgentType,
+        cycleId,
+        data: chunk,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const { bullish, bearish } = await runDebateParallelStreaming(context, analystOutputs, onChunk);
+
+    // Emit complete events
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "bullish_researcher",
+      cycleId,
+      data: { output: bullish },
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "bearish_researcher",
+      cycleId,
+      data: { output: bearish },
+      timestamp: new Date().toISOString(),
+    });
+
     return { ...inputData, bullishResearch: bullish, bearishResearch: bearish };
   },
 });
@@ -153,33 +276,64 @@ const traderStep = createStep({
   inputSchema: AnyInputSchema,
   outputSchema: AnyOutputSchema,
   stateSchema: MinimalStateSchema,
-  execute: async ({ inputData, state, setState }) => {
+  execute: async ({ inputData, state, setState, writer }) => {
     const mode = state.mode ?? "STUB";
     const bullishResearch = inputData.bullishResearch ?? [];
     const bearishResearch = inputData.bearishResearch ?? [];
+    const cycleId = inputData.cycleId;
 
     if (mode === "STUB") {
       const { runTraderAgentStub } = await import("../steps/trading-cycle/decide.js");
-      const decisionPlan = await runTraderAgentStub(
-        inputData.cycleId,
-        bullishResearch,
-        bearishResearch
-      );
+      const decisionPlan = await runTraderAgentStub(cycleId, bullishResearch, bearishResearch);
       await setState({ ...state, iterations: 0 });
       return { ...inputData, decisionPlan };
     }
 
-    // LLM mode - use real trader agent
-    const { runTrader } = await import("../../agents/trader.js");
+    // LLM mode - use streaming trader agent
+    const { runTraderStreaming } = await import("../../agents/trader.js");
     const context = {
-      cycleId: inputData.cycleId,
+      cycleId,
       symbols: inputData.instruments ?? [],
       snapshots: inputData.snapshot ?? {},
       indicators: inputData.snapshot?.indicators ?? {},
       externalContext: inputData.externalContext,
       recentEvents: [],
     };
-    const decisionPlan = await runTrader(context, bullishResearch, bearishResearch);
+    const debateOutputs = {
+      bullish: bullishResearch,
+      bearish: bearishResearch,
+    };
+
+    // Emit start event
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "trader",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run with streaming
+    const onChunk = async (chunk: AgentStreamChunk) => {
+      await emitAgentEvent(writer, {
+        type: "agent-chunk",
+        agent: "trader",
+        cycleId,
+        data: chunk,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const decisionPlan = await runTraderStreaming(context, debateOutputs, onChunk);
+
+    // Emit complete event
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "trader",
+      cycleId,
+      data: { output: decisionPlan },
+      timestamp: new Date().toISOString(),
+    });
+
     await setState({ ...state, iterations: 0 });
     return { ...inputData, decisionPlan };
   },
@@ -196,10 +350,11 @@ const consensusStep = createStep({
     })
     .passthrough(),
   stateSchema: MinimalStateSchema,
-  execute: async ({ inputData, state, setState }) => {
+  execute: async ({ inputData, state, setState, writer }) => {
     const mode = state.mode ?? "STUB";
     const decisions = inputData.decisionPlan?.decisions ?? [];
     const iterations = (state.iterations ?? 0) + 1;
+    const cycleId = inputData.cycleId;
 
     if (mode === "STUB") {
       const { runRiskManagerStub, runCriticStub } = await import(
@@ -214,8 +369,8 @@ const consensusStep = createStep({
       return { ...inputData, approved, iterations, riskApproval, criticApproval };
     }
 
-    // LLM mode - use real approval agents
-    const { runApprovalParallel } = await import("../../agents/approvers.js");
+    // LLM mode - use streaming approval agents
+    const { runApprovalParallelStreaming } = await import("../../agents/approvers.js");
     const analystOutputs = {
       news: inputData.newsAnalysis ?? [],
       fundamentals: inputData.fundamentalsAnalysis ?? [],
@@ -224,11 +379,55 @@ const consensusStep = createStep({
       bullish: inputData.bullishResearch ?? [],
       bearish: inputData.bearishResearch ?? [],
     };
-    const { riskManager, critic } = await runApprovalParallel(
+
+    // Emit start events
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "risk_manager",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "critic",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run with streaming
+    const onChunk = async (chunk: AgentStreamChunk) => {
+      await emitAgentEvent(writer, {
+        type: "agent-chunk",
+        agent: chunk.agentType as AgentType,
+        cycleId,
+        data: chunk,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const { riskManager, critic } = await runApprovalParallelStreaming(
       inputData.decisionPlan,
       analystOutputs,
-      debateOutputs
+      debateOutputs,
+      onChunk
     );
+
+    // Emit complete events
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "risk_manager",
+      cycleId,
+      data: { output: riskManager },
+      timestamp: new Date().toISOString(),
+    });
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "critic",
+      cycleId,
+      data: { output: critic },
+      timestamp: new Date().toISOString(),
+    });
+
     const approved = riskManager.verdict === "APPROVE" && critic.verdict === "APPROVE";
     await setState({ ...state, approved, iterations });
     return {
