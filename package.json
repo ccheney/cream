@@ -41,6 +41,7 @@
     "turbo": "2.7.3"
   },
   "dependencies": {
+    "@google/genai": "1.35.0",
     "@hookform/resolvers": "5.2.2",
     "@tursodatabase/database": "0.4.2",
     "@tursodatabase/sync": "0.4.2",

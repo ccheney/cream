@@ -23,7 +23,7 @@
     "@cream/logger": "workspace:*",
     "@cream/mastra-kit": "workspace:*",
     "@cream/storage": "workspace:*",
-    "@mastra/core": "1.0.0-beta.14",
+    "@mastra/core": "1.0.0-beta.21",
     "croner": "9.1.0",
     "zod": "^4.3.5"
   },

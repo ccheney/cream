@@ -43,15 +43,32 @@ export const mastra = new Mastra({
     predictionMarketsWorkflow,
   },
   bundler: {
-    // Externalize packages that shouldn't be bundled by mastra dev
+    // Workspace packages to transpile (must match package.json names exactly)
+    transpilePackages: [
+      "@cream/broker",
+      "@cream/config",
+      "@cream/domain",
+      "@cream/logger",
+      "@cream/external-context",
+      "@cream/helix",
+      "@cream/helix-schema",
+      "@cream/indicators",
+      "@cream/marketdata",
+      "@cream/mastra-kit",
+      "@cream/prediction-markets",
+      "@cream/regime",
+      "@cream/storage",
+      "@cream/universe",
+    ],
+    // Externalize packages resolved at runtime (exact names, no globs)
     externals: [
-      // Protobuf and gRPC
+      // Protobuf packages - proto has no JS, schema-gen is pre-compiled
+      "@cream/proto",
+      "@cream/schema-gen",
       "@bufbuild/protobuf",
       "@connectrpc/connect",
       "@connectrpc/connect-node",
-      // Protobuf generated stubs
-      "@cream/schema-gen",
-      // Google AI SDK used by @cream/helix
+      // Google AI SDK
       "@google/genai",
       // Native/binary dependencies
       "@libsql/client",
@@ -61,6 +78,7 @@ export const mastra = new Mastra({
       "@tursodatabase/database",
       "@tursodatabase/sync",
     ],
+    sourcemap: true,
   },
 });
 
