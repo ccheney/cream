@@ -6,6 +6,7 @@
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import { getPreviousTradingDay, isMarketOpen } from "@cream/domain";
 import type { AlpacaTimeframe } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
@@ -24,7 +25,6 @@ import {
   type Timeframe,
   TimeframeSchema,
 } from "./types.js";
-import { isMarketOpen, getPreviousTradingDay } from "@cream/domain";
 
 const app = new OpenAPIHono();
 

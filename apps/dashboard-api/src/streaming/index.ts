@@ -4,16 +4,6 @@
  * Real-time data streaming for the dashboard.
  */
 
-// Shared Options WebSocket (single connection for Alpaca)
-export {
-  getSharedOptionsWebSocket,
-  initSharedOptionsWebSocket,
-  isOptionsWebSocketConnected,
-  offOptionsEvent,
-  onOptionsEvent,
-  shutdownSharedOptionsWebSocket,
-} from "./shared-options-ws.js";
-
 // Indicator data streaming
 export {
   getActiveIndicatorSymbols,
@@ -25,7 +15,6 @@ export {
   subscribeIndicatorSymbols,
   unsubscribeIndicatorSymbol,
 } from "./indicator-data.js";
-
 // Stock market data streaming
 export {
   getActiveSymbols,
@@ -37,7 +26,6 @@ export {
   subscribeSymbols,
   unsubscribeSymbol,
 } from "./market-data.js";
-
 // Options data streaming
 export {
   getActiveContracts,
@@ -49,3 +37,12 @@ export {
   subscribeContracts,
   unsubscribeContract,
 } from "./options-data.js";
+// Shared Options WebSocket (single connection for Alpaca)
+export {
+  getSharedOptionsWebSocket,
+  initSharedOptionsWebSocket,
+  isOptionsWebSocketConnected,
+  offOptionsEvent,
+  onOptionsEvent,
+  shutdownSharedOptionsWebSocket,
+} from "./shared-options-ws.js";

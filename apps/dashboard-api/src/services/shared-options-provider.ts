@@ -9,20 +9,20 @@
  * single connection limit).
  */
 
+import type { OptionsDataProvider } from "@cream/indicators";
 import {
   type AlpacaWsEvent,
   parseOptionSymbol,
   solveIVFromQuote,
   timeToExpiry,
 } from "@cream/marketdata";
-import type { OptionsDataProvider } from "@cream/indicators";
+import log from "../logger.js";
 import {
   getSharedOptionsWebSocket,
   isOptionsWebSocketConnected,
-  onOptionsEvent,
   offOptionsEvent,
+  onOptionsEvent,
 } from "../streaming/shared-options-ws.js";
-import log from "../logger.js";
 
 // ============================================
 // Types
@@ -100,14 +100,20 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
    */
   private handleQuote(msg: unknown): void {
     const quote = msg as { S: string; bp: number; ap: number; bs: number; as: number; t: string };
-    if (!quote.S) return;
+    if (!quote.S) {
+      return;
+    }
 
     const optionInfo = parseOptionSymbol(quote.S);
-    if (!optionInfo) return;
+    if (!optionInfo) {
+      return;
+    }
 
     const underlying = optionInfo.root;
     const state = this.subscriptions.get(underlying);
-    if (!state) return;
+    if (!state) {
+      return;
+    }
 
     // Calculate IV from quote
     const tte = timeToExpiry(optionInfo.expiry);
@@ -141,14 +147,20 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
    */
   private handleTrade(msg: unknown): void {
     const trade = msg as { S: string; p: number; s: number; t: string };
-    if (!trade.S) return;
+    if (!trade.S) {
+      return;
+    }
 
     const optionInfo = parseOptionSymbol(trade.S);
-    if (!optionInfo) return;
+    if (!optionInfo) {
+      return;
+    }
 
     const underlying = optionInfo.root;
     const state = this.subscriptions.get(underlying);
-    if (!state) return;
+    if (!state) {
+      return;
+    }
 
     const now = Date.now();
 
@@ -216,7 +228,7 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
    * Get underlying stock price.
    * In production, this would use the stock WebSocket or REST API.
    */
-  private async getUnderlyingPrice(underlying: string): Promise<number> {
+  private async getUnderlyingPrice(_underlying: string): Promise<number> {
     // TODO: Get from shared stock WebSocket or REST API
     // For now, return 0 which will result in null IV calculations
     return 0;
@@ -246,10 +258,14 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
     const atmQuotes: number[] = [];
 
     for (const quote of state.quotes.values()) {
-      if (quote.iv === null) continue;
+      if (quote.iv === null) {
+        continue;
+      }
 
       const optionInfo = parseOptionSymbol(quote.symbol);
-      if (!optionInfo) continue;
+      if (!optionInfo) {
+        continue;
+      }
 
       const moneyness = Math.abs(optionInfo.strike - state.underlyingPrice) / state.underlyingPrice;
       if (moneyness <= atmThreshold) {
@@ -292,10 +308,14 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
     const otmThreshold = 0.1;
 
     for (const quote of state.quotes.values()) {
-      if (quote.iv === null) continue;
+      if (quote.iv === null) {
+        continue;
+      }
 
       const optionInfo = parseOptionSymbol(quote.symbol);
-      if (!optionInfo) continue;
+      if (!optionInfo) {
+        continue;
+      }
 
       const moneyness = (optionInfo.strike - state.underlyingPrice) / state.underlyingPrice;
       const absMoneyness = Math.abs(moneyness);
@@ -350,7 +370,9 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
 
     for (const trade of state.trades) {
       const optionInfo = parseOptionSymbol(trade.symbol);
-      if (!optionInfo) continue;
+      if (!optionInfo) {
+        continue;
+      }
 
       if (optionInfo.type === "PUT") {
         putVolume += trade.size;

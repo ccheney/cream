@@ -162,7 +162,6 @@ export function broadcastOptionsQuote(contract: string, message: ServerMessage):
 
     // Log debug info for first contract check
     if (!loggedDebug && connections.size > 0) {
-      console.log(`[Options Broadcast] Contract: ${upperContract}, Connections: ${connections.size}, HasOptions: ${hasOptionsChannel}, HasContract: ${hasContract}, ClientContracts: ${ws.data.contracts.size}`);
       loggedDebug = true;
     }
 

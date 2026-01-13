@@ -23,8 +23,8 @@ import { broadcastOptionsQuote } from "../websocket/handler.js";
 import {
   getSharedOptionsWebSocket,
   isOptionsWebSocketConnected,
-  onOptionsEvent,
   offOptionsEvent,
+  onOptionsEvent,
 } from "./shared-options-ws.js";
 
 // ============================================
@@ -104,9 +104,9 @@ export async function initOptionsDataStreaming(): Promise<void> {
 /**
  * Ensure the shared options WebSocket is connected.
  */
-async function ensureConnected(): Promise<boolean> {
+async function _ensureConnected(): Promise<boolean> {
   const client = await getSharedOptionsWebSocket();
-  return client !== null && client.isConnected();
+  return client?.isConnected() ?? false;
 }
 
 /**
@@ -216,9 +216,6 @@ function handleOptionsQuoteMessage(msg: AlpacaWsQuoteMessage): void {
   const contract = msg.S;
   const underlying = extractUnderlying(contract);
 
-  // Debug: Log first few quotes to verify data flow
-  console.log(`[Options Data] Quote received: ${contract} bid=${msg.bp} ask=${msg.ap}`);
-
   // Get cached data
   const cached = optionsCache.get(contract);
 
@@ -324,7 +321,6 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     .filter((c) => !activeContracts.has(c));
 
   if (newContracts.length === 0) {
-    console.log("[Options Data] No new contracts to subscribe (all already subscribed)");
     return;
   }
 
@@ -334,11 +330,9 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
 
   const client = await getSharedOptionsWebSocket();
   if (client?.isConnected()) {
-    console.log(`[Options Data] Subscribing ${newContracts.length} contracts to Alpaca OPRA:`, newContracts.slice(0, 3).join(", "), newContracts.length > 3 ? "..." : "");
     client.subscribe("quotes", newContracts);
     client.subscribe("trades", newContracts);
   } else {
-    console.log("[Options Data] Cannot subscribe - Alpaca OPRA WebSocket not connected");
   }
 }
 

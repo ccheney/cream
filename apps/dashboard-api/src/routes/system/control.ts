@@ -7,11 +7,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getSystemStateRepo } from "../../db.js";
-import {
-  getRunningCycles,
-  getSystemState,
-  setSystemStatus,
-} from "./state.js";
+import { getRunningCycles, getSystemState, setSystemStatus } from "./state.js";
 import {
   EnvironmentRequestSchema,
   StartRequestSchema,
@@ -30,7 +26,6 @@ type Environment = "BACKTEST" | "PAPER" | "LIVE";
 async function getSystemStatusResponse(environmentOverride?: string) {
   const state = await getSystemState(environmentOverride);
   const environment = (environmentOverride ?? state.environment) as Environment;
-  console.log("[SystemStatus] env:", environment, "status:", state.status, "override:", environmentOverride);
 
   const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
     getPositionsRepo(),

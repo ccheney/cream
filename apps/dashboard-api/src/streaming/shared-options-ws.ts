@@ -51,16 +51,10 @@ function broadcastEvent(event: AlpacaWsEvent): void {
       // Try to reconnect (the client has auto-reconnect built in)
       break;
     case "reconnecting":
-      log.info(
-        { attempt: event.attempt },
-        "Shared Options WebSocket reconnecting"
-      );
+      log.info({ attempt: event.attempt }, "Shared Options WebSocket reconnecting");
       break;
     case "error":
-      log.error(
-        { code: event.code, message: event.message },
-        "Shared Options WebSocket error"
-      );
+      log.error({ code: event.code, message: event.message }, "Shared Options WebSocket error");
       break;
   }
 

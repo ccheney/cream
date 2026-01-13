@@ -24,10 +24,10 @@ import {
   type TursoShortInterestRepository,
 } from "@cream/indicators";
 import type { AlpacaMarketDataClient } from "@cream/marketdata";
-import { getSharedOptionsDataProvider } from "./shared-options-provider.js";
 import type { TursoClient } from "@cream/storage";
 import { getDbClient } from "../db.js";
 import { getAlpacaClient } from "../routes/market/types.js";
+import { getSharedOptionsDataProvider } from "./shared-options-provider.js";
 
 // ============================================
 // Market Data Provider Adapter

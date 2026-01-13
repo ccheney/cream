@@ -54,10 +54,8 @@ export async function setSystemStatus(
   environment?: string
 ): Promise<DbSystemState> {
   const env = environment ?? requireEnv();
-  console.log("[setSystemStatus] Setting status to", status, "for env:", env);
   const repo = await getSystemStateRepo();
   const result = await repo.setStatus(env, status);
-  console.log("[setSystemStatus] Result:", result.status, result.environment);
   return result;
 }
 
