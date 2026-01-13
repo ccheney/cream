@@ -43,6 +43,9 @@ export type MarketCapCategory = z.infer<typeof MarketCapCategory>;
 export const DataQuality = z.enum(["COMPLETE", "PARTIAL", "STALE"]);
 export type DataQuality = z.infer<typeof DataQuality>;
 
+export const TradingSession = z.enum(["PRE_MARKET", "RTH", "AFTER_HOURS", "CLOSED"]);
+export type TradingSession = z.infer<typeof TradingSession>;
+
 export const SyncRunType = z.enum([
   "fundamentals",
   "short_interest",
@@ -241,6 +244,8 @@ export const SnapshotMetadataSchema = z.object({
   sentiment_date: z.string().nullable(),
   data_quality: DataQuality,
   missing_fields: z.array(z.string()),
+  /** Current trading session when snapshot was taken */
+  trading_session: TradingSession.optional(),
 });
 export type SnapshotMetadata = z.infer<typeof SnapshotMetadataSchema>;
 
