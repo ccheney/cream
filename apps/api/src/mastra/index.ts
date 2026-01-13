@@ -45,6 +45,12 @@ export const mastra = new Mastra({
   bundler: {
     // Externalize packages that shouldn't be bundled by mastra dev
     externals: [
+      // Protobuf and gRPC
+      "@bufbuild/protobuf",
+      "@connectrpc/connect",
+      "@connectrpc/connect-node",
+      // Protobuf generated stubs
+      "@cream/schema-gen",
       // Google AI SDK used by @cream/helix
       "@google/genai",
       // Native/binary dependencies
@@ -54,8 +60,6 @@ export const mastra = new Mastra({
       // Turso packages
       "@tursodatabase/database",
       "@tursodatabase/sync",
-      // Protobuf generated stubs
-      "@cream/schema-gen",
     ],
   },
 });
