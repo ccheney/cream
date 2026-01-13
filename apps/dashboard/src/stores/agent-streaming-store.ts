@@ -14,7 +14,6 @@ import { useShallow } from "zustand/react/shallow";
 // ============================================
 
 export type AgentType =
-  | "technical"
   | "news"
   | "fundamentals"
   | "bullish"
@@ -87,7 +86,6 @@ export type AgentStreamingStore = AgentStreamingStoreState & AgentStreamingStore
 // ============================================
 
 export const AGENT_TYPES: AgentType[] = [
-  "technical",
   "news",
   "fundamentals",
   "bullish",
@@ -245,12 +243,22 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
         set((state) => {
           const newAgents = new Map(state.agents);
           const current = newAgents.get(agentType) ?? createInitialAgentState();
-          newAgents.set(agentType, {
-            ...current,
-            status,
-            error,
-            lastUpdate: new Date().toISOString(),
-          });
+
+          // When transitioning to "processing", reset streaming state to clear cached output
+          if (status === "processing") {
+            newAgents.set(agentType, {
+              ...createInitialAgentState(),
+              status: "processing",
+              lastUpdate: new Date().toISOString(),
+            });
+          } else {
+            newAgents.set(agentType, {
+              ...current,
+              status,
+              error,
+              lastUpdate: new Date().toISOString(),
+            });
+          }
           return { agents: newAgents };
         });
       },

@@ -18,7 +18,6 @@ import type { AgentStreamingState, AgentType, ToolCall } from "@/hooks/useAgentS
 
 /** Agent signature colors from design philosophy */
 const AGENT_COLORS: Record<AgentType, string> = {
-  technical: "#8B5CF6", // Violet
   news: "#EC4899", // Pink
   fundamentals: "#14B8A6", // Teal
   bullish: "#22C55E", // Green
@@ -29,7 +28,6 @@ const AGENT_COLORS: Record<AgentType, string> = {
 };
 
 const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
-  technical: "Technical Analyst",
   news: "News & Sentiment",
   fundamentals: "Fundamentals",
   bullish: "Bullish Research",

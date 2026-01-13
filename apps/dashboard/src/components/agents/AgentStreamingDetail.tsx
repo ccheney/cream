@@ -18,7 +18,6 @@ import type { AgentStreamingState, AgentType, ToolCall } from "@/hooks/useAgentS
 // ============================================
 
 const AGENT_COLORS: Record<AgentType, string> = {
-  technical: "#8B5CF6",
   news: "#EC4899",
   fundamentals: "#14B8A6",
   bullish: "#22C55E",
@@ -29,7 +28,6 @@ const AGENT_COLORS: Record<AgentType, string> = {
 };
 
 const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
-  technical: "Technical Analyst",
   news: "News & Sentiment",
   fundamentals: "Fundamentals",
   bullish: "Bullish Research",

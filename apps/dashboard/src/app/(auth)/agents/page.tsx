@@ -2,7 +2,7 @@
 "use client";
 
 /**
- * Agents Page - Monitor 8-agent consensus network with real-time streaming
+ * Agents Page - Monitor 7-agent consensus network with real-time streaming
  *
  * Displays agent status cards with live tool calls and reasoning streams.
  *
@@ -22,7 +22,6 @@ import { type AgentType, useAgentStreaming } from "@/hooks/useAgentStreaming";
 // ============================================
 
 const AGENT_TYPES: AgentType[] = [
-  "technical",
   "news",
   "fundamentals",
   "bullish",
@@ -33,7 +32,6 @@ const AGENT_TYPES: AgentType[] = [
 ];
 
 const AGENT_NAMES: Record<string, string> = {
-  technical: "Technical Analyst",
   news: "News & Sentiment",
   fundamentals: "Fundamentals & Macro",
   bullish: "Bullish Research",
@@ -101,7 +99,7 @@ export default function AgentsPage() {
           {/* Fallback: Show loading skeleton while waiting for WebSocket data */}
           {!hasStatusData && streamingAgents.size === 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-              {[...Array(8)].map((_, i) => (
+              {[...Array(7)].map((_, i) => (
                 <div
                   key={`skeleton-${i}`}
                   className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4"
