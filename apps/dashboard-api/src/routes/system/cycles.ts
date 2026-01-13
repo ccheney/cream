@@ -251,22 +251,112 @@ app.openapi(triggerCycleRoute, async (c) => {
         // Cast to access properties - Mastra runtime emits more event types than TS types declare
         const evt = event as unknown as Record<string, unknown>;
 
-        // Handle custom agent events from writer.write()
+        // Extract the actual event - check for wrapped events (Mastra may wrap in workflow-step-output)
+        let agentEvt: Record<string, unknown> | null = null;
+
+        // Check if this is a direct agent event
         if (
           evt.type === "agent-start" ||
           evt.type === "agent-chunk" ||
           evt.type === "agent-complete" ||
           evt.type === "agent-error"
         ) {
-          const agentEvent = evt as {
+          agentEvt = evt;
+        }
+        // Check for wrapped events in payload (Mastra 1.0 may wrap custom events)
+        else if (evt.type === "workflow-step-output" && evt.payload) {
+          const payload = evt.payload as Record<string, unknown>;
+          // First check if type is directly on payload
+          if (
+            payload.type === "agent-start" ||
+            payload.type === "agent-chunk" ||
+            payload.type === "agent-complete" ||
+            payload.type === "agent-error"
+          ) {
+            agentEvt = payload;
+          }
+          // Then check inside payload.output (where writer.write() data goes)
+          else if (payload.output) {
+            const output = payload.output as Record<string, unknown>;
+            if (
+              output.type === "agent-start" ||
+              output.type === "agent-chunk" ||
+              output.type === "agent-complete" ||
+              output.type === "agent-error"
+            ) {
+              agentEvt = output;
+            }
+          }
+        }
+        // Check for custom events (writer.custom() emits with different structure)
+        else if (evt.type === "step-output" && evt.output) {
+          const output = evt.output as Record<string, unknown>;
+          if (
+            output.type === "agent-start" ||
+            output.type === "agent-chunk" ||
+            output.type === "agent-complete" ||
+            output.type === "agent-error"
+          ) {
+            agentEvt = output;
+          }
+        }
+        // Check for workflow-custom event type (from writer.custom())
+        else if (evt.type === "workflow-custom" && evt.payload) {
+          const payload = evt.payload as Record<string, unknown>;
+          if (
+            payload.type === "agent-start" ||
+            payload.type === "agent-chunk" ||
+            payload.type === "agent-complete" ||
+            payload.type === "agent-error"
+          ) {
+            agentEvt = payload;
+          }
+          // Also check inside data field
+          else if (payload.data) {
+            const data = payload.data as Record<string, unknown>;
+            if (
+              data.type === "agent-start" ||
+              data.type === "agent-chunk" ||
+              data.type === "agent-complete" ||
+              data.type === "agent-error"
+            ) {
+              agentEvt = data;
+            }
+          }
+        }
+        // Fallback: check if evt itself contains agent fields directly (for unknown wrappers)
+        else if (evt.agent && typeof evt.agent === "string") {
+          const evtType = evt.type as string;
+          if (
+            evtType?.startsWith("agent-") ||
+            evtType === "agent-start" ||
+            evtType === "agent-chunk" ||
+            evtType === "agent-complete" ||
+            evtType === "agent-error"
+          ) {
+            agentEvt = evt;
+          }
+        }
+
+        // Handle agent events (direct or unwrapped)
+        if (agentEvt) {
+          const agentEvent = agentEvt as {
             type: string;
-            agent: string;
-            cycleId: string;
-            data?: { chunkType?: string; text?: string; output?: unknown };
+            agent?: string;
+            cycleId?: string;
+            data?: Record<string, unknown>;
+            payload?: Record<string, unknown>;
             error?: string;
-            timestamp: string;
+            timestamp?: string;
           };
-          const agentType = agentTypeMap[agentEvent.agent];
+
+          // Extract agent from different locations depending on event structure
+          const agentName =
+            agentEvent.agent ??
+            (agentEvent.payload?.agent as string | undefined) ??
+            (agentEvent.data?.agent as string | undefined);
+
+          const agentType = agentTypeMap[agentName ?? ""];
           if (!agentType) {
             continue;
           }
@@ -287,54 +377,81 @@ app.openapi(triggerCycleRoute, async (c) => {
               });
               break;
 
-            case "agent-chunk":
-              if (agentEvent.data?.chunkType === "text-delta" && agentEvent.data.text) {
+            case "agent-chunk": {
+              // AgentStreamChunk structure: data.type + data.payload
+              const outerData = agentEvent.data as Record<string, unknown> | undefined;
+              const innerPayload = outerData?.payload as Record<string, unknown> | undefined;
+
+              const chunkType = outerData?.type as string | undefined;
+              const textContent = innerPayload?.text as string | undefined;
+              const toolCallId = innerPayload?.toolCallId as string | undefined;
+              const toolName = innerPayload?.toolName as string | undefined;
+              const toolArgs = innerPayload?.toolArgs as Record<string, unknown> | undefined;
+              const result = innerPayload?.result;
+              const success = innerPayload?.success as boolean | undefined;
+              const errorText = innerPayload?.error as string | undefined;
+
+              if (chunkType === "text-delta" && textContent) {
                 broadcastAgentTextDelta({
                   type: "agent_text_delta",
                   data: {
                     cycleId,
                     agentType,
-                    text: agentEvent.data.text,
+                    text: textContent,
                     timestamp: ts,
                   },
                 });
-              } else if (agentEvent.data?.chunkType === "reasoning" && agentEvent.data.text) {
+              } else if (chunkType === "reasoning-delta" && textContent) {
+                // reasoning-delta is the AgentStreamChunk type for reasoning output
                 broadcastAgentReasoning({
                   type: "agent_reasoning",
                   data: {
                     cycleId,
                     agentType,
-                    text: agentEvent.data.text,
+                    text: textContent,
                     timestamp: ts,
                   },
                 });
-              } else if (agentEvent.data?.chunkType === "tool-call") {
+              } else if (chunkType === "tool-call" || toolName) {
                 broadcastAgentToolCall({
                   type: "agent_tool_call",
                   data: {
                     cycleId,
                     agentType,
-                    toolName: String(agentEvent.data.text ?? "unknown"),
-                    toolArgs: "{}",
-                    toolCallId: `tc_${Date.now()}`,
+                    toolName: String(toolName ?? "unknown"),
+                    toolArgs: JSON.stringify(toolArgs ?? {}),
+                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
                     timestamp: ts,
                   },
                 });
-              } else if (agentEvent.data?.chunkType === "tool-result") {
+              } else if (chunkType === "tool-result" || result) {
                 broadcastAgentToolResult({
                   type: "agent_tool_result",
                   data: {
                     cycleId,
                     agentType,
-                    toolName: String(agentEvent.data.text ?? "unknown"),
-                    toolCallId: `tc_${Date.now()}`,
-                    resultSummary: JSON.stringify(agentEvent.data.output ?? {}).slice(0, 200),
-                    success: true,
+                    toolName: String(toolName ?? "unknown"),
+                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
+                    resultSummary: JSON.stringify(result ?? {}).slice(0, 200),
+                    success: success ?? true,
+                    timestamp: ts,
+                  },
+                });
+              } else if (chunkType === "error" && errorText) {
+                broadcastAgentOutput({
+                  type: "agent_output",
+                  data: {
+                    cycleId,
+                    agentType,
+                    status: "error",
+                    output: errorText,
+                    error: errorText,
                     timestamp: ts,
                   },
                 });
               }
               break;
+            }
 
             case "agent-complete":
               broadcastAgentOutput({

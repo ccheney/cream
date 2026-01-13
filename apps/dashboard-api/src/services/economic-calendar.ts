@@ -8,8 +8,8 @@
  * @see docs/plans/41-economic-calendar-page.md
  */
 
+import { type EconomicEvent, getFredEconomicCalendar } from "@cream/agents";
 import { createContext, requireEnv } from "@cream/domain";
-import { type EconomicEvent, getFredEconomicCalendar } from "@cream/mastra-kit";
 import { createFREDClientFromEnv, getReleaseById } from "@cream/universe";
 import log from "../logger.js";
 
