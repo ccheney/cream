@@ -16,12 +16,11 @@ This is the core API server that orchestrates trading decisions through:
 
 ### Workflows
 
-**Trading Cycle** (`src/workflows/trading-cycle.ts`)
-- Phase 1: Analysts (technical, news, fundamentals) run in parallel
-- Phase 2: Researchers (bullish/bearish debate) run in parallel
-- Phase 3: Trader synthesizes initial decision plan
-- Phase 4: Consensus loop (risk manager + critic approval) with iteration support
-- Phase 5: HelixDB memory update, constraints check, order submission
+**Trading Cycle** (`src/workflows/trading-cycle/`)
+- OBSERVE: Fetch market snapshot
+- ORIENT: Load memory context, compute regimes
+- DECIDE: Run agents (analysts → debate → trader → consensus)
+- ACT: Submit orders via Rust execution engine
 
 **Prediction Markets** (`src/workflows/prediction-markets.ts`)
 - Fetches macro signals (Fed rate, recession probability, etc.)
@@ -30,18 +29,23 @@ This is the core API server that orchestrates trading decisions through:
 ### Agents
 
 Located in `src/agents/`:
-- **stub-agents.ts** - Mock agents returning hardcoded data (BACKTEST mode)
-- **mastra-agents.ts** - Real agents using Mastra + Google Gemini (PAPER/LIVE)
+- **analysts.ts** - News and fundamentals analysts
+- **researchers.ts** - Bullish/bearish researchers
+- **trader.ts** - Decision plan synthesis
+- **approvers.ts** - Risk manager and critic
 
-### Workflow Steps (`src/steps/`)
+### Trading Cycle Steps (`src/workflows/steps/trading-cycle/`)
 
-- `buildSnapshot.ts` - Market data aggregation
-- `retrieveMemory.ts` - HelixDB GraphRAG retrieval
-- `persistMemory.ts` - Store decisions to HelixDB
-- `loadState.ts` - Load portfolio/config state
-- `executeOrders.ts` - Submit orders via execution engine
+- `observe.ts` - Market data snapshot
+- `orient.ts` - Memory context and regime computation
+- `decide.ts` - Stub agents for BACKTEST mode
+- `act.ts` - Constraint checking and order submission
+- `thesis.ts` - Thesis lifecycle management
+- `helix.ts` - HelixDB integration
+
+### Standalone Workflow Steps (`src/steps/`)
+
 - `fetchPredictionMarkets.ts` - Get Kalshi/Polymarket data
-- `gatherExternalContext.ts` - Aggregate news, sentiment, macro
 
 ## Mode Selection
 
