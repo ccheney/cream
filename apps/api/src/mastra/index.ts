@@ -4,7 +4,7 @@
  * Central Mastra instance with registered agents and workflows.
  *
  * Agents: All 9 trading agents (analysts, researchers, trader, approvers, idea/indicator)
- * Workflows: indicatorSynthesis, predictionMarkets (trading cycle TBD)
+ * Workflows: tradingCycle, indicatorSynthesis, predictionMarkets
  *
  * @see docs/plans/21-mastra-workflow-refactor.md
  */
@@ -15,8 +15,7 @@ import { mastraAgents } from "../agents/mastra-agents.js";
 import { agents } from "../agents/stub-agents.js";
 import { indicatorSynthesisWorkflow } from "../workflows/indicator-synthesis/index.js";
 import { predictionMarketsWorkflow } from "../workflows/prediction-markets.js";
-import { tradingCycleWorkflow } from "../workflows/trading-cycle.js";
-import { tradingCycleWorkflowV2 } from "../workflows/trading-cycle-v2/index.js";
+import { tradingCycleWorkflow } from "../workflows/trading-cycle-v2/index.js";
 
 /**
  * Mastra instance for the trading system.
@@ -39,9 +38,9 @@ import { tradingCycleWorkflowV2 } from "../workflows/trading-cycle-v2/index.js";
 export const mastra = new Mastra({
   agents: mastraAgents,
   workflows: {
+    tradingCycleWorkflow,
     indicatorSynthesisWorkflow,
     predictionMarketsWorkflow,
-    tradingCycleWorkflowV2,
   },
   bundler: {
     // Externalize packages that shouldn't be bundled by mastra dev
@@ -61,8 +60,5 @@ export const mastra = new Mastra({
   },
 });
 
-// Legacy exports for backwards compatibility
+// Exports
 export { agents, indicatorSynthesisWorkflow, predictionMarketsWorkflow, tradingCycleWorkflow };
-
-// New Mastra-native workflow
-export { tradingCycleWorkflowV2 };

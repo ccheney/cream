@@ -4,29 +4,24 @@
  * Endpoints for triggering and monitoring trading cycles.
  */
 
-import { type AgentStatusEvent, type AgentStreamChunk, tradingCycleWorkflow } from "@cream/api";
-import { createContext } from "@cream/domain";
+import { tradingCycleWorkflow } from "@cream/api";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
+import { broadcastCycleProgress, broadcastCycleResult } from "../../websocket/handler.js";
 import {
-  broadcastAgentOutput,
-  broadcastAgentReasoning,
-  broadcastAgentTextDelta,
-  broadcastAgentToolCall,
-  broadcastAgentToolResult,
-  broadcastCycleProgress,
-  broadcastCycleResult,
-} from "../../websocket/handler.js";
-import { systemState } from "./state.js";
+  getLastTriggerTime,
+  getRunningCycles,
+  setLastTriggerTime,
+  setRunningCycle,
+  updateCycleState,
+} from "./state.js";
 import {
   type CycleState,
   CycleStatusResponseSchema,
-  mapAgentType,
   TRIGGER_RATE_LIMIT_MS,
   TriggerCycleRequestSchema,
   TriggerCycleResponseSchema,
-  truncateResult,
 } from "./types.js";
 
 const app = new OpenAPIHono();
@@ -86,7 +81,8 @@ app.openapi(triggerCycleRoute, async (c) => {
     return c.json({ error: "confirmLive required to trigger LIVE cycle" }, 400);
   }
 
-  const existingCycle = systemState.runningCycles.get(environment);
+  const runningCycles = getRunningCycles();
+  const existingCycle = runningCycles.get(environment);
   if (existingCycle && (existingCycle.status === "queued" || existingCycle.status === "running")) {
     return c.json(
       { error: `Cycle already in progress for ${environment}`, cycleId: existingCycle.cycleId },
@@ -94,7 +90,8 @@ app.openapi(triggerCycleRoute, async (c) => {
     );
   }
 
-  const lastTrigger = systemState.lastTriggerTime.get(environment) ?? 0;
+  const lastTriggerTime = getLastTriggerTime();
+  const lastTrigger = lastTriggerTime.get(environment) ?? 0;
   const timeSinceLastTrigger = Date.now() - lastTrigger;
   if (timeSinceLastTrigger < TRIGGER_RATE_LIMIT_MS) {
     const retryAfterMs = TRIGGER_RATE_LIMIT_MS - timeSinceLastTrigger;
@@ -132,8 +129,8 @@ app.openapi(triggerCycleRoute, async (c) => {
     error: null,
     phase: null,
   };
-  systemState.runningCycles.set(environment, cycleState);
-  systemState.lastTriggerTime.set(environment, Date.now());
+  setRunningCycle(environment, cycleState);
+  setLastTriggerTime(environment, Date.now());
 
   const emitProgress = (phase: CyclePhase, progress: number, step: string, message: string) => {
     cycleState.phase = phase.toLowerCase() as CycleState["phase"];
@@ -182,77 +179,8 @@ app.openapi(triggerCycleRoute, async (c) => {
     broadcastCycleResult({ type: "cycle_result", data: resultData });
   };
 
-  const emitAgentEvent = (event: AgentStatusEvent) => {
-    broadcastAgentOutput({
-      type: "agent_output",
-      data: {
-        cycleId: event.cycleId,
-        agentType: mapAgentType(event.agentType),
-        status: event.status,
-        output: event.output ?? "",
-        error: event.error,
-        durationMs: event.durationMs,
-        timestamp: event.timestamp,
-      },
-    });
-  };
-
-  const emitStreamChunk = (chunk: AgentStreamChunk) => {
-    const timestamp = chunk.timestamp;
-    const agentType = mapAgentType(chunk.agentType);
-
-    switch (chunk.type) {
-      case "tool-call":
-        broadcastAgentToolCall({
-          type: "agent_tool_call",
-          data: {
-            cycleId,
-            agentType,
-            toolName: chunk.payload.toolName ?? "",
-            toolArgs: JSON.stringify(chunk.payload.toolArgs ?? {}),
-            toolCallId: chunk.payload.toolCallId ?? "",
-            timestamp,
-          },
-        });
-        break;
-      case "tool-result":
-        broadcastAgentToolResult({
-          type: "agent_tool_result",
-          data: {
-            cycleId,
-            agentType,
-            toolName: chunk.payload.toolName ?? "",
-            toolCallId: chunk.payload.toolCallId ?? "",
-            resultSummary: truncateResult(chunk.payload.result),
-            success: chunk.payload.success ?? true,
-            timestamp,
-          },
-        });
-        break;
-      case "reasoning-delta":
-        broadcastAgentReasoning({
-          type: "agent_reasoning",
-          data: {
-            cycleId,
-            agentType,
-            text: chunk.payload.text ?? "",
-            timestamp,
-          },
-        });
-        break;
-      case "text-delta":
-        broadcastAgentTextDelta({
-          type: "agent_text_delta",
-          data: {
-            cycleId,
-            agentType,
-            text: chunk.payload.text ?? "",
-            timestamp,
-          },
-        });
-        break;
-    }
-  };
+  // TODO: Streaming callbacks not yet supported in v2 workflow
+  // Will be added in future iteration with Mastra event bus pattern
 
   const runCycle = async () => {
     const startTime = Date.now();
@@ -276,25 +204,47 @@ app.openapi(triggerCycleRoute, async (c) => {
     try {
       emitProgress("observe", 10, "market_data", "Fetching market data...");
 
-      const source = useDraftConfig ? "dashboard-test" : "manual";
-      const ctx = createContext(environment, source, configVersion ?? undefined);
-
-      const workflowResult = await tradingCycleWorkflow.execute({
-        triggerData: {
+      // v2 workflow determines mode from CREAM_ENV
+      // Streaming callbacks not yet supported in v2 - will be added in future iteration
+      const run = await tradingCycleWorkflow.createRun();
+      const runResult = await run.start({
+        inputData: {
           cycleId,
-          context: ctx,
           instruments: symbols,
-          useDraftConfig,
-          onAgentEvent: emitAgentEvent,
-          onStreamChunk: emitStreamChunk,
+          forceStub: useDraftConfig, // draft config testing uses stub mode
         },
       });
+
+      if (runResult.status !== "success") {
+        throw new Error("Workflow execution failed");
+      }
+
+      // Extract result from successful workflow
+      const workflowResult = (
+        runResult as {
+          result?: {
+            cycleId: string;
+            approved: boolean;
+            iterations: number;
+            orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
+            mode: "STUB" | "LLM";
+            configVersion: string | null;
+          };
+        }
+      ).result ?? {
+        cycleId,
+        approved: false,
+        iterations: 0,
+        orderSubmission: { submitted: false, orderIds: [], errors: ["No result returned"] },
+        mode: "STUB" as const,
+        configVersion: null,
+      };
 
       cycleState.status = "completed";
       cycleState.completedAt = new Date().toISOString();
 
-      systemState.lastCycleId = cycleId;
-      systemState.lastCycleTime = cycleState.completedAt;
+      // Persist cycle completion to database
+      await updateCycleState(environment, cycleId, "complete");
 
       const durationMs = Date.now() - startTime;
       if (cyclesRepo) {
@@ -416,7 +366,8 @@ const cycleStatusRoute = createRoute({
 app.openapi(cycleStatusRoute, async (c) => {
   const { cycleId } = c.req.valid("param");
 
-  for (const cycleState of systemState.runningCycles.values()) {
+  const runningCycles = getRunningCycles();
+  for (const cycleState of runningCycles.values()) {
     if (cycleState.cycleId === cycleId) {
       return c.json({
         cycleId: cycleState.cycleId,

@@ -189,15 +189,10 @@ async function runTradingCycle(): Promise<void> {
   try {
     const instruments = getInstruments();
 
-    // Create ExecutionContext at scheduler boundary
-    // Source is "scheduled" for automated runs
-    // configId is the trading config version for traceability
-    const ctx = createContext(state.environment, "scheduled", state.config.trading.id);
-
-    await tradingCycleWorkflow.execute({
-      triggerData: {
+    const run = await tradingCycleWorkflow.createRun();
+    await run.start({
+      inputData: {
         cycleId,
-        context: ctx,
         instruments,
       },
     });

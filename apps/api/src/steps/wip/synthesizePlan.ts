@@ -15,11 +15,11 @@
  */
 
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
+import type { PortfolioStateResponse } from "@cream/mastra-kit";
 import { getPortfolioState, withAgentTimeout } from "@cream/mastra-kit";
 import type { ThesisStateRepository } from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
-
 import {
   type AgentConfigEntry,
   type AgentContext,
@@ -31,7 +31,6 @@ import {
 } from "../agents/mastra-agents.js";
 import { getThesisStateRepo } from "../db.js";
 import { log } from "../logger.js";
-import type { PortfolioStateResponse } from "../workflows/trading-cycle.js";
 import { RunAnalystsOutputSchema } from "./runAnalysts.js";
 import { RunDebateOutputSchema } from "./runDebate.js";
 
