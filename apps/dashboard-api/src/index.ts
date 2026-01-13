@@ -50,8 +50,10 @@ import {
 import {
   initMarketDataStreaming,
   initOptionsDataStreaming,
+  initSharedOptionsWebSocket,
   shutdownMarketDataStreaming,
   shutdownOptionsDataStreaming,
+  shutdownSharedOptionsWebSocket,
 } from "./streaming/index.js";
 import {
   closeAllConnections,
@@ -304,13 +306,18 @@ if (import.meta.main) {
     );
   });
 
-  // Initialize options data streaming (non-blocking)
-  initOptionsDataStreaming().catch((error) => {
-    log.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Options data streaming initialization failed"
-    );
-  });
+  // Initialize shared options WebSocket first (single connection for Alpaca)
+  initSharedOptionsWebSocket()
+    .then(() => {
+      // Initialize options data streaming after shared WebSocket is ready
+      return initOptionsDataStreaming();
+    })
+    .catch((error) => {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Options streaming initialization failed"
+      );
+    });
 
   // Start event publisher for broadcasting events to WebSocket clients
   const publisher = getEventPublisher();
@@ -359,6 +366,7 @@ if (import.meta.main) {
     resetEventPublisher();
     shutdownMarketDataStreaming();
     shutdownOptionsDataStreaming();
+    shutdownSharedOptionsWebSocket();
     closeAllConnections("Server shutting down");
     closeDb();
     server.stop();

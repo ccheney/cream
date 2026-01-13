@@ -12,26 +12,26 @@
  */
 
 import {
-  AlpacaConnectionState,
-  type AlpacaWebSocketClient,
   type AlpacaWsBarMessage,
   type AlpacaWsEvent,
   type AlpacaWsQuoteMessage,
   type AlpacaWsTradeMessage,
-  createAlpacaOptionsClientFromEnv,
   isAlpacaConfigured,
 } from "@cream/marketdata";
 import log from "../logger.js";
 import { broadcastOptionsQuote } from "../websocket/handler.js";
+import {
+  getSharedOptionsWebSocket,
+  isOptionsWebSocketConnected,
+  onOptionsEvent,
+  offOptionsEvent,
+} from "./shared-options-ws.js";
 
 // ============================================
 // State
 // ============================================
 
-let alpacaOptionsClient: AlpacaWebSocketClient | null = null;
 let isInitialized = false;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Active options contract subscriptions from dashboard clients.
@@ -82,8 +82,7 @@ function extractUnderlying(contract: string): string {
 
 /**
  * Initialize the options data streaming service.
- * Sets up configuration but does NOT connect until first subscription.
- * This avoids idle connections that Alpaca will terminate.
+ * Registers event handler with the shared WebSocket connection.
  */
 export async function initOptionsDataStreaming(): Promise<void> {
   if (isInitialized) {
@@ -96,44 +95,18 @@ export async function initOptionsDataStreaming(): Promise<void> {
     return;
   }
 
-  // Mark as initialized but don't connect yet - will connect on first subscription
+  // Register our event handler with the shared connection
+  onOptionsEvent(handleOptionsEvent);
   isInitialized = true;
-  log.info("Options data streaming initialized (will connect on first subscription)");
+  log.info("Options data streaming initialized (using shared WebSocket)");
 }
 
 /**
- * Ensure the options WebSocket is connected.
- * Called lazily when first subscription is requested.
+ * Ensure the shared options WebSocket is connected.
  */
 async function ensureConnected(): Promise<boolean> {
-  if (!isAlpacaConfigured()) {
-    return false;
-  }
-
-  if (alpacaOptionsClient?.isConnected()) {
-    return true;
-  }
-
-  // Clean up any existing client
-  if (alpacaOptionsClient) {
-    alpacaOptionsClient.disconnect();
-    alpacaOptionsClient = null;
-  }
-
-  try {
-    alpacaOptionsClient = createAlpacaOptionsClientFromEnv();
-    alpacaOptionsClient.on(handleOptionsEvent);
-    await alpacaOptionsClient.connect();
-    reconnectAttempts = 0;
-    log.info("Options data streaming connected to Alpaca");
-    return true;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    log.warn({ error: errorMsg }, "Failed to connect to Alpaca Options WebSocket");
-    alpacaOptionsClient?.disconnect();
-    alpacaOptionsClient = null;
-    return false;
-  }
+  const client = await getSharedOptionsWebSocket();
+  return client !== null && client.isConnected();
 }
 
 /**
@@ -141,10 +114,7 @@ async function ensureConnected(): Promise<boolean> {
  */
 export function shutdownOptionsDataStreaming(): void {
   log.info({ activeContracts: activeContracts.size }, "Shutting down options data streaming");
-  if (alpacaOptionsClient) {
-    alpacaOptionsClient.disconnect();
-    alpacaOptionsClient = null;
-  }
+  offOptionsEvent(handleOptionsEvent);
   isInitialized = false;
   activeContracts.clear();
   optionsCache.clear();
@@ -156,21 +126,14 @@ export function shutdownOptionsDataStreaming(): void {
 // ============================================
 
 /**
- * Handle events from Alpaca Options WebSocket.
+ * Handle events from shared Alpaca Options WebSocket.
  */
 function handleOptionsEvent(event: AlpacaWsEvent): void {
   switch (event.type) {
-    case "connected":
-      log.debug("Alpaca Options WebSocket connected");
-      break;
-
     case "authenticated":
-      log.info({ activeContracts: activeContracts.size }, "Alpaca Options WebSocket authenticated");
       // Resubscribe to active contracts after reconnection
       if (activeContracts.size > 0) {
-        const contracts = Array.from(activeContracts);
-        alpacaOptionsClient?.subscribe("quotes", contracts);
-        alpacaOptionsClient?.subscribe("trades", contracts);
+        resubscribeActiveContracts();
       }
       break;
 
@@ -190,40 +153,24 @@ function handleOptionsEvent(event: AlpacaWsEvent): void {
       handleOptionsTradeMessage(event.message);
       break;
 
-    case "disconnected":
-      log.warn({ reason: event.reason }, "Alpaca Options WebSocket disconnected");
-      break;
+    // Other events (connected, disconnected, error) are logged by shared-options-ws.ts
+  }
+}
 
-    case "reconnecting":
-      reconnectAttempts = event.attempt;
-      log.info(
-        { attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-        "Reconnecting to Alpaca Options WebSocket"
-      );
-      break;
+/**
+ * Resubscribe to all active contracts after reconnection.
+ */
+async function resubscribeActiveContracts(): Promise<void> {
+  const client = await getSharedOptionsWebSocket();
+  if (!client?.isConnected()) {
+    return;
+  }
 
-    case "error":
-      // 101 status code error typically means missing Alpaca Options Data subscription
-      if (event.message?.includes("101")) {
-        if (reconnectAttempts === 0) {
-          log.warn(
-            { code: event.code, message: event.message },
-            "Alpaca Options WebSocket rejected - Alpaca Options Data subscription may be required"
-          );
-        }
-      } else {
-        log.error(
-          { code: event.code, message: event.message, reconnectAttempts },
-          "Alpaca Options WebSocket error"
-        );
-      }
-      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        log.warn(
-          "Max reconnect attempts reached, options streaming disabled (option chain API still available)"
-        );
-        isInitialized = false;
-      }
-      break;
+  const contracts = Array.from(activeContracts);
+  if (contracts.length > 0) {
+    log.info({ count: contracts.length }, "Resubscribing to options contracts");
+    client.subscribe("quotes", contracts);
+    client.subscribe("trades", contracts);
   }
 }
 
@@ -268,6 +215,9 @@ function handleOptionsBarMessage(msg: AlpacaWsBarMessage): void {
 function handleOptionsQuoteMessage(msg: AlpacaWsQuoteMessage): void {
   const contract = msg.S;
   const underlying = extractUnderlying(contract);
+
+  // Debug: Log first few quotes to verify data flow
+  console.log(`[Options Data] Quote received: ${contract} bid=${msg.bp} ask=${msg.ap}`);
 
   // Get cached data
   const cached = optionsCache.get(contract);
@@ -336,7 +286,6 @@ function handleOptionsTradeMessage(msg: AlpacaWsTradeMessage): void {
 /**
  * Subscribe to options data for a contract.
  * Called when a dashboard client subscribes to an options contract.
- * Lazily connects to WebSocket on first subscription.
  *
  * @param contract OCC format contract symbol (e.g., AAPL250117C00100000)
  */
@@ -353,18 +302,15 @@ export async function subscribeContract(contract: string): Promise<void> {
 
   activeContracts.add(normalizedContract);
 
-  // Connect lazily on first subscription
-  const connected = await ensureConnected();
-  if (connected && alpacaOptionsClient?.isConnected()) {
-    // Subscribe to quotes and trades for this contract
-    alpacaOptionsClient.subscribe("quotes", [normalizedContract]);
-    alpacaOptionsClient.subscribe("trades", [normalizedContract]);
+  const client = await getSharedOptionsWebSocket();
+  if (client?.isConnected()) {
+    client.subscribe("quotes", [normalizedContract]);
+    client.subscribe("trades", [normalizedContract]);
   }
 }
 
 /**
  * Subscribe to multiple contracts at once.
- * Lazily connects to WebSocket on first subscription.
  */
 export async function subscribeContracts(contracts: string[]): Promise<void> {
   const newContracts = contracts
@@ -378,6 +324,7 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     .filter((c) => !activeContracts.has(c));
 
   if (newContracts.length === 0) {
+    console.log("[Options Data] No new contracts to subscribe (all already subscribed)");
     return;
   }
 
@@ -385,12 +332,13 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
     activeContracts.add(contract);
   }
 
-  // Connect lazily on first subscription
-  const connected = await ensureConnected();
-  if (connected && alpacaOptionsClient?.isConnected()) {
-    // Subscribe to both quotes and trades
-    alpacaOptionsClient.subscribe("quotes", newContracts);
-    alpacaOptionsClient.subscribe("trades", newContracts);
+  const client = await getSharedOptionsWebSocket();
+  if (client?.isConnected()) {
+    console.log(`[Options Data] Subscribing ${newContracts.length} contracts to Alpaca OPRA:`, newContracts.slice(0, 3).join(", "), newContracts.length > 3 ? "..." : "");
+    client.subscribe("quotes", newContracts);
+    client.subscribe("trades", newContracts);
+  } else {
+    console.log("[Options Data] Cannot subscribe - Alpaca OPRA WebSocket not connected");
   }
 }
 
@@ -410,9 +358,10 @@ export async function unsubscribeContract(contract: string): Promise<void> {
   activeContracts.delete(normalizedContract);
   optionsCache.delete(normalizedContract);
 
-  if (alpacaOptionsClient?.isConnected()) {
-    alpacaOptionsClient.unsubscribe("quotes", [normalizedContract]);
-    alpacaOptionsClient.unsubscribe("trades", [normalizedContract]);
+  const client = await getSharedOptionsWebSocket();
+  if (client?.isConnected()) {
+    client.unsubscribe("quotes", [normalizedContract]);
+    client.unsubscribe("trades", [normalizedContract]);
   }
 }
 
@@ -451,7 +400,7 @@ export function getActiveContracts(): string[] {
  * Check if options streaming is initialized and connected.
  */
 export function isOptionsStreamingConnected(): boolean {
-  return isInitialized && alpacaOptionsClient?.getState() === AlpacaConnectionState.AUTHENTICATED;
+  return isInitialized && isOptionsWebSocketConnected();
 }
 
 // ============================================

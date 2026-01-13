@@ -217,9 +217,9 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
 function handleBarMessage(msg: AlpacaWsBarMessage): void {
   const symbol = msg.S.toUpperCase();
 
-  // Update cache - preserve prevClose if we have it, otherwise use open price
+  // Update cache - preserve prevClose if we have it, otherwise use close price (gives 0% change)
   const cached = quoteCache.get(symbol);
-  const prevClose = cached?.prevClose ?? msg.o; // Use cached prevClose or open price as fallback
+  const prevClose = cached?.prevClose ?? msg.c; // Use cached prevClose or close price as fallback
 
   quoteCache.set(symbol, {
     bid: msg.c, // Use close as proxy for bid (no bid in bars)
@@ -395,12 +395,14 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
           const latestTrade = snapshot.latestTrade;
           const latestQuote = snapshot.latestQuote;
 
+          const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
           quoteCache.set(upperSymbol, {
             bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
             ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-            last: latestTrade?.price ?? dailyBar?.close ?? 0,
+            last: lastPrice,
             volume: dailyBar?.volume ?? 0,
-            prevClose: prevBar?.close ?? dailyBar?.close ?? 0,
+            // Use previous day's close for accurate % change - don't fall back to today's bar
+            prevClose: prevBar?.close ?? lastPrice,
             timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
           });
         }
@@ -448,12 +450,14 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
             const latestTrade = snapshot.latestTrade;
             const latestQuote = snapshot.latestQuote;
 
+            const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
             quoteCache.set(symbol, {
               bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
               ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-              last: latestTrade?.price ?? dailyBar?.close ?? 0,
+              last: lastPrice,
               volume: dailyBar?.volume ?? 0,
-              prevClose: prevBar?.close ?? dailyBar?.close ?? 0,
+              // Use previous day's close for accurate % change - don't fall back to today's bar
+              prevClose: prevBar?.close ?? lastPrice,
               timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
             });
           }
