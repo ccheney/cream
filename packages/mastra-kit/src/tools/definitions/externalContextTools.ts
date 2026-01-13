@@ -136,7 +136,6 @@ const ExtractTranscriptInputSchema = z.object({
 const ExtractTranscriptOutputSchema = z.object({
   event: ExtractedEventSchema.nullable(),
   stats: StatsSchema,
-  error: z.string().optional(),
 });
 
 type ExtractTranscriptOutput = z.infer<typeof ExtractTranscriptOutputSchema>;
@@ -179,6 +178,10 @@ Requires FMP_KEY for transcript fetching.`,
       quarter: inputData.quarter,
       dryRun: inputData.dryRun,
     });
+    // Throw on error so mastra can handle it
+    if (result.error) {
+      throw new Error(result.error);
+    }
     // Convert Date objects to ISO strings for JSON serialization
     return {
       event: result.event
@@ -195,7 +198,6 @@ Requires FMP_KEY for transcript fetching.`,
           }
         : null,
       stats: result.stats,
-      error: result.error,
     };
   },
 });
@@ -215,7 +217,6 @@ const AnalyzeContentOutputSchema = z.object({
   extraction: ExtractionResultSchema.nullable(),
   scores: ContentScoresSchema.nullable(),
   relatedSymbols: z.array(z.string()),
-  error: z.string().optional(),
 });
 
 type AnalyzeContentOutput = z.infer<typeof AnalyzeContentOutputSchema>;
@@ -251,11 +252,14 @@ Returns:
       symbols: inputData.symbols,
       dryRun: inputData.dryRun,
     });
+    // Throw on error so mastra can handle it
+    if (result.error) {
+      throw new Error(result.error);
+    }
     return {
       extraction: result.extraction,
       scores: result.scores,
       relatedSymbols: result.relatedSymbols,
-      error: result.error,
     };
   },
 });
