@@ -104,7 +104,7 @@ describe("InMemoryCalendarCache", () => {
   describe("preloadYears", () => {
     it("fetches and caches years from client", async () => {
       const mockClient = {
-        getCalendar: async (start: string, end: string) => {
+        getCalendar: async (_start: string, _end: string) => {
           return mockCalendarDays;
         },
       } as AlpacaCalendarClient;

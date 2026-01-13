@@ -51,35 +51,35 @@ describe("MarketDataFactory", () => {
     });
 
     test("returns AlpacaMarketDataAdapter for PAPER with API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       process.env.ALPACA_KEY = "test-key";
       process.env.ALPACA_SECRET = "test-secret";
-      const adapter = createMarketDataAdapter();
+      // Use explicit env parameter since requireEnv() caches at module load
+      const adapter = createMarketDataAdapter("PAPER");
       expect(adapter).toBeInstanceOf(AlpacaMarketDataAdapter);
       expect(adapter.getType()).toBe("alpaca");
     });
 
     test("returns AlpacaMarketDataAdapter for LIVE with API keys", () => {
-      process.env.CREAM_ENV = "LIVE";
       process.env.ALPACA_KEY = "test-key";
       process.env.ALPACA_SECRET = "test-secret";
-      const adapter = createMarketDataAdapter();
+      // Use explicit env parameter since requireEnv() caches at module load
+      const adapter = createMarketDataAdapter("LIVE");
       expect(adapter).toBeInstanceOf(AlpacaMarketDataAdapter);
       expect(adapter.getType()).toBe("alpaca");
     });
 
     test("throws MarketDataConfigError for PAPER without API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       delete process.env.ALPACA_KEY;
       delete process.env.ALPACA_SECRET;
-      expect(() => createMarketDataAdapter()).toThrow(MarketDataConfigError);
+      // Use explicit env parameter since requireEnv() caches at module load
+      expect(() => createMarketDataAdapter("PAPER")).toThrow(MarketDataConfigError);
     });
 
     test("throws MarketDataConfigError for LIVE without API keys", () => {
-      process.env.CREAM_ENV = "LIVE";
       delete process.env.ALPACA_KEY;
       delete process.env.ALPACA_SECRET;
-      expect(() => createMarketDataAdapter()).toThrow(MarketDataConfigError);
+      // Use explicit env parameter since requireEnv() caches at module load
+      expect(() => createMarketDataAdapter("LIVE")).toThrow(MarketDataConfigError);
     });
 
     test("accepts explicit environment override", () => {
@@ -93,25 +93,25 @@ describe("MarketDataFactory", () => {
 
   describe("getMarketDataAdapter", () => {
     test("returns adapter for BACKTEST", () => {
-      process.env.CREAM_ENV = "BACKTEST";
-      const adapter = getMarketDataAdapter();
+      // Use explicit env parameter since requireEnv() caches at module load
+      const adapter = getMarketDataAdapter("BACKTEST");
       expect(adapter).not.toBeNull();
       expect(adapter?.getType()).toBe("mock");
     });
 
     test("returns null for PAPER without API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       delete process.env.ALPACA_KEY;
       delete process.env.ALPACA_SECRET;
-      const adapter = getMarketDataAdapter();
+      // Use explicit env parameter since requireEnv() caches at module load
+      const adapter = getMarketDataAdapter("PAPER");
       expect(adapter).toBeNull();
     });
 
     test("returns adapter for PAPER with API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       process.env.ALPACA_KEY = "test-key";
       process.env.ALPACA_SECRET = "test-secret";
-      const adapter = getMarketDataAdapter();
+      // Use explicit env parameter since requireEnv() caches at module load
+      const adapter = getMarketDataAdapter("PAPER");
       expect(adapter).not.toBeNull();
       expect(adapter?.getType()).toBe("alpaca");
     });
@@ -119,22 +119,22 @@ describe("MarketDataFactory", () => {
 
   describe("isMarketDataAvailable", () => {
     test("returns true for BACKTEST", () => {
-      process.env.CREAM_ENV = "BACKTEST";
-      expect(isMarketDataAvailable()).toBe(true);
+      // Use explicit env parameter since requireEnv() caches at module load
+      expect(isMarketDataAvailable("BACKTEST")).toBe(true);
     });
 
     test("returns false for PAPER without API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       delete process.env.ALPACA_KEY;
       delete process.env.ALPACA_SECRET;
-      expect(isMarketDataAvailable()).toBe(false);
+      // Use explicit env parameter since requireEnv() caches at module load
+      expect(isMarketDataAvailable("PAPER")).toBe(false);
     });
 
     test("returns true for PAPER with API keys", () => {
-      process.env.CREAM_ENV = "PAPER";
       process.env.ALPACA_KEY = "test-key";
       process.env.ALPACA_SECRET = "test-secret";
-      expect(isMarketDataAvailable()).toBe(true);
+      // Use explicit env parameter since requireEnv() caches at module load
+      expect(isMarketDataAvailable("PAPER")).toBe(true);
     });
   });
 });
