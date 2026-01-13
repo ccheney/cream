@@ -5,7 +5,7 @@
 # - Critical (execution-engine, broker, domain): 90/85/90
 # - Core (indicators, helix, schema): 80/75/80
 # - Standard (api, research, test-fixtures): 70/65/70 (root default)
-# - Agent (mastra-kit): 60/50/60
+# - Agent (agents): 60/50/60
 
 [install]
 # Link workspace packages from monorepo root

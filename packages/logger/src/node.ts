@@ -137,7 +137,7 @@ export function withTenantContext(logger: Logger, context: TenantContext): Logge
 
 /**
  * Create a ConsensusLogger-compatible wrapper from a pino logger.
- * Adapts the pino interface to the ConsensusLogger interface used by @cream/mastra-kit.
+ * Adapts the pino interface to the ConsensusLogger interface used by @cream/agents.
  */
 export function createConsensusLogger(logger: Logger): {
   info: (message: string, data?: Record<string, unknown>) => void;
