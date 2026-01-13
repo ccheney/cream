@@ -216,7 +216,8 @@ export async function revisePlan(
   rejectionReasons: string[],
   _analystOutputs: AnalystOutputs,
   debateOutputs: DebateOutputs,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+  abortSignal?: AbortSignal
 ): Promise<DecisionPlan> {
   const prompt = `Revise the following trading plan based on the rejection feedback:
 
@@ -238,6 +239,11 @@ Please address ALL rejection reasons and produce a revised plan that:
 
   const settings = getAgentRuntimeSettings("trader", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+
+  // Add abortSignal to options if provided
+  if (abortSignal) {
+    options.abortSignal = abortSignal;
+  }
 
   const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 

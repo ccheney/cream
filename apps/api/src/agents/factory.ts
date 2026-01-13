@@ -14,9 +14,9 @@ import {
   AGENT_PROMPTS,
   type AgentType,
   analyzeContentTool,
-  economicCalendarTool,
   extractNewsContextTool,
   extractTranscriptTool,
+  fredEconomicCalendarTool,
   getGreeksTool,
   getMarketSnapshotsTool,
   getOptionChainTool,
@@ -54,7 +54,7 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
   option_chain: getOptionChainTool,
   get_greeks: getGreeksTool,
   recalc_indicator: recalcIndicatorTool,
-  economic_calendar: economicCalendarTool,
+  fred_economic_calendar: fredEconomicCalendarTool,
   news_search: newsSearchTool,
   graphrag_query: graphragQueryTool,
   helix_query: helixQueryTool,
@@ -139,24 +139,26 @@ export function getAgentRuntimeSettings(
 }
 
 /**
+ * Options returned by buildGenerateOptions.
+ * Includes optional abortSignal for cancellation support.
+ */
+export interface GenerateOptions {
+  structuredOutput: { schema: z.ZodType };
+  modelSettings: { temperature: number };
+  requestContext: RequestContext;
+  instructions?: string;
+  abortSignal?: AbortSignal;
+}
+
+/**
  * Build generation options with model settings, runtime context, and optional instruction override.
  * Uses fixed temperature (0.3) and model's natural max tokens.
  */
 export function buildGenerateOptions(
   settings: AgentRuntimeSettings,
   structuredOutput: { schema: z.ZodType }
-): {
-  structuredOutput: { schema: z.ZodType };
-  modelSettings: { temperature: number };
-  requestContext: RequestContext;
-  instructions?: string;
-} {
-  const options: {
-    structuredOutput: { schema: z.ZodType };
-    modelSettings: { temperature: number };
-    requestContext: RequestContext;
-    instructions?: string;
-  } = {
+): GenerateOptions {
+  const options: GenerateOptions = {
     structuredOutput,
     modelSettings: {
       temperature: DEFAULT_TEMPERATURE,

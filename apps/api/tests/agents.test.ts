@@ -1121,7 +1121,7 @@ describe("Agent Tool Wiring", () => {
         "option_chain",
         "get_greeks",
         "recalc_indicator",
-        "economic_calendar",
+        "fred_economic_calendar",
         "news_search",
         "helix_query",
         "get_prediction_signals",

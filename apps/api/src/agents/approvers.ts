@@ -40,7 +40,19 @@ export const criticAgent = createAgent("critic");
 // ============================================
 
 /**
+ * Spread threshold configuration by trading session.
+ * Pre/post-market naturally have wider spreads due to lower liquidity.
+ */
+const SPREAD_THRESHOLDS = {
+  RTH: 0.005, // 0.5% during regular trading hours
+  PRE_MARKET: 0.03, // 3% during pre-market (expected to be wider)
+  AFTER_HOURS: 0.03, // 3% during after-hours
+  CLOSED: 0.05, // 5% when market is closed (stale quotes)
+} as const;
+
+/**
  * Build risk indicators summary from snapshots.
+ * Session-aware spread checks use appropriate thresholds for pre/post-market.
  */
 function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapshot>): string {
   if (!indicators || Object.keys(indicators).length === 0) {
@@ -51,6 +63,7 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 
   for (const [symbol, snapshot] of Object.entries(indicators)) {
     const riskParts: string[] = [];
+    const session = snapshot.metadata.trading_session ?? "RTH";
 
     // Volatility metrics
     if (snapshot.price.realized_vol_20d !== null) {
@@ -63,11 +76,14 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
       riskParts.push(`ATR=${snapshot.price.atr_14.toFixed(2)}`);
     }
 
-    // Liquidity risk
+    // Liquidity risk - session-aware thresholds
     if (snapshot.liquidity.bid_ask_spread_pct !== null) {
-      const spreadWarning = snapshot.liquidity.bid_ask_spread_pct > 0.005 ? " [WIDE]" : "";
+      const threshold = SPREAD_THRESHOLDS[session];
+      const isWide = snapshot.liquidity.bid_ask_spread_pct > threshold;
+      const sessionTag = session !== "RTH" ? ` (${session})` : "";
+      const spreadWarning = isWide ? " [WIDE]" : "";
       riskParts.push(
-        `Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${spreadWarning}`
+        `Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${sessionTag}${spreadWarning}`
       );
     }
 
@@ -134,7 +150,8 @@ Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
-- Wide bid-ask spreads (> 0.5%) indicate liquidity risk - reject large orders
+- Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
+- Pre-market and after-hours spreads are naturally wider - only flag as liquidity risk if exceeding session threshold
 - Short interest > 20% of float signals squeeze risk for short positions
 - ATR should inform stop-loss distances (use 2-3x ATR minimum)
 - Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
@@ -275,7 +292,8 @@ export async function runRiskManagerStreaming(
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
   agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+  indicators?: Record<string, IndicatorSnapshot>,
+  abortSignal?: AbortSignal
 ): Promise<RiskManagerOutput> {
   const decayRiskSection = factorZooContext?.decayAlerts.length
     ? `
@@ -299,7 +317,8 @@ Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
-- Wide bid-ask spreads (> 0.5%) indicate liquidity risk - reject large orders
+- Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
+- Pre-market and after-hours spreads are naturally wider - only flag as liquidity risk if exceeding session threshold
 - Short interest > 20% of float signals squeeze risk for short positions
 - ATR should inform stop-loss distances (use 2-3x ATR minimum)
 - Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
@@ -308,9 +327,18 @@ RISK VALIDATION GUIDANCE:
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
   options.modelSettings.temperature = 0.1;
 
+  // Add abortSignal to options if provided
+  if (abortSignal) {
+    options.abortSignal = abortSignal;
+  }
+
   const stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
 
   for await (const chunk of stream.fullStream) {
+    // Check if aborted during streaming
+    if (abortSignal?.aborted) {
+      throw new Error("AbortError: Risk Manager streaming was aborted");
+    }
     processStreamChunk(
       chunk as { type: string; payload: Record<string, unknown> },
       "risk_manager",
@@ -331,7 +359,8 @@ export async function runCriticStreaming(
   debateOutputs: DebateOutputs,
   onChunk: OnStreamChunk,
   agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+  indicators?: Record<string, IndicatorSnapshot>,
+  abortSignal?: AbortSignal
 ): Promise<CriticOutput> {
   const indicatorSummary = buildIndicatorSummary(indicators);
 
@@ -359,9 +388,18 @@ CONSISTENCY VALIDATION GUIDANCE:
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
   options.modelSettings.temperature = 0.1;
 
+  // Add abortSignal to options if provided
+  if (abortSignal) {
+    options.abortSignal = abortSignal;
+  }
+
   const stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
 
   for await (const chunk of stream.fullStream) {
+    // Check if aborted during streaming
+    if (abortSignal?.aborted) {
+      throw new Error("AbortError: Critic streaming was aborted");
+    }
     processStreamChunk(
       chunk as { type: string; payload: Record<string, unknown> },
       "critic",
@@ -385,7 +423,8 @@ export async function runApprovalParallelStreaming(
   constraints?: Record<string, unknown>,
   factorZooContext?: AgentContext["factorZoo"],
   agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+  indicators?: Record<string, IndicatorSnapshot>,
+  abortSignal?: AbortSignal
 ): Promise<{
   riskManager: RiskManagerOutput;
   critic: CriticOutput;
@@ -398,9 +437,18 @@ export async function runApprovalParallelStreaming(
       constraints,
       factorZooContext,
       agentConfigs,
-      indicators
+      indicators,
+      abortSignal
     ),
-    runCriticStreaming(plan, analystOutputs, debateOutputs, onChunk, agentConfigs, indicators),
+    runCriticStreaming(
+      plan,
+      analystOutputs,
+      debateOutputs,
+      onChunk,
+      agentConfigs,
+      indicators,
+      abortSignal
+    ),
   ]);
 
   return { riskManager, critic };
