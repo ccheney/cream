@@ -4,6 +4,7 @@
  * Contains the agent factory, tool registry, and runtime configuration utilities.
  */
 
+import { google } from "@ai-sdk/google";
 import {
   AGENT_CONFIGS,
   AGENT_PROMPTS,
@@ -22,7 +23,6 @@ import {
   helixQueryTool,
   newsSearchTool,
   recalcIndicatorTool,
-  webSearchTool,
 } from "@cream/agents";
 import {
   DEFAULT_GLOBAL_MODEL,
@@ -36,12 +36,6 @@ import type { z } from "zod";
 
 import { log } from "../logger.js";
 import type { AgentConfigEntry, AgentRuntimeSettings } from "./types.js";
-
-/**
- * Default temperature for agent generation (deterministic outputs for trading decisions).
- * Not configurable - hardcoded for consistency and safety.
- */
-export const DEFAULT_TEMPERATURE = 0.3;
 
 /**
  * Maps config tool names to actual Mastra tool instances.
@@ -58,7 +52,6 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
   news_search: newsSearchTool,
   graphrag_query: graphragQueryTool,
   helix_query: helixQueryTool,
-  web_search: webSearchTool,
   extract_news_context: extractNewsContextTool,
   extract_transcript: extractTranscriptTool,
   analyze_content: analyzeContentTool,
@@ -87,13 +80,18 @@ export function createAgent(agentType: AgentType): Agent {
   const systemPrompt = AGENT_PROMPTS[agentType];
 
   // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
-  const tools: Record<string, Tool<any, any>> = {};
+  const tools: Record<string, any> = {};
+
   for (const toolName of config.tools) {
-    const tool = TOOL_INSTANCES[toolName];
-    if (tool) {
-      tools[toolName] = tool;
+    if (toolName === "google_search") {
+      tools.google_search = google.tools.googleSearch({});
     } else {
-      log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
+      const tool = TOOL_INSTANCES[toolName];
+      if (tool) {
+        tools[toolName] = tool;
+      } else {
+        log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
+      }
     }
   }
 
@@ -145,16 +143,15 @@ export function getAgentRuntimeSettings(
  */
 export interface GenerateOptions {
   structuredOutput: { schema: z.ZodType };
-  modelSettings: { temperature: number };
   requestContext: RequestContext;
   instructions?: string;
   abortSignal?: AbortSignal;
 }
 
 /**
- * Build generation options with model settings, runtime context, and optional instruction override.
- * Uses fixed temperature (0.3) and model's natural max tokens.
+ * Build generation options with runtime context and optional instruction override.
  * Enables Gemini 3 thinking/reasoning output at medium level.
+ * Uses model's default temperature (1.0).
  *
  * Note: providerOptions is included at runtime for Gemini thinking configuration
  * but omitted from return type to satisfy Mastra's complex type constraints.
@@ -167,9 +164,6 @@ export function buildGenerateOptions(
   // TypeScript allows extra properties when passed to functions
   return {
     structuredOutput,
-    modelSettings: {
-      temperature: DEFAULT_TEMPERATURE,
-    },
     requestContext: createRequestContext(settings.model),
     instructions: settings.systemPromptOverride,
     providerOptions: {

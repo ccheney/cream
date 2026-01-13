@@ -1106,16 +1106,16 @@ describe("Agent Context", () => {
 describe("Agent Tool Wiring", () => {
   describe("Tool Configuration", () => {
     it("should have all 10 agents with tools configured", () => {
-      // All agents in AGENT_CONFIGS should have web_search in their tools array
+      // All agents in AGENT_CONFIGS should have google_search in their tools array
       for (const agentType of AGENT_TYPES) {
         const config = AGENT_CONFIGS[agentType];
-        expect(config.tools).toContain("web_search");
+        expect(config.tools).toContain("google_search");
       }
     });
 
     it("should have valid tool names for all agents", () => {
       const validToolNames = [
-        "web_search",
+        "google_search",
         "get_quotes",
         "get_portfolio_state",
         "option_chain",

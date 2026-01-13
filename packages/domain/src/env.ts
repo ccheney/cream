@@ -133,9 +133,6 @@ const envSchema = z.object({
   KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
   KALSHI_PRIVATE_KEY_PATH: z.string().optional().describe("Path to Kalshi private key file"),
 
-  // Web Search
-  TAVILY_API_KEY: z.string().optional().describe("Tavily API key for web search"),
-
   // Authentication (OAuth)
   GOOGLE_CLIENT_ID: z.string().optional().describe("Google OAuth client ID"),
   GOOGLE_CLIENT_SECRET: z.string().optional().describe("Google OAuth client secret"),
@@ -173,7 +170,6 @@ function parseEnv(): EnvConfig {
     GOOGLE_API_KEY: Bun.env.GOOGLE_API_KEY ?? process.env.GOOGLE_API_KEY,
     KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,
     KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH ?? process.env.KALSHI_PRIVATE_KEY_PATH,
-    TAVILY_API_KEY: Bun.env.TAVILY_API_KEY ?? process.env.TAVILY_API_KEY,
     GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: Bun.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET,
     BETTER_AUTH_URL: Bun.env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL,
@@ -288,10 +284,10 @@ export function getHelixUrl(): string {
 }
 
 /**
- * Check if web search capability is available (Tavily API key configured)
+ * Check if web search capability is available (Gemini grounding via GOOGLE_GENERATIVE_AI_API_KEY)
  */
 export function hasWebSearchCapability(): boolean {
-  return !!env.TAVILY_API_KEY;
+  return !!env.GOOGLE_GENERATIVE_AI_API_KEY;
 }
 
 // ============================================
@@ -451,7 +447,6 @@ export function getEnvVarDocumentation(): Array<{
     },
     { name: "KALSHI_API_KEY_ID", required: "no", description: "Kalshi API key ID" },
     { name: "KALSHI_PRIVATE_KEY_PATH", required: "no", description: "Path to Kalshi private key" },
-    { name: "TAVILY_API_KEY", required: "no", description: "Tavily API key for web search" },
     { name: "GOOGLE_CLIENT_ID", required: "PAPER/LIVE", description: "Google OAuth client ID" },
     { name: "GOOGLE_CLIENT_SECRET", required: "PAPER/LIVE", description: "Google OAuth secret" },
     { name: "BETTER_AUTH_URL", required: "no", description: "Better Auth base URL for OAuth" },

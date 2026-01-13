@@ -144,10 +144,6 @@ export {
   UpdateDailyWeightsInputSchema,
   type UpdateDailyWeightsOutput,
   UpdateDailyWeightsOutputSchema,
-  // Web search tool
-  WebSearchInputSchema,
-  WebSearchOutputSchema,
-  webSearchTool,
 } from "./definitions/index.js";
 // Re-export implementations
 export {
@@ -200,6 +196,3 @@ export type {
   PortfolioStateResponse,
   Quote,
 } from "./types.js";
-export type { WebSearchResult } from "./webSearch.js";
-// Web search types and function
-export { type WebSearchParams, type WebSearchResponse, webSearch } from "./webSearch.js";

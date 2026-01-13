@@ -25,9 +25,11 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
+    "@ai-sdk/google": "3.0.7",
     "@bufbuild/protobuf": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-node": "^2.1.1",
+    "@cream/agents": "workspace:*",
     "@cream/broker": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
@@ -37,7 +39,6 @@
     "@cream/indicators": "workspace:*",
     "@cream/logger": "workspace:*",
     "@cream/marketdata": "workspace:*",
-    "@cream/agents": "workspace:*",
     "@cream/prediction-markets": "workspace:*",
     "@cream/regime": "workspace:*",
     "@cream/schema-gen": "workspace:*",

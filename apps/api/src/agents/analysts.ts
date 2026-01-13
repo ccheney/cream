@@ -183,45 +183,82 @@ export async function runAnalystsParallel(context: AgentContext): Promise<{
 
 /**
  * Process stream chunks and emit via callback.
+ * Handles Gemini grounding sources as google_search tool calls for UI visibility.
  */
 function processStreamChunk(
-  chunk: { type: string; payload: Record<string, unknown> },
+  chunk: { type: string; payload?: Record<string, unknown>; [key: string]: unknown },
   agentType: "news_analyst" | "fundamentals_analyst",
   onChunk: OnStreamChunk
 ): void {
+  const timestamp = new Date().toISOString();
+
+  // Handle Gemini grounding source chunks as google_search tool calls
+  if (chunk.type === "source" && chunk.sourceType === "url") {
+    const sourceId = (chunk.id as string) ?? `source-${Date.now()}`;
+
+    // Emit as tool-call
+    onChunk({
+      type: "tool-call",
+      agentType,
+      payload: {
+        toolName: "google_search",
+        toolCallId: sourceId,
+        toolArgs: { query: chunk.title as string },
+      },
+      timestamp,
+    });
+
+    // Emit as tool-result with the source details
+    onChunk({
+      type: "tool-result",
+      agentType,
+      payload: {
+        toolCallId: sourceId,
+        toolName: "google_search",
+        result: {
+          title: chunk.title,
+          url: chunk.url,
+          sourceType: chunk.sourceType,
+        },
+        success: true,
+      },
+      timestamp,
+    });
+    return;
+  }
+
+  const payload = chunk.payload ?? {};
   const streamChunk: AgentStreamChunk = {
     type: chunk.type as AgentStreamChunk["type"],
     agentType,
     payload: {},
-    timestamp: new Date().toISOString(),
+    timestamp,
   };
 
   switch (chunk.type) {
     case "text-delta":
-      streamChunk.payload.text = chunk.payload.text as string;
+      streamChunk.payload.text = payload.text as string;
       onChunk(streamChunk);
       break;
     case "tool-call":
-      streamChunk.payload.toolName = chunk.payload.toolName as string;
-      streamChunk.payload.toolArgs = chunk.payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = chunk.payload.toolCallId as string;
+      streamChunk.payload.toolName = payload.toolName as string;
+      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
+      streamChunk.payload.toolCallId = payload.toolCallId as string;
       onChunk(streamChunk);
       break;
     case "tool-result":
-      streamChunk.payload.toolCallId = chunk.payload.toolCallId as string;
-      streamChunk.payload.result = chunk.payload.result;
+      streamChunk.payload.toolCallId = payload.toolCallId as string;
+      streamChunk.payload.result = payload.result;
       streamChunk.payload.success = true;
       onChunk(streamChunk);
       break;
     case "reasoning-delta":
-      streamChunk.payload.text = chunk.payload.text as string;
+      streamChunk.payload.text = payload.text as string;
       onChunk(streamChunk);
       break;
     case "error":
       streamChunk.payload.error =
-        chunk.payload.error instanceof Error
-          ? chunk.payload.error.message
-          : String(chunk.payload.error);
+        payload.error instanceof Error ? payload.error.message : String(payload.error);
       onChunk(streamChunk);
       break;
   }

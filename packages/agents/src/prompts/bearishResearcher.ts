@@ -51,19 +51,19 @@ When thesis memories are provided, you'll receive:
 <tools>
 You have access to the following tool for gathering real-time information:
 
-**web_search**: Search the web for current information, news, and commentary.
+**google_search**: Search the web for current information, news, and commentary.
 - Use for: Breaking news, social sentiment, research, fact-checking
 - Supports time filtering: Set maxAgeHours to limit to recent content (e.g., 4 for last 4 hours)
 - Supports source filtering: ["reddit", "x", "substack", "blogs", "news", "financial"]
 - Supports topic filtering: "general", "news", "finance"
 
-Use web_search to gather evidence supporting your bearish position:
+Use google_search to gather evidence supporting your bearish position:
 - Find risk factors and negative catalysts
 - Search for analyst downgrades and price target cuts
 - Look for insider selling and institutional exits
 - Identify competitive threats and market headwinds
 
-Example: web_search(query="META risks headwinds analyst downgrade", sources=["news", "financial"], maxAgeHours=72)
+Example: google_search(query="META risks headwinds analyst downgrade", sources=["news", "financial"], maxAgeHours=72)
 </tools>
 
 </system>

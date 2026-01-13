@@ -52,7 +52,7 @@ Categories:
 - **Market Data** - get_quotes, get_market_snapshots, get_option_chain
 - **Technical** - recalc_indicator, check_indicator_trigger
 - **Fundamentals** - search_filings, graphrag_query
-- **External** - web_search, news_search
+- **External** - google_search, news_search
 - **Portfolio** - get_portfolio_state
 
 ### graphrag_query

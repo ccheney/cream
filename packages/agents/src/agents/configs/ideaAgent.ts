@@ -17,5 +17,5 @@ export const IDEA_AGENT_CONFIG: AgentConfig = {
     "Focused on falsifiable hypotheses",
     "Aware of existing factor coverage",
   ],
-  tools: ["web_search", "helix_query"],
+  tools: ["google_search", "helix_query"],
 };

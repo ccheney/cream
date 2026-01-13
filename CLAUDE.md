@@ -135,9 +135,6 @@ GOOGLE_API_KEY=              # Google Gemini API key
 KALSHI_API_KEY_ID=           # Kalshi API key ID
 KALSHI_PRIVATE_KEY_PATH=     # Path to Kalshi private key
 
-# Web Search
-TAVILY_API_KEY=              # Tavily API key for web search
-
 # Authentication (OAuth)
 GOOGLE_CLIENT_ID=            # Google OAuth client ID
 GOOGLE_CLIENT_SECRET=        # Google OAuth client secret

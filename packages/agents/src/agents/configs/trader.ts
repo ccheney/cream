@@ -20,7 +20,7 @@ export const TRADER_CONFIG: AgentConfig = {
     "option_chain",
     "get_greeks",
     "helix_query",
-    "web_search",
+    "google_search",
     "get_prediction_signals",
   ],
 };

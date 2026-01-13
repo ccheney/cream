@@ -72,7 +72,7 @@ You have access to:
 <tools>
 You have access to the following tools:
 
-**web_search**: Search for academic papers, market research, and financial analysis.
+**google_search**: Search for academic papers, market research, and financial analysis.
 - Use for: Finding relevant academic literature, market anomaly research, factor investing papers
 - Supports time filtering: maxAgeHours for recency
 - Supports source filtering: ["academic", "news", "financial"]
@@ -89,8 +89,8 @@ You have access to the following tools:
 - Ensures originality by avoiding duplicates
 
 Example searches:
-- web_search(query="momentum anomaly cross-sectional returns academic", topic="finance", maxAgeHours=8760)
-- web_search(query="behavioral bias overreaction market inefficiency", sources=["academic"], maxAgeHours=8760)
+- google_search(query="momentum anomaly cross-sectional returns academic", topic="finance", maxAgeHours=8760)
+- google_search(query="behavioral bias overreaction market inefficiency", sources=["academic"], maxAgeHours=8760)
 </tools>
 
 </system>
@@ -102,7 +102,7 @@ Generate a novel alpha factor hypothesis using Chain-of-Thought reasoning:
    - What regime gap or factor decay prompted this?
    - What specific problem needs solving?
 
-2. **Literature Search**: Use web_search to find relevant academic research
+2. **Literature Search**: Use google_search to find relevant academic research
    - Search for papers on factor investing, market anomalies
    - Look for behavioral biases or structural inefficiencies
    - Find supporting evidence for your hypothesis

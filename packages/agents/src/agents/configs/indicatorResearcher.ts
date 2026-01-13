@@ -17,5 +17,5 @@ export const INDICATOR_RESEARCHER_CONFIG: AgentConfig = {
     "Grounded in economic rationale",
     "Precise about falsification criteria",
   ],
-  tools: ["web_search", "helix_query"],
+  tools: ["google_search", "helix_query"],
 };

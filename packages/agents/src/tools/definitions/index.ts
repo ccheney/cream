@@ -243,4 +243,3 @@ export {
   getPortfolioStateTool,
   getQuotesTool,
 } from "./tradingTools.js";
-export { WebSearchInputSchema, WebSearchOutputSchema, webSearchTool } from "./webSearch.js";

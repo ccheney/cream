@@ -23,7 +23,6 @@ import {
   searchNews,
 } from "./implementations/index.js";
 import { searchFilings } from "./searchFilings.js";
-import { webSearch } from "./webSearch.js";
 
 // ============================================
 // Tool Registry
@@ -40,7 +39,6 @@ export const TOOL_REGISTRY = {
   search_filings: searchFilings,
   graphrag_query: graphragQuery,
   helix_query: helixQuery,
-  web_search: webSearch,
   check_indicator_trigger: checkIndicatorTrigger,
   implement_indicator: implementIndicator,
   // External context extraction tools

@@ -154,7 +154,7 @@ describe("IDEA_AGENT_SYSTEM_PROMPT", () => {
 
   test("contains tools section", () => {
     expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<tools>");
-    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("web_search");
+    expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("google_search");
     expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("helix_query");
   });
 

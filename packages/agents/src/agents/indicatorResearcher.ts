@@ -53,7 +53,7 @@ Your role is to analyze market regime gaps and propose new indicator hypotheses.
 </prefer>
 
 <tools>
-**web_search**: Search for academic papers and market research.
+**google_search**: Search for academic papers and market research.
 - Use for: Finding relevant literature, anomaly research, factor investing papers
 - Supports source filtering: ["academic", "news", "financial"]
 
@@ -102,9 +102,6 @@ export interface IndicatorResearcherConfig {
   /** Tools this agent can use */
   tools: string[];
 
-  /** Generation temperature (0.7 for creativity) */
-  temperature: number;
-
   /** Maximum output tokens */
   maxTokens: number;
 }
@@ -118,8 +115,7 @@ export const INDICATOR_RESEARCHER_CONFIG: IndicatorResearcherConfig = {
   role: "Formulate indicator hypotheses based on regime gaps and performance analysis",
   model: DEFAULT_GLOBAL_MODEL,
   systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
-  tools: ["web_search", "helix_query"],
-  temperature: 0.7,
+  tools: ["google_search", "helix_query"],
   maxTokens: 2000,
 };
 

@@ -158,7 +158,6 @@ RISK VALIDATION GUIDANCE:
 
   const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
-  options.modelSettings.temperature = 0.1;
 
   const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], options);
 
@@ -200,7 +199,6 @@ CONSISTENCY VALIDATION GUIDANCE:
 
   const settings = getAgentRuntimeSettings("critic", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
-  options.modelSettings.temperature = 0.1;
 
   const response = await criticAgent.generate([{ role: "user", content: prompt }], options);
 
@@ -238,45 +236,76 @@ export async function runApprovalParallel(
 
 /**
  * Process stream chunks and emit via callback.
+ * Handles Gemini grounding sources as google_search tool calls for UI visibility.
  */
 function processStreamChunk(
-  chunk: { type: string; payload: Record<string, unknown> },
+  chunk: { type: string; payload?: Record<string, unknown>; [key: string]: unknown },
   agentType: AgentType,
   onChunk: OnStreamChunk
 ): void {
+  const timestamp = new Date().toISOString();
+
+  // Handle Gemini grounding source chunks as google_search tool calls
+  if (chunk.type === "source" && chunk.sourceType === "url") {
+    const sourceId = (chunk.id as string) ?? `source-${Date.now()}`;
+
+    onChunk({
+      type: "tool-call",
+      agentType,
+      payload: {
+        toolName: "google_search",
+        toolCallId: sourceId,
+        toolArgs: { query: chunk.title as string },
+      },
+      timestamp,
+    });
+
+    onChunk({
+      type: "tool-result",
+      agentType,
+      payload: {
+        toolCallId: sourceId,
+        toolName: "google_search",
+        result: { title: chunk.title, url: chunk.url, sourceType: chunk.sourceType },
+        success: true,
+      },
+      timestamp,
+    });
+    return;
+  }
+
+  const payload = chunk.payload ?? {};
   const streamChunk: AgentStreamChunk = {
     type: chunk.type as AgentStreamChunk["type"],
     agentType,
     payload: {},
-    timestamp: new Date().toISOString(),
+    timestamp,
   };
 
   switch (chunk.type) {
     case "text-delta":
-      streamChunk.payload.text = chunk.payload.text as string;
+      streamChunk.payload.text = payload.text as string;
       onChunk(streamChunk);
       break;
     case "tool-call":
-      streamChunk.payload.toolName = chunk.payload.toolName as string;
-      streamChunk.payload.toolArgs = chunk.payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = chunk.payload.toolCallId as string;
+      streamChunk.payload.toolName = payload.toolName as string;
+      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
+      streamChunk.payload.toolCallId = payload.toolCallId as string;
       onChunk(streamChunk);
       break;
     case "tool-result":
-      streamChunk.payload.toolCallId = chunk.payload.toolCallId as string;
-      streamChunk.payload.result = chunk.payload.result;
+      streamChunk.payload.toolCallId = payload.toolCallId as string;
+      streamChunk.payload.result = payload.result;
       streamChunk.payload.success = true;
       onChunk(streamChunk);
       break;
     case "reasoning-delta":
-      streamChunk.payload.text = chunk.payload.text as string;
+      streamChunk.payload.text = payload.text as string;
       onChunk(streamChunk);
       break;
     case "error":
       streamChunk.payload.error =
-        chunk.payload.error instanceof Error
-          ? chunk.payload.error.message
-          : String(chunk.payload.error);
+        payload.error instanceof Error ? payload.error.message : String(payload.error);
       onChunk(streamChunk);
       break;
   }
@@ -325,28 +354,53 @@ RISK VALIDATION GUIDANCE:
 
   const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
-  options.modelSettings.temperature = 0.1;
 
   // Add abortSignal to options if provided
   if (abortSignal) {
     options.abortSignal = abortSignal;
   }
 
-  const stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
-
-  for await (const chunk of stream.fullStream) {
-    // Check if aborted during streaming
-    if (abortSignal?.aborted) {
-      throw new Error("AbortError: Risk Manager streaming was aborted");
-    }
-    processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "risk_manager",
-      onChunk
-    );
+  let stream: Awaited<ReturnType<typeof riskManagerAgent.stream>>;
+  try {
+    stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
+  } catch (err) {
+    console.error("[risk_manager] Failed to create stream:", err);
+    throw err;
   }
 
-  return (await stream.object) as RiskManagerOutput;
+  try {
+    for await (const chunk of stream.fullStream) {
+      // Check if aborted during streaming
+      if (abortSignal?.aborted) {
+        throw new Error("AbortError: Risk Manager streaming was aborted");
+      }
+      processStreamChunk(
+        chunk as { type: string; payload: Record<string, unknown> },
+        "risk_manager",
+        onChunk
+      );
+    }
+  } catch (err) {
+    console.error("[risk_manager] Error during stream iteration:", err);
+    throw err;
+  }
+
+  let result: RiskManagerOutput | undefined;
+  try {
+    result = (await stream.object) as RiskManagerOutput | undefined;
+  } catch (err) {
+    console.error("[risk_manager] Error awaiting stream.object:", err);
+  }
+
+  if (!result) {
+    console.error("[risk_manager] Structured output undefined after streaming");
+    console.error("[risk_manager] Stream text:", await stream.text);
+    console.error("[risk_manager] Stream usage:", await stream.usage);
+    // Check if there's a finishReason or other metadata
+    const response = await stream.response;
+    console.error("[risk_manager] Stream response headers:", response?.headers);
+  }
+  return result as RiskManagerOutput;
 }
 
 /**
@@ -386,28 +440,53 @@ CONSISTENCY VALIDATION GUIDANCE:
 
   const settings = getAgentRuntimeSettings("critic", agentConfigs);
   const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
-  options.modelSettings.temperature = 0.1;
 
   // Add abortSignal to options if provided
   if (abortSignal) {
     options.abortSignal = abortSignal;
   }
 
-  const stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
-
-  for await (const chunk of stream.fullStream) {
-    // Check if aborted during streaming
-    if (abortSignal?.aborted) {
-      throw new Error("AbortError: Critic streaming was aborted");
-    }
-    processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "critic",
-      onChunk
-    );
+  let stream: Awaited<ReturnType<typeof criticAgent.stream>>;
+  try {
+    stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
+  } catch (err) {
+    console.error("[critic] Failed to create stream:", err);
+    throw err;
   }
 
-  return (await stream.object) as CriticOutput;
+  try {
+    for await (const chunk of stream.fullStream) {
+      // Check if aborted during streaming
+      if (abortSignal?.aborted) {
+        throw new Error("AbortError: Critic streaming was aborted");
+      }
+      processStreamChunk(
+        chunk as { type: string; payload: Record<string, unknown> },
+        "critic",
+        onChunk
+      );
+    }
+  } catch (err) {
+    console.error("[critic] Error during stream iteration:", err);
+    throw err;
+  }
+
+  let result: CriticOutput | undefined;
+  try {
+    result = (await stream.object) as CriticOutput | undefined;
+  } catch (err) {
+    console.error("[critic] Error awaiting stream.object:", err);
+  }
+
+  if (!result) {
+    console.error("[critic] Structured output undefined after streaming");
+    console.error("[critic] Stream text:", await stream.text);
+    console.error("[critic] Stream usage:", await stream.usage);
+    // Check if there's a finishReason or other metadata
+    const response = await stream.response;
+    console.error("[critic] Stream response headers:", response?.headers);
+  }
+  return result as CriticOutput;
 }
 
 /**
