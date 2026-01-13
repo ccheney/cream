@@ -15,7 +15,7 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
     "Forward-looking on event risks",
   ],
   tools: [
-    "economic_calendar",
+    "fred_economic_calendar",
     "graphrag_query",
     "analyze_content",
     "helix_query",

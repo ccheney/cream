@@ -588,22 +588,85 @@ export async function withAgentTimeout<T>(
 }
 
 /**
+ * Execute a function that accepts an AbortSignal with timeout.
+ * Creates an AbortController, passes its signal to the function, and aborts on timeout.
+ * This ensures the underlying operation is actually cancelled, not just ignored.
+ */
+export async function withAbortableTimeout<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  agentName: string
+): Promise<AgentTimeoutResult<T>> {
+  const controller = new AbortController();
+  let completed = false;
+
+  const timer = setTimeout(() => {
+    if (!completed) {
+      completed = true;
+      controller.abort();
+    }
+  }, timeoutMs);
+
+  try {
+    const result = await fn(controller.signal);
+    if (!completed) {
+      completed = true;
+      clearTimeout(timer);
+      return { result, timedOut: false, errored: false };
+    }
+    // If we completed due to timeout but the promise also resolved, return timeout
+    return { result: null, timedOut: true, errored: false, agentName };
+  } catch (error: unknown) {
+    completed = true;
+    clearTimeout(timer);
+
+    // Check if this was an abort error (timeout)
+    if (error instanceof Error && error.name === "AbortError") {
+      return { result: null, timedOut: true, errored: false, agentName };
+    }
+
+    // Check for abort in the error message (some libraries wrap AbortError)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.toLowerCase().includes("abort")) {
+      return { result: null, timedOut: true, errored: false, agentName };
+    }
+
+    return { result: null, timedOut: false, errored: true, agentName, error: errorMessage };
+  }
+}
+
+/**
+ * Callback type for getting approval with AbortSignal support.
+ */
+export type GetApprovalFn = (
+  plan: DecisionPlan,
+  signal: AbortSignal
+) => Promise<{ riskManager: RiskManagerOutput; critic: CriticOutput }>;
+
+/**
+ * Callback type for revising a plan with AbortSignal support.
+ */
+export type RevisePlanFn = (
+  plan: DecisionPlan,
+  rejectionReasons: string[],
+  signal: AbortSignal
+) => Promise<DecisionPlan>;
+
+/**
  * Run the consensus loop until approval or iteration cap.
- * Includes timeout handling for individual agents.
+ * Includes timeout handling for individual agents with proper AbortSignal support.
  *
  * @param gate - The ConsensusGate instance
  * @param initialPlan - The initial decision plan
- * @param getApproval - Function to get approver outputs for a plan
- * @param revisePlan - Function to revise the plan based on rejection reasons
+ * @param getApproval - Function to get approver outputs for a plan (receives AbortSignal)
+ * @param revisePlan - Function to revise the plan based on rejection reasons (receives AbortSignal)
  * @returns Final ConsensusResult
  */
 export async function runConsensusLoop(
   gate: ConsensusGate,
   initialPlan: DecisionPlan,
-  getApproval: (
-    plan: DecisionPlan
-  ) => Promise<{ riskManager: RiskManagerOutput; critic: CriticOutput }>,
-  revisePlan: (plan: DecisionPlan, rejectionReasons: string[]) => Promise<DecisionPlan>
+  getApproval: GetApprovalFn,
+  revisePlan: RevisePlanFn
 ): Promise<ConsensusResult> {
   gate.startCycle();
   let currentPlan = initialPlan;
@@ -621,9 +684,9 @@ export async function runConsensusLoop(
       };
     }
 
-    // Get approval from both agents with timeout
-    const approvalResult = await withAgentTimeout(
-      getApproval(currentPlan),
+    // Get approval from both agents with abortable timeout
+    const approvalResult = await withAbortableTimeout(
+      (signal) => getApproval(currentPlan, signal),
       gate.getPerAgentTimeoutMs(),
       "approval"
     );
@@ -637,6 +700,7 @@ export async function runConsensusLoop(
       riskManager = createTimeoutRiskOutput();
       critic = createTimeoutCriticOutput();
       timeoutStatus = "RISK_MANAGER_TIMEOUT"; // Generic timeout
+      log.warn({ iteration: gate.getIteration() }, "Approval agents timed out and were aborted");
     } else if (approvalResult.errored) {
       // Agents errored - treat as reject with error info
       riskManager = createTimeoutRiskOutput();
@@ -677,8 +741,30 @@ export async function runConsensusLoop(
       };
     }
 
-    // Revise the plan based on rejection reasons
-    currentPlan = await revisePlan(currentPlan, result.rejectionReasons);
+    // Revise the plan based on rejection reasons with abortable timeout
+    const reviseResult = await withAbortableTimeout(
+      (signal) => revisePlan(currentPlan, result.rejectionReasons, signal),
+      gate.getPerAgentTimeoutMs(),
+      "revisePlan"
+    );
+
+    if (reviseResult.timedOut) {
+      log.warn({ iteration: gate.getIteration() }, "Plan revision timed out and was aborted");
+      return {
+        ...result,
+        plan: createNoTradePlan(currentPlan.cycleId, "Plan revision timed out"),
+      };
+    }
+
+    if (reviseResult.errored) {
+      log.error({ error: reviseResult.error }, "Plan revision failed");
+      return {
+        ...result,
+        plan: createNoTradePlan(currentPlan.cycleId, `Plan revision failed: ${reviseResult.error}`),
+      };
+    }
+
+    currentPlan = reviseResult.result;
   }
 }
 
