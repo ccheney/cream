@@ -3,6 +3,11 @@ const nextConfig = {
   // Enable standalone output for Docker deployments
   output: "standalone",
 
+  // Forward CREAM_ENV to client-side as NEXT_PUBLIC_CREAM_ENV
+  env: {
+    NEXT_PUBLIC_CREAM_ENV: process.env.CREAM_ENV,
+  },
+
   // Enable React Compiler (stable in Next.js 16)
   // Provides automatic memoization to reduce re-renders
   reactCompiler: true,

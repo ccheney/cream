@@ -416,9 +416,10 @@ export function useWebSocketQuerySync(
           }
 
           case "system_status": {
-            const payload = message.data as SystemStatusPayload;
-            // Use setQueryData for complete data
-            queryClient.setQueryData(queryKeys.systemStatus(), payload);
+            // NOTE: WebSocket system_status is for health checks (healthy/unhealthy),
+            // NOT trading system status (ACTIVE/PAUSED/STOPPED).
+            // Don't update the system status query here - it's handled by REST API.
+            // The health status uses a different data shape and would break the UI.
             break;
           }
 

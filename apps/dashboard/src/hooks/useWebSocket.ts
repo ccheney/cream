@@ -181,17 +181,17 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   } = options;
 
   // Memoize configs to prevent recreating connect/startHeartbeat on every render
+  // Only depend on individual properties, NOT the object reference
   const reconnectionConfig = useMemo<ReconnectionConfig>(
     () => ({
       ...DEFAULT_RECONNECTION,
       ...reconnection,
     }),
     [
-      reconnection.maxAttempts,
-      reconnection.initialDelay,
-      reconnection.maxDelay,
-      reconnection.backoffMultiplier,
-      reconnection,
+      reconnection?.maxAttempts,
+      reconnection?.initialDelay,
+      reconnection?.maxDelay,
+      reconnection?.backoffMultiplier,
     ]
   );
 
@@ -200,7 +200,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       ...DEFAULT_HEARTBEAT,
       ...heartbeat,
     }),
-    [heartbeat.pingInterval, heartbeat.pongTimeout, heartbeat]
+    [heartbeat?.pingInterval, heartbeat?.pongTimeout]
   );
 
   // State

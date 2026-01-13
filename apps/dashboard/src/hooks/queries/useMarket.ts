@@ -122,8 +122,7 @@ export function useCandles(
   timeframe: "1m" | "5m" | "15m" | "1h" | "4h" | "1d" = "1h",
   limit = 500
 ) {
-  const queryClient = useQueryClient();
-  const { connected, subscribeSymbols, lastMessage } = useWebSocketContext();
+  const { connected, subscribeSymbols } = useWebSocketContext();
 
   // Subscribe symbol to WebSocket when connected
   useEffect(() => {
@@ -132,68 +131,8 @@ export function useCandles(
     }
   }, [connected, symbol, subscribeSymbols]);
 
-  // Handle WebSocket updates
-  useEffect(() => {
-    if (!lastMessage || lastMessage.type !== "aggregate") {
-      return;
-    }
-
-    const data = lastMessage.data as {
-      symbol: string;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-      volume: number;
-      timestamp: string;
-    };
-
-    if (data.symbol !== symbol) {
-      return;
-    }
-
-    // Update query cache
-    queryClient.setQueryData<Candle[]>(
-      [...queryKeys.market.all, "candles", symbol, timeframe, limit],
-      (oldData) => {
-        if (!oldData) {
-          return oldData;
-        }
-
-        const lastCandle = oldData[oldData.length - 1];
-        if (!lastCandle) {
-          return oldData;
-        }
-
-        const updateTime = new Date(data.timestamp).getTime();
-        const lastCandleTime = new Date(lastCandle.timestamp).getTime();
-
-        // Simple logic: if update is newer or same time, update/append
-        // Note: Proper aggregation for >1m timeframes is complex and omitted for brevity.
-        // This assumes 1m bars or that we just want to see live price action on the last bar.
-
-        // If the update is within the current bar's duration, update it.
-        // Otherwise, it's a new bar (for 1m).
-        // For simplicity, we'll just update the last bar's Close/High/Low/Vol if it looks "current"
-        // or append if strictly newer and we are in 1m mode.
-
-        const isCurrentBar = updateTime >= lastCandleTime;
-
-        if (isCurrentBar) {
-          const updatedLastCandle = {
-            ...lastCandle,
-            close: data.close,
-            high: Math.max(lastCandle.high, data.high),
-            low: Math.min(lastCandle.low, data.low),
-            volume: lastCandle.volume + (data.volume || 0), // Volume might be delta or total? Polygon AM is total for that minute.
-          };
-          return [...oldData.slice(0, -1), updatedLastCandle];
-        }
-
-        return oldData;
-      }
-    );
-  }, [lastMessage, queryClient, symbol, timeframe, limit]);
+  // Note: WebSocket aggregate messages are handled directly in ws-invalidation.ts
+  // which updates the candle cache without relying on lastMessage state
 
   return useQuery({
     queryKey: [...queryKeys.market.all, "candles", symbol, timeframe, limit] as const,

@@ -70,6 +70,18 @@ interface WebSocketProviderProps {
   children: React.ReactNode;
 }
 
+// Stable config objects (defined outside component to avoid recreation)
+const RECONNECTION_CONFIG = {
+  maxAttempts: config.websocket.maxReconnectAttempts,
+  initialDelay: config.websocket.reconnectDelay,
+  maxDelay: 30000,
+};
+
+const HEARTBEAT_CONFIG = {
+  pingInterval: 30000,
+  pongTimeout: 60000,
+};
+
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const { isAuthenticated } = useAuth();
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
@@ -77,6 +89,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   // Handle incoming WebSocket messages
   const handleMessage = useCallback((data: unknown) => {
     const message = data as WSMessage;
+    // Debug: Log options-related messages
+    if (message.type?.startsWith("options")) {
+      console.log("[WSProvider] Received options message:", message.type, message.data);
+    }
     // Track last message for consumers
     setLastMessage(message);
     // Route to TanStack Query invalidation handler
@@ -88,15 +104,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     url: config.websocket.url,
     onMessage: handleMessage,
     autoConnect: false, // We'll connect manually after auth
-    reconnection: {
-      maxAttempts: config.websocket.maxReconnectAttempts,
-      initialDelay: config.websocket.reconnectDelay,
-      maxDelay: 30000,
-    },
-    heartbeat: {
-      pingInterval: 30000,
-      pongTimeout: 60000,
-    },
+    reconnection: RECONNECTION_CONFIG,
+    heartbeat: HEARTBEAT_CONFIG,
   });
 
   // Destructure all values to avoid depending on unstable ws object reference

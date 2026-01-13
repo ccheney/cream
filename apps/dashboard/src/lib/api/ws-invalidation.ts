@@ -10,6 +10,7 @@
 
 import { type CyclePhase, useCycleStore } from "@/stores/cycle-store";
 import { getQueryClient, queryKeys } from "./query-client";
+import type { OptionsChainResponse } from "./types";
 
 // ============================================
 // Debounced Invalidation
@@ -68,6 +69,17 @@ function mapInvalidationHintToQueryKey(hint: string): readonly unknown[] | null 
         return queryKeys.system.status();
       }
       return queryKeys.system.all;
+
+    case "options":
+      if (parts[1] === "chain" && parts[2]) {
+        return parts[3]
+          ? queryKeys.options.chain(parts[2], parts[3])
+          : queryKeys.options.chain(parts[2]);
+      }
+      if (parts[1] === "quote" && parts[2]) {
+        return queryKeys.options.quote(parts[2]);
+      }
+      return queryKeys.options.all;
 
     case "alerts":
       return queryKeys.alerts.all;
@@ -142,6 +154,9 @@ function flushPendingInvalidations(): void {
 export type WSMessageType =
   | "quote"
   | "aggregate"
+  | "options_quote"
+  | "options_trade"
+  | "options_aggregate"
   | "order"
   | "decision"
   | "agent_output"
@@ -174,6 +189,25 @@ export interface QuoteData {
   askSize?: number;
   prevClose?: number;
   changePercent?: number;
+}
+
+export interface AggregateData {
+  symbol: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  timestamp: string;
+}
+
+export interface Candle {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
 }
 
 export interface OrderData {
@@ -238,6 +272,47 @@ export interface SystemStatusData {
   nextCycleAt?: string;
 }
 
+export interface OptionsQuoteData {
+  contract: string;
+  underlying: string;
+  bid: number;
+  ask: number;
+  bidSize?: number;
+  askSize?: number;
+  last?: number;
+  timestamp: string;
+}
+
+export interface OptionsTradeData {
+  contract: string;
+  underlying: string;
+  price: number;
+  size: number;
+  timestamp: string;
+}
+
+/**
+ * Parse OCC option symbol to extract expiration date.
+ * Format: {underlying}{YYMMDD}{C|P}{strike}
+ * Example: AAPL250117C00180000 -> { underlying: 'AAPL', expiration: '2025-01-17' }
+ */
+function parseOccSymbol(symbol: string): { underlying: string; expiration: string } | null {
+  const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
+  if (!match) return null;
+
+  const [, underlying, expStr] = match;
+  if (!underlying || !expStr) return null;
+
+  const year = 2000 + Number.parseInt(expStr.slice(0, 2), 10);
+  const month = expStr.slice(2, 4);
+  const day = expStr.slice(4, 6);
+
+  return {
+    underlying,
+    expiration: `${year}-${month}-${day}`,
+  };
+}
+
 export function handleWSMessage(message: WSMessage): void {
   const queryClient = getQueryClient();
 
@@ -249,9 +324,179 @@ export function handleWSMessage(message: WSMessage): void {
       break;
     }
 
+    case "aggregate": {
+      const agg = message.data as AggregateData;
+      // Update all candle caches for this symbol (any timeframe/limit)
+      // This handles real-time candle updates from WebSocket
+      const queries = queryClient.getQueriesData<Candle[]>({
+        queryKey: [...queryKeys.market.all, "candles", agg.symbol],
+        exact: false,
+      });
+
+      for (const [queryKey, oldData] of queries) {
+        if (!oldData || oldData.length === 0) continue;
+
+        const lastCandle = oldData[oldData.length - 1];
+        if (!lastCandle) continue;
+
+        const updateTime = new Date(agg.timestamp).getTime();
+        const lastCandleTime = new Date(lastCandle.timestamp).getTime();
+
+        let newData: Candle[];
+
+        if (updateTime === lastCandleTime) {
+          // Same timestamp - update existing candle
+          const updatedCandle: Candle = {
+            ...lastCandle,
+            close: agg.close,
+            high: Math.max(lastCandle.high, agg.high),
+            low: Math.min(lastCandle.low, agg.low),
+            volume: agg.volume,
+          };
+          newData = [...oldData.slice(0, -1), updatedCandle];
+        } else if (updateTime > lastCandleTime) {
+          // New candle - append
+          const newCandle: Candle = {
+            timestamp: agg.timestamp,
+            open: agg.open,
+            high: agg.high,
+            low: agg.low,
+            close: agg.close,
+            volume: agg.volume,
+          };
+          // Extract limit from query key (last element)
+          const limit = (queryKey[queryKey.length - 1] as number) || 500;
+          newData = [...oldData, newCandle];
+          if (newData.length > limit) {
+            newData = newData.slice(-limit);
+          }
+        } else {
+          // Old data - ignore
+          continue;
+        }
+
+        queryClient.setQueryData(queryKey, newData);
+      }
+      break;
+    }
+
+    case "options_quote": {
+      const optQuote = message.data as OptionsQuoteData;
+      console.log("[WS] options_quote received:", optQuote.contract);
+
+      const parsed = parseOccSymbol(optQuote.contract);
+      if (!parsed) {
+        console.log("[WS] Failed to parse OCC symbol:", optQuote.contract);
+        break;
+      }
+      console.log("[WS] Parsed:", parsed);
+
+      // Find and update the options chain cache
+      const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);
+      console.log("[WS] Query key:", chainQueryKey);
+      const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
+      console.log("[WS] Chain data found:", !!chainData, chainData?.chain?.length ?? 0, "rows");
+
+      if (chainData?.chain) {
+        // Find the contract in the chain and update it
+        let foundContract = false;
+        const updatedChain = chainData.chain.map((row) => {
+          if (row.call?.symbol === optQuote.contract) {
+            foundContract = true;
+            return {
+              ...row,
+              call: {
+                ...row.call,
+                bid: optQuote.bid,
+                ask: optQuote.ask,
+                last: optQuote.last ?? row.call.last,
+              },
+            };
+          }
+          if (row.put?.symbol === optQuote.contract) {
+            foundContract = true;
+            return {
+              ...row,
+              put: {
+                ...row.put,
+                bid: optQuote.bid,
+                ask: optQuote.ask,
+                last: optQuote.last ?? row.put.last,
+              },
+            };
+          }
+          return row;
+        });
+
+        console.log("[WS] Contract found in chain:", foundContract, optQuote.contract);
+        if (foundContract) {
+          console.log("[WS] Updating cache with new values - bid:", optQuote.bid, "ask:", optQuote.ask);
+        }
+
+        queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
+          ...chainData,
+          chain: updatedChain,
+        });
+      }
+      break;
+    }
+
+    case "options_trade": {
+      const optTrade = message.data as OptionsTradeData;
+      const parsed = parseOccSymbol(optTrade.contract);
+      if (!parsed) break;
+
+      // Find and update the options chain cache with last trade price
+      const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);
+      const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
+
+      if (chainData?.chain) {
+        const updatedChain = chainData.chain.map((row) => {
+          if (row.call?.symbol === optTrade.contract) {
+            return {
+              ...row,
+              call: {
+                ...row.call,
+                last: optTrade.price,
+                volume: (row.call.volume ?? 0) + optTrade.size,
+              },
+            };
+          }
+          if (row.put?.symbol === optTrade.contract) {
+            return {
+              ...row,
+              put: {
+                ...row.put,
+                last: optTrade.price,
+                volume: (row.put.volume ?? 0) + optTrade.size,
+              },
+            };
+          }
+          return row;
+        });
+
+        queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
+          ...chainData,
+          chain: updatedChain,
+        });
+      }
+      break;
+    }
+
+    case "options_aggregate": {
+      // Options aggregates are less frequent - just invalidate to refetch
+      const aggData = message.data as { contract: string; underlying: string };
+      const parsed = parseOccSymbol(aggData.contract);
+      if (parsed) {
+        queueInvalidation(`options.chain.${parsed.underlying}.${parsed.expiration}`);
+      }
+      break;
+    }
+
     case "system_status": {
-      const status = message.data as SystemStatusData;
-      queryClient.setQueryData(queryKeys.system.status(), status);
+      // NOTE: WebSocket system_status is for health checks (healthy/unhealthy),
+      // NOT trading system status (ACTIVE/PAUSED/STOPPED).
+      // Don't update the system status query here - it's handled by REST API.
       break;
     }
 
