@@ -257,10 +257,10 @@ describe("AgentOutputsRepository", () => {
       agentType: "test",
       vote: "APPROVE",
       confidence: 0.9,
-      metadata: { model: "gemini-2.0-flash", temperature: 0.7 },
+      metadata: { model: "gemini-3-flash-preview", temperature: 0.7 },
     });
 
-    expect(output.metadata).toEqual({ model: "gemini-2.0-flash", temperature: 0.7 });
+    expect(output.metadata).toEqual({ model: "gemini-3-flash-preview", temperature: 0.7 });
   });
 
   test("handles null optional fields", async () => {
