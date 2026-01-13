@@ -304,7 +304,7 @@ Rust gRPC server for deterministic order validation and routing.
 |---------|---------|
 | `@cream/domain` | Zod schemas, ExecutionContext, gRPC/Arrow clients |
 | `@cream/config` | RuntimeConfigService, secrets, startup validation |
-| `@cream/schema` | Protobuf definitions (common, decision, execution, events) |
+| `@cream/proto` | Protobuf definitions (common, decision, execution, events) |
 | `@cream/schema-gen` | Generated stubs for TS, Rust, Python |
 | `@cream/logger` | Pino structured logging with redaction |
 | `@cream/validation` | Research-to-production parity checks |

@@ -1,8 +1,13 @@
 {
-  "name": "@cream/schema",
+  "name": "@cream/proto",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "description": "Protobuf schema definitions for Cream trading system",
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
   "scripts": {
     "lint": "buf lint",
     "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/schema'",

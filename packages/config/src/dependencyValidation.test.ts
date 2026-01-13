@@ -419,7 +419,7 @@ describe("parsePackageJson", () => {
       version: "1.0.0",
       dependencies: {
         zod: "^3.0.0",
-        "@cream/schema": "workspace:*",
+        "@cream/proto": "workspace:*",
       },
       devDependencies: {
         typescript: "^5.0.0",
@@ -431,7 +431,7 @@ describe("parsePackageJson", () => {
     expect(result).not.toBeNull();
     expect(result?.name).toBe("@cream/domain");
     expect(result?.dependencies).toHaveProperty("zod");
-    expect(result?.dependencies).toHaveProperty("@cream/schema");
+    expect(result?.dependencies).toHaveProperty("@cream/proto");
     expect(result?.devDependencies).toHaveProperty("typescript");
   });
 
@@ -506,9 +506,9 @@ describe("Integration", () => {
     // Simulate cream monorepo structure
     const packages = [
       createPackage("@cream/tsconfig"),
-      createPackage("@cream/schema"),
-      createPackage("@cream/schema-gen", ["@cream/schema"]),
-      createPackage("@cream/domain", ["@cream/schema-gen"]),
+      createPackage("@cream/proto"),
+      createPackage("@cream/proto-gen", ["@cream/proto"]),
+      createPackage("@cream/domain", ["@cream/proto-gen"]),
       createPackage("@cream/config", ["@cream/domain"]),
       createPackage("@cream/storage", ["@cream/domain"]),
       createPackage("@cream/marketdata", ["@cream/domain"]),
@@ -527,7 +527,7 @@ describe("Integration", () => {
 
     // Check graph summary
     expect(result.graphSummary.leafPackages).toContain("@cream/tsconfig");
-    expect(result.graphSummary.leafPackages).toContain("@cream/schema");
+    expect(result.graphSummary.leafPackages).toContain("@cream/proto");
     expect(result.graphSummary.mostDepended[0]?.name).toBe("@cream/domain");
   });
 
