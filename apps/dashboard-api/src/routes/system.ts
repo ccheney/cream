@@ -7,5 +7,11 @@
  * @see docs/plans/ui/05-api-endpoints.md
  */
 
-export { default, systemState } from "./system/index.js";
+export {
+  default,
+  getCurrentEnvironment,
+  getRunningCycles,
+  getSystemState,
+  setSystemStatus,
+} from "./system/index.js";
 export type { CycleState, ServiceHealth, SystemState } from "./system/types.js";

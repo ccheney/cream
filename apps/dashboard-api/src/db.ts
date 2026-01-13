@@ -29,6 +29,7 @@ import {
   PositionsRepository,
   RegimeLabelsRepository,
   runMigrations,
+  SystemStateRepository,
   ThesisStateRepository,
   TradingConfigRepository,
   type TursoClient,
@@ -285,6 +286,14 @@ export async function getFilingsRepo(): Promise<FilingsRepository> {
 export async function getFilingSyncRunsRepo(): Promise<FilingSyncRunsRepository> {
   const client = await getDbClient();
   return new FilingSyncRunsRepository(client);
+}
+
+/**
+ * Get system state repository
+ */
+export async function getSystemStateRepo(): Promise<SystemStateRepository> {
+  const client = await getDbClient();
+  return new SystemStateRepository(client);
 }
 
 // ============================================

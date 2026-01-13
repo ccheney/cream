@@ -8,7 +8,6 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import controlRoutes from "./control.js";
 import cyclesRoutes from "./cycles.js";
 import healthRoutes from "./health.js";
-import { systemState } from "./state.js";
 
 const app = new OpenAPIHono();
 
@@ -18,7 +17,14 @@ app.route("/", cyclesRoutes);
 app.route("/", healthRoutes);
 
 export default app;
-export { systemState };
+
+// Re-export state functions for external use
+export {
+  getCurrentEnvironment,
+  getRunningCycles,
+  getSystemState,
+  setSystemStatus,
+} from "./state.js";
 
 // Re-export types for external use
 export type { CycleState, ServiceHealth, SystemState } from "./types.js";

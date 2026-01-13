@@ -127,6 +127,9 @@ export interface CycleState {
   phase: "observe" | "orient" | "decide" | "act" | "complete" | null;
 }
 
+/** Alias for CycleState used in running cycle tracking */
+export type RunningCycleState = CycleState;
+
 export interface SystemState {
   status: "ACTIVE" | "PAUSED" | "STOPPED";
   environment: "BACKTEST" | "PAPER" | "LIVE";

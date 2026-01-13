@@ -2,11 +2,16 @@
  * System Control Routes
  *
  * Endpoints for starting, stopping, pausing, and changing environment.
+ * System status is persisted to the database.
  */
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getAlertsRepo, getOrdersRepo, getPositionsRepo } from "../../db.js";
-import { systemState } from "./state.js";
+import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getSystemStateRepo } from "../../db.js";
+import {
+  getRunningCycles,
+  getSystemState,
+  setSystemStatus,
+} from "./state.js";
 import {
   EnvironmentRequestSchema,
   StartRequestSchema,
@@ -20,7 +25,13 @@ const app = new OpenAPIHono();
 // Helper Functions
 // ============================================
 
-async function getSystemStatusResponse() {
+type Environment = "BACKTEST" | "PAPER" | "LIVE";
+
+async function getSystemStatusResponse(environmentOverride?: string) {
+  const state = await getSystemState(environmentOverride);
+  const environment = (environmentOverride ?? state.environment) as Environment;
+  console.log("[SystemStatus] env:", environment, "status:", state.status, "override:", environmentOverride);
+
   const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
     getPositionsRepo(),
     getOrdersRepo(),
@@ -28,8 +39,8 @@ async function getSystemStatusResponse() {
   ]);
 
   const [positions, orders, alerts] = await Promise.all([
-    positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
-    ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
+    positionsRepo.findMany({ environment, status: "open" }),
+    ordersRepo.findMany({ environment, status: "pending" }),
     alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
   ]);
 
@@ -37,16 +48,17 @@ async function getSystemStatusResponse() {
   nextHour.setMinutes(0, 0, 0);
   nextHour.setHours(nextHour.getHours() + 1);
 
-  const runningCycle = systemState.runningCycles.get(systemState.environment);
+  const runningCycles = getRunningCycles();
+  const runningCycle = runningCycles.get(environment);
   const isRunning =
     runningCycle && (runningCycle.status === "queued" || runningCycle.status === "running");
 
   return {
-    environment: systemState.environment,
-    status: systemState.status,
-    lastCycleId: systemState.lastCycleId,
-    lastCycleTime: systemState.lastCycleTime,
-    nextCycleTime: systemState.status === "ACTIVE" ? nextHour.toISOString() : null,
+    environment,
+    status: state.status,
+    lastCycleId: state.lastCycleId,
+    lastCycleTime: state.lastCycleTime,
+    nextCycleTime: state.status === "ACTIVE" ? nextHour.toISOString() : null,
     positionCount: positions.total,
     openOrderCount: orders.total,
     alerts: alerts.data.map((a) => ({
@@ -120,62 +132,20 @@ const startRoute = createRoute({
 app.openapi(startRoute, async (c) => {
   const body = c.req.valid("json");
 
+  const state = await getSystemState();
+  let environment = state.environment;
+
   if (body.environment) {
     if (body.environment === "LIVE") {
       return c.json({ error: "Cannot start in LIVE mode without explicit confirmation" }, 400);
     }
-    systemState.environment = body.environment;
+    environment = body.environment;
   }
 
-  systemState.status = "ACTIVE";
-  systemState.startedAt = new Date();
+  // Persist status to database
+  await setSystemStatus("ACTIVE", environment);
 
-  const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
-    getPositionsRepo(),
-    getOrdersRepo(),
-    getAlertsRepo(),
-  ]);
-
-  const [positions, orders, alerts] = await Promise.all([
-    positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
-    ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
-  ]);
-
-  const nextHour = new Date();
-  nextHour.setMinutes(0, 0, 0);
-  nextHour.setHours(nextHour.getHours() + 1);
-
-  const runningCycle = systemState.runningCycles.get(systemState.environment);
-  const isRunning =
-    runningCycle && (runningCycle.status === "queued" || runningCycle.status === "running");
-
-  return c.json({
-    environment: systemState.environment,
-    status: systemState.status,
-    lastCycleId: systemState.lastCycleId,
-    lastCycleTime: systemState.lastCycleTime,
-    nextCycleTime: nextHour.toISOString(),
-    positionCount: positions.total,
-    openOrderCount: orders.total,
-    alerts: alerts.data.map((a) => ({
-      id: a.id,
-      severity: a.severity,
-      type: a.type,
-      message: a.message,
-      metadata: a.metadata,
-      acknowledged: a.acknowledged,
-      createdAt: a.createdAt,
-    })),
-    runningCycle: isRunning
-      ? {
-          cycleId: runningCycle.cycleId,
-          status: runningCycle.status,
-          startedAt: runningCycle.startedAt,
-          phase: runningCycle.phase,
-        }
-      : null,
-  });
+  return c.json(await getSystemStatusResponse(environment));
 });
 
 // POST /api/system/stop
@@ -199,13 +169,16 @@ const stopRoute = createRoute({
 app.openapi(stopRoute, async (c) => {
   const body = c.req.valid("json");
 
-  systemState.status = "STOPPED";
+  const state = await getSystemState();
+
+  // Persist status to database
+  await setSystemStatus("STOPPED", state.environment);
 
   if (body.closeAllPositions) {
     try {
       const positionsRepo = await getPositionsRepo();
       const openPositions = await positionsRepo.findMany({
-        environment: systemState.environment,
+        environment: state.environment,
         status: "open",
       });
 
@@ -221,7 +194,7 @@ app.openapi(stopRoute, async (c) => {
             positionCount: openPositions.total,
             symbols: openPositions.data.map((p) => p.symbol),
           },
-          environment: systemState.environment,
+          environment: state.environment,
         });
       }
     } catch {
@@ -229,37 +202,7 @@ app.openapi(stopRoute, async (c) => {
     }
   }
 
-  const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
-    getPositionsRepo(),
-    getOrdersRepo(),
-    getAlertsRepo(),
-  ]);
-
-  const [positions, orders, alerts] = await Promise.all([
-    positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
-    ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
-  ]);
-
-  return c.json({
-    environment: systemState.environment,
-    status: systemState.status,
-    lastCycleId: systemState.lastCycleId,
-    lastCycleTime: systemState.lastCycleTime,
-    nextCycleTime: null,
-    positionCount: positions.total,
-    openOrderCount: orders.total,
-    alerts: alerts.data.map((a) => ({
-      id: a.id,
-      severity: a.severity,
-      type: a.type,
-      message: a.message,
-      metadata: a.metadata,
-      acknowledged: a.acknowledged,
-      createdAt: a.createdAt,
-    })),
-    runningCycle: null,
-  });
+  return c.json(await getSystemStatusResponse());
 });
 
 // POST /api/system/pause
@@ -276,39 +219,12 @@ const pauseRoute = createRoute({
 });
 
 app.openapi(pauseRoute, async (c) => {
-  systemState.status = "PAUSED";
+  const state = await getSystemState();
 
-  const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
-    getPositionsRepo(),
-    getOrdersRepo(),
-    getAlertsRepo(),
-  ]);
+  // Persist status to database
+  await setSystemStatus("PAUSED", state.environment);
 
-  const [positions, orders, alerts] = await Promise.all([
-    positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
-    ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
-  ]);
-
-  return c.json({
-    environment: systemState.environment,
-    status: systemState.status,
-    lastCycleId: systemState.lastCycleId,
-    lastCycleTime: systemState.lastCycleTime,
-    nextCycleTime: null,
-    positionCount: positions.total,
-    openOrderCount: orders.total,
-    alerts: alerts.data.map((a) => ({
-      id: a.id,
-      severity: a.severity,
-      type: a.type,
-      message: a.message,
-      metadata: a.metadata,
-      acknowledged: a.acknowledged,
-      createdAt: a.createdAt,
-    })),
-    runningCycle: null,
-  });
+  return c.json(await getSystemStatusResponse());
 });
 
 // POST /api/system/environment
@@ -345,43 +261,17 @@ app.openapi(environmentRoute, async (c) => {
     return c.json({ error: "confirmLive required when switching to LIVE" }, 400);
   }
 
-  if (systemState.status !== "STOPPED") {
+  const state = await getSystemState();
+
+  if (state.status !== "STOPPED") {
     return c.json({ error: "System must be stopped to change environment" }, 400);
   }
 
-  systemState.environment = body.environment;
+  // Get or create state for the new environment (this ensures it exists in DB)
+  const repo = await getSystemStateRepo();
+  await repo.getOrCreate(body.environment);
 
-  const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
-    getPositionsRepo(),
-    getOrdersRepo(),
-    getAlertsRepo(),
-  ]);
-
-  const [positions, orders, alerts] = await Promise.all([
-    positionsRepo.findMany({ environment: systemState.environment, status: "open" }),
-    ordersRepo.findMany({ environment: systemState.environment, status: "pending" }),
-    alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
-  ]);
-
-  return c.json({
-    environment: systemState.environment,
-    status: systemState.status,
-    lastCycleId: systemState.lastCycleId,
-    lastCycleTime: systemState.lastCycleTime,
-    nextCycleTime: null,
-    positionCount: positions.total,
-    openOrderCount: orders.total,
-    alerts: alerts.data.map((a) => ({
-      id: a.id,
-      severity: a.severity,
-      type: a.type,
-      message: a.message,
-      metadata: a.metadata,
-      acknowledged: a.acknowledged,
-      createdAt: a.createdAt,
-    })),
-    runningCycle: null,
-  });
+  return c.json(await getSystemStatusResponse(body.environment));
 });
 
 export default app;
