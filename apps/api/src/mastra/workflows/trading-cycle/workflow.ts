@@ -549,6 +549,7 @@ const actStep = createStep({
 			approved,
 			iterations: state.iterations ?? 1,
 			orderSubmission,
+			decisionPlan,
 			mode: state.mode ?? "STUB",
 			configVersion: null,
 		};

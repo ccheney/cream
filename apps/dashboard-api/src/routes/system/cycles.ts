@@ -259,6 +259,28 @@ app.openapi(triggerCycleRoute, async (c) => {
 				approved: boolean;
 				iterations: number;
 				orderSubmission: { submitted: boolean; orderIds: string[]; errors: string[] };
+				decisionPlan?: {
+					cycleId: string;
+					timestamp: string;
+					decisions: Array<{
+						decisionId: string;
+						instrumentId: string;
+						action: "BUY" | "SELL" | "HOLD" | "CLOSE";
+						direction: "LONG" | "SHORT" | "FLAT";
+						size: { value: number; unit: string };
+						strategyFamily: string;
+						timeHorizon: string;
+						rationale: {
+							summary: string;
+							bullishFactors: string[];
+							bearishFactors: string[];
+							decisionLogic: string;
+							memoryReferences: string[];
+						};
+						thesisState: string;
+					}>;
+					portfolioNotes: string;
+				};
 				mode: "STUB" | "LLM";
 				configVersion: string | null;
 			} | null = null;
@@ -518,6 +540,35 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 			// Persist cycle completion to database
 			await updateCycleState(environment, cycleId, "complete");
+
+			// Persist decisions from workflow result to database
+			if (workflowResult.decisionPlan?.decisions?.length) {
+				try {
+					const decisionsRepo = await getDecisionsRepo();
+					const status = workflowResult.approved ? "approved" : "rejected";
+
+					for (const decision of workflowResult.decisionPlan.decisions) {
+						await decisionsRepo.create({
+							id: decision.decisionId,
+							cycleId,
+							symbol: decision.instrumentId,
+							action: decision.action === "CLOSE" ? "SELL" : decision.action,
+							direction: decision.direction,
+							size: decision.size.value,
+							sizeUnit: decision.size.unit,
+							status,
+							strategyFamily: decision.strategyFamily,
+							timeHorizon: decision.timeHorizon,
+							rationale: decision.rationale?.summary ?? null,
+							bullishFactors: decision.rationale?.bullishFactors ?? [],
+							bearishFactors: decision.rationale?.bearishFactors ?? [],
+							environment,
+						});
+					}
+				} catch {
+					// Non-critical - log but don't fail the cycle
+				}
+			}
 
 			const durationMs = Date.now() - startTime;
 			if (cyclesRepo) {
