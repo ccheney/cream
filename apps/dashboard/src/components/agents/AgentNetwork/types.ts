@@ -23,7 +23,7 @@ export type NetworkAgentType =
 	| "risk"
 	| "critic";
 
-/** OODA workflow phases */
+/** OODA workflow phases (includes "complete" for finished cycles) */
 export type OODAPhase =
 	| "observe"
 	| "orient"
@@ -32,7 +32,8 @@ export type OODAPhase =
 	| "debate"
 	| "trader"
 	| "consensus"
-	| "act";
+	| "act"
+	| "complete";
 
 /** Phase execution status */
 export type PhaseStatus = "pending" | "active" | "complete" | "error";
@@ -251,6 +252,7 @@ export const INITIAL_PHASE_STATUS: Record<OODAPhase, PhaseStatus> = {
 	trader: "pending",
 	consensus: "pending",
 	act: "pending",
+	complete: "pending",
 };
 
 // ============================================

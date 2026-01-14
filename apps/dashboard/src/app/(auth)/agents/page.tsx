@@ -64,6 +64,7 @@ export default function AgentsPage() {
 	const {
 		agents: streamingAgents,
 		currentCycleId,
+		currentPhase,
 		isSubscribed,
 		viewMode,
 		historicalCycleId,
@@ -138,6 +139,7 @@ export default function AgentsPage() {
 							onAgentSelect={handleAgentSelect}
 							isLive={viewMode === "live" && (isSubscribed || statusSubscribed)}
 							compact={isCompact}
+							currentPhase={currentPhase}
 						/>
 					</div>
 

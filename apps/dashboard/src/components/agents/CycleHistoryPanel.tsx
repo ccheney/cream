@@ -198,7 +198,11 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
 				lastUpdate: state.lastUpdate,
 			};
 		}
-		loadHistoricalCycle(selectedCycleId, agentState);
+		loadHistoricalCycle(
+			selectedCycleId,
+			agentState,
+			fullCycle.cycle.currentPhase as Parameters<typeof loadHistoricalCycle>[2]
+		);
 	}, [fullCycle, selectedCycleId, fullCycleLoading, loadHistoricalCycle]);
 
 	return (

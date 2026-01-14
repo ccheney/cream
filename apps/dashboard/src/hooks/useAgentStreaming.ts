@@ -118,6 +118,8 @@ export interface UseAgentStreamingReturn {
 	isSubscribed: boolean;
 	/** Current cycle ID being tracked */
 	currentCycleId: string | null;
+	/** Current phase of the cycle (includes "complete" for finished cycles) */
+	currentPhase: import("@/stores/agent-streaming-store").OODAPhase | null;
 	/** View mode (live or historical) */
 	viewMode: "live" | "historical";
 	/** Historical cycle ID when viewing past data */
@@ -136,7 +138,8 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 	const { lastMessage, subscribe, unsubscribe, connected } = useWebSocketContext();
 
 	// Use Zustand store for persistent state
-	const { agents, currentCycleId, viewMode, historicalCycleId, getAgent } = useAllAgentStreaming();
+	const { agents, currentCycleId, currentPhase, viewMode, historicalCycleId, getAgent } =
+		useAllAgentStreaming();
 	const {
 		addToolCall,
 		updateToolCallResult,
@@ -302,11 +305,21 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 			getAgent,
 			isSubscribed,
 			currentCycleId,
+			currentPhase,
 			viewMode,
 			historicalCycleId,
 			clear,
 		}),
-		[agents, getAgent, isSubscribed, currentCycleId, viewMode, historicalCycleId, clear]
+		[
+			agents,
+			getAgent,
+			isSubscribed,
+			currentCycleId,
+			currentPhase,
+			viewMode,
+			historicalCycleId,
+			clear,
+		]
 	);
 }
 

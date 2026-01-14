@@ -137,7 +137,8 @@ export interface AgentStreamingStoreActions {
 	/** Load historical cycle data */
 	loadHistoricalCycle: (
 		cycleId: string,
-		streamingState: Record<string, AgentStreamingState>
+		streamingState: Record<string, AgentStreamingState>,
+		currentPhase?: OODAPhase | null
 	) => void;
 	/** Return to live mode */
 	returnToLive: () => void;
@@ -464,7 +465,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 				set(initialState);
 			},
 
-			loadHistoricalCycle: (cycleId, streamingState) => {
+			loadHistoricalCycle: (cycleId, streamingState, currentPhase) => {
 				// Convert record to Map and transform to AgentStreamingState format
 				const agentsMap = new Map<AgentType, AgentStreamingState>();
 				for (const [agentType, state] of Object.entries(streamingState)) {
@@ -483,7 +484,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 					currentCycleId: cycleId,
 					viewMode: "historical",
 					historicalCycleId: cycleId,
-					currentPhase: null,
+					currentPhase: currentPhase ?? null,
 					phaseStatus: { ...INITIAL_PHASE_STATUS },
 					dataFlows: [],
 				});
