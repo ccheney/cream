@@ -436,7 +436,8 @@ export function formatLiquidityIndicators(liquidity: IndicatorSnapshot["liquidit
 	const lines: string[] = [];
 
 	if (liquidity.bid_ask_spread_pct !== null) {
-		lines.push(`  - Bid-Ask Spread: ${(liquidity.bid_ask_spread_pct * 100).toFixed(2)}%`);
+		// bid_ask_spread_pct is already in percentage units (e.g., 0.017 = 0.017%)
+		lines.push(`  - Bid-Ask Spread: ${liquidity.bid_ask_spread_pct.toFixed(4)}%`);
 	}
 
 	if (liquidity.vwap !== null) {

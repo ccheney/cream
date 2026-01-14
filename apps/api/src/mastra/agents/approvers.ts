@@ -46,12 +46,13 @@ export const criticAgent = createAgent("critic");
 /**
  * Spread threshold configuration by trading session.
  * Pre/post-market naturally have wider spreads due to lower liquidity.
+ * Values are in percentage form (0.5 = 0.5%, matching bid_ask_spread_pct units).
  */
 const SPREAD_THRESHOLDS = {
-	RTH: 0.005, // 0.5% during regular trading hours
-	PRE_MARKET: 0.03, // 3% during pre-market (expected to be wider)
-	AFTER_HOURS: 0.03, // 3% during after-hours
-	CLOSED: 0.05, // 5% when market is closed (stale quotes)
+	RTH: 0.5, // 0.5% during regular trading hours
+	PRE_MARKET: 3.0, // 3% during pre-market (expected to be wider)
+	AFTER_HOURS: 3.0, // 3% during after-hours
+	CLOSED: 5.0, // 5% when market is closed (stale quotes)
 } as const;
 
 /**
@@ -87,7 +88,7 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 			const sessionTag = session !== "RTH" ? ` (${session})` : "";
 			const spreadWarning = isWide ? " [WIDE]" : "";
 			riskParts.push(
-				`Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${sessionTag}${spreadWarning}`
+				`Spread=${snapshot.liquidity.bid_ask_spread_pct.toFixed(4)}%${sessionTag}${spreadWarning}`
 			);
 		}
 

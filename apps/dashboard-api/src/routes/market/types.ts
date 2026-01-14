@@ -199,13 +199,7 @@ export function isMarketHours(timestamp: Date): boolean {
  * Get today's date in NY timezone formatted as YYYY-MM-DD.
  */
 export function getTodayNY(): string {
-	const formatter = new Intl.DateTimeFormat("en-US", {
-		timeZone: "America/New_York",
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	});
-	return formatter.format(new Date());
+	return formatDateNY(new Date());
 }
 
 /**
@@ -216,7 +210,10 @@ export function getDaysAgo(days: number): string {
 	// This avoids timezone issues from mixing local date arithmetic with NY formatting
 	const target = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-	// Format in NY timezone
+	return formatDateNY(target);
+}
+
+function formatDateNY(date: Date): string {
 	const formatter = new Intl.DateTimeFormat("en-US", {
 		timeZone: "America/New_York",
 		year: "numeric",
@@ -224,5 +221,14 @@ export function getDaysAgo(days: number): string {
 		day: "2-digit",
 	});
 
-	return formatter.format(target);
+	const parts = formatter.formatToParts(date);
+	const year = parts.find((p) => p.type === "year")?.value;
+	const month = parts.find((p) => p.type === "month")?.value;
+	const day = parts.find((p) => p.type === "day")?.value;
+
+	if (!year || !month || !day) {
+		throw new Error("Failed to format date in America/New_York timezone");
+	}
+
+	return `${year}-${month}-${day}`;
 }
