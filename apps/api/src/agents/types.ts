@@ -98,6 +98,27 @@ export interface AgentContext {
   };
   /** Agent configurations from runtime config (from database) */
   agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>;
+  /** Grounding output from the Grounding Agent (web search context) */
+  groundingOutput?: {
+    perSymbol: Record<
+      string,
+      {
+        news: string[];
+        fundamentals: string[];
+        bullCase: string[];
+        bearCase: string[];
+      }
+    >;
+    global: {
+      macro: string[];
+      events: string[];
+    };
+    sources: Array<{
+      url: string;
+      title: string;
+      relevance: string;
+    }>;
+  };
 }
 
 /**

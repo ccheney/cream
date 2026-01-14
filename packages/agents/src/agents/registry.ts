@@ -10,6 +10,7 @@ import {
   BULLISH_RESEARCHER_CONFIG,
   CRITIC_CONFIG,
   FUNDAMENTALS_ANALYST_CONFIG,
+  GROUNDING_AGENT_CONFIG,
   IDEA_AGENT_CONFIG,
   INDICATOR_RESEARCHER_CONFIG,
   NEWS_ANALYST_CONFIG,
@@ -22,6 +23,7 @@ import {
 // ============================================
 
 export const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
+  grounding_agent: GROUNDING_AGENT_CONFIG,
   news_analyst: NEWS_ANALYST_CONFIG,
   fundamentals_analyst: FUNDAMENTALS_ANALYST_CONFIG,
   bullish_researcher: BULLISH_RESEARCHER_CONFIG,

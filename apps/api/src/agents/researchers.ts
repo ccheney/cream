@@ -9,12 +9,12 @@ import { z } from "zod";
 
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
-import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";
+import { buildDatetimeContext, buildGroundingContext, buildIndicatorSummary } from "./prompts.js";
 import { BearishResearchSchema, BullishResearchSchema } from "./schemas.js";
+import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
   AgentConfigEntry,
   AgentContext,
-  AgentStreamChunk,
   BearishResearchOutput,
   BullishResearchOutput,
   OnStreamChunk,
@@ -47,8 +47,11 @@ export async function runBullishResearcher(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+  // Build grounding context from web searches (focus on bullCase)
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -92,8 +95,11 @@ export async function runBearishResearcher(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+  // Build grounding context from web searches (focus on bearCase)
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -151,55 +157,6 @@ export async function runDebateParallel(
 // ============================================
 
 /**
- * Process stream chunks and emit via callback.
- * Handles standard Mastra agent stream chunk types.
- */
-async function processStreamChunk(
-  chunk: { type: string; payload?: Record<string, unknown> },
-  agentType: AgentType,
-  onChunk: OnStreamChunk
-): Promise<void> {
-  const timestamp = new Date().toISOString();
-  const payload = chunk.payload ?? {};
-
-  const streamChunk: AgentStreamChunk = {
-    type: chunk.type as AgentStreamChunk["type"],
-    agentType,
-    payload: {},
-    timestamp,
-  };
-
-  switch (chunk.type) {
-    case "text-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-call":
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-result":
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.result = payload.result;
-      streamChunk.payload.success = true;
-      await onChunk(streamChunk);
-      break;
-    case "reasoning-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "error":
-      streamChunk.payload.error =
-        payload.error instanceof Error ? payload.error.message : String(payload.error);
-      await onChunk(streamChunk);
-      break;
-  }
-}
-
-/**
  * Run Bullish Researcher agent with streaming.
  */
 export async function runBullishResearcherStreaming(
@@ -210,8 +167,11 @@ export async function runBullishResearcherStreaming(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+  // Build grounding context from web searches (focus on bullCase)
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -237,13 +197,10 @@ Weight technical factors alongside fundamental drivers.`;
   const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
 
   const stream = await bullishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+  const forwardChunk = createStreamChunkForwarder("bullish_researcher", onChunk);
 
   for await (const chunk of stream.fullStream) {
-    await processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "bullish_researcher",
-      onChunk
-    );
+    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
   }
 
   const result = (await stream.object) as BullishResearchOutput[] | undefined;
@@ -261,8 +218,11 @@ export async function runBearishResearcherStreaming(
   // Build compact indicator summary for momentum/trend signals
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+  // Build grounding context from web searches (focus on bearCase)
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
 
@@ -289,13 +249,10 @@ Weight technical factors alongside fundamental headwinds.`;
   const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
 
   const stream = await bearishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+  const forwardChunk = createStreamChunkForwarder("bearish_researcher", onChunk);
 
   for await (const chunk of stream.fullStream) {
-    await processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "bearish_researcher",
-      onChunk
-    );
+    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
   }
 
   const result = (await stream.object) as BearishResearchOutput[] | undefined;

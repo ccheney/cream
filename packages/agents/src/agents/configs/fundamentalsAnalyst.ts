@@ -19,7 +19,6 @@ export const FUNDAMENTALS_ANALYST_CONFIG: AgentConfig = {
     "graphrag_query",
     "analyze_content",
     "helix_query",
-    "google_search",
     "get_prediction_signals",
     "get_market_snapshots",
   ],

@@ -25,6 +25,7 @@ import { WorkflowResultSchema } from "./schemas.js";
 // ============================================
 
 type AgentType =
+  | "grounding_agent"
   | "news_analyst"
   | "fundamentals_analyst"
   | "bullish_researcher"
@@ -106,6 +107,68 @@ const orientStep = createStep({
   },
 });
 
+const groundingStep = createStep({
+  id: "grounding",
+  description: "Run web grounding agent for real-time context",
+  inputSchema: AnyInputSchema,
+  outputSchema: AnyOutputSchema,
+  stateSchema: MinimalStateSchema,
+  execute: async ({ inputData, state, writer }) => {
+    const mode = state.mode ?? "STUB";
+    const symbols = inputData.instruments ?? [];
+    const cycleId = inputData.cycleId;
+
+    if (mode === "STUB") {
+      // Skip grounding in STUB mode - return empty grounding output
+      const { createEmptyGroundingOutput } = await import("../../agents/grounding.js");
+      return { ...inputData, groundingOutput: createEmptyGroundingOutput() };
+    }
+
+    // LLM mode - run grounding agent with streaming
+    const { runGroundingAgentStreaming } = await import("../../agents/grounding.js");
+    const context = {
+      cycleId,
+      symbols,
+      snapshots: inputData.snapshot ?? {},
+      indicators: inputData.snapshot?.indicators ?? {},
+      externalContext: inputData.externalContext,
+      recentEvents: [],
+    };
+
+    // Emit start event
+    await emitAgentEvent(writer, {
+      type: "agent-start",
+      agent: "grounding_agent",
+      cycleId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run with streaming - forward chunks to writer
+    const onChunk = async (chunk: AgentStreamChunk) => {
+      await emitAgentEvent(writer, {
+        type: "agent-chunk",
+        agent: chunk.agentType as AgentType,
+        cycleId,
+        data: chunk,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const groundingOutput = await runGroundingAgentStreaming(context, onChunk);
+
+    // Emit complete event
+    await emitAgentEvent(writer, {
+      type: "agent-complete",
+      agent: "grounding_agent",
+      cycleId,
+      data: { output: groundingOutput },
+      timestamp: new Date().toISOString(),
+    });
+
+    return { ...inputData, groundingOutput };
+  },
+});
+
 const analystsStep = createStep({
   id: "analysts",
   description: "Run news and fundamentals analysts",
@@ -137,6 +200,7 @@ const analystsStep = createStep({
       indicators: inputData.snapshot?.indicators ?? {},
       externalContext: inputData.externalContext,
       recentEvents: [],
+      groundingOutput: inputData.groundingOutput, // Pass grounding context
     };
 
     // Emit start events
@@ -217,6 +281,7 @@ const debateStep = createStep({
       indicators: inputData.snapshot?.indicators ?? {},
       externalContext: inputData.externalContext,
       recentEvents: [],
+      groundingOutput: inputData.groundingOutput, // Pass grounding context
     };
     const analystOutputs = {
       news: inputData.newsAnalysis ?? [],
@@ -506,9 +571,11 @@ export const tradingCycleWorkflow = createWorkflow({
 });
 
 // Wire steps sequentially (simplified from original plan)
+// observe → orient → grounding → analysts → debate → trader → consensus → act
 tradingCycleWorkflow
   .then(observeStep)
   .then(orientStep)
+  .then(groundingStep)
   .then(analystsStep)
   .then(debateStep)
   .then(traderStep)

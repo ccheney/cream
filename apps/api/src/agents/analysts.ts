@@ -9,15 +9,16 @@ import { z } from "zod";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import {
   buildDatetimeContext,
+  buildGroundingContext,
   buildIndicatorContext,
   buildIndicatorSummary,
   buildPredictionMarketContext,
   buildRegimeContext,
 } from "./prompts.js";
 import { FundamentalsAnalysisSchema, SentimentAnalysisSchema } from "./schemas.js";
+import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
   AgentContext,
-  AgentStreamChunk,
   FundamentalsAnalysisOutput,
   OnStreamChunk,
   SentimentAnalysisOutput,
@@ -58,8 +59,11 @@ export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAn
   const indicatorContext = buildIndicatorContext(context.indicators);
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+  // Build grounding context from web searches
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+${groundingContext}
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
 
@@ -109,10 +113,26 @@ export async function runFundamentalsAnalyst(
   // Build indicator context with value and quality factors
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+  // Build grounding context from web searches
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const today = new Date();
+  const fredStartDate = nyFormatter.format(today);
+  const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+
+  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+${groundingContext}
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
+FRED Economic Calendar range (use for fred_economic_calendar tool):
+- startDate: ${fredStartDate}
+- endDate: ${fredEndDate}
 ${regimeContext}${predictionMarketContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
@@ -182,55 +202,6 @@ export async function runAnalystsParallel(context: AgentContext): Promise<{
 // ============================================
 
 /**
- * Process stream chunks and emit via callback.
- * Handles standard Mastra agent stream chunk types.
- */
-async function processStreamChunk(
-  chunk: { type: string; payload?: Record<string, unknown> },
-  agentType: "news_analyst" | "fundamentals_analyst",
-  onChunk: OnStreamChunk
-): Promise<void> {
-  const timestamp = new Date().toISOString();
-  const payload = chunk.payload ?? {};
-
-  const streamChunk: AgentStreamChunk = {
-    type: chunk.type as AgentStreamChunk["type"],
-    agentType,
-    payload: {},
-    timestamp,
-  };
-
-  switch (chunk.type) {
-    case "text-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-call":
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-result":
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.result = payload.result;
-      streamChunk.payload.success = true;
-      await onChunk(streamChunk);
-      break;
-    case "reasoning-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "error":
-      streamChunk.payload.error =
-        payload.error instanceof Error ? payload.error.message : String(payload.error);
-      await onChunk(streamChunk);
-      break;
-  }
-}
-
-/**
  * Run News & Sentiment Analyst agent with streaming.
  */
 export async function runNewsAnalystStreaming(
@@ -245,8 +216,11 @@ export async function runNewsAnalystStreaming(
   const indicatorContext = buildIndicatorContext(context.indicators);
   const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+  // Build grounding context from web searches
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+${groundingContext}
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
 
@@ -270,13 +244,10 @@ If event_risk is true, pay special attention to potential catalysts.`;
   const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
 
   const stream = await newsAnalystAgent.stream([{ role: "user", content: prompt }], options);
+  const forwardChunk = createStreamChunkForwarder("news_analyst", onChunk);
 
   for await (const chunk of stream.fullStream) {
-    await processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "news_analyst",
-      onChunk
-    );
+    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
   }
 
   const result = (await stream.object) as SentimentAnalysisOutput[] | undefined;
@@ -305,10 +276,26 @@ export async function runFundamentalsAnalystStreaming(
   // Build indicator context with value and quality factors
   const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+  // Build grounding context from web searches
+  const groundingContext = buildGroundingContext(context.groundingOutput);
 
+  const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const today = new Date();
+  const fredStartDate = nyFormatter.format(today);
+  const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+
+  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+${groundingContext}
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
+FRED Economic Calendar range (use for fred_economic_calendar tool):
+- startDate: ${fredStartDate}
+- endDate: ${fredEndDate}
 ${regimeContext}${predictionMarketContext}
 Recent Fundamental/Macro Events (from database):
 ${JSON.stringify(fundamentalEvents, null, 2)}
@@ -353,13 +340,10 @@ ${
     [{ role: "user", content: prompt }],
     options
   );
+  const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk);
 
   for await (const chunk of stream.fullStream) {
-    await processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "fundamentals_analyst",
-      onChunk
-    );
+    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
   }
 
   const result = (await stream.object) as FundamentalsAnalysisOutput[] | undefined;

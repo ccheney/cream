@@ -686,3 +686,122 @@ export function buildIndicatorSummary(indicators?: AgentContext["indicators"]): 
 
   return lines.length > 1 ? lines.join("\n") : "";
 }
+
+// ============================================
+// Grounding Context Builder
+// ============================================
+
+import type { GroundingOutput } from "./schemas.js";
+
+/**
+ * Build grounding context section for agent prompts.
+ *
+ * Takes the output from the Grounding Agent and formats it for injection
+ * into downstream agent prompts. Optionally filters to a specific symbol.
+ *
+ * @param groundingOutput - Output from the Grounding Agent
+ * @param symbol - Optional symbol to filter per-symbol context
+ */
+export function buildGroundingContext(
+  groundingOutput?: GroundingOutput | null,
+  symbol?: string
+): string {
+  if (!groundingOutput) {
+    return `
+## Web Grounding Context
+No grounding data available for this cycle.
+
+IMPORTANT: You do not have access to google_search. If you need current information that is not provided, note this as uncertainty in your analysis.
+`;
+  }
+
+  const sections: string[] = [];
+
+  // Global context (always included)
+  const globalMacro = groundingOutput.global?.macro ?? [];
+  const globalEvents = groundingOutput.global?.events ?? [];
+
+  if (globalMacro.length > 0 || globalEvents.length > 0) {
+    sections.push("### Market-Wide Context");
+    if (globalMacro.length > 0) {
+      sections.push("Macro Themes:");
+      for (const item of globalMacro) {
+        sections.push(`- ${item}`);
+      }
+    }
+    if (globalEvents.length > 0) {
+      sections.push("Upcoming Events:");
+      for (const item of globalEvents) {
+        sections.push(`- ${item}`);
+      }
+    }
+  }
+
+  // Per-symbol context
+  const perSymbol = groundingOutput.perSymbol ?? {};
+  const symbolsToInclude = symbol ? [symbol] : Object.keys(perSymbol);
+
+  for (const sym of symbolsToInclude) {
+    const symbolData = perSymbol[sym];
+    if (!symbolData) {
+      continue;
+    }
+
+    const symbolSections: string[] = [`### ${sym}`];
+
+    if (symbolData.news && symbolData.news.length > 0) {
+      symbolSections.push("News & Developments:");
+      for (const item of symbolData.news) {
+        symbolSections.push(`- ${item}`);
+      }
+    }
+
+    if (symbolData.fundamentals && symbolData.fundamentals.length > 0) {
+      symbolSections.push("Fundamentals Context:");
+      for (const item of symbolData.fundamentals) {
+        symbolSections.push(`- ${item}`);
+      }
+    }
+
+    if (symbolData.bullCase && symbolData.bullCase.length > 0) {
+      symbolSections.push("Bullish Catalysts:");
+      for (const item of symbolData.bullCase) {
+        symbolSections.push(`- ${item}`);
+      }
+    }
+
+    if (symbolData.bearCase && symbolData.bearCase.length > 0) {
+      symbolSections.push("Bearish Risks:");
+      for (const item of symbolData.bearCase) {
+        symbolSections.push(`- ${item}`);
+      }
+    }
+
+    if (symbolSections.length > 1) {
+      sections.push(symbolSections.join("\n"));
+    }
+  }
+
+  // Sources
+  const sources = groundingOutput.sources ?? [];
+  if (sources.length > 0) {
+    sections.push("### Sources");
+    for (const src of sources.slice(0, 5)) {
+      sections.push(`- [${src.title}](${src.url}) - ${src.relevance}`);
+    }
+  }
+
+  const content =
+    sections.length > 0
+      ? sections.join("\n\n")
+      : "No grounded information available for the requested symbols.";
+
+  return `
+## Web Grounding Context
+${content}
+
+IMPORTANT: Use this grounded context for real-time information.
+You do not have access to google_search - it is not available to you.
+If critical information is missing from the grounding context, note this as uncertainty in your analysis.
+`;
+}

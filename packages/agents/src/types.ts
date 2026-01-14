@@ -15,6 +15,7 @@
 // ============================================
 
 export const AGENT_TYPES = [
+  "grounding_agent",
   "news_analyst",
   "fundamentals_analyst",
   "bullish_researcher",

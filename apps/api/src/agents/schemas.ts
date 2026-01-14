@@ -250,3 +250,50 @@ export const IdeaAgentOutputSchema = z.object({
 });
 
 export type IdeaAgentOutput = z.infer<typeof IdeaAgentOutputSchema>;
+
+// ============================================
+// Grounding Agent Schemas
+// ============================================
+
+/**
+ * Per-symbol grounding context gathered from web searches.
+ */
+export const SymbolGroundingSchema = z.object({
+  news: z.array(z.string()).describe("Key headlines and recent developments"),
+  fundamentals: z.array(z.string()).describe("Valuation context and analyst views"),
+  bullCase: z.array(z.string()).describe("Bullish catalysts and opportunities"),
+  bearCase: z.array(z.string()).describe("Bearish risks and concerns"),
+});
+
+/**
+ * Global/macro grounding context.
+ */
+export const GlobalGroundingSchema = z.object({
+  macro: z.array(z.string()).describe("Market-wide themes and Fed policy"),
+  events: z.array(z.string()).describe("Upcoming economic events and catalysts"),
+});
+
+/**
+ * Source reference from grounding search.
+ */
+export const GroundingSourceSchema = z.object({
+  url: z.string().describe("Source URL"),
+  title: z.string().describe("Source title or headline"),
+  relevance: z.string().describe("Why this source is relevant"),
+});
+
+/**
+ * Complete grounding output from the Web Grounding Agent.
+ */
+export const GroundingOutputSchema = z.object({
+  perSymbol: z
+    .record(z.string(), SymbolGroundingSchema)
+    .describe("Grounding context organized by symbol"),
+  global: GlobalGroundingSchema.describe("Market-wide grounding context"),
+  sources: z.array(GroundingSourceSchema).describe("Key sources referenced"),
+});
+
+export type GroundingOutput = z.infer<typeof GroundingOutputSchema>;
+export type SymbolGrounding = z.infer<typeof SymbolGroundingSchema>;
+export type GlobalGrounding = z.infer<typeof GlobalGroundingSchema>;
+export type GroundingSource = z.infer<typeof GroundingSourceSchema>;

@@ -19,7 +19,6 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
     "extract_news_context",
     "analyze_content",
     "helix_query",
-    "google_search",
     "get_prediction_signals",
     "get_market_snapshots",
   ],

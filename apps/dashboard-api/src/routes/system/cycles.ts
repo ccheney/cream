@@ -225,8 +225,9 @@ app.openapi(triggerCycleRoute, async (c) => {
       // Map workflow agent types to WebSocket agent types
       const agentTypeMap: Record<
         string,
-        "news" | "fundamentals" | "bullish" | "bearish" | "trader" | "risk" | "critic"
+        "grounding" | "news" | "fundamentals" | "bullish" | "bearish" | "trader" | "risk" | "critic"
       > = {
+        grounding_agent: "grounding",
         news_analyst: "news",
         fundamentals_analyst: "fundamentals",
         bullish_researcher: "bullish",
@@ -412,19 +413,7 @@ app.openapi(triggerCycleRoute, async (c) => {
                     timestamp: ts,
                   },
                 });
-              } else if (chunkType === "tool-call" || toolName) {
-                broadcastAgentToolCall({
-                  type: "agent_tool_call",
-                  data: {
-                    cycleId,
-                    agentType,
-                    toolName: String(toolName ?? "unknown"),
-                    toolArgs: JSON.stringify(toolArgs ?? {}),
-                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
-                    timestamp: ts,
-                  },
-                });
-              } else if (chunkType === "tool-result" || result) {
+              } else if (chunkType === "tool-result" || result !== undefined) {
                 broadcastAgentToolResult({
                   type: "agent_tool_result",
                   data: {
@@ -434,6 +423,21 @@ app.openapi(triggerCycleRoute, async (c) => {
                     toolCallId: toolCallId ?? `tc_${Date.now()}`,
                     resultSummary: JSON.stringify(result ?? {}).slice(0, 200),
                     success: success ?? true,
+                    timestamp: ts,
+                  },
+                });
+              } else if (
+                chunkType === "tool-call" ||
+                (toolName !== undefined && toolArgs !== undefined)
+              ) {
+                broadcastAgentToolCall({
+                  type: "agent_tool_call",
+                  data: {
+                    cycleId,
+                    agentType,
+                    toolName: String(toolName ?? "unknown"),
+                    toolArgs: JSON.stringify(toolArgs ?? {}),
+                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
                     timestamp: ts,
                   },
                 });
