@@ -106,10 +106,7 @@ Returns:
 Example queries:
 - "What companies are related to NVDA?" → Get NVDA's peers, competitors, and supply chain
 - "Who are AAPL's suppliers?" → Check dependencies with type SUPPLIER
-- "What companies depend on TSMC?" → Check dependents to find downstream companies
-
-BACKTEST mode: Returns empty results.
-PAPER/LIVE mode: Queries HelixDB company graph.`,
+- "What companies depend on TSMC?" → Check dependents to find downstream companies`,
 	inputSchema: CompanyRelationshipsInputSchema,
 	outputSchema: CompanyRelationshipsOutputSchema,
 	execute: async (inputData): Promise<CompanyRelationshipsOutput> => {
@@ -129,10 +126,7 @@ Use this tool when you need to:
 
 Returns a list of ticker symbols that are sector peers.
 
-Example: "Get sector peers for AMD" → Returns ["NVDA", "INTC", "QCOM", ...]
-
-BACKTEST mode: Returns empty peers list.
-PAPER/LIVE mode: Queries HelixDB company graph.`,
+Example: "Get sector peers for AMD" → Returns ["NVDA", "INTC", "QCOM", ...]`,
 	inputSchema: SectorPeersInputSchema,
 	outputSchema: SectorPeersOutputSchema,
 	execute: async (inputData): Promise<SectorPeersOutput> => {
@@ -155,10 +149,7 @@ The strength field (0-1) indicates how important the relationship is:
 - 0.5 = Moderate dependency
 - 0.1 = Minor dependency
 
-Example: "What is TSLA's supply chain?" → Returns suppliers (battery, chips) and customers
-
-BACKTEST mode: Returns empty supply chain.
-PAPER/LIVE mode: Queries HelixDB company graph.`,
+Example: "What is TSLA's supply chain?" → Returns suppliers (battery, chips) and customers`,
 	inputSchema: SupplyChainInputSchema,
 	outputSchema: SupplyChainOutputSchema,
 	execute: async (inputData): Promise<SupplyChainOutput> => {

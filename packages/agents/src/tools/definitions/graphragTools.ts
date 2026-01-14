@@ -106,31 +106,7 @@ export type GraphRAGQueryOutput = z.infer<typeof GraphRAGQueryOutputSchema>;
 
 export const graphragQueryTool = createTool({
 	id: "graphrag_query",
-	description: `Unified semantic search across SEC filings, earnings transcripts, news, and events with company discovery.
-
-Use this tool when you need to:
-- Search for relevant context across multiple document types simultaneously
-- Find information about specific topics (e.g., "supply chain issues", "AI investments")
-- Discover related companies through graph relationships
-- Get context for trading decisions from filings, transcripts, and news
-
-The tool performs vector similarity search using text embeddings across:
-- FilingChunks: SEC 10-K, 10-Q, 8-K filing sections
-- TranscriptChunks: Earnings call transcript segments with speaker attribution
-- NewsItems: News articles with sentiment scores
-- ExternalEvents: Market events (macro, regulatory, etc.)
-
-Graph traversal automatically discovers:
-- Companies mentioned in matching documents
-- Related companies (via RELATED_TO edges)
-- Dependent companies (via DEPENDS_ON edges)
-
-Results are ranked by vector similarity score (0-1, higher is better).
-
-BACKTEST mode: Returns empty results (no HelixDB access).
-PAPER/LIVE mode: Queries HelixDB for real semantic search.
-
-Requires HELIX_URL or HELIX_HOST/HELIX_PORT environment variables.`,
+	description: `Semantic search across SEC filings, earnings transcripts, news, and events. Graph traversal discovers related/dependent companies.`,
 	inputSchema: GraphRAGQueryInputSchema,
 	outputSchema: GraphRAGQueryOutputSchema,
 	execute: async (inputData): Promise<GraphRAGQueryOutput> => {

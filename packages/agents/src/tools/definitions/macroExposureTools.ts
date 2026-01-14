@@ -169,8 +169,7 @@ Categories of factors:
 - CREDIT: High yield spread, IG spread
 - ECONOMIC_INDICATORS: GDP, CPI, unemployment, PMI
 
-BACKTEST mode: Returns empty exposures.
-PAPER/LIVE mode: Queries HelixDB macro graph.`,
+`,
 	inputSchema: CompanyMacroExposureInputSchema,
 	outputSchema: CompanyMacroExposureOutputSchema,
 	execute: async (inputData): Promise<CompanyMacroExposureOutput> => {
@@ -204,8 +203,7 @@ Interpretation:
 - Low avgSensitivity + low companyCount = Diversified exposure
 - High avgSensitivity + low companyCount = Idiosyncratic risk in few names
 
-BACKTEST mode: Returns empty aggregations.
-PAPER/LIVE mode: Queries HelixDB macro graph for each company.`,
+`,
 	inputSchema: PortfolioMacroExposureInputSchema,
 	outputSchema: PortfolioMacroExposureOutputSchema,
 	execute: async (inputData): Promise<PortfolioMacroExposureOutput> => {
@@ -238,10 +236,7 @@ Common macro entity IDs:
 - Credit: hy_spread, ig_spread
 - Economic: gdp, cpi, unemployment, pmi_manufacturing, pmi_services
 
-Use list_macro_factors tool to see all available factors.
-
-BACKTEST mode: Returns empty list.
-PAPER/LIVE mode: Queries HelixDB macro graph.`,
+Use list_macro_factors tool to see all available factors.`,
 	inputSchema: CompaniesAffectedInputSchema,
 	outputSchema: CompaniesAffectedOutputSchema,
 	execute: async (inputData): Promise<CompaniesAffectedOutput> => {
