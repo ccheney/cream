@@ -13,13 +13,15 @@
  * @see docs/plans/21-mastra-workflow-refactor.md
  */
 
+import { createNodeLogger } from "@cream/logger";
 import type { ToolStream } from "@mastra/core/tools";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import type { AgentStreamChunk } from "../../agents/types.js";
-import { log } from "../../logger.js";
 import { WorkflowResultSchema } from "./schemas.js";
+
+const log = createNodeLogger({ service: "trading-cycle", level: "info" });
 
 // ============================================
 // Stream Event Types
@@ -46,12 +48,12 @@ interface AgentEvent {
 
 /**
  * Emit an agent event via the workflow writer.
- * Uses writer.custom() for custom events to ensure proper stream visibility.
+ * Uses writer.write() for step output - produces consistent workflow-step-output events.
  */
 async function emitAgentEvent(writer: ToolStream | undefined, event: AgentEvent): Promise<void> {
 	if (writer) {
-		// Use custom() for custom events - these appear with different structure in stream
-		await writer.custom(event);
+		// Use write() for step output - easier to unwrap downstream
+		await writer.write(event);
 	}
 }
 

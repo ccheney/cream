@@ -14,7 +14,7 @@ import { isBacktest } from "@cream/domain";
 import { generateSituationBrief, type MarketSnapshot as HelixMarketSnapshot } from "@cream/helix";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
-import { getIndicatorsRepo, getRegimeLabelsRepo } from "../../../db.js";
+import { getIndicatorsRepo, getRegimeLabelsRepo } from "../../../../db.js";
 import {
 	type IndicatorSynthesisInput,
 	indicatorSynthesisWorkflow,

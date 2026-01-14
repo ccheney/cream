@@ -13,12 +13,13 @@
 
 import { type ImplementIndicatorOutput, implementIndicator } from "@cream/agents";
 import { IndicatorHypothesisSchema, validateIndicatorFileFromPath } from "@cream/indicators";
+import { createNodeLogger } from "@cream/logger";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
-
+import { getIndicatorsRepo } from "../../../db.js";
 import { runIndicatorResearcher } from "../../agents/researchers.js";
-import { getIndicatorsRepo } from "../../db.js";
-import { log } from "../../logger.js";
+
+const log = createNodeLogger({ service: "indicator-synthesis-steps", level: "info" });
 
 // Example indicator code for pattern reference
 const EXAMPLE_INDICATOR_PATTERN = `/**

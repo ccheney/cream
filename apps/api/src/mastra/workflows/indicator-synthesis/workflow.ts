@@ -9,10 +9,10 @@
  */
 
 import { IndicatorHypothesisSchema } from "@cream/indicators";
+import { createNodeLogger } from "@cream/logger";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import { log } from "../../logger.js";
 import {
 	gatherTriggerContextStep,
 	generateHypothesisStep,
@@ -23,6 +23,8 @@ import {
 	type ValidationOutput,
 	validateIndicatorStep,
 } from "./steps.js";
+
+const log = createNodeLogger({ service: "indicator-synthesis", level: "info" });
 
 // ============================================
 // Workflow Input/Output Schemas

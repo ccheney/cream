@@ -268,112 +268,49 @@ app.openapi(triggerCycleRoute, async (c) => {
 				// Cast to access properties - Mastra runtime emits more event types than TS types declare
 				const evt = event as unknown as Record<string, unknown>;
 
-				// Extract the actual event - check for wrapped events (Mastra may wrap in workflow-step-output)
+				// Extract agent event from stream
+				// With writer.write(), events come as workflow-step-output with data in payload.output
 				let agentEvt: Record<string, unknown> | null = null;
 
-				// Check if this is a direct agent event
-				if (
-					evt.type === "agent-start" ||
-					evt.type === "agent-chunk" ||
-					evt.type === "agent-complete" ||
-					evt.type === "agent-error"
-				) {
+				// Helper to check if an object is an agent event
+				const isAgentEvent = (obj: unknown): obj is Record<string, unknown> => {
+					if (!obj || typeof obj !== "object") {
+						return false;
+					}
+					const o = obj as Record<string, unknown>;
+					return (
+						o.type === "agent-start" ||
+						o.type === "agent-chunk" ||
+						o.type === "agent-complete" ||
+						o.type === "agent-error"
+					);
+				};
+
+				// Primary path: workflow-step-output from writer.write()
+				if (evt.type === "workflow-step-output" && evt.payload) {
+					const payload = evt.payload as Record<string, unknown>;
+					// writer.write() puts data in payload.output
+					if (isAgentEvent(payload.output)) {
+						agentEvt = payload.output as Record<string, unknown>;
+					}
+				}
+				// Fallback: direct agent event (unlikely but supported)
+				else if (isAgentEvent(evt)) {
 					agentEvt = evt;
 				}
-				// Check for wrapped events in payload (Mastra 1.0 may wrap custom events)
-				else if (evt.type === "workflow-step-output" && evt.payload) {
-					const payload = evt.payload as Record<string, unknown>;
-					// First check if type is directly on payload
-					if (
-						payload.type === "agent-start" ||
-						payload.type === "agent-chunk" ||
-						payload.type === "agent-complete" ||
-						payload.type === "agent-error"
-					) {
-						agentEvt = payload;
-					}
-					// Then check inside payload.output (where writer.write() data goes)
-					else if (payload.output) {
-						const output = payload.output as Record<string, unknown>;
-						if (
-							output.type === "agent-start" ||
-							output.type === "agent-chunk" ||
-							output.type === "agent-complete" ||
-							output.type === "agent-error"
-						) {
-							agentEvt = output;
-						}
-					}
-				}
-				// Check for custom events (writer.custom() emits with different structure)
-				else if (evt.type === "step-output" && evt.output) {
-					const output = evt.output as Record<string, unknown>;
-					if (
-						output.type === "agent-start" ||
-						output.type === "agent-chunk" ||
-						output.type === "agent-complete" ||
-						output.type === "agent-error"
-					) {
-						agentEvt = output;
-					}
-				}
-				// Check for workflow-custom event type (from writer.custom())
-				else if (evt.type === "workflow-custom" && evt.payload) {
-					const payload = evt.payload as Record<string, unknown>;
-					if (
-						payload.type === "agent-start" ||
-						payload.type === "agent-chunk" ||
-						payload.type === "agent-complete" ||
-						payload.type === "agent-error"
-					) {
-						agentEvt = payload;
-					}
-					// Also check inside data field
-					else if (payload.data) {
-						const data = payload.data as Record<string, unknown>;
-						if (
-							data.type === "agent-start" ||
-							data.type === "agent-chunk" ||
-							data.type === "agent-complete" ||
-							data.type === "agent-error"
-						) {
-							agentEvt = data;
-						}
-					}
-				}
-				// Fallback: check if evt itself contains agent fields directly (for unknown wrappers)
-				else if (evt.agent && typeof evt.agent === "string") {
-					const evtType = evt.type as string;
-					if (
-						evtType?.startsWith("agent-") ||
-						evtType === "agent-start" ||
-						evtType === "agent-chunk" ||
-						evtType === "agent-complete" ||
-						evtType === "agent-error"
-					) {
-						agentEvt = evt;
-					}
-				}
 
-				// Handle agent events (direct or unwrapped)
+				// Handle agent events
 				if (agentEvt) {
 					const agentEvent = agentEvt as {
 						type: string;
-						agent?: string;
+						agent: string;
 						cycleId?: string;
 						data?: Record<string, unknown>;
-						payload?: Record<string, unknown>;
 						error?: string;
 						timestamp?: string;
 					};
 
-					// Extract agent from different locations depending on event structure
-					const agentName =
-						agentEvent.agent ??
-						(agentEvent.payload?.agent as string | undefined) ??
-						(agentEvent.data?.agent as string | undefined);
-
-					const agentType = agentTypeMap[agentName ?? ""];
+					const agentType = agentTypeMap[agentEvent.agent ?? ""];
 					if (!agentType) {
 						continue;
 					}

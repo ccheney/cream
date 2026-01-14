@@ -9,8 +9,8 @@ import type { CloseReason, ThesisStateRepository } from "@cream/storage";
 import {
 	ingestClosedThesis,
 	type ThesisIngestionInput,
-} from "../../../../workflows/steps/thesisMemoryIngestion.js";
-import { getFactorZooRepo, getHelixClient, getThesisStateRepo } from "../../../db.js";
+} from "../../../../../workflows/steps/thesisMemoryIngestion.js";
+import { getFactorZooRepo, getHelixClient, getThesisStateRepo } from "../../../../db.js";
 import { getEmbeddingClient } from "./helix.js";
 import { log } from "./logger.js";
 import type { ResearchTriggerResult, ThesisUpdate } from "./types.js";

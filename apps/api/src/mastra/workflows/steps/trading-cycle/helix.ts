@@ -9,8 +9,8 @@ import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema
 import {
 	createHelixOrchestrator,
 	type HelixOrchestrator,
-} from "../../../../workflows/steps/helixOrchestrator.js";
-import { getHelixClient } from "../../../db.js";
+} from "../../../../../workflows/steps/helixOrchestrator.js";
+import { getHelixClient } from "../../../../db.js";
 import { log } from "./logger.js";
 
 // ============================================

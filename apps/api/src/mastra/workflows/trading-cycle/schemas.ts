@@ -8,6 +8,64 @@
 import { z } from "zod";
 
 // ============================================
+// Memory Context Schemas
+// ============================================
+
+export const MemoryCaseSchema = z.object({
+	caseId: z.string(),
+	symbol: z.string(),
+	action: z.string(),
+	regime: z.string(),
+	rationale: z.string(),
+	similarity: z.number(),
+});
+
+// ============================================
+// Event Schemas (for agent outputs)
+// ============================================
+
+export const EventImpactSchema = z.object({
+	event_id: z.string(),
+	event_type: z.enum([
+		"EARNINGS",
+		"GUIDANCE",
+		"M&A",
+		"REGULATORY",
+		"PRODUCT",
+		"MACRO",
+		"ANALYST",
+		"SOCIAL",
+	]),
+	impact_direction: z.enum(["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"]),
+	impact_magnitude: z.enum(["HIGH", "MEDIUM", "LOW"]),
+	reasoning: z.string(),
+});
+
+export const EventRiskSchema = z.object({
+	event: z.string(),
+	date: z.string(),
+	potential_impact: z.enum(["HIGH", "MEDIUM", "LOW"]),
+});
+
+// ============================================
+// Approval Schemas
+// ============================================
+
+export const ConstraintViolationSchema = z.object({
+	constraint: z.string(),
+	current_value: z.union([z.string(), z.number()]),
+	limit: z.union([z.string(), z.number()]),
+	severity: z.enum(["CRITICAL", "WARNING"]),
+	affected_decisions: z.array(z.string()),
+});
+
+export const RequiredChangeSchema = z.object({
+	decisionId: z.string(),
+	change: z.string(),
+	reason: z.string(),
+});
+
+// ============================================
 // Prediction Markets
 // ============================================
 
@@ -70,7 +128,7 @@ export const MarketSnapshotSchema = z.object({
 	instruments: z.array(z.string()),
 	candles: z.record(z.string(), z.array(CandleDataSchema)),
 	quotes: z.record(z.string(), QuoteDataSchema),
-	indicators: z.record(z.string(), z.any()).optional(),
+	indicators: z.record(z.string(), z.number()).optional(),
 	timestamp: z.number(),
 });
 
@@ -85,7 +143,7 @@ export const RegimeDataSchema = z.object({
 });
 
 export const MemoryContextSchema = z.object({
-	relevantCases: z.array(z.any()),
+	relevantCases: z.array(MemoryCaseSchema),
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
 });
 
@@ -95,7 +153,7 @@ export const MemoryContextSchema = z.object({
 
 export const SentimentAnalysisSchema = z.object({
 	instrument_id: z.string(),
-	event_impacts: z.array(z.any()),
+	event_impacts: z.array(EventImpactSchema),
 	overall_sentiment: z.string(),
 	sentiment_strength: z.number(),
 	duration_expectation: z.string(),
@@ -108,7 +166,7 @@ export const FundamentalsAnalysisSchema = z.object({
 	fundamental_headwinds: z.array(z.string()),
 	valuation_context: z.string(),
 	macro_context: z.string(),
-	event_risk: z.array(z.any()),
+	event_risk: z.array(EventRiskSchema),
 	fundamental_thesis: z.string(),
 	linked_event_ids: z.array(z.string()),
 });
@@ -162,8 +220,8 @@ export const DecisionPlanSchema = z.object({
 
 export const ApprovalSchema = z.object({
 	verdict: z.enum(["APPROVE", "REJECT"]),
-	violations: z.array(z.any()).optional(),
-	required_changes: z.array(z.any()).optional(),
+	violations: z.array(ConstraintViolationSchema).optional(),
+	required_changes: z.array(RequiredChangeSchema).optional(),
 	notes: z.string().optional(),
 });
 

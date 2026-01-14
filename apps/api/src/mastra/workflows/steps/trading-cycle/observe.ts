@@ -26,7 +26,7 @@ import {
 	FIXTURE_TIMESTAMP,
 	getCandleFixtures,
 	getSnapshotFixture,
-} from "../../../../fixtures/market/index.js";
+} from "../../../../../fixtures/market/index.js";
 import { log } from "./logger.js";
 import type { CandleData, MarketSnapshot, QuoteData } from "./types.js";
 

@@ -15,6 +15,7 @@ import {
 	type PredictionMarketScores,
 	requireEnv,
 } from "@cream/domain";
+import { createNodeLogger } from "@cream/logger";
 import {
 	createUnifiedClient,
 	type MacroRiskSignals,
@@ -26,8 +27,9 @@ import type { CreateSignalInput, CreateSnapshotInput, SignalType } from "@cream/
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import { getPredictionMarketsRepo } from "../db.js";
-import { log } from "../logger.js";
+import { getPredictionMarketsRepo } from "../../db.js";
+
+const log = createNodeLogger({ service: "prediction-markets", level: "info" });
 
 /**
  * Create ExecutionContext for step invocation.

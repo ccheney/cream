@@ -7,7 +7,10 @@
 import type { AgentType } from "@cream/agents";
 import type { IndicatorSnapshot } from "@cream/indicators";
 
-import { log } from "../logger.js";
+import { createNodeLogger } from "@cream/logger";
+
+const log = createNodeLogger({ service: "agents-approvers", level: "info" });
+
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";

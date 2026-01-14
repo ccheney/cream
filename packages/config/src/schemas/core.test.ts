@@ -34,12 +34,11 @@ describe("LLMConfigSchema", () => {
 		expect(config.model_id).toBe("gemini-3-flash-preview");
 	});
 
-	it("rejects non-Gemini models", () => {
-		expect(() =>
-			LLMConfigSchema.parse({
-				model_id: "gpt-4",
-			})
-		).toThrow();
+	it("accepts any valid model string", () => {
+		const config = LLMConfigSchema.parse({
+			model_id: "gpt-4",
+		});
+		expect(config.model_id).toBe("gpt-4");
 	});
 });
 

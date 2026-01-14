@@ -23,7 +23,11 @@ import {
 	type DecisionPlan as ProtobufDecisionPlan,
 } from "@cream/schema-gen/cream/v1/decision";
 
-import { ExecutionEngineError, getExecutionEngineClient, OrderSide } from "../../../grpc/index.js";
+import {
+	ExecutionEngineError,
+	getExecutionEngineClient,
+	OrderSide,
+} from "../../../../grpc/index.js";
 import type { Decision, WorkflowDecisionPlan } from "./types.js";
 
 // ============================================

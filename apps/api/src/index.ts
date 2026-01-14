@@ -6,11 +6,11 @@
  * HTTP server integration (via Hono/Express adapters) will be added later.
  */
 
-// Export agents
-export * from "./agents/index.js";
 // Export gRPC client
 export * from "./grpc/index.js";
+// Export agents
+export * from "./mastra/agents/index.js";
 // Export the Mastra configuration
 export { agents, mastra, tradingCycleWorkflow } from "./mastra/index.js";
 // Export workflows
-export * from "./workflows/index.js";
+export * from "./mastra/workflows/index.js";

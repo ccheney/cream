@@ -24,12 +24,15 @@ import {
 	recalcIndicatorTool,
 } from "@cream/agents";
 import { type GlobalModel, getFullModelId, getModelId as getGlobalModelId } from "@cream/domain";
+import { createNodeLogger } from "@cream/logger";
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
 import { wrapLanguageModel } from "ai";
 import type { z } from "zod";
-import { log } from "../logger.js";
+
+const log = createNodeLogger({ service: "agents-factory", level: "info" });
+
 import { geminiThoughtSignatureMiddleware } from "./gemini-middleware.js";
 import type { AgentConfigEntry, AgentRuntimeSettings } from "./types.js";
 
