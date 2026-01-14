@@ -59,7 +59,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Grounding",
     description: "Real-time web context via Google Search",
     color: "#3B82F6", // Blue
-    icon: "🌐",
+    icon: "G",
     phase: "grounding",
   },
   news: {
@@ -68,7 +68,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "News",
     description: "News analysis and sentiment scoring",
     color: "#EC4899", // Pink
-    icon: "📰",
+    icon: "N",
     phase: "analysts",
   },
   fundamentals: {
@@ -77,7 +77,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Fundamentals",
     description: "SEC filings and macro analysis",
     color: "#14B8A6", // Teal
-    icon: "📊",
+    icon: "F",
     phase: "analysts",
   },
   bullish: {
@@ -86,7 +86,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Bullish",
     description: "Long thesis development",
     color: "#22C55E", // Green
-    icon: "📈",
+    icon: "B+",
     phase: "debate",
   },
   bearish: {
@@ -95,7 +95,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Bearish",
     description: "Short thesis development",
     color: "#EF4444", // Red
-    icon: "📉",
+    icon: "B-",
     phase: "debate",
   },
   trader: {
@@ -104,7 +104,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Trader",
     description: "Decision synthesis and trade planning",
     color: "#F59E0B", // Amber
-    icon: "💼",
+    icon: "T",
     phase: "trader",
   },
   risk: {
@@ -113,7 +113,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Risk",
     description: "Position sizing and risk assessment",
     color: "#F97316", // Orange
-    icon: "🛡️",
+    icon: "R",
     phase: "consensus",
   },
   critic: {
@@ -122,7 +122,7 @@ export const AGENT_METADATA: Record<NetworkAgentType, AgentMetadata> = {
     shortName: "Critic",
     description: "Decision validation and critique",
     color: "#6366F1", // Indigo
-    icon: "🔍",
+    icon: "C",
     phase: "consensus",
   },
 };

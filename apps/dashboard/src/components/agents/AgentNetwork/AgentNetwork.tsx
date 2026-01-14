@@ -491,7 +491,7 @@ export function AgentNetwork({
       >
         <div className="flex justify-center">
           <div className="flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-night-700 rounded-lg">
-            <span className="text-lg">⚡</span>
+            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">EX</span>
             <div>
               <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
                 Execution Engine
