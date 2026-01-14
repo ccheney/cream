@@ -1,53 +1,56 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Skeleton loaders and stream items use stable indices
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Skeleton loaders use stable indices
 "use client";
 
 /**
- * Agents Page - Monitor 7-agent consensus network with real-time streaming
+ * Agents Page - Interactive OODA workflow visualization with real-time streaming
  *
- * Displays agent status cards with live tool calls and reasoning streams.
+ * Displays 8-agent consensus network as vertical flow diagram with
+ * animated connections showing data flow between phases.
  *
- * @see docs/plans/ui/20-design-philosophy.md
+ * @see docs/plans/43-agent-network-visualization.md
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { useState } from "react";
-import { AgentStreamingCard } from "@/components/agents/AgentStreamingCard";
+import { useCallback, useState } from "react";
+import {
+  AGENT_METADATA,
+  AgentNetwork,
+  type NetworkAgentType,
+} from "@/components/agents/AgentNetwork";
 import { AgentStreamingDetail } from "@/components/agents/AgentStreamingDetail";
 import { useAgentOutputs } from "@/hooks/queries";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
 import { type AgentType, useAgentStreaming } from "@/hooks/useAgentStreaming";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 // ============================================
-// Constants
+// Type Mapping
 // ============================================
 
-const AGENT_TYPES: AgentType[] = [
-  "news",
-  "fundamentals",
-  "bullish",
-  "bearish",
-  "trader",
-  "risk",
-  "critic",
-];
+/** Map NetworkAgentType to AgentType for store compatibility */
+function toStoreAgentType(networkType: NetworkAgentType): AgentType {
+  return networkType as AgentType;
+}
 
-const AGENT_NAMES: Record<string, string> = {
-  news: "News & Sentiment",
-  fundamentals: "Fundamentals & Macro",
-  bullish: "Bullish Research",
-  bearish: "Bearish Research",
-  trader: "Trader",
-  risk: "Risk Manager",
-  critic: "Critic",
-};
+/** Map NetworkAgentType to display name */
+function getAgentDisplayName(agentType: NetworkAgentType | null): string {
+  if (!agentType) {
+    return "";
+  }
+  return AGENT_METADATA[agentType]?.displayName ?? agentType;
+}
 
 // ============================================
 // Main Component
 // ============================================
 
 export default function AgentsPage() {
-  const [selectedAgent, setSelectedAgent] = useState<AgentType | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<NetworkAgentType | null>(null);
   const { data: outputs, isLoading: outputsLoading } = useAgentOutputs(selectedAgent ?? "", 20);
+
+  // Responsive breakpoint detection
+  const { isMobile, isTablet } = useMediaQuery();
+  const isCompact = isMobile || isTablet;
 
   // Real-time status via WebSocket (replaces HTTP polling)
   const { isSubscribed: statusSubscribed, hasData: hasStatusData } = useAgentStatus();
@@ -55,59 +58,47 @@ export default function AgentsPage() {
   // Real-time streaming state (tool calls, reasoning)
   const { agents: streamingAgents, currentCycleId, isSubscribed } = useAgentStreaming();
 
-  const selectedState = selectedAgent ? streamingAgents.get(selectedAgent) : undefined;
+  // Convert store Map to NetworkAgentType Map
+  const networkAgents = streamingAgents as Map<
+    NetworkAgentType,
+    typeof streamingAgents extends Map<unknown, infer V> ? V : never
+  >;
+
+  const selectedState = selectedAgent
+    ? streamingAgents.get(toStoreAgentType(selectedAgent))
+    : undefined;
+
+  // Handle agent selection from network
+  const handleAgentSelect = useCallback((agentType: NetworkAgentType | null) => {
+    setSelectedAgent(agentType);
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Agent Network</h1>
-        <div className="flex items-center gap-4">
-          {currentCycleId && (
-            <span className="text-xs font-mono text-stone-400 dark:text-stone-500">
-              Cycle: {currentCycleId.slice(0, 16)}...
-            </span>
-          )}
-          {(isSubscribed || statusSubscribed) && (
-            <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              Live
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Main Layout: Cards + Detail Panel */}
+      {/* Main Layout: Network + Detail Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Agent Cards Grid */}
+        {/* Agent Network Visualization */}
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {AGENT_TYPES.map((agentType) => (
-              <AgentStreamingCard
-                key={agentType}
-                agentType={agentType}
-                state={streamingAgents.get(agentType)}
-                isSelected={selectedAgent === agentType}
-                onClick={() => setSelectedAgent(agentType)}
-              />
-            ))}
+          <div className="bg-white dark:bg-night-800 rounded-xl border border-cream-200 dark:border-night-700 p-4">
+            <AgentNetwork
+              agents={networkAgents}
+              cycleId={currentCycleId}
+              selectedAgent={selectedAgent}
+              onAgentSelect={handleAgentSelect}
+              isLive={isSubscribed || statusSubscribed}
+              compact={isCompact}
+            />
           </div>
 
           {/* Fallback: Show loading skeleton while waiting for WebSocket data */}
           {!hasStatusData && streamingAgents.size === 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-              {[...Array(7)].map((_, i) => (
-                <div
-                  key={`skeleton-${i}`}
-                  className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4"
-                >
-                  <div className="h-4 w-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse mb-2" />
-                  <div className="h-4 w-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-                </div>
-              ))}
+            <div className="mt-4 p-4 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-amber-400 animate-pulse" />
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Waiting for streaming data...
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -116,14 +107,14 @@ export default function AgentsPage() {
         <div className="lg:col-span-1">
           {selectedAgent && selectedState ? (
             <AgentStreamingDetail
-              agentType={selectedAgent}
+              agentType={toStoreAgentType(selectedAgent)}
               state={selectedState}
               cycleId={currentCycleId}
             />
           ) : selectedAgent ? (
             <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
               <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
-                {AGENT_NAMES[selectedAgent]}
+                {getAgentDisplayName(selectedAgent)}
               </h3>
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 Waiting for streaming data...
@@ -135,7 +126,7 @@ export default function AgentsPage() {
           ) : (
             <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
               <p className="text-sm text-stone-500 dark:text-stone-400">
-                Select an agent to view streaming details
+                Click an agent in the network to view streaming details
               </p>
             </div>
           )}
@@ -150,7 +141,7 @@ export default function AgentsPage() {
           </h2>
           {selectedAgent && (
             <span className="text-sm text-stone-500 dark:text-night-300">
-              Showing outputs for {AGENT_NAMES[selectedAgent] ?? selectedAgent}
+              Showing outputs for {getAgentDisplayName(selectedAgent)}
             </span>
           )}
         </div>

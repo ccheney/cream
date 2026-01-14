@@ -27,6 +27,7 @@ import { useStatusNarrative } from "@/hooks/useStatusNarrative";
 // ============================================
 
 const AGENT_COLORS: Record<AgentType, string> = {
+  grounding: "#3B82F6",
   news: "#EC4899",
   fundamentals: "#14B8A6",
   bullish: "#22C55E",
@@ -37,6 +38,7 @@ const AGENT_COLORS: Record<AgentType, string> = {
 };
 
 const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
+  grounding: "Grounding Agent",
   news: "News & Sentiment",
   fundamentals: "Fundamentals",
   bullish: "Bullish Research",
@@ -236,7 +238,13 @@ function ReasoningPhases({
               }}
             >
               {isComplete ? (
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -690,7 +698,7 @@ function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSectio
  * Detect the type of a section based on content and title.
  */
 function detectSectionType(content: string, title?: string): SectionType {
-  const text = (title || "") + " " + content;
+  const text = `${title || ""} ${content}`;
   const lowerText = text.toLowerCase();
 
   // Reflection patterns
@@ -775,6 +783,7 @@ function ThoughtSectionComponent({
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
@@ -820,6 +829,7 @@ function ThoughtSectionComponent({
           stroke="currentColor"
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: reducedMotion ? 0 : 0.2 }}
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </motion.svg>
@@ -898,7 +908,7 @@ function MarkdownContent({ content }: { content: string }) {
  */
 function parseInlineMarkdown(text: string, baseKey: number): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  const remaining = text;
+  const _remaining = text;
   let partIndex = 0;
 
   // Pattern for **bold** and *italic*
@@ -1118,11 +1128,9 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
           : "text-red-600 dark:text-red-400";
 
   return (
-    <div
+    <section
       className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 overflow-hidden"
       onKeyDown={handlePanelKeyDown}
-      // biome-ignore lint/a11y/useSemanticElements: Panel is a container, not a form
-      role="region"
       aria-label={`${displayName} streaming detail`}
     >
       {/* Header with shimmer effect when streaming */}
@@ -1242,7 +1250,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 

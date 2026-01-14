@@ -572,3 +572,80 @@ export const AgentStatusDataSchema = z.object({
 });
 
 export type AgentStatusData = z.infer<typeof AgentStatusDataSchema>;
+
+// ============================================
+// Phase Transition Data
+// ============================================
+
+/**
+ * OODA workflow phase enumeration (extended from CyclePhase for visualization)
+ */
+export const OODAPhaseSchema = z.enum([
+  "observe",
+  "orient",
+  "grounding",
+  "analysts",
+  "debate",
+  "trader",
+  "consensus",
+  "act",
+]);
+
+export type OODAPhase = z.infer<typeof OODAPhaseSchema>;
+
+/**
+ * Phase start event data - emitted when a workflow phase begins.
+ */
+export const PhaseStartDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** OODA phase starting */
+  phase: OODAPhaseSchema,
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type PhaseStartData = z.infer<typeof PhaseStartDataSchema>;
+
+/**
+ * Phase complete event data - emitted when a workflow phase completes.
+ */
+export const PhaseCompleteDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** OODA phase that completed */
+  phase: OODAPhaseSchema,
+
+  /** Phase duration in milliseconds */
+  durationMs: z.number().int().nonnegative().optional(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type PhaseCompleteData = z.infer<typeof PhaseCompleteDataSchema>;
+
+/**
+ * Data flow event data - emitted when data flows between phases/agents.
+ */
+export const DataFlowDataSchema = z.object({
+  /** Cycle ID */
+  cycleId: z.string(),
+
+  /** Source phase or agent */
+  from: z.string(),
+
+  /** Destination phase or agent */
+  to: z.string(),
+
+  /** Human-readable label for the data being transferred */
+  label: z.string(),
+
+  /** ISO 8601 timestamp */
+  timestamp: z.string().datetime(),
+});
+
+export type DataFlowData = z.infer<typeof DataFlowDataSchema>;

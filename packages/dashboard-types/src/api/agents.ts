@@ -12,6 +12,7 @@ import { z } from "zod";
 
 export const AgentTypeSchema = z.enum([
   "technical",
+  "grounding",
   "news",
   "fundamentals",
   "bullish",

@@ -336,6 +336,27 @@ export function broadcastDecisionPlan(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast phase start event to connections subscribed to cycles channel.
+ */
+export function broadcastPhaseStart(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast phase complete event to connections subscribed to cycles channel.
+ */
+export function broadcastPhaseComplete(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
+ * Broadcast data flow event to connections subscribed to cycles channel.
+ */
+export function broadcastDataFlow(message: ServerMessage): number {
+  return broadcast("cycles", message);
+}
+
+/**
  * Broadcast agent status to connections subscribed to agents channel.
  */
 export function broadcastAgentStatus(message: ServerMessage): number {

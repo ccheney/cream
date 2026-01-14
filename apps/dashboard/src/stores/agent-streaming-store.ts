@@ -14,6 +14,7 @@ import { useShallow } from "zustand/react/shallow";
 // ============================================
 
 export type AgentType =
+  | "grounding"
   | "news"
   | "fundamentals"
   | "bullish"
@@ -23,6 +24,27 @@ export type AgentType =
   | "critic";
 
 export type AgentStatus = "idle" | "processing" | "complete" | "error";
+
+/** OODA workflow phases for network visualization */
+export type OODAPhase =
+  | "observe"
+  | "orient"
+  | "grounding"
+  | "analysts"
+  | "debate"
+  | "trader"
+  | "consensus"
+  | "act";
+
+export type PhaseStatus = "pending" | "active" | "complete" | "error";
+
+export interface DataFlow {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  timestamp: number;
+}
 
 export interface ToolCall {
   toolCallId: string;
@@ -47,11 +69,29 @@ export interface AgentStreamingState {
 // Store State & Actions
 // ============================================
 
+/** Initial phase status state */
+const INITIAL_PHASE_STATUS: Record<OODAPhase, PhaseStatus> = {
+  observe: "pending",
+  orient: "pending",
+  grounding: "pending",
+  analysts: "pending",
+  debate: "pending",
+  trader: "pending",
+  consensus: "pending",
+  act: "pending",
+};
+
 export interface AgentStreamingStoreState {
   /** Streaming state per agent type */
   agents: Map<AgentType, AgentStreamingState>;
   /** Current cycle ID being tracked */
   currentCycleId: string | null;
+  /** Current OODA phase being executed */
+  currentPhase: OODAPhase | null;
+  /** Status of each phase */
+  phaseStatus: Record<OODAPhase, PhaseStatus>;
+  /** Active data flows */
+  dataFlows: DataFlow[];
 }
 
 export interface AgentStreamingStoreActions {
@@ -73,6 +113,14 @@ export interface AgentStreamingStoreActions {
   setCycleId: (cycleId: string) => void;
   /** Get streaming state for a specific agent */
   getAgent: (agentType: AgentType) => AgentStreamingState | undefined;
+  /** Set the current phase */
+  setCurrentPhase: (phase: OODAPhase) => void;
+  /** Update phase status */
+  updatePhaseStatus: (phase: OODAPhase, status: PhaseStatus) => void;
+  /** Add a data flow */
+  addDataFlow: (flow: DataFlow) => void;
+  /** Clear data flows */
+  clearDataFlows: () => void;
   /** Clear all streaming state */
   clear: () => void;
   /** Reset store to initial state */
@@ -86,6 +134,7 @@ export type AgentStreamingStore = AgentStreamingStoreState & AgentStreamingStore
 // ============================================
 
 export const AGENT_TYPES: AgentType[] = [
+  "grounding",
   "news",
   "fundamentals",
   "bullish",
@@ -106,6 +155,9 @@ const createInitialAgentState = (): AgentStreamingState => ({
 const initialState: AgentStreamingStoreState = {
   agents: new Map(),
   currentCycleId: null,
+  currentPhase: null,
+  phaseStatus: { ...INITIAL_PHASE_STATUS },
+  dataFlows: [],
 };
 
 // ============================================
@@ -113,12 +165,18 @@ const initialState: AgentStreamingStoreState = {
 // ============================================
 
 // Persisted state type (only state, not actions)
-type PersistedState = Pick<AgentStreamingStoreState, "agents" | "currentCycleId">;
+type PersistedState = Pick<
+  AgentStreamingStoreState,
+  "agents" | "currentCycleId" | "currentPhase" | "phaseStatus" | "dataFlows"
+>;
 
 // Custom storage to handle Map serialization
 type SerializedState = {
   agents: [AgentType, AgentStreamingState][];
   currentCycleId: string | null;
+  currentPhase: OODAPhase | null;
+  phaseStatus: Record<OODAPhase, PhaseStatus>;
+  dataFlows: DataFlow[];
 };
 
 const storage = createJSONStorage<PersistedState>(() => sessionStorage, {
@@ -292,6 +350,9 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
           set({
             agents: new Map(),
             currentCycleId: cycleId,
+            currentPhase: null,
+            phaseStatus: { ...INITIAL_PHASE_STATUS },
+            dataFlows: [],
           });
         }
       },
@@ -300,10 +361,44 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
         return get().agents.get(agentType);
       },
 
+      setCurrentPhase: (phase) => {
+        set((state) => {
+          const newPhaseStatus = { ...state.phaseStatus };
+          // Set the new phase to active
+          newPhaseStatus[phase] = "active";
+          return {
+            currentPhase: phase,
+            phaseStatus: newPhaseStatus,
+          };
+        });
+      },
+
+      updatePhaseStatus: (phase, status) => {
+        set((state) => ({
+          phaseStatus: {
+            ...state.phaseStatus,
+            [phase]: status,
+          },
+        }));
+      },
+
+      addDataFlow: (flow) => {
+        set((state) => ({
+          dataFlows: [...state.dataFlows.slice(-9), flow], // Keep last 10 flows
+        }));
+      },
+
+      clearDataFlows: () => {
+        set({ dataFlows: [] });
+      },
+
       clear: () => {
         set({
           agents: new Map(),
           currentCycleId: null,
+          currentPhase: null,
+          phaseStatus: { ...INITIAL_PHASE_STATUS },
+          dataFlows: [],
         });
       },
 
@@ -317,6 +412,9 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
       partialize: (state) => ({
         agents: state.agents,
         currentCycleId: state.currentCycleId,
+        currentPhase: state.currentPhase,
+        phaseStatus: state.phaseStatus,
+        dataFlows: state.dataFlows,
       }),
     }
   )
@@ -328,6 +426,9 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 
 export const selectAgents = (state: AgentStreamingStore) => state.agents;
 export const selectCurrentCycleId = (state: AgentStreamingStore) => state.currentCycleId;
+export const selectCurrentPhase = (state: AgentStreamingStore) => state.currentPhase;
+export const selectPhaseStatus = (state: AgentStreamingStore) => state.phaseStatus;
+export const selectDataFlows = (state: AgentStreamingStore) => state.dataFlows;
 
 export function useAgentStreamingState(agentType: AgentType) {
   return useAgentStreamingStore((state) => state.agents.get(agentType));
@@ -338,6 +439,9 @@ export function useAllAgentStreaming() {
     useShallow((state) => ({
       agents: state.agents,
       currentCycleId: state.currentCycleId,
+      currentPhase: state.currentPhase,
+      phaseStatus: state.phaseStatus,
+      dataFlows: state.dataFlows,
       getAgent: state.getAgent,
     }))
   );
@@ -352,6 +456,10 @@ export function useAgentStreamingActions() {
       appendTextOutput: state.appendTextOutput,
       updateAgentStatus: state.updateAgentStatus,
       setCycleId: state.setCycleId,
+      setCurrentPhase: state.setCurrentPhase,
+      updatePhaseStatus: state.updatePhaseStatus,
+      addDataFlow: state.addDataFlow,
+      clearDataFlows: state.clearDataFlows,
       clear: state.clear,
       reset: state.reset,
     }))
