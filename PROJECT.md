@@ -4,15 +4,7 @@ Cream is an agentic trading system for US equities and options. It combines LLM-
 
 ---
 
-## The Problem Cream Solves
-
-Algorithmic trading traditionally relies on single models or rigid strategies that struggle with market uncertainty. Cream takes a different approach: instead of one model making decisions, it orchestrates a network of specialized AI agents that independently analyze markets from different angles, debate competing hypotheses, and only execute trades that pass a strict consensus test.
-
-The result is a system that can reason about markets the way a trading desk operates — with analysts, researchers, and risk managers each contributing their expertise, but with the speed and consistency of software.
-
----
-
-## How It Works: The OODA Loop
+## The OODA Loop
 
 Every hour, Cream runs a complete decision cycle based on the military OODA framework (Observe → Orient → Decide → Act). This isn't just a metaphor — the system literally implements each phase as a distinct workflow step.
 
