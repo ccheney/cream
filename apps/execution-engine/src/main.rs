@@ -39,9 +39,8 @@ use execution_engine::{
     OrderStateManager, StatePersistence,
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
-    feed::AlpacaController,
     safety::ConnectionMonitor,
-    server::{build_grpc_services_with_feed, create_router},
+    server::create_router,
 };
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -185,9 +184,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // Create market data feed controller (feed starts when SubscribeMarketData is called)
-    let feed_controller = create_feed_controller(&config, cream_env);
-
     // Create HTTP router
     let app = create_router(components.execution_server);
 
@@ -224,29 +220,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
 
     let grpc_shutdown_tx = shutdown_tx.clone();
-    let feed_controller_for_grpc = feed_controller.clone();
     let grpc_handle = tokio::spawn(async move {
         let mut shutdown_rx = grpc_shutdown_tx.subscribe();
 
-        // Build gRPC services with feed controller if available
-        let (execution_service, market_data_service) = match feed_controller_for_grpc {
-            Some(controller) => {
-                match build_grpc_services_with_feed(controller, grpc_shutdown_tx.clone()) {
-                    Ok(services) => services,
-                    Err(e) => {
-                        tracing::error!("Failed to build gRPC services: {e}");
-                        return;
-                    }
-                }
-            }
-            None => match execution_engine::server::build_grpc_services() {
+        // Build gRPC services (market data fetched on-demand via REST API)
+        let (execution_service, market_data_service) =
+            match execution_engine::server::build_grpc_services() {
                 Ok(services) => services,
                 Err(e) => {
                     tracing::error!("Failed to build gRPC services: {e}");
                     return;
                 }
-            },
-        };
+            };
 
         let server = tonic::transport::Server::builder()
             .add_service(execution_service)
@@ -531,41 +516,6 @@ async fn reconciliation_loop(
             }
         }
     }
-}
-
-/// Create an `AlpacaController` for managing the Alpaca market data feed.
-///
-/// The controller manages the feed lifecycle dynamically - the feed is started
-/// when TypeScript calls `SubscribeMarketData` with symbols from runtime config.
-///
-/// # Returns
-///
-/// The feed controller for use by gRPC services, or None in BACKTEST mode.
-fn create_feed_controller(config: &Config, env: Environment) -> Option<Arc<AlpacaController>> {
-    // Skip feed in BACKTEST mode
-    if env == Environment::Backtest {
-        tracing::info!("Alpaca feed disabled in BACKTEST mode");
-        return None;
-    }
-
-    // Create feed controller with Alpaca config
-    let controller = Arc::new(AlpacaController::new(config.feeds.alpaca.clone()));
-
-    // Log status based on API key availability
-    if config.feeds.alpaca.api_key.is_empty() {
-        tracing::warn!(
-            "ALPACA_KEY not set - Alpaca feed will not start. \
-             Set the environment variable and call SubscribeMarketData."
-        );
-    } else {
-        tracing::info!(
-            feed = %config.feeds.alpaca.feed,
-            paper = config.feeds.alpaca.paper,
-            "Alpaca feed controller ready - waiting for SubscribeMarketData call"
-        );
-    }
-
-    Some(controller)
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).

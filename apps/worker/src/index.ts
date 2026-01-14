@@ -44,11 +44,7 @@ import {
 	type JobState,
 } from "./indicators";
 import { log } from "./logger";
-import {
-	getSubscriptionStatus,
-	startMarketDataSubscription,
-	stopMarketDataSubscription,
-} from "./marketdata";
+import { getSubscriptionStatus, stopMarketDataSubscription } from "./marketdata";
 import { type IndicatorSynthesisScheduler, startIndicatorSynthesisScheduler } from "./schedulers";
 
 // ============================================
@@ -781,16 +777,6 @@ async function main() {
 	// Start health server
 	startHealthServer();
 	log.info({ port: HEALTH_PORT }, "Health endpoint listening");
-
-	// Start market data subscription to execution engine
-	const instruments = getInstruments();
-	log.info({ symbolCount: instruments.length }, "Starting market data subscription");
-	await startMarketDataSubscription(instruments).catch((error) => {
-		log.warn(
-			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Market data subscription failed. Execution engine may not be running."
-		);
-	});
 
 	// Skip scheduling if disabled (dev mode)
 	if (state.schedulerDisabled) {
