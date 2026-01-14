@@ -737,15 +737,14 @@ IMPORTANT: You do not have access to google_search. If you need current informat
 		}
 	}
 
-	// Per-symbol context
-	const perSymbol = groundingOutput.perSymbol ?? {};
-	const symbolsToInclude = symbol ? [symbol] : Object.keys(perSymbol);
+	// Per-symbol context (array structure for Gemini compatibility)
+	const perSymbolArray = groundingOutput.perSymbol ?? [];
+	const symbolsToProcess = symbol
+		? perSymbolArray.filter((s) => s.symbol === symbol)
+		: perSymbolArray;
 
-	for (const sym of symbolsToInclude) {
-		const symbolData = perSymbol[sym];
-		if (!symbolData) {
-			continue;
-		}
+	for (const symbolData of symbolsToProcess) {
+		const sym = symbolData.symbol;
 
 		const symbolSections: string[] = [`### ${sym}`];
 

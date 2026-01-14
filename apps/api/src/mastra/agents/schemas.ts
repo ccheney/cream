@@ -257,8 +257,10 @@ export type IdeaAgentOutput = z.infer<typeof IdeaAgentOutputSchema>;
 
 /**
  * Per-symbol grounding context gathered from web searches.
+ * Includes symbol as explicit field for Gemini JSON Schema compatibility.
  */
 export const SymbolGroundingSchema = z.object({
+	symbol: z.string().describe("Stock ticker symbol (e.g., AAPL, MSFT)"),
 	news: z.array(z.string()).describe("Key headlines and recent developments"),
 	fundamentals: z.array(z.string()).describe("Valuation context and analyst views"),
 	bullCase: z.array(z.string()).describe("Bullish catalysts and opportunities"),
@@ -284,11 +286,10 @@ export const GroundingSourceSchema = z.object({
 
 /**
  * Complete grounding output from the Web Grounding Agent.
+ * Uses array instead of record for Gemini JSON Schema compatibility.
  */
 export const GroundingOutputSchema = z.object({
-	perSymbol: z
-		.record(z.string(), SymbolGroundingSchema)
-		.describe("Grounding context organized by symbol"),
+	perSymbol: z.array(SymbolGroundingSchema).describe("Grounding context for each symbol"),
 	global: GlobalGroundingSchema.describe("Market-wide grounding context"),
 	sources: z.array(GroundingSourceSchema).describe("Key sources referenced"),
 });

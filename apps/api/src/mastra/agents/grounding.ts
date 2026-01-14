@@ -58,7 +58,12 @@ ${symbolQueries}
 ### Output Requirements
 
 After performing searches, synthesize findings into the structured output format:
-- perSymbol: For each symbol, provide arrays of concise bullet points for news, fundamentals, bullCase, bearCase
+- perSymbol: Array of objects, one per symbol. Each object must include:
+  - symbol: The ticker symbol (e.g., "AAPL")
+  - news: Array of concise bullet points for headlines and developments
+  - fundamentals: Array of valuation context and analyst views
+  - bullCase: Array of bullish catalysts and opportunities
+  - bearCase: Array of bearish risks and concerns
 - global: Market-wide context for macro and events
 - sources: List key sources with URLs, titles, and relevance
 
@@ -89,7 +94,7 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
 	const result = response.object as GroundingOutput | undefined;
 	return (
 		result ?? {
-			perSymbol: {},
+			perSymbol: [],
 			global: { macro: [], events: [] },
 			sources: [],
 		}
@@ -119,7 +124,7 @@ export async function runGroundingAgentStreaming(
 	const result = (await stream.object) as GroundingOutput | undefined;
 	return (
 		result ?? {
-			perSymbol: {},
+			perSymbol: [],
 			global: { macro: [], events: [] },
 			sources: [],
 		}
@@ -135,7 +140,7 @@ export async function runGroundingAgentStreaming(
  */
 export function createEmptyGroundingOutput(): GroundingOutput {
 	return {
-		perSymbol: {},
+		perSymbol: [],
 		global: { macro: [], events: [] },
 		sources: [],
 	};
