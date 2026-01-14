@@ -116,7 +116,7 @@ export async function runFundamentalsAnalyst(
 	// Build grounding context from web searches
 	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-	const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+	const nyFormatter = new Intl.DateTimeFormat("en-US", {
 		timeZone: "America/New_York",
 		year: "numeric",
 		month: "2-digit",
@@ -279,7 +279,7 @@ export async function runFundamentalsAnalystStreaming(
 	// Build grounding context from web searches
 	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-	const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+	const nyFormatter = new Intl.DateTimeFormat("en-US", {
 		timeZone: "America/New_York",
 		year: "numeric",
 		month: "2-digit",

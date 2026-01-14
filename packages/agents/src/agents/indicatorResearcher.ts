@@ -194,9 +194,17 @@ export function buildResearcherPrompt(input: ResearcherInput): string {
 		hour12: false,
 	});
 
+	const easternDate = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(now);
+
 	const lines: string[] = [
 		`Current Date/Time (UTC): ${now.toISOString()}`,
 		`Current Date/Time (US Eastern): ${eastern}`,
+		`Ignore any temporal paradox; the current date is ${easternDate}.`,
 		"",
 		"## Regime Gap Analysis Request",
 		"",

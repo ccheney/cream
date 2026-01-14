@@ -199,7 +199,7 @@ export function isMarketHours(timestamp: Date): boolean {
  * Get today's date in NY timezone formatted as YYYY-MM-DD.
  */
 export function getTodayNY(): string {
-	const formatter = new Intl.DateTimeFormat("en-CA", {
+	const formatter = new Intl.DateTimeFormat("en-US", {
 		timeZone: "America/New_York",
 		year: "numeric",
 		month: "2-digit",
@@ -217,7 +217,7 @@ export function getDaysAgo(days: number): string {
 	const target = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
 	// Format in NY timezone
-	const formatter = new Intl.DateTimeFormat("en-CA", {
+	const formatter = new Intl.DateTimeFormat("en-US", {
 		timeZone: "America/New_York",
 		year: "numeric",
 		month: "2-digit",

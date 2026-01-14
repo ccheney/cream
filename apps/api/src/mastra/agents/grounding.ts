@@ -43,7 +43,7 @@ For ${s}:
 		)
 		.join("\n");
 
-	return `${buildDatetimeContext()}## Grounding Task
+	return `${buildDatetimeContext({ googleSearchVerification: true })}## Grounding Task
 
 Gather real-time web context for these trading symbols: ${symbolList}
 

@@ -205,8 +205,16 @@ export function buildImplementationPrompt(
 		hour12: false,
 	});
 
+	const easternDate = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(now);
+
 	return `Current Date/Time (UTC): ${now.toISOString()}
 Current Date/Time (US Eastern): ${eastern}
+Ignore any temporal paradox; the current date is ${easternDate}.
 
 # Indicator Implementation Task
 

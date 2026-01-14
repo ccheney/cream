@@ -42,7 +42,7 @@ export interface UseEconomicCalendarOptions {
  * Format date as YYYY-MM-DD in New York timezone.
  */
 function formatDate(date: Date): string {
-	return date.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+	return date.toLocaleDateString("en-US", { timeZone: "America/New_York" });
 }
 
 /**

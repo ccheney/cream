@@ -263,23 +263,33 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 
 const ALPACA_CORPORATE_ACTIONS_URL = "https://data.alpaca.markets/v1beta1/corporate-actions";
 
+// The Alpaca corporate actions endpoint groups actions by type key
+// (e.g. `cash_dividends`, `forward_splits`, `reverse_splits`). In practice, the
+// per-item payload does not always include a `corporate_action_type` field, and
+// dividend "payment" date is often returned as `payable_date`.
+const AlpacaCorporateActionsItemSchema = z
+	.object({
+		symbol: z.string(),
+		ex_date: z.string().optional(),
+		process_date: z.string().optional(),
+		record_date: z.string().nullable().optional(),
+		payment_date: z.string().nullable().optional(),
+		payable_date: z.string().nullable().optional(),
+		corporate_action_type: z.string().optional(),
+		// Dividends
+		rate: z.number().optional(),
+		cash: z.number().optional(),
+		special: z.boolean().optional(),
+		foreign: z.boolean().optional(),
+		// Splits
+		new_rate: z.number().optional(),
+		old_rate: z.number().optional(),
+		description: z.string().optional(),
+	})
+	.passthrough();
+
 const AlpacaCorporateActionsResponseSchema = z.object({
-	corporate_actions: z.record(
-		z.string(),
-		z.array(
-			z.object({
-				corporate_action_type: z.string(),
-				symbol: z.string(),
-				ex_date: z.string(),
-				record_date: z.string().nullable(),
-				payment_date: z.string().nullable(),
-				cash: z.number().optional(),
-				new_rate: z.number().optional(),
-				old_rate: z.number().optional(),
-				description: z.string().optional(),
-			})
-		)
-	),
+	corporate_actions: z.record(z.string(), z.array(AlpacaCorporateActionsItemSchema)),
 });
 
 /**
@@ -359,22 +369,42 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 	): AlpacaCorporateAction[] {
 		const results: AlpacaCorporateAction[] = [];
 
-		for (const [_type, items] of Object.entries(actions)) {
+		for (const [typeKey, items] of Object.entries(actions)) {
 			for (const item of items) {
+				const exDate = item.ex_date ?? item.process_date;
+				if (!exDate) {
+					log.warn(
+						{ typeKey, symbol: item.symbol },
+						"Skipping corporate action: missing ex_date/process_date"
+					);
+					continue;
+				}
+
+				const rawType = item.corporate_action_type ?? typeKey;
+				const normalizedType = rawType.toLowerCase();
+
 				let actionType: AlpacaCorporateAction["corporate_action_type"];
-				switch (item.corporate_action_type.toLowerCase()) {
+				switch (normalizedType) {
 					case "dividend":
 					case "cash_dividend":
+					case "cash_dividends":
 						actionType = "Dividend";
+						if (item.special) {
+							actionType = "SpecialDividend";
+						}
 						break;
 					case "special_dividend":
+					case "special_dividends":
 						actionType = "SpecialDividend";
 						break;
 					case "stock_split":
+					case "stock_splits":
 					case "forward_split":
+					case "forward_splits":
 						actionType = "Split";
 						break;
 					case "reverse_split":
+					case "reverse_splits":
 						actionType = "ReverseSplit";
 						break;
 					case "spinoff":
@@ -398,6 +428,8 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 				let value = 0;
 				if (item.cash !== undefined) {
 					value = item.cash;
+				} else if (item.rate !== undefined) {
+					value = item.rate;
 				} else if (item.new_rate !== undefined && item.old_rate !== undefined) {
 					value = item.old_rate !== 0 ? item.new_rate / item.old_rate : 1;
 				}
@@ -405,9 +437,9 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 				results.push({
 					corporate_action_type: actionType,
 					symbol: item.symbol,
-					ex_date: item.ex_date,
-					record_date: item.record_date,
-					payment_date: item.payment_date,
+					ex_date: exDate,
+					record_date: item.record_date ?? null,
+					payment_date: item.payment_date ?? item.payable_date ?? null,
 					value,
 					description: item.description,
 				});

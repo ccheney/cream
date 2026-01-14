@@ -25,6 +25,7 @@ import {
 import { createFilingsIngestionService } from "@cream/filings";
 import {
 	CorporateActionsRepository,
+	DecisionsRepository,
 	SentimentRepository,
 	ShortInterestRepository,
 } from "@cream/storage";
@@ -187,12 +188,85 @@ async function runTradingCycle(): Promise<void> {
 		const instruments = getInstruments();
 
 		const run = await tradingCycleWorkflow.createRun();
-		await run.start({
+		const workflowRunResult = await run.start({
 			inputData: {
 				cycleId,
 				instruments,
 			},
 		});
+
+		// Persist decisions so they show up in the dashboard Decisions page.
+		if (workflowRunResult.status === "success") {
+			const output = (workflowRunResult as { result?: unknown }).result as
+				| {
+						approved?: boolean;
+						decisionPlan?: {
+							decisions?: Array<{
+								decisionId: string;
+								instrumentId: string;
+								action: "BUY" | "SELL" | "HOLD" | "CLOSE";
+								direction: "LONG" | "SHORT" | "FLAT";
+								size: { value: number; unit: string };
+								strategyFamily?: string | null;
+								timeHorizon?: string | null;
+								rationale?: {
+									summary?: string | null;
+									bullishFactors?: string[] | null;
+									bearishFactors?: string[] | null;
+								} | null;
+							}>;
+						};
+				  }
+				| undefined;
+
+			const decisions = output?.decisionPlan?.decisions ?? [];
+			if (decisions.length > 0) {
+				try {
+					const client = await getDbClient();
+					const repo = new DecisionsRepository(client);
+					const status = output?.approved ? "approved" : "rejected";
+
+					let created = 0;
+					for (const decision of decisions) {
+						if (!decision.decisionId || !decision.instrumentId) {
+							continue;
+						}
+
+						const existing = await repo.findById(decision.decisionId);
+						if (existing) {
+							continue;
+						}
+
+						await repo.create({
+							id: decision.decisionId,
+							cycleId,
+							symbol: decision.instrumentId,
+							action: decision.action === "CLOSE" ? "SELL" : decision.action,
+							direction: decision.direction,
+							size: decision.size.value,
+							sizeUnit: decision.size.unit,
+							status,
+							strategyFamily: decision.strategyFamily ?? null,
+							timeHorizon: decision.timeHorizon ?? null,
+							rationale: decision.rationale?.summary ?? null,
+							bullishFactors: decision.rationale?.bullishFactors ?? [],
+							bearishFactors: decision.rationale?.bearishFactors ?? [],
+							environment: state.environment,
+						});
+						created++;
+					}
+
+					if (created > 0) {
+						log.info({ cycleId, created }, "Persisted trading decisions");
+					}
+				} catch (error) {
+					log.warn(
+						{ cycleId, error: error instanceof Error ? error.message : String(error) },
+						"Failed to persist trading decisions"
+					);
+				}
+			}
+		}
 	} catch (_error) {
 		// Error handling done in workflow
 	} finally {

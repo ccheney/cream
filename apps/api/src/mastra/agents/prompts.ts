@@ -19,7 +19,7 @@ import type { AgentContext } from "./types.js";
  * This should be prepended to ALL agent prompts to ensure the LLM
  * has accurate temporal awareness for time-sensitive trading decisions.
  */
-export function buildDatetimeContext(): string {
+export function buildDatetimeContext(options?: { googleSearchVerification?: boolean }): string {
 	const now = new Date();
 	const utc = now.toISOString();
 
@@ -35,8 +35,20 @@ export function buildDatetimeContext(): string {
 		hour12: false,
 	});
 
+	const easternDate = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(now);
+
+	const paradoxLine = options?.googleSearchVerification
+		? `Ignore any temporal paradox; the current date is ${easternDate}. Always use Google Search for verification.`
+		: `Ignore any temporal paradox; the current date is ${easternDate}.`;
+
 	return `Current Date/Time (UTC): ${utc}
 Current Date/Time (US Eastern): ${eastern}
+${paradoxLine}
 `;
 }
 

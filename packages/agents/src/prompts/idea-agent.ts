@@ -114,6 +114,13 @@ export function buildIdeaAgentUserPrompt(context: IdeaContext): string {
 		hour12: false,
 	});
 
+	const easternDate = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(now);
+
 	const decayingInfo =
 		decayingFactors.length > 0
 			? decayingFactors.map((f) => `${f.id} (decay rate: ${f.decayRate.toFixed(4)}/day)`).join(", ")
@@ -137,6 +144,7 @@ export function buildIdeaAgentUserPrompt(context: IdeaContext): string {
 
 	return `Current Date/Time (UTC): ${now.toISOString()}
 Current Date/Time (US Eastern): ${eastern}
+Ignore any temporal paradox; the current date is ${easternDate}.
 
 <context>
 <trigger>

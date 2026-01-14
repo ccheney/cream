@@ -144,7 +144,7 @@ Input notes:
 	execute: async (
 		inputData
 	): Promise<{ startDate: string; endDate: string; events: EconomicEvent[] }> => {
-		const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+		const nyFormatter = new Intl.DateTimeFormat("en-US", {
 			timeZone: "America/New_York",
 			year: "numeric",
 			month: "2-digit",
