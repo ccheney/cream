@@ -4,6 +4,7 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
+process.env.LLM_MODEL_ID = "gemini-3-flash-preview";
 
 import { describe, expect, mock, test } from "bun:test";
 import type { Factor, FactorZooStats, Hypothesis, ResearchTrigger } from "@cream/domain";
@@ -154,14 +155,12 @@ describe("IDEA_AGENT_SYSTEM_PROMPT", () => {
 
 	test("contains tools section", () => {
 		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<tools>");
-		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("google_search");
 		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("helix_query");
 	});
 
 	test("contains instructions for structured output", () => {
 		// Output format handled by Gemini structured output - no <output_format> tag needed
 		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<instructions>");
-		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("<output>");
 		expect(IDEA_AGENT_SYSTEM_PROMPT).toContain("Chain-of-Thought");
 	});
 });

@@ -4,6 +4,7 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
+process.env.LLM_MODEL_ID = "gemini-3-flash-preview";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "../turso.js";
