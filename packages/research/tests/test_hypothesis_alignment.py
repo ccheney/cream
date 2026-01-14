@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -127,19 +128,20 @@ def test_alignment_result_passed_threshold() -> None:
 
 
 def test_evaluator_initialization() -> None:
-    """Test HypothesisAlignmentEvaluator initialization."""
-    evaluator = HypothesisAlignmentEvaluator()
-    assert evaluator.model == "gemini-3-flash-preview"
-    assert evaluator.threshold == 0.7
+    """Test HypothesisAlignmentEvaluator initialization with env var."""
+    with patch.dict("os.environ", {"LLM_MODEL_ID": "test-model"}):
+        evaluator = HypothesisAlignmentEvaluator()
+        assert evaluator.model == "test-model"
+        assert evaluator.threshold == 0.7
 
 
 def test_evaluator_custom_config() -> None:
     """Test evaluator with custom configuration."""
     evaluator = HypothesisAlignmentEvaluator(
-        model="gemini-3-pro-preview",
+        model="custom-model",
         threshold=0.8,
     )
-    assert evaluator.model == "gemini-3-pro-preview"
+    assert evaluator.model == "custom-model"
     assert evaluator.threshold == 0.8
 
 
@@ -148,7 +150,7 @@ def test_build_evaluation_prompt(
     mock_factor: MockFactor,
 ) -> None:
     """Test building the evaluation prompt."""
-    evaluator = HypothesisAlignmentEvaluator()
+    evaluator = HypothesisAlignmentEvaluator(model="test-model")
     source = """def compute_signal(self, data):
     close = data["close"]
     rsi = compute_rsi(close, 14)
@@ -171,7 +173,7 @@ def test_build_evaluation_prompt(
 
 def test_parse_response_valid_json() -> None:
     """Test parsing a valid JSON response."""
-    evaluator = HypothesisAlignmentEvaluator()
+    evaluator = HypothesisAlignmentEvaluator(model="test-model")
 
     response = '{"alignment_score": 0.8, "reasoning": "Good match", "gaps": [], "extras": []}'
     data = evaluator._parse_response(response)
@@ -182,7 +184,7 @@ def test_parse_response_valid_json() -> None:
 
 def test_parse_response_with_markdown() -> None:
     """Test parsing JSON wrapped in markdown code blocks."""
-    evaluator = HypothesisAlignmentEvaluator()
+    evaluator = HypothesisAlignmentEvaluator(model="test-model")
 
     response = """```json
 {"alignment_score": 0.75, "reasoning": "Partial match", "gaps": ["Missing X"], "extras": []}
@@ -195,7 +197,7 @@ def test_parse_response_with_markdown() -> None:
 
 def test_parse_response_with_extra_text() -> None:
     """Test parsing JSON with extra text around it."""
-    evaluator = HypothesisAlignmentEvaluator()
+    evaluator = HypothesisAlignmentEvaluator(model="test-model")
 
     response = """Here's my analysis:
 {"alignment_score": 0.9, "reasoning": "Excellent alignment", "gaps": [], "extras": []}
@@ -207,7 +209,7 @@ This looks good."""
 
 def test_parse_response_invalid_json() -> None:
     """Test handling invalid JSON response."""
-    evaluator = HypothesisAlignmentEvaluator()
+    evaluator = HypothesisAlignmentEvaluator(model="test-model")
 
     response = "This is not valid JSON"
     with pytest.raises(ValueError, match="No JSON object found"):
