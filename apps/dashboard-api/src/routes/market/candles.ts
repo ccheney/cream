@@ -6,7 +6,7 @@
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import { getPreviousTradingDay, isMarketOpen } from "@cream/domain";
+import { getPreviousTradingDay, getTradingSession, isMarketOpen } from "@cream/domain";
 import type { AlpacaTimeframe } from "@cream/marketdata";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
@@ -87,12 +87,16 @@ app.openapi(candlesRoute, async (c) => {
 
 	let fromStr: string;
 	if (isIntraday) {
-		// For intraday: fetch current trading day only (or previous if market closed)
+		// For intraday: fetch current trading day only if we have data within market hours filter
+		// The market hours filter is 7 AM - 5 PM ET, so we need to be past 7 AM ET to have data
 		const todayNY = getTodayNY();
-		if (isMarketOpen(todayNY)) {
+		const session = getTradingSession(new Date());
+		const hasIntradayData = session === "RTH" || session === "AFTER_HOURS";
+
+		if (isMarketOpen(todayNY) && hasIntradayData) {
 			fromStr = todayNY;
 		} else {
-			// Market closed today - use previous trading day
+			// Market not open today, or we're in pre-market/closed - use previous trading day
 			const prevDay = getPreviousTradingDay(todayNY);
 			fromStr = prevDay.toISOString().slice(0, 10);
 		}

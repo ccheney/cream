@@ -393,6 +393,7 @@ export function handleWSMessage(message: WSMessage): void {
 
 			const parsed = parseOccSymbol(optQuote.contract);
 			if (!parsed) {
+				console.debug("[WS] options_quote: failed to parse contract", optQuote.contract);
 				break;
 			}
 
@@ -400,44 +401,64 @@ export function handleWSMessage(message: WSMessage): void {
 			const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);
 			const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
 
-			if (chainData?.chain) {
-				// Find the contract in the chain and update it
-				let foundContract = false;
-				const updatedChain = chainData.chain.map((row) => {
-					if (row.call?.symbol === optQuote.contract) {
-						foundContract = true;
-						return {
-							...row,
-							call: {
-								...row.call,
-								bid: optQuote.bid,
-								ask: optQuote.ask,
-								last: optQuote.last ?? row.call.last,
-							},
-						};
-					}
-					if (row.put?.symbol === optQuote.contract) {
-						foundContract = true;
-						return {
-							...row,
-							put: {
-								...row.put,
-								bid: optQuote.bid,
-								ask: optQuote.ask,
-								last: optQuote.last ?? row.put.last,
-							},
-						};
-					}
-					return row;
+			if (!chainData?.chain) {
+				console.debug("[WS] options_quote: no chain data in cache for", {
+					underlying: parsed.underlying,
+					expiration: parsed.expiration,
+					queryKey: chainQueryKey,
 				});
-				if (foundContract) {
-				}
+				break;
+			}
 
-				queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
-					...chainData,
-					chain: updatedChain,
+			// Find the contract in the chain and update it
+			let foundContract = false;
+			const updatedChain = chainData.chain.map((row) => {
+				if (row.call?.symbol === optQuote.contract) {
+					foundContract = true;
+					return {
+						...row,
+						call: {
+							...row.call,
+							bid: optQuote.bid,
+							ask: optQuote.ask,
+							last: optQuote.last ?? row.call.last,
+						},
+					};
+				}
+				if (row.put?.symbol === optQuote.contract) {
+					foundContract = true;
+					return {
+						...row,
+						put: {
+							...row.put,
+							bid: optQuote.bid,
+							ask: optQuote.ask,
+							last: optQuote.last ?? row.put.last,
+						},
+					};
+				}
+				return row;
+			});
+
+			if (!foundContract) {
+				console.debug("[WS] options_quote: contract not found in chain", {
+					contract: optQuote.contract,
+					chainLength: chainData.chain.length,
+					sampleCallSymbol: chainData.chain[0]?.call?.symbol,
+					samplePutSymbol: chainData.chain[0]?.put?.symbol,
+				});
+			} else {
+				console.debug("[WS] options_quote: updating cache", {
+					contract: optQuote.contract,
+					bid: optQuote.bid,
+					ask: optQuote.ask,
 				});
 			}
+
+			queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
+				...chainData,
+				chain: updatedChain,
+			});
 			break;
 		}
 
@@ -452,36 +473,49 @@ export function handleWSMessage(message: WSMessage): void {
 			const chainQueryKey = queryKeys.options.chain(parsed.underlying, parsed.expiration);
 			const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
 
-			if (chainData?.chain) {
-				const updatedChain = chainData.chain.map((row) => {
-					if (row.call?.symbol === optTrade.contract) {
-						return {
-							...row,
-							call: {
-								...row.call,
-								last: optTrade.price,
-								volume: (row.call.volume ?? 0) + optTrade.size,
-							},
-						};
-					}
-					if (row.put?.symbol === optTrade.contract) {
-						return {
-							...row,
-							put: {
-								...row.put,
-								last: optTrade.price,
-								volume: (row.put.volume ?? 0) + optTrade.size,
-							},
-						};
-					}
-					return row;
-				});
+			if (!chainData?.chain) {
+				break;
+			}
 
-				queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
-					...chainData,
-					chain: updatedChain,
+			let foundContract = false;
+			const updatedChain = chainData.chain.map((row) => {
+				if (row.call?.symbol === optTrade.contract) {
+					foundContract = true;
+					return {
+						...row,
+						call: {
+							...row.call,
+							last: optTrade.price,
+							volume: (row.call.volume ?? 0) + optTrade.size,
+						},
+					};
+				}
+				if (row.put?.symbol === optTrade.contract) {
+					foundContract = true;
+					return {
+						...row,
+						put: {
+							...row.put,
+							last: optTrade.price,
+							volume: (row.put.volume ?? 0) + optTrade.size,
+						},
+					};
+				}
+				return row;
+			});
+
+			if (foundContract) {
+				console.debug("[WS] options_trade: updating cache", {
+					contract: optTrade.contract,
+					price: optTrade.price,
+					size: optTrade.size,
 				});
 			}
+
+			queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
+				...chainData,
+				chain: updatedChain,
+			});
 			break;
 		}
 

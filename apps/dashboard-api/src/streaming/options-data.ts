@@ -215,6 +215,7 @@ function handleOptionsBarMessage(msg: AlpacaWsBarMessage): void {
 function handleOptionsQuoteMessage(msg: AlpacaWsQuoteMessage): void {
 	const contract = msg.S;
 	const underlying = extractUnderlying(contract);
+	log.debug({ contract, bid: msg.bp, ask: msg.ap }, "Options quote received from Alpaca");
 
 	// Get cached data
 	const cached = optionsCache.get(contract);
@@ -321,6 +322,7 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
 		.filter((c) => !activeContracts.has(c));
 
 	if (newContracts.length === 0) {
+		log.debug({ contracts }, "No new contracts to subscribe (already subscribed)");
 		return;
 	}
 
@@ -330,9 +332,17 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
 
 	const client = await getSharedOptionsWebSocket();
 	if (client?.isConnected()) {
+		log.info(
+			{ count: newContracts.length, contracts: newContracts.slice(0, 3) },
+			"Subscribing to options contracts via Alpaca WS"
+		);
 		client.subscribe("quotes", newContracts);
 		client.subscribe("trades", newContracts);
 	} else {
+		log.warn(
+			{ count: newContracts.length },
+			"Cannot subscribe to options - Alpaca WS not connected"
+		);
 	}
 }
 
