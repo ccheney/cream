@@ -187,7 +187,7 @@ app.openapi(triggerCycleRoute, async (c) => {
               approved: workflowResult.approved,
               iterations: workflowResult.iterations,
               decisions: [],
-              orders: workflowResult.orderSubmission.orderIds.map((orderId) => ({
+              orders: (workflowResult.orderSubmission?.orderIds ?? []).map((orderId) => ({
                 orderId,
                 symbol: "unknown",
                 side: "buy" as const,
@@ -542,13 +542,8 @@ app.openapi(triggerCycleRoute, async (c) => {
           }
         }
 
-        // Capture final result
-        if (evt.type === "workflow-finish") {
-          const payload = evt.payload as Record<string, unknown> | undefined;
-          if (payload?.result) {
-            workflowResult = payload.result as unknown as NonNullable<typeof workflowResult>;
-          }
-        }
+        // Note: workflow-finish event contains usage stats, not the result
+        // The actual workflow result must come from stream.result
       }
 
       // Check stream status for success
@@ -556,8 +551,9 @@ app.openapi(triggerCycleRoute, async (c) => {
         throw new Error("Workflow execution failed");
       }
 
-      // Use stream.result if we didn't capture from events
-      if (!workflowResult && stream.result) {
+      // Always get the result from stream.result - this is the authoritative source
+      // The workflow-finish event contains usage stats, not the workflow output
+      if (stream.result) {
         workflowResult = (await stream.result) as unknown as NonNullable<typeof workflowResult>;
       }
 
@@ -602,7 +598,7 @@ app.openapi(triggerCycleRoute, async (c) => {
             approved: workflowResult.approved,
             iterations: workflowResult.iterations,
             decisions: decisionSummaries,
-            orders: workflowResult.orderSubmission.orderIds.map((orderId) => ({
+            orders: (workflowResult.orderSubmission?.orderIds ?? []).map((orderId) => ({
               orderId,
               symbol: "unknown",
               side: "buy" as const,

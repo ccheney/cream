@@ -102,9 +102,9 @@ export const DEFAULT_CONFIG: RateLimitConfig = {
   message: "Too many requests, please try again later",
 };
 
-/** Stricter limits for auth endpoints: 10 requests per minute */
+/** Stricter limits for auth endpoints: 60 requests per minute */
 export const AUTH_CONFIG: RateLimitConfig = {
-  maxRequests: 10,
+  maxRequests: 60,
   windowMs: 60_000, // 1 minute
   message: "Too many authentication attempts, please try again later",
 };
