@@ -156,11 +156,11 @@ export const PhaseContainer = memo(function PhaseContainer({
       aria-expanded={isExpanded}
       aria-label={`${displayName} phase, ${status}`}
     >
-      {/* Phase Label (positioned above border) */}
+      {/* Phase Label (positioned on top border) */}
       <div
         className={`
-          absolute -top-2.5 left-4 px-2
-          text-[10px] font-semibold uppercase tracking-wider
+          absolute left-4 px-2 -translate-y-1/2
+          text-[10px] font-semibold uppercase tracking-wider leading-none
           ${
             status === "active"
               ? "text-amber-600 dark:text-amber-400"
@@ -172,6 +172,7 @@ export const PhaseContainer = memo(function PhaseContainer({
           }
           ${bgColors[status]}
         `}
+        style={{ top: 0 }}
       >
         {displayName}
       </div>

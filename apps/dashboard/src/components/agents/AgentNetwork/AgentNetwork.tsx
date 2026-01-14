@@ -36,11 +36,6 @@ const staggerContainer = {
   },
 };
 
-const connectionVariants = {
-  initial: { pathLength: 0, opacity: 0 },
-  animate: { pathLength: 1, opacity: 1, transition: { duration: 0.5 } },
-};
-
 // ============================================
 // Helper Functions
 // ============================================
@@ -101,45 +96,24 @@ interface ConnectionArrowProps {
 }
 
 function ConnectionArrow({ isActive, label }: ConnectionArrowProps) {
+  const color = isActive ? "bg-amber-500" : "bg-stone-300 dark:bg-night-600";
+  const textColor = isActive
+    ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+    : "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700";
+
   return (
-    <div className="flex flex-col items-center py-2">
-      <motion.svg
-        width="24"
-        height="32"
-        viewBox="0 0 24 32"
-        className="text-stone-300 dark:text-night-600"
-        variants={connectionVariants}
-        initial="initial"
-        animate="animate"
-        aria-hidden="true"
-      >
-        <defs>
-          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill={isActive ? "#F59E0B" : "currentColor"} />
-          </marker>
-        </defs>
-        <motion.line
-          x1="12"
-          y1="0"
-          x2="12"
-          y2="24"
-          stroke={isActive ? "#F59E0B" : "currentColor"}
-          strokeWidth="2"
-          strokeDasharray={isActive ? "0" : "4 2"}
-          markerEnd="url(#arrowhead)"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.3 }}
-        />
-      </motion.svg>
+    <div className="flex flex-col items-center py-1">
+      {/* Vertical line */}
+      <div className={`w-0.5 h-4 ${color}`} />
+      {/* Arrow triangle */}
+      <div
+        className={`w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] ${
+          isActive ? "border-t-amber-500" : "border-t-stone-300 dark:border-t-night-600"
+        }`}
+      />
+      {/* Label */}
       {label && (
-        <span
-          className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-            isActive
-              ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
-              : "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700"
-          }`}
-        >
+        <span className={`mt-1 text-[10px] font-mono px-2 py-0.5 rounded ${textColor}`}>
           {label}
         </span>
       )}
