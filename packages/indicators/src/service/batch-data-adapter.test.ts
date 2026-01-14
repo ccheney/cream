@@ -108,7 +108,7 @@ describe("FundamentalRepositoryAdapter", () => {
 			marketCap: 3000000000000,
 			sector: "Technology",
 			industry: "Consumer Electronics",
-			source: "FMP",
+			source: "test",
 			computedAt: "2026-01-10T12:00:00Z",
 		};
 
@@ -158,7 +158,7 @@ describe("FundamentalRepositoryAdapter", () => {
 			marketCap: 800000000000,
 			sector: "Consumer Cyclical",
 			industry: "Auto Manufacturers",
-			source: "FMP",
+			source: "test",
 			computedAt: "2026-01-10T12:00:00Z",
 		};
 

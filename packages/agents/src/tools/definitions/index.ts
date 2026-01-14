@@ -49,9 +49,6 @@ export {
 	supplyChainTool,
 } from "./companyRelationshipTools.js";
 export {
-	EconomicCalendarInputSchema,
-	EconomicCalendarOutputSchema,
-	economicCalendarTool,
 	FREDCalendarInputSchema,
 	FREDCalendarOutputSchema,
 	fredEconomicCalendarTool,
@@ -61,9 +58,6 @@ export {
 	helixQueryTool,
 	MacroIndicatorsInputSchema,
 	MacroIndicatorsOutputSchema,
-	NewsSearchInputSchema,
-	NewsSearchOutputSchema,
-	newsSearchTool,
 	RecalcIndicatorInputSchema,
 	RecalcIndicatorOutputSchema,
 	recalcIndicatorTool,

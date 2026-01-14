@@ -9,7 +9,7 @@ Dynamically selects trading symbols based on configuration:
 - **Static Lists** - Direct ticker lists
 - **Index Constituents** - S&P 500, NASDAQ 100, Russell, etc.
 - **ETF Holdings** - Top holdings from ETFs
-- **Stock Screeners** - Custom filters via FMP
+- **Stock Screeners** - Custom filters via Alpaca
 
 ## Usage
 
@@ -71,7 +71,8 @@ const config = {
 ### Environment
 
 ```bash
-FMP_KEY=...  # Required for index/ETF/screener sources
+ALPACA_KEY=...     # Required for index/ETF/screener sources
+ALPACA_SECRET=...  # Required for index/ETF/screener sources
 ```
 
 ## Supported Indices

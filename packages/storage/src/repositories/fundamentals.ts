@@ -2,7 +2,7 @@
  * Fundamentals Repository
  *
  * CRUD operations for the fundamental_indicators table.
- * Stores fundamental data (P/E, P/B, ROE, ROA, etc.) from FMP.
+ * Stores fundamental data (P/E, P/B, ROE, ROA, etc.).
  *
  * @see docs/plans/33-indicator-engine-v2.md
  * @see migrations/008_indicator_engine_v2.sql
@@ -184,7 +184,7 @@ export class FundamentalsRepository {
 					input.marketCap ?? null,
 					input.sector ?? null,
 					input.industry ?? null,
-					input.source ?? "FMP",
+					input.source ?? "computed",
 				]
 			);
 
@@ -253,7 +253,7 @@ export class FundamentalsRepository {
 					input.marketCap ?? null,
 					input.sector ?? null,
 					input.industry ?? null,
-					input.source ?? "FMP",
+					input.source ?? "computed",
 				]
 			);
 

@@ -342,18 +342,18 @@ describe("KeyRotationRegistry", () => {
 
 		it("should create different managers for different services", () => {
 			const alpacaManager = registry.getManager("alpaca");
-			const fmpManager = registry.getManager("fmp");
-			expect(alpacaManager).not.toBe(fmpManager);
+			const alphavantageManager = registry.getManager("alphavantage");
+			expect(alpacaManager).not.toBe(alphavantageManager);
 		});
 	});
 
 	describe("getKey", () => {
 		it("should get key from correct service manager", () => {
 			registry.getManager("alpaca").addKey("alpaca-key", "pk");
-			registry.getManager("fmp").addKey("fmp-key", "fk");
+			registry.getManager("alphavantage").addKey("alphavantage-key", "ak");
 
 			expect(registry.getKey("alpaca")).toBe("alpaca-key");
-			expect(registry.getKey("fmp")).toBe("fmp-key");
+			expect(registry.getKey("alphavantage")).toBe("alphavantage-key");
 		});
 	});
 
@@ -371,11 +371,11 @@ describe("KeyRotationRegistry", () => {
 
 	describe("reportRateLimit", () => {
 		it("should route to correct manager", () => {
-			registry.getManager("fmp").addKey("test-key", "key1");
+			registry.getManager("alpaca").addKey("test-key", "key1");
 
-			registry.reportRateLimit("fmp", "test-key", 42);
+			registry.reportRateLimit("alpaca", "test-key", 42);
 
-			const stats = registry.getManager("fmp").getStats();
+			const stats = registry.getManager("alpaca").getStats();
 			expect(stats.keys[0]?.rateLimitRemaining).toBe(42);
 		});
 	});
@@ -383,13 +383,13 @@ describe("KeyRotationRegistry", () => {
 	describe("getAllStats", () => {
 		it("should return stats for all initialized managers", () => {
 			registry.getManager("alpaca").addKey("pk", "alpaca-key");
-			registry.getManager("fmp").addKey("fk", "fmp-key");
+			registry.getManager("alphavantage").addKey("ak", "alphavantage-key");
 
 			const allStats = registry.getAllStats();
 
 			expect(allStats).toHaveLength(2);
 			expect(allStats.some((s) => s.service === "alpaca")).toBe(true);
-			expect(allStats.some((s) => s.service === "fmp")).toBe(true);
+			expect(allStats.some((s) => s.service === "alphavantage")).toBe(true);
 		});
 	});
 
@@ -403,13 +403,13 @@ describe("KeyRotationRegistry", () => {
 
 		it("should initialize managers from environment variables", () => {
 			process.env.ALPACA_KEY = "test-alpaca-key";
-			process.env.FMP_KEY = "test-fmp-key";
+			process.env.ALPHAVANTAGE_KEY = "test-alphavantage-key";
 
 			const envRegistry = new KeyRotationRegistry({}, silentLogger);
 			envRegistry.initFromEnv();
 
 			expect(envRegistry.getKey("alpaca")).toBe("test-alpaca-key");
-			expect(envRegistry.getKey("fmp")).toBe("test-fmp-key");
+			expect(envRegistry.getKey("alphavantage")).toBe("test-alphavantage-key");
 		});
 
 		it("should handle comma-separated keys from env", () => {
@@ -423,11 +423,8 @@ describe("KeyRotationRegistry", () => {
 
 		it("should handle missing env variables gracefully", () => {
 			// Clear both process.env and Bun.env
-			delete process.env.FMP_KEY;
 			delete process.env.ALPHAVANTAGE_KEY;
 			delete process.env.ALPACA_KEY;
-			// @ts-expect-error - Bun.env is readonly but we need to clear for test
-			Bun.env.FMP_KEY = undefined;
 			// @ts-expect-error - Bun.env is readonly but we need to clear for test
 			Bun.env.ALPHAVANTAGE_KEY = undefined;
 			// @ts-expect-error - Bun.env is readonly but we need to clear for test
@@ -438,7 +435,7 @@ describe("KeyRotationRegistry", () => {
 
 			// Should not throw - managers are created but without keys
 			const stats = envRegistry.getAllStats();
-			expect(stats.length).toBe(3); // 3 services initialized but no keys
+			expect(stats.length).toBe(2); // 2 services initialized but no keys
 		});
 	});
 });

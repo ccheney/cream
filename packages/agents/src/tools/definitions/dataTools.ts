@@ -14,15 +14,8 @@ import {
 	type MacroIndicatorValue,
 } from "../implementations/fred.js";
 import { graphragQuery } from "../implementations/graphrag.js";
-import {
-	type EconomicEvent,
-	getEconomicCalendar,
-	type HelixQueryResult,
-	type IndicatorResult,
-	type NewsItem,
-	recalcIndicator,
-	searchNews,
-} from "../index.js";
+import { recalcIndicator } from "../implementations/indicators.js";
+import type { EconomicEvent, HelixQueryResult, IndicatorResult } from "../types.js";
 
 /**
  * Create ExecutionContext for tool invocation.
@@ -81,59 +74,6 @@ Supported indicators:
 	execute: async (inputData): Promise<IndicatorResult> => {
 		const ctx = createToolContext();
 		return recalcIndicator(ctx, inputData.indicator, inputData.symbol, inputData.params);
-	},
-});
-
-// ============================================
-// Economic Calendar Tool
-// ============================================
-
-const EconomicCalendarInputSchema = z.object({
-	startDate: z.string().describe("Start date in YYYY-MM-DD or ISO 8601 format"),
-	endDate: z.string().describe("End date in YYYY-MM-DD or ISO 8601 format"),
-});
-
-const EconomicEventSchema = z.object({
-	id: z.string().describe("Unique event identifier"),
-	name: z.string().describe("Event name (e.g., 'FOMC Rate Decision', 'Non-Farm Payrolls')"),
-	date: z.string().describe("Event date in YYYY-MM-DD format"),
-	time: z.string().describe("Event time in HH:MM format (usually Eastern)"),
-	impact: z
-		.enum(["high", "medium", "low"])
-		.describe("Market impact level. High = major volatility expected"),
-	forecast: z
-		.string()
-		.nullable()
-		.describe("Consensus forecast value. Null if no forecast available"),
-	previous: z.string().nullable().describe("Previous release value for comparison"),
-	actual: z
-		.string()
-		.nullable()
-		.describe("Actual released value. Null if event hasn't occurred yet"),
-});
-
-const EconomicCalendarOutputSchema = z.object({
-	events: z
-		.array(EconomicEventSchema)
-		.describe("Economic events in the date range, sorted by date"),
-});
-
-export const economicCalendarTool = createTool({
-	id: "economic_calendar",
-	description: `Get economic calendar events for a date range. Use this tool to:
-- Identify upcoming high-impact macro events (FOMC, NFP, CPI)
-- Check for earnings releases that may affect positions
-- Plan around known volatility catalysts
-- Assess event risk for trading decisions
-
-Events include impact rating (high/medium/low) and actual vs forecast data.
-Requires FMP_KEY environment variable.`,
-	inputSchema: EconomicCalendarInputSchema,
-	outputSchema: EconomicCalendarOutputSchema,
-	execute: async (inputData): Promise<{ events: EconomicEvent[] }> => {
-		const ctx = createToolContext();
-		const events = await getEconomicCalendar(ctx, inputData.startDate, inputData.endDate);
-		return { events };
 	},
 });
 
@@ -277,52 +217,6 @@ Requires FRED_API_KEY environment variable (free at fred.stlouisfed.org).`,
 });
 
 // ============================================
-// News Search Tool
-// ============================================
-
-const NewsSearchInputSchema = z.object({
-	query: z.string().describe("Search query for filtering results"),
-	symbols: z.array(z.string()).optional().describe("Stock symbols to fetch news for"),
-	limit: z.number().min(1).max(50).optional().describe("Maximum results (default: 20)"),
-});
-
-const NewsItemSchema = z.object({
-	id: z.string().describe("Unique news article identifier"),
-	headline: z.string().describe("Article headline/title. Key for quick scanning"),
-	summary: z.string().describe("Article summary or first paragraph. May be truncated"),
-	source: z.string().describe("News source name (e.g., 'Reuters', 'Bloomberg', 'SEC Filings')"),
-	publishedAt: z.string().describe("Publication timestamp in ISO 8601 format"),
-	symbols: z.array(z.string()).describe("Ticker symbols mentioned or tagged in the article"),
-	sentiment: z
-		.enum(["positive", "negative", "neutral"])
-		.describe("Article sentiment based on keyword analysis"),
-});
-
-const NewsSearchOutputSchema = z.object({
-	news: z.array(NewsItemSchema).describe("News articles matching the query, most recent first"),
-});
-
-export const newsSearchTool = createTool({
-	id: "news_search",
-	description: `Search news for symbols or keywords. Use this tool to:
-- Find recent news affecting specific stocks
-- Search for market-moving headlines by keyword
-- Assess sentiment around positions or watchlist
-- Research breaking news and announcements
-
-Sentiment is determined via keyword-based analysis (positive/negative/neutral).
-For more sophisticated sentiment, use the external-context extraction pipeline.
-Requires FMP_KEY environment variable.`,
-	inputSchema: NewsSearchInputSchema,
-	outputSchema: NewsSearchOutputSchema,
-	execute: async (inputData): Promise<{ news: NewsItem[] }> => {
-		const ctx = createToolContext();
-		const news = await searchNews(ctx, inputData.query, inputData.symbols, inputData.limit);
-		return { news };
-	},
-});
-
-// ============================================
 // Helix Query Tool
 // ============================================
 
@@ -440,16 +334,12 @@ HelixDB stores the system's learned memory including:
 
 // Re-export schemas for testing
 export {
-	EconomicCalendarInputSchema,
-	EconomicCalendarOutputSchema,
 	FREDCalendarInputSchema,
 	FREDCalendarOutputSchema,
 	HelixQueryInputSchema,
 	HelixQueryOutputSchema,
 	MacroIndicatorsInputSchema,
 	MacroIndicatorsOutputSchema,
-	NewsSearchInputSchema,
-	NewsSearchOutputSchema,
 	RecalcIndicatorInputSchema,
 	RecalcIndicatorOutputSchema,
 };

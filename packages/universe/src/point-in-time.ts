@@ -4,6 +4,8 @@
  * Provides survivorship-bias-free universe resolution by using historical
  * index compositions and ticker changes. Essential for accurate backtesting.
  *
+ * This resolver works with pre-populated cached data from the database.
+ *
  * Impact of survivorship bias: 1-4% annual return inflation
  *
  * @see docs/plans/12-backtest.md - Survivorship Bias Prevention
@@ -15,7 +17,6 @@ import type {
 	TickerChangesRepository,
 	UniverseSnapshotsRepository,
 } from "@cream/storage";
-import { createFMPClient, type FMPClient, type FMPClientConfig } from "./fmp-client.js";
 
 export interface PointInTimeResult {
 	/** Symbols valid on the target date */
@@ -43,14 +44,10 @@ export interface PointInTimeResult {
  * Configuration for point-in-time resolver
  */
 export interface PointInTimeResolverConfig {
-	/** FMP client configuration */
-	fmpConfig?: Partial<FMPClientConfig>;
 	/** Whether to use cached snapshots */
 	useCache?: boolean;
 	/** Maximum age of cached snapshot in days */
 	maxCacheAgeDays?: number;
-	/** Whether to auto-populate missing data from FMP */
-	autoPopulate?: boolean;
 }
 
 /**
@@ -75,15 +72,16 @@ export interface DataValidationResult {
 /**
  * Resolves universe at historical dates for survivorship-bias-free backtesting.
  *
+ * This resolver works with pre-populated cached data.
+ *
  * @example
  * ```typescript
- * const resolver = new PointInTimeUniverseResolver(client);
+ * const resolver = new PointInTimeUniverseResolver(constituentsRepo, tickerChangesRepo, snapshotsRepo);
  * const result = await resolver.getUniverseAsOf("SP500", "2020-01-15");
  * console.log(`S&P 500 on 2020-01-15 had ${result.symbols.length} stocks`);
  * ```
  */
 export class PointInTimeUniverseResolver {
-	private fmpClient: FMPClient | null = null;
 	private readonly config: Required<PointInTimeResolverConfig>;
 
 	constructor(
@@ -93,10 +91,8 @@ export class PointInTimeUniverseResolver {
 		config: PointInTimeResolverConfig = {}
 	) {
 		this.config = {
-			fmpConfig: config.fmpConfig ?? {},
 			useCache: config.useCache ?? true,
 			maxCacheAgeDays: config.maxCacheAgeDays ?? 30,
-			autoPopulate: config.autoPopulate ?? false,
 		};
 	}
 
@@ -105,7 +101,6 @@ export class PointInTimeUniverseResolver {
 		const tickerChangesMapped = new Map<string, string>();
 		const delistedExcluded: string[] = [];
 		let tickerChangesApplied = 0;
-		let _fromCache = false;
 
 		if (this.config.useCache) {
 			const snapshot = await this.snapshotsRepo.get(indexId, asOfDate);
@@ -133,7 +128,6 @@ export class PointInTimeUniverseResolver {
 				);
 
 				if (daysDiff <= this.config.maxCacheAgeDays) {
-					_fromCache = true;
 					warnings.push(
 						`Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`
 					);
@@ -184,38 +178,6 @@ export class PointInTimeUniverseResolver {
 					tickerChangesMapped,
 				},
 			};
-		}
-
-		if (this.config.autoPopulate) {
-			const fmp = this.getFMPClient();
-			const targetDate = new Date(asOfDate);
-
-			try {
-				const symbols = await fmp.getConstituentsAsOf(indexId, targetDate);
-
-				await this.snapshotsRepo.save({
-					snapshotDate: asOfDate,
-					indexId,
-					tickers: symbols,
-					tickerCount: symbols.length,
-					sourceVersion: "fmp-live",
-				});
-
-				return {
-					symbols,
-					asOfDate,
-					indexId,
-					fromCache: false,
-					warnings: ["Fetched from FMP API (no cached data available)"],
-					metadata: {
-						tickerChangesApplied: 0,
-						delistedExcluded: [],
-						tickerChangesMapped: new Map(),
-					},
-				};
-			} catch (error) {
-				warnings.push(`FMP API error: ${error}`);
-			}
 		}
 
 		warnings.push(`No historical data available for ${indexId} on ${asOfDate}`);
@@ -315,87 +277,6 @@ export class PointInTimeUniverseResolver {
 				snapshotCount: snapshotDates.length,
 			},
 		};
-	}
-
-	async populateHistoricalData(
-		indexId: IndexId,
-		startDate: string,
-		_endDate: string
-	): Promise<{ snapshotsCreated: number; constituentsAdded: number }> {
-		const fmp = this.getFMPClient();
-		let snapshotsCreated = 0;
-		let constituentsAdded = 0;
-
-		const currentConstituents = await fmp.getIndexConstituents(indexId);
-
-		for (const constituent of currentConstituents) {
-			await this.constituentsRepo.upsert({
-				indexId,
-				symbol: constituent.symbol,
-				dateAdded: constituent.dateFirstAdded ?? startDate,
-				dateRemoved: null,
-				reasonAdded: "initial_load",
-				sector: constituent.sector,
-				provider: "fmp",
-			});
-			constituentsAdded++;
-		}
-
-		try {
-			const historicalChanges = await fmp.getHistoricalConstituents(indexId);
-
-			for (const change of historicalChanges) {
-				if (change.removedTicker) {
-					await this.constituentsRepo.upsert({
-						indexId,
-						symbol: change.removedTicker,
-						dateAdded: "1900-01-01", // Unknown original add date
-						dateRemoved: change.dateAdded,
-						reasonRemoved: change.reason,
-						provider: "fmp",
-					});
-				}
-
-				if (
-					change.symbol &&
-					change.removedTicker &&
-					change.reason?.toLowerCase().includes("name")
-				) {
-					await this.tickerChangesRepo.insert({
-						oldSymbol: change.removedTicker,
-						newSymbol: change.symbol,
-						changeDate: change.dateAdded,
-						changeType: "rename",
-						reason: change.reason,
-						provider: "fmp",
-					});
-				}
-			}
-		} catch {
-			// Historical data may not be available for all indices
-		}
-
-		const todayParts = new Date().toISOString().split("T");
-		const today = todayParts[0] ?? new Date().toISOString().slice(0, 10);
-		const currentSymbols = currentConstituents.map((c) => c.symbol);
-
-		await this.snapshotsRepo.save({
-			snapshotDate: today,
-			indexId,
-			tickers: currentSymbols,
-			tickerCount: currentSymbols.length,
-			sourceVersion: "fmp-bulk-load",
-		});
-		snapshotsCreated++;
-
-		return { snapshotsCreated, constituentsAdded };
-	}
-
-	private getFMPClient(): FMPClient {
-		if (!this.fmpClient) {
-			this.fmpClient = createFMPClient(this.config.fmpConfig);
-		}
-		return this.fmpClient;
 	}
 }
 

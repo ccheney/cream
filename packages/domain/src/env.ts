@@ -107,7 +107,6 @@ const envSchema = z.object({
 	HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
 
 	// Market Data Providers (Alpaca is unified provider via ALPACA_KEY/ALPACA_SECRET)
-	FMP_KEY: z.string().optional().describe("FMP API key for fundamentals and transcripts"),
 	ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
 	FRED_API_KEY: z.string().optional().describe("FRED API key for economic data"),
 
@@ -161,7 +160,6 @@ function parseEnv(): EnvConfig {
 		HELIX_URL: Bun.env.HELIX_URL ?? process.env.HELIX_URL,
 		HELIX_HOST: Bun.env.HELIX_HOST ?? process.env.HELIX_HOST,
 		HELIX_PORT: Bun.env.HELIX_PORT ?? process.env.HELIX_PORT,
-		FMP_KEY: Bun.env.FMP_KEY ?? process.env.FMP_KEY,
 		ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
 		FRED_API_KEY: Bun.env.FRED_API_KEY ?? process.env.FRED_API_KEY,
 		ALPACA_KEY: Bun.env.ALPACA_KEY ?? process.env.ALPACA_KEY,
@@ -465,7 +463,6 @@ export function getEnvVarDocumentation(): Array<{
 		{ name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
 		{ name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },
 		{ name: "HELIX_PORT", required: "no", description: "HelixDB port (alternative to HELIX_URL)" },
-		{ name: "FMP_KEY", required: "no", description: "FMP API key for fundamentals" },
 		{
 			name: "ALPHAVANTAGE_KEY",
 			required: "no",

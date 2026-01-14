@@ -92,7 +92,7 @@ describe("ExternalEventSchema", () => {
 		eventTime: "2026-01-05T16:00:00Z",
 		payload: { eps: 1.25, estimate: 1.2 },
 		relatedInstrumentIds: ["AAPL"],
-		source: "FMP",
+		source: "reuters",
 		headline: "Apple Q4 Earnings Beat Estimates",
 	};
 

@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { FMPNewsArticle, FMPTranscript } from "../src/index.js";
+import type { NewsArticle, TranscriptInput } from "../src/index.js";
 import {
 	calculateMacroSurprise,
 	extractTranscriptSections,
@@ -17,7 +17,7 @@ import {
 	groupByIndicator,
 	isMacroReleaseSignificant,
 	parseAlphaVantageIndicator,
-	parseFMPEconomicEvents,
+	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,
 	parseNewsArticles,
@@ -27,7 +27,7 @@ import {
 
 describe("News Parser", () => {
 	it("should parse valid news article", () => {
-		const article: FMPNewsArticle = {
+		const article: NewsArticle = {
 			symbol: "AAPL",
 			publishedDate: "2026-01-05T10:00:00Z",
 			title: "Apple Reports Record Q1 Earnings",
@@ -47,7 +47,7 @@ describe("News Parser", () => {
 	});
 
 	it("should filter articles below minimum length", () => {
-		const article: FMPNewsArticle = {
+		const article: NewsArticle = {
 			publishedDate: "2026-01-05T10:00:00Z",
 			title: "Short",
 			site: "test",
@@ -114,8 +114,8 @@ describe("News Parser", () => {
 });
 
 describe("Transcript Parser", () => {
-	it("should parse FMP transcript", () => {
-		const transcript: FMPTranscript = {
+	it("should parse transcript", () => {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -135,7 +135,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should return null for transcript with no content", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -148,7 +148,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should return null for transcript with no symbol", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "",
 			quarter: 1,
 			year: 2026,
@@ -161,7 +161,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should return null for transcript with invalid date", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -174,7 +174,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should return null for transcript with empty date", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -188,7 +188,7 @@ describe("Transcript Parser", () => {
 
 	it("should truncate very long content", () => {
 		const longContent = `John Smith -- CEO: ${"A".repeat(60000)}`;
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -205,7 +205,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should parse simple speaker pattern", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -223,7 +223,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should handle continuation lines", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -241,7 +241,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should handle content with no speaker pattern", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -258,7 +258,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should filter short segments", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -278,7 +278,7 @@ describe("Transcript Parser", () => {
 	});
 
 	it("should skip empty lines", () => {
-		const transcript: FMPTranscript = {
+		const transcript: TranscriptInput = {
 			symbol: "AAPL",
 			quarter: 1,
 			year: 2026,
@@ -426,7 +426,7 @@ describe("Macro Parser", () => {
 		}
 	});
 
-	it("should parse FMP economic events", () => {
+	it("should parse economic calendar events", () => {
 		const events = [
 			{
 				date: "2026-01-05",
@@ -438,7 +438,7 @@ describe("Macro Parser", () => {
 			},
 		];
 
-		const results = parseFMPEconomicEvents(events);
+		const results = parseEconomicCalendarEvents(events);
 		expect(results).toHaveLength(1);
 		const firstResult = results[0];
 		if (firstResult) {
@@ -533,7 +533,7 @@ describe("Macro Parser", () => {
 		expect(results[0]?.value).toBe(27500);
 	});
 
-	it("should skip FMP events with null actual values", () => {
+	it("should skip events with null actual values", () => {
 		const events = [
 			{
 				date: "2026-01-05",
@@ -551,7 +551,7 @@ describe("Macro Parser", () => {
 			},
 		];
 
-		const results = parseFMPEconomicEvents(events);
+		const results = parseEconomicCalendarEvents(events);
 		expect(results).toHaveLength(1);
 		expect(results[0]?.indicator).toBe("Unemployment Rate");
 	});

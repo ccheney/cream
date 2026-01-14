@@ -553,7 +553,7 @@ export function comparePerformanceMetrics(
  * Schema for data source metadata.
  */
 export const DataSourceMetadataSchema = z.object({
-	/** Data provider (e.g., "alpaca", "fmp") */
+	/** Data provider (e.g., "alpaca") */
 	provider: z.string(),
 	/** Data feed type */
 	feedType: z.enum(["historical", "realtime"]),

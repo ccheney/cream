@@ -2,7 +2,7 @@
 # See: https://bun.sh/docs/runtime/bunfig
 #
 # STANDARD TIER: 70% line, 65% branch, 70% function
-# Universe resolution and FMP API integration
+# Universe resolution
 
 [test]
 # Standard tier: Default coverage requirements

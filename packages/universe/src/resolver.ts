@@ -4,12 +4,13 @@
  * Main entry point for resolving a complete universe configuration.
  * Handles source composition, filtering, diversification, and limits.
  *
+ * Filtering works with metadata already present on instruments.
+ *
  * @see docs/plans/11-configuration.md lines 355-700
  */
 
 import type { UniverseConfig, UniverseFilters, UniverseSource } from "@cream/config";
 
-import { createFMPClient, type FMPClientConfig } from "./fmp-client.js";
 import {
 	type ResolvedInstrument,
 	resolveSource,
@@ -194,54 +195,19 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
 
 /**
  * Apply post-resolution filters
+ *
+ * Filtering works with metadata already present on instruments.
  */
-async function applyFilters(
+function applyFilters(
 	instruments: ResolvedInstrument[],
-	filters: UniverseFilters | undefined,
-	fmpConfig?: Partial<FMPClientConfig>
-): Promise<{ instruments: ResolvedInstrument[]; warnings: string[] }> {
+	filters: UniverseFilters | undefined
+): { instruments: ResolvedInstrument[]; warnings: string[] } {
 	if (!filters) {
 		return { instruments, warnings: [] };
 	}
 
 	const warnings: string[] = [];
 	let filtered = [...instruments];
-
-	// Fetch missing metadata if needed for filtering
-	const needsMetadata =
-		filters.min_avg_volume > 0 ||
-		filters.min_market_cap > 0 ||
-		filters.min_price > 0 ||
-		filters.max_price !== undefined ||
-		(filters.include_sectors && filters.include_sectors.length > 0) ||
-		(filters.exclude_sectors && filters.exclude_sectors.length > 0);
-
-	if (needsMetadata) {
-		const symbolsNeedingData = filtered
-			.filter((i) => !i.marketCap || !i.avgVolume || !i.price || !i.sector)
-			.map((i) => i.symbol);
-
-		if (symbolsNeedingData.length > 0) {
-			try {
-				const client = createFMPClient(fmpConfig);
-				const profiles = await client.getCompanyProfiles(symbolsNeedingData);
-
-				for (const instrument of filtered) {
-					const profile = profiles.get(instrument.symbol);
-					if (profile) {
-						instrument.name = instrument.name ?? profile.companyName;
-						instrument.sector = instrument.sector ?? profile.sector;
-						instrument.industry = instrument.industry ?? profile.industry;
-						instrument.marketCap = instrument.marketCap ?? profile.mktCap;
-						instrument.avgVolume = instrument.avgVolume ?? profile.volAvg;
-						instrument.price = instrument.price ?? profile.price;
-					}
-				}
-			} catch (error) {
-				warnings.push(`Failed to fetch metadata for filtering: ${error}`);
-			}
-		}
-	}
 
 	if (filters.min_avg_volume > 0) {
 		const before = filtered.length;
@@ -472,7 +438,7 @@ export async function resolveUniverse(
 
 	const afterComposition = instruments.length;
 
-	const filterResult = await applyFilters(instruments, config.filters, options.fmpConfig);
+	const filterResult = applyFilters(instruments, config.filters);
 	instruments = filterResult.instruments;
 	warnings.push(...filterResult.warnings);
 

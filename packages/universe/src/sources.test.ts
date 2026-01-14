@@ -4,7 +4,8 @@
 
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
-process.env.FMP_KEY = "test-api-key";
+process.env.ALPACA_KEY = "test-api-key";
+process.env.ALPACA_SECRET = "test-api-secret";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ETFHoldingsSource, IndexSource, ScreenerSource, StaticSource } from "@cream/config";
@@ -16,7 +17,7 @@ import {
 	resolveStaticSource,
 } from "./sources.js";
 
-// Mock FMP client responses
+// Mock client responses
 const mockConstituents = [
 	{ symbol: "AAPL", name: "Apple Inc.", sector: "Technology" },
 	{ symbol: "MSFT", name: "Microsoft Corporation", sector: "Technology" },
@@ -140,7 +141,7 @@ describe("Source Resolvers", () => {
 				name: "sp500",
 				type: "index",
 				index_id: "SP500",
-				provider: "fmp",
+				provider: "alpaca",
 				point_in_time: false,
 				enabled: true,
 			};
@@ -185,7 +186,7 @@ describe("Source Resolvers", () => {
 				name: "sp500-historical",
 				type: "index",
 				index_id: "SP500",
-				provider: "fmp",
+				provider: "alpaca",
 				point_in_time: true,
 				enabled: true,
 			};
@@ -229,7 +230,7 @@ describe("Source Resolvers", () => {
 				name: "spy-holdings",
 				type: "etf_holdings",
 				etf_symbol: "SPY",
-				provider: "fmp",
+				provider: "alpaca",
 				min_weight_pct: 1.0,
 				enabled: true,
 			};
@@ -257,7 +258,7 @@ describe("Source Resolvers", () => {
 				name: "spy-top2",
 				type: "etf_holdings",
 				etf_symbol: "SPY",
-				provider: "fmp",
+				provider: "alpaca",
 				min_weight_pct: 0,
 				top_n: 2,
 				enabled: true,
@@ -287,7 +288,7 @@ describe("Source Resolvers", () => {
 				name: "multi-etf",
 				type: "etf_holdings",
 				etf_symbols: ["SPY", "QQQ"],
-				provider: "fmp",
+				provider: "alpaca",
 				min_weight_pct: 0,
 				enabled: true,
 			};
@@ -303,7 +304,7 @@ describe("Source Resolvers", () => {
 			const source: ETFHoldingsSource = {
 				name: "no-etf",
 				type: "etf_holdings",
-				provider: "fmp",
+				provider: "alpaca",
 				min_weight_pct: 0,
 				enabled: true,
 			} as ETFHoldingsSource;
@@ -345,7 +346,7 @@ describe("Source Resolvers", () => {
 			const source: ScreenerSource = {
 				name: "tech-screener",
 				type: "screener",
-				provider: "fmp",
+				provider: "alpaca",
 				filters: {
 					market_cap_min: 1000000000,
 					market_cap_max: 100000000000,
@@ -384,7 +385,7 @@ describe("Source Resolvers", () => {
 			const source: ScreenerSource = {
 				name: "high-volume",
 				type: "screener",
-				provider: "fmp",
+				provider: "alpaca",
 				filters: {},
 				limit: 100,
 				sort_by: "volume",
@@ -410,7 +411,7 @@ describe("Source Resolvers", () => {
 			const source: ScreenerSource = {
 				name: "small-cap",
 				type: "screener",
-				provider: "fmp",
+				provider: "alpaca",
 				filters: {},
 				limit: 100,
 				sort_by: "market_cap",
@@ -470,7 +471,7 @@ describe("Source Resolvers", () => {
 				name: "test-index",
 				type: "index",
 				index_id: "SP500",
-				provider: "fmp",
+				provider: "alpaca",
 				point_in_time: false,
 				enabled: true,
 			};
@@ -491,7 +492,7 @@ describe("Source Resolvers", () => {
 				name: "test-etf",
 				type: "etf_holdings",
 				etf_symbol: "SPY",
-				provider: "fmp",
+				provider: "alpaca",
 				min_weight_pct: 0,
 				enabled: true,
 			};
@@ -511,7 +512,7 @@ describe("Source Resolvers", () => {
 			const source: ScreenerSource = {
 				name: "test-screener",
 				type: "screener",
-				provider: "fmp",
+				provider: "alpaca",
 				filters: {},
 				limit: 100,
 				enabled: true,

@@ -69,7 +69,7 @@ export const ExternalEventSchema = z.object({
 	/** Affected instrument IDs (empty for macro events) */
 	relatedInstrumentIds: z.array(z.string()).default([]),
 
-	/** Source of the event (FMP, Alpha Vantage, etc.) */
+	/** Source of the event */
 	source: z.string().optional(),
 
 	/** Headline or summary */

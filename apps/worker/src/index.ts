@@ -25,7 +25,6 @@ import {
 import { createFilingsIngestionService } from "@cream/filings";
 import {
 	CorporateActionsRepository,
-	FundamentalsRepository,
 	SentimentRepository,
 	ShortInterestRepository,
 } from "@cream/storage";
@@ -39,9 +38,7 @@ import {
 	createAlpacaCorporateActionsFromEnv,
 	createDefaultConfig,
 	createFINRAClient,
-	createFMPClientFromEnv,
 	createSentimentProviderFromEnv,
-	createSharesOutstandingProviderFromEnv,
 	IndicatorBatchScheduler,
 	type JobState,
 } from "./indicators";
@@ -288,17 +285,13 @@ async function runFilingsSync(): Promise<void> {
  */
 async function initIndicatorBatchScheduler(): Promise<void> {
 	// Check if required API keys are available
-	const hasFmpKey = !!(process.env.FMP_KEY ?? Bun.env.FMP_KEY);
 	const hasAlpacaKeys = !!(
 		(process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY) &&
 		(process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET)
 	);
 
-	if (!hasFmpKey && !hasAlpacaKeys) {
-		log.warn(
-			{},
-			"Indicator batch scheduler disabled: FMP_KEY or ALPACA_KEY/ALPACA_SECRET not configured"
-		);
+	if (!hasAlpacaKeys) {
+		log.warn({}, "Indicator batch scheduler disabled: ALPACA_KEY/ALPACA_SECRET not configured");
 		return;
 	}
 
@@ -306,25 +299,20 @@ async function initIndicatorBatchScheduler(): Promise<void> {
 		const db = await getDbClient();
 
 		// Create repositories
-		const fundamentalsRepo = new FundamentalsRepository(db);
 		const shortInterestRepo = new ShortInterestRepository(db);
 		const sentimentRepo = new SentimentRepository(db);
 		const corporateActionsRepo = new CorporateActionsRepository(db);
 
 		// Create scheduler config with enabled jobs based on available API keys
 		const schedulerConfig = createDefaultConfig();
-		schedulerConfig.enabled.fundamentals = hasFmpKey;
-		schedulerConfig.enabled.shortInterest = hasFmpKey; // Uses FINRA (no key) + FMP for shares
-		schedulerConfig.enabled.sentiment = hasFmpKey;
+		schedulerConfig.enabled.shortInterest = true;
+		schedulerConfig.enabled.sentiment = hasAlpacaKeys;
 		schedulerConfig.enabled.corporateActions = hasAlpacaKeys;
 
-		// Create data provider adapters (only if keys are available)
-		const fmpClient = hasFmpKey ? createFMPClientFromEnv() : createStubFMPClient();
+		// Create data provider adapters
 		const finraClient = createFINRAClient();
-		const sharesProvider = hasFmpKey
-			? createSharesOutstandingProviderFromEnv()
-			: createStubSharesProvider();
-		const sentimentProvider = hasFmpKey
+		const sharesProvider = createStubSharesProvider();
+		const sentimentProvider = hasAlpacaKeys
 			? createSentimentProviderFromEnv()
 			: createStubSentimentProvider();
 		const alpacaClient = hasAlpacaKeys
@@ -334,12 +322,10 @@ async function initIndicatorBatchScheduler(): Promise<void> {
 		// Create and start scheduler
 		state.indicatorScheduler = new IndicatorBatchScheduler(
 			{
-				fmpClient,
 				finraClient,
 				sharesProvider,
 				sentimentProvider,
 				alpacaClient,
-				fundamentalsRepo,
 				shortInterestRepo,
 				sentimentRepo,
 				corporateActionsRepo,
@@ -351,7 +337,6 @@ async function initIndicatorBatchScheduler(): Promise<void> {
 		state.indicatorScheduler.start();
 		log.info(
 			{
-				fundamentals: schedulerConfig.enabled.fundamentals,
 				shortInterest: schedulerConfig.enabled.shortInterest,
 				sentiment: schedulerConfig.enabled.sentiment,
 				corporateActions: schedulerConfig.enabled.corporateActions,
@@ -374,16 +359,6 @@ function getIndicatorJobStatus(): Record<string, JobState> | null {
 }
 
 // Stub implementations for when API keys are not available
-function createStubFMPClient() {
-	return {
-		getKeyMetrics: async () => [],
-		getIncomeStatement: async () => [],
-		getBalanceSheet: async () => [],
-		getCashFlowStatement: async () => [],
-		getCompanyProfile: async () => null,
-	};
-}
-
 function createStubSharesProvider() {
 	return {
 		getSharesData: async () => null,
@@ -645,8 +620,6 @@ async function main() {
 	const environment = requireEnv();
 
 	// Validate environment at startup
-	// FMP_KEY is now optional - the indicator scheduler handles missing keys gracefully with stub providers
-	// News was migrated from FMP to Alpaca (commit 1c4f76a9)
 	const startupCtx = createContext(environment, "scheduled");
 	if (!isBacktest(startupCtx)) {
 		validateEnvironmentOrExit(startupCtx, "worker", []);
@@ -657,14 +630,6 @@ async function main() {
 			log.warn(
 				{},
 				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
-			);
-		}
-
-		// Warn if FMP_KEY is not set (used for fundamentals, short interest, sentiment)
-		if (!process.env.FMP_KEY) {
-			log.warn(
-				{},
-				"FMP_KEY not configured. Fundamentals, short interest, and sentiment jobs will be disabled."
 			);
 		}
 	}

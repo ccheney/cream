@@ -159,7 +159,7 @@ export const OptionsIndicatorsSchema = z.object({
 export type OptionsIndicators = z.infer<typeof OptionsIndicatorsSchema>;
 
 /**
- * Value Factors (Batch from FMP)
+ * Value Factors (Batch)
  */
 export const ValueIndicatorsSchema = z.object({
 	pe_ratio_ttm: z.number().nullable(),
@@ -173,7 +173,7 @@ export const ValueIndicatorsSchema = z.object({
 export type ValueIndicators = z.infer<typeof ValueIndicatorsSchema>;
 
 /**
- * Quality Factors (Batch from FMP + EDGAR)
+ * Quality Factors (Batch from EDGAR)
  */
 export const QualityIndicatorsSchema = z.object({
 	gross_profitability: z.number().nullable(),

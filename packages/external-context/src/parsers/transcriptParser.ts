@@ -1,10 +1,10 @@
 /**
  * Transcript Parser
  *
- * Parses FMP earnings call transcript API responses into normalized format.
+ * Parses earnings call transcripts into normalized format.
  */
 
-import type { FMPTranscript, ParsedTranscript, TranscriptSpeaker } from "../types.js";
+import type { ParsedTranscript, TranscriptInput, TranscriptSpeaker } from "../types.js";
 
 /**
  * Transcript parser configuration
@@ -22,10 +22,10 @@ const DEFAULT_CONFIG: Required<TranscriptParserConfig> = {
 };
 
 /**
- * Parse FMP transcript into normalized format
+ * Parse transcript into normalized format
  */
 export function parseTranscript(
-	transcript: FMPTranscript,
+	transcript: TranscriptInput,
 	config: TranscriptParserConfig = {}
 ): ParsedTranscript | null {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
@@ -57,7 +57,7 @@ export function parseTranscript(
 /**
  * Parse transcript content into speaker segments
  *
- * FMP transcripts typically have format:
+ * Transcripts typically have format:
  * "Speaker Name: Text content..."
  * or structured sections
  */

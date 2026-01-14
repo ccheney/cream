@@ -9,15 +9,11 @@
 export {
 	// Adapters
 	AlpacaCorporateActionsAdapter,
+	AlpacaSentimentAdapter,
 	createAlpacaCorporateActionsFromEnv,
 	createFINRAClient,
-	createFMPClientFromEnv,
 	createSentimentProviderFromEnv,
-	createSharesOutstandingProviderFromEnv,
 	FINRAClientAdapter,
-	FMPClientAdapter,
-	SentimentDataAdapter,
-	SharesOutstandingAdapter,
 } from "./adapters.js";
 export {
 	createDefaultConfig,

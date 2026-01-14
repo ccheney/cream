@@ -9,7 +9,6 @@ import { implementIndicator } from "./claudeCodeIndicator.js";
 import {
 	analyzeContent,
 	extractNewsContext,
-	getEconomicCalendar,
 	getFredEconomicCalendar,
 	getGreeks,
 	getMacroIndicators,
@@ -19,7 +18,6 @@ import {
 	graphragQuery,
 	helixQuery,
 	recalcIndicator,
-	searchNews,
 } from "./implementations/index.js";
 import { searchFilings } from "./searchFilings.js";
 
@@ -33,8 +31,6 @@ export const TOOL_REGISTRY = {
 	option_chain: getOptionChain,
 	get_greeks: getGreeks,
 	recalc_indicator: recalcIndicator,
-	economic_calendar: getEconomicCalendar,
-	news_search: searchNews,
 	search_filings: searchFilings,
 	graphrag_query: graphragQuery,
 	helix_query: helixQuery,
@@ -44,8 +40,8 @@ export const TOOL_REGISTRY = {
 	extract_news_context: extractNewsContext,
 	analyze_content: analyzeContent,
 	// FRED Economic Data tools
-	fred_economic_calendar: getFredEconomicCalendar,
-	fred_macro_indicators: getMacroIndicators,
+	economic_calendar: getFredEconomicCalendar,
+	macro_indicators: getMacroIndicators,
 } as const;
 
 export type ToolName = keyof typeof TOOL_REGISTRY;

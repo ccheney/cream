@@ -107,7 +107,7 @@ Returns full extraction results with:
 - eventType: classification for event-driven analysis
 - scores: sentimentScore, importanceScore, surpriseScore
 
-Requires FMP_KEY for news fetching.`,
+Requires ALPACA_KEY and ALPACA_SECRET for news fetching.`,
 	inputSchema: ExtractNewsContextInputSchema,
 	outputSchema: ExtractNewsContextOutputSchema,
 	execute: async (inputData): Promise<ExtractNewsContextOutput> => {

@@ -63,7 +63,7 @@ describe("UniverseCacheRepository", () => {
 			sourceHash: "abc123",
 			tickers: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
 			expiresAt: getFutureDate(24),
-			provider: "fmp",
+			provider: "alpaca",
 		};
 
 		await repo.set(cache);
@@ -75,7 +75,7 @@ describe("UniverseCacheRepository", () => {
 		expect(result!.sourceHash).toBe("abc123");
 		expect(result!.tickers).toEqual(["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]);
 		expect(result!.tickerCount).toBe(5);
-		expect(result!.provider).toBe("fmp");
+		expect(result!.provider).toBe("alpaca");
 	});
 
 	test("returns null for expired cache", async () => {

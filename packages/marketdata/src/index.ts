@@ -10,7 +10,6 @@
  * import {
  *   createAlpacaClientFromEnv,
  *   createAlpacaStocksClientFromEnv,
- *   createFmpClientFromEnv,
  *   createAlphaVantageClientFromEnv,
  * } from "@cream/marketdata";
  *
@@ -29,10 +28,6 @@
  *   }
  * });
  * ws.subscribe("quotes", ["AAPL", "MSFT"]);
- *
- * // Fundamentals (transcripts, filings)
- * const fmp = createFmpClientFromEnv();
- * const transcripts = await fmp.getEarningsTranscript("AAPL", 4, 2025);
  *
  * // Macro indicators
  * const av = createAlphaVantageClientFromEnv();

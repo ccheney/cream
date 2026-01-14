@@ -27,7 +27,7 @@ async function setupTables(client: TursoClient): Promise<void> {
       sector TEXT,
       industry TEXT,
       market_cap_at_add REAL,
-      provider TEXT NOT NULL DEFAULT 'fmp',
+      provider TEXT NOT NULL DEFAULT 'alpaca',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(index_id, symbol, date_added)
@@ -44,7 +44,7 @@ async function setupTables(client: TursoClient): Promise<void> {
       conversion_ratio REAL,
       reason TEXT,
       acquiring_company TEXT,
-      provider TEXT NOT NULL DEFAULT 'fmp',
+      provider TEXT NOT NULL DEFAULT 'alpaca',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(old_symbol, new_symbol, change_date)
     )
@@ -91,7 +91,7 @@ describe("IndexConstituentsRepository", () => {
 			sector: "Technology",
 			industry: "Consumer Electronics",
 			marketCapAtAdd: 100000000000,
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const constituents = await repo.getCurrentConstituents("SP500");
@@ -105,7 +105,7 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "GE",
 			dateAdded: "1990-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		await repo.upsert({
@@ -114,7 +114,7 @@ describe("IndexConstituentsRepository", () => {
 			dateAdded: "1990-01-01",
 			dateRemoved: "2018-06-26",
 			reasonRemoved: "Underperformance",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const current = await repo.getCurrentConstituents("SP500");
@@ -127,9 +127,9 @@ describe("IndexConstituentsRepository", () => {
 
 	test("bulk inserts constituents", async () => {
 		const constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[] = [
-			{ indexId: "SP500", symbol: "AAPL", dateAdded: "2000-01-01", provider: "fmp" },
-			{ indexId: "SP500", symbol: "MSFT", dateAdded: "1995-01-01", provider: "fmp" },
-			{ indexId: "SP500", symbol: "GOOGL", dateAdded: "2006-03-31", provider: "fmp" },
+			{ indexId: "SP500", symbol: "AAPL", dateAdded: "2000-01-01", provider: "alpaca" },
+			{ indexId: "SP500", symbol: "MSFT", dateAdded: "1995-01-01", provider: "alpaca" },
+			{ indexId: "SP500", symbol: "GOOGL", dateAdded: "2006-03-31", provider: "alpaca" },
 		];
 
 		const count = await repo.bulkInsert(constituents);
@@ -149,20 +149,20 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "AAPL",
 			dateAdded: "2000-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "META",
 			dateAdded: "2013-12-23",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "GOOG",
 			dateAdded: "2006-03-31",
 			dateRemoved: "2014-04-02",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const asOf2010 = await repo.getConstituentsAsOf("SP500", "2010-01-01");
@@ -183,20 +183,20 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "AAPL",
 			dateAdded: "2000-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "MSFT",
 			dateAdded: "1995-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "GE",
 			dateAdded: "1990-01-01",
 			dateRemoved: "2018-06-26",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const current = await repo.getCurrentConstituents("SP500");
@@ -211,13 +211,13 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "META",
 			dateAdded: "2013-12-23",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "NASDAQ100",
 			symbol: "META",
 			dateAdded: "2013-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const history = await repo.getSymbolHistory("META");
@@ -229,14 +229,14 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "AAPL",
 			dateAdded: "2000-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "GE",
 			dateAdded: "1990-01-01",
 			dateRemoved: "2018-06-26",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		expect(await repo.wasInIndexOnDate("SP500", "AAPL", "2020-01-01")).toBe(true);
@@ -251,26 +251,26 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "META",
 			dateAdded: "2013-12-23",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "PYPL",
 			dateAdded: "2015-07-20",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "GE",
 			dateAdded: "1990-01-01",
 			dateRemoved: "2018-06-26",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "ETSY",
 			dateAdded: "2020-09-21",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesInRange("SP500", "2015-01-01", "2019-12-31");
@@ -286,20 +286,20 @@ describe("IndexConstituentsRepository", () => {
 			indexId: "SP500",
 			symbol: "AAPL",
 			dateAdded: "2000-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "MSFT",
 			dateAdded: "1995-01-01",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.upsert({
 			indexId: "SP500",
 			symbol: "GE",
 			dateAdded: "1990-01-01",
 			dateRemoved: "2018-06-26",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const currentCount = await repo.getConstituentCount("SP500");
@@ -325,7 +325,7 @@ describe("IndexConstituentsRepository", () => {
 				indexId,
 				symbol: `TEST_${indexId}`,
 				dateAdded: "2020-01-01",
-				provider: "fmp",
+				provider: "alpaca",
 			});
 		}
 
@@ -362,7 +362,7 @@ describe("TickerChangesRepository", () => {
 			changeDate: "2022-06-09",
 			changeType: "rename",
 			reason: "Company rebranding to Meta Platforms",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesFromSymbol("FB");
@@ -377,7 +377,7 @@ describe("TickerChangesRepository", () => {
 			newSymbol: "META",
 			changeDate: "2022-06-09",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		await repo.insert({
@@ -386,7 +386,7 @@ describe("TickerChangesRepository", () => {
 			changeDate: "2022-06-09",
 			changeType: "rename",
 			reason: "Updated reason",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesFromSymbol("FB");
@@ -399,14 +399,14 @@ describe("TickerChangesRepository", () => {
 			newSymbol: "GOOGL",
 			changeDate: "2014-04-03",
 			changeType: "restructure",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.insert({
 			oldSymbol: "AAPL",
 			newSymbol: "AAPL2",
 			changeDate: "2020-01-01",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesFromSymbol("GOOG");
@@ -420,7 +420,7 @@ describe("TickerChangesRepository", () => {
 			newSymbol: "META",
 			changeDate: "2022-06-09",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesToSymbol("META");
@@ -435,14 +435,14 @@ describe("TickerChangesRepository", () => {
 			changeDate: "2018-06-14",
 			changeType: "acquisition",
 			acquiringCompany: "AT&T",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.insert({
 			oldSymbol: "T",
 			newSymbol: "WBD",
 			changeDate: "2022-04-08",
 			changeType: "spinoff",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		// Note: This tests the chain from TWX -> T -> WBD
@@ -459,7 +459,7 @@ describe("TickerChangesRepository", () => {
 			newSymbol: "META",
 			changeDate: "2022-06-09",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const historical2021 = await repo.resolveToHistoricalSymbol("META", "2021-01-01");
@@ -475,21 +475,21 @@ describe("TickerChangesRepository", () => {
 			newSymbol: "META",
 			changeDate: "2022-06-09",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.insert({
 			oldSymbol: "GOOG",
 			newSymbol: "GOOGL",
 			changeDate: "2014-04-03",
 			changeType: "restructure",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 		await repo.insert({
 			oldSymbol: "TWTR",
 			newSymbol: "X",
 			changeDate: "2023-07-24",
 			changeType: "rename",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes2022 = await repo.getChangesInRange("2022-01-01", "2022-12-31");
@@ -509,7 +509,7 @@ describe("TickerChangesRepository", () => {
 				newSymbol: `NEW_${changeType}`,
 				changeDate: "2023-01-01",
 				changeType,
-				provider: "fmp",
+				provider: "alpaca",
 			});
 		}
 
@@ -528,7 +528,7 @@ describe("TickerChangesRepository", () => {
 			changeType: "acquisition",
 			conversionRatio: 0.9848,
 			acquiringCompany: "Microsoft",
-			provider: "fmp",
+			provider: "alpaca",
 		});
 
 		const changes = await repo.getChangesFromSymbol("ATVI");

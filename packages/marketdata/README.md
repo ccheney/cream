@@ -6,7 +6,7 @@ Market data aggregation and processing for the Cream trading system.
 
 Central data layer providing:
 
-- **Provider Clients** - Alpaca, FMP, Alpha Vantage
+- **Provider Clients** - Alpaca, Alpha Vantage
 - **Environment-Aware Adapters** - Mock (BACKTEST), Real (PAPER/LIVE)
 - **Data Validation** - Staleness, gaps, anomalies
 - **Feature Snapshots** - Candles, indicators, regime
@@ -18,7 +18,6 @@ Central data layer providing:
 | Provider | Data |
 |----------|------|
 | Alpaca | Quotes, candles, options (unified) |
-| FMP | Fundamentals, transcripts |
 | Alpha Vantage | Macro indicators |
 
 ## Usage
@@ -97,7 +96,6 @@ const greeks = calculateGreeks({
 ```bash
 ALPACA_KEY=...       # Alpaca (unified market data + broker)
 ALPACA_SECRET=...    # Alpaca secret
-FMP_KEY=...          # FMP
 ALPHAVANTAGE_KEY=... # Alpha Vantage
 CREAM_ENV=...        # Controls adapter selection
 ```

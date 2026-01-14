@@ -70,12 +70,9 @@ export {
 	// Factor Zoo tools
 	createUpdateDailyWeightsTool,
 	// Data tools
-	EconomicCalendarInputSchema,
-	EconomicCalendarOutputSchema,
 	ExtractedEventSchema,
 	ExtractNewsContextInputSchema,
 	ExtractNewsContextOutputSchema,
-	economicCalendarTool,
 	extractNewsContextTool,
 	// Filing search tool
 	FilingChunkSummarySchema,
@@ -123,9 +120,6 @@ export {
 	helixQueryTool,
 	MacroIndicatorsInputSchema,
 	MacroIndicatorsOutputSchema,
-	NewsSearchInputSchema,
-	NewsSearchOutputSchema,
-	newsSearchTool,
 	RecalcIndicatorInputSchema,
 	RecalcIndicatorOutputSchema,
 	recalcIndicatorTool,
@@ -152,7 +146,6 @@ export {
 	extractNewsContext,
 	type GraphRAGQueryParams,
 	type GraphRAGQueryResult,
-	getEconomicCalendar,
 	// FRED implementations
 	getFredEconomicCalendar,
 	getGreeks,
@@ -165,7 +158,6 @@ export {
 	type MacroIndicatorValue,
 	parseOSISymbol,
 	recalcIndicator,
-	searchNews,
 } from "./implementations/index.js";
 // Re-export registry
 export { getAvailableTools, getTool, TOOL_REGISTRY, type ToolName } from "./registry.js";
@@ -182,7 +174,6 @@ export type {
 	Greeks,
 	HelixQueryResult,
 	IndicatorResult,
-	NewsItem,
 	OptionChainResponse,
 	OptionContract,
 	OptionExpiration,

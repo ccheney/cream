@@ -168,7 +168,7 @@ export {
 	type TriggerSource,
 	type UpdateSyncRunProgress,
 } from "./filings.js";
-// Fundamental indicators (migration 008) - FMP fundamental data
+// Fundamental indicators (migration 008)
 export {
 	type CreateFundamentalIndicatorsInput,
 	type FundamentalFilters,

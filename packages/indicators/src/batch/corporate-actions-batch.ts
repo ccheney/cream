@@ -15,7 +15,7 @@
 
 import type { CorporateActionInsert, CorporateActionsRepository } from "@cream/storage";
 import { log } from "../logger.js";
-import type { BatchJobResult } from "./fundamentals-batch.js";
+import type { BatchJobResult } from "./types.js";
 
 // ============================================
 // Types

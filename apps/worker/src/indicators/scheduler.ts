@@ -5,7 +5,6 @@
  * Jobs run on different schedules based on data freshness requirements.
  *
  * Schedule (all times in America/New_York timezone):
- * - Fundamentals: 2:00 AM daily (after market data providers update)
  * - Short Interest: 6:00 PM daily (after FINRA publishes)
  * - Sentiment: Hourly from 9:00 AM - 4:00 PM (market hours)
  * - Corporate Actions: 6:00 AM daily (before market open)
@@ -18,8 +17,6 @@ import {
 	type BatchJobResult,
 	CorporateActionsBatchJob,
 	type FINRAClient,
-	FundamentalsBatchJob,
-	type FundamentalsFMPClient,
 	SentimentAggregationJob,
 	type SentimentDataProvider,
 	type SharesOutstandingProvider,
@@ -27,7 +24,6 @@ import {
 } from "@cream/indicators";
 import type {
 	CorporateActionsRepository,
-	FundamentalsRepository,
 	SentimentRepository,
 	ShortInterestRepository,
 } from "@cream/storage";
@@ -44,8 +40,6 @@ const TIMEZONE = "America/New_York";
 // Cron expressions (minute hour day month weekday)
 // Note: croner uses 6-field cron with seconds, so we use 5-field with implicit "0" seconds
 const CRON_SCHEDULES = {
-	// 2:00 AM ET daily - after market data providers update overnight
-	fundamentals: "0 2 * * *",
 	// 6:00 PM ET daily - after FINRA publishes short interest data
 	shortInterest: "0 18 * * *",
 	// Every hour from 9 AM - 4 PM ET (market hours), Mon-Fri
@@ -61,12 +55,7 @@ const CRON_SCHEDULES = {
 export const JobStatusSchema = z.enum(["idle", "running", "error", "disabled"]);
 export type JobStatus = z.infer<typeof JobStatusSchema>;
 
-export const JobNameSchema = z.enum([
-	"fundamentals",
-	"shortInterest",
-	"sentiment",
-	"corporateActions",
-]);
+export const JobNameSchema = z.enum(["shortInterest", "sentiment", "corporateActions"]);
 export type JobName = z.infer<typeof JobNameSchema>;
 
 export interface JobState {
@@ -81,14 +70,12 @@ export interface JobState {
 export interface IndicatorSchedulerConfig {
 	/** Enable/disable individual jobs */
 	enabled: {
-		fundamentals: boolean;
 		shortInterest: boolean;
 		sentiment: boolean;
 		corporateActions: boolean;
 	};
 	/** Override job configurations */
 	jobConfigs?: {
-		fundamentals?: { rateLimitDelayMs?: number };
 		shortInterest?: { rateLimitDelayMs?: number };
 		sentiment?: { rateLimitDelayMs?: number };
 		corporateActions?: { rateLimitDelayMs?: number };
@@ -97,14 +84,12 @@ export interface IndicatorSchedulerConfig {
 
 export interface IndicatorSchedulerDependencies {
 	// Data providers (injected for testability)
-	fmpClient: FundamentalsFMPClient;
 	finraClient: FINRAClient;
 	sharesProvider: SharesOutstandingProvider;
 	sentimentProvider: SentimentDataProvider;
 	alpacaClient: AlpacaCorporateActionsClient;
 
 	// Repositories
-	fundamentalsRepo: FundamentalsRepository;
 	shortInterestRepo: ShortInterestRepository;
 	sentimentRepo: SentimentRepository;
 	corporateActionsRepo: CorporateActionsRepository;
@@ -163,12 +148,6 @@ export class IndicatorBatchScheduler {
 	 */
 	start(): void {
 		log.info({}, "Starting indicator batch scheduler");
-
-		if (this.config.enabled.fundamentals) {
-			this.scheduleJob("fundamentals", CRON_SCHEDULES.fundamentals, () =>
-				this.runFundamentalsJob()
-			);
-		}
 
 		if (this.config.enabled.shortInterest) {
 			this.scheduleJob("shortInterest", CRON_SCHEDULES.shortInterest, () =>
@@ -261,8 +240,6 @@ export class IndicatorBatchScheduler {
 		}
 
 		switch (jobName) {
-			case "fundamentals":
-				return this.runFundamentalsJob();
 			case "shortInterest":
 				return this.runShortInterestJob();
 			case "sentiment":
@@ -318,17 +295,6 @@ export class IndicatorBatchScheduler {
 		);
 
 		this.jobs.set(name, job);
-	}
-
-	private async runFundamentalsJob(): Promise<BatchJobResult> {
-		return this.executeJob("fundamentals", async (symbols) => {
-			const job = new FundamentalsBatchJob(
-				this.deps.fmpClient,
-				this.deps.fundamentalsRepo,
-				this.config.jobConfigs?.fundamentals
-			);
-			return job.run(symbols);
-		});
 	}
 
 	private async runShortInterestJob(): Promise<BatchJobResult> {
@@ -424,7 +390,6 @@ export class IndicatorBatchScheduler {
 export function createDefaultConfig(): IndicatorSchedulerConfig {
 	return {
 		enabled: {
-			fundamentals: true,
 			shortInterest: true,
 			sentiment: true,
 			corporateActions: true,

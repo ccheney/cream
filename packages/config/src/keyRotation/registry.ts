@@ -43,8 +43,6 @@ export class KeyRotationRegistry {
 			"ALPHAVANTAGE_KEY"
 		);
 
-		this.getManager("fmp").addKeysFromEnv(process.env.FMP_KEY ?? Bun.env.FMP_KEY, "FMP_KEY");
-
 		this.getManager("alpaca").addKeysFromEnv(
 			process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY,
 			"ALPACA_KEY"

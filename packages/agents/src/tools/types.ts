@@ -79,16 +79,6 @@ export interface EconomicEvent {
 	actual: string | null;
 }
 
-export interface NewsItem {
-	id: string;
-	headline: string;
-	summary: string;
-	source: string;
-	publishedAt: string;
-	symbols: string[];
-	sentiment: "positive" | "negative" | "neutral";
-}
-
 export interface HelixQueryResult {
 	nodes: unknown[];
 	edges: unknown[];

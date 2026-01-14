@@ -1,34 +1,24 @@
 /**
  * Entity Linker
  *
- * Maps company names to stock tickers using FMP company search API
- * and local alias lookup.
+ * Maps company names to stock tickers using local alias lookup.
  */
 
-import type { EntityLink, ExtractedEntity, FMPCompanySearch } from "../types.js";
+import type { EntityLink, ExtractedEntity } from "../types.js";
 
 /**
  * Entity linker configuration
  */
 export interface EntityLinkerConfig {
-	/** FMP API key */
-	fmpApiKey?: string;
-	/** FMP base URL */
-	fmpBaseUrl?: string;
 	/** Minimum confidence threshold (default: 0.5) */
 	minConfidence?: number;
 	/** Cache TTL in milliseconds (default: 1 hour) */
 	cacheTtl?: number;
-	/** Maximum API calls per batch (default: 10) */
-	maxBatchSize?: number;
 }
 
 const DEFAULT_CONFIG: Required<EntityLinkerConfig> = {
-	fmpApiKey: "",
-	fmpBaseUrl: "https://financialmodelingprep.com/api/v3",
 	minConfidence: 0.5,
 	cacheTtl: 60 * 60 * 1000, // 1 hour
-	maxBatchSize: 10,
 };
 
 /**
@@ -178,8 +168,7 @@ export class EntityLinker {
 	private cache: Map<string, CacheEntry> = new Map();
 
 	constructor(config: EntityLinkerConfig = {}) {
-		const apiKey = config.fmpApiKey || process.env.FMP_KEY || "";
-		this.config = { ...DEFAULT_CONFIG, ...config, fmpApiKey: apiKey };
+		this.config = { ...DEFAULT_CONFIG, ...config };
 	}
 
 	/**
@@ -225,18 +214,11 @@ export class EntityLinker {
 			return cached;
 		}
 
-		// Try local alias lookup (fastest)
+		// Try local alias lookup
 		const aliasResult = this.lookupAlias(normalizedName);
 		if (aliasResult) {
 			this.setCache(normalizedName, aliasResult);
 			return aliasResult;
-		}
-
-		// Try FMP API search (if API key available)
-		if (this.config.fmpApiKey) {
-			const fmpResult = await this.searchFMP(entityName);
-			this.setCache(normalizedName, fmpResult);
-			return fmpResult;
 		}
 
 		// No match found
@@ -271,124 +253,6 @@ export class EntityLinker {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Search FMP API for company
-	 */
-	private async searchFMP(query: string): Promise<EntityLink | null> {
-		try {
-			const url = new URL(`${this.config.fmpBaseUrl}/search`);
-			url.searchParams.set("query", query);
-			url.searchParams.set("limit", "5");
-			url.searchParams.set("apikey", this.config.fmpApiKey);
-
-			const response = await fetch(url.toString());
-			if (!response.ok) {
-				return null;
-			}
-
-			const data = await response.json();
-			// Ensure we have a valid array
-			if (!data || !Array.isArray(data) || data.length === 0) {
-				return null;
-			}
-			const results: FMPCompanySearch[] = data;
-
-			// Find best match
-			const bestMatch = this.findBestMatch(query, results);
-			if (!bestMatch) {
-				return null;
-			}
-
-			return {
-				entityName: query,
-				ticker: bestMatch.symbol,
-				confidence: this.computeMatchConfidence(query, bestMatch),
-				method: "fuzzy",
-			};
-		} catch {
-			return null;
-		}
-	}
-
-	/**
-	 * Find best matching result from FMP search
-	 */
-	private findBestMatch(query: string, results: FMPCompanySearch[]): FMPCompanySearch | null {
-		const normalizedQuery = query.toLowerCase();
-
-		// First, try exact name match
-		for (const result of results) {
-			if (result.name.toLowerCase() === normalizedQuery) {
-				return result;
-			}
-		}
-
-		// Try symbol match
-		for (const result of results) {
-			if (result.symbol.toLowerCase() === normalizedQuery) {
-				return result;
-			}
-		}
-
-		// Try partial match with highest relevance
-		for (const result of results) {
-			if (
-				result.name.toLowerCase().includes(normalizedQuery) ||
-				normalizedQuery.includes(result.name.toLowerCase())
-			) {
-				return result;
-			}
-		}
-
-		// Return first result as fallback (FMP ranks by relevance)
-		return results[0] || null;
-	}
-
-	/**
-	 * Compute confidence for FMP match
-	 */
-	private computeMatchConfidence(query: string, match: FMPCompanySearch): number {
-		const normalizedQuery = query.toLowerCase();
-		const normalizedName = match.name.toLowerCase();
-
-		// Exact match
-		if (normalizedName === normalizedQuery) {
-			return 0.95;
-		}
-
-		// Contains full query
-		if (normalizedName.includes(normalizedQuery)) {
-			return 0.85;
-		}
-
-		// Query contains match name
-		if (normalizedQuery.includes(normalizedName)) {
-			return 0.8;
-		}
-
-		// Levenshtein-like similarity (simplified)
-		const similarity = this.stringSimilarity(normalizedQuery, normalizedName);
-		return 0.5 + similarity * 0.3;
-	}
-
-	/**
-	 * Simple string similarity (Jaccard-like)
-	 */
-	private stringSimilarity(a: string, b: string): number {
-		const wordsA = new Set(a.split(/\s+/));
-		const wordsB = new Set(b.split(/\s+/));
-
-		let intersection = 0;
-		for (const word of wordsA) {
-			if (wordsB.has(word)) {
-				intersection++;
-			}
-		}
-
-		const union = wordsA.size + wordsB.size - intersection;
-		return union > 0 ? intersection / union : 0;
 	}
 
 	/**
@@ -431,7 +295,7 @@ export class EntityLinker {
 }
 
 /**
- * Create entity linker with environment configuration
+ * Create entity linker with configuration
  */
 export function createEntityLinker(config?: EntityLinkerConfig): EntityLinker {
 	return new EntityLinker(config);

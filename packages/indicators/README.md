@@ -140,14 +140,13 @@ For populating batch indicators from external data sources:
 
 ```typescript
 import {
-  FundamentalsBatchJob,
   ShortInterestBatchJob,
   SentimentAggregationJob,
   CorporateActionsBatchJob,
 } from "@cream/indicators";
 
-// Run fundamentals batch (scheduled nightly)
-const job = new FundamentalsBatchJob(fmpClient, fundamentalsRepo);
+// Run short interest batch
+const job = new ShortInterestBatchJob(finraClient, shortInterestRepo, sharesProvider);
 const result = await job.run(symbols);
 console.log(`Processed ${result.processed}, Failed: ${result.failed}`);
 ```
@@ -156,9 +155,8 @@ console.log(`Processed ${result.processed}, Failed: ${result.failed}`);
 
 | Job | Frequency | Data Source | Purpose |
 |-----|-----------|-------------|---------|
-| `FundamentalsBatchJob` | Daily | FMP API | Value & quality metrics |
 | `ShortInterestBatchJob` | Bi-monthly | FINRA | Short interest data |
-| `SentimentAggregationJob` | Hourly | News/Social | Sentiment scores |
+| `SentimentAggregationJob` | Hourly | Alpaca News | Sentiment scores |
 | `CorporateActionsBatchJob` | Daily | Alpaca | Earnings, dividends, splits |
 
 ## Data Quality

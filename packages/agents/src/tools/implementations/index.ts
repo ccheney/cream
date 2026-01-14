@@ -20,7 +20,6 @@ export {
 	type ExtractNewsContextResult,
 	extractNewsContext,
 } from "./externalContext.js";
-export { getEconomicCalendar, searchNews } from "./fmp.js";
 export {
 	getEconomicCalendar as getFredEconomicCalendar,
 	getMacroIndicators,

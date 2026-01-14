@@ -50,7 +50,6 @@ export const MemoryNodeCreateSchema = MemoryNodeSchema.omit({ embedding: true })
 export type MemoryNodeCreate = z.infer<typeof MemoryNodeCreateSchema>;
 
 export const CitationSource = z.enum([
-	"FMP",
 	"NEWS_API",
 	"SEC_EDGAR",
 	"EARNINGS_CALL",

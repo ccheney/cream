@@ -21,7 +21,7 @@
  *   targetSymbols: ["AAPL", "MSFT", "GOOGL"],
  * });
  *
- * const result = await pipeline.processNews(fmpNewsArticles);
+ * const result = await pipeline.processNews(newsArticles);
  * console.log(result.events);
  * ```
  */
@@ -51,8 +51,8 @@ export {
 export {
 	type AlphaVantageEconomicIndicator,
 	calculateMacroSurprise,
+	type EconomicCalendarEvent,
 	extractTranscriptSections,
-	type FMPEconomicEvent,
 	type FREDEconomicEvent,
 	type FREDLatestValues,
 	type FREDObservationEntry,
@@ -68,7 +68,7 @@ export {
 	type MacroIndicatorType,
 	type NewsParserConfig,
 	parseAlphaVantageIndicator,
-	parseFMPEconomicEvents,
+	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,
 	parseNewsArticle,
@@ -110,6 +110,8 @@ export {
 } from "./scoring/index.js";
 // Types
 export type {
+	// Input types (provider-agnostic)
+	CompanySearchResult,
 	// Scoring types
 	ContentScores,
 	// Pipeline types
@@ -122,12 +124,9 @@ export type {
 	ExtractedEntity,
 	ExtractedEvent,
 	ExtractionResult,
-	FMPCompanySearch,
-	// FMP types
-	FMPNewsArticle,
-	FMPTranscript,
 	// Extraction client interface (for DI)
 	IExtractionClient,
+	NewsArticle,
 	ParsedMacroRelease,
 	// Parser types
 	ParsedNews,
@@ -136,6 +135,7 @@ export type {
 	PipelineInput,
 	// Extraction types
 	Sentiment,
+	TranscriptInput,
 	TranscriptSpeaker,
 } from "./types.js";
 // Zod schemas

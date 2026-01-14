@@ -18,7 +18,6 @@ import { Iso8601Schema } from "./time";
  * Data source for external events
  */
 export const DataSource = z.enum([
-	"FMP",
 	"ALPHA_VANTAGE",
 	"ALPACA",
 	"BENZINGA",

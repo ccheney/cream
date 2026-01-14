@@ -7,7 +7,7 @@
 export {
 	type AlphaVantageEconomicIndicator,
 	calculateMacroSurprise,
-	type FMPEconomicEvent,
+	type EconomicCalendarEvent,
 	type FREDEconomicEvent,
 	type FREDLatestValues,
 	type FREDObservationEntry,
@@ -19,7 +19,7 @@ export {
 	MACRO_INDICATORS,
 	type MacroIndicatorType,
 	parseAlphaVantageIndicator,
-	parseFMPEconomicEvents,
+	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,
 	sortFREDEventsByDateAndImpact,

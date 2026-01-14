@@ -45,7 +45,8 @@ CREAM_ENV=BACKTEST|PAPER|LIVE
 TURSO_DATABASE_URL=http://localhost:8080
 HELIX_HOST=localhost
 HELIX_PORT=6969
-FMP_KEY=...                    # Required for non-BACKTEST
+ALPACA_KEY=...                    # Required for batch jobs
+ALPACA_SECRET=...                 # Required for batch jobs
 GOOGLE_GENERATIVE_AI_API_KEY=... # For agent execution
 ```
 
@@ -94,7 +95,7 @@ bun test
 
 - **Database** - Config must be seeded (`bun run db:seed`)
 - **HelixDB** - Required for PAPER/LIVE
-- **FMP_KEY** - Required for non-BACKTEST
+- **ALPACA_KEY/ALPACA_SECRET** - Required for indicator batch jobs
 
 ## Execution Guarantee
 

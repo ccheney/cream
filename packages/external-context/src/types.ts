@@ -215,13 +215,13 @@ export interface ExtractedEvent {
 }
 
 // ============================================
-// FMP API Response Types
+// Input Types (Provider-agnostic)
 // ============================================
 
 /**
- * FMP news article response
+ * News article input for the extraction pipeline
  */
-export interface FMPNewsArticle {
+export interface NewsArticle {
 	symbol?: string;
 	publishedDate: string;
 	title: string;
@@ -232,9 +232,9 @@ export interface FMPNewsArticle {
 }
 
 /**
- * FMP transcript response
+ * Transcript input for the extraction pipeline
  */
-export interface FMPTranscript {
+export interface TranscriptInput {
 	symbol: string;
 	quarter: number;
 	year: number;
@@ -243,14 +243,14 @@ export interface FMPTranscript {
 }
 
 /**
- * FMP company search result
+ * Company search result for entity resolution
  */
-export interface FMPCompanySearch {
+export interface CompanySearchResult {
 	symbol: string;
 	name: string;
-	currency: string;
-	stockExchange: string;
-	exchangeShortName: string;
+	currency?: string;
+	stockExchange?: string;
+	exchangeShortName?: string;
 }
 
 // ============================================

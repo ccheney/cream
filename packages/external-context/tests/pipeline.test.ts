@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { FMPNewsArticle, IExtractionClient } from "../src/index.js";
+import type { IExtractionClient, NewsArticle } from "../src/index.js";
 import { createExtractionPipeline, ExtractionPipeline } from "../src/index.js";
 
 /**
@@ -53,7 +53,7 @@ describe("ExtractionPipeline", () => {
 		});
 
 		it("should process news articles", async () => {
-			const articles: FMPNewsArticle[] = [
+			const articles: NewsArticle[] = [
 				{
 					symbol: "AAPL",
 					publishedDate: "2026-01-05T10:00:00Z",
@@ -143,7 +143,7 @@ describe("ExtractionPipeline", () => {
 		});
 
 		it("should track processing stats", async () => {
-			const articles: FMPNewsArticle[] = [
+			const articles: NewsArticle[] = [
 				{
 					publishedDate: "2026-01-05T10:00:00Z",
 					title: "Article 1",

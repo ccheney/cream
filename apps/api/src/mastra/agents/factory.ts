@@ -20,7 +20,6 @@ import {
 	getQuotesTool,
 	graphragQueryTool,
 	helixQueryTool,
-	newsSearchTool,
 	recalcIndicatorTool,
 } from "@cream/agents";
 import { type GlobalModel, getFullModelId, getModelId as getGlobalModelId } from "@cream/domain";
@@ -48,7 +47,6 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
 	get_greeks: getGreeksTool,
 	recalc_indicator: recalcIndicatorTool,
 	fred_economic_calendar: fredEconomicCalendarTool,
-	news_search: newsSearchTool,
 	graphrag_query: graphragQueryTool,
 	helix_query: helixQueryTool,
 	extract_news_context: extractNewsContextTool,

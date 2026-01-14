@@ -46,7 +46,7 @@ async function setupTables(client: TursoClient): Promise<void> {
       sector TEXT,
       industry TEXT,
 
-      source TEXT NOT NULL DEFAULT 'FMP',
+      source TEXT NOT NULL DEFAULT 'computed',
       computed_at TEXT NOT NULL DEFAULT (datetime('now')),
 
       UNIQUE(symbol, date)
@@ -117,7 +117,7 @@ describe("FundamentalsRepository", () => {
 			expect(result.marketCap).toBe(2800000000000);
 			expect(result.sector).toBe("Technology");
 			expect(result.industry).toBe("Consumer Electronics");
-			expect(result.source).toBe("FMP");
+			expect(result.source).toBe("computed");
 		});
 
 		test("creates with minimal input", async () => {
@@ -131,7 +131,7 @@ describe("FundamentalsRepository", () => {
 			expect(result.date).toBe("2024-01-15");
 			expect(result.peRatioTtm).toBeNull();
 			expect(result.sector).toBeNull();
-			expect(result.source).toBe("FMP");
+			expect(result.source).toBe("computed");
 		});
 
 		test("upserts fundamental indicators", async () => {

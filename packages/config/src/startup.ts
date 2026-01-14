@@ -92,7 +92,6 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 		"TURSO_DATABASE_URL",
 		"TURSO_AUTH_TOKEN",
 		"HELIX_URL",
-		"FMP_KEY",
 		"ALPHAVANTAGE_KEY",
 		"ALPACA_KEY",
 		"ALPACA_SECRET",

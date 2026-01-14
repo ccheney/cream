@@ -12,7 +12,7 @@ Raw Feed → Parse → Extract (Claude) → Score → Link → ExtractedEvent
 
 ## Pipeline Stages
 
-1. **Parse** - Normalize raw feeds (FMP news, transcripts, macro)
+1. **Parse** - Normalize raw feeds (news, transcripts, macro)
 2. **Extract** - Claude tool use for structured extraction
 3. **Score** - Sentiment (-1 to 1), importance (0 to 1), surprise (-1 to 1)
 4. **Link** - Map entities to ticker symbols
@@ -30,7 +30,7 @@ const pipeline = createExtractionPipeline({
   dryRun: false,
 });
 
-const result = await pipeline.processNews(fmpArticles);
+const result = await pipeline.processNews(newsArticles);
 console.log(result.events);  // ExtractedEvent[]
 ```
 
@@ -39,7 +39,7 @@ console.log(result.events);  // ExtractedEvent[]
 ```typescript
 import { createEntityLinker } from "@cream/external-context";
 
-const linker = createEntityLinker({ fmpApiKey: process.env.FMP_KEY });
+const linker = createEntityLinker();
 const links = await linker.linkEntities([
   { name: "Apple Inc", type: "company" },
 ]);
@@ -59,7 +59,6 @@ const importance = classifyImportance(0.85);  // "high"
 
 ```bash
 ANTHROPIC_API_KEY=...  # Claude for extraction
-FMP_KEY=...            # Entity linking
 ```
 
 ## Scoring Details

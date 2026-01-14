@@ -2,25 +2,11 @@
  * @cream/universe
  *
  * Universe resolution system for selecting tradeable instruments.
- * Supports static lists, index constituents, ETF holdings, and screeners.
+ * Supports static ticker lists.
  *
  * @see docs/plans/11-configuration.md lines 355-700
  */
 
-// FMP Client
-export {
-	createFMPClient,
-	FMPClient,
-	type FMPClientConfig,
-	type FMPConstituent,
-	type FMPEarningsTranscript,
-	type FMPEconomicEvent,
-	type FMPETFHolding,
-	type FMPHistoricalConstituent,
-	type FMPScreenerFilters,
-	type FMPScreenerResult,
-	type FMPStockNews,
-} from "./fmp-client.js";
 // FRED Client (Federal Reserve Economic Data)
 export {
 	classifyReleaseImpact,
@@ -74,9 +60,6 @@ export {
 // Source Resolvers
 export {
 	type ResolvedInstrument,
-	resolveETFHoldingsSource,
-	resolveIndexSource,
-	resolveScreenerSource,
 	resolveSource,
 	resolveStaticSource,
 	type SourceResolutionResult,

@@ -43,7 +43,7 @@ export const IndexConstituentSchema = z.object({
 	sector: z.string().nullable().optional(),
 	industry: z.string().nullable().optional(),
 	marketCapAtAdd: z.number().nullable().optional(),
-	provider: z.string().default("fmp"),
+	provider: z.string().default("alpaca"),
 	createdAt: z.string().optional(),
 	updatedAt: z.string().optional(),
 });
@@ -58,7 +58,7 @@ export const TickerChangeSchema = z.object({
 	conversionRatio: z.number().nullable().optional(),
 	reason: z.string().nullable().optional(),
 	acquiringCompany: z.string().nullable().optional(),
-	provider: z.string().default("fmp"),
+	provider: z.string().default("alpaca"),
 	createdAt: z.string().optional(),
 });
 export type TickerChange = z.infer<typeof TickerChangeSchema>;
@@ -102,7 +102,7 @@ export class IndexConstituentsRepository {
 					constituent.sector ?? null,
 					constituent.industry ?? null,
 					constituent.marketCapAtAdd ?? null,
-					constituent.provider ?? "fmp",
+					constituent.provider ?? "alpaca",
 				]
 			);
 		} catch (error) {
@@ -233,7 +233,7 @@ export class TickerChangesRepository {
 					change.conversionRatio ?? null,
 					change.reason ?? null,
 					change.acquiringCompany ?? null,
-					change.provider ?? "fmp",
+					change.provider ?? "alpaca",
 				]
 			);
 		} catch (error) {

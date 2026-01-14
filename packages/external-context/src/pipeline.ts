@@ -13,11 +13,14 @@ import { randomUUID } from "node:crypto";
 import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
 import {
 	parseAlphaVantageIndicator,
-	parseFMPEconomicEvents,
+	parseEconomicCalendarEvents,
 	parseNewsArticles,
 	parseTranscript,
 } from "./parsers/index.js";
-import type { AlphaVantageEconomicIndicator, FMPEconomicEvent } from "./parsers/macroParser.js";
+import type {
+	AlphaVantageEconomicIndicator,
+	EconomicCalendarEvent,
+} from "./parsers/macroParser.js";
 import {
 	computeImportanceScore,
 	computeSentimentFromExtraction,
@@ -29,11 +32,11 @@ import type {
 	ContentSourceType,
 	ExtractedEvent,
 	ExtractionResult,
-	FMPNewsArticle,
-	FMPTranscript,
 	IExtractionClient,
+	NewsArticle,
 	ParsedMacroRelease,
 	ParsedTranscript,
+	TranscriptInput,
 } from "./types.js";
 
 /**
@@ -84,7 +87,7 @@ export class ExtractionPipeline {
 	/**
 	 * Process news articles through the pipeline
 	 */
-	async processNews(articles: FMPNewsArticle[]): Promise<PipelineResult> {
+	async processNews(articles: NewsArticle[]): Promise<PipelineResult> {
 		const startTime = Date.now();
 		const parsed = parseNewsArticles(articles);
 		return this.processItems(
@@ -102,7 +105,7 @@ export class ExtractionPipeline {
 	/**
 	 * Process transcripts through the pipeline
 	 */
-	async processTranscripts(transcripts: FMPTranscript[]): Promise<PipelineResult> {
+	async processTranscripts(transcripts: TranscriptInput[]): Promise<PipelineResult> {
 		const startTime = Date.now();
 		const parsed = transcripts
 			.map((t) => parseTranscript(t))
@@ -113,7 +116,7 @@ export class ExtractionPipeline {
 				sourceType: "transcript" as const,
 				content: p.speakers.map((s) => `${s.speaker}: ${s.text}`).join("\n\n"),
 				eventTime: p.date,
-				source: "FMP",
+				source: "transcript",
 				symbols: [p.symbol],
 			})),
 			startTime
@@ -124,13 +127,13 @@ export class ExtractionPipeline {
 	 * Process macro releases through the pipeline
 	 */
 	async processMacroReleases(
-		releases: AlphaVantageEconomicIndicator | FMPEconomicEvent[]
+		releases: AlphaVantageEconomicIndicator | EconomicCalendarEvent[]
 	): Promise<PipelineResult> {
 		const startTime = Date.now();
 		let parsed: ParsedMacroRelease[];
 
 		if (Array.isArray(releases)) {
-			parsed = parseFMPEconomicEvents(releases);
+			parsed = parseEconomicCalendarEvents(releases);
 		} else {
 			parsed = parseAlphaVantageIndicator(releases);
 		}

@@ -28,7 +28,7 @@ export type ComposeMode = z.infer<typeof ComposeMode>;
 /**
  * Data provider
  */
-export const UniverseProvider = z.enum(["fmp", "eodhd", "alpaca", "finnhub"]);
+export const UniverseProvider = z.enum(["eodhd", "alpaca", "finnhub"]);
 export type UniverseProvider = z.infer<typeof UniverseProvider>;
 
 /**
@@ -60,7 +60,7 @@ export const IndexSourceSchema = z.object({
 	name: z.string().min(1),
 	enabled: z.boolean().default(true),
 	index_id: IndexId,
-	provider: UniverseProvider.default("fmp"),
+	provider: UniverseProvider.default("alpaca"),
 	/**
 	 * Enable point-in-time data for survivorship-bias-free backtesting
 	 */
@@ -84,7 +84,7 @@ export const ETFHoldingsSourceSchema = z
 		 * Multiple ETF tickers (mutually exclusive with etf_symbol)
 		 */
 		etf_symbols: z.array(z.string()).optional(),
-		provider: UniverseProvider.default("fmp"),
+		provider: UniverseProvider.default("alpaca"),
 		/**
 		 * Minimum weight percentage to include holding
 		 */
@@ -126,7 +126,7 @@ export const ScreenerSourceSchema = z.object({
 	type: z.literal("screener"),
 	name: z.string().min(1),
 	enabled: z.boolean().default(true),
-	provider: UniverseProvider.default("fmp"),
+	provider: UniverseProvider.default("alpaca"),
 	/**
 	 * Filter criteria (provider-specific)
 	 */

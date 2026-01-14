@@ -18,7 +18,7 @@ import {
 	createAlpacaClientFromEnv,
 	isAlpacaConfigured,
 } from "@cream/marketdata";
-import { createFREDClient, type FMPClient, type FREDClient } from "@cream/universe";
+import { createFREDClient, type FREDClient } from "@cream/universe";
 
 // ============================================
 // gRPC Client Singletons
@@ -106,16 +106,6 @@ export function getAlpacaMarketDataClient(): AlpacaMarketDataClient | null {
 
 	alpacaMarketDataClient = createAlpacaClientFromEnv();
 	return alpacaMarketDataClient;
-}
-
-// ============================================
-// FMP Client Singleton
-// ============================================
-
-// DISABLED: FMP free tier doesn't support most endpoints we need.
-// TODO: Remove FMP dependency entirely or upgrade to paid plan.
-export function getFMPClient(): FMPClient | null {
-	return null;
 }
 
 // ============================================

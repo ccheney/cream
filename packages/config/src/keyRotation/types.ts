@@ -5,7 +5,7 @@
 /**
  * Service that requires API keys.
  */
-export type ApiService = "alphavantage" | "fmp" | "alpaca";
+export type ApiService = "alphavantage" | "alpaca";
 
 /**
  * API key with metadata.

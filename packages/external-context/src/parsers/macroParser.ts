@@ -1,7 +1,7 @@
 /**
  * Macro Release Parser
  *
- * Parses Alpha Vantage, FMP, and FRED macro data sources into normalized format.
+ * Parses Alpha Vantage and FRED macro data sources into normalized format.
  */
 
 import {
@@ -107,9 +107,9 @@ export function parseAlphaVantageIndicator(
 }
 
 /**
- * Parse FMP economic calendar event
+ * Economic calendar event structure
  */
-export interface FMPEconomicEvent {
+export interface EconomicCalendarEvent {
 	date: string;
 	country: string;
 	event: string;
@@ -123,9 +123,9 @@ export interface FMPEconomicEvent {
 }
 
 /**
- * Parse FMP economic calendar events
+ * Parse economic calendar events into macro releases
  */
-export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroRelease[] {
+export function parseEconomicCalendarEvents(events: EconomicCalendarEvent[]): ParsedMacroRelease[] {
 	const results: ParsedMacroRelease[] = [];
 
 	for (const event of events) {
@@ -145,7 +145,7 @@ export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroR
 			previousValue: event.previous ?? undefined,
 			date,
 			unit: event.unit,
-			source: `FMP:${event.country}`,
+			source: event.country,
 		});
 	}
 

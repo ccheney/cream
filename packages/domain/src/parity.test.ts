@@ -453,7 +453,7 @@ describe("validateDataConsistency", () => {
 
 	test("warns about provider mismatch", () => {
 		const historical: DataSourceMetadata = {
-			provider: "fmp",
+			provider: "polygon",
 			feedType: "historical",
 			adjusted: true,
 			startDate: "2025-01-01T00:00:00Z",

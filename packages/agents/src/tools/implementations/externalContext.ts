@@ -99,7 +99,7 @@ export async function extractNewsContext(
 		// Fetch news from Alpaca
 		const newsItems = await client.getNews(symbols, limit);
 
-		// Transform Alpaca news to FMPNewsArticle format expected by pipeline
+		// Transform Alpaca news to format expected by pipeline
 		const articles = newsItems.map((item) => ({
 			symbol: item.symbols.join(","),
 			publishedDate: item.created_at,

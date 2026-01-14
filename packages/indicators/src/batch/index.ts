@@ -27,26 +27,6 @@ export {
 	type PriceProvider,
 } from "./corporate-actions-batch.js";
 export {
-	type BatchJobResult,
-	// Calculation functions (exported for testing)
-	calculateAccrualsRatio,
-	calculateAssetGrowth,
-	calculateBeneishMScore,
-	calculateCashFlowQuality,
-	calculateGrossProfitability,
-	type FMPBalanceSheet,
-	type FMPCashFlowStatement,
-	type FMPCompanyProfile,
-	type FMPIncomeStatement,
-	type FMPKeyMetrics,
-	// Batch job
-	FundamentalsBatchJob,
-	type FundamentalsBatchJobConfig,
-	// FMP client interface
-	type FundamentalsFMPClient,
-} from "./fundamentals-batch.js";
-
-export {
 	// Types
 	type AggregatedSentiment,
 	// Calculation functions (exported for testing)
@@ -82,3 +62,4 @@ export {
 	ShortInterestBatchJob,
 	type ShortInterestBatchJobConfig,
 } from "./short-interest-batch.js";
+export type { BatchJobResult } from "./types.js";

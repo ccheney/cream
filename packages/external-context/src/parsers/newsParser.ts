@@ -1,10 +1,10 @@
 /**
  * News Parser
  *
- * Parses FMP news API responses into normalized format.
+ * Parses news articles into normalized format.
  */
 
-import type { FMPNewsArticle, ParsedNews } from "../types.js";
+import type { NewsArticle, ParsedNews } from "../types.js";
 
 /**
  * News parser configuration
@@ -22,10 +22,10 @@ const DEFAULT_CONFIG: Required<NewsParserConfig> = {
 };
 
 /**
- * Parse FMP news articles into normalized format
+ * Parse news articles into normalized format
  */
 export function parseNewsArticles(
-	articles: FMPNewsArticle[],
+	articles: NewsArticle[],
 	config: NewsParserConfig = {}
 ): ParsedNews[] {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
@@ -42,10 +42,10 @@ export function parseNewsArticles(
 }
 
 /**
- * Parse a single FMP news article
+ * Parse a single news article
  */
 export function parseNewsArticle(
-	article: FMPNewsArticle,
+	article: NewsArticle,
 	config: Required<NewsParserConfig>
 ): ParsedNews | null {
 	// Validate required fields
@@ -71,7 +71,7 @@ export function parseNewsArticle(
 		return null;
 	}
 
-	// Extract symbols (FMP may provide as comma-separated or single)
+	// Extract symbols (may be comma-separated or single)
 	const symbols = article.symbol
 		? article.symbol.split(",").map((s) => s.trim().toUpperCase())
 		: undefined;
