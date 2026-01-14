@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Quote(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbol", "bid", "ask", "bid_size", "ask_size", "last", "last_size", "volume", "timestamp")
     SYMBOL_FIELD_NUMBER: _ClassVar[int]
     BID_FIELD_NUMBER: _ClassVar[int]
     ASK_FIELD_NUMBER: _ClassVar[int]
@@ -33,7 +33,7 @@ class Quote(_message.Message):
     def __init__(self, symbol: _Optional[str] = ..., bid: _Optional[float] = ..., ask: _Optional[float] = ..., bid_size: _Optional[int] = ..., ask_size: _Optional[int] = ..., last: _Optional[float] = ..., last_size: _Optional[int] = ..., volume: _Optional[int] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Bar(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbol", "timestamp", "timeframe_minutes", "open", "high", "low", "close", "volume", "vwap", "trade_count")
     SYMBOL_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     TIMEFRAME_MINUTES_FIELD_NUMBER: _ClassVar[int]
@@ -57,7 +57,7 @@ class Bar(_message.Message):
     def __init__(self, symbol: _Optional[str] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., timeframe_minutes: _Optional[int] = ..., open: _Optional[float] = ..., high: _Optional[float] = ..., low: _Optional[float] = ..., close: _Optional[float] = ..., volume: _Optional[int] = ..., vwap: _Optional[float] = ..., trade_count: _Optional[int] = ...) -> None: ...
 
 class SymbolSnapshot(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbol", "quote", "bars", "market_status", "day_high", "day_low", "prev_close", "open", "as_of")
     SYMBOL_FIELD_NUMBER: _ClassVar[int]
     QUOTE_FIELD_NUMBER: _ClassVar[int]
     BARS_FIELD_NUMBER: _ClassVar[int]
@@ -79,7 +79,7 @@ class SymbolSnapshot(_message.Message):
     def __init__(self, symbol: _Optional[str] = ..., quote: _Optional[_Union[Quote, _Mapping]] = ..., bars: _Optional[_Iterable[_Union[Bar, _Mapping]]] = ..., market_status: _Optional[_Union[_common_pb2.MarketStatus, str]] = ..., day_high: _Optional[float] = ..., day_low: _Optional[float] = ..., prev_close: _Optional[float] = ..., open: _Optional[float] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class MarketSnapshot(_message.Message):
-    __slots__ = ()
+    __slots__ = ("environment", "as_of", "market_status", "regime", "symbols")
     ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
     AS_OF_FIELD_NUMBER: _ClassVar[int]
     MARKET_STATUS_FIELD_NUMBER: _ClassVar[int]
@@ -93,7 +93,7 @@ class MarketSnapshot(_message.Message):
     def __init__(self, environment: _Optional[_Union[_common_pb2.Environment, str]] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., market_status: _Optional[_Union[_common_pb2.MarketStatus, str]] = ..., regime: _Optional[_Union[_common_pb2.Regime, str]] = ..., symbols: _Optional[_Iterable[_Union[SymbolSnapshot, _Mapping]]] = ...) -> None: ...
 
 class OptionQuote(_message.Message):
-    __slots__ = ()
+    __slots__ = ("contract", "quote", "implied_volatility", "delta", "gamma", "theta", "vega", "rho", "open_interest")
     CONTRACT_FIELD_NUMBER: _ClassVar[int]
     QUOTE_FIELD_NUMBER: _ClassVar[int]
     IMPLIED_VOLATILITY_FIELD_NUMBER: _ClassVar[int]
@@ -115,7 +115,7 @@ class OptionQuote(_message.Message):
     def __init__(self, contract: _Optional[_Union[_common_pb2.OptionContract, _Mapping]] = ..., quote: _Optional[_Union[Quote, _Mapping]] = ..., implied_volatility: _Optional[float] = ..., delta: _Optional[float] = ..., gamma: _Optional[float] = ..., theta: _Optional[float] = ..., vega: _Optional[float] = ..., rho: _Optional[float] = ..., open_interest: _Optional[int] = ...) -> None: ...
 
 class OptionChain(_message.Message):
-    __slots__ = ()
+    __slots__ = ("underlying", "underlying_price", "options", "as_of")
     UNDERLYING_FIELD_NUMBER: _ClassVar[int]
     UNDERLYING_PRICE_FIELD_NUMBER: _ClassVar[int]
     OPTIONS_FIELD_NUMBER: _ClassVar[int]
@@ -127,7 +127,7 @@ class OptionChain(_message.Message):
     def __init__(self, underlying: _Optional[str] = ..., underlying_price: _Optional[float] = ..., options: _Optional[_Iterable[_Union[OptionQuote, _Mapping]]] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class SubscribeMarketDataRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbols", "include_options", "bar_timeframes")
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_OPTIONS_FIELD_NUMBER: _ClassVar[int]
     BAR_TIMEFRAMES_FIELD_NUMBER: _ClassVar[int]
@@ -137,7 +137,7 @@ class SubscribeMarketDataRequest(_message.Message):
     def __init__(self, symbols: _Optional[_Iterable[str]] = ..., include_options: _Optional[bool] = ..., bar_timeframes: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class SubscribeMarketDataResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("quote", "bar", "option_quote", "snapshot")
     QUOTE_FIELD_NUMBER: _ClassVar[int]
     BAR_FIELD_NUMBER: _ClassVar[int]
     OPTION_QUOTE_FIELD_NUMBER: _ClassVar[int]
@@ -149,7 +149,7 @@ class SubscribeMarketDataResponse(_message.Message):
     def __init__(self, quote: _Optional[_Union[Quote, _Mapping]] = ..., bar: _Optional[_Union[Bar, _Mapping]] = ..., option_quote: _Optional[_Union[OptionQuote, _Mapping]] = ..., snapshot: _Optional[_Union[SymbolSnapshot, _Mapping]] = ...) -> None: ...
 
 class GetSnapshotRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbols", "include_bars", "bar_timeframes")
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_BARS_FIELD_NUMBER: _ClassVar[int]
     BAR_TIMEFRAMES_FIELD_NUMBER: _ClassVar[int]
@@ -159,13 +159,13 @@ class GetSnapshotRequest(_message.Message):
     def __init__(self, symbols: _Optional[_Iterable[str]] = ..., include_bars: _Optional[bool] = ..., bar_timeframes: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class GetSnapshotResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("snapshot",)
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     snapshot: MarketSnapshot
     def __init__(self, snapshot: _Optional[_Union[MarketSnapshot, _Mapping]] = ...) -> None: ...
 
 class GetOptionChainRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("underlying", "expirations", "min_strike", "max_strike")
     UNDERLYING_FIELD_NUMBER: _ClassVar[int]
     EXPIRATIONS_FIELD_NUMBER: _ClassVar[int]
     MIN_STRIKE_FIELD_NUMBER: _ClassVar[int]
@@ -177,7 +177,7 @@ class GetOptionChainRequest(_message.Message):
     def __init__(self, underlying: _Optional[str] = ..., expirations: _Optional[_Iterable[str]] = ..., min_strike: _Optional[float] = ..., max_strike: _Optional[float] = ...) -> None: ...
 
 class GetOptionChainResponse(_message.Message):
-    __slots__ = ()
+    __slots__ = ("chain",)
     CHAIN_FIELD_NUMBER: _ClassVar[int]
     chain: OptionChain
     def __init__(self, chain: _Optional[_Union[OptionChain, _Mapping]] = ...) -> None: ...

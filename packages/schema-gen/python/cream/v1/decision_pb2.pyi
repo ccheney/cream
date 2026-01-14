@@ -12,7 +12,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class OrderPlan(_message.Message):
-    __slots__ = ()
+    __slots__ = ("entry_order_type", "entry_limit_price", "exit_order_type", "time_in_force", "execution_tactic", "execution_params")
     ENTRY_ORDER_TYPE_FIELD_NUMBER: _ClassVar[int]
     ENTRY_LIMIT_PRICE_FIELD_NUMBER: _ClassVar[int]
     EXIT_ORDER_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -28,7 +28,7 @@ class OrderPlan(_message.Message):
     def __init__(self, entry_order_type: _Optional[_Union[_common_pb2.OrderType, str]] = ..., entry_limit_price: _Optional[float] = ..., exit_order_type: _Optional[_Union[_common_pb2.OrderType, str]] = ..., time_in_force: _Optional[_Union[_common_pb2.TimeInForce, str]] = ..., execution_tactic: _Optional[str] = ..., execution_params: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class References(_message.Message):
-    __slots__ = ()
+    __slots__ = ("used_indicators", "memory_case_ids", "event_ids")
     USED_INDICATORS_FIELD_NUMBER: _ClassVar[int]
     MEMORY_CASE_IDS_FIELD_NUMBER: _ClassVar[int]
     EVENT_IDS_FIELD_NUMBER: _ClassVar[int]
@@ -38,7 +38,7 @@ class References(_message.Message):
     def __init__(self, used_indicators: _Optional[_Iterable[str]] = ..., memory_case_ids: _Optional[_Iterable[str]] = ..., event_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Decision(_message.Message):
-    __slots__ = ()
+    __slots__ = ("instrument", "action", "size", "order_plan", "risk_levels", "strategy_family", "rationale", "confidence", "references")
     INSTRUMENT_FIELD_NUMBER: _ClassVar[int]
     ACTION_FIELD_NUMBER: _ClassVar[int]
     SIZE_FIELD_NUMBER: _ClassVar[int]
@@ -60,7 +60,7 @@ class Decision(_message.Message):
     def __init__(self, instrument: _Optional[_Union[_common_pb2.Instrument, _Mapping]] = ..., action: _Optional[_Union[_common_pb2.Action, str]] = ..., size: _Optional[_Union[_common_pb2.Size, _Mapping]] = ..., order_plan: _Optional[_Union[OrderPlan, _Mapping]] = ..., risk_levels: _Optional[_Union[_common_pb2.RiskLevels, _Mapping]] = ..., strategy_family: _Optional[_Union[_common_pb2.StrategyFamily, str]] = ..., rationale: _Optional[str] = ..., confidence: _Optional[float] = ..., references: _Optional[_Union[References, _Mapping]] = ...) -> None: ...
 
 class DecisionPlan(_message.Message):
-    __slots__ = ()
+    __slots__ = ("cycle_id", "as_of_timestamp", "environment", "decisions", "portfolio_notes")
     CYCLE_ID_FIELD_NUMBER: _ClassVar[int]
     AS_OF_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
@@ -74,7 +74,7 @@ class DecisionPlan(_message.Message):
     def __init__(self, cycle_id: _Optional[str] = ..., as_of_timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., environment: _Optional[_Union[_common_pb2.Environment, str]] = ..., decisions: _Optional[_Iterable[_Union[Decision, _Mapping]]] = ..., portfolio_notes: _Optional[str] = ...) -> None: ...
 
 class RiskValidationResult(_message.Message):
-    __slots__ = ()
+    __slots__ = ("valid", "errors", "warnings", "risk_reward_ratio")
     VALID_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]
     WARNINGS_FIELD_NUMBER: _ClassVar[int]
@@ -86,7 +86,7 @@ class RiskValidationResult(_message.Message):
     def __init__(self, valid: _Optional[bool] = ..., errors: _Optional[_Iterable[str]] = ..., warnings: _Optional[_Iterable[str]] = ..., risk_reward_ratio: _Optional[float] = ...) -> None: ...
 
 class DecisionPlanValidationResult(_message.Message):
-    __slots__ = ()
+    __slots__ = ("success", "decision_plan", "errors", "warnings")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     DECISION_PLAN_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]

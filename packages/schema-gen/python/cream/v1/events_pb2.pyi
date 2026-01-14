@@ -79,7 +79,7 @@ SENTIMENT_BEARISH: Sentiment
 SENTIMENT_NEUTRAL: Sentiment
 
 class EarningsEventPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("symbol", "quarter", "year", "eps_actual", "eps_expected", "eps_surprise_pct", "revenue_actual", "revenue_expected", "revenue_surprise_pct", "guidance_summary", "transcript_available")
     SYMBOL_FIELD_NUMBER: _ClassVar[int]
     QUARTER_FIELD_NUMBER: _ClassVar[int]
     YEAR_FIELD_NUMBER: _ClassVar[int]
@@ -105,7 +105,7 @@ class EarningsEventPayload(_message.Message):
     def __init__(self, symbol: _Optional[str] = ..., quarter: _Optional[str] = ..., year: _Optional[int] = ..., eps_actual: _Optional[float] = ..., eps_expected: _Optional[float] = ..., eps_surprise_pct: _Optional[float] = ..., revenue_actual: _Optional[float] = ..., revenue_expected: _Optional[float] = ..., revenue_surprise_pct: _Optional[float] = ..., guidance_summary: _Optional[str] = ..., transcript_available: _Optional[bool] = ...) -> None: ...
 
 class MacroEventPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("indicator_name", "value", "previous_value", "expected_value", "surprise_pct", "unit", "country", "period")
     INDICATOR_NAME_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
     PREVIOUS_VALUE_FIELD_NUMBER: _ClassVar[int]
@@ -125,7 +125,7 @@ class MacroEventPayload(_message.Message):
     def __init__(self, indicator_name: _Optional[str] = ..., value: _Optional[float] = ..., previous_value: _Optional[float] = ..., expected_value: _Optional[float] = ..., surprise_pct: _Optional[float] = ..., unit: _Optional[str] = ..., country: _Optional[str] = ..., period: _Optional[str] = ...) -> None: ...
 
 class NewsEventPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("headline", "body", "source", "url", "entities", "key_insights")
     HEADLINE_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
@@ -141,7 +141,7 @@ class NewsEventPayload(_message.Message):
     def __init__(self, headline: _Optional[str] = ..., body: _Optional[str] = ..., source: _Optional[str] = ..., url: _Optional[str] = ..., entities: _Optional[_Iterable[_Union[ExtractedEntity, _Mapping]]] = ..., key_insights: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ExtractedEntity(_message.Message):
-    __slots__ = ()
+    __slots__ = ("name", "entity_type", "ticker")
     NAME_FIELD_NUMBER: _ClassVar[int]
     ENTITY_TYPE_FIELD_NUMBER: _ClassVar[int]
     TICKER_FIELD_NUMBER: _ClassVar[int]
@@ -151,7 +151,7 @@ class ExtractedEntity(_message.Message):
     def __init__(self, name: _Optional[str] = ..., entity_type: _Optional[str] = ..., ticker: _Optional[str] = ...) -> None: ...
 
 class SentimentEventPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("platform", "mention_count", "average_volume", "volume_zscore", "aggregate_sentiment", "window_minutes")
     PLATFORM_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
     AVERAGE_VOLUME_FIELD_NUMBER: _ClassVar[int]
@@ -167,7 +167,7 @@ class SentimentEventPayload(_message.Message):
     def __init__(self, platform: _Optional[str] = ..., mention_count: _Optional[int] = ..., average_volume: _Optional[int] = ..., volume_zscore: _Optional[float] = ..., aggregate_sentiment: _Optional[_Union[Sentiment, str]] = ..., window_minutes: _Optional[int] = ...) -> None: ...
 
 class MergerAcquisitionPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("transaction_type", "acquirer_symbol", "target_symbol", "deal_value", "currency", "expected_close_date", "status")
     TRANSACTION_TYPE_FIELD_NUMBER: _ClassVar[int]
     ACQUIRER_SYMBOL_FIELD_NUMBER: _ClassVar[int]
     TARGET_SYMBOL_FIELD_NUMBER: _ClassVar[int]
@@ -185,7 +185,7 @@ class MergerAcquisitionPayload(_message.Message):
     def __init__(self, transaction_type: _Optional[str] = ..., acquirer_symbol: _Optional[str] = ..., target_symbol: _Optional[str] = ..., deal_value: _Optional[float] = ..., currency: _Optional[str] = ..., expected_close_date: _Optional[str] = ..., status: _Optional[str] = ...) -> None: ...
 
 class AnalystRatingPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("firm", "analyst_name", "previous_rating", "new_rating", "previous_target", "new_target", "action_type")
     FIRM_FIELD_NUMBER: _ClassVar[int]
     ANALYST_NAME_FIELD_NUMBER: _ClassVar[int]
     PREVIOUS_RATING_FIELD_NUMBER: _ClassVar[int]
@@ -203,7 +203,7 @@ class AnalystRatingPayload(_message.Message):
     def __init__(self, firm: _Optional[str] = ..., analyst_name: _Optional[str] = ..., previous_rating: _Optional[str] = ..., new_rating: _Optional[str] = ..., previous_target: _Optional[float] = ..., new_target: _Optional[float] = ..., action_type: _Optional[str] = ...) -> None: ...
 
 class RegulatoryPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("regulatory_body", "action_type", "subject", "decision", "next_steps")
     REGULATORY_BODY_FIELD_NUMBER: _ClassVar[int]
     ACTION_TYPE_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_FIELD_NUMBER: _ClassVar[int]
@@ -217,7 +217,7 @@ class RegulatoryPayload(_message.Message):
     def __init__(self, regulatory_body: _Optional[str] = ..., action_type: _Optional[str] = ..., subject: _Optional[str] = ..., decision: _Optional[str] = ..., next_steps: _Optional[str] = ...) -> None: ...
 
 class DividendPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("amount", "currency", "ex_date", "record_date", "payment_date", "dividend_type", "yoy_change_pct")
     AMOUNT_FIELD_NUMBER: _ClassVar[int]
     CURRENCY_FIELD_NUMBER: _ClassVar[int]
     EX_DATE_FIELD_NUMBER: _ClassVar[int]
@@ -235,7 +235,7 @@ class DividendPayload(_message.Message):
     def __init__(self, amount: _Optional[float] = ..., currency: _Optional[str] = ..., ex_date: _Optional[str] = ..., record_date: _Optional[str] = ..., payment_date: _Optional[str] = ..., dividend_type: _Optional[str] = ..., yoy_change_pct: _Optional[float] = ...) -> None: ...
 
 class SplitPayload(_message.Message):
-    __slots__ = ()
+    __slots__ = ("split_from", "split_to", "effective_date", "announcement_date")
     SPLIT_FROM_FIELD_NUMBER: _ClassVar[int]
     SPLIT_TO_FIELD_NUMBER: _ClassVar[int]
     EFFECTIVE_DATE_FIELD_NUMBER: _ClassVar[int]
@@ -247,7 +247,7 @@ class SplitPayload(_message.Message):
     def __init__(self, split_from: _Optional[int] = ..., split_to: _Optional[int] = ..., effective_date: _Optional[str] = ..., announcement_date: _Optional[str] = ...) -> None: ...
 
 class ExternalEvent(_message.Message):
-    __slots__ = ()
+    __slots__ = ("event_id", "event_type", "event_time", "earnings", "macro", "news", "sentiment_spike", "merger_acquisition", "analyst_rating", "regulatory", "dividend", "split", "generic_payload", "related_instrument_ids", "source", "headline", "sentiment_score", "importance_score", "surprise_score", "confidence", "processed_at", "original_content")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     EVENT_TIME_FIELD_NUMBER: _ClassVar[int]
@@ -295,7 +295,7 @@ class ExternalEvent(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., event_type: _Optional[_Union[EventType, str]] = ..., event_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., earnings: _Optional[_Union[EarningsEventPayload, _Mapping]] = ..., macro: _Optional[_Union[MacroEventPayload, _Mapping]] = ..., news: _Optional[_Union[NewsEventPayload, _Mapping]] = ..., sentiment_spike: _Optional[_Union[SentimentEventPayload, _Mapping]] = ..., merger_acquisition: _Optional[_Union[MergerAcquisitionPayload, _Mapping]] = ..., analyst_rating: _Optional[_Union[AnalystRatingPayload, _Mapping]] = ..., regulatory: _Optional[_Union[RegulatoryPayload, _Mapping]] = ..., dividend: _Optional[_Union[DividendPayload, _Mapping]] = ..., split: _Optional[_Union[SplitPayload, _Mapping]] = ..., generic_payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., related_instrument_ids: _Optional[_Iterable[str]] = ..., source: _Optional[_Union[DataSource, str]] = ..., headline: _Optional[str] = ..., sentiment_score: _Optional[float] = ..., importance_score: _Optional[float] = ..., surprise_score: _Optional[float] = ..., confidence: _Optional[float] = ..., processed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., original_content: _Optional[str] = ...) -> None: ...
 
 class ExternalEventList(_message.Message):
-    __slots__ = ()
+    __slots__ = ("events", "total_count", "next_cursor")
     EVENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     NEXT_CURSOR_FIELD_NUMBER: _ClassVar[int]
@@ -305,7 +305,7 @@ class ExternalEventList(_message.Message):
     def __init__(self, events: _Optional[_Iterable[_Union[ExternalEvent, _Mapping]]] = ..., total_count: _Optional[int] = ..., next_cursor: _Optional[str] = ...) -> None: ...
 
 class EventQueryRequest(_message.Message):
-    __slots__ = ()
+    __slots__ = ("event_types", "instrument_ids", "start_time", "end_time", "limit", "cursor", "min_importance")
     EVENT_TYPES_FIELD_NUMBER: _ClassVar[int]
     INSTRUMENT_IDS_FIELD_NUMBER: _ClassVar[int]
     START_TIME_FIELD_NUMBER: _ClassVar[int]

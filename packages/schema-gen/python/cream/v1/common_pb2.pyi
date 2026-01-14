@@ -153,7 +153,7 @@ MARKET_STATUS_AFTER_HOURS: MarketStatus
 MARKET_STATUS_CLOSED: MarketStatus
 
 class OptionContract(_message.Message):
-    __slots__ = ()
+    __slots__ = ("underlying", "expiration", "strike", "option_type")
     UNDERLYING_FIELD_NUMBER: _ClassVar[int]
     EXPIRATION_FIELD_NUMBER: _ClassVar[int]
     STRIKE_FIELD_NUMBER: _ClassVar[int]
@@ -165,7 +165,7 @@ class OptionContract(_message.Message):
     def __init__(self, underlying: _Optional[str] = ..., expiration: _Optional[str] = ..., strike: _Optional[float] = ..., option_type: _Optional[_Union[OptionType, str]] = ...) -> None: ...
 
 class Instrument(_message.Message):
-    __slots__ = ()
+    __slots__ = ("instrument_id", "instrument_type", "option_contract")
     INSTRUMENT_ID_FIELD_NUMBER: _ClassVar[int]
     INSTRUMENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     OPTION_CONTRACT_FIELD_NUMBER: _ClassVar[int]
@@ -175,7 +175,7 @@ class Instrument(_message.Message):
     def __init__(self, instrument_id: _Optional[str] = ..., instrument_type: _Optional[_Union[InstrumentType, str]] = ..., option_contract: _Optional[_Union[OptionContract, _Mapping]] = ...) -> None: ...
 
 class Size(_message.Message):
-    __slots__ = ()
+    __slots__ = ("quantity", "unit", "target_position_quantity")
     QUANTITY_FIELD_NUMBER: _ClassVar[int]
     UNIT_FIELD_NUMBER: _ClassVar[int]
     TARGET_POSITION_QUANTITY_FIELD_NUMBER: _ClassVar[int]
@@ -185,7 +185,7 @@ class Size(_message.Message):
     def __init__(self, quantity: _Optional[int] = ..., unit: _Optional[_Union[SizeUnit, str]] = ..., target_position_quantity: _Optional[int] = ...) -> None: ...
 
 class RiskLevels(_message.Message):
-    __slots__ = ()
+    __slots__ = ("stop_loss_level", "take_profit_level", "denomination")
     STOP_LOSS_LEVEL_FIELD_NUMBER: _ClassVar[int]
     TAKE_PROFIT_LEVEL_FIELD_NUMBER: _ClassVar[int]
     DENOMINATION_FIELD_NUMBER: _ClassVar[int]

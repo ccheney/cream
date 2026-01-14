@@ -7,24 +7,17 @@
 // @generated from file cream/v1/events.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
-import type { JsonObject, Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv1";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv1";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import {
-	file_google_protobuf_struct,
-	file_google_protobuf_timestamp,
-} from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file cream/v1/events.proto.
  */
-export const file_cream_v1_events: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		"ChVjcmVhbS92MS9ldmVudHMucHJvdG8SCGNyZWFtLnYxIr8DChRFYXJuaW5nc0V2ZW50UGF5bG9hZBIOCgZzeW1ib2wYASABKAkSDwoHcXVhcnRlchgCIAEoCRIMCgR5ZWFyGAMgASgFEhcKCmVwc19hY3R1YWwYBCABKAFIAIgBARIZCgxlcHNfZXhwZWN0ZWQYBSABKAFIAYgBARIdChBlcHNfc3VycHJpc2VfcGN0GAYgASgBSAKIAQESGwoOcmV2ZW51ZV9hY3R1YWwYByABKAFIA4gBARIdChByZXZlbnVlX2V4cGVjdGVkGAggASgBSASIAQESIQoUcmV2ZW51ZV9zdXJwcmlzZV9wY3QYCSABKAFIBYgBARIdChBndWlkYW5jZV9zdW1tYXJ5GAogASgJSAaIAQESHAoUdHJhbnNjcmlwdF9hdmFpbGFibGUYCyABKAhCDQoLX2Vwc19hY3R1YWxCDwoNX2Vwc19leHBlY3RlZEITChFfZXBzX3N1cnByaXNlX3BjdEIRCg9fcmV2ZW51ZV9hY3R1YWxCEwoRX3JldmVudWVfZXhwZWN0ZWRCFwoVX3JldmVudWVfc3VycHJpc2VfcGN0QhMKEV9ndWlkYW5jZV9zdW1tYXJ5IoUCChFNYWNyb0V2ZW50UGF5bG9hZBIWCg5pbmRpY2F0b3JfbmFtZRgBIAEoCRINCgV2YWx1ZRgCIAEoARIbCg5wcmV2aW91c192YWx1ZRgDIAEoAUgAiAEBEhsKDmV4cGVjdGVkX3ZhbHVlGAQgASgBSAGIAQESGQoMc3VycHJpc2VfcGN0GAUgASgBSAKIAQESDAoEdW5pdBgGIAEoCRIPCgdjb3VudHJ5GAcgASgJEhMKBnBlcmlvZBgIIAEoCUgDiAEBQhEKD19wcmV2aW91c192YWx1ZUIRCg9fZXhwZWN0ZWRfdmFsdWVCDwoNX3N1cnByaXNlX3BjdEIJCgdfcGVyaW9kIp8BChBOZXdzRXZlbnRQYXlsb2FkEhAKCGhlYWRsaW5lGAEgASgJEgwKBGJvZHkYAiABKAkSDgoGc291cmNlGAMgASgJEhAKA3VybBgEIAEoCUgAiAEBEisKCGVudGl0aWVzGAUgAygLMhkuY3JlYW0udjEuRXh0cmFjdGVkRW50aXR5EhQKDGtleV9pbnNpZ2h0cxgGIAMoCUIGCgRfdXJsIlQKD0V4dHJhY3RlZEVudGl0eRIMCgRuYW1lGAEgASgJEhMKC2VudGl0eV90eXBlGAIgASgJEhMKBnRpY2tlchgDIAEoCUgAiAEBQgkKB190aWNrZXIi6AEKFVNlbnRpbWVudEV2ZW50UGF5bG9hZBIQCghwbGF0Zm9ybRgBIAEoCRIVCg1tZW50aW9uX2NvdW50GAIgASgDEhsKDmF2ZXJhZ2Vfdm9sdW1lGAMgASgDSACIAQESGgoNdm9sdW1lX3pzY29yZRgEIAEoAUgBiAEBEjAKE2FnZ3JlZ2F0ZV9zZW50aW1lbnQYBSABKA4yEy5jcmVhbS52MS5TZW50aW1lbnQSFgoOd2luZG93X21pbnV0ZXMYBiABKAVCEQoPX2F2ZXJhZ2Vfdm9sdW1lQhAKDl92b2x1bWVfenNjb3JlIpgCChhNZXJnZXJBY3F1aXNpdGlvblBheWxvYWQSGAoQdHJhbnNhY3Rpb25fdHlwZRgBIAEoCRIcCg9hY3F1aXJlcl9zeW1ib2wYAiABKAlIAIgBARIaCg10YXJnZXRfc3ltYm9sGAMgASgJSAGIAQESFwoKZGVhbF92YWx1ZRgEIAEoAUgCiAEBEhAKCGN1cnJlbmN5GAUgASgJEiAKE2V4cGVjdGVkX2Nsb3NlX2RhdGUYBiABKAlIA4gBARIOCgZzdGF0dXMYByABKAlCEgoQX2FjcXVpcmVyX3N5bWJvbEIQCg5fdGFyZ2V0X3N5bWJvbEINCgtfZGVhbF92YWx1ZUIWChRfZXhwZWN0ZWRfY2xvc2VfZGF0ZSKFAgoUQW5hbHlzdFJhdGluZ1BheWxvYWQSDAoEZmlybRgBIAEoCRIZCgxhbmFseXN0X25hbWUYAiABKAlIAIgBARIcCg9wcmV2aW91c19yYXRpbmcYAyABKAlIAYgBARISCgpuZXdfcmF0aW5nGAQgASgJEhwKD3ByZXZpb3VzX3RhcmdldBgFIAEoAUgCiAEBEhcKCm5ld190YXJnZXQYBiABKAFIA4gBARITCgthY3Rpb25fdHlwZRgHIAEoCUIPCg1fYW5hbHlzdF9uYW1lQhIKEF9wcmV2aW91c19yYXRpbmdCEgoQX3ByZXZpb3VzX3RhcmdldEINCgtfbmV3X3RhcmdldCKdAQoRUmVndWxhdG9yeVBheWxvYWQSFwoPcmVndWxhdG9yeV9ib2R5GAEgASgJEhMKC2FjdGlvbl90eXBlGAIgASgJEhQKB3N1YmplY3QYAyABKAlIAIgBARIQCghkZWNpc2lvbhgEIAEoCRIXCgpuZXh0X3N0ZXBzGAUgASgJSAGIAQFCCgoIX3N1YmplY3RCDQoLX25leHRfc3RlcHMi4QEKD0RpdmlkZW5kUGF5bG9hZBIOCgZhbW91bnQYASABKAESEAoIY3VycmVuY3kYAiABKAkSDwoHZXhfZGF0ZRgDIAEoCRIYCgtyZWNvcmRfZGF0ZRgEIAEoCUgAiAEBEhkKDHBheW1lbnRfZGF0ZRgFIAEoCUgBiAEBEhUKDWRpdmlkZW5kX3R5cGUYBiABKAkSGwoOeW95X2NoYW5nZV9wY3QYByABKAFIAogBAUIOCgxfcmVjb3JkX2RhdGVCDwoNX3BheW1lbnRfZGF0ZUIRCg9feW95X2NoYW5nZV9wY3QiggEKDFNwbGl0UGF5bG9hZBISCgpzcGxpdF9mcm9tGAEgASgFEhAKCHNwbGl0X3RvGAIgASgFEhYKDmVmZmVjdGl2ZV9kYXRlGAMgASgJEh4KEWFubm91bmNlbWVudF9kYXRlGAQgASgJSACIAQFCFAoSX2Fubm91bmNlbWVudF9kYXRlIpgICg1FeHRlcm5hbEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEicKCmV2ZW50X3R5cGUYAiABKA4yEy5jcmVhbS52MS5FdmVudFR5cGUSLgoKZXZlbnRfdGltZRgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoIZWFybmluZ3MYCiABKAsyHi5jcmVhbS52MS5FYXJuaW5nc0V2ZW50UGF5bG9hZEgAEiwKBW1hY3JvGAsgASgLMhsuY3JlYW0udjEuTWFjcm9FdmVudFBheWxvYWRIABIqCgRuZXdzGAwgASgLMhouY3JlYW0udjEuTmV3c0V2ZW50UGF5bG9hZEgAEjoKD3NlbnRpbWVudF9zcGlrZRgNIAEoCzIfLmNyZWFtLnYxLlNlbnRpbWVudEV2ZW50UGF5bG9hZEgAEkAKEm1lcmdlcl9hY3F1aXNpdGlvbhgOIAEoCzIiLmNyZWFtLnYxLk1lcmdlckFjcXVpc2l0aW9uUGF5bG9hZEgAEjgKDmFuYWx5c3RfcmF0aW5nGA8gASgLMh4uY3JlYW0udjEuQW5hbHlzdFJhdGluZ1BheWxvYWRIABIxCgpyZWd1bGF0b3J5GBAgASgLMhsuY3JlYW0udjEuUmVndWxhdG9yeVBheWxvYWRIABItCghkaXZpZGVuZBgRIAEoCzIZLmNyZWFtLnYxLkRpdmlkZW5kUGF5bG9hZEgAEicKBXNwbGl0GBIgASgLMhYuY3JlYW0udjEuU3BsaXRQYXlsb2FkSAASMgoPZ2VuZXJpY19wYXlsb2FkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdEgAEh4KFnJlbGF0ZWRfaW5zdHJ1bWVudF9pZHMYBCADKAkSJAoGc291cmNlGAUgASgOMhQuY3JlYW0udjEuRGF0YVNvdXJjZRIVCghoZWFkbGluZRgGIAEoCUgBiAEBEhwKD3NlbnRpbWVudF9zY29yZRgUIAEoAUgCiAEBEh0KEGltcG9ydGFuY2Vfc2NvcmUYFSABKAFIA4gBARIbCg5zdXJwcmlzZV9zY29yZRgWIAEoAUgEiAEBEhcKCmNvbmZpZGVuY2UYFyABKAFIBYgBARIwCgxwcm9jZXNzZWRfYXQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEh0KEG9yaWdpbmFsX2NvbnRlbnQYHyABKAlIBogBAUIJCgdwYXlsb2FkQgsKCV9oZWFkbGluZUISChBfc2VudGltZW50X3Njb3JlQhMKEV9pbXBvcnRhbmNlX3Njb3JlQhEKD19zdXJwcmlzZV9zY29yZUINCgtfY29uZmlkZW5jZUITChFfb3JpZ2luYWxfY29udGVudCJ7ChFFeHRlcm5hbEV2ZW50TGlzdBInCgZldmVudHMYASADKAsyFy5jcmVhbS52MS5FeHRlcm5hbEV2ZW50EhMKC3RvdGFsX2NvdW50GAIgASgFEhgKC25leHRfY3Vyc29yGAMgASgJSACIAQFCDgoMX25leHRfY3Vyc29yIrgCChFFdmVudFF1ZXJ5UmVxdWVzdBIoCgtldmVudF90eXBlcxgBIAMoDjITLmNyZWFtLnYxLkV2ZW50VHlwZRIWCg5pbnN0cnVtZW50X2lkcxgCIAMoCRIzCgpzdGFydF90aW1lGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjEKCGVuZF90aW1lGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEg0KBWxpbWl0GAUgASgFEhMKBmN1cnNvchgGIAEoCUgCiAEBEhsKDm1pbl9pbXBvcnRhbmNlGAcgASgBSAOIAQFCDQoLX3N0YXJ0X3RpbWVCCwoJX2VuZF90aW1lQgkKB19jdXJzb3JCEQoPX21pbl9pbXBvcnRhbmNlKscDCglFdmVudFR5cGUSGgoWRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEhcKE0VWRU5UX1RZUEVfRUFSTklOR1MQARIXChNFVkVOVF9UWVBFX0dVSURBTkNFEAISFAoQRVZFTlRfVFlQRV9NQUNSTxADEhMKD0VWRU5UX1RZUEVfTkVXUxAEEh4KGkVWRU5UX1RZUEVfU0VOVElNRU5UX1NQSUtFEAUSGQoVRVZFTlRfVFlQRV9TRUNfRklMSU5HEAYSFwoTRVZFTlRfVFlQRV9ESVZJREVORBAHEhQKEEVWRU5UX1RZUEVfU1BMSVQQCBIWChJFVkVOVF9UWVBFX01fQU5EX0EQCRIdChlFVkVOVF9UWVBFX0FOQUxZU1RfUkFUSU5HEAoSGQoVRVZFTlRfVFlQRV9DT05GRVJFTkNFEAsSHQoZRVZFTlRfVFlQRV9QUk9EVUNUX0xBVU5DSBAMEhkKFUVWRU5UX1RZUEVfUkVHVUxBVE9SWRANEh8KG0VWRU5UX1RZUEVfRVhFQ1VUSVZFX0NIQU5HRRAOEhQKEEVWRU5UX1RZUEVfTEVHQUwQDxIUChBFVkVOVF9UWVBFX09USEVSEBAq4AEKCkRhdGFTb3VyY2USGwoXREFUQV9TT1VSQ0VfVU5TUEVDSUZJRUQQABITCg9EQVRBX1NPVVJDRV9GTVAQARIdChlEQVRBX1NPVVJDRV9BTFBIQV9WQU5UQUdFEAISGgoWREFUQV9TT1VSQ0VfUkVTRVJWRURfMxADEhgKFERBVEFfU09VUkNFX0JFTlpJTkdBEAQSGQoVREFUQV9TT1VSQ0VfU0VDX0VER0FSEAUSFgoSREFUQV9TT1VSQ0VfU09DSUFMEAYSGAoUREFUQV9TT1VSQ0VfSU5URVJOQUwQByprCglTZW50aW1lbnQSGQoVU0VOVElNRU5UX1VOU1BFQ0lGSUVEEAASFQoRU0VOVElNRU5UX0JVTExJU0gQARIVChFTRU5USU1FTlRfQkVBUklTSBACEhUKEVNFTlRJTUVOVF9ORVVUUkFMEANClAEKDGNvbS5jcmVhbS52MUILRXZlbnRzUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM",
-		[file_google_protobuf_timestamp, file_google_protobuf_struct]
-	);
+export const file_cream_v1_events: GenFile = /*@__PURE__*/
+  fileDesc("ChVjcmVhbS92MS9ldmVudHMucHJvdG8SCGNyZWFtLnYxIr8DChRFYXJuaW5nc0V2ZW50UGF5bG9hZBIOCgZzeW1ib2wYASABKAkSDwoHcXVhcnRlchgCIAEoCRIMCgR5ZWFyGAMgASgFEhcKCmVwc19hY3R1YWwYBCABKAFIAIgBARIZCgxlcHNfZXhwZWN0ZWQYBSABKAFIAYgBARIdChBlcHNfc3VycHJpc2VfcGN0GAYgASgBSAKIAQESGwoOcmV2ZW51ZV9hY3R1YWwYByABKAFIA4gBARIdChByZXZlbnVlX2V4cGVjdGVkGAggASgBSASIAQESIQoUcmV2ZW51ZV9zdXJwcmlzZV9wY3QYCSABKAFIBYgBARIdChBndWlkYW5jZV9zdW1tYXJ5GAogASgJSAaIAQESHAoUdHJhbnNjcmlwdF9hdmFpbGFibGUYCyABKAhCDQoLX2Vwc19hY3R1YWxCDwoNX2Vwc19leHBlY3RlZEITChFfZXBzX3N1cnByaXNlX3BjdEIRCg9fcmV2ZW51ZV9hY3R1YWxCEwoRX3JldmVudWVfZXhwZWN0ZWRCFwoVX3JldmVudWVfc3VycHJpc2VfcGN0QhMKEV9ndWlkYW5jZV9zdW1tYXJ5IoUCChFNYWNyb0V2ZW50UGF5bG9hZBIWCg5pbmRpY2F0b3JfbmFtZRgBIAEoCRINCgV2YWx1ZRgCIAEoARIbCg5wcmV2aW91c192YWx1ZRgDIAEoAUgAiAEBEhsKDmV4cGVjdGVkX3ZhbHVlGAQgASgBSAGIAQESGQoMc3VycHJpc2VfcGN0GAUgASgBSAKIAQESDAoEdW5pdBgGIAEoCRIPCgdjb3VudHJ5GAcgASgJEhMKBnBlcmlvZBgIIAEoCUgDiAEBQhEKD19wcmV2aW91c192YWx1ZUIRCg9fZXhwZWN0ZWRfdmFsdWVCDwoNX3N1cnByaXNlX3BjdEIJCgdfcGVyaW9kIp8BChBOZXdzRXZlbnRQYXlsb2FkEhAKCGhlYWRsaW5lGAEgASgJEgwKBGJvZHkYAiABKAkSDgoGc291cmNlGAMgASgJEhAKA3VybBgEIAEoCUgAiAEBEisKCGVudGl0aWVzGAUgAygLMhkuY3JlYW0udjEuRXh0cmFjdGVkRW50aXR5EhQKDGtleV9pbnNpZ2h0cxgGIAMoCUIGCgRfdXJsIlQKD0V4dHJhY3RlZEVudGl0eRIMCgRuYW1lGAEgASgJEhMKC2VudGl0eV90eXBlGAIgASgJEhMKBnRpY2tlchgDIAEoCUgAiAEBQgkKB190aWNrZXIi6AEKFVNlbnRpbWVudEV2ZW50UGF5bG9hZBIQCghwbGF0Zm9ybRgBIAEoCRIVCg1tZW50aW9uX2NvdW50GAIgASgDEhsKDmF2ZXJhZ2Vfdm9sdW1lGAMgASgDSACIAQESGgoNdm9sdW1lX3pzY29yZRgEIAEoAUgBiAEBEjAKE2FnZ3JlZ2F0ZV9zZW50aW1lbnQYBSABKA4yEy5jcmVhbS52MS5TZW50aW1lbnQSFgoOd2luZG93X21pbnV0ZXMYBiABKAVCEQoPX2F2ZXJhZ2Vfdm9sdW1lQhAKDl92b2x1bWVfenNjb3JlIpgCChhNZXJnZXJBY3F1aXNpdGlvblBheWxvYWQSGAoQdHJhbnNhY3Rpb25fdHlwZRgBIAEoCRIcCg9hY3F1aXJlcl9zeW1ib2wYAiABKAlIAIgBARIaCg10YXJnZXRfc3ltYm9sGAMgASgJSAGIAQESFwoKZGVhbF92YWx1ZRgEIAEoAUgCiAEBEhAKCGN1cnJlbmN5GAUgASgJEiAKE2V4cGVjdGVkX2Nsb3NlX2RhdGUYBiABKAlIA4gBARIOCgZzdGF0dXMYByABKAlCEgoQX2FjcXVpcmVyX3N5bWJvbEIQCg5fdGFyZ2V0X3N5bWJvbEINCgtfZGVhbF92YWx1ZUIWChRfZXhwZWN0ZWRfY2xvc2VfZGF0ZSKFAgoUQW5hbHlzdFJhdGluZ1BheWxvYWQSDAoEZmlybRgBIAEoCRIZCgxhbmFseXN0X25hbWUYAiABKAlIAIgBARIcCg9wcmV2aW91c19yYXRpbmcYAyABKAlIAYgBARISCgpuZXdfcmF0aW5nGAQgASgJEhwKD3ByZXZpb3VzX3RhcmdldBgFIAEoAUgCiAEBEhcKCm5ld190YXJnZXQYBiABKAFIA4gBARITCgthY3Rpb25fdHlwZRgHIAEoCUIPCg1fYW5hbHlzdF9uYW1lQhIKEF9wcmV2aW91c19yYXRpbmdCEgoQX3ByZXZpb3VzX3RhcmdldEINCgtfbmV3X3RhcmdldCKdAQoRUmVndWxhdG9yeVBheWxvYWQSFwoPcmVndWxhdG9yeV9ib2R5GAEgASgJEhMKC2FjdGlvbl90eXBlGAIgASgJEhQKB3N1YmplY3QYAyABKAlIAIgBARIQCghkZWNpc2lvbhgEIAEoCRIXCgpuZXh0X3N0ZXBzGAUgASgJSAGIAQFCCgoIX3N1YmplY3RCDQoLX25leHRfc3RlcHMi4QEKD0RpdmlkZW5kUGF5bG9hZBIOCgZhbW91bnQYASABKAESEAoIY3VycmVuY3kYAiABKAkSDwoHZXhfZGF0ZRgDIAEoCRIYCgtyZWNvcmRfZGF0ZRgEIAEoCUgAiAEBEhkKDHBheW1lbnRfZGF0ZRgFIAEoCUgBiAEBEhUKDWRpdmlkZW5kX3R5cGUYBiABKAkSGwoOeW95X2NoYW5nZV9wY3QYByABKAFIAogBAUIOCgxfcmVjb3JkX2RhdGVCDwoNX3BheW1lbnRfZGF0ZUIRCg9feW95X2NoYW5nZV9wY3QiggEKDFNwbGl0UGF5bG9hZBISCgpzcGxpdF9mcm9tGAEgASgFEhAKCHNwbGl0X3RvGAIgASgFEhYKDmVmZmVjdGl2ZV9kYXRlGAMgASgJEh4KEWFubm91bmNlbWVudF9kYXRlGAQgASgJSACIAQFCFAoSX2Fubm91bmNlbWVudF9kYXRlIpgICg1FeHRlcm5hbEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEicKCmV2ZW50X3R5cGUYAiABKA4yEy5jcmVhbS52MS5FdmVudFR5cGUSLgoKZXZlbnRfdGltZRgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoIZWFybmluZ3MYCiABKAsyHi5jcmVhbS52MS5FYXJuaW5nc0V2ZW50UGF5bG9hZEgAEiwKBW1hY3JvGAsgASgLMhsuY3JlYW0udjEuTWFjcm9FdmVudFBheWxvYWRIABIqCgRuZXdzGAwgASgLMhouY3JlYW0udjEuTmV3c0V2ZW50UGF5bG9hZEgAEjoKD3NlbnRpbWVudF9zcGlrZRgNIAEoCzIfLmNyZWFtLnYxLlNlbnRpbWVudEV2ZW50UGF5bG9hZEgAEkAKEm1lcmdlcl9hY3F1aXNpdGlvbhgOIAEoCzIiLmNyZWFtLnYxLk1lcmdlckFjcXVpc2l0aW9uUGF5bG9hZEgAEjgKDmFuYWx5c3RfcmF0aW5nGA8gASgLMh4uY3JlYW0udjEuQW5hbHlzdFJhdGluZ1BheWxvYWRIABIxCgpyZWd1bGF0b3J5GBAgASgLMhsuY3JlYW0udjEuUmVndWxhdG9yeVBheWxvYWRIABItCghkaXZpZGVuZBgRIAEoCzIZLmNyZWFtLnYxLkRpdmlkZW5kUGF5bG9hZEgAEicKBXNwbGl0GBIgASgLMhYuY3JlYW0udjEuU3BsaXRQYXlsb2FkSAASMgoPZ2VuZXJpY19wYXlsb2FkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdEgAEh4KFnJlbGF0ZWRfaW5zdHJ1bWVudF9pZHMYBCADKAkSJAoGc291cmNlGAUgASgOMhQuY3JlYW0udjEuRGF0YVNvdXJjZRIVCghoZWFkbGluZRgGIAEoCUgBiAEBEhwKD3NlbnRpbWVudF9zY29yZRgUIAEoAUgCiAEBEh0KEGltcG9ydGFuY2Vfc2NvcmUYFSABKAFIA4gBARIbCg5zdXJwcmlzZV9zY29yZRgWIAEoAUgEiAEBEhcKCmNvbmZpZGVuY2UYFyABKAFIBYgBARIwCgxwcm9jZXNzZWRfYXQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEh0KEG9yaWdpbmFsX2NvbnRlbnQYHyABKAlIBogBAUIJCgdwYXlsb2FkQgsKCV9oZWFkbGluZUISChBfc2VudGltZW50X3Njb3JlQhMKEV9pbXBvcnRhbmNlX3Njb3JlQhEKD19zdXJwcmlzZV9zY29yZUINCgtfY29uZmlkZW5jZUITChFfb3JpZ2luYWxfY29udGVudCJ7ChFFeHRlcm5hbEV2ZW50TGlzdBInCgZldmVudHMYASADKAsyFy5jcmVhbS52MS5FeHRlcm5hbEV2ZW50EhMKC3RvdGFsX2NvdW50GAIgASgFEhgKC25leHRfY3Vyc29yGAMgASgJSACIAQFCDgoMX25leHRfY3Vyc29yIrgCChFFdmVudFF1ZXJ5UmVxdWVzdBIoCgtldmVudF90eXBlcxgBIAMoDjITLmNyZWFtLnYxLkV2ZW50VHlwZRIWCg5pbnN0cnVtZW50X2lkcxgCIAMoCRIzCgpzdGFydF90aW1lGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjEKCGVuZF90aW1lGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEg0KBWxpbWl0GAUgASgFEhMKBmN1cnNvchgGIAEoCUgCiAEBEhsKDm1pbl9pbXBvcnRhbmNlGAcgASgBSAOIAQFCDQoLX3N0YXJ0X3RpbWVCCwoJX2VuZF90aW1lQgkKB19jdXJzb3JCEQoPX21pbl9pbXBvcnRhbmNlKscDCglFdmVudFR5cGUSGgoWRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEhcKE0VWRU5UX1RZUEVfRUFSTklOR1MQARIXChNFVkVOVF9UWVBFX0dVSURBTkNFEAISFAoQRVZFTlRfVFlQRV9NQUNSTxADEhMKD0VWRU5UX1RZUEVfTkVXUxAEEh4KGkVWRU5UX1RZUEVfU0VOVElNRU5UX1NQSUtFEAUSGQoVRVZFTlRfVFlQRV9TRUNfRklMSU5HEAYSFwoTRVZFTlRfVFlQRV9ESVZJREVORBAHEhQKEEVWRU5UX1RZUEVfU1BMSVQQCBIWChJFVkVOVF9UWVBFX01fQU5EX0EQCRIdChlFVkVOVF9UWVBFX0FOQUxZU1RfUkFUSU5HEAoSGQoVRVZFTlRfVFlQRV9DT05GRVJFTkNFEAsSHQoZRVZFTlRfVFlQRV9QUk9EVUNUX0xBVU5DSBAMEhkKFUVWRU5UX1RZUEVfUkVHVUxBVE9SWRANEh8KG0VWRU5UX1RZUEVfRVhFQ1VUSVZFX0NIQU5HRRAOEhQKEEVWRU5UX1RZUEVfTEVHQUwQDxIUChBFVkVOVF9UWVBFX09USEVSEBAq4AEKCkRhdGFTb3VyY2USGwoXREFUQV9TT1VSQ0VfVU5TUEVDSUZJRUQQABITCg9EQVRBX1NPVVJDRV9GTVAQARIdChlEQVRBX1NPVVJDRV9BTFBIQV9WQU5UQUdFEAISGgoWREFUQV9TT1VSQ0VfUkVTRVJWRURfMxADEhgKFERBVEFfU09VUkNFX0JFTlpJTkdBEAQSGQoVREFUQV9TT1VSQ0VfU0VDX0VER0FSEAUSFgoSREFUQV9TT1VSQ0VfU09DSUFMEAYSGAoUREFUQV9TT1VSQ0VfSU5URVJOQUwQByprCglTZW50aW1lbnQSGQoVU0VOVElNRU5UX1VOU1BFQ0lGSUVEEAASFQoRU0VOVElNRU5UX0JVTExJU0gQARIVChFTRU5USU1FTlRfQkVBUklTSBACEhUKEVNFTlRJTUVOVF9ORVVUUkFMEANClAEKDGNvbS5jcmVhbS52MUILRXZlbnRzUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_struct]);
 
 /**
  * Earnings event payload
@@ -32,91 +25,90 @@ export const file_cream_v1_events: GenFile =
  * @generated from message cream.v1.EarningsEventPayload
  */
 export type EarningsEventPayload = Message<"cream.v1.EarningsEventPayload"> & {
-	/**
-	 * Symbol this earnings relates to
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * Symbol this earnings relates to
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Fiscal quarter (e.g., "Q1", "Q2")
-	 *
-	 * @generated from field: string quarter = 2;
-	 */
-	quarter: string;
+  /**
+   * Fiscal quarter (e.g., "Q1", "Q2")
+   *
+   * @generated from field: string quarter = 2;
+   */
+  quarter: string;
 
-	/**
-	 * Fiscal year
-	 *
-	 * @generated from field: int32 year = 3;
-	 */
-	year: number;
+  /**
+   * Fiscal year
+   *
+   * @generated from field: int32 year = 3;
+   */
+  year: number;
 
-	/**
-	 * Actual EPS reported
-	 *
-	 * @generated from field: optional double eps_actual = 4;
-	 */
-	epsActual?: number;
+  /**
+   * Actual EPS reported
+   *
+   * @generated from field: optional double eps_actual = 4;
+   */
+  epsActual?: number;
 
-	/**
-	 * Expected/consensus EPS
-	 *
-	 * @generated from field: optional double eps_expected = 5;
-	 */
-	epsExpected?: number;
+  /**
+   * Expected/consensus EPS
+   *
+   * @generated from field: optional double eps_expected = 5;
+   */
+  epsExpected?: number;
 
-	/**
-	 * EPS surprise percentage ((actual - expected) / expected * 100)
-	 *
-	 * @generated from field: optional double eps_surprise_pct = 6;
-	 */
-	epsSurprisePct?: number;
+  /**
+   * EPS surprise percentage ((actual - expected) / expected * 100)
+   *
+   * @generated from field: optional double eps_surprise_pct = 6;
+   */
+  epsSurprisePct?: number;
 
-	/**
-	 * Actual revenue reported (in dollars)
-	 *
-	 * @generated from field: optional double revenue_actual = 7;
-	 */
-	revenueActual?: number;
+  /**
+   * Actual revenue reported (in dollars)
+   *
+   * @generated from field: optional double revenue_actual = 7;
+   */
+  revenueActual?: number;
 
-	/**
-	 * Expected/consensus revenue
-	 *
-	 * @generated from field: optional double revenue_expected = 8;
-	 */
-	revenueExpected?: number;
+  /**
+   * Expected/consensus revenue
+   *
+   * @generated from field: optional double revenue_expected = 8;
+   */
+  revenueExpected?: number;
 
-	/**
-	 * Revenue surprise percentage
-	 *
-	 * @generated from field: optional double revenue_surprise_pct = 9;
-	 */
-	revenueSurprisePct?: number;
+  /**
+   * Revenue surprise percentage
+   *
+   * @generated from field: optional double revenue_surprise_pct = 9;
+   */
+  revenueSurprisePct?: number;
 
-	/**
-	 * Management guidance update
-	 *
-	 * @generated from field: optional string guidance_summary = 10;
-	 */
-	guidanceSummary?: string;
+  /**
+   * Management guidance update
+   *
+   * @generated from field: optional string guidance_summary = 10;
+   */
+  guidanceSummary?: string;
 
-	/**
-	 * Earnings call transcript available
-	 *
-	 * @generated from field: bool transcript_available = 11;
-	 */
-	transcriptAvailable: boolean;
+  /**
+   * Earnings call transcript available
+   *
+   * @generated from field: bool transcript_available = 11;
+   */
+  transcriptAvailable: boolean;
 };
 
 /**
  * Describes the message cream.v1.EarningsEventPayload.
  * Use `create(EarningsEventPayloadSchema)` to create a new message.
  */
-export const EarningsEventPayloadSchema: GenMessage<EarningsEventPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 0);
+export const EarningsEventPayloadSchema: GenMessage<EarningsEventPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 0);
 
 /**
  * Macro economic event payload
@@ -124,70 +116,69 @@ export const EarningsEventPayloadSchema: GenMessage<EarningsEventPayload> =
  * @generated from message cream.v1.MacroEventPayload
  */
 export type MacroEventPayload = Message<"cream.v1.MacroEventPayload"> & {
-	/**
-	 * Indicator name (e.g., "Non-Farm Payrolls", "CPI", "GDP")
-	 *
-	 * @generated from field: string indicator_name = 1;
-	 */
-	indicatorName: string;
+  /**
+   * Indicator name (e.g., "Non-Farm Payrolls", "CPI", "GDP")
+   *
+   * @generated from field: string indicator_name = 1;
+   */
+  indicatorName: string;
 
-	/**
-	 * Actual value released
-	 *
-	 * @generated from field: double value = 2;
-	 */
-	value: number;
+  /**
+   * Actual value released
+   *
+   * @generated from field: double value = 2;
+   */
+  value: number;
 
-	/**
-	 * Previous period value
-	 *
-	 * @generated from field: optional double previous_value = 3;
-	 */
-	previousValue?: number;
+  /**
+   * Previous period value
+   *
+   * @generated from field: optional double previous_value = 3;
+   */
+  previousValue?: number;
 
-	/**
-	 * Expected/consensus value
-	 *
-	 * @generated from field: optional double expected_value = 4;
-	 */
-	expectedValue?: number;
+  /**
+   * Expected/consensus value
+   *
+   * @generated from field: optional double expected_value = 4;
+   */
+  expectedValue?: number;
 
-	/**
-	 * Surprise percentage
-	 *
-	 * @generated from field: optional double surprise_pct = 5;
-	 */
-	surprisePct?: number;
+  /**
+   * Surprise percentage
+   *
+   * @generated from field: optional double surprise_pct = 5;
+   */
+  surprisePct?: number;
 
-	/**
-	 * Unit of measurement
-	 *
-	 * @generated from field: string unit = 6;
-	 */
-	unit: string;
+  /**
+   * Unit of measurement
+   *
+   * @generated from field: string unit = 6;
+   */
+  unit: string;
 
-	/**
-	 * Country (default: "US")
-	 *
-	 * @generated from field: string country = 7;
-	 */
-	country: string;
+  /**
+   * Country (default: "US")
+   *
+   * @generated from field: string country = 7;
+   */
+  country: string;
 
-	/**
-	 * Period this data covers
-	 *
-	 * @generated from field: optional string period = 8;
-	 */
-	period?: string;
+  /**
+   * Period this data covers
+   *
+   * @generated from field: optional string period = 8;
+   */
+  period?: string;
 };
 
 /**
  * Describes the message cream.v1.MacroEventPayload.
  * Use `create(MacroEventPayloadSchema)` to create a new message.
  */
-export const MacroEventPayloadSchema: GenMessage<MacroEventPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 1);
+export const MacroEventPayloadSchema: GenMessage<MacroEventPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 1);
 
 /**
  * News event payload
@@ -195,56 +186,55 @@ export const MacroEventPayloadSchema: GenMessage<MacroEventPayload> =
  * @generated from message cream.v1.NewsEventPayload
  */
 export type NewsEventPayload = Message<"cream.v1.NewsEventPayload"> & {
-	/**
-	 * Article headline
-	 *
-	 * @generated from field: string headline = 1;
-	 */
-	headline: string;
+  /**
+   * Article headline
+   *
+   * @generated from field: string headline = 1;
+   */
+  headline: string;
 
-	/**
-	 * Article body/summary
-	 *
-	 * @generated from field: string body = 2;
-	 */
-	body: string;
+  /**
+   * Article body/summary
+   *
+   * @generated from field: string body = 2;
+   */
+  body: string;
 
-	/**
-	 * Source publication
-	 *
-	 * @generated from field: string source = 3;
-	 */
-	source: string;
+  /**
+   * Source publication
+   *
+   * @generated from field: string source = 3;
+   */
+  source: string;
 
-	/**
-	 * URL to full article
-	 *
-	 * @generated from field: optional string url = 4;
-	 */
-	url?: string;
+  /**
+   * URL to full article
+   *
+   * @generated from field: optional string url = 4;
+   */
+  url?: string;
 
-	/**
-	 * Extracted entities (company names, people, products)
-	 *
-	 * @generated from field: repeated cream.v1.ExtractedEntity entities = 5;
-	 */
-	entities: ExtractedEntity[];
+  /**
+   * Extracted entities (company names, people, products)
+   *
+   * @generated from field: repeated cream.v1.ExtractedEntity entities = 5;
+   */
+  entities: ExtractedEntity[];
 
-	/**
-	 * LLM-extracted key insights
-	 *
-	 * @generated from field: repeated string key_insights = 6;
-	 */
-	keyInsights: string[];
+  /**
+   * LLM-extracted key insights
+   *
+   * @generated from field: repeated string key_insights = 6;
+   */
+  keyInsights: string[];
 };
 
 /**
  * Describes the message cream.v1.NewsEventPayload.
  * Use `create(NewsEventPayloadSchema)` to create a new message.
  */
-export const NewsEventPayloadSchema: GenMessage<NewsEventPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 2);
+export const NewsEventPayloadSchema: GenMessage<NewsEventPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 2);
 
 /**
  * Extracted entity from content
@@ -252,37 +242,36 @@ export const NewsEventPayloadSchema: GenMessage<NewsEventPayload> =
  * @generated from message cream.v1.ExtractedEntity
  */
 export type ExtractedEntity = Message<"cream.v1.ExtractedEntity"> & {
-	/**
-	 * Entity name as it appears
-	 *
-	 * @generated from field: string name = 1;
-	 */
-	name: string;
+  /**
+   * Entity name as it appears
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
 
-	/**
-	 * Entity type
-	 *
-	 * "company", "person", "product", "event", "location"
-	 *
-	 * @generated from field: string entity_type = 2;
-	 */
-	entityType: string;
+  /**
+   * Entity type
+   *
+   * "company", "person", "product", "event", "location"
+   *
+   * @generated from field: string entity_type = 2;
+   */
+  entityType: string;
 
-	/**
-	 * Resolved ticker symbol (if company)
-	 *
-	 * @generated from field: optional string ticker = 3;
-	 */
-	ticker?: string;
+  /**
+   * Resolved ticker symbol (if company)
+   *
+   * @generated from field: optional string ticker = 3;
+   */
+  ticker?: string;
 };
 
 /**
  * Describes the message cream.v1.ExtractedEntity.
  * Use `create(ExtractedEntitySchema)` to create a new message.
  */
-export const ExtractedEntitySchema: GenMessage<ExtractedEntity> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 3);
+export const ExtractedEntitySchema: GenMessage<ExtractedEntity> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 3);
 
 /**
  * Sentiment spike event payload
@@ -290,56 +279,55 @@ export const ExtractedEntitySchema: GenMessage<ExtractedEntity> =
  * @generated from message cream.v1.SentimentEventPayload
  */
 export type SentimentEventPayload = Message<"cream.v1.SentimentEventPayload"> & {
-	/**
-	 * Platform (Twitter/X, Reddit, StockTwits)
-	 *
-	 * @generated from field: string platform = 1;
-	 */
-	platform: string;
+  /**
+   * Platform (Twitter/X, Reddit, StockTwits)
+   *
+   * @generated from field: string platform = 1;
+   */
+  platform: string;
 
-	/**
-	 * Volume of mentions
-	 *
-	 * @generated from field: int64 mention_count = 2;
-	 */
-	mentionCount: bigint;
+  /**
+   * Volume of mentions
+   *
+   * @generated from field: int64 mention_count = 2;
+   */
+  mentionCount: bigint;
 
-	/**
-	 * Normal average volume
-	 *
-	 * @generated from field: optional int64 average_volume = 3;
-	 */
-	averageVolume?: bigint;
+  /**
+   * Normal average volume
+   *
+   * @generated from field: optional int64 average_volume = 3;
+   */
+  averageVolume?: bigint;
 
-	/**
-	 * Volume z-score
-	 *
-	 * @generated from field: optional double volume_zscore = 4;
-	 */
-	volumeZscore?: number;
+  /**
+   * Volume z-score
+   *
+   * @generated from field: optional double volume_zscore = 4;
+   */
+  volumeZscore?: number;
 
-	/**
-	 * Aggregate sentiment of mentions
-	 *
-	 * @generated from field: cream.v1.Sentiment aggregate_sentiment = 5;
-	 */
-	aggregateSentiment: Sentiment;
+  /**
+   * Aggregate sentiment of mentions
+   *
+   * @generated from field: cream.v1.Sentiment aggregate_sentiment = 5;
+   */
+  aggregateSentiment: Sentiment;
 
-	/**
-	 * Time window in minutes
-	 *
-	 * @generated from field: int32 window_minutes = 6;
-	 */
-	windowMinutes: number;
+  /**
+   * Time window in minutes
+   *
+   * @generated from field: int32 window_minutes = 6;
+   */
+  windowMinutes: number;
 };
 
 /**
  * Describes the message cream.v1.SentimentEventPayload.
  * Use `create(SentimentEventPayloadSchema)` to create a new message.
  */
-export const SentimentEventPayloadSchema: GenMessage<SentimentEventPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 4);
+export const SentimentEventPayloadSchema: GenMessage<SentimentEventPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 4);
 
 /**
  * Merger/acquisition event payload
@@ -347,63 +335,62 @@ export const SentimentEventPayloadSchema: GenMessage<SentimentEventPayload> =
  * @generated from message cream.v1.MergerAcquisitionPayload
  */
 export type MergerAcquisitionPayload = Message<"cream.v1.MergerAcquisitionPayload"> & {
-	/**
-	 * Type: "merger", "acquisition", "spinoff", "divestiture"
-	 *
-	 * @generated from field: string transaction_type = 1;
-	 */
-	transactionType: string;
+  /**
+   * Type: "merger", "acquisition", "spinoff", "divestiture"
+   *
+   * @generated from field: string transaction_type = 1;
+   */
+  transactionType: string;
 
-	/**
-	 * Acquirer symbol (if acquisition)
-	 *
-	 * @generated from field: optional string acquirer_symbol = 2;
-	 */
-	acquirerSymbol?: string;
+  /**
+   * Acquirer symbol (if acquisition)
+   *
+   * @generated from field: optional string acquirer_symbol = 2;
+   */
+  acquirerSymbol?: string;
 
-	/**
-	 * Target symbol (if acquisition)
-	 *
-	 * @generated from field: optional string target_symbol = 3;
-	 */
-	targetSymbol?: string;
+  /**
+   * Target symbol (if acquisition)
+   *
+   * @generated from field: optional string target_symbol = 3;
+   */
+  targetSymbol?: string;
 
-	/**
-	 * Deal value (if disclosed)
-	 *
-	 * @generated from field: optional double deal_value = 4;
-	 */
-	dealValue?: number;
+  /**
+   * Deal value (if disclosed)
+   *
+   * @generated from field: optional double deal_value = 4;
+   */
+  dealValue?: number;
 
-	/**
-	 * Currency of deal value
-	 *
-	 * @generated from field: string currency = 5;
-	 */
-	currency: string;
+  /**
+   * Currency of deal value
+   *
+   * @generated from field: string currency = 5;
+   */
+  currency: string;
 
-	/**
-	 * Expected close date
-	 *
-	 * @generated from field: optional string expected_close_date = 6;
-	 */
-	expectedCloseDate?: string;
+  /**
+   * Expected close date
+   *
+   * @generated from field: optional string expected_close_date = 6;
+   */
+  expectedCloseDate?: string;
 
-	/**
-	 * Deal status: "announced", "pending", "approved", "closed", "terminated"
-	 *
-	 * @generated from field: string status = 7;
-	 */
-	status: string;
+  /**
+   * Deal status: "announced", "pending", "approved", "closed", "terminated"
+   *
+   * @generated from field: string status = 7;
+   */
+  status: string;
 };
 
 /**
  * Describes the message cream.v1.MergerAcquisitionPayload.
  * Use `create(MergerAcquisitionPayloadSchema)` to create a new message.
  */
-export const MergerAcquisitionPayloadSchema: GenMessage<MergerAcquisitionPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 5);
+export const MergerAcquisitionPayloadSchema: GenMessage<MergerAcquisitionPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 5);
 
 /**
  * Analyst rating event payload
@@ -411,63 +398,62 @@ export const MergerAcquisitionPayloadSchema: GenMessage<MergerAcquisitionPayload
  * @generated from message cream.v1.AnalystRatingPayload
  */
 export type AnalystRatingPayload = Message<"cream.v1.AnalystRatingPayload"> & {
-	/**
-	 * Analyst firm name
-	 *
-	 * @generated from field: string firm = 1;
-	 */
-	firm: string;
+  /**
+   * Analyst firm name
+   *
+   * @generated from field: string firm = 1;
+   */
+  firm: string;
 
-	/**
-	 * Analyst name (if available)
-	 *
-	 * @generated from field: optional string analyst_name = 2;
-	 */
-	analystName?: string;
+  /**
+   * Analyst name (if available)
+   *
+   * @generated from field: optional string analyst_name = 2;
+   */
+  analystName?: string;
 
-	/**
-	 * Previous rating (if upgrade/downgrade)
-	 *
-	 * @generated from field: optional string previous_rating = 3;
-	 */
-	previousRating?: string;
+  /**
+   * Previous rating (if upgrade/downgrade)
+   *
+   * @generated from field: optional string previous_rating = 3;
+   */
+  previousRating?: string;
 
-	/**
-	 * New rating
-	 *
-	 * @generated from field: string new_rating = 4;
-	 */
-	newRating: string;
+  /**
+   * New rating
+   *
+   * @generated from field: string new_rating = 4;
+   */
+  newRating: string;
 
-	/**
-	 * Previous price target
-	 *
-	 * @generated from field: optional double previous_target = 5;
-	 */
-	previousTarget?: number;
+  /**
+   * Previous price target
+   *
+   * @generated from field: optional double previous_target = 5;
+   */
+  previousTarget?: number;
 
-	/**
-	 * New price target
-	 *
-	 * @generated from field: optional double new_target = 6;
-	 */
-	newTarget?: number;
+  /**
+   * New price target
+   *
+   * @generated from field: optional double new_target = 6;
+   */
+  newTarget?: number;
 
-	/**
-	 * Action type: "initiated", "upgrade", "downgrade", "reiterated"
-	 *
-	 * @generated from field: string action_type = 7;
-	 */
-	actionType: string;
+  /**
+   * Action type: "initiated", "upgrade", "downgrade", "reiterated"
+   *
+   * @generated from field: string action_type = 7;
+   */
+  actionType: string;
 };
 
 /**
  * Describes the message cream.v1.AnalystRatingPayload.
  * Use `create(AnalystRatingPayloadSchema)` to create a new message.
  */
-export const AnalystRatingPayloadSchema: GenMessage<AnalystRatingPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 6);
+export const AnalystRatingPayloadSchema: GenMessage<AnalystRatingPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 6);
 
 /**
  * Regulatory event payload
@@ -475,49 +461,48 @@ export const AnalystRatingPayloadSchema: GenMessage<AnalystRatingPayload> =
  * @generated from message cream.v1.RegulatoryPayload
  */
 export type RegulatoryPayload = Message<"cream.v1.RegulatoryPayload"> & {
-	/**
-	 * Regulatory body (FDA, SEC, FTC, DOJ, etc.)
-	 *
-	 * @generated from field: string regulatory_body = 1;
-	 */
-	regulatoryBody: string;
+  /**
+   * Regulatory body (FDA, SEC, FTC, DOJ, etc.)
+   *
+   * @generated from field: string regulatory_body = 1;
+   */
+  regulatoryBody: string;
 
-	/**
-	 * Action type (approval, rejection, investigation, settlement, etc.)
-	 *
-	 * @generated from field: string action_type = 2;
-	 */
-	actionType: string;
+  /**
+   * Action type (approval, rejection, investigation, settlement, etc.)
+   *
+   * @generated from field: string action_type = 2;
+   */
+  actionType: string;
 
-	/**
-	 * Product or matter name (if applicable)
-	 *
-	 * @generated from field: optional string subject = 3;
-	 */
-	subject?: string;
+  /**
+   * Product or matter name (if applicable)
+   *
+   * @generated from field: optional string subject = 3;
+   */
+  subject?: string;
 
-	/**
-	 * Decision or status
-	 *
-	 * @generated from field: string decision = 4;
-	 */
-	decision: string;
+  /**
+   * Decision or status
+   *
+   * @generated from field: string decision = 4;
+   */
+  decision: string;
 
-	/**
-	 * Next steps or timeline
-	 *
-	 * @generated from field: optional string next_steps = 5;
-	 */
-	nextSteps?: string;
+  /**
+   * Next steps or timeline
+   *
+   * @generated from field: optional string next_steps = 5;
+   */
+  nextSteps?: string;
 };
 
 /**
  * Describes the message cream.v1.RegulatoryPayload.
  * Use `create(RegulatoryPayloadSchema)` to create a new message.
  */
-export const RegulatoryPayloadSchema: GenMessage<RegulatoryPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 7);
+export const RegulatoryPayloadSchema: GenMessage<RegulatoryPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 7);
 
 /**
  * Dividend event payload
@@ -525,63 +510,62 @@ export const RegulatoryPayloadSchema: GenMessage<RegulatoryPayload> =
  * @generated from message cream.v1.DividendPayload
  */
 export type DividendPayload = Message<"cream.v1.DividendPayload"> & {
-	/**
-	 * Dividend amount per share
-	 *
-	 * @generated from field: double amount = 1;
-	 */
-	amount: number;
+  /**
+   * Dividend amount per share
+   *
+   * @generated from field: double amount = 1;
+   */
+  amount: number;
 
-	/**
-	 * Currency
-	 *
-	 * @generated from field: string currency = 2;
-	 */
-	currency: string;
+  /**
+   * Currency
+   *
+   * @generated from field: string currency = 2;
+   */
+  currency: string;
 
-	/**
-	 * Ex-dividend date
-	 *
-	 * @generated from field: string ex_date = 3;
-	 */
-	exDate: string;
+  /**
+   * Ex-dividend date
+   *
+   * @generated from field: string ex_date = 3;
+   */
+  exDate: string;
 
-	/**
-	 * Record date
-	 *
-	 * @generated from field: optional string record_date = 4;
-	 */
-	recordDate?: string;
+  /**
+   * Record date
+   *
+   * @generated from field: optional string record_date = 4;
+   */
+  recordDate?: string;
 
-	/**
-	 * Payment date
-	 *
-	 * @generated from field: optional string payment_date = 5;
-	 */
-	paymentDate?: string;
+  /**
+   * Payment date
+   *
+   * @generated from field: optional string payment_date = 5;
+   */
+  paymentDate?: string;
 
-	/**
-	 * Dividend type: "regular", "special", "variable"
-	 *
-	 * @generated from field: string dividend_type = 6;
-	 */
-	dividendType: string;
+  /**
+   * Dividend type: "regular", "special", "variable"
+   *
+   * @generated from field: string dividend_type = 6;
+   */
+  dividendType: string;
 
-	/**
-	 * Year-over-year change percentage
-	 *
-	 * @generated from field: optional double yoy_change_pct = 7;
-	 */
-	yoyChangePct?: number;
+  /**
+   * Year-over-year change percentage
+   *
+   * @generated from field: optional double yoy_change_pct = 7;
+   */
+  yoyChangePct?: number;
 };
 
 /**
  * Describes the message cream.v1.DividendPayload.
  * Use `create(DividendPayloadSchema)` to create a new message.
  */
-export const DividendPayloadSchema: GenMessage<DividendPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 8);
+export const DividendPayloadSchema: GenMessage<DividendPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 8);
 
 /**
  * Stock split event payload
@@ -589,42 +573,41 @@ export const DividendPayloadSchema: GenMessage<DividendPayload> =
  * @generated from message cream.v1.SplitPayload
  */
 export type SplitPayload = Message<"cream.v1.SplitPayload"> & {
-	/**
-	 * Split ratio numerator (e.g., 4 for 4:1)
-	 *
-	 * @generated from field: int32 split_from = 1;
-	 */
-	splitFrom: number;
+  /**
+   * Split ratio numerator (e.g., 4 for 4:1)
+   *
+   * @generated from field: int32 split_from = 1;
+   */
+  splitFrom: number;
 
-	/**
-	 * Split ratio denominator (e.g., 1 for 4:1)
-	 *
-	 * @generated from field: int32 split_to = 2;
-	 */
-	splitTo: number;
+  /**
+   * Split ratio denominator (e.g., 1 for 4:1)
+   *
+   * @generated from field: int32 split_to = 2;
+   */
+  splitTo: number;
 
-	/**
-	 * Effective date
-	 *
-	 * @generated from field: string effective_date = 3;
-	 */
-	effectiveDate: string;
+  /**
+   * Effective date
+   *
+   * @generated from field: string effective_date = 3;
+   */
+  effectiveDate: string;
 
-	/**
-	 * Announcement date
-	 *
-	 * @generated from field: optional string announcement_date = 4;
-	 */
-	announcementDate?: string;
+  /**
+   * Announcement date
+   *
+   * @generated from field: optional string announcement_date = 4;
+   */
+  announcementDate?: string;
 };
 
 /**
  * Describes the message cream.v1.SplitPayload.
  * Use `create(SplitPayloadSchema)` to create a new message.
  */
-export const SplitPayloadSchema: GenMessage<SplitPayload> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 9);
+export const SplitPayloadSchema: GenMessage<SplitPayload> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 9);
 
 /**
  * A discrete external event
@@ -632,179 +615,167 @@ export const SplitPayloadSchema: GenMessage<SplitPayload> =
  * @generated from message cream.v1.ExternalEvent
  */
 export type ExternalEvent = Message<"cream.v1.ExternalEvent"> & {
-	/**
-	 * Unique identifier (UUID v4)
-	 *
-	 * @generated from field: string event_id = 1;
-	 */
-	eventId: string;
+  /**
+   * Unique identifier (UUID v4)
+   *
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
 
-	/**
-	 * Category of event
-	 *
-	 * @generated from field: cream.v1.EventType event_type = 2;
-	 */
-	eventType: EventType;
+  /**
+   * Category of event
+   *
+   * @generated from field: cream.v1.EventType event_type = 2;
+   */
+  eventType: EventType;
 
-	/**
-	 * When the event occurred
-	 *
-	 * @generated from field: google.protobuf.Timestamp event_time = 3;
-	 */
-	eventTime?: Timestamp;
+  /**
+   * When the event occurred
+   *
+   * @generated from field: google.protobuf.Timestamp event_time = 3;
+   */
+  eventTime?: Timestamp;
 
-	/**
-	 * Event payload (structure varies by event_type)
-	 * Using oneof for type-safe payloads
-	 *
-	 * @generated from oneof cream.v1.ExternalEvent.payload
-	 */
-	payload:
-		| {
-				/**
-				 * @generated from field: cream.v1.EarningsEventPayload earnings = 10;
-				 */
-				value: EarningsEventPayload;
-				case: "earnings";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.MacroEventPayload macro = 11;
-				 */
-				value: MacroEventPayload;
-				case: "macro";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.NewsEventPayload news = 12;
-				 */
-				value: NewsEventPayload;
-				case: "news";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.SentimentEventPayload sentiment_spike = 13;
-				 */
-				value: SentimentEventPayload;
-				case: "sentimentSpike";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.MergerAcquisitionPayload merger_acquisition = 14;
-				 */
-				value: MergerAcquisitionPayload;
-				case: "mergerAcquisition";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.AnalystRatingPayload analyst_rating = 15;
-				 */
-				value: AnalystRatingPayload;
-				case: "analystRating";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.RegulatoryPayload regulatory = 16;
-				 */
-				value: RegulatoryPayload;
-				case: "regulatory";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.DividendPayload dividend = 17;
-				 */
-				value: DividendPayload;
-				case: "dividend";
-		  }
-		| {
-				/**
-				 * @generated from field: cream.v1.SplitPayload split = 18;
-				 */
-				value: SplitPayload;
-				case: "split";
-		  }
-		| {
-				/**
-				 * Fallback for other types
-				 *
-				 * @generated from field: google.protobuf.Struct generic_payload = 19;
-				 */
-				value: JsonObject;
-				case: "genericPayload";
-		  }
-		| { case: undefined; value?: undefined };
+  /**
+   * Event payload (structure varies by event_type)
+   * Using oneof for type-safe payloads
+   *
+   * @generated from oneof cream.v1.ExternalEvent.payload
+   */
+  payload: {
+    /**
+     * @generated from field: cream.v1.EarningsEventPayload earnings = 10;
+     */
+    value: EarningsEventPayload;
+    case: "earnings";
+  } | {
+    /**
+     * @generated from field: cream.v1.MacroEventPayload macro = 11;
+     */
+    value: MacroEventPayload;
+    case: "macro";
+  } | {
+    /**
+     * @generated from field: cream.v1.NewsEventPayload news = 12;
+     */
+    value: NewsEventPayload;
+    case: "news";
+  } | {
+    /**
+     * @generated from field: cream.v1.SentimentEventPayload sentiment_spike = 13;
+     */
+    value: SentimentEventPayload;
+    case: "sentimentSpike";
+  } | {
+    /**
+     * @generated from field: cream.v1.MergerAcquisitionPayload merger_acquisition = 14;
+     */
+    value: MergerAcquisitionPayload;
+    case: "mergerAcquisition";
+  } | {
+    /**
+     * @generated from field: cream.v1.AnalystRatingPayload analyst_rating = 15;
+     */
+    value: AnalystRatingPayload;
+    case: "analystRating";
+  } | {
+    /**
+     * @generated from field: cream.v1.RegulatoryPayload regulatory = 16;
+     */
+    value: RegulatoryPayload;
+    case: "regulatory";
+  } | {
+    /**
+     * @generated from field: cream.v1.DividendPayload dividend = 17;
+     */
+    value: DividendPayload;
+    case: "dividend";
+  } | {
+    /**
+     * @generated from field: cream.v1.SplitPayload split = 18;
+     */
+    value: SplitPayload;
+    case: "split";
+  } | {
+    /**
+     * Fallback for other types
+     *
+     * @generated from field: google.protobuf.Struct generic_payload = 19;
+     */
+    value: JsonObject;
+    case: "genericPayload";
+  } | { case: undefined; value?: undefined };
 
-	/**
-	 * Affected instrument IDs (tickers)
-	 *
-	 * @generated from field: repeated string related_instrument_ids = 4;
-	 */
-	relatedInstrumentIds: string[];
+  /**
+   * Affected instrument IDs (tickers)
+   *
+   * @generated from field: repeated string related_instrument_ids = 4;
+   */
+  relatedInstrumentIds: string[];
 
-	/**
-	 * Data source
-	 *
-	 * @generated from field: cream.v1.DataSource source = 5;
-	 */
-	source: DataSource;
+  /**
+   * Data source
+   *
+   * @generated from field: cream.v1.DataSource source = 5;
+   */
+  source: DataSource;
 
-	/**
-	 * Headline or summary (for quick display)
-	 *
-	 * @generated from field: optional string headline = 6;
-	 */
-	headline?: string;
+  /**
+   * Headline or summary (for quick display)
+   *
+   * @generated from field: optional string headline = 6;
+   */
+  headline?: string;
 
-	/**
-	 * Sentiment score (-1.0 bearish to 1.0 bullish)
-	 *
-	 * @generated from field: optional double sentiment_score = 20;
-	 */
-	sentimentScore?: number;
+  /**
+   * Sentiment score (-1.0 bearish to 1.0 bullish)
+   *
+   * @generated from field: optional double sentiment_score = 20;
+   */
+  sentimentScore?: number;
 
-	/**
-	 * Importance/relevance score (0.0 to 1.0)
-	 *
-	 * @generated from field: optional double importance_score = 21;
-	 */
-	importanceScore?: number;
+  /**
+   * Importance/relevance score (0.0 to 1.0)
+   *
+   * @generated from field: optional double importance_score = 21;
+   */
+  importanceScore?: number;
 
-	/**
-	 * Surprise score (-1.0 big miss to 1.0 big beat)
-	 *
-	 * @generated from field: optional double surprise_score = 22;
-	 */
-	surpriseScore?: number;
+  /**
+   * Surprise score (-1.0 big miss to 1.0 big beat)
+   *
+   * @generated from field: optional double surprise_score = 22;
+   */
+  surpriseScore?: number;
 
-	/**
-	 * Confidence in extraction (0.0 to 1.0)
-	 *
-	 * @generated from field: optional double confidence = 23;
-	 */
-	confidence?: number;
+  /**
+   * Confidence in extraction (0.0 to 1.0)
+   *
+   * @generated from field: optional double confidence = 23;
+   */
+  confidence?: number;
 
-	/**
-	 * When the event was processed/extracted
-	 *
-	 * @generated from field: google.protobuf.Timestamp processed_at = 30;
-	 */
-	processedAt?: Timestamp;
+  /**
+   * When the event was processed/extracted
+   *
+   * @generated from field: google.protobuf.Timestamp processed_at = 30;
+   */
+  processedAt?: Timestamp;
 
-	/**
-	 * Original content (for reference/debugging)
-	 *
-	 * @generated from field: optional string original_content = 31;
-	 */
-	originalContent?: string;
+  /**
+   * Original content (for reference/debugging)
+   *
+   * @generated from field: optional string original_content = 31;
+   */
+  originalContent?: string;
 };
 
 /**
  * Describes the message cream.v1.ExternalEvent.
  * Use `create(ExternalEventSchema)` to create a new message.
  */
-export const ExternalEventSchema: GenMessage<ExternalEvent> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 10);
+export const ExternalEventSchema: GenMessage<ExternalEvent> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 10);
 
 /**
  * Collection of external events
@@ -812,35 +783,34 @@ export const ExternalEventSchema: GenMessage<ExternalEvent> =
  * @generated from message cream.v1.ExternalEventList
  */
 export type ExternalEventList = Message<"cream.v1.ExternalEventList"> & {
-	/**
-	 * Events in the collection
-	 *
-	 * @generated from field: repeated cream.v1.ExternalEvent events = 1;
-	 */
-	events: ExternalEvent[];
+  /**
+   * Events in the collection
+   *
+   * @generated from field: repeated cream.v1.ExternalEvent events = 1;
+   */
+  events: ExternalEvent[];
 
-	/**
-	 * Total count (may exceed list if paginated)
-	 *
-	 * @generated from field: int32 total_count = 2;
-	 */
-	totalCount: number;
+  /**
+   * Total count (may exceed list if paginated)
+   *
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount: number;
 
-	/**
-	 * Pagination cursor for next page
-	 *
-	 * @generated from field: optional string next_cursor = 3;
-	 */
-	nextCursor?: string;
+  /**
+   * Pagination cursor for next page
+   *
+   * @generated from field: optional string next_cursor = 3;
+   */
+  nextCursor?: string;
 };
 
 /**
  * Describes the message cream.v1.ExternalEventList.
  * Use `create(ExternalEventListSchema)` to create a new message.
  */
-export const ExternalEventListSchema: GenMessage<ExternalEventList> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 11);
+export const ExternalEventListSchema: GenMessage<ExternalEventList> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 11);
 
 /**
  * Event query request
@@ -848,63 +818,62 @@ export const ExternalEventListSchema: GenMessage<ExternalEventList> =
  * @generated from message cream.v1.EventQueryRequest
  */
 export type EventQueryRequest = Message<"cream.v1.EventQueryRequest"> & {
-	/**
-	 * Filter by event types
-	 *
-	 * @generated from field: repeated cream.v1.EventType event_types = 1;
-	 */
-	eventTypes: EventType[];
+  /**
+   * Filter by event types
+   *
+   * @generated from field: repeated cream.v1.EventType event_types = 1;
+   */
+  eventTypes: EventType[];
 
-	/**
-	 * Filter by instrument IDs
-	 *
-	 * @generated from field: repeated string instrument_ids = 2;
-	 */
-	instrumentIds: string[];
+  /**
+   * Filter by instrument IDs
+   *
+   * @generated from field: repeated string instrument_ids = 2;
+   */
+  instrumentIds: string[];
 
-	/**
-	 * Start time (inclusive)
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp start_time = 3;
-	 */
-	startTime?: Timestamp;
+  /**
+   * Start time (inclusive)
+   *
+   * @generated from field: optional google.protobuf.Timestamp start_time = 3;
+   */
+  startTime?: Timestamp;
 
-	/**
-	 * End time (exclusive)
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp end_time = 4;
-	 */
-	endTime?: Timestamp;
+  /**
+   * End time (exclusive)
+   *
+   * @generated from field: optional google.protobuf.Timestamp end_time = 4;
+   */
+  endTime?: Timestamp;
 
-	/**
-	 * Maximum events to return
-	 *
-	 * @generated from field: int32 limit = 5;
-	 */
-	limit: number;
+  /**
+   * Maximum events to return
+   *
+   * @generated from field: int32 limit = 5;
+   */
+  limit: number;
 
-	/**
-	 * Pagination cursor
-	 *
-	 * @generated from field: optional string cursor = 6;
-	 */
-	cursor?: string;
+  /**
+   * Pagination cursor
+   *
+   * @generated from field: optional string cursor = 6;
+   */
+  cursor?: string;
 
-	/**
-	 * Minimum importance score
-	 *
-	 * @generated from field: optional double min_importance = 7;
-	 */
-	minImportance?: number;
+  /**
+   * Minimum importance score
+   *
+   * @generated from field: optional double min_importance = 7;
+   */
+  minImportance?: number;
 };
 
 /**
  * Describes the message cream.v1.EventQueryRequest.
  * Use `create(EventQueryRequestSchema)` to create a new message.
  */
-export const EventQueryRequestSchema: GenMessage<EventQueryRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_events, 12);
+export const EventQueryRequestSchema: GenMessage<EventQueryRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_events, 12);
 
 /**
  * Category of external event
@@ -912,128 +881,129 @@ export const EventQueryRequestSchema: GenMessage<EventQueryRequest> =
  * @generated from enum cream.v1.EventType
  */
 export enum EventType {
-	/**
-	 * @generated from enum value: EVENT_TYPE_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: EVENT_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * Earnings report
-	 *
-	 * @generated from enum value: EVENT_TYPE_EARNINGS = 1;
-	 */
-	EARNINGS = 1,
+  /**
+   * Earnings report
+   *
+   * @generated from enum value: EVENT_TYPE_EARNINGS = 1;
+   */
+  EARNINGS = 1,
 
-	/**
-	 * Forward guidance update
-	 *
-	 * @generated from enum value: EVENT_TYPE_GUIDANCE = 2;
-	 */
-	GUIDANCE = 2,
+  /**
+   * Forward guidance update
+   *
+   * @generated from enum value: EVENT_TYPE_GUIDANCE = 2;
+   */
+  GUIDANCE = 2,
 
-	/**
-	 * Macro economic release
-	 *
-	 * @generated from enum value: EVENT_TYPE_MACRO = 3;
-	 */
-	MACRO = 3,
+  /**
+   * Macro economic release
+   *
+   * @generated from enum value: EVENT_TYPE_MACRO = 3;
+   */
+  MACRO = 3,
 
-	/**
-	 * General news
-	 *
-	 * @generated from enum value: EVENT_TYPE_NEWS = 4;
-	 */
-	NEWS = 4,
+  /**
+   * General news
+   *
+   * @generated from enum value: EVENT_TYPE_NEWS = 4;
+   */
+  NEWS = 4,
 
-	/**
-	 * Social/sentiment volume spike
-	 *
-	 * @generated from enum value: EVENT_TYPE_SENTIMENT_SPIKE = 5;
-	 */
-	SENTIMENT_SPIKE = 5,
+  /**
+   * Social/sentiment volume spike
+   *
+   * @generated from enum value: EVENT_TYPE_SENTIMENT_SPIKE = 5;
+   */
+  SENTIMENT_SPIKE = 5,
 
-	/**
-	 * SEC filing (10-K, 10-Q, 8-K)
-	 *
-	 * @generated from enum value: EVENT_TYPE_SEC_FILING = 6;
-	 */
-	SEC_FILING = 6,
+  /**
+   * SEC filing (10-K, 10-Q, 8-K)
+   *
+   * @generated from enum value: EVENT_TYPE_SEC_FILING = 6;
+   */
+  SEC_FILING = 6,
 
-	/**
-	 * Dividend announcement
-	 *
-	 * @generated from enum value: EVENT_TYPE_DIVIDEND = 7;
-	 */
-	DIVIDEND = 7,
+  /**
+   * Dividend announcement
+   *
+   * @generated from enum value: EVENT_TYPE_DIVIDEND = 7;
+   */
+  DIVIDEND = 7,
 
-	/**
-	 * Stock split
-	 *
-	 * @generated from enum value: EVENT_TYPE_SPLIT = 8;
-	 */
-	SPLIT = 8,
+  /**
+   * Stock split
+   *
+   * @generated from enum value: EVENT_TYPE_SPLIT = 8;
+   */
+  SPLIT = 8,
 
-	/**
-	 * Merger and acquisition
-	 *
-	 * @generated from enum value: EVENT_TYPE_M_AND_A = 9;
-	 */
-	M_AND_A = 9,
+  /**
+   * Merger and acquisition
+   *
+   * @generated from enum value: EVENT_TYPE_M_AND_A = 9;
+   */
+  M_AND_A = 9,
 
-	/**
-	 * Analyst rating change
-	 *
-	 * @generated from enum value: EVENT_TYPE_ANALYST_RATING = 10;
-	 */
-	ANALYST_RATING = 10,
+  /**
+   * Analyst rating change
+   *
+   * @generated from enum value: EVENT_TYPE_ANALYST_RATING = 10;
+   */
+  ANALYST_RATING = 10,
 
-	/**
-	 * Conference/investor day
-	 *
-	 * @generated from enum value: EVENT_TYPE_CONFERENCE = 11;
-	 */
-	CONFERENCE = 11,
+  /**
+   * Conference/investor day
+   *
+   * @generated from enum value: EVENT_TYPE_CONFERENCE = 11;
+   */
+  CONFERENCE = 11,
 
-	/**
-	 * Product launch
-	 *
-	 * @generated from enum value: EVENT_TYPE_PRODUCT_LAUNCH = 12;
-	 */
-	PRODUCT_LAUNCH = 12,
+  /**
+   * Product launch
+   *
+   * @generated from enum value: EVENT_TYPE_PRODUCT_LAUNCH = 12;
+   */
+  PRODUCT_LAUNCH = 12,
 
-	/**
-	 * Regulatory decision
-	 *
-	 * @generated from enum value: EVENT_TYPE_REGULATORY = 13;
-	 */
-	REGULATORY = 13,
+  /**
+   * Regulatory decision
+   *
+   * @generated from enum value: EVENT_TYPE_REGULATORY = 13;
+   */
+  REGULATORY = 13,
 
-	/**
-	 * Executive appointment/departure
-	 *
-	 * @generated from enum value: EVENT_TYPE_EXECUTIVE_CHANGE = 14;
-	 */
-	EXECUTIVE_CHANGE = 14,
+  /**
+   * Executive appointment/departure
+   *
+   * @generated from enum value: EVENT_TYPE_EXECUTIVE_CHANGE = 14;
+   */
+  EXECUTIVE_CHANGE = 14,
 
-	/**
-	 * Legal/litigation
-	 *
-	 * @generated from enum value: EVENT_TYPE_LEGAL = 15;
-	 */
-	LEGAL = 15,
+  /**
+   * Legal/litigation
+   *
+   * @generated from enum value: EVENT_TYPE_LEGAL = 15;
+   */
+  LEGAL = 15,
 
-	/**
-	 * Other/unclassified
-	 *
-	 * @generated from enum value: EVENT_TYPE_OTHER = 16;
-	 */
-	OTHER = 16,
+  /**
+   * Other/unclassified
+   *
+   * @generated from enum value: EVENT_TYPE_OTHER = 16;
+   */
+  OTHER = 16,
 }
 
 /**
  * Describes the enum cream.v1.EventType.
  */
-export const EventTypeSchema: GenEnum<EventType> = /*@__PURE__*/ enumDesc(file_cream_v1_events, 0);
+export const EventTypeSchema: GenEnum<EventType> = /*@__PURE__*/
+  enumDesc(file_cream_v1_events, 0);
 
 /**
  * Data source for external events
@@ -1041,67 +1011,66 @@ export const EventTypeSchema: GenEnum<EventType> = /*@__PURE__*/ enumDesc(file_c
  * @generated from enum cream.v1.DataSource
  */
 export enum DataSource {
-	/**
-	 * @generated from enum value: DATA_SOURCE_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: DATA_SOURCE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * Financial Modeling Prep
-	 *
-	 * @generated from enum value: DATA_SOURCE_FMP = 1;
-	 */
-	FMP = 1,
+  /**
+   * Financial Modeling Prep
+   *
+   * @generated from enum value: DATA_SOURCE_FMP = 1;
+   */
+  FMP = 1,
 
-	/**
-	 * Alpha Vantage
-	 *
-	 * @generated from enum value: DATA_SOURCE_ALPHA_VANTAGE = 2;
-	 */
-	ALPHA_VANTAGE = 2,
+  /**
+   * Alpha Vantage
+   *
+   * @generated from enum value: DATA_SOURCE_ALPHA_VANTAGE = 2;
+   */
+  ALPHA_VANTAGE = 2,
 
-	/**
-	 * Reserved (formerly Polygon)
-	 *
-	 * @generated from enum value: DATA_SOURCE_RESERVED_3 = 3;
-	 */
-	RESERVED_3 = 3,
+  /**
+   * Reserved (formerly Polygon)
+   *
+   * @generated from enum value: DATA_SOURCE_RESERVED_3 = 3;
+   */
+  RESERVED_3 = 3,
 
-	/**
-	 * Benzinga
-	 *
-	 * @generated from enum value: DATA_SOURCE_BENZINGA = 4;
-	 */
-	BENZINGA = 4,
+  /**
+   * Benzinga
+   *
+   * @generated from enum value: DATA_SOURCE_BENZINGA = 4;
+   */
+  BENZINGA = 4,
 
-	/**
-	 * SEC EDGAR
-	 *
-	 * @generated from enum value: DATA_SOURCE_SEC_EDGAR = 5;
-	 */
-	SEC_EDGAR = 5,
+  /**
+   * SEC EDGAR
+   *
+   * @generated from enum value: DATA_SOURCE_SEC_EDGAR = 5;
+   */
+  SEC_EDGAR = 5,
 
-	/**
-	 * Social media aggregation
-	 *
-	 * @generated from enum value: DATA_SOURCE_SOCIAL = 6;
-	 */
-	SOCIAL = 6,
+  /**
+   * Social media aggregation
+   *
+   * @generated from enum value: DATA_SOURCE_SOCIAL = 6;
+   */
+  SOCIAL = 6,
 
-	/**
-	 * Internal system-generated
-	 *
-	 * @generated from enum value: DATA_SOURCE_INTERNAL = 7;
-	 */
-	INTERNAL = 7,
+  /**
+   * Internal system-generated
+   *
+   * @generated from enum value: DATA_SOURCE_INTERNAL = 7;
+   */
+  INTERNAL = 7,
 }
 
 /**
  * Describes the enum cream.v1.DataSource.
  */
-export const DataSourceSchema: GenEnum<DataSource> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_events, 1);
+export const DataSourceSchema: GenEnum<DataSource> = /*@__PURE__*/
+  enumDesc(file_cream_v1_events, 1);
 
 /**
  * Sentiment classification
@@ -1109,28 +1078,30 @@ export const DataSourceSchema: GenEnum<DataSource> =
  * @generated from enum cream.v1.Sentiment
  */
 export enum Sentiment {
-	/**
-	 * @generated from enum value: SENTIMENT_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: SENTIMENT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: SENTIMENT_BULLISH = 1;
-	 */
-	BULLISH = 1,
+  /**
+   * @generated from enum value: SENTIMENT_BULLISH = 1;
+   */
+  BULLISH = 1,
 
-	/**
-	 * @generated from enum value: SENTIMENT_BEARISH = 2;
-	 */
-	BEARISH = 2,
+  /**
+   * @generated from enum value: SENTIMENT_BEARISH = 2;
+   */
+  BEARISH = 2,
 
-	/**
-	 * @generated from enum value: SENTIMENT_NEUTRAL = 3;
-	 */
-	NEUTRAL = 3,
+  /**
+   * @generated from enum value: SENTIMENT_NEUTRAL = 3;
+   */
+  NEUTRAL = 3,
 }
 
 /**
  * Describes the enum cream.v1.Sentiment.
  */
-export const SentimentSchema: GenEnum<Sentiment> = /*@__PURE__*/ enumDesc(file_cream_v1_events, 2);
+export const SentimentSchema: GenEnum<Sentiment> = /*@__PURE__*/
+  enumDesc(file_cream_v1_events, 2);
+
