@@ -189,6 +189,21 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 
         case "agent_tool_result": {
           const resultData = message.data;
+          const currentAgent = getAgent(agentType);
+          const existingToolCall = currentAgent?.toolCalls.some(
+            (tc) => tc.toolCallId === resultData.toolCallId
+          );
+          // In case a tool result arrives without a prior tool-call event (provider/stream edge cases),
+          // create a placeholder tool call so the UI can still display the result.
+          if (!existingToolCall) {
+            addToolCall(agentType, {
+              toolCallId: resultData.toolCallId,
+              toolName: resultData.toolName,
+              toolArgs: "{}",
+              status: "pending",
+              timestamp: resultData.timestamp,
+            });
+          }
           updateToolCallResult(agentType, resultData.toolCallId, {
             success: resultData.success,
             resultSummary: resultData.resultSummary,
@@ -225,6 +240,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
     [
       currentCycleId,
       setCycleId,
+      getAgent,
       addToolCall,
       updateToolCallResult,
       appendReasoning,

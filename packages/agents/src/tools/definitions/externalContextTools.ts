@@ -19,6 +19,20 @@ function createToolContext() {
   return createContext(requireEnv(), "scheduled");
 }
 
+/**
+ * Guardrail: keep raw content bounded so tool results don't explode downstream prompts
+ * (e.g., when Mastra's structured output processor includes tool results verbatim).
+ */
+const MAX_ORIGINAL_CONTENT_CHARS = 5_000;
+
+function truncateText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) {
+    return text;
+  }
+  const omitted = text.length - maxChars;
+  return `${text.slice(0, maxChars)}\n...[truncated ${omitted} chars]`;
+}
+
 // ============================================
 // Shared Schemas
 // ============================================
@@ -113,7 +127,7 @@ Requires FMP_KEY for news fetching.`,
         extraction: e.extraction,
         scores: e.scores,
         relatedInstrumentIds: e.relatedInstrumentIds,
-        originalContent: e.originalContent,
+        originalContent: truncateText(e.originalContent, MAX_ORIGINAL_CONTENT_CHARS),
         processedAt: e.processedAt.toISOString(),
       })),
       stats: result.stats,

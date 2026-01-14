@@ -9,10 +9,10 @@ import type { AgentType } from "@cream/agents";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import { buildDatetimeContext, buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
+import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
   AgentConfigEntry,
   AgentContext,
-  AgentStreamChunk,
   BearishResearchOutput,
   BullishResearchOutput,
   DecisionPlan,
@@ -53,6 +53,8 @@ export async function runTrader(
   const factorZooContext = buildFactorZooContext(context.factorZoo);
   const indicatorContext = buildIndicatorContext(context.indicators);
 
+  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+
   const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
@@ -65,6 +67,12 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
+Symbols: ${context.symbols.join(", ")}
+
+TOOL USE (required):
+- If Current Portfolio State is empty, call get_portfolio_state before producing the final plan.
+- Call get_quotes with instruments=[Symbols] to confirm current prices/liquidity before sizing.
+Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 
 POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
@@ -95,55 +103,6 @@ FACTOR ZOO SIGNALS:
 // ============================================
 
 /**
- * Process stream chunks and emit via callback.
- * Handles standard Mastra agent stream chunk types.
- */
-async function processStreamChunk(
-  chunk: { type: string; payload?: Record<string, unknown> },
-  agentType: AgentType,
-  onChunk: OnStreamChunk
-): Promise<void> {
-  const timestamp = new Date().toISOString();
-  const payload = chunk.payload ?? {};
-
-  const streamChunk: AgentStreamChunk = {
-    type: chunk.type as AgentStreamChunk["type"],
-    agentType,
-    payload: {},
-    timestamp,
-  };
-
-  switch (chunk.type) {
-    case "text-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-call":
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-result":
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.result = payload.result;
-      streamChunk.payload.success = true;
-      await onChunk(streamChunk);
-      break;
-    case "reasoning-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "error":
-      streamChunk.payload.error =
-        payload.error instanceof Error ? payload.error.message : String(payload.error);
-      await onChunk(streamChunk);
-      break;
-  }
-}
-
-/**
  * Run Trader agent with streaming.
  */
 export async function runTraderStreaming(
@@ -154,6 +113,8 @@ export async function runTraderStreaming(
 ): Promise<DecisionPlan> {
   const factorZooContext = buildFactorZooContext(context.factorZoo);
   const indicatorContext = buildIndicatorContext(context.indicators);
+
+  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
 
   const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
@@ -167,6 +128,12 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Cycle ID: ${context.cycleId}
+Symbols: ${context.symbols.join(", ")}
+
+TOOL USE (required):
+- If Current Portfolio State is empty, call get_portfolio_state before producing the final plan.
+- Call get_quotes with instruments=[Symbols] to confirm current prices/liquidity before sizing.
+Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 
 POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
@@ -188,13 +155,10 @@ FACTOR ZOO SIGNALS:
   const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
 
   const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
+  const forwardChunk = createStreamChunkForwarder("trader", onChunk);
 
   for await (const chunk of stream.fullStream) {
-    await processStreamChunk(
-      chunk as { type: string; payload: Record<string, unknown> },
-      "trader",
-      onChunk
-    );
+    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
   }
 
   return (await stream.object) as DecisionPlan;

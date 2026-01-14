@@ -11,11 +11,11 @@ import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";
 import { CriticOutputSchema, RiskManagerOutputSchema } from "./schemas.js";
+import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type { DebateOutputs } from "./trader.js";
 import type {
   AgentConfigEntry,
   AgentContext,
-  AgentStreamChunk,
   CriticOutput,
   DecisionPlan,
   OnStreamChunk,
@@ -138,6 +138,9 @@ NOTE: Decaying factors indicate reduced signal reliability. Consider this when v
 
   const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
+  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+  const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
+
   const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
@@ -147,7 +150,15 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Risk Constraints:
-${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
+${JSON.stringify(constraints ?? {}, null, 2)}
+
+TOOL USE (required):
+- If Current Portfolio State is empty, call get_portfolio_state before issuing a verdict.
+- If Risk Constraints are missing, call get_portfolio_state to infer position count/exposure and be conservative.
+- If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
+Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
+Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
+${riskIndicatorsSummary}${decayRiskSection}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
 - Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
@@ -235,55 +246,6 @@ export async function runApprovalParallel(
 // ============================================
 
 /**
- * Process stream chunks and emit via callback.
- * Handles standard Mastra agent stream chunk types.
- */
-async function processStreamChunk(
-  chunk: { type: string; payload?: Record<string, unknown> },
-  agentType: AgentType,
-  onChunk: OnStreamChunk
-): Promise<void> {
-  const timestamp = new Date().toISOString();
-  const payload = chunk.payload ?? {};
-
-  const streamChunk: AgentStreamChunk = {
-    type: chunk.type as AgentStreamChunk["type"],
-    agentType,
-    payload: {},
-    timestamp,
-  };
-
-  switch (chunk.type) {
-    case "text-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-call":
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.toolArgs = payload.args as Record<string, unknown>;
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      await onChunk(streamChunk);
-      break;
-    case "tool-result":
-      streamChunk.payload.toolCallId = payload.toolCallId as string;
-      streamChunk.payload.toolName = payload.toolName as string;
-      streamChunk.payload.result = payload.result;
-      streamChunk.payload.success = true;
-      await onChunk(streamChunk);
-      break;
-    case "reasoning-delta":
-      streamChunk.payload.text = payload.text as string;
-      await onChunk(streamChunk);
-      break;
-    case "error":
-      streamChunk.payload.error =
-        payload.error instanceof Error ? payload.error.message : String(payload.error);
-      await onChunk(streamChunk);
-      break;
-  }
-}
-
-/**
  * Run Risk Manager agent with streaming.
  */
 export async function runRiskManagerStreaming(
@@ -306,6 +268,9 @@ NOTE: Decaying factors indicate reduced signal reliability. Consider this when v
 
   const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
+  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+  const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
+
   const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
@@ -315,7 +280,15 @@ Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
 Risk Constraints:
-${JSON.stringify(constraints ?? {}, null, 2)}${riskIndicatorsSummary}${decayRiskSection}
+${JSON.stringify(constraints ?? {}, null, 2)}
+
+TOOL USE (required):
+- If Current Portfolio State is empty, call get_portfolio_state before issuing a verdict.
+- If Risk Constraints are missing, call get_portfolio_state to infer position count/exposure and be conservative.
+- If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
+Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
+Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
+${riskIndicatorsSummary}${decayRiskSection}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
 - Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
@@ -341,16 +314,13 @@ RISK VALIDATION GUIDANCE:
   }
 
   try {
+    const forwardChunk = createStreamChunkForwarder("risk_manager", onChunk);
     for await (const chunk of stream.fullStream) {
       // Check if aborted during streaming
       if (abortSignal?.aborted) {
         throw new Error("AbortError: Risk Manager streaming was aborted");
       }
-      await processStreamChunk(
-        chunk as { type: string; payload: Record<string, unknown> },
-        "risk_manager",
-        onChunk
-      );
+      await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
     }
   } catch (err) {
     console.error("[risk_manager] Error during stream iteration:", err);
@@ -427,16 +397,13 @@ CONSISTENCY VALIDATION GUIDANCE:
   }
 
   try {
+    const forwardChunk = createStreamChunkForwarder("critic", onChunk);
     for await (const chunk of stream.fullStream) {
       // Check if aborted during streaming
       if (abortSignal?.aborted) {
         throw new Error("AbortError: Critic streaming was aborted");
       }
-      await processStreamChunk(
-        chunk as { type: string; payload: Record<string, unknown> },
-        "critic",
-        onChunk
-      );
+      await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
     }
   } catch (err) {
     console.error("[critic] Error during stream iteration:", err);

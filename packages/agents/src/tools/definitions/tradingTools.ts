@@ -108,6 +108,18 @@ export const getPortfolioStateTool = createTool({
 
 const GetOptionChainInputSchema = z.object({
   underlying: z.string().describe("Underlying symbol (e.g., AAPL, SPY)"),
+  maxExpirations: z
+    .number()
+    .min(1)
+    .max(12)
+    .optional()
+    .describe("Maximum expirations to return (default: 4)"),
+  maxContractsPerSide: z
+    .number()
+    .min(1)
+    .max(50)
+    .optional()
+    .describe("Maximum calls and puts per expiration (default: 20)"),
 });
 
 const OptionContractSchema = z.object({
@@ -150,7 +162,32 @@ export const getOptionChainTool = createTool({
   outputSchema: GetOptionChainOutputSchema,
   execute: async (inputData): Promise<OptionChainResponse> => {
     const ctx = createToolContext();
-    return getOptionChain(ctx, inputData.underlying);
+    const full = await getOptionChain(ctx, inputData.underlying);
+
+    // Guardrail: option chains can be extremely large (SPY, QQQ, etc.) and easily
+    // exceed provider token limits when included in downstream prompts.
+    const maxExpirations = inputData.maxExpirations ?? 4;
+    const maxContractsPerSide = inputData.maxContractsPerSide ?? 20;
+
+    const expirations = (full.expirations ?? []).slice(0, maxExpirations).map((exp) => {
+      const calls = [...(exp.calls ?? [])]
+        .sort((a, b) => b.openInterest - a.openInterest)
+        .slice(0, maxContractsPerSide)
+        .sort((a, b) => a.strike - b.strike);
+
+      const puts = [...(exp.puts ?? [])]
+        .sort((a, b) => b.openInterest - a.openInterest)
+        .slice(0, maxContractsPerSide)
+        .sort((a, b) => a.strike - b.strike);
+
+      return {
+        expiration: exp.expiration,
+        calls,
+        puts,
+      };
+    });
+
+    return { underlying: full.underlying, expirations };
   },
 });
 

@@ -13,11 +13,11 @@ import {
   getMacroIndicators,
   type MacroIndicatorValue,
 } from "../implementations/fred.js";
+import { graphragQuery } from "../implementations/graphrag.js";
 import {
   type EconomicEvent,
   getEconomicCalendar,
   type HelixQueryResult,
-  helixQuery,
   type IndicatorResult,
   type NewsItem,
   recalcIndicator,
@@ -142,8 +142,14 @@ Requires FMP_KEY environment variable.`,
 // ============================================
 
 const FREDCalendarInputSchema = z.object({
-  startDate: z.string().describe("Start date in YYYY-MM-DD format"),
-  endDate: z.string().describe("End date in YYYY-MM-DD format"),
+  startDate: z
+    .string()
+    .optional()
+    .describe("Start date in YYYY-MM-DD format (defaults to today in America/New_York if omitted)"),
+  endDate: z
+    .string()
+    .optional()
+    .describe("End date in YYYY-MM-DD format (defaults to +3 days if omitted)"),
 });
 
 const FREDEventSchema = z.object({
@@ -163,6 +169,8 @@ const FREDEventSchema = z.object({
 });
 
 const FREDCalendarOutputSchema = z.object({
+  startDate: z.string().describe("Start date used for the query (YYYY-MM-DD)"),
+  endDate: z.string().describe("End date used for the query (YYYY-MM-DD)"),
   events: z.array(FREDEventSchema).describe("FRED economic calendar events in the date range"),
 });
 
@@ -186,13 +194,33 @@ Use this tool to find upcoming Federal Reserve data releases including:
 Events are filtered to tracked releases only (no minor data).
 Impact levels reflect historical market reaction magnitude.
 
-Requires FRED_API_KEY environment variable (free at fred.stlouisfed.org).`,
+Requires FRED_API_KEY environment variable (free at fred.stlouisfed.org).
+
+Input notes:
+- startDate/endDate should be YYYY-MM-DD
+- If omitted, defaults to today → today+3 days (America/New_York)`,
   inputSchema: FREDCalendarInputSchema,
   outputSchema: FREDCalendarOutputSchema,
-  execute: async (inputData): Promise<{ events: EconomicEvent[] }> => {
+  execute: async (
+    inputData
+  ): Promise<{ startDate: string; endDate: string; events: EconomicEvent[] }> => {
+    const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const today = new Date();
+    const defaultStart = nyFormatter.format(today);
+    const defaultEnd = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+
+    const startDate = inputData.startDate ?? defaultStart;
+    const endDate = inputData.endDate ?? defaultEnd;
+
     const ctx = createToolContext();
-    const events = await getFredEconomicCalendar(ctx, inputData.startDate, inputData.endDate);
-    return { events };
+    const events = await getFredEconomicCalendar(ctx, startDate, endDate);
+    return { startDate, endDate, events };
   },
 });
 
@@ -299,8 +327,31 @@ Requires FMP_KEY environment variable.`,
 // ============================================
 
 const HelixQueryInputSchema = z.object({
-  queryName: z.string().describe("Registered HelixQL query name"),
-  params: z.record(z.string(), z.unknown()).optional().describe("Query parameters"),
+  query: z
+    .string()
+    .min(3)
+    .describe(
+      "Natural language query for semantic search over HelixDB memory (e.g., 'AAPL earnings guidance')"
+    ),
+  symbol: z.string().optional().describe("Optional company ticker symbol filter (e.g., 'AAPL')"),
+  limit: z
+    .number()
+    .min(1)
+    .max(50)
+    .optional()
+    .describe("Maximum results per type to return (default: 10)"),
+  maxNodes: z
+    .number()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("Maximum nodes to return to the agent (default: 50)"),
+  maxEdges: z
+    .number()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("Maximum edges to return to the agent (default: 100)"),
 });
 
 const HelixQueryOutputSchema = z.object({
@@ -315,7 +366,7 @@ const HelixQueryOutputSchema = z.object({
 
 export const helixQueryTool = createTool({
   id: "helix_query",
-  description: `Query HelixDB for memory/graph data. Use this tool to:
+  description: `Query HelixDB for memory/graph data using semantic search. Use this tool to:
 - Retrieve similar historical cases from memory
 - Query knowledge graph relationships
 - Access vector similarity search results
@@ -329,7 +380,61 @@ HelixDB stores the system's learned memory including:
   outputSchema: HelixQueryOutputSchema,
   execute: async (inputData): Promise<HelixQueryResult> => {
     const ctx = createToolContext();
-    return helixQuery(ctx, inputData.queryName, inputData.params as Record<string, unknown>);
+    const trunc = (text: string, maxChars = 1200) =>
+      text.length > maxChars ? `${text.slice(0, maxChars)}…` : text;
+
+    const result = await graphragQuery(ctx, {
+      query: inputData.query,
+      limit: inputData.limit,
+      symbol: inputData.symbol,
+    });
+
+    // Flatten GraphRAG results into a generic node list so agents can
+    // inspect them uniformly (and so output stays bounded).
+    const nodes: unknown[] = [
+      ...result.filingChunks.map((c) => ({
+        ...c,
+        _type: "FilingChunk",
+        chunkText: trunc(c.chunkText),
+      })),
+      ...result.transcriptChunks.map((c) => ({
+        ...c,
+        _type: "TranscriptChunk",
+        chunkText: trunc(c.chunkText),
+      })),
+      ...result.newsItems.map((n) => ({ ...n, _type: "NewsItem", bodyText: trunc(n.bodyText) })),
+      ...result.externalEvents.map((e) => ({ ...e, _type: "ExternalEvent" })),
+      ...result.companies.map((c) => ({ ...c, _type: "Company" })),
+    ];
+    const edges: unknown[] = [];
+
+    // Guardrail: Helix queries can return very large graphs. Returning huge payloads
+    // can blow up downstream prompts (e.g., structured output post-processing) and
+    // cause Gemini to reject the request due to token limits.
+    const maxNodes = inputData.maxNodes ?? 50;
+    const maxEdges = inputData.maxEdges ?? 100;
+
+    const nodesTotal = nodes.length;
+    const edgesTotal = edges.length;
+
+    const clippedNodes = nodesTotal > maxNodes ? nodes.slice(0, maxNodes) : nodes;
+    const clippedEdges = edgesTotal > maxEdges ? edges.slice(0, maxEdges) : edges;
+
+    return {
+      nodes: clippedNodes,
+      edges: clippedEdges,
+      metadata: {
+        executionTimeMs: result.executionTimeMs,
+        query: inputData.query,
+        symbol: inputData.symbol,
+        limit: inputData.limit ?? 10,
+        nodesTotal,
+        edgesTotal,
+        nodesReturned: clippedNodes.length,
+        edgesReturned: clippedEdges.length,
+        truncated: nodesTotal > clippedNodes.length || edgesTotal > clippedEdges.length,
+      },
+    };
   },
 });
 

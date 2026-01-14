@@ -26,6 +26,8 @@
   },
   "dependencies": {
     "@ai-sdk/google": "3.0.7",
+    "@ai-sdk/provider": "3.0.2",
+    "ai": "6.0.33",
     "@bufbuild/protobuf": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-node": "^2.1.1",

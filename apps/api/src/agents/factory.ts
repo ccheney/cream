@@ -31,9 +31,10 @@ import {
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
+import { wrapLanguageModel } from "ai";
 import type { z } from "zod";
-
 import { log } from "../logger.js";
+import { geminiThoughtSignatureMiddleware } from "./gemini-middleware.js";
 import type { AgentConfigEntry, AgentRuntimeSettings } from "./types.js";
 
 /**
@@ -69,9 +70,39 @@ export function getModelIdForRuntime(model: string | undefined): string {
 }
 
 /**
+ * Extract the model name from a Mastra model ID.
+ * e.g., "google/gemini-3-flash-preview" -> "gemini-3-flash-preview"
+ */
+function extractModelName(modelId: string): string {
+  const parts = modelId.split("/");
+  const modelName = parts[1];
+  return modelName ?? modelId;
+}
+
+/**
+ * Create a Google model instance wrapped with thought signature middleware.
+ * This is required for Gemini 3 models which need thought signatures during
+ * multi-turn tool calling.
+ *
+ * @see https://ai.google.dev/gemini-api/docs/thought-signatures
+ */
+function createWrappedGoogleModel(modelId: string) {
+  const modelName = extractModelName(modelId);
+  const baseModel = google(modelName);
+
+  return wrapLanguageModel({
+    model: baseModel,
+    middleware: geminiThoughtSignatureMiddleware,
+  });
+}
+
+/**
  * Create a Mastra Agent from our config.
  * Uses dynamic model selection to allow runtime model override via RequestContext.
  * Resolves tool instances from TOOL_INSTANCES registry based on config.tools.
+ *
+ * The model is wrapped with thought signature middleware for Gemini 3 compatibility.
+ * @see https://ai.google.dev/gemini-api/docs/thought-signatures
  */
 export function createAgent(agentType: AgentType): Agent {
   const config = AGENT_CONFIGS[agentType];
@@ -79,10 +110,27 @@ export function createAgent(agentType: AgentType): Agent {
 
   // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
   const tools: Record<string, any> = {};
+  const shouldEnableNativeGoogleSearch =
+    config.tools.includes("google_search") &&
+    config.tools.filter((t) => t !== "google_search").length === 0;
+
+  if (config.tools.includes("google_search") && !shouldEnableNativeGoogleSearch) {
+    // Gemini does not support combining provider-defined tools (google_search, url_context, etc.)
+    // with custom function tools in the same request. The Google provider drops function tools
+    // when any provider tool is present, which makes agents appear to "never call tools".
+    //
+    // See: https://github.com/vercel/ai/issues/8258
+    log.warn(
+      { agentType },
+      "Skipping native google_search tool because it cannot be combined with function tools on Gemini"
+    );
+  }
 
   for (const toolName of config.tools) {
     if (toolName === "google_search") {
-      tools.google_search = google.tools.googleSearch({});
+      if (shouldEnableNativeGoogleSearch) {
+        tools.google_search = google.tools.googleSearch({});
+      }
     } else {
       const tool = TOOL_INSTANCES[toolName];
       if (tool) {
@@ -96,9 +144,18 @@ export function createAgent(agentType: AgentType): Agent {
   const toolNames = Object.keys(tools);
   log.info({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
 
+  // Dynamic model selection with thought signature middleware for Gemini 3
   const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
     const runtimeModel = requestContext?.get("model") as string | undefined;
-    return getModelIdForRuntime(runtimeModel);
+    const modelId = getModelIdForRuntime(runtimeModel);
+
+    // Only wrap Google models with middleware
+    if (modelId.startsWith("google/")) {
+      return createWrappedGoogleModel(modelId);
+    }
+
+    // Non-Google models return as-is
+    return modelId;
   };
 
   return new Agent({
@@ -113,7 +170,7 @@ export function createAgent(agentType: AgentType): Agent {
 /**
  * Create a RequestContext with model configuration for runtime model selection.
  */
-export function createRequestContext(model?: string): RequestContext {
+export function createRequestContext(model?: string | null): RequestContext {
   const ctx = new RequestContext();
   if (model) {
     ctx.set("model", model);
@@ -139,39 +196,61 @@ export function getAgentRuntimeSettings(
 
 /**
  * Options returned by buildGenerateOptions.
- * Note: providerOptions is omitted from the type but included at runtime.
- * Mastra's ProviderOptions type is complex; runtime value is type-safe through AI SDK.
  */
 export interface GenerateOptions {
-  structuredOutput: { schema: z.ZodType };
+  structuredOutput: {
+    schema: z.ZodType;
+    model?: string;
+  };
   requestContext: RequestContext;
   instructions?: string;
   abortSignal?: AbortSignal;
   maxSteps?: number;
+  /**
+   * Provider-specific options for the underlying AI SDK model call.
+   * Used to enable Gemini 3 thinking (reasoning) streaming.
+   */
+  providerOptions?: {
+    google?: {
+      thinkingConfig?: {
+        includeThoughts?: boolean;
+        thinkingLevel?: "minimal" | "low" | "medium" | "high";
+      };
+    };
+  };
 }
 
 /**
  * Build generation options with runtime context and optional instruction override.
- * Enables Gemini 3 thinking/reasoning output at medium level.
  * Uses model's default temperature (1.0).
- *
- * Note: providerOptions is included at runtime for Gemini thinking configuration
- * but omitted from return type to satisfy Mastra's complex type constraints.
  *
  * maxSteps: Controls how many LLM calls can happen for tool use. Default is 1 (no tool execution).
  * We set to 5 to allow tools to be called and results processed.
+ *
+ * structuredOutput.model: Two-step approach for combining tools with structured output.
+ * The main agent runs with tools and generates natural language. A secondary model
+ * (Gemini Flash) then extracts structured data from that response.
+ * This is required because Gemini doesn't support combining response_format with tools.
+ * @see https://mastra.ai/docs/agents/structured-output
+ *
+ * Note: Gemini 3 thinking is enabled to stream reasoning ("thoughts") to the UI.
+ * Gemini 3 also requires thought_signature handling for multi-turn tool calling when
+ * thinking is enabled. We handle this via middleware that injects a bypass signature
+ * into missing tool-call thought signatures (until upstream fixes land).
+ * @see https://ai.google.dev/gemini-api/docs/thought-signatures
  */
 export function buildGenerateOptions(
   settings: AgentRuntimeSettings,
   structuredOutput: { schema: z.ZodType }
 ): GenerateOptions {
-  // Return type is GenerateOptions but object includes providerOptions for Gemini thinking
-  // TypeScript allows extra properties when passed to functions
   return {
-    structuredOutput,
+    structuredOutput: {
+      ...structuredOutput,
+      model: "google/gemini-3-flash-preview",
+    },
     requestContext: createRequestContext(settings.model),
-    instructions: settings.systemPromptOverride,
-    maxSteps: 5, // Enable tool execution (default 1 means tools never run)
+    instructions: settings.systemPromptOverride ?? undefined,
+    maxSteps: 5,
     providerOptions: {
       google: {
         thinkingConfig: {
@@ -180,5 +259,5 @@ export function buildGenerateOptions(
         },
       },
     },
-  } as GenerateOptions;
+  };
 }

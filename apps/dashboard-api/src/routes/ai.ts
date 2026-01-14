@@ -102,7 +102,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 
   try {
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-3-flash-preview"),
       prompt: STATUS_PROMPT.replace("{reasoning}", reasoning.slice(-500)),
       maxOutputTokens: 20,
       temperature: 0.3,

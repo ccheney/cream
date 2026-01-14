@@ -168,10 +168,33 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
         set((state) => {
           const newAgents = new Map(state.agents);
           const current = newAgents.get(agentType) ?? createInitialAgentState();
-          // Deduplicate by toolCallId
-          const exists = current.toolCalls.some((tc) => tc.toolCallId === toolCall.toolCallId);
-          if (exists) {
-            return state;
+          // Upsert by toolCallId (streaming can emit partial → final tool-call events)
+          const existingIndex = current.toolCalls.findIndex(
+            (tc) => tc.toolCallId === toolCall.toolCallId
+          );
+          if (existingIndex !== -1) {
+            const existing = current.toolCalls[existingIndex];
+            if (!existing) {
+              return state;
+            }
+            const updatedToolCalls = [...current.toolCalls];
+            updatedToolCalls[existingIndex] = {
+              toolCallId: existing.toolCallId,
+              toolName: toolCall.toolName,
+              toolArgs: toolCall.toolArgs,
+              status: existing.status,
+              resultSummary: existing.resultSummary,
+              durationMs: existing.durationMs,
+              timestamp: toolCall.timestamp,
+            };
+
+            newAgents.set(agentType, {
+              ...current,
+              status: "processing",
+              toolCalls: updatedToolCalls,
+              lastUpdate: toolCall.timestamp,
+            });
+            return { agents: newAgents };
           }
           newAgents.set(agentType, {
             ...current,

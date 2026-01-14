@@ -26,6 +26,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@ai-sdk/google": "3.0.7",
+        "@ai-sdk/provider": "3.0.2",
         "@bufbuild/protobuf": "^2.10.2",
         "@connectrpc/connect": "^2.1.1",
         "@connectrpc/connect-node": "^2.1.1",
@@ -47,6 +48,7 @@
         "@hono/node-server": "1.19.8",
         "@mastra/core": "1.0.0-beta.21",
         "@mastra/hono": "0.1.0-beta.16",
+        "ai": "6.0.33",
         "hono": "4.11.4",
         "zod": "^4.3.5",
       },
@@ -1205,7 +1207,7 @@
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
-    "ai": ["ai@6.0.31", "", { "dependencies": { "@ai-sdk/gateway": "3.0.13", "@ai-sdk/provider": "3.0.2", "@ai-sdk/provider-utils": "4.0.5", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-aAn62jsDueAK7oiY4jeqJcA4zFctDqVHGyEaUDaWxEXzz4kbMdoByfYlYZhO1V3nhkeVoI8qNyFfiZusAubQLQ=="],
+    "ai": ["ai@6.0.33", "", { "dependencies": { "@ai-sdk/gateway": "3.0.13", "@ai-sdk/provider": "3.0.2", "@ai-sdk/provider-utils": "4.0.5", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-bVokbmy2E2QF6Efl+5hOJx5MRWoacZ/CZY/y1E+VcewknvGlgaiCzMu8Xgddz6ArFJjiMFNUPHKxAhIePE4rmg=="],
 
     "ajv": ["ajv@8.17.1", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g=="],
 
@@ -2456,6 +2458,8 @@
     "@babel/traverse/@babel/types": ["@babel/types@7.28.6", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg=="],
 
     "@bufbuild/protoplugin/typescript": ["typescript@5.4.5", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ=="],
+
+    "@cream/dashboard-api/ai": ["ai@6.0.31", "", { "dependencies": { "@ai-sdk/gateway": "3.0.13", "@ai-sdk/provider": "3.0.2", "@ai-sdk/provider-utils": "4.0.5", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-aAn62jsDueAK7oiY4jeqJcA4zFctDqVHGyEaUDaWxEXzz4kbMdoByfYlYZhO1V3nhkeVoI8qNyFfiZusAubQLQ=="],
 
     "@cream/helix/testcontainers": ["testcontainers@10.28.0", "", { "dependencies": { "@balena/dockerignore": "^1.0.2", "@types/dockerode": "^3.3.35", "archiver": "^7.0.1", "async-lock": "^1.4.1", "byline": "^5.0.0", "debug": "^4.3.5", "docker-compose": "^0.24.8", "dockerode": "^4.0.5", "get-port": "^7.1.0", "proper-lockfile": "^4.1.2", "properties-reader": "^2.3.0", "ssh-remote-port-forward": "^1.0.4", "tar-fs": "^3.0.7", "tmp": "^0.2.3", "undici": "^5.29.0" } }, "sha512-1fKrRRCsgAQNkarjHCMKzBKXSJFmzNTiTbhb5E/j5hflRXChEtHvkefjaHlgkNUjfw92/Dq8LTgwQn6RDBFbMg=="],
 
