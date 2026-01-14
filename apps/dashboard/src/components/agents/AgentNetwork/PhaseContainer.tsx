@@ -140,6 +140,14 @@ export const PhaseContainer = memo(function PhaseContainer({
     error: "bg-red-50/30 dark:bg-red-900/10",
   };
 
+  // Opaque backgrounds for label (to cover the border line)
+  const labelBgColors = {
+    pending: "bg-cream-50 dark:bg-night-850",
+    active: "bg-white dark:bg-night-800",
+    complete: "bg-white dark:bg-night-800",
+    error: "bg-white dark:bg-night-800",
+  };
+
   return (
     <motion.div
       variants={containerVariants}
@@ -159,7 +167,7 @@ export const PhaseContainer = memo(function PhaseContainer({
       {/* Phase Label (positioned on top border) */}
       <div
         className={`
-          absolute left-4 px-2 -translate-y-1/2
+          absolute left-4 px-1.5 -translate-y-1/2
           text-[10px] font-semibold uppercase tracking-wider leading-none
           ${
             status === "active"
@@ -170,7 +178,7 @@ export const PhaseContainer = memo(function PhaseContainer({
                   ? "text-red-600 dark:text-red-400"
                   : "text-stone-400 dark:text-stone-500"
           }
-          ${bgColors[status]}
+          ${labelBgColors[status]}
         `}
         style={{ top: 0 }}
       >
